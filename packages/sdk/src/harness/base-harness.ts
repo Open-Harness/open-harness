@@ -42,22 +42,52 @@ export abstract class BaseHarness<TState, TInput, TOutput> {
 	 * Abstract method that users MUST implement.
 	 * Yields { input, output } pairs that represent steps in the harness execution.
 	 *
+	 * This is the core of the harness pattern - users control the execution logic
+	 * by implementing this generator. The framework handles step tracking automatically.
+	 *
+	 * @example
+	 * ```typescript
+	 * async *execute() {
+	 *   for (const item of this.items) {
+	 *     const output = await this.process(item);
+	 *     yield { input: item, output };
+	 *   }
+	 * }
+	 * ```
+	 *
+	 * @yields { input, output } pairs that will be recorded as steps
 	 * @returns AsyncGenerator yielding StepYield pairs
 	 */
 	protected abstract execute(): AsyncGenerator<StepYield<TInput, TOutput>>;
 
 	/**
 	 * Runs the harness by iterating the execute() generator.
-	 * Automatically increments currentStep and records each step to history.
-	 * Stops early if isComplete() returns true.
 	 *
-	 * @returns Promise that resolves when execution completes
+	 * This method owns the execution loop. For each yield from execute():
+	 * 1. Increments currentStep (happens AFTER yield is processed)
+	 * 2. Records the step to history with timestamp
+	 * 3. Checks isComplete() and breaks if true
+	 *
+	 * The isComplete() check happens AFTER recording, ensuring at least one step
+	 * is always processed even if isComplete() would return true initially.
+	 *
+	 * @example
+	 * ```typescript
+	 * const harness = new MyHarness({ initialState: { count: 0 } });
+	 * await harness.run();
+	 * console.log(`Completed ${harness.getCurrentStep()} steps`);
+	 * ```
+	 *
+	 * @returns Promise that resolves when execution completes (generator exhausted or isComplete() returns true)
 	 */
 	async run(): Promise<void> {
 		for await (const { input, output } of this.execute()) {
+			// Increment step number AFTER yield is processed
 			this.currentStep++;
+			// Record step to history (stateDelta tracking can be enhanced by subclasses)
 			this.state.record(this.currentStep, input, output, { modified: [] });
 
+			// Check completion AFTER recording - ensures at least one step is processed
 			if (this.isComplete()) {
 				break;
 			}
@@ -76,10 +106,21 @@ export abstract class BaseHarness<TState, TInput, TOutput> {
 
 	/**
 	 * Checks if the harness execution is complete.
-	 * Users can override this method to add custom completion logic.
-	 * Default implementation returns false (allows generator to complete naturally).
 	 *
-	 * @returns true if complete, false otherwise
+	 * Users can override this method to add custom completion logic based on state.
+	 * Default implementation returns false, allowing the generator to complete naturally.
+	 *
+	 * This method is called AFTER each step is recorded, ensuring at least one step
+	 * is always processed even if completion conditions are met initially.
+	 *
+	 * @example
+	 * ```typescript
+	 * override isComplete(): boolean {
+	 *   return this.state.getState().ticketsRemaining <= 0;
+	 * }
+	 * ```
+	 *
+	 * @returns true if complete (execution should stop), false otherwise (continue)
 	 */
 	isComplete(): boolean {
 		return false;
