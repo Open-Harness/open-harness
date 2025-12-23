@@ -54,19 +54,10 @@ const { values } = parseArgs({
 	allowPositionals: true,
 });
 
-const projectDir =
-	typeof values["project-dir"] === "string"
-		? values["project-dir"]
-		: "./autonomous_demo_project";
-const maxIterations =
-	typeof values["max-iterations"] === "string"
-		? parseInt(values["max-iterations"], 10)
-		: undefined;
+const projectDir = typeof values["project-dir"] === "string" ? values["project-dir"] : "./autonomous_demo_project";
+const maxIterations = typeof values["max-iterations"] === "string" ? parseInt(values["max-iterations"], 10) : undefined;
 const model = typeof values.model === "string" ? values.model : DEFAULT_MODEL;
-const enableMonologue =
-	typeof values["enable-monologue"] === "boolean"
-		? values["enable-monologue"]
-		: true;
+const enableMonologue = typeof values["enable-monologue"] === "boolean" ? values["enable-monologue"] : true;
 
 // ============================================
 // Main Execution
@@ -145,31 +136,24 @@ async function main() {
 				// First session: Initialize
 				console.log("🎯 Running initializer agent...\n");
 
-				await initializer.run(
-					"Read app_spec.txt and set up the project foundation",
-					`session_init`,
-					{
-						permissionMode: "bypassPermissions",
-						allowDangerouslySkipPermissions: true,
-						callbacks: {
-							onText: (content: string) => {
-								// Print text output
-								process.stdout.write(content);
-							},
-							onToolCall: (toolName: string) => {
-								console.log(`\n[Tool: ${toolName}]`);
-							},
-							onResult: (result: {
-								num_turns: number;
-								total_cost_usd: number;
-							}) => {
-								console.log(`\n✅ Session complete`);
-								console.log(`Turns: ${result.num_turns}`);
-								console.log(`Cost: $${result.total_cost_usd.toFixed(4)}`);
-							},
+				await initializer.run("Read app_spec.txt and set up the project foundation", `session_init`, {
+					permissionMode: "bypassPermissions",
+					allowDangerouslySkipPermissions: true,
+					callbacks: {
+						onText: (content: string) => {
+							// Print text output
+							process.stdout.write(content);
+						},
+						onToolCall: (toolName: string) => {
+							console.log(`\n[Tool: ${toolName}]`);
+						},
+						onResult: (result: { num_turns: number; total_cost_usd: number }) => {
+							console.log(`\n✅ Session complete`);
+							console.log(`Turns: ${result.num_turns}`);
+							console.log(`Cost: $${result.total_cost_usd.toFixed(4)}`);
 						},
 					},
-				);
+				});
 
 				// Update progress
 				updateProgressNotes(
@@ -181,30 +165,23 @@ async function main() {
 				// Subsequent sessions: Build
 				console.log("🔨 Running builder agent...\n");
 
-				await builder.run(
-					"Continue building the application",
-					`session_${iteration}`,
-					{
-						permissionMode: "bypassPermissions",
-						allowDangerouslySkipPermissions: true,
-						callbacks: {
-							onText: (content: string) => {
-								process.stdout.write(content);
-							},
-							onToolCall: (toolName: string) => {
-								console.log(`\n[Tool: ${toolName}]`);
-							},
-							onResult: (result: {
-								num_turns: number;
-								total_cost_usd: number;
-							}) => {
-								console.log(`\n✅ Session complete`);
-								console.log(`Turns: ${result.num_turns}`);
-								console.log(`Cost: $${result.total_cost_usd.toFixed(4)}`);
-							},
+				await builder.run("Continue building the application", `session_${iteration}`, {
+					permissionMode: "bypassPermissions",
+					allowDangerouslySkipPermissions: true,
+					callbacks: {
+						onText: (content: string) => {
+							process.stdout.write(content);
+						},
+						onToolCall: (toolName: string) => {
+							console.log(`\n[Tool: ${toolName}]`);
+						},
+						onResult: (result: { num_turns: number; total_cost_usd: number }) => {
+							console.log(`\n✅ Session complete`);
+							console.log(`Turns: ${result.num_turns}`);
+							console.log(`Cost: $${result.total_cost_usd.toFixed(4)}`);
 						},
 					},
-				);
+				});
 			}
 
 			// Check progress
@@ -214,9 +191,7 @@ async function main() {
 				console.log("\n🎉 All features complete!");
 				shouldContinue = false;
 			} else {
-				console.log(
-					`\n⏸️  Agent will auto-continue in ${AUTO_CONTINUE_DELAY_MS / 1000}s...`,
-				);
+				console.log(`\n⏸️  Agent will auto-continue in ${AUTO_CONTINUE_DELAY_MS / 1000}s...`);
 				console.log("   (Press Ctrl+C to pause)");
 
 				printProgressSummary(projectDir);

@@ -3,26 +3,26 @@
  * Uses bun:sqlite for zero-dependency SQLite support
  */
 
-import { Database } from 'bun:sqlite'
+import { Database } from "bun:sqlite";
 
 export interface DatabaseConfig {
-  path: string
-  readonly?: boolean
+	path: string;
+	readonly?: boolean;
 }
 
 export class TradingDatabase {
-  private db: Database
+	private db: Database;
 
-  constructor(config: DatabaseConfig = { path: ':memory:' }) {
-    this.db = new Database(config.path, {
-      readonly: config.readonly ?? false,
-      create: true,
-    })
-    this.db.exec('PRAGMA journal_mode = WAL')
-  }
+	constructor(config: DatabaseConfig = { path: ":memory:" }) {
+		this.db = new Database(config.path, {
+			readonly: config.readonly ?? false,
+			create: true,
+		});
+		this.db.exec("PRAGMA journal_mode = WAL");
+	}
 
-  initialize(): void {
-    this.db.exec(`
+	initialize(): void {
+		this.db.exec(`
       -- Cache for market data
       CREATE TABLE IF NOT EXISTS cache (
         key TEXT PRIMARY KEY,
@@ -105,22 +105,22 @@ export class TradingDatabase {
         explanation TEXT,
         FOREIGN KEY (snapshot_id) REFERENCES snapshots(id)
       );
-    `)
-  }
+    `);
+	}
 
-  query<T>(sql: string, params: any[] = []): T[] {
-    return this.db.query(sql).all(...params) as T[]
-  }
+	query<T>(sql: string, params: unknown[] = []): T[] {
+		return this.db.query(sql).all(...params) as T[];
+	}
 
-  run(sql: string, params: any[] = []): void {
-    this.db.run(sql, ...params)
-  }
+	run(sql: string, params: unknown[] = []): void {
+		this.db.run(sql, ...params);
+	}
 
-  close(): void {
-    this.db.close()
-  }
+	close(): void {
+		this.db.close();
+	}
 
-  get raw(): Database {
-    return this.db
-  }
+	get raw(): Database {
+		return this.db;
+	}
 }

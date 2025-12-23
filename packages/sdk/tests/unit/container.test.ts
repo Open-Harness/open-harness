@@ -12,12 +12,13 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { Container, inject, injectable } from "@needle-di/core";
 import { CodingAgent } from "../../src/agents/coding-agent.js";
 import { AgentMonologue } from "../../src/agents/monologue.js";
 import { createContainer } from "../../src/core/container.js";
 import { Record } from "../../src/core/decorators.js";
+import type { RunnerCallbacks } from "../../src/core/tokens.js";
 import {
 	type IAgentRunner,
 	IAgentRunnerToken,
@@ -26,8 +27,7 @@ import {
 	IVaultToken,
 } from "../../src/core/tokens.js";
 import { BaseAgent } from "../../src/runner/base-agent.js";
-import type { RunnerCallbacks } from "../../src/core/tokens.js";
-import type { SessionResult } from "../../src/runner/models.js";
+import type { CompactData, SessionResult } from "../../src/runner/models.js";
 
 // ============================================================================
 // Mock Runner for Testing
@@ -38,11 +38,7 @@ class MockRunner implements IAgentRunner {
 	public callCount = 0;
 	public lastPrompt = "";
 
-	async run(args: {
-		prompt: string;
-		options: any;
-		callbacks?: RunnerCallbacks;
-	}): Promise<SDKMessage | undefined> {
+	async run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }): Promise<SDKMessage | undefined> {
 		this.callCount++;
 		this.lastPrompt = args.prompt;
 
@@ -54,12 +50,12 @@ class MockRunner implements IAgentRunner {
 				session_id: "mock_session",
 				model: "mock-model",
 				tools: [],
-			} as any,
+			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
 			{
 				type: "tool_progress",
 				tool_name: "test_tool",
 				elapsed_time_seconds: 0.5,
-			} as any,
+			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
 			{
 				type: "system",
 				subtype: "compact_boundary",
@@ -68,13 +64,13 @@ class MockRunner implements IAgentRunner {
 					trigger: "manual",
 					pre_tokens: 1000,
 				},
-			} as any,
+			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
 			{
 				type: "system",
 				subtype: "status",
 				session_id: "mock_session",
 				status: "compacting",
-			} as any,
+			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
 			{
 				type: "assistant",
 				message: {
@@ -85,7 +81,7 @@ class MockRunner implements IAgentRunner {
 						},
 					],
 				},
-			} as any,
+			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
 			{
 				type: "result",
 				subtype: "success",
@@ -101,7 +97,7 @@ class MockRunner implements IAgentRunner {
 					summary: "Mock task completed",
 					handoff: "",
 				},
-			} as any,
+			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
 		];
 
 		// Fire callbacks for each message
@@ -124,9 +120,13 @@ class MockRecordingFactory {
 		return {
 			async run(args: {
 				prompt: string;
-				options: any;
-				callbacks?: any;
-				runFn: any;
+				options: Options;
+				callbacks?: RunnerCallbacks;
+				runFn: (args: {
+					prompt: string;
+					options: Options;
+					callbacks?: RunnerCallbacks;
+				}) => Promise<SDKMessage | undefined>;
 			}) {
 				return args.runFn(args);
 			},
@@ -212,12 +212,9 @@ describe("@Record Decorator", () => {
 		class DecoratedService {
 			constructor(private runner: IAgentRunner = inject(IAgentRunnerToken)) {}
 
+			// biome-ignore lint/suspicious/noExplicitAny: Record decorator uses any[] for generic args
 			@Record("smoke", (args: any[]) => args[1])
-			async doWork(
-				prompt: string,
-				sessionId: string,
-				callbacks?: any,
-			): Promise<SDKMessage | undefined> {
+			async doWork(prompt: string, _sessionId: string, callbacks?: RunnerCallbacks): Promise<SDKMessage | undefined> {
 				return this.runner.run({
 					prompt,
 					options: {},
@@ -249,6 +246,7 @@ describe("Promise-based API", () => {
 
 		// Should be a Promise, not an AsyncGenerator
 		expect(result).toBeInstanceOf(Promise);
+		// biome-ignore lint/suspicious/noExplicitAny: Testing that result is not an async iterator
 		expect(typeof (result as any)[Symbol.asyncIterator]).not.toBe("function");
 
 		// Should resolve to SDKMessage
@@ -284,7 +282,7 @@ describe("Callback Tests", () => {
 		const mockRunner = new MockRunner();
 		const agent = new BaseAgent("TestAgent", mockRunner);
 
-		let capturedResult: SessionResult | undefined = undefined;
+		let capturedResult: SessionResult | undefined;
 
 		await agent.run("test", "session", {
 			callbacks: {
@@ -329,7 +327,7 @@ describe("Callback Tests", () => {
 		const mockRunner = new MockRunner();
 		const agent = new BaseAgent("TestAgent", mockRunner);
 
-		let capturedCompact: any = null;
+		let capturedCompact: CompactData | null = null;
 
 		await agent.run("test", "session", {
 			callbacks: {
@@ -358,9 +356,7 @@ describe("Callback Tests", () => {
 		});
 
 		expect(capturedStatus).toBeDefined();
-		expect(["compacting", "null"].includes(capturedStatus ?? "null")).toBe(
-			true,
-		);
+		expect(["compacting", "null"].includes(capturedStatus ?? "null")).toBe(true);
 	});
 });
 

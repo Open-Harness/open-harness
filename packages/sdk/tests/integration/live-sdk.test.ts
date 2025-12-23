@@ -27,22 +27,18 @@ describe("Live SDK Integration", () => {
 		let textContent = "";
 
 		// Make real API call
-		const result = await agent.run(
-			"Say 'Hello from integration test!' and nothing else.",
-			"integration_test_session",
-			{
-				model: "haiku",
-				maxTurns: 1,
-				callbacks: {
-					onSessionStart: () => events.push("session_start"),
-					onText: (content) => {
-						events.push("text");
-						textContent += content;
-					},
-					onSessionEnd: () => events.push("session_end"),
+		const result = await agent.run("Say 'Hello from integration test!' and nothing else.", "integration_test_session", {
+			model: "haiku",
+			maxTurns: 1,
+			callbacks: {
+				onSessionStart: () => events.push("session_start"),
+				onText: (content) => {
+					events.push("text");
+					textContent += content;
 				},
+				onSessionEnd: () => events.push("session_end"),
 			},
-		);
+		});
 
 		// Validate
 		expect(result).toBeDefined();

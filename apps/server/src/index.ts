@@ -7,15 +7,15 @@ const app = new Hono();
 
 app.use(logger());
 app.use(
-  "/*",
-  cors({
-    origin: process.env.CORS_ORIGIN || "",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-  }),
+	"/*",
+	cors({
+		origin: process.env.CORS_ORIGIN || "",
+		allowMethods: ["GET", "POST", "OPTIONS"],
+	}),
 );
 
 app.get("/", (c) => {
-  return c.text("OK");
+	return c.text("OK");
 });
 
 export default app;

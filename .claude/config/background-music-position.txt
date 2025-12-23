@@ -24,4 +24,4 @@ agent_vibes_cumbia_v1_loop.mp3:5.717823
 agentvibes_soft_flamenco_loop.mp3:4.998005
 agent_vibes_arabic_v2_loop.mp3:.00000000000000000006132724
 agent_vibes_chillwave_v2_loop.mp3:14.628390
-agent_vibes_celtic_harp_v1_loop.mp3:9.865669
+agent_vibes_celtic_harp_v1_loop.mp3:9.285170

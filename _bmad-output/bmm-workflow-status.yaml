@@ -1,4 +1,4 @@
-# Workflow Status Template
+# BMM Workflow Status - Open Harness
 
 # This tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
 # Implementation phase is tracked separately in sprint-status.yaml
@@ -15,10 +15,106 @@
 #   - {file-path}: File created/found (e.g., "docs/product-brief.md")
 #   - skipped: Optional/conditional workflow that was skipped
 
-generated: "{{generated}}"
-project: "dao"
-project_type: "{{project_type}}"
-selected_track: "{{selected_track}}"
-field_type: "{{field_type}}"
-workflow_path: "{{workflow_path_file}}"
-workflow_status: "{{workflow_items}}"
+generated: "2024-12-24T00:00:00Z"
+project: "Open Harness"
+project_type: "sdk"
+project_level: 3  # Complex System (12-40 stories) - SDK + CLI + integrations
+selected_track: "bmad-method"
+field_type: "brownfield"
+workflow_path: "_bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
+
+# Vision Context
+# ==============
+# Open Harness is an extensible workflow SDK for building AI agent applications
+# with Anthropic's Claude. Current state: SDK working, CLI code complete but
+# integration issues, Trading Bot as example app.
+
+# Existing Documentation
+# ======================
+existing_docs:
+  - path: "docs/project-overview.md"
+    type: "overview"
+    status: "current"
+  - path: "docs/architecture-sdk.md"
+    type: "architecture"
+    status: "current"
+  - path: "packages/sdk/README.md"
+    type: "readme"
+    status: "current"
+  - path: "packages/sdk/QUICKSTART.md"
+    type: "quickstart"
+    status: "current"
+  - path: "TRADING-BOT-ARCHITECTURE.md"
+    type: "example-architecture"
+    status: "current"
+
+# Workflow Status
+# ===============
+workflow_status:
+  # Prerequisite - Documentation (brownfield)
+  prerequisite:
+    document-project:
+      status: "docs/project-overview.md"  # Already documented
+      agent: "analyst"
+      note: "Existing documentation sufficient for brownfield context"
+
+  # Phase 0 - Discovery (Optional)
+  phase_0_discovery:
+    brainstorm-project:
+      status: "skipped"
+      note: "Project vision already established"
+    research:
+      status: "skipped"
+      note: "Technical context well-documented"
+    product-brief:
+      status: "optional"
+      note: "Optional for brownfield - may create if helpful for stakeholder alignment"
+
+  # Phase 1 - Planning (Required)
+  phase_1_planning:
+    prd:
+      status: "required"  # <-- NEXT: Start here
+      agent: "pm"
+      command: "prd"
+      note: "Consolidate Open Harness vision into comprehensive PRD"
+    create-ux-design:
+      status: "conditional"
+      condition: "if_has_ui"
+      note: "CLI + SDK - minimal UI, possibly docs site"
+
+  # Phase 2 - Solutioning (Required)
+  phase_2_solutioning:
+    create-architecture:
+      status: "recommended"
+      agent: "architect"
+      note: "Integration architecture - distill brownfield context into focused solution"
+    create-epics-and-stories:
+      status: "required"
+      agent: "pm"
+      note: "Break PRD into implementable work"
+    test-design:
+      status: "recommended"
+      agent: "tea"
+      note: "System-level testability review"
+    validate-architecture:
+      status: "optional"
+      agent: "architect"
+    implementation-readiness:
+      status: "required"
+      agent: "architect"
+      note: "Gate check before implementation"
+
+  # Phase 3 - Implementation
+  phase_3_implementation:
+    sprint-planning:
+      status: "required"
+      agent: "sm"
+      note: "Creates sprint plan from epics/stories"
+
+# Next Action
+# ===========
+next_action:
+  workflow: "prd"
+  agent: "pm"
+  command: "/prd"
+  description: "Start PRD to consolidate Open Harness vision and define requirements"
