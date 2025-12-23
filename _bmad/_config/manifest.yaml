@@ -1,7 +1,7 @@
 installation:
   version: 6.0.0-alpha.20
-  installDate: 2025-12-23T22:44:09.218Z
-  lastUpdated: 2025-12-23T22:44:09.218Z
+  installDate: 2025-12-24T16:15:25.370Z
+  lastUpdated: 2025-12-24T16:15:25.370Z
 modules:
   - core
   - bmm
@@ -10,3 +10,4 @@ ides:
   - claude-code
   - cursor
   - opencode
+  - roo

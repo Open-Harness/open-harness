@@ -1,0 +1,18 @@
+{
+  "name": "@dao/examples-coding",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@dao/sdk": "workspace:*",
+    "@clack/prompts": "^0.11.0",
+    "@anthropic-ai/claude-agent-sdk": "^0.1.76"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.10",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

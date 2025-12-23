@@ -1,43 +1,60 @@
 /**
- * bun-vi SDK - Extensible Workflow SDK for Anthropic Agents
+ * Open Harness SDK - Extensible Workflow SDK for Anthropic Agents
  *
- * Core Primitives:
- * - Agent: Prompt template + state + custom logic
- * - Workflow: Orchestrates agents with task management
- * - Task: Work unit in workflow task list
- * - Monologue: Stream abstraction - turns tool noise into narrative
+ * TWO-LAYER ARCHITECTURE:
+ *
+ * LAYER 1 - HARNESS (Step-Aware Agents):
+ * - BaseHarness: Abstract class for step-aware execution
+ * - Agent: Lightweight wrapper for step-aware agent logic
+ * - PersistentState: State management with bounded context
+ *
+ * LAYER 2 - INTERNAL (LLM Execution Infrastructure):
+ * - createAgent: Factory for creating agents (built-in, config, class-based)
+ * - createWorkflow: Factory for creating workflows
+ * - withMonologue: Wrapper for narrative generation
+ * - BaseAgent: Foundation class with DI, callbacks, EventBus
+ * - TaskList: Workflow task management
  */
 
 // ============================================
-// Core Factories
+// HARNESS LAYER (Step-Aware Execution)
 // ============================================
 
+export { BaseHarness, Agent, PersistentState } from "./harness/index.js";
+
+export type {
+	Step,
+	StepYield,
+	StateDelta,
+	Constraints,
+	LoadedContext,
+	HarnessConfig,
+	PersistentStateConfig,
+	AgentConfig,
+	AgentRunParams,
+} from "./harness/index.js";
+
+// ============================================
+// INTERNAL LAYER (LLM Execution Infrastructure)
+// ============================================
+
+// Core Factories
 export { createAgent } from "./factory/agent-factory.js";
 export { createWorkflow } from "./factory/workflow-builder.js";
 
-// ============================================
 // Primitives
-// ============================================
-
 export { withMonologue } from "./monologue/wrapper.js";
 export { TaskList } from "./workflow/task-list.js";
 
-// ============================================
-// Base Classes (for advanced users)
-// ============================================
+// Base Classes (for extension)
+export { BaseAgent, type StreamCallbacks } from "./runner/base-agent.js";
 
-export type { StreamCallbacks } from "./runner/base-agent.js";
-export { BaseAgent } from "./runner/base-agent.js";
-
-// ============================================
-// Built-in Agents (examples)
-// ============================================
-
+// Built-in Agents
 export { CodingAgent } from "./agents/coding-agent.js";
 export { ReviewAgent } from "./agents/review-agent.js";
 
 // ============================================
-// Types
+// TYPES
 // ============================================
 
 export type {
@@ -48,19 +65,10 @@ export type {
 	StatusData,
 } from "./runner/models.js";
 
-export type {
-	Task,
-	TaskStatus,
-} from "./workflow/task-list.js";
+export type { Task, TaskStatus } from "./workflow/task-list.js";
 
 // ============================================
-// Harness Primitives
-// ============================================
-
-export * from "./harness/index.js";
-
-// ============================================
-// Internal (for testing/advanced usage)
+// ADVANCED (Container Access)
 // ============================================
 
 export type { ContainerOptions } from "./core/container.js";

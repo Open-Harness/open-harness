@@ -103,6 +103,21 @@
         "typescript": "^5",
       },
     },
+    "examples/coding": {
+      "name": "@dao/examples-coding",
+      "dependencies": {
+        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+        "@clack/prompts": "^0.11.0",
+        "@dao/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "2.3.10",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/config": {
       "name": "@dao/config",
       "version": "0.0.0",
@@ -231,6 +246,8 @@
     "@dao/cli": ["@dao/cli@workspace:apps/cli"],
 
     "@dao/config": ["@dao/config@workspace:packages/config"],
+
+    "@dao/examples-coding": ["@dao/examples-coding@workspace:examples/coding"],
 
     "@dao/sdk": ["@dao/sdk@workspace:packages/sdk"],
 

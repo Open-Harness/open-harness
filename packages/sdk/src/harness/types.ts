@@ -87,6 +87,8 @@ export type StepYield<TInput, TOutput> = {
 export interface PersistentStateConfig<TState> {
 	/** Initial state */
 	initialState: TState;
+	/** Optional maximum number of context steps to retain */
+	maxContextSteps?: number;
 	/** Optional storage path or identifier */
 	storagePath?: string;
 }
@@ -98,13 +100,13 @@ export interface PersistentStateConfig<TState> {
  * @template TInput - The input type
  * @template TOutput - The output type
  */
-export interface AgentConfig<TState, _TInput, _TOutput> {
-	/** Agent name or identifier */
-	name: string;
-	/** Constraints for the agent */
-	constraints?: Constraints;
-	/** Initial state */
-	initialState?: TState;
+export interface AgentConfig<TState, TInput, TOutput> {
+	/** Optional agent name (defaults to 'Agent' in implementation) */
+	name?: string;
+	/** Required: The run function that executes the agent */
+	run: (params: AgentRunParams<TState, TInput, TOutput>) => Promise<TOutput>;
+	/** Optional: Function to check if agent/harness is complete */
+	isComplete?: (state: TState) => boolean;
 }
 
 /**
@@ -114,11 +116,17 @@ export interface AgentConfig<TState, _TInput, _TOutput> {
  * @template TInput - The input type
  * @template TOutput - The output type
  */
-export interface AgentRunParams<TState, TInput, _TOutput> {
-	/** Input data for the run */
+export interface AgentRunParams<TState, TInput, TOutput> {
+	/** Input data for this run */
 	input: TInput;
-	/** Current state */
-	state: TState;
-	/** Optional context */
-	context?: LoadedContext<TState>;
+	/** Current state context */
+	context: TState;
+	/** Current step number */
+	stepNumber: number;
+	/** History of previous steps */
+	stepHistory: Step<TInput, TOutput>[];
+	/** Constraints for this run */
+	constraints: Constraints;
+	/** Optional callbacks for LLM execution (from internal layer) */
+	callbacks?: import("../runner/base-agent.js").StreamCallbacks;
 }

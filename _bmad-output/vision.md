@@ -1,231 +1,602 @@
 # Open Harness Vision Document
 
-**The Operating System for Autonomous AI**
+**Step-Aware Autonomous Agents**
 
 **Author:** Abdullah  
 **Date:** December 24, 2025  
-**Version:** 1.0
+**Version:** 2.1  
 
 ---
 
 ## I. Vision Statement
 
-Open Harness is building the infrastructure for autonomous AI agents that work in days and weeks, not seconds and minutes.
+Open Harness is building step-aware autonomous agents that work in out-of-loop mode for extended time periods.
 
-We envision a world where creating long-running AI workflows is as simple as having a conversation—where developers build sophisticated multi-agent systems once, and everyone else configures them forever. Where AI isn't just a tool you use for moments, but a colleague you delegate to for marathons.
+We envision a world where creating autonomous AI agents is simple—where developers build time-aware systems using composable primitives, and users configure them via YAML. Where AI isn't just responding to prompts—it's taking steps toward goals, knowing where it is in time, with persistent state across those steps.
 
-**Our Mission:** Make autonomous AI workflows buildable once, reusable forever.
+**Our Mission:** Make step-by-step autonomous agents buildable for any domain—trading, coding, research, monitoring, whatever you need.
 
-**Our Platform:** The two-layer architecture that bridges expert developers and everyday users—TypeScript SDK for building, YAML configs for customizing, Anthropic Skills for onboarding.
+**Our Platform:** Opinionated primitives (Harness, Agent, Step, State) that you compose powerfully. Not complex graphs. Not black boxes. Simple Lego building blocks that enable sophisticated autonomous behavior.
 
-**Our Future:** The operating system where autonomous AI agents are created, shared, deployed, and run by millions.
+**Our Future:** A platform where agents are time-aware, transparent, and composable for any use case.
 
 ---
 
 ## II. The Problem We Solve
 
-### AI That Can't Persist
+### Out-Of-Loop Agents Exist, But...
 
-Every night, millions of developers close their laptops with unfinished work. The AI helped for an hour—wrote some functions, suggested fixes—but then stopped. Tomorrow, they'll start over, re-explaining context, rebuilding momentum. The AI is brilliant, but it can't *persist*. It's a tool, not a colleague.
+Autonomous AI agents already exist. Cursor background agents. OpenAI Canvas. Anthropic artifacts. Google Gems. Augment Code.
 
-Meanwhile, traders stare at screens for hours, making split-second decisions their trading algorithms can't handle. The bots are fast but dumb. The humans are smart but slow. What's missing? An AI that can execute complex strategies over days, learning and adapting, while the trader sleeps.
+They work. They execute tasks autonomously while you do other things. That's **out-of-loop** execution—you give a goal, agent works, returns when done.
 
-**The constraint we've accepted:** AI works in moments, not marathons.
+**But they have limitations:**
 
-### Why Current Frameworks Fall Short
+**1. Black Box Opacity**
+You can't see what the agent is doing. It just says "working..." and eventually shows you results. No transparency into results. No audit log. No way to understand *why* it made choices.
 
-Today's AI frameworks are built for one-shot interactions:
+**2. Domain-Specific**
+Cursor background agents are great for coding. OpenAI Canvas works for documents. But try using Cursor for trading—impossible. Each tool is locked to one domain.
 
-- **Anthropic SDK (Direct):** Low-level primitives, no workflow orchestration, no state persistence
-- **LangChain/LlamaIndex:** RAG-focused, complex abstractions, not designed for multi-day autonomy
-- **Custom Solutions:** Everyone rebuilds the same patterns—session management, checkpointing, retry logic, iterative loops
+**3. No Time Awareness**
+The agent doesn't know it's in a temporal loop. Each session feels like a fresh conversation. The agent doesn't plan for steps ahead. It just reacts to the current prompt.
 
-**The gap:** No framework exists for long-running autonomous execution with coherent decision-making across extended time periods.
+**4. No Persistent State**
+State exists only during execution. Stop the agent, restart it—state is lost. No checkpoint recovery. No resumption from where it left off.
 
----
+**5. Hard to Customize**
+Patterns are locked. You get what the platform gives you. Can't add tools. Can't change behavior. Can't adapt to your needs.
 
-## III. The Solution: The Harness Pattern
+### What If You Had...
 
-Think about a baby learning to walk. You don't explain physics or muscle memory. You give them a *harness*—something that provides structure, catches them when they fall, helps them persist through the learning loop until they succeed.
+A **general-purpose** framework for building out-of-loop agents that's:
+- **Time-aware:** Agent knows it's at step 7 of 100, planning for steps 8-15
+- **Transparent:** See every step, every action/result, in a readable log
+- **Domain-agnostic:** Build for trading, coding, research—anything
+- **Stateful:** Persistent semantic memory that survives step boundaries
+- **Composable:** Primitives you can mix and match
 
-AI agents need the same thing. Not handcuffs. Not limitations. A *harness*—infrastructure that enables long-running autonomy while maintaining coherence.
-
-### Core Architecture
-
-The Harness pattern provides four fundamental capabilities:
-
-#### 1. State Persistence
-Agents remember what they were doing across sessions. Not just chat history—actual decision state, progress tracking, goal context. When a session ends and a new one begins, the agent doesn't start from scratch.
-
-#### 2. Iterative Decision Loops
-Not request/response. Not one-shot prompts. Goal-driven iteration that continues until objectives are met—whether that takes 10 minutes or 10 days.
-
-```
-Traditional Pattern:           Harness Pattern:
-User → Prompt → Response      Goal → [Session 1] → Checkpoint
-                              Checkpoint → [Session 2] → Checkpoint  
-                              Checkpoint → [Session N] → Complete
-```
-
-#### 3. Session Boundary Management
-Long-running agents hit context window limits. The Harness pattern manages session boundaries intelligently—fresh context windows that maintain coherent goals across breaks. Each session knows what came before without being burdened by the entire history.
-
-#### 4. Execution Safety Rails
-Guardrails for long-running autonomy: timeouts, checkpoints, progress validation, graceful failure handling, and rollback capability. Agents work autonomously, but safely.
-
-### Why This Matters
-
-Anthropic proved this pattern works with their computer-use demo—agents running for hours, completing complex tasks across multiple sessions. But their code was purpose-built for one use case.
-
-**Open Harness makes this pattern reusable.** Build any long-running workflow once. Configure it for infinite use cases. Share it with the world.
+**That's Open Harness.**
 
 ---
 
-## IV. What We're Shipping: v1.0
+## III. The Harness Pattern
 
-Open Harness v1.0 is production-ready today for local autonomous workflows. Here's what ships:
+### What Is a Harness?
+
+A **harness** is code that defines state, behavior, and constraints of a system such that it can act within a defined space.
+
+It adds **time dimensionality** to agents. Instead of "prompting repeatedly," you give agents awareness that they're iterating through **steps**—knowing what came before, planning what comes next.
+
+### The Four Primitives
+
+#### 1. HARNESS
+
+The system around the context window that gives agents time dimensionality.
+
+```typescript
+class Harness<AgentState, StepInput, StepOutput> {
+  // The agent that runs
+  private agent: Agent<AgentState, StepInput, StepOutput>;
+
+  // Persistent state across steps
+  private state: PersistentState<AgentState>;
+
+  // History of all steps
+  private stepHistory: Step<AgentState, StepInput, StepOutput>[];
+
+  // Current step number
+  private currentStep: number = 0;
+
+  /**
+   * The CORE METHOD: Take one step
+   * Flexible cadence - YOU control when to call this!
+   */
+  async step(input: StepInput): Promise<StepOutput> {
+    this.currentStep++;
+
+    // Load relevant context (not full history)
+    const context = this.state.loadContext(input);
+
+    // Agent runs WITH step awareness (runs have side effects)
+    const result = await this.agent.run({
+      input,
+      context,
+      stepNumber: this.currentStep,      // CRITICAL: Time awareness
+      stepHistory: this.state.getRecentSteps(10),
+      constraints: this.constraints
+    });
+
+    // Persist this step (record the result)
+    this.state.record(this.currentStep, result);
+
+    return result;
+  }
+}
+```
+
+#### 2. AGENT
+
+A step-aware runner that knows:
+- What step it's on
+- What happened in previous steps
+- What constraints it's working within
+- When it's complete
+
+```typescript
+class Agent<AgentState, StepInput, StepOutput> {
+  async run(params: {
+    input: StepInput;
+    context: AgentState;
+    stepNumber: number;
+    stepHistory: Step[];
+    constraints: Constraints;
+  }): Promise<StepOutput> {
+    // Agent runs (with side effects: write file, call API, execute trade)
+    // Agent can now say:
+    // "I'm at step 7, based on step 5's result..."
+    // "Planning for steps 8-10..."
+    // "The last 3 runs failed, I'll try a different approach..."
+  }
+
+  isComplete(state: AgentState): boolean {
+    // Define when agent is done
+    // Trading: Never complete (runs forever)
+    // Coding: All tickets done
+  }
+}
+  
+  isComplete(state: AgentState): boolean {
+    // Define when the agent is done
+    // Trading: Never complete (runs forever)
+    // Coding: All tickets done
+  }
+}
+```
+
+#### 3. STEP
+
+A single execution point in time—the fundamental unit of execution.
+
+```typescript
+interface Step<AgentState, StepInput, StepOutput> {
+  stepNumber: number;
+  timestamp: number;
+  input: StepInput;
+  output: StepOutput;
+  stateDelta: StateDelta;  // What changed this step
+}
+```
+
+**Examples of Steps:**
+- **Trading Agent:** Every market data update (every 5 seconds)
+- **Coding Agent:** Every subtask completion (write test, run test, fix bug)
+- **Monitoring Agent:** Every scheduled check (every hour)
+- **Research Agent:** Every information processing step (read paper, extract insights)
+
+#### 4. STATE
+
+Persistent semantic memory that survives step boundaries. Not chat history—semantic state.
+
+```typescript
+interface PersistentState<AgentState> {
+  // Goal we're working toward (persists across steps)
+  goal: Goal;
+
+  // Progress toward goal
+  progress: Progress;
+
+  // Actions/results made (for audit/review)
+  actionLog: ActionLog;
+
+  // Knowledge accumulated (not raw history)
+  knowledge: KnowledgeGraph;
+
+  // Load relevant context for THIS step
+  loadContext(stepInput: StepInput): Context {
+    return {
+      goal: this.goal,
+      recentActions: this.getRecentActions(10),
+      relevantKnowledge: this.knowledge.query(stepInput)
+    };
+  }
+}
+```
+
+---
+
+## IV. Layered Architecture
+
+### Two Layers, Clear Separation
+
+Open Harness uses a **layered architecture** that separates user-facing primitives from internal infrastructure:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ EXTERNAL API (NEW - User-Facing)                        │
+├─────────────────────────────────────────────────────────┤
+│  • createHarness() factory                               │
+│  • Agent.run() method                                    │
+│  • Harness class                                         │
+│  • Step, State primitives                                │
+│  • Simple, time-aware, composable                        │
+└─────────────────────────────────────────────────────────┘
+                          ↓ wraps
+┌─────────────────────────────────────────────────────────┐
+│ INTERNAL API (EXISTING - Infrastructure)                │
+├─────────────────────────────────────────────────────────┤
+│  • BaseAgent.run() method                                │
+│  • TaskList class                                        │
+│  • StreamCallbacks                                       │
+│  • DI container                                          │
+│  • IAgentRunner interface                                │
+│  • Complex, working, unchanged                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### How It Works
+
+**EXTERNAL → INTERNAL Mapping:**
+
+| External API | Internal API | Purpose |
+|--------------|--------------|---------|
+| `Harness.step()` | `BaseAgent.run()` | Execute one step |
+| `Agent.run()` | `BaseAgent.run()` | Run agent with step context |
+| `PersistentState` | `TaskList` | State management |
+| `StreamCallbacks` | `StreamCallbacks` | Event system (same!) |
+
+**Key Principle:** External simplicity wraps internal complexity. Reuse what works, expose what users need.
+
+### Why Two Layers?
+
+**INTERNAL API** (Existing Code):
+- Already battle-tested in production
+- Complex infrastructure (DI, events, streaming)
+- Not user-friendly for simple use cases
+- **Keep unchanged** - it works!
+
+**EXTERNAL API** (New Layer):
+- Simple, opinionated primitives
+- Time-aware from the start
+- Designed for out-of-loop agents
+- **Mirror internal patterns** where sensible
+
+Example: `Harness.step()` internally calls `BaseAgent.run()`, but adds:
+- Step number tracking
+- Step history management
+- Context loading (not full history)
+- Result persistence
+
+Same underlying power, cleaner interface.
+
+---
+
+## V. Time Awareness: The Key Differentiator
+
+### Without Harness vs. With Harness
+
+**Traditional Pattern:**
+```
+Agent: "I don't know time"
+Prompt: "What should I do?"
+Response: "Here's what I'll do..."
+
+[Next prompt - agent thinks fresh conversation]
+Agent: "What do you want?"
+```
+
+**Harness Pattern:**
+```
+Agent: "I'm at step 7 of 100"
+       "Based on step 5's result, I should..."
+       "Planning for steps 8-12..."
+       "The last 3 actions failed, adjusting strategy..."
+       "Working toward goal from step 0"
+```
+
+### What Time Awareness Enables
+
+**1. Planning, Not Just Reacting**
+Agent doesn't just respond to current input—it plans for future steps.
+
+**2. Learning Across Steps**
+Agent remembers what worked, what didn't, and adapts strategy.
+
+**3. Coherent Goal Pursuit**
+Agent knows it's working toward a goal established at step 0, maintaining coherence.
+
+**4. Auditability**
+Every step is logged with reasoning, inputs, outputs. See exactly *why* agent made choices.
+
+### Flexible Cadence: You Control When
+
+The harness doesn't decide when to step—**you do**.
+
+**Time-Based (Trading):**
+```typescript
+// Step every 5 seconds
+setInterval(async () => {
+  const marketUpdate = await getMarketData();
+  await harness.step(marketUpdate);
+}, 5000);
+```
+
+**Event-Based (Monitoring):**
+```typescript
+// Step when condition met
+market.on('rsi-threshold-hit', async (data) => {
+  await harness.step(data);
+});
+```
+
+**Task-Completion-Based (Coding):**
+```typescript
+// Step after subtask completes
+while (!harness.isComplete()) {
+  const ticket = getNextTicket();
+  await implementTicket(ticket);
+  
+  await harness.step({ ticket, status: 'complete' });
+}
+```
+
+**This is the Django/Rails philosophy:** Give you simple primitives. You compose them however fits your use case. Not complex DAGs. Not rigid workflows. Just `harness.step()`—called however you want.
+
+---
+
+## VI. In-Loop vs. Out-Loop
+
+### The Key Difference: Feedback Loop Presence
+
+The distinction is **not** about whether the agent works in the background—it's about whether there's a conversation/feedback loop while execution happens.
+
+### In-Loop (Feedback Loop Active)
+
+User is in a **feedback loop** with the agent—even if the agent works independently for minutes making tool calls, the user eventually gets results back and can respond.
+
+```
+You: "Help me think through this problem"
+[Agent analyzes, makes several tool calls over 2 minutes]
+Agent: "Here's my analysis with 3 possible solutions..."
+You: "Good point, what about approach X?"
+[Agent thinks, runs more tools]
+Agent: "Approach X is viable because..."
+```
+
+**Characteristics:**
+- **Conversational feedback loop** exists
+- User receives results, can respond, agent replies
+- Agent may work independently temporarily, but loop remains open
+- User is "in the conversation" even if not actively prompting
+
+**Examples:**
+- Claude Desktop (even with background work, you get results back)
+- Cursor (background agents return results you can act on)
+- V0 (coding assistant with iterative feedback)
+- Any chat-based AI tool
+
+### Out-Of-Loop (No Feedback Loop)
+
+User **sets up, leaves, returns to result**. No conversation happens during execution. No feedback loop exists while running.
+
+```
+You: "Implement this feature and run all tests"
+[You go do other things]
+[Hours/days pass - agent works autonomously]
+[No conversation happens during execution]
+[Agent logs to file, but no feedback to you]
+[You return later]
+You: "Check status..." (new conversation, separate session)
+System: "Feature implemented, all tests passed"
+```
+
+**Characteristics:**
+- **No feedback loop** during execution
+- User is not "in the conversation" while agent runs
+- Execution happens autonomously without user involvement
+- User starts a separate conversation to check status/results
+
+**Examples:**
+- Cron jobs (run on schedule, you check logs later)
+- 24/7 trading bots (run continuously, you check results weekly)
+- Autonomous research agents (run overnight, you review findings next day)
+- Scheduled CI/CD pipelines (run on triggers, you check results later)
+
+### Why "Out-Of-Loop" Matters
+
+Both modes exist and are useful:
+
+| Mode | Best For | User Experience |
+|------|----------|-----------------|
+| **In-Loop** | Iterative work, debugging, brainstorming | Conversational, interactive |
+| **Out-Of-Loop** | Long-running tasks, monitoring, automation | Fire-and-forget, scheduled |
+
+**Open Harness targets OUT-OF-LOOP**—agents that run autonomously for extended periods (hours, days, weeks) without user interaction.
+
+**Existing Out-Of-Loop Tools:**
+- Cursor background agents (work on background task, return results)
+- OpenAI Canvas (edit autonomously, you check later)
+- Anthropic artifacts (generate independently)
+- Google Gems (run tasks in background)
+- Augment Code (autonomous code generation)
+
+**What Open Harness Does Differently:**
+
+| Dimension | Current Tools | Open Harness |
+|-----------|---------------|--------------|
+| **Scope** | Domain-specific (coding, documents) | General-purpose (any domain) |
+| **Time Awareness** | None (just "working...") | **Step-aware, planning horizons** |
+| **State** | Ephemeral (lost on restart) | **Persistent semantic state** |
+| **Visibility** | Black box | **Transparent (every step logged)** |
+| **Customization** | Locked patterns | **Unlimited (composable primitives)** |
+| **Philosophy** | "We figure it out" | "You have control via simple primitives" |
+
+---
+
+## VII. What We're Shipping: v1.0
+
+Open Harness v1.0 is production-ready today for local autonomous agents with time awareness.
 
 ### Core Platform
 
 **1. SDK (TypeScript/Bun Primitives)**
 
-Four core building blocks for framework developers:
-
-- **Agent:** Reusable AI behavior (config-based, class-based, or built-in)
-- **Workflow:** Multi-agent orchestration with task management
-- **Task:** Work units with automatic progress tracking
-- **Monologue:** Readable output layer that transforms tool noise into human narrative
+Four core building blocks:
 
 ```typescript
-import { createAgent, createWorkflow, withMonologue } from '@openharness/sdk';
+import { Harness, Agent, PersistentState } from '@openharness/sdk';
 
-// Create agents
-const coder = createAgent('coder', { model: 'claude-3-7-sonnet-20250219' });
-const reviewer = createAgent('reviewer');
+// Define your state schema
+interface TradingState {
+  portfolio: Portfolio;
+  marketData: MarketData;
+  position: Position | null;
+}
 
-// Add readable output
-const narrativeCoder = withMonologue(coder, {
-  onNarrative: (text) => console.log(`🤖 ${text}`)
-});
+// Create agent
+const trader = new Agent<TradingState, MarketUpdate, TradeResult>({
+  async run({ input, context, stepNumber, stepHistory }) {
+    console.log(`Step ${stepNumber}: ${input.indicators.rsi}`);
 
-// Build workflows
-const workflow = createWorkflow({
-  name: 'Feature-Implementation',
-  agents: { coder: narrativeCoder, reviewer },
-  tasks: [
-    { id: '1', description: 'Write function' },
-    { id: '2', description: 'Write tests' }
-  ],
-  async execute({ agents, state, tasks }) {
-    for (const task of tasks) {
-      state.markInProgress(task.id);
-      const result = await agents.coder.run(task.description, `session_${task.id}`);
-      state.markComplete(task.id, { result });
+    const rsi = input.indicators.rsi;
+    const lastResult = stepHistory[stepHistory.length - 1]?.output;
+
+    if (rsi < 30 && !lastResult?.buy) {
+      return { action: 'BUY', amount: 0.1 };
     }
+    if (rsi > 70 && lastResult?.buy) {
+      return { action: 'SELL', amount: 0.1 };
+    }
+
+    return { action: 'HOLD' };
+  },
+
+  isComplete(state: TradingState) {
+    // Trading never completes
+    return false;
   }
 });
+
+// Wrap in harness
+const harness = new Harness({
+  agent: trader,
+  initialState: {
+    portfolio: { balance: 10000, btc: 0 },
+    marketData: {},
+    position: null
+  },
+  constraints: { maxDrawdown: 0.1, maxPositions: 1 }
+});
+
+// Run with flexible cadence
+setInterval(async () => {
+  const marketUpdate = await getMarketData();
+  await harness.step(marketUpdate);
+}, 5000);
 ```
 
-**2. CLI Workflow Runner (Local Execution)**
-
-Run workflows via YAML configuration—no coding required:
+**2. CLI Harness Runner (Local Execution)**
 
 ```bash
 npm install -g @openharness/cli
 
-# Run a workflow
-harness run ./trading-agent-config.yaml
+# Run a harness
+harness run ./trading-harness.yaml
 
 # Monitor progress
 harness status session_abc123
+
+# View step history (actions/results)
+harness history session_abc123
 ```
 
 **3. YAML Configuration System**
 
-Declarative workflow definitions that anyone can customize:
+Declarative harness definitions:
 
 ```yaml
-workflow:
+harness:
   name: "momentum-trading-agent"
+  stepStrategy: time-based  # OR: event-based, task-completion
+  stepInterval: 5000  # 5 seconds
   
-agents:
-  trader:
-    type: "custom"
-    model: "claude-3-7-sonnet-20250219"
-    prompt: |
-      You are a trading agent executing momentum strategies.
-      Buy when RSI < 30, sell when RSI > 70.
-      Risk level: {{RISK_LEVEL}}
-    tools:
-      - market-data-mcp
-      - portfolio-manager
-
-tasks:
-  - id: "monitor"
-    description: "Monitor market conditions"
-    checkpoint_interval: "1hour"
-  - id: "execute"
-    description: "Execute trades based on strategy"
+agent:
+  type: custom
+  model: claude-3-7-sonnet-20250219
+  prompt: |
+    You are a trading agent executing momentum strategies.
+    Buy when RSI < 30, sell when RSI > 70.
+    Risk level: {{RISK_LEVEL}}
+  tools:
+    - market-data-mcp
+    - portfolio-manager
+  
+state:
+  portfolio:
+    balance: 10000
+    btc: 0
+  marketData: {}
+  position: null
+  
+constraints:
+  maxDrawdown: 0.1
+  maxPositions: 1
 ```
-
-**4. State Persistence (Local Files)**
-
-Workflows save state automatically:
-- Task progress tracking
-- Agent decision history
-- Checkpoint recovery
-- Session resumption
 
 ### Flagship Examples
 
-Two production-ready examples that prove the pattern works:
+#### Example 1: Coding Agent (Ticket-Based)
 
-#### Example 1: Horizon Agent (Autonomous Software Engineering)
+**Characteristics:**
+- Time Dimensionality: Task-completion based
+- Cadence: Steps after subtasks complete
+- State Model: Simple (current ticket, tickets progress, test results)
 
-Imagine assigning a feature to an AI on Monday morning and getting a pull request Friday afternoon—fully implemented, tested, and debugged. Not a toy example. A real feature requiring 200+ interconnected tasks, architectural decisions, edge case handling.
+**Usage:**
+```typescript
+interface CodingState {
+  currentTicket: string;
+  ticketsProgress: Record<string, boolean>;
+  tests: TestResults;
+}
 
-**That's the Horizon Agent.**
+const coder = new Agent<CodingState, Ticket, CodingOutput>({...});
+const harness = new Harness({ agent: coder, initialState: {...} });
 
-It works in multi-day sessions, persisting progress, making iterative improvements, learning from test failures. It doesn't replace senior engineers—it replaces the grind. The 80% of feature work that's mechanical but time-consuming.
+while (!harness.isComplete()) {
+  const ticket = getNextTicket();
+  await implementTicket(ticket);
+  await harness.step({ ticket, status: 'complete' });
+}
+```
 
-**Use Case:**
-- Multi-day feature implementation
-- Test-driven development workflows
-- Technical debt cleanup marathons
-- Autonomous refactoring projects
+#### Example 2: Trading Agent (Time-Based)
 
-#### Example 2: Trading Agent (24/7 Strategy Execution)
+**Characteristics:**
+- Time Dimensionality: Time-based (rigid)
+- Cadence: Steps every N seconds or when condition met
+- State Model: Complex (portfolio, market data, trade history, strategy state)
 
-A seasoned trader has a strategy that works—proven over months of manual execution. But it requires 24/7 monitoring, split-second decisions, and disciplined consistency. Humans can't sustain that.
+**Usage:**
+```typescript
+interface TradingState {
+  portfolio: Portfolio;
+  marketData: MarketData;
+  tradeHistory: Trade[];
+}
 
-**The Trading Agent can.**
+const trader = new Agent<TradingState, MarketUpdate, TradeResult>({...});
+const harness = new Harness({ agent: trader, initialState: {...} });
 
-Configure it with your strategy (YAML), feed it market data (MCP integration), and let it run. It executes your approach continuously, adapting to market conditions, logging every decision for your review. It's not making up strategy—it's executing *yours*, autonomously.
-
-**Use Case:**
-- 24/7 market monitoring
-- Automated strategy execution
-- Portfolio rebalancing over weeks/months
-- Backtesting that runs for days
+setInterval(async () => {
+  const marketData = await getMarketData();
+  await harness.step(marketData);
+}, 5000);
+```
 
 ### Zero-Friction Onboarding: Anthropic Skills
 
-Here's the unlock for v1.0: **Anthropic Skills for conversational onboarding.**
-
-Skills are just markdown files with scripts. No cloud infrastructure. No complex setup. Just instructions that teach Claude how to help users create workflows.
-
-**Why Skills Matter:**
-
-What if creating an autonomous AI agent was as simple as having a conversation?
-
-No terminal commands. No YAML syntax to memorize. Just open Claude and say: *"Help me build a trading agent."*
-
-**The Skills We're Shipping:**
-
-**Skill 1: "Create Workflow"**
-- Interactive YAML generator
-- Claude asks questions, generates config
-- Templates for trading, coding, research agents
+**Skill for conversational harness creation:**
 
 ```
 User: "Help me create a trading agent"
@@ -234,80 +605,14 @@ Claude (via Skill): "Great! I'll help you configure one.
 User: "Buy when RSI < 30, sell when RSI > 70"
 Claude: "Risk level? (conservative/moderate/aggressive)"
 User: "Moderate"
-Claude: "Generating workflow config..."
-[Creates trading-agent-config.yaml]
-Claude: "Done! Run it with: harness run ./trading-agent-config.yaml"
+Claude: "Generating harness config..."
+[Creates trading-harness.yaml]
+Claude: "Done! Run it with: harness run ./trading-harness.yaml"
 ```
 
-**Skill 2: "Run Workflow"**
-- Wrapper around CLI commands
-- Status monitoring
-- Error troubleshooting assistance
-
-**Skill 3: "Explore Examples"**
-- Guided tour of Horizon + Trading examples
-- Architecture explanations
-- Customization suggestions
-
-**Installation:**
-1. Open Claude Desktop or Claude Code
-2. Install "Open Harness" skill from marketplace
-3. Start building workflows through conversation
-
-**Impact:** 10x larger addressable market. Non-coders can now build autonomous agents.
-
 ---
 
-## V. The Two-Layer Architecture
-
-Open Harness serves two completely different users—and that's the genius.
-
-### Layer 1: Build Once (For Framework Developers)
-
-You're an expert developer. You understand the complexity: multi-agent coordination, state management, retry logic, checkpoint recovery. You build the *workflow* in TypeScript using our SDK. You define the agents, the flow, the decision points. You create something sophisticated—like our Horizon Agent that autonomously builds applications across 200+ tickets over multiple days.
-
-**Your Tools:**
-- TypeScript/Bun SDK
-- Full control over agent behavior
-- Custom workflow orchestration
-- Advanced state management
-
-**Your Output:**
-- Reusable workflow patterns
-- Production-ready examples
-- Contributions to the ecosystem
-
-### Layer 2: Configure Forever (For Everyone Else)
-
-You're a trader with a proven strategy. Or a team lead who needs documentation generated. You don't want to build a framework—you want to *use* one. So you take an existing workflow, customize it with a YAML config file (change the prompts, swap the model, inject your data), and run it with a single CLI command. No code. Just configuration.
-
-**Your Tools:**
-- YAML configuration files
-- CLI commands
-- Anthropic Skills (conversational interface)
-
-**Your Output:**
-- Customized workflows for your needs
-- Autonomous agents running locally
-- Results without coding
-
-### Skills Bridge the Gap
-
-The Anthropic Skills layer makes Layer 2 accessible to non-technical users:
-
-**Natural Language → YAML Generation → Running Agent**
-
-You don't need to know YAML syntax. You don't need to understand workflow architecture. You just describe what you want, and Claude (via our Skill) generates the configuration for you.
-
-**The Magic:**
-
-Workflow creators build complex systems once. Workflow consumers configure and reuse them forever. It's like Docker for AI—experts build images, everyone runs containers.
-
----
-
-## VI. Why Anthropic? Why Now?
-
-We didn't start with Anthropic's SDK by accident. We bet on the platform investing earliest and fastest in agent infrastructure:
+## VIII. Why Anthropic? Why Now?
 
 ### The Anthropic Advantage
 
@@ -322,440 +627,258 @@ We didn't start with Anthropic's SDK by accident. We bet on the platform investi
 - Non-coder accessibility
 
 **3. Agent SDK**
-- Native support for long-running patterns
+- Native support for agent patterns
 - Streaming, tool use, state management
-- Built for autonomy, not just chat
+- Built for autonomy
 
 **4. Claude's Reasoning**
 - Best-in-class for complex decision-making
 - Extended thinking mode for hard problems
-- Reliable tool use and iteration
+- Reliable tool use
 
 ### Multi-Provider Future
 
-Could we support OpenRouter, Ollama, other providers? **Yes—and we will.**
+Could we support OpenRouter, Ollama, others? **Yes—and we will.**
 
-But we started with Anthropic because they're building the future of agent infrastructure *today*. When they ship new primitives, we integrate immediately. Early adopter advantage.
-
-Open Harness abstracts the agent runtime. Adding new providers is a matter of adapter implementation, not architectural overhaul.
-
-**The Bet:** Anthropic is moving fastest on agent infrastructure. We're riding that wave while building abstraction layers that future-proof the platform.
+But we started with Anthropic because they're building agent infrastructure fastest. Open Harness abstracts the agent runtime—adding new providers is an adapter implementation, not architectural overhaul.
 
 ---
 
-## VII. The Roadmap
+## IX. The Roadmap
 
 ### v1.0 (Now) - Foundation
 
-**Status:** Shipping  
-**Timeline:** Current release
+- ✅ SDK with generics: `Harness<S, I, O>`
+- ✅ Four primitives: Harness, Agent, Step, State
+- ✅ CLI runner
+- ✅ YAML configuration
+- ✅ Two examples (Coding, Trading)
+- ✅ Anthropic Skills for onboarding
+- ✅ Local execution
 
-**What's Included:**
-- ✅ SDK published to npm (`@openharness/sdk`)
-- ✅ CLI workflow runner (`@openharness/cli`)
-- ✅ YAML configuration system
-- ✅ Two flagship examples (Horizon Agent, Trading Agent)
-- ✅ **Anthropic Skills** for conversational onboarding
-- ✅ Local execution (zero infrastructure cost)
-- ✅ Documentation and quickstart guides
+### v1.1 (3-6mo) - Community
 
-**Target Users:** 
-- Framework developers building custom workflows
-- Technical users configuring existing workflows
-- Non-coders using Skills to generate agents
+- 🎯 Harness generators: `harness generate trading-bot`
+- 🎯 Harness gallery (searchable library)
+- 🎯 10+ community harnesses
+- 🎯 Enhanced Skills
 
-**Business Model:** Free and open-source
+### v2.0 (6-12mo) - Cloud
 
-**Success Metrics:**
-- 1,000 GitHub stars
-- 10+ community-contributed workflows
-- 100+ active users
-- First external PR within 30 days
+- 🎯 E2B cloud sandboxes
+- 🎯 Hosted dashboard
+- 🎯 Freemium model
 
----
+### v3.0+ - Platform
 
-### v1.1 (3-6 Months) - Community & Ecosystem
-
-**Focus:** Workflow discovery and contribution
-
-**Features:**
-- 🎯 **CLI Generators** (`harness generate trading-bot`)
-  - Interactive scaffolding for new workflows
-  - Template-based project creation
-  - Best practices baked in
-- 🎯 **Workflow Gallery** (Documentation site)
-  - Searchable workflow library
-  - Community ratings and reviews
-  - Live examples and demos
-- 🎯 **Enhanced Skills**
-  - More workflow templates
-  - Better error handling
-  - Progress monitoring from Claude UI
-- 🎯 **10+ Community Workflows**
-  - Documentation agent
-  - Research agent
-  - Data processing workflows
-  - Creative use cases
-
-**Target Users:**
-- Growing developer community
-- Workflow contributors
-- First enterprise early adopters
-
-**Business Model:** Still free, validating demand
-
-**Success Metrics:**
-- 10,000 GitHub stars
-- 50+ community workflows
-- 1,000+ active users
-- First "Harness-native" project (company built on framework)
+- 🎯 Harness marketplace
+- 🎯 Multi-provider support
+- 🎯 Enterprise features
 
 ---
 
-### v2.0 (6-12 Months) - Cloud & Monetization
-
-**Focus:** Hosted execution and revenue
-
-**Features:**
-- 🎯 **E2B Cloud Sandboxes**
-  - Cloud-based workflow execution
-  - No local setup required
-  - Isolated, secure runtime environments
-  - API for programmatic deployment
-- 🎯 **Hosted Runner Dashboard**
-  - Monitor workflows in real-time
-  - Logs, metrics, performance analytics
-  - Cost tracking and optimization
-  - Team collaboration features
-- 🎯 **Freemium Model**
-  - Free: Local execution (unlimited)
-  - Free: Cloud execution (10 hours/month)
-  - Paid: Cloud execution (unlimited, $19/month)
-  - Enterprise: Custom pricing, SLA, support
-
-**Target Users:**
-- Users who want "set and forget" agents
-- Teams running 24/7 workflows
-- Enterprise customers with compliance needs
-
-**Business Model:** Freemium SaaS
-
-**Success Metrics:**
-- 1,000 paying customers
-- $20K MRR
-- 99.9% uptime SLA
-- Enterprise pilot customers
-
----
-
-### v3.0+ (12+ Months) - Platform Maturity
-
-**Focus:** Ecosystem dominance
-
-**Vision Features:**
-- 💭 **Workflow Marketplace**
-  - Buy/sell premium workflows
-  - Revenue sharing for creators
-  - Verified/certified workflows
-- 💭 **Multi-Provider Support**
-  - OpenRouter integration
-  - Ollama (local models)
-  - Azure OpenAI
-  - Custom model endpoints
-- 💭 **Enterprise Platform**
-  - SSO/SAML authentication
-  - Audit logs and compliance
-  - Team workspace management
-  - Fine-grained access control
-- 💭 **Workflow IDE**
-  - Visual workflow builder
-  - No-code editor
-  - Real-time collaboration
-  - Version control integration
-- 💭 **Advanced Monitoring**
-  - APM-style observability
-  - Cost optimization recommendations
-  - Performance profiling
-  - A/B testing for prompts
-
-**Target Users:**
-- Enterprise customers at scale
-- Workflow marketplace creators
-- Platform integrators and partners
-
-**Business Model:** Multi-tier SaaS + marketplace revenue share
-
-**Success Metrics:**
-- "Harness-compatible" becomes industry term
-- 100,000+ active workflows running
-- Strategic partnerships (Anthropic, cloud providers)
-- Category leadership in autonomous AI
-
----
-
-## VIII. What Open Harness IS (and ISN'T)
+## X. What Open Harness IS (and ISN'T)
 
 ### What Open Harness IS
 
-✅ **A framework for long-running autonomous AI workflows**  
-Built for agents that work in days and weeks, maintaining coherent decision-making across extended time periods.
+✅ **A framework for step-aware autonomous agents**  
+Built for agents that know time, plan ahead, persist state across steps.
 
-✅ **A two-layer architecture (Build + Configure)**  
-TypeScript SDK for expert developers who build workflows. YAML configs for everyone else who uses them.
+✅ **Four primitives: Harness, Agent, Step, State**  
+Simple, composable Lego blocks you combine powerfully.
 
-✅ **Built on the Anthropic stack**  
-Leveraging MCP, Skills, Agent SDK, and Claude for best-in-class agent infrastructure.
+✅ **General-purpose**  
+Build for any domain—trading, coding, research, monitoring.
 
-✅ **Opinionated and focused**  
-We solve one problem extremely well: long-running autonomous execution. Not trying to be everything.
+✅ **Time-aware**  
+Agents know step number, step history, planning horizon.
 
-✅ **Production-ready today (locally)**  
-The SDK, CLI, and examples work NOW. Local execution is stable and documented.
+✅ **Transparent**  
+See every step, every decision, logged and readable.
 
-✅ **Open-source and community-driven**  
-Framework code is public, contributions welcome, roadmap shaped by users.
+✅ **Built on Anthropic stack**  
+MCP, Skills, Agent SDK—betting on fastest-moving platform.
 
-✅ **Designed for three user types**  
-Framework developers (build workflows), technical users (configure workflows), non-coders (use Skills).
+✅ **Production-ready (locally)**  
+SDK, CLI, examples work NOW.
+
+✅ **Django/Rails philosophy**  
+Opinionated primitives, not infinitely flexible. Simple tools you compose.
 
 ### What Open Harness ISN'T
 
 ❌ **NOT a chatbot framework**  
-Use Vercel AI SDK, LangChain, or similar for conversational UIs. We're for autonomous workflows, not chat.
+Use Vercel AI SDK for chat. We're for out-of-loop autonomous agents.
 
-❌ **NOT a replacement for the Anthropic SDK**  
-We wrap it, extend it, and add workflow orchestration. The Anthropic SDK is our foundation.
+❌ **NOT replacing Anthropic SDK**  
+We wrap it, extend it, add time awareness.
 
-❌ **NOT for one-shot prompts**  
-If your use case is "send prompt, get response, done"—just use the Anthropic SDK directly.
+❌ **NOT in-loop**  
+We don't do conversational, human-in-the-loop execution.
 
-❌ **NOT cloud-hosted yet (v1.0)**  
-Current release runs locally. Cloud sandboxes and hosted execution come in v2.0.
-
-❌ **NOT trying to support every LLM provider (yet)**  
-Started with Anthropic for strategic reasons. Multi-provider support comes later after validation.
+❌ **NOT a workflow engine**  
+No graphs, no DAGs. Just `harness.step()`—you control cadence.
 
 ❌ **NOT a no-code platform (yet)**  
-Skills make onboarding conversational, but you still need CLI access. True no-code visual builder is v3.0+.
+Skills help onboarding, but you still use CLI/code.
+
+❌ **NOT cloud-hosted yet**  
+v1.0 is local. Cloud comes in v2.0.
 
 ---
 
-## IX. Target Use Cases
+## XI. The Philosophy
 
-### Software Engineering Agents
+### Django/Rails, Not LangChain
 
-**The Pattern:**  
-Assign a feature, get a PR. Multi-day autonomous coding with test-driven development.
+**The Problem with LangChain:**
+- Infinite flexibility
+- Thousands of abstractions
+- Complex graphs, chains, agents...
+- Steep learning curve
+- Over-engineered for most use cases
 
-**Examples:**
-- Feature implementation (200+ interconnected tasks)
-- Technical debt cleanup marathons
-- Automated refactoring projects
-- Documentation generation from codebases
+**The Django/Rails Approach:**
+- Few, opinionated primitives
+- Simple, composable
+- Productive from day one
+- Convention over configuration
 
-**Why Open Harness:**
-- State persistence across coding sessions
-- Iterative test-fix loops
-- Checkpoint recovery when tests fail
-- Progress tracking for complex features
+**Open Harness Philosophy:**
 
-**Target Users:** Engineering teams, solo developers, dev agencies
+Give you 4 primitives:
+1. **Harness** - Step-aware execution system
+2. **Agent** - Runner (takes actions, returns results)
+3. **Step** - Time slice
+4. **State** - Persistent memory
 
----
+Wrap tools (MCPs, CLIs, libraries). Give autonomy to the model. Tune prompts. That's it.
 
-### Trading & Finance Agents
+From that simple foundation, build powerful agents:
 
-**The Pattern:**  
-24/7 strategy execution with continuous market monitoring and autonomous decision-making.
+```typescript
+// Trading: Wrap CCXT CLI, give model autonomy
+const tradingHarness = new Harness({
+  agent: tradingAgent,
+  initialState: portfolio
+});
 
-**Examples:**
-- Momentum trading (RSI-based strategies)
-- Portfolio rebalancing over weeks/months
-- Backtesting complex strategies (multi-day simulations)
-- Risk monitoring and alerting
+// Coding: Wrap tools, give model autonomy
+const codingHarness = new Harness({
+  agent: coder,
+  initialState: tickets
+});
 
-**Why Open Harness:**
-- Runs continuously without human intervention
-- Adapts to changing market conditions
-- Logs every decision for audit/review
-- Executes trader's strategy, doesn't invent one
-
-**Target Users:** Retail traders, hedge funds, quant teams
-
----
-
-### Meta-Agents & Workflow Orchestrators
-
-**The Pattern:**  
-Coordinate multiple specialized agents for complex business processes.
-
-**Examples:**
-- BMAD-style multi-agent teams (analyst → architect → PM → dev)
-- Research agents working for weeks
-- Data processing pipelines with human-in-the-loop
-- Content generation workflows (research → write → edit → publish)
-
-**Why Open Harness:**
-- Multi-agent orchestration built-in
-- Task management and progress tracking
-- State shared across agents
-- Session boundaries for long-running processes
-
-**Target Users:** Enterprises, automation consultants, AI-native companies
-
----
-
-### Research & Analysis Agents
-
-**The Pattern:**  
-Deep research over extended periods with iterative refinement.
-
-**Examples:**
-- Competitive analysis (scrape → analyze → report)
-- Market research spanning weeks
-- Literature reviews (search → read → summarize → synthesize)
-- Due diligence automation
-
-**Why Open Harness:**
-- Persistence across research sessions
-- Incremental knowledge building
-- Checkpoint when new insights emerge
-- Synthesize findings at the end
-
-**Target Users:** Analysts, researchers, consultants
-
----
-
-## X. The Strategic Vision
-
-### The Platform Play
-
-Open Harness isn't just a framework—it's a **two-sided marketplace** in the making:
-
-**Side 1 - Workflow Creators:**
-- Expert developers build sophisticated workflows
-- Share as YAML templates and Skills
-- Build reputation as workflow architects
-- Eventually: monetize premium workflows
-
-**Side 2 - Workflow Consumers:**
-- Download/fork workflow configs
-- Customize for their needs (YAML or Skills)
-- Run locally or in cloud (v2.0+)
-- Contribute improvements back
-
-**The Flywheel:**
-
-```
-More workflows published 
-  → More users attracted 
-    → More workflows created 
-      → Network effects unlock 
-        → Platform dominance
+// Monitoring: Wrap APIs, give model autonomy
+const monitorHarness = new Harness({
+  agent: monitor,
+  initialState: metrics
+});
 ```
 
-### Network Effects
+**Same pattern. Different tools. Any domain.**
 
-**Stage 1 (v1.0):** Skills onboarding brings users  
-**Stage 2 (v1.1):** CLI generators make contribution easy  
-**Stage 3 (v2.0):** Cloud sandboxes enable "set and forget"  
-**Stage 4 (v3.0):** Marketplace monetizes creators  
+### Delegate to the Model
 
-**Result:** The more workflows exist, the more valuable the platform becomes. Classic network effect.
+We don't orchestrate everything. We give the model:
+- Tools (MCPs, CLIs, libraries)
+- State (persistent memory)
+- Time awareness (step number, step history)
+- Constraints (bounds of decision space)
 
-### Capital Efficiency
+The model figures out the rest.
 
-**The Smart Sequencing:**
-
-Traditional approach (expensive):
-1. Build cloud infrastructure first
-2. Then build distribution
-3. Hope users come
-
-**Open Harness approach (smart):**
-1. v1.0: Free distribution (Skills) + local execution (zero hosting cost)
-2. Validate demand, build community
-3. v2.0: Once you HAVE users, build paid infrastructure (E2B)
-
-**No infrastructure burn until demand is proven.**
-
-### Strategic Moats
-
-**1. First-Mover Advantage**  
-Own the "long-running autonomous AI" category before competitors exist.
-
-**2. Ecosystem Lock-In (The Good Kind)**  
-Developers build careers around Open Harness patterns. Companies build on the platform. Migration cost increases over time.
-
-**3. Anthropic Amplification**  
-Every Anthropic feature → Open Harness integrates first. Official Skills marketplace → free distribution. Potential strategic partnership.
-
-**4. Workflow Library Becomes Irreplaceable**  
-"Where else would I get these workflows?" The library becomes the moat.
+**Minimal primitives. Maximum model autonomy.**
 
 ---
 
-## XI. Success Metrics
+## XII. Target Use Cases
 
-### Developer Success
+### Software Engineering
 
-- **5-Minute Rule:** Clone to running example in under 5 minutes
-- **Self-Evident Structure:** No "where do I put this?" questions
-- **First External PR:** Within 30 days of publishing
+**Pattern:** Task-completion steps across tickets
 
-### User Success
+**Why Harness:**
+- State persists across coding sessions
+- Test-fix loops become step iterations
+- Checkpoint recovery from failed tests
+- Progress tracking across 200+ tickets
 
-- **Skills Onboarding:** Non-coder creates first agent via conversation
-- **Workflow Reuse:** 80% of users start from existing templates
-- **Autonomous Duration:** Average workflow runs > 4 hours successfully
+**Target:** Engineering teams, solo devs, dev agencies
 
-### Business Success
+### Trading & Finance
 
-- **v1.0:** 1,000 GitHub stars, 10 contributors, 100 active users
-- **v1.1:** 10,000 stars, 50 workflows, 1,000 users
-- **v2.0:** 1,000 paying customers, $20K MRR
-- **v3.0:** Category leadership, "Harness-compatible" as industry term
+**Pattern:** Time-based steps with complex state
+
+**Why Harness:**
+- Runs continuously (24/7)
+- Time-aware decisions (knows history)
+- Complex state management (portfolio, trades, strategy)
+- Transparent audit log
+
+**Target:** Retail traders, hedge funds, quant teams
+
+### Research & Analysis
+
+**Pattern:** Information processing steps
+
+**Why Harness:**
+- Knowledge accumulation across steps
+- Checkpoint when insights emerge
+- Synthesize findings at completion
+- Persistent research state
+
+**Target:** Analysts, researchers, consultants
+
+### Monitoring & Alerts
+
+**Pattern:** Event-based steps
+
+**Why Harness:**
+- Step when conditions met
+- Alert history persists
+- Stateful monitoring patterns
+- Flexible cadence (time OR event)
+
+**Target:** DevOps, SREs, operations teams
 
 ---
 
-## XII. Call to Action
+## XIII. Call to Action
 
-The future of work isn't humans doing everything or AI doing everything. It's humans delegating complex, time-intensive goals to AI colleagues who work autonomously while we focus on strategy, creativity, and judgment.
+**Step-aware autonomous agents. Time dimensionality. Persistent state. General-purpose. Simple primitives.**
 
-**Open Harness makes that future buildable today.**
-
-Not in a lab. In production. With TypeScript, Bun, and the Anthropic stack.
-
-The infrastructure is ready. The examples prove it works. The ecosystem is forming.
+Open Harness makes this buildable today.
 
 ### For Developers
 
-Build workflows in TypeScript. Contribute to the ecosystem. Shape the future of autonomous AI.
-
-```bash
+```typescript
 npm install @openharness/sdk
-```
 
-### For Technical Users
+// Define state
+interface MyState { ... }
 
-Configure workflows with YAML. Run autonomous agents locally. Customize for your needs.
+// Create agent
+const agent = new Agent<MyState, Input, Output>({...});
 
-```bash
-npm install -g @openharness/cli
-harness run ./your-workflow.yaml
+// Wrap in harness
+const harness = new Harness({ agent, initialState: {...} });
+
+// Step however fits your use case
+await harness.step(input);
 ```
 
 ### For Everyone Else
 
-Install our Skill in Claude. Describe what you want. Watch your autonomous agent come to life.
+Install our Anthropic Skill. Describe what you want. We'll generate the harness config. Run it with CLI.
 
 ```
-Install "Open Harness" skill → Chat with Claude → Agent running
+Install "Open Harness" skill → Chat with Claude → Harness running
 ```
 
 ---
 
-## **Built for conversation. Designed for autonomy.**
+## **Step-Aware. Time-Dimensional. Simple Primitives.**
 
 **What will you build?**
 
@@ -764,7 +887,7 @@ Install "Open Harness" skill → Chat with Claude → Agent running
 **Repository:** https://github.com/yourusername/open-harness  
 **Documentation:** https://docs.openharness.dev  
 **Skills Marketplace:** Coming soon  
-**Community:** Discord, GitHub Discussions
+**Community:** Discord, GitHub Discussions  
 
 ---
 

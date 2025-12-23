@@ -218,7 +218,7 @@ describe("@Record Decorator", () => {
 				return this.runner.run({
 					prompt,
 					options: {},
-					callbacks: callbacks?.callbacks,
+					callbacks,
 				});
 			}
 		}
@@ -327,11 +327,11 @@ describe("Callback Tests", () => {
 		const mockRunner = new MockRunner();
 		const agent = new BaseAgent("TestAgent", mockRunner);
 
-		let capturedCompact: CompactData | null = null;
+		let capturedCompact: CompactData | undefined;
 
 		await agent.run("test", "session", {
 			callbacks: {
-				onCompact: (data) => {
+				onCompact: (data: CompactData) => {
 					capturedCompact = data;
 				},
 			},

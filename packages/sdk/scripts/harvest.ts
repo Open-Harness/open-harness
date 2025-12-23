@@ -12,7 +12,7 @@ import { type IAgentRunner, IAgentRunnerToken, type RunnerCallbacks } from "../s
 class Harvester {
 	constructor(private runner: IAgentRunner = inject(IAgentRunnerToken)) {}
 
-	@Record("golden", (args) => args[1])
+	@Record("golden", (args) => args[1] as string)
 	async capture(
 		prompt: string,
 		scenarioId: string,

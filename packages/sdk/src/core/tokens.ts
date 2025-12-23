@@ -100,6 +100,18 @@ export interface IEventBus {
 export const IEventBusToken = new InjectionToken<IEventBus>("IEventBus");
 
 // ============================================================================
+// Container Interface (for decorators)
+// ============================================================================
+
+/**
+ * Interface for DI container used by decorators.
+ * Allows retrieving services by their injection token.
+ */
+export interface IContainer {
+	get<T>(token: InjectionToken<T>): T;
+}
+
+// ============================================================================
 // Recorded Session (for Vault storage)
 // ============================================================================
 

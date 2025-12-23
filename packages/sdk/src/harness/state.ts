@@ -41,14 +41,6 @@ export class PersistentState<TState, TInput = unknown, TOutput = unknown> {
 	/**
 	 * Updates state immutably using an updater function.
 	 *
-	 * The updater function receives the current state and must return a new state object.
-	 * This ensures immutability - the original state is never mutated.
-	 *
-	 * @example
-	 * ```typescript
-	 * state.updateState(s => ({ ...s, count: s.count + 1 }));
-	 * ```
-	 *
 	 * @param updater - Function that takes current state and returns new state
 	 */
 	updateState(updater: (state: TState) => TState): void {
