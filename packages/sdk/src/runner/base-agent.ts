@@ -3,16 +3,22 @@
  *
  * Uses constructor injection for dependencies (NeedleDI pattern).
  * Pure Promise + Callbacks pattern, no async generators.
+ *
+ * @deprecated For new agents, consider using BaseAnthropicAgent from
+ * '../agents/base-anthropic-agent.js' which provides typed IAgentCallbacks.
  */
 
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
 import { type IAgentRunner, IAgentRunnerToken, type IEventBus, IEventBusToken } from "../core/tokens.js";
+import { mapSdkMessageToEvents } from "./event-mapper.js";
 import { type AgentEvent, type CompactData, EventTypeConst, type SessionResult, type StatusData } from "./models.js";
 
 /**
  * Type-safe callbacks for agent events.
  * All callbacks are optional - provide only what you need.
+ *
+ * @deprecated Use IAgentCallbacks from '../callbacks/types.js' instead.
  */
 export type StreamCallbacks = {
 	/** Session initialized with model info */
@@ -49,6 +55,10 @@ export type StreamCallbacks = {
 	onError?: (error: string, event: AgentEvent) => void;
 };
 
+/**
+ * @deprecated For new agents, consider using BaseAnthropicAgent from
+ * '../agents/base-anthropic-agent.js' which provides typed IAgentCallbacks.
+ */
 @injectable()
 export class BaseAgent {
 	constructor(
@@ -69,7 +79,7 @@ export class BaseAgent {
 	 */
 	async run(
 		prompt: string,
-		_sessionId: string,
+		sessionId: string,
 		options?: Options & { callbacks?: StreamCallbacks },
 	): Promise<SDKMessage | undefined> {
 		const { callbacks, ...runnerOptions } = options || {};
@@ -79,7 +89,8 @@ export class BaseAgent {
 			options: runnerOptions,
 			callbacks: {
 				onMessage: (msg) => {
-					const events = this.mapMessageToEvents(msg);
+					// Use shared event mapper
+					const events = mapSdkMessageToEvents(msg, this.name, sessionId);
 					for (const event of events) {
 						this.fireEventBus(event);
 						if (callbacks) {
@@ -99,6 +110,10 @@ export class BaseAgent {
 		}
 	}
 
+	/**
+	 * Fire stream callbacks based on event type.
+	 * This method adapts AgentEvent to StreamCallbacks interface.
+	 */
 	private fireStreamCallback(callbacks: StreamCallbacks, event: AgentEvent, msg: SDKMessage): void {
 		try {
 			switch (event.event_type) {
@@ -190,153 +205,5 @@ export class BaseAgent {
 		} catch (_error) {
 			// Fire-and-forget: silently ignore callback errors
 		}
-	}
-
-	private mapMessageToEvents(msg: SDKMessage): AgentEvent[] {
-		const events: AgentEvent[] = [];
-		const timestamp = new Date();
-
-		switch (msg.type) {
-			case "system":
-				if (msg.subtype === "init") {
-					events.push({
-						timestamp,
-						event_type: EventTypeConst.SESSION_START,
-						agent_name: this.name,
-						content: `Session started: ${msg.session_id}`,
-						session_id: msg.session_id,
-						metadata: {
-							model: msg.model,
-							tools: msg.tools,
-							cwd: msg.cwd,
-							permission_mode: msg.permissionMode,
-							slash_commands: msg.slash_commands,
-						},
-					});
-				} else if (msg.subtype === "compact_boundary") {
-					events.push({
-						timestamp,
-						event_type: EventTypeConst.COMPACT,
-						agent_name: this.name,
-						content: `Context compacted (${msg.compact_metadata.trigger})`,
-						session_id: msg.session_id,
-						metadata: {
-							trigger: msg.compact_metadata.trigger,
-							pre_tokens: msg.compact_metadata.pre_tokens,
-						},
-					});
-				} else if (msg.subtype === "status") {
-					events.push({
-						timestamp,
-						event_type: EventTypeConst.STATUS,
-						agent_name: this.name,
-						content: `Status: ${msg.status ?? "idle"}`,
-						session_id: msg.session_id,
-						metadata: {
-							status: msg.status,
-						},
-					});
-				}
-				break;
-
-			case "assistant":
-				if (Array.isArray(msg.message.content)) {
-					for (const block of msg.message.content) {
-						if (block.type === "text") {
-							events.push({
-								timestamp,
-								event_type: EventTypeConst.TEXT,
-								agent_name: this.name,
-								content: block.text,
-								session_id: msg.session_id,
-							});
-						} else if (block.type === "thinking") {
-							events.push({
-								timestamp,
-								event_type: EventTypeConst.THINKING,
-								agent_name: this.name,
-								content: block.thinking,
-								session_id: msg.session_id,
-							});
-						} else if (block.type === "tool_use") {
-							events.push({
-								timestamp,
-								event_type: EventTypeConst.TOOL_CALL,
-								agent_name: this.name,
-								tool_name: block.name,
-								tool_input: block.input as Record<string, unknown>,
-								content: `Calling tool: ${block.name}`,
-								session_id: msg.session_id,
-							});
-						}
-					}
-				}
-				break;
-
-			case "user":
-				if (Array.isArray(msg.message.content)) {
-					for (const block of msg.message.content) {
-						if (block.type === "tool_result") {
-							events.push({
-								timestamp,
-								event_type: EventTypeConst.TOOL_RESULT,
-								agent_name: this.name,
-								tool_result: {
-									content: block.content,
-									is_error: block.is_error,
-								},
-								content: `Tool result: ${String(block.content).slice(0, 100)}`,
-								session_id: msg.session_id,
-							});
-						}
-					}
-				}
-				break;
-
-			case "tool_progress":
-				events.push({
-					timestamp,
-					event_type: EventTypeConst.TOOL_PROGRESS,
-					agent_name: this.name,
-					tool_name: msg.tool_name,
-					content: `Tool progress: ${msg.tool_name}`,
-					session_id: msg.session_id,
-					metadata: {
-						elapsed_seconds: msg.elapsed_time_seconds,
-						tool_use_id: msg.tool_use_id,
-					},
-				});
-				break;
-
-			case "result":
-				// Emit both RESULT and SESSION_END for result messages
-				events.push({
-					timestamp,
-					event_type: EventTypeConst.RESULT,
-					agent_name: this.name,
-					content: msg.subtype === "success" ? "Task completed" : "Task failed",
-					is_error: msg.subtype !== "success",
-					session_id: msg.session_id,
-					metadata: {
-						subtype: msg.subtype,
-						usage: msg.usage,
-						duration_ms: msg.duration_ms,
-						num_turns: msg.num_turns,
-						total_cost_usd: msg.total_cost_usd,
-					},
-				});
-				events.push({
-					timestamp,
-					event_type: EventTypeConst.SESSION_END,
-					agent_name: this.name,
-					content: msg.subtype === "success" ? "Task completed" : "Task failed",
-					is_error: msg.subtype !== "success",
-					session_id: msg.session_id,
-					metadata: { usage: msg.usage },
-				});
-				break;
-		}
-
-		return events;
 	}
 }

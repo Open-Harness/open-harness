@@ -15,7 +15,6 @@ bun-vi/
 │   │   ├── vault.ts          # Recording storage
 │   │   ├── recording-factory.ts  # Factory for @Record decorator
 │   │   ├── decorators.ts     # @Record decorator
-│   │   ├── live-runner.ts    # Real Claude SDK runner
 │   │   └── replay-runner.ts  # Replay from recordings
 │   │
 │   ├── runner/               # Base agent runtime

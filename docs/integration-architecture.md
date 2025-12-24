@@ -6,7 +6,7 @@ How the parts of Open Harness communicate and integrate.
 
 ```
                     ┌─────────────────┐
-                    │   @dao/config   │
+                    │   @openharnes/config   │
                     │  (shared types) │
                     └────────┬────────┘
                              │
@@ -14,13 +14,13 @@ How the parts of Open Harness communicate and integrate.
         │                    │                    │
         ▼                    ▼                    ▼
 ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│   @dao/sdk    │   │   apps/docs   │   │  apps/server  │
+│   @openharnes/sdk    │   │   apps/docs   │   │  apps/server  │
 │  (core SDK)   │   │  (Next.js)    │   │    (Hono)     │
 └───────┬───────┘   └───────────────┘   └───────────────┘
         │
         ▼
 ┌───────────────┐
-│   @dao/cli    │
+│   @openharnes/cli    │
 │ (imports SDK) │
 └───────────────┘
 
@@ -38,7 +38,7 @@ How the parts of Open Harness communicate and integrate.
 
 **Integration Pattern:**
 ```typescript
-import { createAgent, withMonologue } from "@dao/sdk";
+import { createAgent, withMonologue } from "@openharnes/sdk";
 
 // Create agents using SDK factory
 const initializerAgent = createAgent({
@@ -109,14 +109,14 @@ OBSERVE → ANALYZE → VALIDATE → EXECUTE → NARRATE → MONITOR → FINAL_N
 ```
 
 **Future Integration:**
-The trading bot could import `@dao/sdk` to use:
+The trading bot could import `@openharnes/sdk` to use:
 - `createAgent()` for Claude-powered analysis
 - `withMonologue()` for narrative trading logs
 - `TaskList` for trade tracking
 
 ## Shared Configuration
 
-### Workspace Package (`@dao/config`)
+### Workspace Package (`@openharnes/config`)
 
 **Location:** `packages/config/`
 
@@ -179,7 +179,7 @@ Packages use `catalog:` to reference shared versions:
                                         │ imports
                                         ▼
                                  ┌─────────────┐
-                                 │  @dao/sdk   │
+                                 │  @openharnes/sdk   │
                                  └─────────────┘
 ```
 
@@ -204,9 +204,9 @@ Packages use `catalog:` to reference shared versions:
 ```
 
 **Build Order:**
-1. `@dao/config` (base config)
-2. `@dao/sdk` (core library)
-3. `@dao/cli`, `apps/*` (applications)
+1. `@openharnes/config` (base config)
+2. `@openharnes/sdk` (core library)
+3. `@openharnes/cli`, `apps/*` (applications)
 
 ### Development Commands
 

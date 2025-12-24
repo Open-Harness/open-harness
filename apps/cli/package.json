@@ -1,5 +1,5 @@
 {
-	"name": "@dao/cli",
+	"name": "@openharnes/cli",
 	"version": "0.1.0",
 	"module": "src/index.ts",
 	"bin": {
@@ -23,7 +23,7 @@
 	"type": "module",
 	"dependencies": {
 		"@clack/prompts": "^0.7.0",
-		"@dao/sdk": "workspace:*",
+		"@openharnes/sdk": "workspace:*",
 		"chalk": "^5.3.0",
 		"commander": "^11.0.0",
 		"yaml": "^2.3.0",

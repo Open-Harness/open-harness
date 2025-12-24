@@ -45,7 +45,29 @@ export interface IAgentRunner {
 	run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }): Promise<SDKMessage | undefined>;
 }
 
+/**
+ * @deprecated Use provider-specific tokens instead (IAnthropicRunnerToken, etc.)
+ */
 export const IAgentRunnerToken = new InjectionToken<IAgentRunner>("IAgentRunner");
+
+// ============================================================================
+// Provider-Specific Runner Tokens
+// ============================================================================
+
+/**
+ * Token for Anthropic/Claude runner.
+ */
+export const IAnthropicRunnerToken = new InjectionToken<IAgentRunner>("IAnthropicRunner");
+
+/**
+ * Token for OpenCode runner (future).
+ */
+export const IOpenCodeRunnerToken = new InjectionToken<IAgentRunner>("IOpenCodeRunner");
+
+/**
+ * Token for Replay runner (testing).
+ */
+export const IReplayRunnerToken = new InjectionToken<IAgentRunner>("IReplayRunner");
 
 // ============================================================================
 // Vault (Recording Storage)

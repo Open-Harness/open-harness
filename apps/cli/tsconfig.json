@@ -17,7 +17,7 @@
 		"noImplicitOverride": true,
 		"baseUrl": ".",
 		"paths": {
-			"@dao/sdk": ["../../packages/sdk/src/index.ts"]
+			"@openharnes/sdk": ["../../packages/sdk/src/index.ts"]
 		},
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
