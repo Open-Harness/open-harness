@@ -5,23 +5,20 @@
  * Provides a clean API surface for SDK users.
  */
 
+export { Agent } from "./agent.js";
 // Classes
 export { BaseHarness } from "./base-harness.js";
-export { Agent } from "./agent.js";
 export { PersistentState } from "./state.js";
 
 // Types
 export type {
-	Step,
-	StateDelta,
-	Constraints,
-	LoadedContext,
-	HarnessConfig,
-	StepYield,
-	PersistentStateConfig,
 	AgentConfig,
 	AgentRunParams,
+	Constraints,
+	HarnessConfig,
+	LoadedContext,
+	PersistentStateConfig,
+	StateDelta,
+	Step,
+	StepYield,
 } from "./types.js";
-
-
-

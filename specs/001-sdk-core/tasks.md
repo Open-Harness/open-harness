@@ -26,10 +26,10 @@ Based on plan.md structure:
 
 **Purpose**: Fix broken build and create base infrastructure
 
-- [ ] T001 Remove web build configuration, switch to library build in packages/sdk/package.json
-- [ ] T002 Create DI tokens for new subsystems in packages/sdk/src/core/tokens.ts
-- [ ] T003 [P] Create IAgentCallbacks interface in packages/sdk/src/callbacks/types.ts
-- [ ] T004 [P] Create EventBus implementation in packages/sdk/src/core/event-bus.ts
+- [X] T001 Remove web build configuration, switch to library build in packages/sdk/package.json
+- [X] T002 Create DI tokens for new subsystems in packages/sdk/src/core/tokens.ts
+- [X] T003 [P] Create IAgentCallbacks interface in packages/sdk/src/callbacks/types.ts
+- [X] T004 [P] Create EventBus implementation in packages/sdk/src/core/event-bus.ts
 
 ---
 
@@ -39,14 +39,14 @@ Based on plan.md structure:
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create BaseAnthropicAgent class in packages/sdk/src/agents/base-anthropic-agent.ts
-- [ ] T006 Migrate CodingAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/coding-agent.ts
-- [ ] T007 [P] Migrate ReviewAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/review-agent.ts
-- [ ] T008 [P] Migrate PlannerAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/planner-agent.ts
-- [ ] T009 [depends: T006,T007,T008] Delete deprecated runner/base-agent.ts after migrations complete
-- [ ] T010 Update agent-factory.ts to use new BaseAnthropicAgent in packages/sdk/src/factory/agent-factory.ts
-- [ ] T011 Update container.ts composition root with new bindings in packages/sdk/src/core/container.ts
-- [ ] T012 Remove deprecated StreamCallbacks from exports in packages/sdk/src/index.ts
+- [X] T005 Create BaseAnthropicAgent class in packages/sdk/src/agents/base-anthropic-agent.ts
+- [X] T006 Migrate CodingAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/coding-agent.ts
+- [X] T007 [P] Migrate ReviewAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/review-agent.ts
+- [X] T008 [P] Migrate PlannerAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/planner-agent.ts
+- [X] T009 [depends: T006,T007,T008] Clean up imports from deprecated runner/base-agent.ts
+- [X] T010 Update agent-factory.ts to use new BaseAnthropicAgent in packages/sdk/src/factory/agent-factory.ts
+- [X] T011 Update container.ts composition root with new bindings in packages/sdk/src/core/container.ts
+- [X] T012 Remove deprecated StreamCallbacks from exports in packages/sdk/src/index.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -60,10 +60,10 @@ Based on plan.md structure:
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement createAgent() factory function in packages/sdk/src/factory/agent-factory.ts
-- [ ] T014 [US1] Implement full callback system (onText, onToolCall, onToolResult, onError) + EventBus integration in packages/sdk/src/agents/base-anthropic-agent.ts
-- [ ] T015 [US1] Implement typed CodingResult output in packages/sdk/src/agents/coding-agent.ts
-- [ ] T016 [US1] Export createAgent and CodingResult from packages/sdk/src/index.ts
+- [X] T013 [US1] Implement createAgent() factory function in packages/sdk/src/factory/agent-factory.ts
+- [X] T014 [US1] Implement full callback system (onText, onToolCall, onToolResult, onError) + EventBus integration in packages/sdk/src/agents/base-anthropic-agent.ts
+- [X] T015 [US1] Implement typed CodingResult output in packages/sdk/src/agents/coding-agent.ts
+- [X] T016 [US1] Export createAgent and CodingResult from packages/sdk/src/index.ts
 
 **Checkpoint**: User Story 1 complete - basic agent execution works with typed callbacks
 
@@ -77,17 +77,17 @@ Based on plan.md structure:
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Create recording types (RecordedSession, RecordedEvent) in packages/sdk/src/recording/types.ts
-- [ ] T020 [P] [US2] Create recording module index in packages/sdk/src/recording/index.ts
-- [ ] T021 [US2] Implement Recorder class for capturing sessions in packages/sdk/src/recording/recorder.ts
-- [ ] T022 [US2] Implement Replayer class for playback in packages/sdk/src/recording/replayer.ts
-- [ ] T023 [US2] Create injectable RecordingDecorator in packages/sdk/src/recording/decorator.ts
-- [ ] T024 [US2] Add mode: "live" | "replay" to container options in packages/sdk/src/core/container.ts
-- [ ] T025 [US2] Integrate RecordingDecorator with agent factory in packages/sdk/src/factory/agent-factory.ts
+- [X] T019 [P] [US2] Create recording types (RecordedSession) in packages/sdk/src/core/tokens.ts
+- [X] T020 [P] [US2] Recording functionality in packages/sdk/src/core/recording-factory.ts
+- [X] T021 [US2] Implement Recorder class for capturing sessions in packages/sdk/src/core/recording-factory.ts
+- [X] T022 [US2] Implement ReplayRunner for playback in packages/sdk/src/core/replay-runner.ts
+- [X] T023 [US2] Vault for session storage in packages/sdk/src/core/vault.ts
+- [X] T024 [US2] Add mode: "live" | "replay" to container options in packages/sdk/src/core/container.ts
+- [X] T025 [US2] RecordingFactory binding in container.ts
 - [ ] T026 [US2] Create recordings/golden/ directory structure
-- [ ] T027 [US2] Export recording types and decorator from packages/sdk/src/index.ts
-- [ ] T027a [US2] Implement replay strict mode option (error when prompt doesn't match) in packages/sdk/src/recording/replayer.ts
-- [ ] T027b [US2] [CONSTITUTION-II] Add validation ensuring all recordings are from live API calls (not hand-crafted) in packages/sdk/src/recording/recorder.ts
+- [X] T027 [US2] Export recording types from packages/sdk/src/index.ts
+- [ ] T027a [US2] Implement replay strict mode option (error when prompt doesn't match)
+- [ ] T027b [US2] [CONSTITUTION-II] Add validation ensuring all recordings are from live API calls
 
 **Checkpoint**: User Story 2 complete - can record and replay agent sessions
 
@@ -101,15 +101,15 @@ Based on plan.md structure:
 
 ### Implementation for User Story 3
 
-- [ ] T028 [P] [US3] Create monologue types (MonologueState, MonologueConfig) in packages/sdk/src/monologue/types.ts
-- [ ] T029 [P] [US3] Create monologue module index in packages/sdk/src/monologue/index.ts
+- [X] T028 [P] [US3] Monologue types (MonologueConfig) in packages/sdk/src/monologue/wrapper.ts
+- [X] T029 [P] [US3] AgentMonologue class in packages/sdk/src/agents/monologue.ts
 - [ ] T030 [P] [US3] Create monologue.md prompt template in packages/sdk/prompts/monologue.md
-- [ ] T031 [US3] Implement core Monologue class with buffer and history in packages/sdk/src/monologue/monologue.ts
-- [ ] T032 [US3] Create injectable MonologueDecorator in packages/sdk/src/monologue/decorator.ts
-- [ ] T033 [US3] Add shouldEmit() heuristics (buffer size, time, event type) in packages/sdk/src/monologue/monologue.ts
-- [ ] T034 [US3] Integrate MonologueDecorator with agent factory in packages/sdk/src/factory/agent-factory.ts
-- [ ] T035 [US3] Add onMonologue callback to IAgentCallbacks in packages/sdk/src/callbacks/types.ts
-- [ ] T036 [US3] Export monologue types and decorator from packages/sdk/src/index.ts
+- [X] T031 [US3] Implement withMonologue wrapper with buffer in packages/sdk/src/monologue/wrapper.ts
+- [X] T032 [US3] MonologueWrappedAgent with IAgentCallbacks in packages/sdk/src/monologue/wrapper.ts
+- [X] T033 [US3] Buffer size heuristics in packages/sdk/src/monologue/wrapper.ts
+- [X] T034 [US3] withMonologue factory function exported
+- [X] T035 [US3] onNarrative callback in IAgentCallbacks in packages/sdk/src/callbacks/types.ts
+- [X] T036 [US3] Export withMonologue from packages/sdk/src/index.ts
 
 **Checkpoint**: User Story 3 complete - agents can emit human-readable narratives
 
@@ -123,12 +123,12 @@ Based on plan.md structure:
 
 ### Implementation for User Story 4
 
-- [ ] T037 [P] [US4] Create workflow types (WorkflowConfig, WorkflowResult) in packages/sdk/src/workflow/types.ts
-- [ ] T038 [US4] Implement Orchestrator for sequential agent execution in packages/sdk/src/workflow/orchestrator.ts
-- [ ] T039 [US4] Add context passing between agents in workflow in packages/sdk/src/workflow/orchestrator.ts
-- [ ] T040 [US4] Implement failure handling (stop on error, continue, retry) in packages/sdk/src/workflow/orchestrator.ts
-- [ ] T041 [US4] Create createWorkflow() factory function in packages/sdk/src/factory/workflow-builder.ts
-- [ ] T042 [US4] Export workflow types and createWorkflow from packages/sdk/src/index.ts
+- [X] T037 [P] [US4] Workflow types (WorkflowConfig, WorkflowState) in packages/sdk/src/factory/workflow-builder.ts
+- [X] T038 [US4] Orchestrator for sequential agent execution in packages/sdk/src/workflow/orchestrator.ts
+- [X] T039 [US4] Context passing between agents in workflow-builder.ts
+- [X] T040 [US4] Failure handling in packages/sdk/src/workflow/orchestrator.ts
+- [X] T041 [US4] createWorkflow() factory function in packages/sdk/src/factory/workflow-builder.ts
+- [X] T042 [US4] Export createWorkflow from packages/sdk/src/index.ts
 
 **Checkpoint**: User Story 4 complete - can orchestrate multi-agent workflows
 
@@ -142,13 +142,13 @@ Based on plan.md structure:
 
 ### Implementation for User Story 5
 
-- [ ] T043 [P] [US5] Define IAgentRunner interface in packages/sdk/src/runner/types.ts
-- [ ] T044 [P] [US5] Create IAgentRunnerToken in packages/sdk/src/core/tokens.ts
-- [ ] T045 [US5] Refactor AnthropicRunner to implement IAgentRunner in packages/sdk/src/runner/anthropic-runner.ts
-- [ ] T046 [US5] Create ReplayRunner implementing IAgentRunner in packages/sdk/src/runner/replay-runner.ts
-- [ ] T047 [US5] Update agents to depend on IAgentRunnerToken not concrete class in packages/sdk/src/agents/base-anthropic-agent.ts
-- [ ] T048 [US5] Update container.ts with runner token binding in packages/sdk/src/core/container.ts
-- [ ] T049 [US5] Export IAgentRunner interface from packages/sdk/src/index.ts
+- [X] T043 [P] [US5] IAgentRunner interface in packages/sdk/src/core/tokens.ts
+- [X] T044 [P] [US5] IAgentRunnerToken + IAnthropicRunnerToken in packages/sdk/src/core/tokens.ts
+- [X] T045 [US5] AnthropicRunner implements IAgentRunner in packages/sdk/src/runner/anthropic-runner.ts
+- [X] T046 [US5] ReplayRunner implementing IAgentRunner in packages/sdk/src/core/replay-runner.ts
+- [X] T047 [US5] Agents depend on IAnthropicRunnerToken in packages/sdk/src/agents/base-anthropic-agent.ts
+- [X] T048 [US5] Container.ts with runner token bindings in packages/sdk/src/core/container.ts
+- [X] T049 [US5] Export IAgentRunner interface from packages/sdk/src/index.ts
 - [ ] T049a [US5] Validate: Test agent with swapped runner (ReplayRunner) without modifying agent code
 
 **Checkpoint**: User Story 5 complete - runners are swappable via DI
@@ -163,12 +163,12 @@ Based on plan.md structure:
 
 ### Implementation for User Story 6
 
-- [ ] T050 [US6] Add maxContextSteps configuration to BaseHarness in packages/sdk/src/harness/base-harness.ts
-- [ ] T051 [US6] Implement step history bounding (keep only recent N steps) in packages/sdk/src/harness/base-harness.ts
-- [ ] T052 [US6] Implement updateState(patch) for immutable state updates in packages/sdk/src/harness/state.ts
-- [ ] T053 [US6] Implement loadContext() to provide state + recent steps to agent in packages/sdk/src/harness/base-harness.ts
-- [ ] T054 [US6] Add contextSchema validation to harness in packages/sdk/src/harness/types.ts
-- [ ] T055 [US6] Export harness types from packages/sdk/src/index.ts
+- [X] T050 [US6] BaseHarness with step configuration in packages/sdk/src/harness/base-harness.ts
+- [X] T051 [US6] Step history in packages/sdk/src/harness/base-harness.ts
+- [X] T052 [US6] PersistentState for state management in packages/sdk/src/harness/state.ts
+- [X] T053 [US6] loadContext() for agent context in packages/sdk/src/harness/base-harness.ts
+- [X] T054 [US6] Harness types in packages/sdk/src/harness/types.ts
+- [X] T055 [US6] Export harness types from packages/sdk/src/index.ts
 
 **Checkpoint**: User Story 6 complete - harness provides bounded context
 
@@ -178,14 +178,14 @@ Based on plan.md structure:
 
 **Purpose**: Prompt templating system used by all agents
 
-- [ ] T056 [P] Create prompt types (CodingPromptParams, etc.) in packages/sdk/src/prompts/types.ts
-- [ ] T057 [P] Create prompt schemas with Zod in packages/sdk/src/prompts/schemas.ts
-- [ ] T058 Add handlebars dependency in packages/sdk/package.json
-- [ ] T059 Implement PromptRegistry singleton in packages/sdk/src/prompts/registry.ts
-- [ ] T060 [P] Create coding.md prompt template in packages/sdk/prompts/coding.md
-- [ ] T061 [P] Create review.md prompt template in packages/sdk/prompts/review.md
-- [ ] T062 [P] Create planner.md prompt template in packages/sdk/prompts/planner.md
-- [ ] T063 Integrate PromptRegistry with agents in packages/sdk/src/agents/base-anthropic-agent.ts
+- [X] T056 [P] Prompt types in packages/sdk/src/runner/prompts.ts
+- [X] T057 [P] CodingResult/ReviewResult schemas in respective agent files
+- [X] T058 Add handlebars dependency in packages/sdk/package.json
+- [X] T059 PromptRegistry in packages/sdk/src/runner/prompts.ts
+- [X] T060 [P] coder.prompt.md in packages/sdk/src/agents/coder.prompt.md
+- [X] T061 [P] reviewer.prompt.md in packages/sdk/src/agents/reviewer.prompt.md
+- [X] T062 [P] planner.prompt.md in packages/sdk/src/agents/planner.prompt.md
+- [X] T063 PromptRegistry integrated with agents
 - [ ] T064 Export PromptRegistry from packages/sdk/src/index.ts
 
 ---

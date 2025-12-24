@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Smoke Test - Real-world SDK workflow verification
  *
@@ -14,15 +15,15 @@
  * Run with: bun packages/sdk/scripts/smoke-test.ts
  */
 
+import type { ReviewResult } from "../src/agents/review-agent.js";
 import {
 	BaseHarness,
 	CodingAgent,
-	ReviewAgent,
-	createContainer,
 	type CodingResult,
+	createContainer,
+	ReviewAgent,
 	type StepYield,
 } from "../src/index.js";
-import type { ReviewResult } from "../src/agents/review-agent.js";
 
 // ============================================
 // Types
@@ -72,8 +73,10 @@ class CodeReviewHarness extends BaseHarness<WorkflowState, WorkflowInput, Workfl
 
 		// Step 1: Code the task
 		const codeResult = await this.coder.execute(state.task, "smoke-test-session", {
-			onText: (_text: string, _event) => process.stdout.write("."),
-			onToolCall: (name: string, _input, _event) => console.log(`\n   🔧 Tool: ${name}`),
+			callbacks: {
+				onText: () => process.stdout.write("."),
+				onToolCall: (event) => console.log(`\n   🔧 Tool: ${event.toolName}`),
+			},
 		});
 
 		console.log(`\n   ✅ Code result: ${codeResult.stopReason}`);
@@ -94,7 +97,9 @@ class CodeReviewHarness extends BaseHarness<WorkflowState, WorkflowInput, Workfl
 		console.log("\n🔍 Phase 2: Review");
 
 		const reviewResult = await this.reviewer.review(state.task, codeResult.summary, "smoke-test-session", {
-			onText: (_text: string, _event) => process.stdout.write("."),
+			callbacks: {
+				onText: () => process.stdout.write("."),
+			},
 		});
 
 		console.log(`\n   Decision: ${reviewResult.decision === "approve" ? "✅ Approved" : "❌ Rejected"}`);
@@ -143,7 +148,7 @@ async function main() {
 
 		const finalState = harness.getState();
 
-		console.log("\n" + "=".repeat(50));
+		console.log(`\n${"=".repeat(50)}`);
 		console.log("📊 Results:");
 		console.log(`   Steps completed: ${harness.getCurrentStep()}`);
 		console.log(`   Code result: ${finalState.codeResult?.stopReason ?? "N/A"}`);

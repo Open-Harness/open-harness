@@ -7,23 +7,20 @@
  * - Concrete agents: CodingAgent, ReviewAgent, etc.
  */
 
-// Core Types
-export type {
-	IAgent,
-	IAgentRunner,
-	RunnerOptions,
-	AgentDefinition,
-	AgentEvent,
-	RunnerCallbacks,
-	RunArgs,
-} from "./types.js";
-
 // Base Classes
 export { BaseAnthropicAgent } from "./base-anthropic-agent.js";
-
 // Concrete Agents
 export { CodingAgent } from "./coding-agent.js";
-export { ReviewAgent } from "./review-agent.js";
-
 // Monologue Agent
 export { AgentMonologue } from "./monologue.js";
+export { ReviewAgent } from "./review-agent.js";
+// Core Types
+export type {
+	AgentDefinition,
+	AgentEvent,
+	IAgent,
+	IAgentRunner,
+	RunArgs,
+	RunnerCallbacks,
+	RunnerOptions,
+} from "./types.js";

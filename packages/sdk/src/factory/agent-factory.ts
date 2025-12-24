@@ -5,14 +5,18 @@
  * 1. Built-in agents: createAgent('coder', options)
  * 2. Config-based agents: createAgent({ name, prompt, ... })
  * 3. Class-based agents: createAgent(MyAgentClass, options)
+ *
+ * All agents use the unified IAgentCallbacks interface.
  */
 
 import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import { BaseAnthropicAgent } from "../agents/base-anthropic-agent.js";
 import { CodingAgent } from "../agents/coding-agent.js";
+import { PlannerAgent } from "../agents/planner-agent.js";
 import { ReviewAgent } from "../agents/review-agent.js";
+import type { IAgentCallbacks } from "../callbacks/types.js";
 import { createContainer } from "../core/container.js";
-import { IAgentRunnerToken } from "../core/tokens.js";
-import { BaseAgent, type StreamCallbacks } from "../runner/base-agent.js";
+import { type IAgentRunner, IAnthropicRunnerToken, type IEventBus, IEventBusToken } from "../core/tokens.js";
 
 // ============================================
 // Types
@@ -33,13 +37,13 @@ export type AgentConfig = {
 	/** Optional: initial state */
 	state?: Record<string, unknown>;
 	/** Optional: default callbacks */
-	callbacks?: StreamCallbacks;
+	callbacks?: IAgentCallbacks;
 };
 
 /**
  * Built-in agent types
  */
-export type BuiltInAgentType = "coder" | "reviewer";
+export type BuiltInAgentType = "coder" | "reviewer" | "planner";
 
 /**
  * Options for agent creation
@@ -48,13 +52,13 @@ export type AgentOptions = {
 	/** Model override */
 	model?: "haiku" | "sonnet" | "opus";
 	/** Default callbacks */
-	callbacks?: StreamCallbacks;
+	callbacks?: IAgentCallbacks;
 };
 
 /**
  * Agent class constructor type
  */
-export type AgentClass<TArgs extends unknown[] = any[]> = new (...args: TArgs) => BaseAgent;
+export type AgentClass<TArgs extends unknown[] = unknown[]> = new (...args: TArgs) => BaseAnthropicAgent;
 
 // ============================================
 // Internal Container (Singleton)
@@ -69,28 +73,47 @@ function getGlobalContainer() {
 	return _globalContainer;
 }
 
+/**
+ * Reset the global container. Useful for testing.
+ */
+export function resetGlobalContainer(): void {
+	_globalContainer = null;
+}
+
+/**
+ * Set a custom container. Useful for testing or custom setups.
+ */
+export function setGlobalContainer(container: ReturnType<typeof createContainer>): void {
+	_globalContainer = container;
+}
+
 // ============================================
 // Config-based Agent
 // ============================================
 
-class ConfigAgent extends BaseAgent {
+class ConfigAgent extends BaseAnthropicAgent {
+	private config: AgentConfig;
+	private agentOptions?: AgentOptions;
+
 	constructor(
-		private config: AgentConfig,
-		private options?: AgentOptions,
+		config: AgentConfig,
+		options: AgentOptions | undefined,
+		runner: IAgentRunner,
+		eventBus: IEventBus | null,
 	) {
-		const container = getGlobalContainer();
-		const runner = container.get(IAgentRunnerToken);
-		super(config.name, runner, null);
+		super(config.name, runner, eventBus);
+		this.config = config;
+		this.agentOptions = options;
 	}
 
 	/**
 	 * Run the agent with prompt template interpolation
 	 */
-	override async run(
+	async execute<TOutput = unknown>(
 		promptOrVars: string | Record<string, unknown>,
 		sessionId: string,
-		runOptions?: Options & { callbacks?: StreamCallbacks },
-	) {
+		options?: { callbacks?: IAgentCallbacks<TOutput> },
+	): Promise<TOutput> {
 		let finalPrompt: string;
 
 		// If string, use as-is
@@ -104,21 +127,16 @@ class ConfigAgent extends BaseAgent {
 			});
 		}
 
-		// Merge callbacks and options
+		// Merge callbacks
 		const mergedCallbacks = {
 			...this.config.callbacks,
-			...this.options?.callbacks,
-			...runOptions?.callbacks,
-		};
+			...this.agentOptions?.callbacks,
+			...options?.callbacks,
+		} as IAgentCallbacks<TOutput>;
 
-		const mergedOptions: Options = {
-			model: this.options?.model || this.config.model || "haiku",
-			...runOptions,
-			outputFormat: (this.config.outputSchema as Options["outputFormat"]) || runOptions?.outputFormat,
-		};
-
-		return super.run(finalPrompt, sessionId, {
-			...mergedOptions,
+		return this.run<TOutput>(finalPrompt, sessionId, {
+			model: this.agentOptions?.model || this.config.model || "haiku",
+			outputFormat: this.config.outputSchema as Options["outputFormat"],
 			callbacks: mergedCallbacks,
 		});
 	}
@@ -137,7 +155,7 @@ class ConfigAgent extends BaseAgent {
 /**
  * Create an agent from a built-in type
  */
-function createBuiltInAgent(type: BuiltInAgentType, _options?: AgentOptions): BaseAgent {
+function createBuiltInAgent(type: BuiltInAgentType, _options?: AgentOptions): BaseAnthropicAgent {
 	const container = getGlobalContainer();
 
 	switch (type) {
@@ -145,6 +163,8 @@ function createBuiltInAgent(type: BuiltInAgentType, _options?: AgentOptions): Ba
 			return container.get(CodingAgent);
 		case "reviewer":
 			return container.get(ReviewAgent);
+		case "planner":
+			return container.get(PlannerAgent);
 		default:
 			throw new Error(`Unknown built-in agent type: ${type}`);
 	}
@@ -153,14 +173,17 @@ function createBuiltInAgent(type: BuiltInAgentType, _options?: AgentOptions): Ba
 /**
  * Create an agent from a config object
  */
-function createConfigAgent(config: AgentConfig, options?: AgentOptions): BaseAgent {
-	return new ConfigAgent(config, options);
+function createConfigAgent(config: AgentConfig, options?: AgentOptions): BaseAnthropicAgent {
+	const container = getGlobalContainer();
+	const runner = container.get(IAnthropicRunnerToken);
+	const eventBus = container.get(IEventBusToken);
+	return new ConfigAgent(config, options, runner, eventBus);
 }
 
 /**
  * Create an agent from a class constructor
  */
-function createClassAgent(agentConstructor: AgentClass, _options?: AgentOptions): BaseAgent {
+function createClassAgent(agentConstructor: AgentClass, _options?: AgentOptions): BaseAnthropicAgent {
 	const container = getGlobalContainer();
 
 	// Check if class is registered in container
@@ -168,8 +191,9 @@ function createClassAgent(agentConstructor: AgentClass, _options?: AgentOptions)
 		return container.get(agentConstructor);
 	} catch {
 		// If not registered, instantiate manually
-		const runner = container.get(IAgentRunnerToken);
-		return new agentConstructor(runner);
+		const runner = container.get(IAnthropicRunnerToken);
+		const eventBus = container.get(IEventBusToken);
+		return new agentConstructor(runner, eventBus);
 	}
 }
 
@@ -182,7 +206,10 @@ function createClassAgent(agentConstructor: AgentClass, _options?: AgentOptions)
  *
  * @example
  * // Built-in agent
- * const coder = createAgent('coder', { model: 'haiku' });
+ * const coder = createAgent('coder');
+ * await coder.execute("Write a hello world", "session-1", {
+ *   callbacks: { onText: (text) => console.log(text) }
+ * });
  *
  * @example
  * // Config-based agent
@@ -194,13 +221,16 @@ function createClassAgent(agentConstructor: AgentClass, _options?: AgentOptions)
  *
  * @example
  * // Class-based agent
- * class CustomAgent extends BaseAgent { ... }
+ * class CustomAgent extends BaseAnthropicAgent { ... }
  * const custom = createAgent(CustomAgent);
  */
-export function createAgent(type: BuiltInAgentType, options?: AgentOptions): BaseAgent;
-export function createAgent(config: AgentConfig, options?: AgentOptions): BaseAgent;
-export function createAgent(AgentClass: AgentClass, options?: AgentOptions): BaseAgent;
-export function createAgent(input: BuiltInAgentType | AgentConfig | AgentClass, options?: AgentOptions): BaseAgent {
+export function createAgent(type: BuiltInAgentType, options?: AgentOptions): BaseAnthropicAgent;
+export function createAgent(config: AgentConfig, options?: AgentOptions): BaseAnthropicAgent;
+export function createAgent(AgentClass: AgentClass, options?: AgentOptions): BaseAnthropicAgent;
+export function createAgent(
+	input: BuiltInAgentType | AgentConfig | AgentClass,
+	options?: AgentOptions,
+): BaseAnthropicAgent {
 	// Built-in agent type
 	if (typeof input === "string") {
 		return createBuiltInAgent(input as BuiltInAgentType, options);

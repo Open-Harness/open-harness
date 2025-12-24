@@ -6,11 +6,11 @@
  * of raw tool calls.
  */
 
-import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import type { BaseAnthropicAgent } from "../agents/base-anthropic-agent.js";
 import { AgentMonologue } from "../agents/monologue.js";
+import type { IAgentCallbacks } from "../callbacks/types.js";
 import { createContainer } from "../core/container.js";
-import type { BaseAgent, StreamCallbacks } from "../runner/base-agent.js";
-import { EventTypeConst } from "../runner/models.js";
+import { type AgentEvent, EventTypeConst } from "../runner/models.js";
 
 // ============================================
 // Types
@@ -38,15 +38,13 @@ const DEFAULT_CONFIG: Required<MonologueConfig> = {
 // Wrapped Agent
 // ============================================
 
-import type { AgentEvent } from "../runner/models.js";
-
 class MonologueWrappedAgent {
 	private monologue: AgentMonologue;
 	private config: Required<MonologueConfig>;
 	private eventBuffer: AgentEvent[] = [];
 
 	constructor(
-		private baseAgent: BaseAgent,
+		private baseAgent: BaseAnthropicAgent,
 		config: MonologueConfig = {},
 	) {
 		this.config = { ...DEFAULT_CONFIG, ...config };
@@ -57,69 +55,86 @@ class MonologueWrappedAgent {
 	}
 
 	/**
-	 * Run the agent with monologue enabled
+	 * Create wrapped callbacks that intercept events for monologue generation
 	 */
-	async run(prompt: string, sessionId: string, options?: Options & { callbacks?: StreamCallbacks }) {
-		const { callbacks, ...runOptions } = options || {};
+	wrapCallbacks<TOutput>(callbacks?: IAgentCallbacks<TOutput>): IAgentCallbacks<TOutput> {
+		const sessionId = `monologue_${Date.now()}`;
 
-		// Create wrapped callbacks that intercept events
-		const wrappedCallbacks: StreamCallbacks = {
+		return {
 			...callbacks,
 
-			// Intercept events and buffer them
-			onText: (content, event) => {
+			onText: (text, delta) => {
 				if (this.config.eventTypes.includes(EventTypeConst.TEXT)) {
-					this.eventBuffer.push(event);
+					this.eventBuffer.push({
+						timestamp: new Date(),
+						event_type: EventTypeConst.TEXT,
+						agent_name: this.baseAgent.name,
+						content: text,
+						session_id: sessionId,
+					});
 					this.checkBufferAndGenerate(sessionId);
 				}
-				callbacks?.onText?.(content, event);
+				callbacks?.onText?.(text, delta);
 			},
 
-			onThinking: (thought, event) => {
+			onThinking: (thought) => {
 				if (this.config.eventTypes.includes(EventTypeConst.THINKING)) {
-					this.eventBuffer.push(event);
+					this.eventBuffer.push({
+						timestamp: new Date(),
+						event_type: EventTypeConst.THINKING,
+						agent_name: this.baseAgent.name,
+						content: thought,
+						session_id: sessionId,
+					});
 					this.checkBufferAndGenerate(sessionId);
 				}
-				callbacks?.onThinking?.(thought, event);
+				callbacks?.onThinking?.(thought);
 			},
 
-			onToolCall: (toolName, input, event) => {
+			onToolCall: (event) => {
 				if (this.config.eventTypes.includes(EventTypeConst.TOOL_CALL)) {
-					this.eventBuffer.push(event);
+					this.eventBuffer.push({
+						timestamp: new Date(),
+						event_type: EventTypeConst.TOOL_CALL,
+						agent_name: this.baseAgent.name,
+						tool_name: event.toolName,
+						tool_input: event.input,
+						content: `Calling tool: ${event.toolName}`,
+						session_id: sessionId,
+					});
 					this.checkBufferAndGenerate(sessionId);
 				}
-				callbacks?.onToolCall?.(toolName, input, event);
+				callbacks?.onToolCall?.(event);
 			},
 
-			onToolResult: (result, event) => {
+			onToolResult: (event) => {
 				if (this.config.eventTypes.includes(EventTypeConst.TOOL_RESULT)) {
-					this.eventBuffer.push(event);
+					this.eventBuffer.push({
+						timestamp: new Date(),
+						event_type: EventTypeConst.TOOL_RESULT,
+						agent_name: this.baseAgent.name,
+						tool_result: event.content as Record<string, unknown>,
+						is_error: event.isError,
+						session_id: sessionId,
+					});
 					this.checkBufferAndGenerate(sessionId);
 				}
-				callbacks?.onToolResult?.(result, event);
+				callbacks?.onToolResult?.(event);
 			},
 
-			// Pass through other callbacks
-			onSessionStart: callbacks?.onSessionStart,
-			onToolProgress: callbacks?.onToolProgress,
-			onCompact: callbacks?.onCompact,
-			onStatus: callbacks?.onStatus,
-			onResult: async (result, event) => {
+			onComplete: async (result) => {
 				// Generate final monologue if buffer has events
 				if (this.eventBuffer.length > 0) {
 					await this.generateMonologue(sessionId);
 				}
-				callbacks?.onResult?.(result, event);
+				callbacks?.onComplete?.(result);
 			},
-			onSessionEnd: callbacks?.onSessionEnd,
-			onError: callbacks?.onError,
-		};
 
-		// Run base agent with wrapped callbacks
-		return this.baseAgent.run(prompt, sessionId, {
-			...runOptions,
-			callbacks: wrappedCallbacks,
-		});
+			onError: callbacks?.onError,
+			onStart: callbacks?.onStart,
+			onProgress: callbacks?.onProgress,
+			onNarrative: callbacks?.onNarrative,
+		};
 	}
 
 	/**
@@ -157,7 +172,7 @@ class MonologueWrappedAgent {
 	/**
 	 * Get the underlying base agent
 	 */
-	getBaseAgent(): BaseAgent {
+	getBaseAgent(): BaseAnthropicAgent {
 		return this.baseAgent;
 	}
 
@@ -176,26 +191,32 @@ class MonologueWrappedAgent {
 /**
  * Wrap an agent with monologue capability
  *
- * Transforms raw tool calls and events into a readable first-person narrative.
- * Perfect for long-running agents where you want high-level progress updates.
+ * Creates a wrapper that intercepts agent events and generates human-readable
+ * narratives. Use the returned wrapper's `wrapCallbacks` method to create
+ * callbacks that will trigger monologue generation.
  *
  * @example
  * ```typescript
- * import { createAgent, withMonologue } from 'bun-vi';
+ * import { createAgent, withMonologue } from '@openharness/sdk';
  *
  * const coder = createAgent('coder');
- * const narrativeCoder = withMonologue(coder, {
+ * const monologue = withMonologue(coder, {
  *   bufferSize: 5,
  *   onNarrative: (text) => {
  *     console.log(`Agent: ${text}`);
  *   }
  * });
  *
- * await narrativeCoder.run('Build a login page', 'session_1');
+ * // Use wrapped callbacks when executing the agent
+ * await coder.execute('Build a login page', 'session_1', {
+ *   callbacks: monologue.wrapCallbacks({
+ *     onText: (text) => process.stdout.write(text),
+ *   }),
+ * });
  * // Output: "Agent: I'm analyzing the requirements for a login page..."
  * // Output: "Agent: I've created the form structure and added validation..."
  * ```
  */
-export function withMonologue(agent: BaseAgent, config?: MonologueConfig): MonologueWrappedAgent {
+export function withMonologue(agent: BaseAnthropicAgent, config?: MonologueConfig): MonologueWrappedAgent {
 	return new MonologueWrappedAgent(agent, config);
 }

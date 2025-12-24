@@ -5,7 +5,8 @@
  * Users define the orchestration logic via an execute function.
  */
 
-import type { BaseAgent, StreamCallbacks } from "../runner/base-agent.js";
+import type { BaseAnthropicAgent } from "../agents/base-anthropic-agent.js";
+import type { IAgentCallbacks } from "../callbacks/types.js";
 import { type Task, type TaskInput, TaskList } from "../workflow/task-list.js";
 
 // ============================================
@@ -40,7 +41,7 @@ export type WorkflowState<TResult = unknown, TMeta = Record<string, unknown>> = 
  * Context passed to workflow execute function
  */
 export type WorkflowContext<
-	TAgents extends Record<string, BaseAgent> = Record<string, BaseAgent>,
+	TAgents extends Record<string, BaseAnthropicAgent> = Record<string, BaseAnthropicAgent>,
 	TResult = unknown,
 	TMeta = Record<string, unknown>,
 > = {
@@ -56,7 +57,7 @@ export type WorkflowContext<
  * Workflow configuration
  */
 export type WorkflowConfig<
-	TAgents extends Record<string, BaseAgent> = Record<string, BaseAgent>,
+	TAgents extends Record<string, BaseAnthropicAgent> = Record<string, BaseAnthropicAgent>,
 	TResult = unknown,
 	TMeta = Record<string, unknown>,
 > = {
@@ -69,7 +70,7 @@ export type WorkflowConfig<
 	/** Orchestration logic */
 	execute: (context: WorkflowContext<TAgents, TResult, TMeta>) => Promise<void>;
 	/** Optional: global callbacks */
-	callbacks?: StreamCallbacks;
+	callbacks?: IAgentCallbacks;
 	/** Optional: monologue configuration */
 	monologue?: {
 		enabled: boolean;
@@ -84,7 +85,7 @@ export type WorkflowConfig<
 // ============================================
 
 export class Workflow<
-	TAgents extends Record<string, BaseAgent> = Record<string, BaseAgent>,
+	TAgents extends Record<string, BaseAnthropicAgent> = Record<string, BaseAnthropicAgent>,
 	TResult = unknown,
 	TMeta = Record<string, unknown>,
 > {
@@ -161,7 +162,7 @@ export class Workflow<
  * Create a workflow
  */
 export function createWorkflow<
-	TAgents extends Record<string, BaseAgent>,
+	TAgents extends Record<string, BaseAnthropicAgent>,
 	TResult = unknown,
 	TMeta = Record<string, unknown>,
 >(config: WorkflowConfig<TAgents, TResult, TMeta>): Workflow<TAgents, TResult, TMeta> {

@@ -8,7 +8,7 @@
  */
 
 import type { ZodSchema } from "zod";
-import type { IAgentCallbacks, AgentResult } from "../callbacks/index.js";
+import type { AgentResult, IAgentCallbacks } from "../callbacks/index.js";
 
 // ============================================================================
 // IAgent Interface - The Core Abstraction
@@ -53,11 +53,7 @@ export interface IAgent<TInput, TOutput> {
 	 * @param callbacks - Optional callbacks for event handling
 	 * @returns Promise resolving to typed output
 	 */
-	execute(
-		input: TInput,
-		sessionId: string,
-		callbacks?: IAgentCallbacks<TOutput>,
-	): Promise<TOutput>;
+	execute(input: TInput, sessionId: string, callbacks?: IAgentCallbacks<TOutput>): Promise<TOutput>;
 }
 
 // ============================================================================

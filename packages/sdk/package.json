@@ -1,19 +1,30 @@
 {
-	"name": "@openharnes/sdk",
+	"name": "@openharness/sdk",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"prompts"
+	],
 	"scripts": {
 		"bmad": "claude --mcp-config .mcp.json",
 		"typecheck": "tsc --noEmit",
+		"check-types": "tsc --noEmit",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write",
 		"lint:summary": "biome check --reporter summary .",
 		"capture": "bun scripts/e2e-capture.ts",
 		"harvest": "bun scripts/harvest.ts",
-		"dev": "bun --hot src/server/index.ts",
-		"build": "bun build ./src/server/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
-		"start": "NODE_ENV=production bun src/server/index.ts",
+		"build": "bun build ./src/index.ts --outdir=dist --target=node --format=esm --sourcemap=external && tsc --declaration --emitDeclarationOnly --outDir dist",
 		"test": "bun test tests/**/*.test.ts",
 		"test:unit": "bun test tests/unit/container.test.ts",
 		"test:integration": "bun test tests/integration/live-sdk.test.ts",
@@ -22,16 +33,13 @@
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "^0.1.76",
 		"@needle-di/core": "^1.1.0",
-		"react": "^19",
-		"react-dom": "^19",
+		"handlebars": "^4.7.8",
 		"reflect-metadata": "^0.2.2",
 		"zod": "^4.2.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.10",
-		"@types/bun": "latest",
-		"@types/react": "^19",
-		"@types/react-dom": "^19"
+		"@types/bun": "latest"
 	},
 	"module": "src/index.ts",
 	"peerDependencies": {

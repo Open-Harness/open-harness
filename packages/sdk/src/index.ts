@@ -41,19 +41,23 @@ export { Agent, BaseHarness, PersistentState } from "./harness/index.js";
 // ============================================
 
 // Base Classes
-export { BaseAnthropicAgent } from "./agents/base-anthropic-agent.js";
+export { type AgentRunOptions, BaseAnthropicAgent } from "./agents/base-anthropic-agent.js";
+
 // Concrete Agents
-export { CodingAgent } from "./agents/coding-agent.js";
-export { PlannerAgent, type PlannerResult, type Ticket } from "./agents/planner-agent.js";
-export { ReviewAgent, type ReviewResult } from "./agents/review-agent.js";
+export { CodingAgent, type CodingAgentOptions } from "./agents/coding-agent.js";
+export { PlannerAgent, type PlannerAgentOptions, type PlannerResult, type Ticket } from "./agents/planner-agent.js";
+export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./agents/review-agent.js";
+
 // Core Interface
 export type { AgentDefinition, IAgent, RunnerOptions } from "./agents/types.js";
-// Unified Callbacks
+
+// Unified Callbacks (IAgentCallbacks is the primary callback interface)
 export type {
 	AgentError,
 	AgentResult,
 	AgentStartMetadata,
 	IAgentCallbacks,
+	NarrativeConfig,
 	ProgressEvent,
 	TokenUsage,
 	ToolCallEvent,
@@ -65,14 +69,16 @@ export type {
 // ============================================
 
 // Core Factories
-export { createAgent } from "./factory/agent-factory.js";
+export { createAgent, resetGlobalContainer, setGlobalContainer } from "./factory/agent-factory.js";
 export { createWorkflow } from "./factory/workflow-builder.js";
+
 // Primitives
 export { withMonologue } from "./monologue/wrapper.js";
+
 // Runners
 export { AnthropicRunner } from "./runner/anthropic-runner.js";
-// Legacy Base Classes (use BaseAnthropicAgent instead)
-export { BaseAgent, type StreamCallbacks } from "./runner/base-agent.js";
+
+// Task Management
 export { TaskList } from "./workflow/task-list.js";
 
 // ============================================
@@ -94,19 +100,43 @@ export type { Task, TaskStatus } from "./workflow/task-list.js";
 // ============================================
 
 export type { ContainerOptions } from "./core/container.js";
-export { createContainer } from "./core/container.js";
+export { createContainer, createTestContainer } from "./core/container.js";
+
+// EventBus
+export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./core/event-bus.js";
+
+// Token Interfaces
 export type {
 	IAgentRunner,
 	IConfig,
 	IEventBus,
+	IMonologueConfig,
+	IMonologueDecorator,
+	IMonologueRunner,
+	IPromptRegistry,
+	IRecordingDecorator,
 	IVault,
 } from "./core/tokens.js";
+
 // DI Tokens
 export {
 	IAgentRunnerToken,
 	IAnthropicRunnerToken,
 	IConfigToken,
 	IEventBusToken,
+	IMonologueDecoratorToken,
+	IMonologueRunnerToken,
+	IPromptRegistryToken,
+	IRecordingDecoratorToken,
 	IReplayRunnerToken,
 	IVaultToken,
 } from "./core/tokens.js";
+
+// ============================================
+// DEPRECATED EXPORTS (for backward compatibility)
+// ============================================
+
+/**
+ * @deprecated Use IAgentCallbacks instead. Will be removed in next major version.
+ */
+export type { StreamCallbacks } from "./callbacks/types.js";
