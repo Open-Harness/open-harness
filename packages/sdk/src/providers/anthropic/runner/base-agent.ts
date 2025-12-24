@@ -10,7 +10,7 @@
 
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
-import { type IAgentRunner, IAgentRunnerToken, type IEventBus, IEventBusToken } from "../core/tokens.js";
+import { type IAgentRunner, IAgentRunnerToken, type IEventBus, IEventBusToken } from "../../../core/tokens.js";
 import { mapSdkMessageToEvents } from "./event-mapper.js";
 import { type AgentEvent, type CompactData, EventTypeConst, type SessionResult, type StatusData } from "./models.js";
 

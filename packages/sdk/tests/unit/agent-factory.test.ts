@@ -10,7 +10,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { injectable } from "@needle-di/core";
-import { BaseAnthropicAgent } from "../../src/agents/base-anthropic-agent.js";
+import { BaseAnthropicAgent } from "../../src/providers/anthropic/agents/base-anthropic-agent.js";
 import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
 import { type AgentConfig, createAgent } from "../../src/factory/agent-factory.js";
 

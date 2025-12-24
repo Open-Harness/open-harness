@@ -152,3 +152,54 @@ export {
 	ValidationCheckSchema,
 	ValidationResultSchema,
 } from "./task-harness-types.js";
+
+// ============================================================================
+// Renderer System (003-harness-renderer)
+// ============================================================================
+
+// Base Renderer
+export { BaseHarnessRenderer } from "./base-renderer.js";
+// Composite Renderer (multiple renderers)
+export { CompositeRenderer } from "./composite-renderer.js";
+// Console Renderer
+export { ConsoleRenderer } from "./console-renderer.js";
+// Event Protocol
+export {
+	type AgentName,
+	type HarnessCompleteEvent,
+	type HarnessErrorEvent,
+	type HarnessEvent,
+	type HarnessStartEvent,
+	isLifecycleEvent,
+	isPhaseEvent,
+	isTaskEvent,
+	isValidationEvent,
+	type MonologueMetadata,
+	type NarrativeEntry as EventNarrativeEntry,
+	type NarrativeImportance,
+	type PhaseCompleteEvent,
+	type PhaseStartEvent,
+	type TaskCompleteEvent,
+	type TaskFailedEvent,
+	type TaskNarrativeEvent,
+	type TaskRetryEvent,
+	type TaskSkippedEvent,
+	type TaskStartEvent,
+	type ValidationCompleteEvent,
+	type ValidationFailedEvent,
+	type ValidationStartEvent,
+	type VerbosityLevel,
+} from "./event-protocol.js";
+// Renderer Interface
+export type {
+	IHarnessRenderer,
+	PhaseRenderState,
+	RendererConfig,
+	RenderState,
+	TaskDisplayStatus,
+	TaskRenderState,
+	ValidationDisplayStatus,
+} from "./renderer-interface.js";
+
+// Replay Controller
+export { ReplayController, type ReplayControllerConfig } from "./replay-controller.js";

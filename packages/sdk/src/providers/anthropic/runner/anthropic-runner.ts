@@ -10,7 +10,7 @@
 
 import { type Options, query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { injectable } from "@needle-di/core";
-import type { IAgentRunner, RunnerCallbacks } from "../core/tokens.js";
+import type { IAgentRunner, RunnerCallbacks } from "../../../core/tokens.js";
 
 /**
  * AnthropicRunner - Production runner for Claude/Anthropic API

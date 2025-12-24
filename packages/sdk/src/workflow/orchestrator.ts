@@ -3,10 +3,10 @@
  */
 
 import { inject, injectable } from "@needle-di/core";
-import { CodingAgent } from "../agents/coding-agent.js";
-import { ReviewAgent } from "../agents/review-agent.js";
+import { CodingAgent } from "../providers/anthropic/agents/coding-agent.js";
+import { ReviewAgent } from "../providers/anthropic/agents/review-agent.js";
 import type { IAgentCallbacks } from "../callbacks/types.js";
-import type { CodingResult } from "../runner/models.js";
+import type { CodingResult } from "../providers/anthropic/runner/models.js";
 
 export type Task = {
 	id: string;

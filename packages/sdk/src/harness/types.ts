@@ -128,5 +128,5 @@ export interface AgentRunParams<TState, TInput, TOutput> {
 	/** Constraints for this run */
 	constraints: Constraints;
 	/** Optional callbacks for LLM execution (from internal layer) */
-	callbacks?: import("../runner/base-agent.js").StreamCallbacks;
+	callbacks?: import("../providers/anthropic/runner/base-agent.js").StreamCallbacks;
 }

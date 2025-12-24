@@ -14,8 +14,7 @@
 import { describe, expect, test } from "bun:test";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { Container, inject, injectable } from "@needle-di/core";
-import { CodingAgent } from "../../src/agents/coding-agent.js";
-import { AgentMonologue } from "../../src/agents/monologue.js";
+import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
 import { createContainer } from "../../src/core/container.js";
 import { Record } from "../../src/core/decorators.js";
 import type { RunnerCallbacks } from "../../src/core/tokens.js";
@@ -26,8 +25,8 @@ import {
 	IRecordingFactoryToken,
 	IVaultToken,
 } from "../../src/core/tokens.js";
-import { BaseAgent } from "../../src/runner/base-agent.js";
-import type { CompactData, SessionResult } from "../../src/runner/models.js";
+import { BaseAgent } from "../../src/providers/anthropic/runner/base-agent.js";
+import type { CompactData, SessionResult } from "../../src/providers/anthropic/runner/models.js";
 
 // ============================================================================
 // Mock Runner for Testing
@@ -409,17 +408,5 @@ describe("Full Agent Workflow", () => {
 		expect(coder.name).toBe("Coder");
 	});
 
-	test("AgentMonologue", async () => {
-		const container = createContainer({ mode: "live" });
-
-		const mockRunner = new MockRunner();
-		container.bind({ provide: IAgentRunnerToken, useValue: mockRunner });
-		container.bind({
-			provide: IAgentRunnerToken,
-			useValue: new MockRunner(),
-		});
-
-		const monologue = container.get(AgentMonologue);
-		expect(monologue).toBeDefined();
-	});
+	// AgentMonologue test removed - will be reimplemented in Phase 3
 });

@@ -10,7 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { describe, expect, test } from "bun:test";
-import { ParserAgent } from "../../src/agents/parser-agent.js";
+import { ParserAgent } from "../../src/providers/anthropic/agents/parser-agent.js";
 import { createReplayContainer } from "../helpers/replay-runner.js";
 
 const FIXTURES_DIR = path.resolve(__dirname, "../fixtures");

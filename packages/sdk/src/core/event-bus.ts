@@ -9,7 +9,7 @@
  */
 
 import { injectable } from "@needle-di/core";
-import type { AgentEvent } from "../runner/models.js";
+import type { AgentEvent } from "../providers/anthropic/runner/models.js";
 import type { IEventBus } from "./tokens.js";
 
 /**

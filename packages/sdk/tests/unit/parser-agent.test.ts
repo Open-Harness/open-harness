@@ -10,7 +10,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { beforeAll, describe, expect, test } from "bun:test";
-import { ParserAgent } from "../../src/agents/parser-agent.js";
+import { ParserAgent } from "../../src/providers/anthropic/agents/parser-agent.js";
 import type { ParserAgentOutput } from "../../src/harness/task-harness-types.js";
 import { createRecordingContainer, type RecordingRunner } from "../helpers/recording-wrapper.js";
 

@@ -12,13 +12,16 @@
 
 import * as fs from "node:fs/promises";
 import { inject, injectable } from "@needle-di/core";
-import { ParserAgent } from "../agents/parser-agent.js";
-import { ValidationReviewAgent } from "../agents/validation-review-agent.js";
+import { ParserAgent } from "../providers/anthropic/agents/parser-agent.js";
+import { ValidationReviewAgent } from "../providers/anthropic/agents/validation-review-agent.js";
 import type { IAgentCallbacks } from "../callbacks/types.js";
 import { type IEventBus, IEventBusToken, type ITaskHarness, type ITaskHarnessCallbacks } from "../core/tokens.js";
 import type { BackoffConfig } from "./backoff.js";
 import { resolveDependencies } from "./dependency-resolver.js";
+import type { HarnessEvent } from "./event-protocol.js";
 import { HarnessRecorder, loadStateEvents, reconstructCheckpoint, type StateEventType } from "./harness-recorder.js";
+import { CompositeRenderer } from "./composite-renderer.js";
+import type { IHarnessRenderer, RendererConfig } from "./renderer-interface.js";
 import type {
 	CodingAgentOutput,
 	FailureRecord,
@@ -96,6 +99,8 @@ export class TaskHarness implements ITaskHarness {
 	private narratives: NarrativeEntry[] = [];
 	private startTime = 0;
 	private recorder: HarnessRecorder | null = null;
+	private renderer: IHarnessRenderer | null = null;
+	private currentPhase: { name: string; number: number } | null = null;
 
 	/** Maximum retry attempts for validation failures */
 	private static readonly MAX_VALIDATION_RETRIES = 2;
@@ -124,6 +129,40 @@ export class TaskHarness implements ITaskHarness {
 				sessionId: this.state.sessionId,
 				includeSnapshots: this.config.includeStateSnapshots ?? false,
 			});
+		}
+	}
+
+	/**
+	 * Set the renderer for this harness.
+	 *
+	 * The renderer receives events during execution for visual output.
+	 * Must be called before run() to be effective.
+	 *
+	 * @param renderer - The renderer to use
+	 */
+	setRenderer(renderer: IHarnessRenderer): void {
+		this.renderer = renderer;
+	}
+
+	/**
+	 * Set multiple renderers for this harness.
+	 *
+	 * Creates a CompositeRenderer internally to fan out events to all renderers.
+	 * Must be called before run() to be effective.
+	 *
+	 * @param renderers - The renderers to use
+	 */
+	setRenderers(renderers: IHarnessRenderer[]): void {
+		if (renderers.length === 0) {
+			this.renderer = null;
+		} else if (renderers.length === 1) {
+			this.renderer = renderers[0] ?? null;
+		} else {
+			const composite = new CompositeRenderer();
+			for (const r of renderers) {
+				composite.add(r);
+			}
+			this.renderer = composite;
 		}
 	}
 
@@ -160,6 +199,7 @@ export class TaskHarness implements ITaskHarness {
 			if (!parseResult || this.aborted) {
 				const summary = this.buildSummary();
 				await this.finalizeRecording(summary);
+				await this.finalizeRenderer(summary);
 				return summary;
 			}
 
@@ -186,6 +226,17 @@ export class TaskHarness implements ITaskHarness {
 
 			this.state = setTasks(this.state, parseResult.tasks, pendingQueue);
 
+			// Initialize renderer with parsed tasks
+			await this.initializeRenderer(parseResult.tasks);
+
+			// Emit harness:start event
+			this.emitEvent({
+				type: "harness:start",
+				tasks: parseResult.tasks,
+				sessionId: this.state.sessionId,
+				mode: this.config.mode,
+			});
+
 			this.emitNarrative(
 				"Harness",
 				`Found ${parseResult.metadata.totalTasks} tasks (${parseResult.metadata.pendingTasks} pending, ${parseResult.metadata.completeTasks} complete)`,
@@ -206,6 +257,9 @@ export class TaskHarness implements ITaskHarness {
 			});
 			await this.finalizeRecording(summary);
 
+			// Emit harness:complete event
+			this.emitEvent({ type: "harness:complete", summary });
+
 			this.emitNarrative(
 				"Harness",
 				`Execution complete: ${summary.validatedTasks} validated, ${summary.failedTasks} failed, ${summary.skippedTasks} skipped`,
@@ -213,18 +267,53 @@ export class TaskHarness implements ITaskHarness {
 				callbacks,
 			);
 
+			// Finalize renderer
+			await this.finalizeRenderer(summary);
+
 			callbacks?.onComplete?.(summary);
 			return summary;
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			this.emitNarrative("Harness", `Execution failed: ${errorMessage}`, null, callbacks);
 
+			// Emit harness:error event
+			this.emitEvent({
+				type: "harness:error",
+				error: error instanceof Error ? error : new Error(errorMessage),
+			});
+
 			// Log abort and finalize
 			await this.logStateEvent("harness_aborted", null, { error: errorMessage });
 			await this.finalizeRecording(null);
+			await this.finalizeRenderer(null);
 
 			throw error;
 		}
+	}
+
+	/**
+	 * Initialize the renderer if present.
+	 */
+	private async initializeRenderer(tasks: ParsedTask[]): Promise<void> {
+		if (!this.renderer) return;
+
+		const config: RendererConfig = {
+			mode: this.config.mode,
+			sessionId: this.state.sessionId,
+			showTimestamps: false,
+			collapseCompleted: false,
+			showTokenUsage: true,
+		};
+
+		await this.renderer.initialize(tasks, config);
+	}
+
+	/**
+	 * Finalize the renderer if present.
+	 */
+	private async finalizeRenderer(summary: HarnessSummary | null): Promise<void> {
+		if (!this.renderer || !summary) return;
+		await this.renderer.finalize(summary);
 	}
 
 	/**
@@ -372,7 +461,13 @@ export class TaskHarness implements ITaskHarness {
 				continue;
 			}
 
+			// Emit phase:start if entering a new phase
+			this.emitPhaseStartIfNeeded(task);
+
 			await this.executeTask(task, callbacks);
+
+			// Emit phase:complete if this was the last task in the phase
+			this.emitPhaseCompleteIfNeeded(task);
 
 			// Check if we should stop (fail-fast mode and failure occurred)
 			if (!this.state.continueOnFailure && Object.keys(this.state.failedTasks).length > 0) {
@@ -383,12 +478,56 @@ export class TaskHarness implements ITaskHarness {
 	}
 
 	/**
+	 * Emit phase:start event if entering a new phase.
+	 */
+	private emitPhaseStartIfNeeded(task: ParsedTask): void {
+		if (!this.currentPhase || this.currentPhase.number !== task.phaseNumber) {
+			// Count tasks in this phase
+			const tasksInPhase = this.state.tasks.filter((t) => t.phaseNumber === task.phaseNumber);
+			this.currentPhase = { name: task.phase, number: task.phaseNumber };
+
+			this.emitEvent({
+				type: "phase:start",
+				phase: task.phase,
+				phaseNumber: task.phaseNumber,
+				taskCount: tasksInPhase.length,
+			});
+		}
+	}
+
+	/**
+	 * Emit phase:complete event if this was the last task in the phase.
+	 */
+	private emitPhaseCompleteIfNeeded(task: ParsedTask): void {
+		if (!this.currentPhase || this.currentPhase.number !== task.phaseNumber) return;
+
+		// Check if all tasks in this phase are done
+		const tasksInPhase = this.state.tasks.filter((t) => t.phaseNumber === task.phaseNumber);
+		const allDone = tasksInPhase.every(
+			(t) =>
+				this.state.validatedTasks[t.id] ||
+				this.state.failedTasks[t.id] ||
+				t.status === "complete",
+		);
+
+		if (allDone) {
+			this.emitEvent({
+				type: "phase:complete",
+				phaseNumber: task.phaseNumber,
+			});
+		}
+	}
+
+	/**
 	 * Execute a single task.
 	 */
 	private async executeTask(task: ParsedTask, callbacks?: ITaskHarnessCallbacks): Promise<void> {
 		this.emitNarrative("Harness", `Starting task ${task.id}`, task.id, callbacks);
 		this.state = startTask(this.state, task.id);
 		callbacks?.onTaskStart?.(task);
+
+		// Emit task:start event
+		this.emitEvent({ type: "task:start", task });
 
 		// Log task started
 		await this.logStateEvent("task_started", task.id, {
@@ -403,6 +542,9 @@ export class TaskHarness implements ITaskHarness {
 			if (result.success) {
 				this.state = completeTask(this.state, task.id, result);
 				callbacks?.onTaskComplete?.(task, result);
+
+				// Emit task:complete event
+				this.emitEvent({ type: "task:complete", taskId: task.id, result });
 
 				// Log task completed
 				await this.logStateEvent("task_completed", task.id, {
@@ -478,6 +620,9 @@ export class TaskHarness implements ITaskHarness {
 		const previousAttempts: ValidationResult[] = [];
 		let attempts = 0;
 
+		// Emit validation:start event
+		this.emitEvent({ type: "validation:start", taskId: task.id });
+
 		while (attempts < TaskHarness.MAX_VALIDATION_RETRIES) {
 			attempts++;
 			this.emitNarrative(
@@ -505,6 +650,9 @@ export class TaskHarness implements ITaskHarness {
 					task.id,
 					callbacks,
 				);
+
+				// Emit validation:complete event
+				this.emitEvent({ type: "validation:complete", taskId: task.id, result: validationResult });
 
 				// Log task validated
 				await this.logStateEvent("task_validated", task.id, {
@@ -540,6 +688,17 @@ export class TaskHarness implements ITaskHarness {
 				callbacks,
 			);
 
+			// Emit task:retry event if we'll retry
+			if (attempts < TaskHarness.MAX_VALIDATION_RETRIES && validationResult.confidence >= 0.3) {
+				this.emitEvent({
+					type: "task:retry",
+					taskId: task.id,
+					attempt: attempts,
+					maxAttempts: TaskHarness.MAX_VALIDATION_RETRIES,
+					reason: validationResult.reasoning,
+				});
+			}
+
 			// Check for abort signal (validation is futile)
 			if (validationResult.confidence < 0.3) {
 				this.emitNarrative(
@@ -555,13 +714,20 @@ export class TaskHarness implements ITaskHarness {
 			// For now, we just retry validation to show the loop structure
 		}
 
-		// All retries exhausted - mark as failed
-		const finalReason =
-			previousAttempts.length > 0
+		// Emit validation:failed event
+		const failure: FailureRecord = {
+			taskId: task.id,
+			stage: "validation",
+			error: previousAttempts.length > 0
 				? `Validation failed after ${attempts} attempts: ${previousAttempts[previousAttempts.length - 1]?.reasoning}`
-				: "Validation failed";
+				: "Validation failed",
+			retryable: false,
+			timestamp: Date.now(),
+		};
+		this.emitEvent({ type: "validation:failed", taskId: task.id, failure });
 
-		await this.handleTaskFailure(task, "validation", finalReason, false, callbacks);
+		// All retries exhausted - mark as failed
+		await this.handleTaskFailure(task, "validation", failure.error, false, callbacks);
 	}
 
 	/**
@@ -696,6 +862,10 @@ export class TaskHarness implements ITaskHarness {
 
 		this.state = failTask(this.state, task.id, failure);
 		this.emitNarrative("Harness", `✗ ${task.id} failed at ${stage}: ${error}`, task.id, callbacks);
+
+		// Emit task:failed event
+		this.emitEvent({ type: "task:failed", taskId: task.id, failure });
+
 		callbacks?.onTaskFailed?.(task, failure);
 
 		// Log task_failed event for recording
@@ -716,6 +886,27 @@ export class TaskHarness implements ITaskHarness {
 		callbacks?.onNarrative?.(entry);
 		// Record narrative for replay
 		this.recorder?.recordNarrative(entry);
+
+		// Emit to renderer if present
+		if (this.renderer && taskId) {
+			this.emitEvent({
+				type: "task:narrative",
+				taskId,
+				entry: {
+					timestamp: entry.timestamp,
+					agentName: entry.agentName as "Parser" | "Coder" | "Reviewer" | "Validator" | "Harness",
+					taskId: entry.taskId,
+					text: entry.text,
+				},
+			});
+		}
+	}
+
+	/**
+	 * Emit an event to the renderer.
+	 */
+	private emitEvent(event: HarnessEvent): void {
+		this.renderer?.handleEvent(event);
 	}
 
 	/**
@@ -724,12 +915,19 @@ export class TaskHarness implements ITaskHarness {
 	private buildSummary(): HarnessSummary {
 		const durationMs = Date.now() - this.startTime;
 
+		// Calculate total retries across all tasks
+		const totalRetries = Object.values(this.state.retryHistory).reduce(
+			(sum, retries) => sum + retries.length,
+			0,
+		);
+
 		return {
 			totalTasks: this.state.tasks.length,
 			completedTasks: Object.keys(this.state.completedTasks).length,
 			validatedTasks: Object.keys(this.state.validatedTasks).length,
 			failedTasks: Object.keys(this.state.failedTasks).length,
 			skippedTasks: this.state.tasks.filter((t) => t.status === "complete").length,
+			totalRetries,
 			durationMs,
 			tokenUsage: {
 				inputTokens: 0,
