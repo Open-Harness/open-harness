@@ -1,8 +1,25 @@
 {
   "name": "trading-bot",
+  "version": "0.1.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts",
+    "cli": "bun trading-cli.ts",
+    "test": "bun test",
+    "test:smoke": "bun test tests/smoke/",
+    "test:integration": "bun test tests/integration/",
+    "test:e2e": "bun test tests/e2e/",
+    "backtest": "bun trading-cli.ts backtest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "ccxt": "^4.4.54",
+    "technicalindicators": "^3.1.0"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
