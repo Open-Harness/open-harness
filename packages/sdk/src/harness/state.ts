@@ -41,6 +41,14 @@ export class PersistentState<TState, TInput = unknown, TOutput = unknown> {
 	/**
 	 * Updates state immutably using an updater function.
 	 *
+	 * The updater function receives the current state and must return a new state object.
+	 * This ensures immutability - the original state is never mutated.
+	 *
+	 * @example
+	 * ```typescript
+	 * state.updateState(s => ({ ...s, count: s.count + 1 }));
+	 * ```
+	 *
 	 * @param updater - Function that takes current state and returns new state
 	 */
 	updateState(updater: (state: TState) => TState): void {
@@ -78,8 +86,18 @@ export class PersistentState<TState, TInput = unknown, TOutput = unknown> {
 	/**
 	 * Gets the most recent N steps.
 	 *
-	 * @param count - Number of recent steps to return
-	 * @returns Array of most recent steps (chronological order)
+	 * Returns steps in chronological order (oldest to newest).
+	 * If count is 0 or negative, returns empty array.
+	 * If count exceeds history length, returns all available steps.
+	 *
+	 * @example
+	 * ```typescript
+	 * // Get last 5 steps
+	 * const recent = state.getRecentSteps(5);
+	 * ```
+	 *
+	 * @param count - Number of recent steps to return (must be >= 0)
+	 * @returns Array of most recent steps (chronological order), empty if count <= 0
 	 */
 	getRecentSteps(count: number): Step<TInput, TOutput>[] {
 		if (count <= 0 || this.stepHistory.length === 0) {
@@ -92,11 +110,22 @@ export class PersistentState<TState, TInput = unknown, TOutput = unknown> {
 	/**
 	 * Loads bounded context for agent execution.
 	 *
-	 * @returns LoadedContext with current state and bounded recent steps
+	 * Returns a snapshot of the current state and recent steps (bounded by maxContextSteps).
+	 * This prevents unbounded memory growth by limiting the number of steps included in context.
+	 * Steps are converted to Step<unknown, unknown>[] to match LoadedContext type requirements.
+	 *
+	 * @example
+	 * ```typescript
+	 * const context = state.loadContext();
+	 * // Use context.state and context.recentSteps in agent execution
+	 * ```
+	 *
+	 * @returns LoadedContext with current state and bounded recent steps (maxContextSteps)
 	 */
 	loadContext(): LoadedContext<TState> {
 		const recentSteps = this.getRecentSteps(this.maxContextSteps);
-		// Convert to Step<unknown, unknown>[] for LoadedContext type
+		// Convert to Step<unknown, unknown>[] for LoadedContext type compatibility
+		// This allows LoadedContext to work with any step types
 		const contextSteps: Step<unknown, unknown>[] = recentSteps.map((step) => ({
 			stepNumber: step.stepNumber,
 			timestamp: step.timestamp,
@@ -108,7 +137,7 @@ export class PersistentState<TState, TInput = unknown, TOutput = unknown> {
 		return {
 			state: this.state,
 			recentSteps: contextSteps,
-			relevantKnowledge: {},
+			relevantKnowledge: {}, // Placeholder for future knowledge base integration
 		};
 	}
 }

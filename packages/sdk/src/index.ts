@@ -54,6 +54,12 @@ export type {
 } from "./workflow/task-list.js";
 
 // ============================================
+// Harness Primitives
+// ============================================
+
+export * from "./harness/index.js";
+
+// ============================================
 // Internal (for testing/advanced usage)
 // ============================================
 
