@@ -1,0 +1,24 @@
+{
+  "captured_at": "2025-12-23T15:54:25.443Z",
+  "session_id": "849ce23e-f3e1-4ac9-afd3-6ced2bc63373",
+  "total_messages": 30,
+  "message_types": {
+    "system.init": 2,
+    "assistant": 15,
+    "user": 8,
+    "result": 2,
+    "system.status": 2,
+    "system.compact_boundary": 1
+  },
+  "events_seen": {
+    "session_start": true,
+    "text": true,
+    "thinking": true,
+    "tool_call": true,
+    "tool_result": true,
+    "tool_progress": false,
+    "compact_boundary": true,
+    "status": true,
+    "result": true
+  }
+}

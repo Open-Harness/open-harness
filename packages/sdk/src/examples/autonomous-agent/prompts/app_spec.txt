@@ -1,0 +1,108 @@
+Simple Todo Application
+=======================
+
+Build a clean, functional todo list web application.
+
+## Technology Stack
+
+**Frontend:**
+- HTML + vanilla JavaScript
+- Tailwind CSS (via CDN)
+- Single page application
+
+**Backend:**
+- Bun with built-in HTTP server
+- SQLite database (bun:sqlite)
+- REST API
+
+**Port:** Run on port 3000
+
+## Core Features
+
+### 1. Task Management
+- Add new tasks with a text input
+- Mark tasks as complete/incomplete (checkbox)
+- Delete tasks (delete button)
+- Edit task text (inline editing)
+
+### 2. Task List Display
+- Show all tasks in a list
+- Completed tasks have strikethrough text
+- Show task count (e.g., "3 of 10 tasks complete")
+- Empty state when no tasks exist
+
+### 3. Filtering
+- "All" - show all tasks
+- "Active" - show incomplete tasks only
+- "Completed" - show completed tasks only
+
+### 4. Persistence
+- Tasks saved to SQLite database
+- Data persists across page refreshes
+- Auto-save on every change
+
+### 5. UI/UX
+- Clean, minimal design
+- Responsive layout (works on mobile)
+- Smooth animations for adding/removing tasks
+- Input field clears after adding task
+- Focus management (auto-focus input after actions)
+
+## Database Schema
+
+```sql
+CREATE TABLE tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  text TEXT NOT NULL,
+  completed BOOLEAN DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## API Endpoints
+
+- GET /api/tasks - Get all tasks
+- POST /api/tasks - Create new task (body: { text })
+- PUT /api/tasks/:id - Update task (body: { text?, completed? })
+- DELETE /api/tasks/:id - Delete task
+
+## File Structure
+
+```
+project/
+├── init.sh              # Setup and run script
+├── server.ts            # Bun HTTP server + API + database
+├── public/
+│   ├── index.html       # Main page
+│   └── app.js           # Frontend JavaScript
+├── feature_list.json    # Test cases
+└── claude-progress.txt  # Progress tracking
+```
+
+## Design Requirements
+
+- Use Tailwind CSS for styling
+- Primary color: Blue (#3B82F6)
+- Background: Light gray (#F9FAFB)
+- Task items: White cards with subtle shadow
+- Hover states on interactive elements
+- Smooth transitions (200ms)
+
+## Success Criteria
+
+- All CRUD operations work correctly
+- Data persists across refreshes
+- Filtering works as expected
+- Clean, professional appearance
+- No console errors
+- Responsive on mobile and desktop
+- Fast performance (< 100ms response times)
+
+## Implementation Notes
+
+- Use Bun.serve() for the HTTP server
+- Use bun:sqlite for database (no external dependencies)
+- Serve static files from /public directory
+- Enable CORS for API requests
+- Handle errors gracefully with user-friendly messages
