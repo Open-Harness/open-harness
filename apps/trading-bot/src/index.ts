@@ -3,24 +3,33 @@
  * Production-grade agentic trading bot built with Anthropic Agent SDK and Bun
  */
 
-// Core
-export { Container, container } from './core/container'
-export { TradingDatabase } from './core/database'
-export { TimeSource, RealTimeSource, MockTimeSource } from './core/time-source'
-
 // CCXT
-export type { CCXTInterface, OHLCV, OrderResult, Position, Balance } from './ccxt/ccxt-interface'
-export { CCXTWrapper } from './ccxt/ccxt-wrapper'
-export { MockCCXT } from './ccxt/mock-ccxt'
+export type {
+	Balance,
+	CCXTInterface,
+	OHLCV,
+	OrderResult,
+	Position,
+} from "./ccxt/ccxt-interface";
+export { CCXTWrapper } from "./ccxt/ccxt-wrapper";
+export { MockCCXT } from "./ccxt/mock-ccxt";
+// Core
+export { Container, container } from "./core/container";
+export { TradingDatabase } from "./core/database";
+export { MockTimeSource, RealTimeSource, TimeSource } from "./core/time-source";
 
 // Services
-export { MarketService } from './services/market-service'
-export { OrderService } from './services/order-service'
-export { RiskService } from './services/risk-service'
-
-// Workflow
-export { TradingWorkflow } from './workflow/trading-workflow'
-
+export { MarketService } from "./services/market-service";
+export { OrderService } from "./services/order-service";
+export { RiskService } from "./services/risk-service";
 // Snapshotting
-export type { AgentState, Snapshot, MonologueEntry, DCALayer, CompletedTrade } from './snapshotting/agent-state'
-export { SnapshotStorage } from './snapshotting/snapshot-storage'
+export type {
+	AgentState,
+	CompletedTrade,
+	DCALayer,
+	MonologueEntry,
+	Snapshot,
+} from "./snapshotting/agent-state";
+export { SnapshotStorage } from "./snapshotting/snapshot-storage";
+// Workflow
+export { TradingWorkflow } from "./workflow/trading-workflow";
