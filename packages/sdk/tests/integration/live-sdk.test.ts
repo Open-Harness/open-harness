@@ -1,8 +1,8 @@
 /**
  * Live SDK Integration Test
  *
- * Makes real API calls to verify agents work correctly.
- * Works with both API key and subscription authentication.
+ * Makes real API calls to verify agents work correctly and captures golden recordings.
+ * Works with Claude Code subscription authentication (no API key needed).
  *
  * Run with: bun test tests/integration/live-sdk.test.ts
  */
@@ -10,11 +10,11 @@
 import { describe, expect, test } from "bun:test";
 import { CodingAgent } from "../../src/agents/coding-agent.js";
 import { ReviewAgent } from "../../src/agents/review-agent.js";
-import { createContainer } from "../../src/core/container.js";
+import { createRecordingContainer } from "../helpers/recording-wrapper.js";
 
 describe("Live SDK Integration", () => {
 	test(
-		"CodingAgent executes with callbacks",
+		"CodingAgent executes with callbacks and captures golden recording",
 		async () => {
 			// Log authentication method
 			if (process.env.ANTHROPIC_API_KEY) {
@@ -23,14 +23,17 @@ describe("Live SDK Integration", () => {
 				console.log("Using subscription authentication (no API key)");
 			}
 
-			// Create live container
-			const container = createContainer({ mode: "live" });
+			// Create recording container
+			const { container, recorder } = createRecordingContainer("golden/coding-agent");
 			const coder = container.get(CodingAgent);
 
 			console.log("Agent:", coder.name);
 
 			// Track events
 			const events: string[] = [];
+
+			// Start capture
+			recorder.startCapture("add-two-numbers");
 
 			// Execute coding task
 			const result = await coder.execute("Write a function that adds two numbers", "integration_test_session", {
@@ -41,6 +44,9 @@ describe("Live SDK Integration", () => {
 					onComplete: () => events.push("complete"),
 				},
 			});
+
+			// Save recording
+			await recorder.saveCapture({ task: "add-two-numbers" });
 
 			// Validate
 			expect(result).toBeDefined();
@@ -55,16 +61,19 @@ describe("Live SDK Integration", () => {
 	);
 
 	test(
-		"ReviewAgent executes with callbacks",
+		"ReviewAgent executes with callbacks and captures golden recording",
 		async () => {
-			// Create live container
-			const container = createContainer({ mode: "live" });
+			// Create recording container
+			const { container, recorder } = createRecordingContainer("golden/review-agent");
 			const reviewer = container.get(ReviewAgent);
 
 			console.log("Agent:", reviewer.name);
 
 			// Track events
 			const events: string[] = [];
+
+			// Start capture
+			recorder.startCapture("review-add-function");
 
 			// Execute review task
 			const result = await reviewer.review(
@@ -79,6 +88,9 @@ describe("Live SDK Integration", () => {
 					},
 				},
 			);
+
+			// Save recording
+			await recorder.saveCapture({ task: "review-add-function" });
 
 			// Validate
 			expect(result).toBeDefined();

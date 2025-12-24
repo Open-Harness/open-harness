@@ -242,3 +242,229 @@ export interface IPromptRegistry {
 }
 
 export const IPromptRegistryToken = new InjectionToken<IPromptRegistry>("IPromptRegistry");
+
+// ============================================================================
+// Task Harness System (002-sdk-validation)
+// ============================================================================
+
+/**
+ * Token for ParserAgent - parses tasks.md into structured ParsedTask[]
+ */
+export const IParserAgentToken = new InjectionToken<IParserAgent>("IParserAgent");
+
+/**
+ * Token for TaskHarness - orchestrates task execution with Parser, Coding, Review agents
+ */
+export const ITaskHarnessToken = new InjectionToken<ITaskHarness>("ITaskHarness");
+
+/**
+ * Parser Agent interface for converting tasks.md to structured output
+ */
+export interface IParserAgent {
+	/**
+	 * Parse a tasks.md file into structured tasks
+	 * @param input Parser input containing file path and content
+	 * @returns Parsed tasks with phases, warnings, and metadata
+	 */
+	parse(input: IParserAgentInput): Promise<IParserAgentOutput>;
+}
+
+/**
+ * Input to Parser Agent
+ */
+export interface IParserAgentInput {
+	tasksFilePath: string;
+	tasksContent: string;
+	specFilePath?: string;
+}
+
+/**
+ * Output from Parser Agent
+ */
+export interface IParserAgentOutput {
+	tasks: IParsedTask[];
+	phases: IPhaseInfo[];
+	warnings: string[];
+	metadata: IParserMetadata;
+}
+
+/**
+ * Parsed task from tasks.md
+ */
+export interface IParsedTask {
+	id: string;
+	phase: string;
+	phaseNumber: number;
+	description: string;
+	filePaths: string[];
+	userStory: string | null;
+	dependencies: string[];
+	status: "complete" | "pending";
+	validationCriteria: string;
+	flags: ITaskFlags;
+}
+
+/**
+ * Task flags parsed from task line
+ */
+export interface ITaskFlags {
+	parallel: boolean;
+	constitution: string | null;
+}
+
+/**
+ * Phase information extracted from tasks.md
+ */
+export interface IPhaseInfo {
+	number: number;
+	name: string;
+	purpose: string;
+	independentTest: string | null;
+	goal: string | null;
+}
+
+/**
+ * Parser metadata
+ */
+export interface IParserMetadata {
+	totalTasks: number;
+	completeTasks: number;
+	pendingTasks: number;
+	cycles: string[][];
+	sourcePath: string;
+}
+
+/**
+ * Task Harness interface for orchestrating task execution
+ */
+export interface ITaskHarness {
+	/**
+	 * Run the harness to execute tasks
+	 * @param callbacks Optional callbacks for progress updates
+	 * @returns Summary of execution
+	 */
+	run(callbacks?: ITaskHarnessCallbacks): Promise<IHarnessSummary>;
+
+	/**
+	 * Get current harness state
+	 */
+	getState(): ITaskHarnessState;
+
+	/**
+	 * Get session ID for this run
+	 */
+	getSessionId(): string;
+
+	/**
+	 * Abort execution
+	 */
+	abort(): void;
+}
+
+/**
+ * Task Harness configuration
+ */
+export interface ITaskHarnessConfig {
+	tasksFilePath: string;
+	mode: "live" | "replay";
+	continueOnFailure?: boolean;
+	taskTimeoutMs?: number;
+	sessionId?: string;
+	resumeFromCheckpoint?: string;
+}
+
+/**
+ * Task Harness callbacks
+ */
+export interface ITaskHarnessCallbacks {
+	onTasksParsed?: (result: IParserAgentOutput) => void;
+	onTaskStart?: (task: IParsedTask) => void;
+	onTaskComplete?: (task: IParsedTask, result: ITaskResult) => void;
+	onTaskValidated?: (task: IParsedTask, result: IValidationResult) => void;
+	onTaskFailed?: (task: IParsedTask, failure: IFailureRecord) => void;
+	onNarrative?: (entry: INarrativeEntry) => void;
+	onComplete?: (summary: IHarnessSummary) => void;
+}
+
+/**
+ * Task execution result
+ */
+export interface ITaskResult {
+	taskId: string;
+	success: boolean;
+	summary: string;
+	filesModified: string[];
+	output: unknown;
+	durationMs: number;
+}
+
+/**
+ * Validation result from Review Agent
+ */
+export interface IValidationResult {
+	taskId: string;
+	passed: boolean;
+	reasoning: string;
+	suggestedFixes: string[];
+	confidence: number;
+	uncertainties: string[];
+}
+
+/**
+ * Failure record
+ */
+export interface IFailureRecord {
+	taskId: string;
+	stage: "coding" | "validation";
+	error: string;
+	retryable: boolean;
+	timestamp: number;
+}
+
+/**
+ * Narrative entry for unified stream
+ */
+export interface INarrativeEntry {
+	timestamp: number;
+	agentName: "Parser" | "Coder" | "Reviewer" | "Harness";
+	taskId: string | null;
+	text: string;
+}
+
+/**
+ * Harness execution summary
+ */
+export interface IHarnessSummary {
+	totalTasks: number;
+	completedTasks: number;
+	validatedTasks: number;
+	failedTasks: number;
+	skippedTasks: number;
+	durationMs: number;
+}
+
+/**
+ * Task Harness state
+ */
+export interface ITaskHarnessState {
+	tasks: IParsedTask[];
+	taskQueue: string[];
+	currentTaskId: string | null;
+	completedTasks: Record<string, ITaskResult>;
+	validatedTasks: Record<string, IValidationResult>;
+	failedTasks: Record<string, IFailureRecord>;
+	retryHistory: Record<string, IRetryRecord[]>;
+	mode: "live" | "replay";
+	continueOnFailure: boolean;
+	sessionId: string;
+}
+
+/**
+ * Retry record
+ */
+export interface IRetryRecord {
+	attempt: number;
+	previousFailure: IFailureRecord;
+	feedback: string;
+	timestamp: number;
+}

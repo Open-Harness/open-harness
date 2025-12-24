@@ -28,6 +28,9 @@ import {
 	IReplayRunnerToken,
 	type IVault,
 	IVaultToken,
+	// Task Harness tokens - uncomment when implementations exist:
+	// IParserAgentToken,
+	// ITaskHarnessToken,
 } from "./tokens.js";
 import { Vault } from "./vault.js";
 

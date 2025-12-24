@@ -215,7 +215,7 @@ As a developer, I want to record a full harness run and replay it deterministica
 
 - tasks.md follows the format established in 001-sdk-core (phases, checkpoints, task format)
 - Coding Agent has appropriate tools/permissions for file operations
-- API key or subscription authentication is available for live runs
+- Claude Code subscription provides automatic authentication for live runs (no API key needed)
 - 001-sdk-core infrastructure (BaseHarness, agents, container) is functional
 
 ---
