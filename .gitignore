@@ -1,50 +1,118 @@
-# Dependencies
+# ============================================
+# bun-vi SDK - Git Ignore
+# ============================================
+
+# ============================================
+# Core Bun/Vite/Node
+# ============================================
 node_modules
-.pnp
-.pnp.js
-
-# Build outputs
+out
 dist
-build
-*.tsbuildinfo
+*.tgz
 
-# Environment variables
+# ============================================
+# Testing & Coverage
+# ============================================
+coverage
+*.lcov
+
+# ============================================
+# Logs
+# ============================================
+logs
+_.log
+report.[0-9]_[0-9]_[0-9]_[0-9]_.json
+
+# ============================================
+# Environment Files
+# ============================================
 .env
-.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
-# IDEs and editors
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-.idea
+# ============================================
+# Caches
+# ============================================
+.eslintcache
+.cache
+*.tsbuildinfo
+__pycache__
+
+# ============================================
+# IDE Files
+# ============================================
+.idea/
+.vscode/
 *.swp
 *.swo
 *~
+
+# ============================================
+# OS Files
+# ============================================
 .DS_Store
+Thumbs.db
+desktop.ini
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+# ============================================
+# ============================================
+# PROJECT-SPECIFIC EXCLUSIONS
+# ============================================
+# ============================================
 
-# Turbo
-.turbo
+# ============================================
+# Audio Files (generated, large)
+# ============================================
+*.wav
+*.mp3
+*.ogg
+*.flac
 
-# Better-T-Stack
-.alchemy
+# ============================================
+# Test Artifacts & Workspaces
+# ============================================
+test_project/
+test_autonomous_run/
+tmp/
+temp/
 
-# Testing
-coverage
-.nyc_output
+# ============================================
+# Claude-Quickstarts (external, not part of SDK)
+# ============================================
+claude-quickstarts/
 
-# Misc
-*.tgz
-.cache
-tmp
-temp
+# ============================================
+# .claude - Local AI Config (keep structure, exclude generated)
+# ============================================
+# Audio files
+.claude/audio/tracks/*.mp3
+.claude/audio/tracks/*.wav
+.claude/audio/*.wav
+.claude/audio/*.mp3
+
+# Local settings (don't commit personal config)
+.claude/settings.local.json
+.claude/github-star-reminder.txt
+
+# Inbox/Exports (personal workspaces)
+.claude/inbox/
+.claude/exports/
+
+# ============================================
+# _bmad - Personal Tooling (exclude generated)
+# ============================================
+_bmad/_memory/
+_bmad/bmm/data/
+
+# ============================================
+# Config Files (generated/local)
+# ============================================
+settings.json
+settings.local.json
+
+# ============================================
+# Hooks (generated scripts)
+# ============================================
+/hooks/*.sh
