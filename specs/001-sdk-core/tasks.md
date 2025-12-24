@@ -43,7 +43,7 @@ Based on plan.md structure:
 - [ ] T006 Migrate CodingAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/coding-agent.ts
 - [ ] T007 [P] Migrate ReviewAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/review-agent.ts
 - [ ] T008 [P] Migrate PlannerAgent to extend BaseAnthropicAgent in packages/sdk/src/agents/planner-agent.ts
-- [ ] T009 Delete deprecated runner/base-agent.ts after migrations complete
+- [ ] T009 [depends: T006,T007,T008] Delete deprecated runner/base-agent.ts after migrations complete
 - [ ] T010 Update agent-factory.ts to use new BaseAnthropicAgent in packages/sdk/src/factory/agent-factory.ts
 - [ ] T011 Update container.ts composition root with new bindings in packages/sdk/src/core/container.ts
 - [ ] T012 Remove deprecated StreamCallbacks from exports in packages/sdk/src/index.ts
@@ -61,11 +61,9 @@ Based on plan.md structure:
 ### Implementation for User Story 1
 
 - [ ] T013 [US1] Implement createAgent() factory function in packages/sdk/src/factory/agent-factory.ts
-- [ ] T014 [US1] Add onText, onToolCall, onToolResult callbacks to BaseAnthropicAgent in packages/sdk/src/agents/base-anthropic-agent.ts
+- [ ] T014 [US1] Implement full callback system (onText, onToolCall, onToolResult, onError) + EventBus integration in packages/sdk/src/agents/base-anthropic-agent.ts
 - [ ] T015 [US1] Implement typed CodingResult output in packages/sdk/src/agents/coding-agent.ts
-- [ ] T016 [US1] Add onError callback with error details in packages/sdk/src/agents/base-anthropic-agent.ts
-- [ ] T017 [US1] Integrate EventBus for cross-cutting event emission in packages/sdk/src/agents/base-anthropic-agent.ts
-- [ ] T018 [US1] Export createAgent and CodingResult from packages/sdk/src/index.ts
+- [ ] T016 [US1] Export createAgent and CodingResult from packages/sdk/src/index.ts
 
 **Checkpoint**: User Story 1 complete - basic agent execution works with typed callbacks
 
@@ -88,6 +86,8 @@ Based on plan.md structure:
 - [ ] T025 [US2] Integrate RecordingDecorator with agent factory in packages/sdk/src/factory/agent-factory.ts
 - [ ] T026 [US2] Create recordings/golden/ directory structure
 - [ ] T027 [US2] Export recording types and decorator from packages/sdk/src/index.ts
+- [ ] T027a [US2] Implement replay strict mode option (error when prompt doesn't match) in packages/sdk/src/recording/replayer.ts
+- [ ] T027b [US2] [CONSTITUTION-II] Add validation ensuring all recordings are from live API calls (not hand-crafted) in packages/sdk/src/recording/recorder.ts
 
 **Checkpoint**: User Story 2 complete - can record and replay agent sessions
 
@@ -149,6 +149,7 @@ Based on plan.md structure:
 - [ ] T047 [US5] Update agents to depend on IAgentRunnerToken not concrete class in packages/sdk/src/agents/base-anthropic-agent.ts
 - [ ] T048 [US5] Update container.ts with runner token binding in packages/sdk/src/core/container.ts
 - [ ] T049 [US5] Export IAgentRunner interface from packages/sdk/src/index.ts
+- [ ] T049a [US5] Validate: Test agent with swapped runner (ReplayRunner) without modifying agent code
 
 **Checkpoint**: User Story 5 complete - runners are swappable via DI
 
@@ -196,10 +197,12 @@ Based on plan.md structure:
 - [ ] T065 Verify bun run build succeeds with zero errors
 - [ ] T066 Verify bun run check-types passes with strict mode
 - [ ] T067 Verify all exports in index.ts resolve to existing implementations
-- [ ] T068 [P] Capture at least 3 golden recordings in recordings/golden/
+- [ ] T068 [P] Capture 3 golden recordings: coding-simple.jsonl, workflow-basic.jsonl, monologue-demo.jsonl in recordings/golden/
 - [ ] T069 Verify no any types in public API surface
 - [ ] T070 Remove any remaining deprecated code references
 - [ ] T071 Validate DX: new user can create and run agent in <10 lines
+- [ ] T072 Implement timeout configuration (per-agent + per-workflow) in packages/sdk/src/agents/base-anthropic-agent.ts and packages/sdk/src/workflow/orchestrator.ts
+- [ ] T073 Add container binding validation on creation (fail-fast for missing bindings) in packages/sdk/src/core/container.ts
 
 ---
 

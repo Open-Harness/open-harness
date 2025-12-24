@@ -1,6 +1,6 @@
 # Feature Specification: Open Harness SDK Core
 
-**Feature Branch**: `spec-kit/fix-1`
+**Feature Branch**: `001-sdk-core`
 **Created**: 2025-12-25
 **Status**: Draft
 **Input**: Architectural audit + user requirements discussion
@@ -122,6 +122,8 @@ As a developer, I want to run long-running agent tasks with bounded context and 
 - What happens when DI container has missing bindings? → Fail fast with clear error listing missing tokens
 - What happens when agent execution times out? → Configurable timeout, error callback fires
 - What happens when replay doesn't match prompt? → Use first recording in file (warn) or strict mode (error)
+- What happens when user provides custom prompt override? → Must follow same Zod schema as default; validation error if schema mismatch
+- What makes a recording "golden" vs "scratch"? → Golden recordings: captured from live API, no PII, committed to repo; Scratch: local experiments, gitignored
 
 ---
 
@@ -159,7 +161,7 @@ As a developer, I want to run long-running agent tasks with bounded context and 
 - **FR-033**: Decorators (Recording, Monologue) MUST integrate with DI container
 - **FR-034**: Circular dependencies MUST be prevented by architecture
 
-**Event System**
+**Event System** *(Internal Infrastructure - no dedicated user story; validated via integration tests)*
 - **FR-040**: EventBus MUST support publish/subscribe pattern
 - **FR-041**: Events MUST be typed (AgentEvent discriminated union)
 - **FR-042**: Subscribers MUST be able to filter by event type
@@ -350,6 +352,7 @@ The harness is the orchestration layer that owns state. Options for how this loo
 - `@anthropic-ai/claude-agent-sdk` ^0.1.76 - Claude SDK
 - `@needle-di/core` ^1.1.0 - Dependency injection
 - `zod` ^4.2.1 - Schema validation
+- `handlebars` - Prompt templating (Markdown with Handlebars syntax)
 - `bun` - Runtime and test framework
 
 ---
