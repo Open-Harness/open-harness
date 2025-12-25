@@ -34,6 +34,13 @@ Every command that produces artifacts should validate them before proceeding. Us
 - `50-69`: fix_required (user choice)
 - `< 50`: block
 
+**Exception - oharnes.verify**: Uses stricter post-implementation thresholds:
+- `>= 90`: PASS (ready for merge)
+- `70-89`: PARTIAL (fix issues before merge)
+- `< 70`: FAIL (significant work needed, triggers retrospective)
+
+**Terminology**: `oharnes.verify` uses user-facing terms (PASS/PARTIAL/FAIL) equivalent to (proceed/fix_required/block).
+
 ---
 
 ## When to Use Sub-Agents
@@ -78,6 +85,12 @@ Examples: `oharnes.plan-researcher.md`, `oharnes.plan-validator.md`
 name: oharnes.<command>:<role>
 ```
 Examples: `oharnes.plan:researcher`, `oharnes.tasks:validator`
+
+### Directory Field Naming
+Agents output directory paths with consistent field names:
+- verify agents: use `feature_dir`
+- retro agents: use `spec_directory`
+- analyze agents: use `feature_dir`
 
 ---
 
@@ -233,6 +246,11 @@ Handle results:
   - Ask: "Fix now or proceed anyway?"
   - If fix: Address issues, re-run validator (max 2 iterations)
   - If proceed: Continue with warning
+
+**Iteration Limits**:
+- Standard validation loops: max 2 iterations
+- `oharnes.implement` task verification: max 5 attempts (coding is iterative)
+- `oharnes.implement` gate fixes: max 3 attempts per gate
 
 - **If `recommendation: block`** (score < 50):
   - Display critical gaps

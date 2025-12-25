@@ -92,7 +92,7 @@ findings:
     location: spec.md:L45-L52
     status: compliant
     evidence: "Acceptance criteria section present with 6 criteria"
-    severity: none
+    # Note: severity omitted for compliant items (only include for violations)
 ```
 
 ## Boundaries

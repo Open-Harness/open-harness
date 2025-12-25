@@ -69,6 +69,7 @@ statistics:
   completion_percentage: 80
   expected_count: 15
   count_matches: true
+  issue_count: 3  # number of findings
 findings:
   - id: TC001
     task_id: T008

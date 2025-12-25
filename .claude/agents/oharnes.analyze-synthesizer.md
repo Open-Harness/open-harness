@@ -14,7 +14,6 @@ Aggregate duplicate, ambiguity, coverage, and constitution findings into a score
 ## Input
 
 You receive via prompt:
-- `FEATURE_DIR`: Path to feature spec directory
 - `ANALYSIS_FOLDER`: Path containing analysis YAML files
 
 Expected files:

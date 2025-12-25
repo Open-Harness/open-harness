@@ -90,6 +90,7 @@ statistics:
   gates_passed: 2
   gates_failed: 1
   gates_skipped: 0
+  issue_count: 1  # number of failed gates
 gates:
   - name: types
     command: "tsc --noEmit"
@@ -118,8 +119,7 @@ findings:
   - id: GR002
     gate: lint
     status: pass
-    error_summary: null
-    severity: null
+    # Note: error_summary and severity omitted for passing gates
 ```
 
 ## Boundaries

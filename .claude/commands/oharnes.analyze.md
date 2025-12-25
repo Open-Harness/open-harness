@@ -6,10 +6,6 @@ handoffs:
     agent: oharnes.implement
     prompt: Analysis complete and passed. Proceed with implementation.
     send: true
-  - label: Clarify Issues
-    agent: oharnes.clarify
-    prompt: Analysis found issues requiring clarification. Review findings and resolve ambiguities.
-    send: false
 ---
 
 # Analysis Controller
@@ -133,14 +129,14 @@ Apply threshold-based decision logic:
 - **If `overall_score 50-69`** (recommendation: fix_required):
   - Display issues to user in structured format
   - Ask: "Fix issues now or proceed anyway? (fix/proceed)"
-  - If fix: Suggest running `/oharnes.clarify` or manual resolution
+  - If fix: Suggest manual resolution of issues in spec/plan/tasks
   - If proceed: Continue with warning, note in report
 
 - **If `overall_score < 50`** (recommendation: block):
   - Display critical gaps to user
   - ERROR: Do not proceed to implementation
   - List blocking_issues and suggested_fixes
-  - Recommend `/oharnes.clarify` or manual spec revision
+  - Recommend manual spec/plan/tasks revision
   - EXIT without handoff
 
 ## Report Assembly
@@ -250,13 +246,26 @@ After generating ANALYSIS.md:
    ```
 
 2. Handle based on recommendation:
-   - **proceed**: Offer handoff to `/oharnes.implement`
-   - **fix_required**: Ask user for decision (fix vs proceed), offer handoff to `/oharnes.clarify`
+   - **proceed**: Continue to commit step
+   - **fix_required**: Ask user for decision (fix vs proceed)
    - **block**: Display blocking issues, suggest fixes, NO handoff
 
 3. If proceeding (score >= 70 or user override):
-   - Ask user: "Begin implementation? (y/n)"
-   - If yes, handoff to `/oharnes.implement`
+   - Ask user: "Commit spec artifacts before implementation? (y/n)"
+   - If yes, commit using `/commit` skill with message:
+     ```
+     docs({FEATURE_NAME}): analysis passed, ready for implementation
+
+     Score: {score}/100
+     Coverage: {coverage}%
+
+     Artifacts:
+     - spec.md
+     - plan.md
+     - tasks.md
+     - ANALYSIS.md
+     ```
+   - After commit, handoff to `/oharnes.implement`
 
 ## Error Handling
 
