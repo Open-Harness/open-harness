@@ -1,7 +1,7 @@
 ---
 name: oharnes.analyze:coverage-mapper
 description: Map requirements to implementing tasks and identify coverage gaps. Use when checking requirement-task traceability.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Write
 model: sonnet
 ---
 
@@ -14,7 +14,6 @@ Ensure every requirement has implementing tasks, and every task traces to a requ
 ## Input
 
 You receive via prompt:
-- `FEATURE_DIR`: Path to feature spec directory
 - `SPEC_PATH`: Path to spec.md
 - `PLAN_PATH`: Path to plan.md
 - `TASKS_PATH`: Path to tasks.md

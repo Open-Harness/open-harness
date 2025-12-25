@@ -1,7 +1,7 @@
 ---
 name: oharnes.retro:file-auditor
 description: Compare tasks.md file paths to actual filesystem. Use when verifying implementation matches task specifications.
-tools: Read, Glob, Bash
+tools: Read, Glob, Bash, Write
 model: haiku
 ---
 

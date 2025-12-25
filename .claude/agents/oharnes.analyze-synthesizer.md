@@ -1,7 +1,7 @@
 ---
 name: oharnes.analyze:synthesizer
 description: Synthesize findings from all analysis agents into scored report with recommendations. Use after duplicate, ambiguity, coverage, and constitution checks complete.
-tools: Read
+tools: Read, Write
 model: sonnet
 ---
 

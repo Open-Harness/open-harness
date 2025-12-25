@@ -1,7 +1,7 @@
 ---
 name: oharnes.analyze:constitution-checker
 description: Check artifacts against project constitution MUST and SHOULD principles. Use when verifying spec/plan/tasks comply with constitutional requirements.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write
 model: haiku
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: oharnes.retro:spec-drift
 description: Compare spec requirements to actual implementation. Use when checking if implementation matches specification.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Write
 model: sonnet
 ---
 

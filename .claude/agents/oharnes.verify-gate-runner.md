@@ -1,7 +1,7 @@
 ---
 name: oharnes.verify:gate-runner
 description: Execute verification gates (types, lint, tests) and report pass/fail status. Use when validating implementation quality.
-tools: Read, Bash, Glob
+tools: Read, Bash, Glob, Write
 model: haiku
 ---
 

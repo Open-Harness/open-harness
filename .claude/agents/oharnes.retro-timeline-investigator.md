@@ -1,7 +1,7 @@
 ---
 name: oharnes.retro:timeline-investigator
 description: Analyze git history to build implementation timeline. Use when investigating what happened during a feature implementation cycle.
-tools: Bash, Read, Glob
+tools: Bash, Read, Glob, Write
 model: haiku
 ---
 

@@ -2,7 +2,7 @@
 name: oharnes.plan:validator
 description: Validate plan artifacts against spec requirements. Use after Phase 1 (Design & Contracts) completes.
 tools: Read, Grep, Glob
-model: opus
+model: sonnet
 ---
 
 You are a plan quality analyst validating design artifacts against specification requirements.
