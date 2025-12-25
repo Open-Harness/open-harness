@@ -1,0 +1,3 @@
+$ bun build ./src/server/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='"production"' --env='BUN_PUBLIC_*'
+FileNotFound opening root directory "./src/server"
+error: script "build" exited with code 1
