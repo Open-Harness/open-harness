@@ -90,6 +90,35 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
    - Validation score and any outstanding issues
 
+7. **User Approval & Handoff**: After reporting, complete these steps:
+
+   a. **Ask for approval** using the `AskUserQuestion` tool:
+      - Question: "Do you approve this tasks.md?"
+      - Options: "Yes, approve" / "No, needs changes"
+
+   b. **If approved**, ask about committing using the `AskUserQuestion` tool:
+      - Question: "Would you like me to commit the tasks.md file?"
+      - Options: "Yes, commit it" / "No, don't commit"
+
+      If yes, commit with message: `docs(tasks): generate tasks.md for [feature-name]`
+
+   c. **Present next steps**:
+      ```
+      ## Next Steps
+
+      Your tasks.md is ready. Here's what to do next:
+
+      | Option | Command | When to Use |
+      |--------|---------|-------------|
+      | **Analyze** | `/oharnes.analyze` | Validate spec/plan/tasks consistency before implementation |
+      | **Implement** | `/oharnes.implement` | Start executing tasks from tasks.md |
+
+      ⚠️ **Recommended**: Start a fresh conversation before running the next command.
+      This ensures clean context and prevents token bloat from task generation.
+      ```
+
+   d. **If not approved**, ask what changes are needed and iterate on tasks.md
+
 Context for task generation: $ARGUMENTS
 
 The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context.
