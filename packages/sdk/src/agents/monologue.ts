@@ -26,7 +26,7 @@ export class AgentMonologue {
 	 * @param callbacks - Optional callbacks for observing the generation
 	 * @returns The generated monologue event, or undefined if nothing to process
 	 */
-	@Record("monologue", (args) => args[0])
+	@Record("monologue", (args) => args[0] as string)
 	async generate(_sessionId: string, callbacks?: RunnerCallbacks): Promise<AgentEvent | undefined> {
 		if (this.buffer.length === 0) return undefined;
 

@@ -17,13 +17,7 @@
 		"test": "bun test tests/**/*.test.ts",
 		"test:unit": "bun test tests/unit/container.test.ts",
 		"test:integration": "bun test tests/integration/live-sdk.test.ts",
-		"example:basic": "bun src/examples/basic-agent.ts",
-		"example:workflow": "bun src/examples/workflow-demo.ts",
-		"example:recording": "bun src/examples/recording-demo.ts",
-		"example:callbacks": "bun src/examples/callbacks.ts",
-		"example:validate-callbacks": "bun src/examples/callback-validation.ts",
-		"example:thinking": "bun src/examples/thinking-test.ts",
-		"example:autonomous": "bun src/examples/autonomous-agent/index.ts"
+		"example": "bun src/examples/autonomous-harness.ts"
 	},
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "^0.1.76",

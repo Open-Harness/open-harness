@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Harness — Step-Aware Autonomous Agents</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --bg-alt: #111;
+            --text: #e4e4e7;
+            --text-dim: #71717a;
+            --accent: #22c55e;
+            --accent-dim: #166534;
+            --border: #27272a;
+            --code: #1e1e1e;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.15s;
+        }
+
+        a:hover {
+            border-bottom-color: var(--accent);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .nav-links a {
+            margin-left: 30px;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 120px 0 100px;
+        }
+
+        .hero h1 {
+            font-size: clamp(32px, 6vw, 56px);
+            line-height: 1.1;
+            letter-spacing: -1px;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 .dim {
+            color: var(--text-dim);
+        }
+
+        .hero p {
+            font-size: 16px;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--bg);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dim);
+            border-color: var(--accent-dim);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-dim);
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--code);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 24px;
+            margin: 60px 0;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .code-block code {
+            color: #a1a1aa;
+        }
+
+        .code-block .keyword { color: #f472b6; }
+        .code-block .string { color: #a3e635; }
+        .code-block .comment { color: #52525b; }
+        .code-block .function { color: #60a5fa; }
+        .code-block .number { color: #fbbf24; }
+
+        /* Section */
+        section {
+            padding: 80px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        section h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        section p {
+            color: var(--text-dim);
+            max-width: 700px;
+        }
+
+        /* Primitives Grid */
+        .primitives {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .primitive {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 4px;
+        }
+
+        .primitive h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .primitive p {
+            font-size: 12px;
+            margin: 0;
+        }
+
+        /* Comparison */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 640px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .compare-box {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 4px;
+        }
+
+        .compare-box.bad {
+            border-color: #3f3f46;
+        }
+
+        .compare-box.good {
+            border-color: var(--accent-dim);
+        }
+
+        .compare-box h3 {
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .compare-box ul {
+            list-style: none;
+        }
+
+        .compare-box li {
+            font-size: 12px;
+            color: var(--text-dim);
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .compare-box li:last-child {
+            border-bottom: none;
+        }
+
+        .compare-box .icon {
+            flex-shrink: 0;
+        }
+
+        /* Terminal */
+        .terminal {
+            background: var(--code);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin: 60px 0;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: var(--bg-alt);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-header span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .terminal-header span:nth-child(1) { background: #ef4444; }
+        .terminal-header span:nth-child(2) { background: #f59e0b; }
+        .terminal-header span:nth-child(3) { background: #22c55e; }
+
+        .terminal-body {
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            display: flex;
+            gap: 12px;
+        }
+
+        .prompt {
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .output {
+            color: var(--text-dim);
+        }
+
+        .output.success {
+            color: var(--accent);
+        }
+
+        /* Use Cases */
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .use-case {
+            border-left: 2px solid var(--border);
+            padding-left: 20px;
+        }
+
+        .use-case h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .use-case p {
+            font-size: 12px;
+            margin: 0;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        footer p {
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        footer .links {
+            margin-top: 20px;
+        }
+
+        footer .links a {
+            margin: 0 15px;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        footer .links a:hover {
+            color: var(--text);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--accent-dim);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">open<span>harness</span></div>
+                <div class="nav-links">
+                    <a href="#primitives">Primitives</a>
+                    <a href="#comparison">Why</a>
+                    <a href="https://github.com/openharness/sdk">GitHub</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <span class="badge">v1.0 — Production Ready</span>
+                <h1>Step-aware <span class="dim">autonomous</span><br>agents that know time</h1>
+                <p>Agents that plan across steps. Persistent state. Transparent execution. Simple primitives. Build autonomous systems for trading, coding, research—anything.</p>
+                <div class="cta-group">
+                    <a href="https://github.com/openharness/sdk" class="btn btn-primary">Get Started</a>
+                    <a href="#primitives" class="btn btn-secondary">Learn More</a>
+                </div>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="code-block">
+                <code><span class="comment">// Four primitives. Infinite possibilities.</span>
+<span class="keyword">import</span> { Harness, Agent, PersistentState } <span class="keyword">from</span> <span class="string">'@openharness/sdk'</span>;
+
+<span class="comment">// Define your state schema</span>
+<span class="keyword">interface</span> <span class="function">TradingState</span> {
+  portfolio: Portfolio;
+  marketData: MarketData;
+  position: Position | <span class="keyword">null</span>;
+}
+
+<span class="comment">// Create agent with step awareness</span>
+<span class="keyword">const</span> trader = <span class="keyword">new</span> <span class="function">Agent</span><TradingState, MarketUpdate, TradeResult>({
+  <span class="keyword">async</span> <span class="function">run</span>({ input, context, stepNumber, stepHistory }) {
+    console.<span class="function">log</span>(<span class="string">`Step </span><span class="string">${stepNumber}</span><span class="string">: RSI = </span><span class="string">${input.indicators.rsi}</span><span class="string">`</span>);
+
+    <span class="keyword">const</span> rsi = input.indicators.rsi;
+    <span class="keyword">const</span> lastResult = stepHistory[stepHistory.length - <span class="number">1</span>]?.output;
+
+    <span class="keyword">if</span> (rsi < <span class="number">30</span> && !lastResult?.buy) {
+      <span class="keyword">return</span> { action: <span class="string">'BUY'</span>, amount: <span class="number">0.1</span> };
+    }
+    <span class="keyword">if</span> (rsi > <span class="number">70</span> && lastResult?.buy) {
+      <span class="keyword">return</span> { action: <span class="string">'SELL'</span>, amount: <span class="number">0.1</span> };
+    }
+
+    <span class="keyword">return</span> { action: <span class="string">'HOLD'</span> };
+  },
+
+  <span class="function">isComplete</span>(state: TradingState) {
+    <span class="comment">// Trading never completes</span>
+    <span class="keyword">return</span> <span class="keyword">false</span>;
+  }
+});
+
+<span class="comment">// Wrap in harness for time-aware execution</span>
+<span class="keyword">const</span> harness = <span class="keyword">new</span> <span class="function">Harness</span>({
+  agent: trader,
+  initialState: { portfolio: { balance: <span class="number">10000</span>, btc: <span class="number">0</span> } },
+  constraints: { maxDrawdown: <span class="number">0.1</span>, maxPositions: <span class="number">1</span> }
+});
+
+<span class="comment">// Step whenever you want—time, event, or task-based</span>
+<span class="function">setInterval</span>(<span class="keyword">async</span> () => {
+  <span class="keyword">const</span> marketUpdate = <span class="keyword">await</span> <span class="function">getMarketData</span>();
+  <span class="keyword">await</span> harness.<span class="function">step</span>(marketUpdate);
+}, <span class="number">5000</span>);</code>
+            </div>
+        </div>
+
+        <section id="primitives">
+            <div class="container">
+                <h2>Four Primitives</h2>
+                <p>Simple building blocks. Compose them however you want. No complex graphs. No black boxes.</p>
+
+                <div class="primitives">
+                    <div class="primitive">
+                        <h3>Harness</h3>
+                        <p>The execution system that gives agents time dimensionality. Knows what step you're on. Persists state across steps.</p>
+                    </div>
+                    <div class="primitive">
+                        <h3>Agent</h3>
+                        <p>Autonomous decision-maker. Takes actions, returns results. Aware of step number, step history, constraints.</p>
+                    </div>
+                    <div class="primitive">
+                        <h3>Step</h3>
+                        <p>A single execution point in time. The fundamental unit. Time-based, event-based, or task-completion based.</p>
+                    </div>
+                    <div class="primitive">
+                        <h3>State</h3>
+                        <p>Persistent semantic memory. Survives step boundaries. Goal, progress, action log, knowledge graph.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="comparison">
+            <div class="container">
+                <h2>Not LangChain</h2>
+                <p>Django/Rails philosophy. Opinionated primitives, not infinite flexibility. Productive from day one.</p>
+
+                <div class="comparison">
+                    <div class="compare-box bad">
+                        <h3><span class="icon">×</span> The Old Way</h3>
+                        <ul>
+                            <li><span class="icon">×</span> Black box opacity—no visibility into decisions</li>
+                            <li><span class="icon">×</span> Domain-specific—locked to one use case</li>
+                            <li><span class="icon">×</span> No time awareness—reacts, doesn't plan</li>
+                            <li><span class="icon">×</span> Ephemeral state—lost on restart</li>
+                            <li><span class="icon">×</span> Infinite abstractions—thousands to learn</li>
+                            <li><span class="icon">×</span> Complex graphs—DAGs, chains, workflows</li>
+                        </ul>
+                    </div>
+                    <div class="compare-box good">
+                        <h3><span class="icon">✓</span> Open Harness</h3>
+                        <ul>
+                            <li><span class="icon">✓</span> Transparent—every step logged, readable</li>
+                            <li><span class="icon">✓</span> General-purpose—any domain</li>
+                            <li><span class="icon">✓</span> Time-aware—knows step number, plans ahead</li>
+                            <li><span class="icon">✓</span> Persistent state—survives restarts</li>
+                            <li><span class="icon">✓</span> Four primitives—simple, composable</li>
+                            <li><span class="icon">✓</span> Just harness.step()—you control cadence</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="container">
+                <h2>CLI + YAML Configuration</h2>
+                <p>Don't want to write TypeScript? Define your harness in YAML. Run it with the CLI. Monitor progress. Check history.</p>
+
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-line">
+                            <span class="prompt">$</span>
+                            <span class="output">harness run ./trading-harness.yaml</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Starting harness: momentum-trading-agent</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Step 1: RSI = 28.5 → BUY 0.1 BTC</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Step 2: RSI = 32.1 → HOLD</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Step 3: RSI = 71.3 → SELL 0.1 BTC</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Step 4: RSI = 65.2 → HOLD</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output success">→ PnL: +$420.69</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt">$</span>
+                            <span class="output">harness status session_abc123</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Session: session_abc123</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Steps: 1,247</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Status: Running</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ PnL: +$12,847.32</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="container">
+                <h2>What It's For</h2>
+                <p>Out-of-loop agents that run autonomously for hours, days, weeks. You set up, leave, return to results.</p>
+
+                <div class="use-cases">
+                    <div class="use-case">
+                        <h3>Trading Bots</h3>
+                        <p>24/7 execution. Time-based steps. Complex state: portfolio, trades, strategy. Transparent audit log.</p>
+                    </div>
+                    <div class="use-case">
+                        <h3>Coding Agents</h3>
+                        <p>Task-completion steps. State persists across sessions. Test-fix loops become step iterations. 200+ ticket progress tracking.</p>
+                    </div>
+                    <div class="use-case">
+                        <h3>Research Agents</h3>
+                        <p>Information processing steps. Knowledge accumulation. Checkpoint when insights emerge. Persistent research state.</p>
+                    </div>
+                    <div class="use-case">
+                        <h3>Monitoring Agents</h3>
+                        <p>Event-based steps. Step when conditions met. Alert history persists. Stateful monitoring patterns.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="container">
+                <h2>What It's Not</h2>
+                <p>Clear boundaries. We do one thing well.</p>
+
+                <div class="primitives">
+                    <div class="primitive">
+                        <h3>Not a Chatbot Framework</h3>
+                        <p>Use Vercel AI SDK for chat. We're for out-of-loop autonomous agents.</p>
+                    </div>
+                    <div class="primitive">
+                        <h3>Not Replacing Anthropic SDK</h3>
+                        <p>We wrap it, extend it, add time awareness.</p>
+                    </div>
+                    <div class="primitive">
+                        <h3>Not In-Loop</h3>
+                        <p>We don't do conversational, human-in-the-loop execution.</p>
+                    </div>
+                    <div class="primitive">
+                        <h3>Not a Workflow Engine</h3>
+                        <p>No graphs, no DAGs. Just harness.step()—you control cadence.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="container">
+                <h2>Get Started</h2>
+                <p>Five minutes. That's all it takes.</p>
+
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-line">
+                            <span class="prompt">$</span>
+                            <span class="output">npm install @openharness/sdk</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt">$</span>
+                            <span class="output">npm install -g @openharness/cli</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt">$</span>
+                            <span class="output">harness init --template trading-bot</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output">→ Created trading-harness.yaml</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt">$</span>
+                            <span class="output">harness run ./trading-harness.yaml</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="prompt"></span>
+                            <span class="output success">→ Running...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cta-group" style="margin-top: 40px;">
+                    <a href="https://github.com/openharness/sdk" class="btn btn-primary">GitHub</a>
+                    <a href="https://docs.openharness.dev" class="btn btn-secondary">Documentation</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Step-aware. Time-dimensional. Simple primitives.</p>
+            <p style="margin-top: 10px;">What will you build?</p>
+            <div class="links">
+                <a href="https://github.com/openharness/sdk">GitHub</a>
+                <a href="https://docs.openharness.dev">Docs</a>
+                <a href="https://discord.gg/openharness">Discord</a>
+            </div>
+            <p style="margin-top: 40px;">MIT License · Open Source</p>
+        </div>
+    </footer>
+</body>
+</html>

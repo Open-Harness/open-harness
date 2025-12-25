@@ -18,9 +18,7 @@ export class Agent<TState, TInput, TOutput> {
 	/** Agent name (defaults to 'Agent' if not provided) */
 	readonly name: string;
 
-	private readonly runFn: (
-		params: AgentRunParams<TState, TInput, TOutput>,
-	) => Promise<TOutput>;
+	private readonly runFn: (params: AgentRunParams<TState, TInput, TOutput>) => Promise<TOutput>;
 	private readonly isCompleteFn?: (state: TState) => boolean;
 
 	/**
@@ -36,21 +34,6 @@ export class Agent<TState, TInput, TOutput> {
 
 	/**
 	 * Runs the agent with the provided parameters.
-	 *
-	 * Delegates to the user-provided run function, passing all step context
-	 * including stepNumber, stepHistory, and constraints. This allows agents
-	 * to make decisions based on execution history.
-	 *
-	 * @example
-	 * ```typescript
-	 * const result = await agent.run({
-	 *   input: data,
-	 *   context: currentState,
-	 *   stepNumber: 5,
-	 *   stepHistory: previousSteps,
-	 *   constraints: { maxTokens: 1000 }
-	 * });
-	 * ```
 	 *
 	 * @param params - Run parameters including input, context, stepNumber, stepHistory, constraints
 	 * @returns Promise resolving to the output
@@ -72,4 +55,3 @@ export class Agent<TState, TInput, TOutput> {
 		return false;
 	}
 }
-

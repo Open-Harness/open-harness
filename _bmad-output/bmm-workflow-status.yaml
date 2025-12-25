@@ -16,21 +16,39 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2024-12-24T00:00:00Z"
+last_updated: "2024-12-24"
 project: "Open Harness"
 project_type: "sdk"
 project_level: 3  # Complex System (12-40 stories) - SDK + CLI + integrations
-selected_track: "bmad-method"
-field_type: "brownfield"
-workflow_path: "_bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
 
-# Vision Context
-# ==============
-# Open Harness is an extensible workflow SDK for building AI agent applications
-# with Anthropic's Claude. Current state: SDK working, CLI code complete but
-# integration issues, Trading Bot as example app.
+# ===========================================
+# TWO PARALLEL TRACKS
+# ===========================================
+# Track A: Infrastructure - Repo cleanup, publishing, CI/CD
+# Track B: Harness SDK - Core primitives, examples
+# ===========================================
+
+tracks:
+  track_a_infrastructure:
+    name: "Infrastructure"
+    description: "Contributor-ready repo, npm publishing, CI/CD"
+    prd: "_bmad-output/prd-infrastructure.md"
+    status: "prd_complete"
+    
+  track_b_harness:
+    name: "Harness SDK"  
+    description: "Core primitives (Harness, Agent, Step, State), examples"
+    prd: "_bmad-output/prd-harness.md"
+    vision: "_bmad-output/vision.md"
+    status: "prd_complete"
+
+# Superseded Documents
+superseded:
+  - path: "_bmad-output/prd.md"
+    reason: "Split into prd-infrastructure.md and prd-harness.md"
+    date: "2024-12-24"
 
 # Existing Documentation
-# ======================
 existing_docs:
   - path: "docs/project-overview.md"
     type: "overview"
@@ -48,73 +66,85 @@ existing_docs:
     type: "example-architecture"
     status: "current"
 
-# Workflow Status
-# ===============
-workflow_status:
-  # Prerequisite - Documentation (brownfield)
-  prerequisite:
-    document-project:
-      status: "docs/project-overview.md"  # Already documented
-      agent: "analyst"
-      note: "Existing documentation sufficient for brownfield context"
-
-  # Phase 0 - Discovery (Optional)
-  phase_0_discovery:
-    brainstorm-project:
-      status: "skipped"
-      note: "Project vision already established"
-    research:
-      status: "skipped"
-      note: "Technical context well-documented"
-    product-brief:
-      status: "optional"
-      note: "Optional for brownfield - may create if helpful for stakeholder alignment"
-
-  # Phase 1 - Planning (Required)
+# ===========================================
+# TRACK A: INFRASTRUCTURE
+# ===========================================
+track_a_workflow:
   phase_1_planning:
     prd:
-      status: "required"  # <-- NEXT: Start here
+      status: "_bmad-output/prd-infrastructure.md"
       agent: "pm"
-      command: "prd"
-      note: "Consolidate Open Harness vision into comprehensive PRD"
-    create-ux-design:
-      status: "conditional"
-      condition: "if_has_ui"
-      note: "CLI + SDK - minimal UI, possibly docs site"
+      completed: "2024-12-24"
 
-  # Phase 2 - Solutioning (Required)
   phase_2_solutioning:
-    create-architecture:
-      status: "recommended"
-      agent: "architect"
-      note: "Integration architecture - distill brownfield context into focused solution"
     create-epics-and-stories:
-      status: "required"
+      status: "required"  # <-- NEXT for Track A
       agent: "pm"
-      note: "Break PRD into implementable work"
-    test-design:
-      status: "recommended"
-      agent: "tea"
-      note: "System-level testability review"
-    validate-architecture:
-      status: "optional"
-      agent: "architect"
+      input: "_bmad-output/prd-infrastructure.md"
+      output: "_bmad-output/epics-infrastructure.md"
+      
+    create-architecture:
+      status: "skipped"
+      note: "Infrastructure track doesn't need architecture doc"
+      
     implementation-readiness:
       status: "required"
       agent: "architect"
       note: "Gate check before implementation"
 
-  # Phase 3 - Implementation
   phase_3_implementation:
     sprint-planning:
       status: "required"
       agent: "sm"
-      note: "Creates sprint plan from epics/stories"
 
-# Next Action
-# ===========
-next_action:
-  workflow: "prd"
-  agent: "pm"
-  command: "/prd"
-  description: "Start PRD to consolidate Open Harness vision and define requirements"
+# ===========================================
+# TRACK B: HARNESS SDK
+# ===========================================
+track_b_workflow:
+  phase_1_planning:
+    prd:
+      status: "_bmad-output/prd-harness.md"
+      agent: "pm"
+      completed: "2024-12-24"
+
+  phase_2_solutioning:
+    create-architecture:
+      status: "recommended"  # <-- Consider for Track B
+      agent: "architect"
+      input: "_bmad-output/prd-harness.md"
+      output: "_bmad-output/architecture-harness.md"
+      note: "Layered architecture details"
+      
+    create-epics-and-stories:
+      status: "required"  # <-- NEXT for Track B
+      agent: "pm"
+      input: "_bmad-output/prd-harness.md"
+      output: "_bmad-output/epics-harness.md"
+      
+    implementation-readiness:
+      status: "required"
+      agent: "architect"
+
+  phase_3_implementation:
+    sprint-planning:
+      status: "required"
+      agent: "sm"
+
+# ===========================================
+# NEXT ACTIONS
+# ===========================================
+next_actions:
+  track_a:
+    workflow: "create-epics-and-stories"
+    agent: "pm"
+    command: "/create-epics-and-stories"
+    input: "_bmad-output/prd-infrastructure.md"
+    description: "Break Infrastructure PRD into implementable stories"
+    
+  track_b:
+    workflow: "create-epics-and-stories"
+    agent: "pm"
+    command: "/create-epics-and-stories"
+    input: "_bmad-output/prd-harness.md"
+    description: "Break Harness SDK PRD into implementable stories"
+    note: "Consider architecture doc first if layered design needs more detail"
