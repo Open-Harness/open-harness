@@ -87,7 +87,6 @@ findings:
 - Report statistics objectively
 
 **DO NOT**:
-- Read file contents (just check existence)
 - Modify any files
 - Make assumptions about why files are missing
 - Check more than 100 paths (summarize if more)

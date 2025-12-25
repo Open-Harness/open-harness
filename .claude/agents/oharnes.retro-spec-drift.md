@@ -97,4 +97,4 @@ requirement_findings:
 - Modify any files
 - Make value judgments about architectural decisions
 - Assume intent behind divergence
-- Check more than 20 requirements (summarize if more)
+

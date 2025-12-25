@@ -97,7 +97,7 @@ anomalies:
 - Modify any files (except writing to RETRO_FOLDER)
 - Make judgments about code quality
 - Analyze code content (just file existence and changes)
-- Exceed 30 commits in analysis (summarize if more)
+
 
 ## Examples
 
