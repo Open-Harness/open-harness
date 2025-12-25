@@ -1,11 +1,11 @@
 {
-  "name": "dao",
+  "name": "open-harness",
   "private": true,
   "workspaces": {
     "packages": [
       "apps/*",
       "packages/*",
-      "examples/*"
+      "harnesses/*"
     ],
     "catalog": {
       "dotenv": "^17.2.2",

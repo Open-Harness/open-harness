@@ -1,0 +1,91 @@
+agent: synthesizer
+timestamp: "2025-12-26T13:30:00Z"
+spec_directory: specs/003-harness-renderer
+overall_severity: critical
+summary: "Implementation failed due to prototype-driven development that bypassed specification. Core feature (monologue module) completely skipped, architectural boundaries violated, and no verification gates prevented divergence."
+
+root_causes:
+  - id: RC001
+    title: "Prototype in context caused architectural divergence"
+    description: "Agent accessed working prototype in listr2/examples/harness-renderer from Dec 25 and ported its structure instead of following specification task paths"
+    evidence:
+      - "timeline.yaml: Prototype files created Dec 25 23:48-23:55, 5 hours before implementation"
+      - "file-audit.yaml: Renderer files in harness/ not renderer/"
+      - "spec-drift.yaml: AD001 - Renderer code merged into harness instead of separate module"
+      - "plan.md:154: Explicitly states renderer/ should be separate from harness/"
+    severity: critical
+
+  - id: RC002
+    title: "Monologue module completely skipped - core feature unimplemented"
+    description: "13+ tasks for monologue generator, decorator, prompts, and configuration were not implemented at all. Directory created but empty."
+    evidence:
+      - "file-audit.yaml: All monologue files missing (FA009-FA017)"
+      - "spec-drift.yaml: AD002 - Core feature (P1 user story) completely unimplemented"
+      - "timeline.yaml: Monologue directory created but ZERO files implemented"
+    severity: critical
+
+  - id: RC003
+    title: "Spec-kit /implement has no verification gates"
+    description: "Implementation command allowed commit despite wrong module paths, missing core features, failing tests, and unmarked tasks"
+    evidence:
+      - "timeline.yaml: No step to verify tasks marked complete, no test execution gate"
+      - "file-audit.yaml: 25 paths checked, only 6 correct, 11 missing, 3 wrong location"
+      - "test-results.yaml: 2 fail, 1 error - not caught by validate command"
+    severity: critical
+
+  - id: RC004
+    title: "Manual narrative emission bypassed decorator architecture"
+    description: "Implementation used hardcoded TaskHarness.emitNarrative() calls instead of @AnthropicMonologue decorator system"
+    evidence:
+      - "spec-drift.yaml: Manual narrative calls at 8+ locations in TaskHarness"
+      - "spec-drift.yaml: Specified approach ignored - decorator-driven generation"
+    severity: high
+
+  - id: RC005
+    title: "Tasks.md path specifications ignored"
+    description: "50+ tasks with explicit file paths (e.g., 'packages/sdk/src/renderer/protocol.ts') were not followed"
+    evidence:
+      - "file-audit.yaml: Expected renderer/protocol.ts, found harness/event-protocol.ts"
+      - "plan.md:154: Structure Decision explicitly defines module separation"
+    severity: high
+
+responsibility_attribution:
+  - component: "Implementing Agent"
+    responsibility: "Made unauthorized architectural decisions and skipped core feature implementation"
+    evidence:
+      - "Merged renderer into harness/ without spec authorization"
+      - "Created empty monologue/ directory but implemented zero files"
+      - "Did not mark any tasks complete despite writing ~3000 LOC"
+
+  - component: "Spec-Kit /implement Command"
+    responsibility: "No verification that implementation matches task paths, no test execution gate"
+    evidence:
+      - "No step to verify completion or run tests"
+      - "2 failures + 1 error not caught before commit"
+
+  - component: "Spec-Kit /validate Command"
+    responsibility: "Validation too shallow - checks file existence but not correctness, paths, or tests"
+    evidence:
+      - "Validate passed but tests failing"
+
+  - component: "Context Setup / Environment"
+    responsibility: "Prototype from Dec 25 accessible during implementation caused confusion"
+    evidence:
+      - "Prototype in listr2/examples/harness-renderer/ from 12/25"
+
+remediation:
+  immediate:
+    - "Decide: Move renderer files to src/renderer/ OR update spec to accept current architecture"
+    - "Implement monologue module completely (5 files)"
+    - "Fix test failures in ParserAgent and integration tests"
+    - "Mark completed tasks in tasks.md"
+
+  process:
+    - "Add file path verification to /implement command"
+    - "Add test execution gate to /implement command"
+    - "Add task completion verification to /implement command"
+    - "Enhance /validate command with deeper checks"
+    - "Isolate prototypes during spec-driven development"
+
+pattern_detected: "prototype-driven-divergence"
+estimated_recovery_effort: "37-41 hours"
