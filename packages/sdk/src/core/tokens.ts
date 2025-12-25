@@ -142,3 +142,103 @@ export type RecordedSession = {
 	options: Options;
 	messages: SDKMessage[];
 };
+
+// ============================================================================
+// Monologue System
+// ============================================================================
+
+import type { IAgentCallbacks } from "../callbacks/types.js";
+
+/**
+ * Configuration for monologue generation.
+ */
+export interface IMonologueConfig {
+	/** Whether monologue is enabled */
+	enabled: boolean;
+	/** Model to use for narrative generation (default: 'haiku') */
+	model?: "haiku" | "sonnet" | "opus";
+	/** Custom system prompt override */
+	systemPrompt?: string;
+	/** Minimum events to buffer before considering emit */
+	minBufferSize?: number;
+	/** Force emit when buffer reaches this size */
+	maxBufferSize?: number;
+	/** Minimum time between emits (ms) */
+	throttleMs?: number;
+}
+
+/**
+ * Monologue decorator interface for wrapping agents with narrative generation.
+ */
+export interface IMonologueDecorator {
+	/**
+	 * Wrap callbacks with monologue generation.
+	 * @param callbacks Original callbacks
+	 * @param config Monologue configuration
+	 * @returns Enhanced callbacks with monologue support
+	 */
+	wrapCallbacks<TOutput>(
+		callbacks: IAgentCallbacks<TOutput> | undefined,
+		config: IMonologueConfig,
+	): IAgentCallbacks<TOutput>;
+}
+
+export const IMonologueDecoratorToken = new InjectionToken<IMonologueDecorator>("IMonologueDecorator");
+
+/**
+ * Runner for generating monologue narratives using a cheap model.
+ */
+export interface IMonologueRunner {
+	/**
+	 * Generate narrative text from buffered events.
+	 * @param events Buffered agent events
+	 * @param history Previous narrative history
+	 * @returns Generated narrative text
+	 */
+	generateNarrative(events: AgentEvent[], history: string[]): Promise<string>;
+}
+
+export const IMonologueRunnerToken = new InjectionToken<IMonologueRunner>("IMonologueRunner");
+
+// ============================================================================
+// Recording Decorator
+// ============================================================================
+
+/**
+ * Recording decorator interface for wrapping agent execution.
+ */
+export interface IRecordingDecorator {
+	/**
+	 * Wrap agent execution with recording/replay capability.
+	 * @param sessionId Session identifier
+	 * @param category Recording category (e.g., 'golden', 'scratch')
+	 */
+	wrap(
+		sessionId: string,
+		category?: string,
+	): {
+		beforeRun: (prompt: string, options: Options) => void;
+		afterRun: (result: SDKMessage | undefined) => Promise<void>;
+	};
+}
+
+export const IRecordingDecoratorToken = new InjectionToken<IRecordingDecorator>("IRecordingDecorator");
+
+// ============================================================================
+// Prompt Registry
+// ============================================================================
+
+/**
+ * Prompt registry interface for loading and formatting prompts.
+ */
+export interface IPromptRegistry {
+	/**
+	 * Format a prompt template with given parameters.
+	 * @param templateName Name of the template (e.g., 'coding', 'review')
+	 * @param params Template parameters
+	 * @returns Formatted prompt string
+	 */
+	format(templateName: string, params: Record<string, unknown>): Promise<string>;
+}
+
+export const IPromptRegistryToken = new InjectionToken<IPromptRegistry>("IPromptRegistry");

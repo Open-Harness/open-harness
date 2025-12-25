@@ -8,11 +8,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { injectable } from "@needle-di/core";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { withMonologue } from "../../src/monologue/wrapper.js";
-import { BaseAgent } from "../../src/runner/base-agent.js";
+import { injectable } from "@needle-di/core";
+import { BaseAnthropicAgent } from "../../src/agents/base-anthropic-agent.js";
 import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
+import { withMonologue } from "../../src/monologue/wrapper.js";
 
 // ============================================================================
 // Mock Runner for Testing
@@ -28,7 +28,7 @@ class MockRunner implements IAgentRunner {
 		this.lastPrompt = args.prompt;
 
 		// Simulate SDK result message
-		const resultMessage: SDKMessage = {
+		const resultMessage = {
 			type: "result",
 			subtype: "success",
 			session_id: "mock_session",
@@ -39,7 +39,11 @@ class MockRunner implements IAgentRunner {
 			total_cost_usd: 0.001,
 			usage: { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
 			structured_output: { stopReason: "finished", summary: "Done", handoff: "" },
-		} as SDKMessage;
+			result: "Done",
+			modelUsage: { input_tokens: 10, output_tokens: 20 },
+			permission_denials: [],
+			uuid: "mock-uuid-123",
+		} as unknown as SDKMessage;
 
 		// Fire callback if provided
 		if (args.callbacks?.onMessage) {
@@ -54,9 +58,15 @@ class MockRunner implements IAgentRunner {
 // Mock Agent for Testing
 // ============================================================================
 
-class MockAgent extends BaseAgent {
+@injectable()
+class MockAgent extends BaseAnthropicAgent {
 	constructor() {
 		super("MockAgent", new MockRunner(), null);
+	}
+
+	// Simple execute method for testing
+	async execute(prompt: string, sessionId: string): Promise<unknown> {
+		return this.run(prompt, sessionId);
 	}
 }
 
@@ -82,13 +92,12 @@ describe("Monologue Wrapper", () => {
 
 		test("accepts custom config", () => {
 			const agent = new MockAgent();
-			let narrativeCalled = false;
 
 			const wrapped = withMonologue(agent, {
 				bufferSize: 3,
 				model: "sonnet",
 				onNarrative: () => {
-					narrativeCalled = true;
+					// Callback for narratives
 				},
 			});
 
@@ -97,31 +106,41 @@ describe("Monologue Wrapper", () => {
 		});
 	});
 
-	describe("Event buffering", () => {
-		test("wrapped agent can be run", async () => {
+	describe("wrapCallbacks", () => {
+		test("wrapCallbacks returns an IAgentCallbacks object", () => {
 			const agent = new MockAgent();
 			const wrapped = withMonologue(agent);
 
-			// Just verify it doesn't throw - actual monologue generation requires live API
-			const result = await wrapped.run("Test prompt", "session_1");
-			expect(result).toBeDefined();
+			const callbacks = wrapped.wrapCallbacks({
+				onText: () => {},
+			});
+
+			expect(callbacks).toBeDefined();
+			expect(typeof callbacks.onText).toBe("function");
 		});
 
-		test("callbacks are passed through", async () => {
+		test("wrapCallbacks passes through original callbacks", () => {
 			const agent = new MockAgent();
 			const wrapped = withMonologue(agent);
 
-			let resultReceived = false;
+			let onStartCalled = false;
+			let onCompleteCalled = false;
 
-			await wrapped.run("Test prompt", "session_1", {
-				callbacks: {
-					onResult: () => {
-						resultReceived = true;
-					},
+			const callbacks = wrapped.wrapCallbacks({
+				onStart: () => {
+					onStartCalled = true;
+				},
+				onComplete: () => {
+					onCompleteCalled = true;
 				},
 			});
 
-			expect(resultReceived).toBe(true);
+			// Call the wrapped callbacks
+			callbacks.onStart?.({ agentName: "test", sessionId: "session_1" });
+			callbacks.onComplete?.({ success: true });
+
+			expect(onStartCalled).toBe(true);
+			expect(onCompleteCalled).toBe(true);
 		});
 	});
 

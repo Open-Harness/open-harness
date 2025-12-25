@@ -9,11 +9,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { injectable } from "@needle-di/core";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { createWorkflow, type WorkflowConfig } from "../../src/factory/workflow-builder.js";
-import { BaseAgent } from "../../src/runner/base-agent.js";
+import { injectable } from "@needle-di/core";
+import { BaseAnthropicAgent } from "../../src/agents/base-anthropic-agent.js";
 import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
+import { createWorkflow } from "../../src/factory/workflow-builder.js";
 
 // ============================================================================
 // Mock Runner for Testing
@@ -26,7 +26,7 @@ class MockRunner implements IAgentRunner {
 	async run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }): Promise<SDKMessage | undefined> {
 		this.callCount++;
 
-		const resultMessage: SDKMessage = {
+		const resultMessage = {
 			type: "result",
 			subtype: "success",
 			session_id: "mock_session",
@@ -37,7 +37,11 @@ class MockRunner implements IAgentRunner {
 			total_cost_usd: 0.001,
 			usage: { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
 			structured_output: { stopReason: "finished", summary: "Done", handoff: "" },
-		} as SDKMessage;
+			result: "Done",
+			modelUsage: { input_tokens: 10, output_tokens: 20 },
+			permission_denials: [],
+			uuid: "mock-uuid-123",
+		} as unknown as SDKMessage;
 
 		if (args.callbacks?.onMessage) {
 			args.callbacks.onMessage(resultMessage);
@@ -51,7 +55,8 @@ class MockRunner implements IAgentRunner {
 // Mock Agent for Testing
 // ============================================================================
 
-class MockAgent extends BaseAgent {
+@injectable()
+class MockAgent extends BaseAnthropicAgent {
 	constructor() {
 		super("MockAgent", new MockRunner(), null);
 	}
@@ -105,7 +110,7 @@ describe("Workflow Builder", () => {
 		});
 
 		test("markComplete changes task status and sets result", () => {
-			const workflow = createWorkflow<Record<string, BaseAgent>, string>({
+			const workflow = createWorkflow<Record<string, BaseAnthropicAgent>, string>({
 				name: "CompleteWorkflow",
 				tasks: [{ id: "task1", description: "Test" }],
 				agents: {},

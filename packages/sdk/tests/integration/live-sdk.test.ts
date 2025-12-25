@@ -8,9 +8,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { createContainer } from "../../src/core/container.js";
 import { CodingAgent } from "../../src/agents/coding-agent.js";
 import { ReviewAgent } from "../../src/agents/review-agent.js";
+import { createContainer } from "../../src/core/container.js";
 
 describe("Live SDK Integration", () => {
 	test(
@@ -33,22 +33,20 @@ describe("Live SDK Integration", () => {
 			const events: string[] = [];
 
 			// Execute coding task
-			const result = await coder.execute(
-				"Write a function that adds two numbers",
-				"integration_test_session",
-				{
-					onSessionStart: () => events.push("session_start"),
+			const result = await coder.execute("Write a function that adds two numbers", "integration_test_session", {
+				callbacks: {
+					onStart: () => events.push("start"),
 					onText: () => events.push("text"),
-					onToolCall: (name) => events.push(`tool:${name}`),
-					onSessionEnd: () => events.push("session_end"),
+					onToolCall: (event) => events.push(`tool:${event.toolName}`),
+					onComplete: () => events.push("complete"),
 				},
-			);
+			});
 
 			// Validate
 			expect(result).toBeDefined();
 			expect(result.summary).toBeDefined();
-			expect(events).toContain("session_start");
-			expect(events).toContain("session_end");
+			expect(events).toContain("start");
+			expect(events).toContain("complete");
 
 			console.log("Summary:", result.summary);
 			console.log("Events:", events);
@@ -74,9 +72,11 @@ describe("Live SDK Integration", () => {
 				"Created an add function that takes two parameters and returns their sum",
 				"integration_test_session",
 				{
-					onSessionStart: () => events.push("session_start"),
-					onText: () => events.push("text"),
-					onSessionEnd: () => events.push("session_end"),
+					callbacks: {
+						onStart: () => events.push("start"),
+						onText: () => events.push("text"),
+						onComplete: () => events.push("complete"),
+					},
 				},
 			);
 
@@ -84,8 +84,8 @@ describe("Live SDK Integration", () => {
 			expect(result).toBeDefined();
 			expect(result.decision).toMatch(/^(approve|reject)$/);
 			expect(result.feedback).toBeDefined();
-			expect(events).toContain("session_start");
-			expect(events).toContain("session_end");
+			expect(events).toContain("start");
+			expect(events).toContain("complete");
 
 			console.log("Decision:", result.decision);
 			console.log("Feedback:", result.feedback);

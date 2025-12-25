@@ -5,12 +5,23 @@
 import { inject, injectable } from "@needle-di/core";
 import { CodingAgent } from "../agents/coding-agent.js";
 import { ReviewAgent } from "../agents/review-agent.js";
-import type { StreamCallbacks } from "../runner/base-agent.js";
+import type { IAgentCallbacks } from "../callbacks/types.js";
+import type { CodingResult } from "../runner/models.js";
 
 export type Task = {
 	id: string;
 	description: string;
 };
+
+/**
+ * Workflow options
+ */
+export interface WorkflowOptions {
+	/** Callbacks for agent events */
+	callbacks?: IAgentCallbacks<CodingResult>;
+	/** Timeout per agent execution in ms */
+	timeoutMs?: number;
+}
 
 @injectable()
 export class Workflow {
@@ -22,20 +33,21 @@ export class Workflow {
 	/**
 	 * Run all tasks through the coding and review pipeline.
 	 *
-	 * Callbacks are optional - pass them to observe agent events.
-	 *
 	 * @param tasks - List of tasks to process
-	 * @param callbacks - Optional event callbacks for both agents
+	 * @param options - Optional execution options
 	 * @returns Promise that resolves when all tasks are complete
 	 */
-	async run(tasks: Task[], callbacks?: StreamCallbacks): Promise<void> {
+	async run(tasks: Task[], options?: WorkflowOptions): Promise<void> {
 		for (const task of tasks) {
 			console.log(`Starting Task: ${task.id}`);
 			const sessionId = `session_${task.id}`;
 
 			// 1. Coding Phase
 			console.log(`Coding phase...`);
-			const coderResult = await this.coder.execute(task.description, sessionId, callbacks);
+			const coderResult = await this.coder.execute(task.description, sessionId, {
+				callbacks: options?.callbacks,
+				timeoutMs: options?.timeoutMs,
+			});
 
 			console.log(`Coder finished with reason: ${coderResult.stopReason}`);
 
@@ -52,12 +64,9 @@ export class Workflow {
 
 			// 2. Review Phase
 			console.log(`Reviewing implementation...`);
-			const reviewResult = await this.reviewer.review(
-				task.description,
-				coderResult.summary,
-				`${sessionId}_rev`,
-				callbacks,
-			);
+			const reviewResult = await this.reviewer.review(task.description, coderResult.summary, `${sessionId}_rev`, {
+				timeoutMs: options?.timeoutMs,
+			});
 
 			if (reviewResult.decision === "approve") {
 				console.log(`Task ${task.id} APPROVED and COMMITTED.`);

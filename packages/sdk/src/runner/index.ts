@@ -8,23 +8,20 @@
 // Runners
 export { AnthropicRunner, LiveSDKRunner } from "./anthropic-runner.js";
 
-// Base Agent (legacy - use BaseAnthropicAgent from agents/ instead)
-export { BaseAgent, type StreamCallbacks } from "./base-agent.js";
-
-// Event Mapping (shared between BaseAgent and BaseAnthropicAgent)
+// Event Mapping (shared between agents)
 export { mapSdkMessageToEvents } from "./event-mapper.js";
 
 // Models and Types
 export {
 	type AgentEvent,
-	EventType,
-	EventTypeConst,
-	type SessionResult,
-	type CompactData,
-	type StatusData,
 	type CodingResult,
 	CodingResultSchema,
 	CodingResultSdkSchema,
+	type CompactData,
+	EventType,
+	EventTypeConst,
+	type SessionResult,
+	type StatusData,
 	zodToSdkSchema,
 } from "./models.js";
 

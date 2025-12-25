@@ -43,18 +43,18 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.SESSION_START);
-			expect(events[0].agent_name).toBe(TEST_AGENT);
-			expect(events[0].session_id).toBe("sdk-session-456"); // Uses msg.session_id
-			expect(events[0].content).toBe("Session started: sdk-session-456");
-			expect(events[0].metadata).toEqual({
+			expect(events[0]?.event_type).toBe(EventTypeConst.SESSION_START);
+			expect(events[0]?.agent_name).toBe(TEST_AGENT);
+			expect(events[0]?.session_id).toBe("sdk-session-456"); // Uses msg.session_id
+			expect(events[0]?.content).toBe("Session started: sdk-session-456");
+			expect(events[0]?.metadata).toEqual({
 				model: "claude-sonnet-4-20250514",
 				tools: ["Read", "Write", "Bash"],
 				cwd: "/projects/test",
 				permission_mode: "default",
 				slash_commands: ["/help"],
 			});
-			expect(events[0].timestamp).toBeInstanceOf(Date);
+			expect(events[0]?.timestamp).toBeInstanceOf(Date);
 		});
 
 		test("compact_boundary subtype creates COMPACT event", () => {
@@ -71,10 +71,10 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.COMPACT);
-			expect(events[0].session_id).toBe("sdk-session-789"); // Uses msg.session_id
-			expect(events[0].content).toBe("Context compacted (auto)");
-			expect(events[0].metadata).toEqual({
+			expect(events[0]?.event_type).toBe(EventTypeConst.COMPACT);
+			expect(events[0]?.session_id).toBe("sdk-session-789"); // Uses msg.session_id
+			expect(events[0]?.content).toBe("Context compacted (auto)");
+			expect(events[0]?.metadata).toEqual({
 				trigger: "auto",
 				pre_tokens: 50000,
 			});
@@ -91,10 +91,10 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.STATUS);
-			expect(events[0].session_id).toBe("sdk-session-abc"); // Uses msg.session_id
-			expect(events[0].content).toBe("Status: compacting");
-			expect(events[0].metadata).toEqual({ status: "compacting" });
+			expect(events[0]?.event_type).toBe(EventTypeConst.STATUS);
+			expect(events[0]?.session_id).toBe("sdk-session-abc"); // Uses msg.session_id
+			expect(events[0]?.content).toBe("Status: compacting");
+			expect(events[0]?.metadata).toEqual({ status: "compacting" });
 		});
 
 		test("status with null status shows idle", () => {
@@ -108,15 +108,15 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].content).toBe("Status: idle");
+			expect(events[0]?.content).toBe("Status: idle");
 		});
 
 		test("unknown system subtype returns empty array", () => {
-			const msg: SDKMessage = {
+			const msg = {
 				type: "system",
 				subtype: "unknown_subtype",
 				session_id: "test",
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
@@ -140,10 +140,10 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.TEXT);
-			expect(events[0].agent_name).toBe(TEST_AGENT);
-			expect(events[0].session_id).toBe(TEST_SESSION); // Uses passed sessionId
-			expect(events[0].content).toBe("Hello, I will help you with that task.");
+			expect(events[0]?.event_type).toBe(EventTypeConst.TEXT);
+			expect(events[0]?.agent_name).toBe(TEST_AGENT);
+			expect(events[0]?.session_id).toBe(TEST_SESSION); // Uses passed sessionId
+			expect(events[0]?.content).toBe("Hello, I will help you with that task.");
 		});
 
 		test("thinking block creates THINKING event", () => {
@@ -157,9 +157,9 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.THINKING);
-			expect(events[0].content).toBe("Let me analyze this problem...");
-			expect(events[0].session_id).toBe(TEST_SESSION);
+			expect(events[0]?.event_type).toBe(EventTypeConst.THINKING);
+			expect(events[0]?.content).toBe("Let me analyze this problem...");
+			expect(events[0]?.session_id).toBe(TEST_SESSION);
 		});
 
 		test("tool_use block creates TOOL_CALL event", () => {
@@ -179,11 +179,11 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.TOOL_CALL);
-			expect(events[0].tool_name).toBe("Read");
-			expect(events[0].tool_input).toEqual({ filePath: "/path/to/file.ts" });
-			expect(events[0].content).toBe("Calling tool: Read");
-			expect(events[0].session_id).toBe(TEST_SESSION);
+			expect(events[0]?.event_type).toBe(EventTypeConst.TOOL_CALL);
+			expect(events[0]?.tool_name).toBe("Read");
+			expect(events[0]?.tool_input).toEqual({ filePath: "/path/to/file.ts" });
+			expect(events[0]?.content).toBe("Calling tool: Read");
+			expect(events[0]?.session_id).toBe(TEST_SESSION);
 		});
 
 		test("multiple content blocks create multiple events", () => {
@@ -201,9 +201,9 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(3);
-			expect(events[0].event_type).toBe(EventTypeConst.THINKING);
-			expect(events[1].event_type).toBe(EventTypeConst.TEXT);
-			expect(events[2].event_type).toBe(EventTypeConst.TOOL_CALL);
+			expect(events[0]?.event_type).toBe(EventTypeConst.THINKING);
+			expect(events[1]?.event_type).toBe(EventTypeConst.TEXT);
+			expect(events[2]?.event_type).toBe(EventTypeConst.TOOL_CALL);
 		});
 
 		test("unknown content block type is ignored", () => {
@@ -220,7 +220,7 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.TEXT);
+			expect(events[0]?.event_type).toBe(EventTypeConst.TEXT);
 		});
 
 		test("empty content array returns empty events", () => {
@@ -268,13 +268,13 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.TOOL_RESULT);
-			expect(events[0].tool_result).toEqual({
+			expect(events[0]?.event_type).toBe(EventTypeConst.TOOL_RESULT);
+			expect(events[0]?.tool_result).toEqual({
 				content: "File contents here...",
 				is_error: false,
 			});
-			expect(events[0].content).toBe("Tool result: File contents here...");
-			expect(events[0].session_id).toBe(TEST_SESSION);
+			expect(events[0]?.content).toBe("Tool result: File contents here...");
+			expect(events[0]?.session_id).toBe(TEST_SESSION);
 		});
 
 		test("tool_result with error flag", () => {
@@ -294,7 +294,7 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].tool_result?.is_error).toBe(true);
+			expect(events[0]?.tool_result?.is_error).toBe(true);
 		});
 
 		test("long tool result content is truncated in content field", () => {
@@ -315,8 +315,8 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].content).toBe("Tool result: " + "A".repeat(100));
-			expect(events[0].tool_result?.content).toBe(longContent); // Full content preserved
+			expect(events[0]?.content).toBe(`Tool result: ${"A".repeat(100)}`);
+			expect(events[0]?.tool_result?.content).toBe(longContent); // Full content preserved
 		});
 
 		test("non-array user content returns empty events", () => {
@@ -347,11 +347,11 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(1);
-			expect(events[0].event_type).toBe(EventTypeConst.TOOL_PROGRESS);
-			expect(events[0].tool_name).toBe("Bash");
-			expect(events[0].content).toBe("Tool progress: Bash");
-			expect(events[0].session_id).toBe(TEST_SESSION);
-			expect(events[0].metadata).toEqual({
+			expect(events[0]?.event_type).toBe(EventTypeConst.TOOL_PROGRESS);
+			expect(events[0]?.tool_name).toBe("Bash");
+			expect(events[0]?.content).toBe("Tool progress: Bash");
+			expect(events[0]?.session_id).toBe(TEST_SESSION);
+			expect(events[0]?.metadata).toEqual({
 				elapsed_seconds: 5.2,
 				tool_use_id: "tu_12345",
 			});
@@ -364,7 +364,7 @@ describe("Event Mapper", () => {
 
 	describe("result messages", () => {
 		test("success result creates RESULT and SESSION_END events", () => {
-			const msg: SDKMessage = {
+			const msg = {
 				type: "result",
 				subtype: "success",
 				session_id: "result-session",
@@ -379,18 +379,18 @@ describe("Event Mapper", () => {
 					cache_read_input_tokens: 100,
 					cache_creation_input_tokens: 50,
 				},
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(2);
 
 			// First event: RESULT
-			expect(events[0].event_type).toBe(EventTypeConst.RESULT);
-			expect(events[0].content).toBe("Task completed");
-			expect(events[0].is_error).toBe(false);
-			expect(events[0].session_id).toBe(TEST_SESSION);
-			expect(events[0].metadata).toEqual({
+			expect(events[0]?.event_type).toBe(EventTypeConst.RESULT);
+			expect(events[0]?.content).toBe("Task completed");
+			expect(events[0]?.is_error).toBe(false);
+			expect(events[0]?.session_id).toBe(TEST_SESSION);
+			expect(events[0]?.metadata).toEqual({
 				subtype: "success",
 				usage: {
 					input_tokens: 1000,
@@ -404,13 +404,13 @@ describe("Event Mapper", () => {
 			});
 
 			// Second event: SESSION_END
-			expect(events[1].event_type).toBe(EventTypeConst.SESSION_END);
-			expect(events[1].content).toBe("Task completed");
-			expect(events[1].is_error).toBe(false);
+			expect(events[1]?.event_type).toBe(EventTypeConst.SESSION_END);
+			expect(events[1]?.content).toBe("Task completed");
+			expect(events[1]?.is_error).toBe(false);
 		});
 
 		test("failure result creates events with is_error=true", () => {
-			const msg: SDKMessage = {
+			const msg = {
 				type: "result",
 				subtype: "error",
 				session_id: "error-session",
@@ -419,19 +419,19 @@ describe("Event Mapper", () => {
 				num_turns: 1,
 				total_cost_usd: 0.01,
 				usage: { input_tokens: 100, output_tokens: 50 },
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
 			expect(events).toHaveLength(2);
-			expect(events[0].content).toBe("Task failed");
-			expect(events[0].is_error).toBe(true);
-			expect(events[1].content).toBe("Task failed");
-			expect(events[1].is_error).toBe(true);
+			expect(events[0]?.content).toBe("Task failed");
+			expect(events[0]?.is_error).toBe(true);
+			expect(events[1]?.content).toBe("Task failed");
+			expect(events[1]?.is_error).toBe(true);
 		});
 
 		test("interrupted result treated as failure", () => {
-			const msg: SDKMessage = {
+			const msg = {
 				type: "result",
 				subtype: "interrupted",
 				session_id: "int-session",
@@ -439,12 +439,12 @@ describe("Event Mapper", () => {
 				num_turns: 2,
 				total_cost_usd: 0.02,
 				usage: { input_tokens: 200, output_tokens: 100 },
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
-			expect(events[0].content).toBe("Task failed");
-			expect(events[0].is_error).toBe(true);
+			expect(events[0]?.content).toBe("Task failed");
+			expect(events[0]?.is_error).toBe(true);
 		});
 	});
 
@@ -454,10 +454,10 @@ describe("Event Mapper", () => {
 
 	describe("unknown message types", () => {
 		test("unknown message type returns empty array", () => {
-			const msg: SDKMessage = {
+			const msg = {
 				type: "unknown_type" as any,
 				data: "some data",
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
@@ -483,20 +483,20 @@ describe("Event Mapper", () => {
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 			const after = new Date();
 
-			expect(events[0].timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
-			expect(events[0].timestamp.getTime()).toBeLessThanOrEqual(after.getTime());
+			expect(events[0]?.timestamp.getTime()).toBeGreaterThanOrEqual(before.getTime());
+			expect(events[0]?.timestamp.getTime()).toBeLessThanOrEqual(after.getTime());
 		});
 
 		test("agent_name is correctly attributed on all events", () => {
 			const customAgent = "MyCustomAgent";
-			const msg: SDKMessage = {
+			const msg = {
 				type: "result",
 				subtype: "success",
 				duration_ms: 100,
 				num_turns: 1,
 				total_cost_usd: 0.001,
 				usage: { input_tokens: 10, output_tokens: 5 },
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, customAgent, TEST_SESSION);
 
@@ -519,7 +519,7 @@ describe("Event Mapper", () => {
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
-			expect(events[0].tool_input).toEqual(complexInput);
+			expect(events[0]?.tool_input).toEqual(complexInput);
 		});
 	});
 });

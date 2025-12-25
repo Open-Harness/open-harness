@@ -7,12 +7,12 @@
  * 3. Invalid input error handling
  */
 
-import { describe, expect, test, beforeEach } from "bun:test";
-import { injectable } from "@needle-di/core";
+import { describe, expect, test } from "bun:test";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { createAgent, type AgentConfig } from "../../src/factory/agent-factory.js";
-import { BaseAgent } from "../../src/runner/base-agent.js";
+import { injectable } from "@needle-di/core";
+import { BaseAnthropicAgent } from "../../src/agents/base-anthropic-agent.js";
 import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
+import { type AgentConfig, createAgent } from "../../src/factory/agent-factory.js";
 
 // ============================================================================
 // Mock Runner for Testing
@@ -28,7 +28,7 @@ class MockRunner implements IAgentRunner {
 		this.lastPrompt = args.prompt;
 
 		// Simulate SDK result message
-		const resultMessage: SDKMessage = {
+		const resultMessage = {
 			type: "result",
 			subtype: "success",
 			session_id: "mock_session",
@@ -43,7 +43,11 @@ class MockRunner implements IAgentRunner {
 				summary: "Mock task completed",
 				handoff: "",
 			},
-		} as SDKMessage;
+			result: "Mock task completed",
+			modelUsage: { input_tokens: 10, output_tokens: 20 },
+			permission_denials: [],
+			uuid: "mock-uuid-123",
+		} as unknown as SDKMessage;
 
 		// Fire callback if provided
 		if (args.callbacks?.onMessage) {
@@ -117,9 +121,13 @@ describe("Agent Factory", () => {
 	describe("Class-based agents", () => {
 		test("createAgent with custom class creates instance", () => {
 			@injectable()
-			class CustomAgent extends BaseAgent {
-				constructor(runner: IAgentRunner) {
-					super("CustomAgent", runner, null);
+			class CustomAgent extends BaseAnthropicAgent {
+				constructor() {
+					// Use a mock runner - in real usage, this would come from DI
+					const mockRunner: IAgentRunner = {
+						run: async () => undefined,
+					};
+					super("CustomAgent", mockRunner, null);
 				}
 			}
 

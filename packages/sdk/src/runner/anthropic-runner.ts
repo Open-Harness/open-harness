@@ -20,11 +20,7 @@ import type { IAgentRunner, RunnerCallbacks } from "../core/tokens.js";
  */
 @injectable()
 export class AnthropicRunner implements IAgentRunner {
-	async run(args: {
-		prompt: string;
-		options: Options;
-		callbacks?: RunnerCallbacks;
-	}): Promise<SDKMessage | undefined> {
+	async run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }): Promise<SDKMessage | undefined> {
 		const { prompt, options, callbacks } = args;
 		let lastMessage: SDKMessage | undefined;
 

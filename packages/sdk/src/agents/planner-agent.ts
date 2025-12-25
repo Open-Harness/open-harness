@@ -1,13 +1,18 @@
 /**
  * PlannerAgent - Specialized agent for breaking PRDs into tickets
+ *
+ * Takes a Product Requirements Document and produces a list of
+ * development tickets with IDs, titles, and descriptions.
+ * Uses Haiku model for cost-effective planning.
  */
 
 import { inject, injectable } from "@needle-di/core";
 import { z } from "zod";
-import { IAgentRunnerToken, IEventBusToken } from "../core/tokens.js";
-import { BaseAgent, type StreamCallbacks } from "../runner/base-agent.js";
+import type { IAgentCallbacks } from "../callbacks/types.js";
+import { IAnthropicRunnerToken, IEventBusToken } from "../core/tokens.js";
 import type { JSONSchemaFormat } from "../runner/models.js";
 import { PromptRegistry } from "../runner/prompts.js";
+import { BaseAnthropicAgent } from "./base-anthropic-agent.js";
 
 // ============================================
 // Schema
@@ -50,16 +55,23 @@ export const PlannerResultSdkSchema: JSONSchemaFormat = {
 	},
 };
 
+/**
+ * Options for PlannerAgent execution.
+ */
+export interface PlannerAgentOptions {
+	/** Event callbacks */
+	callbacks?: IAgentCallbacks<PlannerResult>;
+	/** Timeout in milliseconds */
+	timeoutMs?: number;
+}
+
 // ============================================
 // Agent
 // ============================================
 
 @injectable()
-export class PlannerAgent extends BaseAgent {
-	constructor(
-		runner = inject(IAgentRunnerToken),
-		eventBus = inject(IEventBusToken, { optional: true }) ?? null,
-	) {
+export class PlannerAgent extends BaseAnthropicAgent {
+	constructor(runner = inject(IAnthropicRunnerToken), eventBus = inject(IEventBusToken, { optional: true }) ?? null) {
 		super("Planner", runner, eventBus);
 	}
 
@@ -68,22 +80,29 @@ export class PlannerAgent extends BaseAgent {
 	 *
 	 * @param prd - The product requirements document to break down
 	 * @param sessionId - Unique session identifier
-	 * @param callbacks - Optional event callbacks
+	 * @param options - Optional execution options including callbacks
 	 * @returns Promise with the structured planner result containing tickets
+	 *
+	 * @example
+	 * ```typescript
+	 * const agent = container.get(PlannerAgent);
+	 * const result = await agent.plan(prdContent, "session-1", {
+	 *   callbacks: {
+	 *     onComplete: (result) => {
+	 *       console.log(`Created ${result.output?.tickets.length} tickets`);
+	 *     },
+	 *   },
+	 * });
+	 * ```
 	 */
-	async plan(prd: string, sessionId: string, callbacks?: StreamCallbacks): Promise<PlannerResult> {
+	async plan(prd: string, sessionId: string, options?: PlannerAgentOptions): Promise<PlannerResult> {
 		const prompt = await PromptRegistry.formatPlanner({ prd });
-		const lastMsg = await this.run(prompt, sessionId, {
+		return this.run<PlannerResult>(prompt, sessionId, {
 			model: "haiku",
-			maxTurns: 3, // Need turns for: text response + StructuredOutput tool
+			maxTurns: 3,
 			outputFormat: PlannerResultSdkSchema,
-			callbacks,
+			callbacks: options?.callbacks,
+			timeoutMs: options?.timeoutMs,
 		});
-
-		if (lastMsg && lastMsg.type === "result" && lastMsg.subtype === "success") {
-			return lastMsg.structured_output as PlannerResult;
-		}
-
-		throw new Error("PlannerAgent: Failed to get structured output from session.");
 	}
 }
