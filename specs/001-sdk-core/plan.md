@@ -1,6 +1,6 @@
 # Implementation Plan: Open Harness SDK Core
 
-**Branch**: `spec-kit/fix-1` | **Date**: 2025-12-25 | **Spec**: [spec.md](./spec.md)
+**Branch**: `001-sdk-core` | **Date**: 2025-12-25 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification + architectural audit findings
 
 ## Summary
@@ -258,6 +258,8 @@ class TicketHarness extends BaseHarness<TicketState, Ticket, CodingResult> {
 const agent = createAgent("coder");
 const result = await agent.execute("Write hello world", "session-1");
 ```
+
+**Context Flow Clarification**: Agents receive context as a parameter to `execute()`, NOT by calling `loadContext()` themselves. The harness calls `loadContext()` and transforms the result before passing to agent. This keeps agents stateless and testable.
 
 **Benefits**:
 - **Reusable agents** - Define what they accept, not what they require
