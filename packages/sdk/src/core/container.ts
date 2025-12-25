@@ -9,21 +9,23 @@ import { Container } from "@needle-di/core";
 import { CodingAgent } from "../agents/coding-agent.js";
 import { AgentMonologue } from "../agents/monologue.js";
 import { ReviewAgent } from "../agents/review-agent.js";
+import { AnthropicRunner } from "../runner/anthropic-runner.js";
 import type { AgentEvent } from "../runner/models.js";
 import { Workflow } from "../workflow/orchestrator.js";
 import { setDecoratorContainer } from "./decorators.js";
-import { LiveSDKRunner } from "./live-runner.js";
 import { RecordingFactory } from "./recording-factory.js";
 import { ReplayRunner } from "./replay-runner.js";
 import {
 	type IAgentRunner,
 	IAgentRunnerToken,
+	IAnthropicRunnerToken,
 	type IConfig,
 	IConfigToken,
 	type IEventBus,
 	IEventBusToken,
 	type IRecordingFactory,
 	IRecordingFactoryToken,
+	IReplayRunnerToken,
 	type IVault,
 	IVaultToken,
 } from "./tokens.js";
@@ -109,10 +111,26 @@ export function createContainer(options: ContainerOptions = {}): Container {
 		useValue: config,
 	});
 
-	// Agent Runner (mode-dependent)
+	// =========================================================================
+	// Provider-Specific Runner Tokens
+	// =========================================================================
+
+	// Anthropic Runner (production)
+	container.bind({
+		provide: IAnthropicRunnerToken,
+		useClass: AnthropicRunner,
+	});
+
+	// Replay Runner (testing)
+	container.bind({
+		provide: IReplayRunnerToken,
+		useClass: ReplayRunner,
+	});
+
+	// Legacy IAgentRunnerToken (mode-dependent, for backward compatibility)
 	container.bind({
 		provide: IAgentRunnerToken,
-		useClass: mode === "replay" ? ReplayRunner : LiveSDKRunner,
+		useClass: mode === "replay" ? ReplayRunner : AnthropicRunner,
 	});
 
 	// Vault

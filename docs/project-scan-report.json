@@ -94,12 +94,12 @@
 			{
 				"part_id": "sdk",
 				"project_type_id": "library",
-				"display_name": "@dao/sdk"
+				"display_name": "@openharnes/sdk"
 			},
 			{
 				"part_id": "cli",
 				"project_type_id": "cli",
-				"display_name": "@dao/cli"
+				"display_name": "@openharnes/cli"
 			},
 			{
 				"part_id": "trading-bot",

@@ -10,8 +10,8 @@
 **Open Harness** (working name: "dao") is an extensible workflow SDK for building AI agent applications. Built on top of the Anthropic Agent SDK, it provides clean abstractions for creating agents, workflows, and task management with readable narrative output (Monologue).
 
 The project consists of:
-- A **core SDK** (`@dao/sdk`) - The heart of the system
-- A **CLI** (`@dao/cli`) - Workflow runner for YAML-configured workflows
+- A **core SDK** (`@openharnes/sdk`) - The heart of the system
+- A **CLI** (`@openharnes/cli`) - Workflow runner for YAML-configured workflows
 - A **Trading Bot** - Example application demonstrating SDK usage
 - A **Documentation Site** - Next.js-based docs (scaffolded)
 - A **Backend Server** - Hono-based API server (minimal)
@@ -20,14 +20,14 @@ The project consists of:
 
 This project consists of 5 parts:
 
-### @dao/sdk (packages/sdk)
+### @openharnes/sdk (packages/sdk)
 - **Type:** Library
 - **Location:** `packages/sdk/`
 - **Tech Stack:** TypeScript, Bun, Anthropic Agent SDK, NeedleDI
 - **Entry Point:** `src/index.ts`
 - **Status:** Working, nearly publishable
 
-### @dao/cli (apps/cli)
+### @openharnes/cli (apps/cli)
 - **Type:** CLI
 - **Location:** `apps/cli/`
 - **Tech Stack:** TypeScript, Bun, Commander, Chalk
@@ -58,9 +58,9 @@ This project consists of 5 parts:
 ## Cross-Part Integration
 
 The SDK is the central dependency:
-- CLI imports `@dao/sdk` for workflow execution
+- CLI imports `@openharnes/sdk` for workflow execution
 - Trading Bot demonstrates SDK patterns (but doesn't import directly yet)
-- All apps share `@dao/config` workspace package
+- All apps share `@openharnes/config` workspace package
 
 ## Quick Reference
 
@@ -80,12 +80,12 @@ The SDK is the central dependency:
 
 ### Part-Specific Documentation
 
-#### SDK (@dao/sdk)
+#### SDK (@openharnes/sdk)
 - [Architecture - SDK](./architecture-sdk.md) - Technical architecture for the SDK
 - [API Reference - SDK](./api-reference-sdk.md) - Public API documentation
 - [Development Guide - SDK](./development-guide-sdk.md) - Setup and dev workflow
 
-#### CLI (@dao/cli)
+#### CLI (@openharnes/cli)
 - [Architecture - CLI](./architecture-cli.md) - Technical architecture for the CLI
 - [Development Guide - CLI](./development-guide-cli.md) - Setup and dev workflow
 

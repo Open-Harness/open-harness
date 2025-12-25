@@ -39,7 +39,7 @@ Create a universal harness for AI agent development that:
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 ├─────────────────────────────────────────────────────────────────┤
-│               @dao/sdk (Clean API Surface)                       │
+│               @openharnes/sdk (Clean API Surface)                       │
 ├─────────────────────────────────────────────────────────────────┤
 │               DI Container (NeedleDI - Hidden)                   │
 ├─────────────────────────────────────────────────────────────────┤
@@ -92,12 +92,12 @@ Create a universal harness for AI agent development that:
 ```
 open-harness/
 ├── apps/
-│   ├── cli/              # Workflow runner CLI (@dao/cli)
+│   ├── cli/              # Workflow runner CLI (@openharnes/cli)
 │   ├── docs/             # Documentation site (Next.js)
 │   ├── server/           # Backend API (Hono)
 │   └── trading-bot/      # Example application
 ├── packages/
-│   ├── sdk/              # Core SDK (@dao/sdk)
+│   ├── sdk/              # Core SDK (@openharnes/sdk)
 │   └── config/           # Shared TypeScript config
 ├── _bmad/                # BMad Method tooling
 ├── _bmad-output/         # BMad artifacts
@@ -134,7 +134,7 @@ open-harness/
 
 1. **Consolidate naming**: Finalize "Open Harness" as official name
 2. **Fix CLI integration**: Resolve the "doesn't work" issue
-3. **Publish SDK**: Prepare @dao/sdk for npm publication
+3. **Publish SDK**: Prepare @openharnes/sdk for npm publication
 4. **Document APIs**: Generate comprehensive API documentation
 5. **Build docs site**: Populate with guides and examples
 

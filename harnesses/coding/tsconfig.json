@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"noEmit": true,
+		"types": ["bun-types"],
+		"baseUrl": ".",
+		"paths": {
+			"@openharnes/sdk": ["node_modules/@openharnes/sdk/src/index.ts"]
+		}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules/@openharnes/sdk/src/agents/monologue.ts"]
+}

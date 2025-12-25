@@ -1,319 +1,286 @@
-# SDK Architecture (@dao/sdk)
+# SDK Architecture (@openharnes/sdk)
 
 ## Overview
 
-The SDK provides a clean, type-safe abstraction layer over the Anthropic Agent SDK. It enables developers to build autonomous agents and multi-agent workflows without dealing with DI complexity.
+The SDK provides a provider-agnostic, type-safe framework for building step-aware autonomous agents. It enables developers to build multi-agent workflows with typed inputs/outputs, unified callbacks, and clean separation of concerns.
 
 ## Core Design Principles
 
-1. **Zero Leakage**: DI container is completely hidden from users
-2. **Promise + Callbacks**: No async generators exposed
-3. **Composable**: Mix and match agents and workflows
-4. **Type-Safe**: Full TypeScript with IntelliSense
-5. **Extensible**: Built-in agents are just examples
+1. **Provider-Agnostic**: Harnesses don't care which LLM provider powers agents
+2. **Typed I/O**: Agents have typed inputs and outputs for safe chaining
+3. **Unified Callbacks**: Same callback interface (`IAgentCallbacks`) across all providers
+4. **DI for Infrastructure**: Dependency injection for runners, EventBus, Vault
+5. **User Owns Orchestration**: Framework provides infrastructure, users control flow
 
-## Architecture Layers
+## Three-Layer Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    PUBLIC API SURFACE                        │
-│  createAgent() | createWorkflow() | withMonologue() | TaskList │
-├─────────────────────────────────────────────────────────────┤
-│                    DOMAIN LAYER                              │
-│  BaseAgent | CodingAgent | ReviewAgent | Workflow            │
-├─────────────────────────────────────────────────────────────┤
-│                  INFRASTRUCTURE LAYER                        │
-│  Container | Tokens | LiveRunner | ReplayRunner | Vault      │
-├─────────────────────────────────────────────────────────────┤
-│                    EXTERNAL DEPS                             │
-│  @anthropic-ai/claude-agent-sdk | @needle-di/core            │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         LAYER 1: HARNESS                                    │
+│                     (Step-Aware Orchestration)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  BaseHarness<TState, TInput, TOutput>                                       │
+│    - constructor(config: HarnessConfig<TState>)                             │
+│    - protected state: PersistentState<TState>                               │
+│    - protected currentStep: number                                          │
+│    - abstract execute(): AsyncGenerator<StepYield<TInput, TOutput>>         │
+│    - run(): Promise<void>                                                   │
+│    - loadContext(): LoadedContext<TState>                                   │
+│    - isComplete(): boolean                                                  │
+│                                                                             │
+│  Agent<TState, TInput, TOutput>                                             │
+│    - Lightweight wrapper for step-aware agent logic                         │
+│    - Provides step context to agent execution                               │
+│                                                                             │
+│  PersistentState<TState>                                                    │
+│    - getState(): TState                                                     │
+│    - updateState(fn: (s: TState) => TState): void                           │
+│    - loadContext(): LoadedContext<TState>                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │ uses
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         LAYER 2: AGENTS                                     │
+│                  (Provider-Agnostic Agent System)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  interface IAgent<TInput, TOutput> {                                        │
+│    readonly name: string;                                                   │
+│    execute(                                                                 │
+│      input: TInput,                                                         │
+│      sessionId: string,                                                     │
+│      callbacks?: IAgentCallbacks                                            │
+│    ): Promise<TOutput>;                                                     │
+│  }                                                                          │
+│                                                                             │
+│  interface IAgentCallbacks {                                                │
+│    onStart?: (metadata: AgentStartMetadata) => void;                        │
+│    onText?: (text: string, delta: boolean) => void;                         │
+│    onToolCall?: (event: ToolCallEvent) => void;                             │
+│    onToolResult?: (event: ToolResultEvent) => void;                         │
+│    onThinking?: (thought: string) => void;                                  │
+│    onProgress?: (event: ProgressEvent) => void;                             │
+│    onComplete?: (result: AgentResult<TOutput>) => void;                     │
+│    onError?: (error: AgentError) => void;                                   │
+│  }                                                                          │
+│                                                                             │
+│  abstract class BaseAnthropicAgent<TInput, TOutput>                         │
+│      implements IAgent<TInput, TOutput> {                                   │
+│    protected abstract buildPrompt(input: TInput): string;                   │
+│    protected abstract extractOutput(result: AgentResult): TOutput;          │
+│    protected abstract getOptions(): RunnerOptions;                          │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │ uses
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         LAYER 3: RUNNERS                                    │
+│                   (LLM Execution Infrastructure)                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  interface IAgentRunner {                                                   │
+│    run(args: {                                                              │
+│      prompt: string;                                                        │
+│      options: Options;                                                      │
+│      callbacks?: RunnerCallbacks;                                           │
+│    }): Promise<SDKMessage | undefined>;                                     │
+│  }                                                                          │
+│                                                                             │
+│  class AnthropicRunner implements IAgentRunner { ... }                      │
+│  class ReplayRunner implements IAgentRunner { ... }                         │
+│                                                                             │
+│  // Provider-Specific Tokens                                                │
+│  IAnthropicRunnerToken                                                      │
+│  IReplayRunnerToken                                                         │
+│                                                                             │
+│  // Infrastructure                                                          │
+│  IEventBusToken, IVaultToken, IConfigToken                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Core Components
+## Key Components
 
-### 1. Agent Factory (`factory/agent-factory.ts`)
+### 1. Harness Layer
 
-Creates agents without exposing DI. Supports three patterns:
+**BaseHarness** - Abstract base class for step-aware orchestration:
 
 ```typescript
-// Built-in agent
-const coder = createAgent('coder');
-
-// Config-based agent
-const myAgent = createAgent({
-  name: 'MyAgent',
-  prompt: 'You are a {{role}} expert. Task: {{task}}',
-  model: 'haiku'
-});
-
-// Class-based agent
-class CustomAgent extends BaseAgent { ... }
-const custom = createAgent(CustomAgent);
+class MyHarness extends BaseHarness<State, Input, Output> {
+  protected async *execute() {
+    // User implements orchestration logic
+    const result = await this.agent.run({ ... });
+    yield { input, output: result };
+  }
+}
 ```
 
-**Internal Flow:**
-1. Lazily creates global container on first use
-2. Resolves agent from container (built-in) or creates directly (config/class)
-3. Injects runner dependency automatically
+**Agent** - Lightweight wrapper for step-aware agent logic:
 
-### 2. BaseAgent (`runner/base-agent.ts`)
+```typescript
+const agent = new Agent<State, Input, Output>({
+  name: 'MyAgent',
+  async run({ input, stepNumber, context }) {
+    // Agent implementation
+    return output;
+  }
+});
+```
 
-Foundation for all agents:
+**PersistentState** - Manages state with bounded context:
+
+```typescript
+this.state.updateState(s => ({
+  ...s,
+  itemsProcessed: s.itemsProcessed + 1
+}));
+```
+
+### 2. Agent Layer
+
+**IAgent Interface** - Core abstraction for typed agents:
+
+```typescript
+interface IAgent<TInput, TOutput> {
+  readonly name: string;
+  execute(
+    input: TInput,
+    sessionId: string,
+    callbacks?: IAgentCallbacks<TOutput>
+  ): Promise<TOutput>;
+}
+```
+
+**BaseAnthropicAgent** - Base class for Anthropic/Claude agents:
+
+```typescript
+class CodingAgent extends BaseAnthropicAgent<CodingInput, CodingOutput> {
+  readonly name = 'CodingAgent';
+
+  protected buildPrompt(input: CodingInput): string {
+    return `Task: ${input.task}`;
+  }
+
+  protected getOptions(): RunnerOptions {
+    return { model: 'sonnet' };
+  }
+
+  protected extractOutput(result: AgentResult): CodingOutput {
+    return result.output as CodingOutput;
+  }
+}
+```
+
+### 3. Runner Layer
+
+**AnthropicRunner** - Production runner for Claude API:
 
 ```typescript
 @injectable()
-export class BaseAgent {
-  constructor(
-    public readonly name: string,
-    protected runner: IAgentRunner,
-    protected eventBus: IEventBus | null
-  ) {}
-
-  async run(prompt: string, sessionId: string, options?: Options): Promise<SDKMessage | undefined>
-}
-```
-
-**Key Responsibilities:**
-- Runs prompts through the SDK
-- Maps SDK messages to typed AgentEvents
-- Fires callbacks (onText, onToolCall, onResult, etc.)
-- Publishes to event bus for cross-cutting concerns
-
-### 3. Workflow Builder (`factory/workflow-builder.ts`)
-
-Orchestrates multiple agents with task management:
-
-```typescript
-const workflow = createWorkflow({
-  name: 'Code-Review',
-  tasks: [{ id: '1', description: 'Write function' }],
-  agents: { coder: createAgent('coder') },
-  
-  async execute({ agents, state, tasks }) {
-    for (const task of tasks) {
-      state.markInProgress(task.id);
-      await agents.coder.run(task.description, `session_${task.id}`);
-      state.markComplete(task.id);
+class AnthropicRunner implements IAgentRunner {
+  async run(args): Promise<SDKMessage | undefined> {
+    for await (const message of query({ prompt, options })) {
+      callbacks?.onMessage?.(message);
     }
+    return lastMessage;
   }
-});
-```
-
-### 4. TaskList (`workflow/task-list.ts`)
-
-Stateful task management primitive:
-
-```typescript
-const tasks = new TaskList([
-  { id: '1', description: 'Implement login' }
-]);
-
-tasks.markInProgress('1');
-tasks.markCompleted('1', { result: 'Done!' });
-
-const progress = tasks.getProgress();
-// { total: 1, completed: 1, pending: 0, percentComplete: 100 }
-```
-
-**Task Lifecycle:**
-`pending → in_progress → completed | failed | skipped`
-
-### 5. Monologue Wrapper (`monologue/wrapper.ts`)
-
-Transforms tool noise into readable narrative:
-
-```typescript
-const narrativeAgent = withMonologue(agent, {
-  bufferSize: 5,
-  onNarrative: (text) => console.log(`Agent: ${text}`)
-});
-```
-
-**Internal Flow:**
-1. Intercepts agent events (onToolCall, onText, etc.)
-2. Buffers events until threshold reached
-3. Uses AgentMonologue to synthesize first-person narrative
-4. Fires onNarrative callback with human-readable text
-
-## Dependency Injection
-
-### Composition Root (`core/container.ts`)
-
-Single place where all bindings are configured:
-
-```typescript
-export function createContainer(options: ContainerOptions = {}): Container {
-  const container = new Container();
-  
-  // Infrastructure
-  container.bind({ provide: IConfigToken, useValue: config });
-  container.bind({ provide: IAgentRunnerToken, useClass: LiveSDKRunner });
-  container.bind({ provide: IVaultToken, useClass: Vault });
-  
-  // Domain
-  container.bind(CodingAgent);
-  container.bind(ReviewAgent);
-  container.bind(Workflow);
-  
-  return container;
 }
 ```
 
-### Injection Tokens (`core/tokens.ts`)
-
-Interfaces and tokens for DI:
+## Typed Agent Chaining
 
 ```typescript
-export interface IAgentRunner {
-  run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks })
-    : Promise<SDKMessage | undefined>;
+// Type-safe chaining
+const analysis: AnalysisOutput = await analyzer.execute({ ticket }, sessionId);
+const code: CodingOutput = await coder.execute({ task: analysis.plan }, sessionId);
+const review: ReviewOutput = await reviewer.execute({ impl: code.summary }, sessionId);
+
+// Loop based on typed output
+while (review.decision === 'reject') {
+  code = await coder.execute({ task: analysis.plan, feedback: review.feedback }, sessionId);
+  review = await reviewer.execute({ impl: code.summary }, sessionId);
 }
-
-export const IAgentRunnerToken = new InjectionToken<IAgentRunner>('IAgentRunner');
 ```
 
-## Event System
-
-### AgentEvent Model (`runner/models.ts`)
-
-Normalized event type for all agent activities:
+## DI Container
 
 ```typescript
-type AgentEvent = {
-  timestamp: Date;
-  event_type: EventType;
-  agent_name: string;
-  content?: string;
-  session_id?: string;
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-  tool_result?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  is_error?: boolean;
-};
-```
-
-### Event Types
-
-- `SESSION_START` - Session initialized
-- `TEXT` - Text content from assistant
-- `THINKING` - Extended thinking/reasoning
-- `TOOL_CALL` - Tool invocation started
-- `TOOL_RESULT` - Tool execution completed
-- `TOOL_PROGRESS` - Tool execution progress
-- `COMPACT` - Context compaction started
-- `STATUS` - Status update
-- `RESULT` - Final result with usage stats
-- `SESSION_END` - Session ended
-- `ERROR` - Error occurred
-
-### Callback Pattern
-
-```typescript
-type StreamCallbacks = {
-  onSessionStart?: (metadata, event) => void;
-  onText?: (content, event) => void;
-  onThinking?: (thought, event) => void;
-  onToolCall?: (toolName, input, event) => void;
-  onToolResult?: (result, event) => void;
-  onResult?: (result, event) => void;
-  onSessionEnd?: (content, isError, event) => void;
-  onError?: (error, event) => void;
-};
-```
-
-## Recording & Replay
-
-### Purpose
-- Test without calling Claude API
-- Capture sessions for debugging
-- Create deterministic test fixtures
-
-### Components
-
-- **Vault** (`core/vault.ts`): Storage for recordings
-- **RecordingFactory** (`core/recording-factory.ts`): Creates recorders
-- **LiveSDKRunner** (`core/live-runner.ts`): Real SDK execution
-- **ReplayRunner** (`core/replay-runner.ts`): Replay from recordings
-
-### Usage
-
-```typescript
-// Live mode (default)
+// Create container with provider bindings
 const container = createContainer({ mode: 'live' });
 
-// Replay mode (for testing)
-const container = createContainer({ mode: 'replay' });
+// Provider-specific tokens
+container.bind({ provide: IAnthropicRunnerToken, useClass: AnthropicRunner });
+container.bind({ provide: IReplayRunnerToken, useClass: ReplayRunner });
+
+// Get agents from container
+const coder = container.get(CodingAgent);
+const reviewer = container.get(ReviewAgent);
 ```
 
-## Public API Surface
+## File Structure
 
-### Exports from `index.ts`
-
-```typescript
-// Factories
-export { createAgent } from './factory/agent-factory.js';
-export { createWorkflow } from './factory/workflow-builder.js';
-
-// Primitives
-export { withMonologue } from './monologue/wrapper.js';
-export { TaskList } from './workflow/task-list.js';
-
-// Base Classes (advanced)
-export { BaseAgent } from './runner/base-agent.js';
-export type { StreamCallbacks } from './runner/base-agent.js';
-
-// Built-in Agents (examples)
-export { CodingAgent } from './agents/coding-agent.js';
-export { ReviewAgent } from './agents/review-agent.js';
-
-// Types
-export type { AgentEvent, CodingResult, ... } from './runner/models.js';
-export type { Task, TaskStatus } from './workflow/task-list.js';
-
-// Internal (testing/advanced)
-export { createContainer } from './core/container.js';
-export type { ContainerOptions } from './core/container.js';
+```
+packages/sdk/src/
+├── index.ts                    # Main exports
+│
+├── harness/                    # LAYER 1: HARNESS
+│   ├── index.ts
+│   ├── base-harness.ts         # BaseHarness abstract class
+│   ├── agent.ts                # Agent wrapper
+│   ├── state.ts                # PersistentState
+│   └── types.ts                # Step, StepYield, HarnessConfig
+│
+├── agents/                     # LAYER 2: AGENTS
+│   ├── index.ts
+│   ├── types.ts                # IAgent, RunnerOptions
+│   ├── base-anthropic-agent.ts # BaseAnthropicAgent
+│   ├── coding-agent.ts
+│   └── review-agent.ts
+│
+├── callbacks/                  # CALLBACKS
+│   ├── index.ts
+│   └── types.ts                # IAgentCallbacks, events
+│
+├── runner/                     # LAYER 3: RUNNERS
+│   ├── index.ts
+│   ├── anthropic-runner.ts     # AnthropicRunner
+│   ├── base-agent.ts           # Legacy BaseAgent
+│   └── models.ts               # AgentEvent, EventType
+│
+├── core/                       # DI INFRASTRUCTURE
+│   ├── container.ts            # createContainer()
+│   ├── tokens.ts               # All injection tokens
+│   ├── replay-runner.ts
+│   └── vault.ts
+│
+├── factory/                    # FACTORIES
+│   ├── agent-factory.ts        # createAgent()
+│   └── workflow-builder.ts     # createWorkflow()
+│
+└── workflow/                   # WORKFLOW
+    ├── task-list.ts            # TaskList
+    └── orchestrator.ts         # Workflow
 ```
 
-## Testing Strategy
+## Running Tests
 
-### Unit Tests
-- Container creation and binding
-- TaskList state management
-- Event mapping
+```bash
+# All tests
+bun test
 
-### Integration Tests
-- Live SDK execution (requires API key)
-- Recording and replay
-- Full workflow execution
+# Smoke test (no API key needed)
+bun run smoke
 
-### Example Tests
+# Unit tests
+bun test:unit
 
-```typescript
-// Direct instantiation for unit tests
-const mockRunner: IAgentRunner = {
-  async run(args) {
-    args.callbacks?.onMessage?.(mockMessage);
-    return mockResult;
-  }
-};
-
-const agent = new BaseAgent('TestAgent', mockRunner);
-const result = await agent.run('test', 'session');
+# Integration tests (requires API key)
+bun test:integration
 ```
 
-## Error Handling
+## Example: External Harness
 
-- Callbacks are fire-and-forget (errors silently caught)
-- Workflow errors propagate to caller
-- Agent errors include session context
-- Recording failures don't affect execution
+Harnesses should be built OUTSIDE the SDK repo. See `/harnesses/coding-workflow/` for an example.
 
-## Performance Considerations
-
-- Container is lazily created (first agent creation)
-- Container is singleton (reused across agents)
-- Events are processed synchronously
-- Monologue generation is async (non-blocking)
+```bash
+# From harnesses/coding-workflow/
+bun install
+bun start
+```
