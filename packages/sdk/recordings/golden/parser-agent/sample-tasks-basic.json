@@ -1,553 +1,529 @@
 {
-  "scenarioId": "sample-tasks-basic",
-  "category": "golden/parser-agent",
-  "timestamp": 1766729300987,
-  "messages": [
-    {
-      "type": "system",
-      "subtype": "init",
-      "cwd": "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk",
-      "session_id": "82b398ad-dae2-4562-9f91-9fe4e4f5e726",
-      "tools": [
-        "Task",
-        "TaskOutput",
-        "Bash",
-        "Glob",
-        "Grep",
-        "ExitPlanMode",
-        "Read",
-        "Edit",
-        "Write",
-        "NotebookEdit",
-        "WebFetch",
-        "TodoWrite",
-        "WebSearch",
-        "KillShell",
-        "AskUserQuestion",
-        "Skill",
-        "EnterPlanMode",
-        "LSP",
-        "StructuredOutput"
-      ],
-      "mcp_servers": [],
-      "model": "claude-sonnet-4-5-20250929",
-      "permissionMode": "default",
-      "slash_commands": [
-        "compact",
-        "context",
-        "cost",
-        "init",
-        "pr-comments",
-        "release-notes",
-        "review",
-        "security-review"
-      ],
-      "apiKeySource": "none",
-      "claude_code_version": "2.0.76",
-      "output_style": "default",
-      "agents": [
-        "general-purpose",
-        "statusline-setup",
-        "Explore",
-        "Plan",
-        "claude-code-guide"
-      ],
-      "skills": [],
-      "plugins": [],
-      "uuid": "3929d7d4-efb9-4d34-8986-f5558fa150b3"
-    },
-    {
-      "type": "assistant",
-      "message": {
-        "model": "claude-sonnet-4-5-20250929",
-        "id": "msg_01VpyBEdXkwRS89yUCdxhZii",
-        "type": "message",
-        "role": "assistant",
-        "content": [
-          {
-            "type": "text",
-            "text": "I'll parse the markdown tasks file and extract all the required information into a structured JSON format.\n\nLet me analyze the content:\n\n1. **Tasks**: I need to extract all tasks with their IDs (T001-T008), descriptions, status (checked/unchecked), dependencies, and validation criteria\n2. **Phases**: Three phases (Setup, Implementation, Polish) with their purposes and goals\n3. **Warnings**: Check for any malformed content or dependency issues\n4. **Metadata**: Track totals, cycles, and source path"
-          }
-        ],
-        "stop_reason": null,
-        "stop_sequence": null,
-        "usage": {
-          "input_tokens": 3,
-          "cache_creation_input_tokens": 0,
-          "cache_read_input_tokens": 16357,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "output_tokens": 5,
-          "service_tier": "standard"
-        },
-        "context_management": null
-      },
-      "parent_tool_use_id": null,
-      "session_id": "82b398ad-dae2-4562-9f91-9fe4e4f5e726",
-      "uuid": "0e2a7f7d-2f19-4bc5-b4e5-3a53ebfddffb"
-    },
-    {
-      "type": "assistant",
-      "message": {
-        "model": "claude-sonnet-4-5-20250929",
-        "id": "msg_01VpyBEdXkwRS89yUCdxhZii",
-        "type": "message",
-        "role": "assistant",
-        "content": [
-          {
-            "type": "tool_use",
-            "id": "toolu_01WUHPtX2fKRmudrYRM1nt3k",
-            "name": "StructuredOutput",
-            "input": {
-              "metadata": {
-                "totalTasks": 8,
-                "completeTasks": 1,
-                "pendingTasks": 7,
-                "cycles": [],
-                "sourcePath": "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/fixtures/sample-tasks.md"
-              },
-              "phases": [
-                {
-                  "number": 1,
-                  "name": "Setup",
-                  "purpose": "Initialize test environment",
-                  "independentTest": null,
-                  "goal": null
-                },
-                {
-                  "number": 2,
-                  "name": "Implementation",
-                  "purpose": "Implement core functionality",
-                  "independentTest": "The hello function should return the expected greeting string",
-                  "goal": null
-                },
-                {
-                  "number": 3,
-                  "name": "Polish",
-                  "purpose": "Final cleanup",
-                  "independentTest": null,
-                  "goal": null
-                }
-              ],
-              "tasks": [
-                {
-                  "id": "T001",
-                  "phase": "Setup",
-                  "phaseNumber": 1,
-                  "description": "Create src/utils/hello.ts with a function that returns \"Hello, World!\"",
-                  "filePaths": [
-                    "src/utils/hello.ts"
-                  ],
-                  "userStory": null,
-                  "dependencies": [],
-                  "status": "pending",
-                  "validationCriteria": "Run typecheck to verify no errors",
-                  "flags": {
-                    "parallel": false,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T002",
-                  "phase": "Setup",
-                  "phaseNumber": 1,
-                  "description": "Verify TypeScript configuration exists",
-                  "filePaths": [],
-                  "userStory": null,
-                  "dependencies": [],
-                  "status": "complete",
-                  "validationCriteria": "Run typecheck to verify no errors",
-                  "flags": {
-                    "parallel": true,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T003",
-                  "phase": "Setup",
-                  "phaseNumber": 1,
-                  "description": "Run typecheck to verify no errors",
-                  "filePaths": [],
-                  "userStory": null,
-                  "dependencies": [],
-                  "status": "pending",
-                  "validationCriteria": "Run typecheck to verify no errors",
-                  "flags": {
-                    "parallel": false,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T004",
-                  "phase": "Implementation",
-                  "phaseNumber": 2,
-                  "description": "Add unit test for hello function in tests/hello.test.ts",
-                  "filePaths": [
-                    "tests/hello.test.ts"
-                  ],
-                  "userStory": null,
-                  "dependencies": [
-                    "T001"
-                  ],
-                  "status": "pending",
-                  "validationCriteria": "Run tests and ensure all pass",
-                  "flags": {
-                    "parallel": false,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T005",
-                  "phase": "Implementation",
-                  "phaseNumber": 2,
-                  "description": "Add JSDoc documentation to hello function",
-                  "filePaths": [],
-                  "userStory": null,
-                  "dependencies": [],
-                  "status": "pending",
-                  "validationCriteria": "Run tests and ensure all pass",
-                  "flags": {
-                    "parallel": true,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T006",
-                  "phase": "Implementation",
-                  "phaseNumber": 2,
-                  "description": "Run tests and ensure all pass",
-                  "filePaths": [],
-                  "userStory": null,
-                  "dependencies": [],
-                  "status": "pending",
-                  "validationCriteria": "Run tests and ensure all pass",
-                  "flags": {
-                    "parallel": false,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T007",
-                  "phase": "Polish",
-                  "phaseNumber": 3,
-                  "description": "Update README with usage example",
-                  "filePaths": [],
-                  "userStory": null,
-                  "dependencies": [
-                    "T004",
-                    "T005"
-                  ],
-                  "status": "pending",
-                  "validationCriteria": "Run lint and fix any errors",
-                  "flags": {
-                    "parallel": false,
-                    "constitution": null
-                  }
-                },
-                {
-                  "id": "T008",
-                  "phase": "Polish",
-                  "phaseNumber": 3,
-                  "description": "Run lint and fix any errors",
-                  "filePaths": [],
-                  "userStory": null,
-                  "dependencies": [],
-                  "status": "pending",
-                  "validationCriteria": "Run lint and fix any errors",
-                  "flags": {
-                    "parallel": false,
-                    "constitution": null
-                  }
-                }
-              ],
-              "warnings": []
-            }
-          }
-        ],
-        "stop_reason": "tool_use",
-        "stop_sequence": null,
-        "usage": {
-          "input_tokens": 3,
-          "cache_creation_input_tokens": 0,
-          "cache_read_input_tokens": 16357,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 0,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "output_tokens": 1432,
-          "service_tier": "standard"
-        },
-        "context_management": null
-      },
-      "parent_tool_use_id": null,
-      "session_id": "82b398ad-dae2-4562-9f91-9fe4e4f5e726",
-      "uuid": "357a8ff7-5eba-44b9-aa2e-453cd7a84436"
-    },
-    {
-      "type": "user",
-      "message": {
-        "role": "user",
-        "content": [
-          {
-            "tool_use_id": "toolu_01WUHPtX2fKRmudrYRM1nt3k",
-            "type": "tool_result",
-            "content": "Structured output provided successfully"
-          }
-        ]
-      },
-      "parent_tool_use_id": null,
-      "session_id": "82b398ad-dae2-4562-9f91-9fe4e4f5e726",
-      "uuid": "6d814e82-ba84-4d0e-8330-9e892fe2c0dd",
-      "tool_use_result": "Structured output provided successfully"
-    },
-    {
-      "type": "assistant",
-      "message": {
-        "model": "claude-sonnet-4-5-20250929",
-        "id": "msg_01TUUHo3QhF6cr1rMgTcDyTc",
-        "type": "message",
-        "role": "assistant",
-        "content": [
-          {
-            "type": "text",
-            "text": "## Summary\n\nSuccessfully parsed the tasks file with the following results:\n\n**Phases**: 3 phases identified\n- Phase 1: Setup - Initialize test environment\n- Phase 2: Implementation - Implement core functionality (with independent test criteria)\n- Phase 3: Polish - Final cleanup\n\n**Tasks**: 8 tasks total\n- 1 completed (T002)\n- 7 pending\n- File paths extracted from task descriptions where applicable\n- Dependencies correctly parsed (T004 depends on T001; T007 depends on T004, T005)\n- Tasks marked with `[P]` flag identified as parallel-capable\n- Validation criteria assigned based on phase validation sections\n\n**Warnings**: None - the file is well-formed with no dependency cycles or malformed content"
-          }
-        ],
-        "stop_reason": null,
-        "stop_sequence": null,
-        "usage": {
-          "input_tokens": 6,
-          "cache_creation_input_tokens": 1130,
-          "cache_read_input_tokens": 16357,
-          "cache_creation": {
-            "ephemeral_5m_input_tokens": 1130,
-            "ephemeral_1h_input_tokens": 0
-          },
-          "output_tokens": 1,
-          "service_tier": "standard"
-        },
-        "context_management": null
-      },
-      "parent_tool_use_id": null,
-      "session_id": "82b398ad-dae2-4562-9f91-9fe4e4f5e726",
-      "uuid": "2dff62c2-0f56-4a55-9779-f596555fcb53"
-    },
-    {
-      "type": "result",
-      "subtype": "success",
-      "is_error": false,
-      "duration_ms": 24172,
-      "duration_api_ms": 39279,
-      "num_turns": 2,
-      "result": "## Summary\n\nSuccessfully parsed the tasks file with the following results:\n\n**Phases**: 3 phases identified\n- Phase 1: Setup - Initialize test environment\n- Phase 2: Implementation - Implement core functionality (with independent test criteria)\n- Phase 3: Polish - Final cleanup\n\n**Tasks**: 8 tasks total\n- 1 completed (T002)\n- 7 pending\n- File paths extracted from task descriptions where applicable\n- Dependencies correctly parsed (T004 depends on T001; T007 depends on T004, T005)\n- Tasks marked with `[P]` flag identified as parallel-capable\n- Validation criteria assigned based on phase validation sections\n\n**Warnings**: None - the file is well-formed with no dependency cycles or malformed content",
-      "session_id": "82b398ad-dae2-4562-9f91-9fe4e4f5e726",
-      "total_cost_usd": 0.0462784,
-      "usage": {
-        "input_tokens": 9,
-        "cache_creation_input_tokens": 1130,
-        "cache_read_input_tokens": 32714,
-        "output_tokens": 1605,
-        "server_tool_use": {
-          "web_search_requests": 0,
-          "web_fetch_requests": 0
-        },
-        "service_tier": "standard",
-        "cache_creation": {
-          "ephemeral_1h_input_tokens": 0,
-          "ephemeral_5m_input_tokens": 1130
-        }
-      },
-      "modelUsage": {
-        "claude-haiku-4-5-20251001": {
-          "inputTokens": 1652,
-          "outputTokens": 127,
-          "cacheReadInputTokens": 0,
-          "cacheCreationInputTokens": 0,
-          "webSearchRequests": 0,
-          "costUSD": 0.002287,
-          "contextWindow": 200000
-        },
-        "claude-sonnet-4-5-20250929": {
-          "inputTokens": 12,
-          "outputTokens": 1958,
-          "cacheReadInputTokens": 34493,
-          "cacheCreationInputTokens": 1130,
-          "webSearchRequests": 0,
-          "costUSD": 0.0439914,
-          "contextWindow": 200000
-        }
-      },
-      "permission_denials": [],
-      "structured_output": {
-        "metadata": {
-          "totalTasks": 8,
-          "completeTasks": 1,
-          "pendingTasks": 7,
-          "cycles": [],
-          "sourcePath": "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/fixtures/sample-tasks.md"
-        },
-        "phases": [
-          {
-            "number": 1,
-            "name": "Setup",
-            "purpose": "Initialize test environment",
-            "independentTest": null,
-            "goal": null
-          },
-          {
-            "number": 2,
-            "name": "Implementation",
-            "purpose": "Implement core functionality",
-            "independentTest": "The hello function should return the expected greeting string",
-            "goal": null
-          },
-          {
-            "number": 3,
-            "name": "Polish",
-            "purpose": "Final cleanup",
-            "independentTest": null,
-            "goal": null
-          }
-        ],
-        "tasks": [
-          {
-            "id": "T001",
-            "phase": "Setup",
-            "phaseNumber": 1,
-            "description": "Create src/utils/hello.ts with a function that returns \"Hello, World!\"",
-            "filePaths": [
-              "src/utils/hello.ts"
-            ],
-            "userStory": null,
-            "dependencies": [],
-            "status": "pending",
-            "validationCriteria": "Run typecheck to verify no errors",
-            "flags": {
-              "parallel": false,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T002",
-            "phase": "Setup",
-            "phaseNumber": 1,
-            "description": "Verify TypeScript configuration exists",
-            "filePaths": [],
-            "userStory": null,
-            "dependencies": [],
-            "status": "complete",
-            "validationCriteria": "Run typecheck to verify no errors",
-            "flags": {
-              "parallel": true,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T003",
-            "phase": "Setup",
-            "phaseNumber": 1,
-            "description": "Run typecheck to verify no errors",
-            "filePaths": [],
-            "userStory": null,
-            "dependencies": [],
-            "status": "pending",
-            "validationCriteria": "Run typecheck to verify no errors",
-            "flags": {
-              "parallel": false,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T004",
-            "phase": "Implementation",
-            "phaseNumber": 2,
-            "description": "Add unit test for hello function in tests/hello.test.ts",
-            "filePaths": [
-              "tests/hello.test.ts"
-            ],
-            "userStory": null,
-            "dependencies": [
-              "T001"
-            ],
-            "status": "pending",
-            "validationCriteria": "Run tests and ensure all pass",
-            "flags": {
-              "parallel": false,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T005",
-            "phase": "Implementation",
-            "phaseNumber": 2,
-            "description": "Add JSDoc documentation to hello function",
-            "filePaths": [],
-            "userStory": null,
-            "dependencies": [],
-            "status": "pending",
-            "validationCriteria": "Run tests and ensure all pass",
-            "flags": {
-              "parallel": true,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T006",
-            "phase": "Implementation",
-            "phaseNumber": 2,
-            "description": "Run tests and ensure all pass",
-            "filePaths": [],
-            "userStory": null,
-            "dependencies": [],
-            "status": "pending",
-            "validationCriteria": "Run tests and ensure all pass",
-            "flags": {
-              "parallel": false,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T007",
-            "phase": "Polish",
-            "phaseNumber": 3,
-            "description": "Update README with usage example",
-            "filePaths": [],
-            "userStory": null,
-            "dependencies": [
-              "T004",
-              "T005"
-            ],
-            "status": "pending",
-            "validationCriteria": "Run lint and fix any errors",
-            "flags": {
-              "parallel": false,
-              "constitution": null
-            }
-          },
-          {
-            "id": "T008",
-            "phase": "Polish",
-            "phaseNumber": 3,
-            "description": "Run lint and fix any errors",
-            "filePaths": [],
-            "userStory": null,
-            "dependencies": [],
-            "status": "pending",
-            "validationCriteria": "Run lint and fix any errors",
-            "flags": {
-              "parallel": false,
-              "constitution": null
-            }
-          }
-        ],
-        "warnings": []
-      },
-      "uuid": "a276e41c-49cc-4f70-9ef2-d318c94ab71d"
-    }
-  ],
-  "metadata": {
-    "fixture": "sample-tasks.md"
-  }
+	"scenarioId": "sample-tasks-basic",
+	"category": "golden/parser-agent",
+	"timestamp": 1766769957534,
+	"messages": [
+		{
+			"type": "system",
+			"subtype": "init",
+			"cwd": "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk",
+			"session_id": "28e12b31-1c76-422f-99f3-2bbf41e1bc04",
+			"tools": [
+				"Task",
+				"TaskOutput",
+				"Bash",
+				"Glob",
+				"Grep",
+				"ExitPlanMode",
+				"Read",
+				"Edit",
+				"Write",
+				"NotebookEdit",
+				"WebFetch",
+				"TodoWrite",
+				"WebSearch",
+				"KillShell",
+				"AskUserQuestion",
+				"Skill",
+				"EnterPlanMode",
+				"LSP",
+				"StructuredOutput"
+			],
+			"mcp_servers": [],
+			"model": "claude-sonnet-4-5-20250929",
+			"permissionMode": "default",
+			"slash_commands": [
+				"compact",
+				"context",
+				"cost",
+				"init",
+				"pr-comments",
+				"release-notes",
+				"review",
+				"security-review"
+			],
+			"apiKeySource": "none",
+			"claude_code_version": "2.0.76",
+			"output_style": "default",
+			"agents": ["general-purpose", "statusline-setup", "Explore", "Plan"],
+			"skills": [],
+			"plugins": [],
+			"uuid": "a3e02c85-0ac3-43a3-911c-003a44356d56"
+		},
+		{
+			"type": "assistant",
+			"message": {
+				"model": "claude-sonnet-4-5-20250929",
+				"id": "msg_014ud3LviGdQAwgPzXsDSWdf",
+				"type": "message",
+				"role": "assistant",
+				"content": [
+					{
+						"type": "text",
+						"text": "I'll parse the tasks.md file and extract all tasks, phases, warnings, and metadata into the structured JSON format.\n\nLet me analyze the content:\n\n**Tasks identified:**\n- T001: Create src/utils/hello.ts - Phase 1, pending\n- T002: Verify TypeScript configuration - Phase 1, complete, parallel flag\n- T003: Run typecheck - Phase 1 Validation, pending\n- T004: Add unit test - Phase 2, pending, depends on T001\n- T005: Add JSDoc documentation - Phase 2, pending, parallel flag\n- T006: Run tests - Phase 2 Validation, pending\n- T007: Update README - Phase 3, pending, depends on T004, T005\n- T008: Run lint - Phase 3 Validation, pending\n\n**Phases identified:**\n- Phase 1: Setup - Initialize test environment\n- Phase 2: Implementation - Implement core functionality (has independent test)\n- Phase 3: Polish - Final cleanup\n\n**Metadata:**\n- Total tasks: 8\n- Complete: 1 (T002)\n- Pending: 7\n- Dependency cycles: None detected\n- Source path: provided"
+					}
+				],
+				"stop_reason": null,
+				"stop_sequence": null,
+				"usage": {
+					"input_tokens": 3,
+					"cache_creation_input_tokens": 3523,
+					"cache_read_input_tokens": 12673,
+					"cache_creation": {
+						"ephemeral_5m_input_tokens": 3523,
+						"ephemeral_1h_input_tokens": 0
+					},
+					"output_tokens": 8,
+					"service_tier": "standard"
+				},
+				"context_management": null
+			},
+			"parent_tool_use_id": null,
+			"session_id": "28e12b31-1c76-422f-99f3-2bbf41e1bc04",
+			"uuid": "275e4dad-6f4e-47fe-a327-a74d421c2266"
+		},
+		{
+			"type": "assistant",
+			"message": {
+				"model": "claude-sonnet-4-5-20250929",
+				"id": "msg_014ud3LviGdQAwgPzXsDSWdf",
+				"type": "message",
+				"role": "assistant",
+				"content": [
+					{
+						"type": "tool_use",
+						"id": "toolu_016kceU4BRgCXDSBuzoEdg33",
+						"name": "StructuredOutput",
+						"input": {
+							"metadata": {
+								"totalTasks": 8,
+								"completeTasks": 1,
+								"pendingTasks": 7,
+								"cycles": [],
+								"sourcePath": "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/fixtures/sample-tasks.md"
+							},
+							"phases": [
+								{
+									"number": 1,
+									"name": "Setup",
+									"purpose": "Initialize test environment",
+									"independentTest": null,
+									"goal": null
+								},
+								{
+									"number": 2,
+									"name": "Implementation",
+									"purpose": "Implement core functionality",
+									"independentTest": "The hello function should return the expected greeting string",
+									"goal": null
+								},
+								{
+									"number": 3,
+									"name": "Polish",
+									"purpose": "Final cleanup",
+									"independentTest": null,
+									"goal": null
+								}
+							],
+							"tasks": [
+								{
+									"id": "T001",
+									"phase": "Setup",
+									"phaseNumber": 1,
+									"description": "Create src/utils/hello.ts with a function that returns \"Hello, World!\"",
+									"filePaths": ["src/utils/hello.ts"],
+									"userStory": null,
+									"dependencies": [],
+									"status": "pending",
+									"validationCriteria": "Run typecheck to verify no errors",
+									"flags": {
+										"parallel": false,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T002",
+									"phase": "Setup",
+									"phaseNumber": 1,
+									"description": "Verify TypeScript configuration exists",
+									"filePaths": [],
+									"userStory": null,
+									"dependencies": [],
+									"status": "complete",
+									"validationCriteria": "Run typecheck to verify no errors",
+									"flags": {
+										"parallel": true,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T003",
+									"phase": "Setup",
+									"phaseNumber": 1,
+									"description": "Run typecheck to verify no errors",
+									"filePaths": [],
+									"userStory": null,
+									"dependencies": [],
+									"status": "pending",
+									"validationCriteria": "Run typecheck to verify no errors",
+									"flags": {
+										"parallel": false,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T004",
+									"phase": "Implementation",
+									"phaseNumber": 2,
+									"description": "Add unit test for hello function in tests/hello.test.ts",
+									"filePaths": ["tests/hello.test.ts"],
+									"userStory": null,
+									"dependencies": ["T001"],
+									"status": "pending",
+									"validationCriteria": "Run tests and ensure all pass",
+									"flags": {
+										"parallel": false,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T005",
+									"phase": "Implementation",
+									"phaseNumber": 2,
+									"description": "Add JSDoc documentation to hello function",
+									"filePaths": [],
+									"userStory": null,
+									"dependencies": [],
+									"status": "pending",
+									"validationCriteria": "Run tests and ensure all pass",
+									"flags": {
+										"parallel": true,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T006",
+									"phase": "Implementation",
+									"phaseNumber": 2,
+									"description": "Run tests and ensure all pass",
+									"filePaths": [],
+									"userStory": null,
+									"dependencies": [],
+									"status": "pending",
+									"validationCriteria": "Run tests and ensure all pass",
+									"flags": {
+										"parallel": false,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T007",
+									"phase": "Polish",
+									"phaseNumber": 3,
+									"description": "Update README with usage example",
+									"filePaths": [],
+									"userStory": null,
+									"dependencies": ["T004", "T005"],
+									"status": "pending",
+									"validationCriteria": "Run lint and fix any errors",
+									"flags": {
+										"parallel": false,
+										"constitution": null
+									}
+								},
+								{
+									"id": "T008",
+									"phase": "Polish",
+									"phaseNumber": 3,
+									"description": "Run lint and fix any errors",
+									"filePaths": [],
+									"userStory": null,
+									"dependencies": [],
+									"status": "pending",
+									"validationCriteria": "Run lint and fix any errors",
+									"flags": {
+										"parallel": false,
+										"constitution": null
+									}
+								}
+							],
+							"warnings": []
+						}
+					}
+				],
+				"stop_reason": "tool_use",
+				"stop_sequence": null,
+				"usage": {
+					"input_tokens": 3,
+					"cache_creation_input_tokens": 3523,
+					"cache_read_input_tokens": 12673,
+					"cache_creation": {
+						"ephemeral_5m_input_tokens": 3523,
+						"ephemeral_1h_input_tokens": 0
+					},
+					"output_tokens": 1585,
+					"service_tier": "standard"
+				},
+				"context_management": null
+			},
+			"parent_tool_use_id": null,
+			"session_id": "28e12b31-1c76-422f-99f3-2bbf41e1bc04",
+			"uuid": "55f31578-f996-4feb-8a9c-3c91c4784368"
+		},
+		{
+			"type": "user",
+			"message": {
+				"role": "user",
+				"content": [
+					{
+						"tool_use_id": "toolu_016kceU4BRgCXDSBuzoEdg33",
+						"type": "tool_result",
+						"content": "Structured output provided successfully"
+					}
+				]
+			},
+			"parent_tool_use_id": null,
+			"session_id": "28e12b31-1c76-422f-99f3-2bbf41e1bc04",
+			"uuid": "c8d7a3d0-5d27-4697-8c94-354e85b7ac47",
+			"tool_use_result": "Structured output provided successfully"
+		},
+		{
+			"type": "assistant",
+			"message": {
+				"model": "claude-sonnet-4-5-20250929",
+				"id": "msg_01SZrkqqzb3CBuvxrSBvc6s3",
+				"type": "message",
+				"role": "assistant",
+				"content": [
+					{
+						"type": "text",
+						"text": "I've successfully parsed the tasks.md file and extracted all the structured information:\n\n## Summary\n\n**8 tasks parsed** across **3 phases**:\n- ✅ 1 complete (T002)\n- ⏳ 7 pending\n\n**Phases:**\n1. **Setup** - Initialize test environment (3 tasks)\n2. **Implementation** - Implement core functionality (3 tasks, with independent test defined)\n3. **Polish** - Final cleanup (2 tasks)\n\n**Key findings:**\n- File paths extracted: `src/utils/hello.ts`, `tests/hello.test.ts`\n- Parallel tasks identified: T002, T005 (marked with [P] flag)\n- Dependencies tracked: T004→T001, T007→T004+T005\n- Validation criteria mapped from phase validation sections\n- No dependency cycles detected\n- No warnings (well-formed task file)\n\nThe structured output is ready for SDK validation or further processing."
+					}
+				],
+				"stop_reason": null,
+				"stop_sequence": null,
+				"usage": {
+					"input_tokens": 6,
+					"cache_creation_input_tokens": 1283,
+					"cache_read_input_tokens": 16196,
+					"cache_creation": {
+						"ephemeral_5m_input_tokens": 1283,
+						"ephemeral_1h_input_tokens": 0
+					},
+					"output_tokens": 1,
+					"service_tier": "standard"
+				},
+				"context_management": null
+			},
+			"parent_tool_use_id": null,
+			"session_id": "28e12b31-1c76-422f-99f3-2bbf41e1bc04",
+			"uuid": "b403245f-78c4-415f-9d4c-b29046e69861"
+		},
+		{
+			"type": "result",
+			"subtype": "success",
+			"is_error": false,
+			"duration_ms": 39674,
+			"duration_api_ms": 38124,
+			"num_turns": 2,
+			"result": "I've successfully parsed the tasks.md file and extracted all the structured information:\n\n## Summary\n\n**8 tasks parsed** across **3 phases**:\n- ✅ 1 complete (T002)\n- ⏳ 7 pending\n\n**Phases:**\n1. **Setup** - Initialize test environment (3 tasks)\n2. **Implementation** - Implement core functionality (3 tasks, with independent test defined)\n3. **Polish** - Final cleanup (2 tasks)\n\n**Key findings:**\n- File paths extracted: `src/utils/hello.ts`, `tests/hello.test.ts`\n- Parallel tasks identified: T002, T005 (marked with [P] flag)\n- Dependencies tracked: T004→T001, T007→T004+T005\n- Validation criteria mapped from phase validation sections\n- No dependency cycles detected\n- No warnings (well-formed task file)\n\nThe structured output is ready for SDK validation or further processing.",
+			"session_id": "28e12b31-1c76-422f-99f3-2bbf41e1bc04",
+			"total_cost_usd": 0.06659595,
+			"usage": {
+				"input_tokens": 9,
+				"cache_creation_input_tokens": 4806,
+				"cache_read_input_tokens": 28869,
+				"output_tokens": 1810,
+				"server_tool_use": {
+					"web_search_requests": 0,
+					"web_fetch_requests": 0
+				},
+				"service_tier": "standard",
+				"cache_creation": {
+					"ephemeral_1h_input_tokens": 0,
+					"ephemeral_5m_input_tokens": 4806
+				}
+			},
+			"modelUsage": {
+				"claude-haiku-4-5-20251001": {
+					"inputTokens": 1338,
+					"outputTokens": 480,
+					"cacheReadInputTokens": 0,
+					"cacheCreationInputTokens": 0,
+					"webSearchRequests": 0,
+					"costUSD": 0.003738,
+					"contextWindow": 200000
+				},
+				"claude-sonnet-4-5-20250929": {
+					"inputTokens": 12,
+					"outputTokens": 2043,
+					"cacheReadInputTokens": 28869,
+					"cacheCreationInputTokens": 6271,
+					"webSearchRequests": 0,
+					"costUSD": 0.06285795,
+					"contextWindow": 200000
+				}
+			},
+			"permission_denials": [],
+			"structured_output": {
+				"metadata": {
+					"totalTasks": 8,
+					"completeTasks": 1,
+					"pendingTasks": 7,
+					"cycles": [],
+					"sourcePath": "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/fixtures/sample-tasks.md"
+				},
+				"phases": [
+					{
+						"number": 1,
+						"name": "Setup",
+						"purpose": "Initialize test environment",
+						"independentTest": null,
+						"goal": null
+					},
+					{
+						"number": 2,
+						"name": "Implementation",
+						"purpose": "Implement core functionality",
+						"independentTest": "The hello function should return the expected greeting string",
+						"goal": null
+					},
+					{
+						"number": 3,
+						"name": "Polish",
+						"purpose": "Final cleanup",
+						"independentTest": null,
+						"goal": null
+					}
+				],
+				"tasks": [
+					{
+						"id": "T001",
+						"phase": "Setup",
+						"phaseNumber": 1,
+						"description": "Create src/utils/hello.ts with a function that returns \"Hello, World!\"",
+						"filePaths": ["src/utils/hello.ts"],
+						"userStory": null,
+						"dependencies": [],
+						"status": "pending",
+						"validationCriteria": "Run typecheck to verify no errors",
+						"flags": {
+							"parallel": false,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T002",
+						"phase": "Setup",
+						"phaseNumber": 1,
+						"description": "Verify TypeScript configuration exists",
+						"filePaths": [],
+						"userStory": null,
+						"dependencies": [],
+						"status": "complete",
+						"validationCriteria": "Run typecheck to verify no errors",
+						"flags": {
+							"parallel": true,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T003",
+						"phase": "Setup",
+						"phaseNumber": 1,
+						"description": "Run typecheck to verify no errors",
+						"filePaths": [],
+						"userStory": null,
+						"dependencies": [],
+						"status": "pending",
+						"validationCriteria": "Run typecheck to verify no errors",
+						"flags": {
+							"parallel": false,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T004",
+						"phase": "Implementation",
+						"phaseNumber": 2,
+						"description": "Add unit test for hello function in tests/hello.test.ts",
+						"filePaths": ["tests/hello.test.ts"],
+						"userStory": null,
+						"dependencies": ["T001"],
+						"status": "pending",
+						"validationCriteria": "Run tests and ensure all pass",
+						"flags": {
+							"parallel": false,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T005",
+						"phase": "Implementation",
+						"phaseNumber": 2,
+						"description": "Add JSDoc documentation to hello function",
+						"filePaths": [],
+						"userStory": null,
+						"dependencies": [],
+						"status": "pending",
+						"validationCriteria": "Run tests and ensure all pass",
+						"flags": {
+							"parallel": true,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T006",
+						"phase": "Implementation",
+						"phaseNumber": 2,
+						"description": "Run tests and ensure all pass",
+						"filePaths": [],
+						"userStory": null,
+						"dependencies": [],
+						"status": "pending",
+						"validationCriteria": "Run tests and ensure all pass",
+						"flags": {
+							"parallel": false,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T007",
+						"phase": "Polish",
+						"phaseNumber": 3,
+						"description": "Update README with usage example",
+						"filePaths": [],
+						"userStory": null,
+						"dependencies": ["T004", "T005"],
+						"status": "pending",
+						"validationCriteria": "Run lint and fix any errors",
+						"flags": {
+							"parallel": false,
+							"constitution": null
+						}
+					},
+					{
+						"id": "T008",
+						"phase": "Polish",
+						"phaseNumber": 3,
+						"description": "Run lint and fix any errors",
+						"filePaths": [],
+						"userStory": null,
+						"dependencies": [],
+						"status": "pending",
+						"validationCriteria": "Run lint and fix any errors",
+						"flags": {
+							"parallel": false,
+							"constitution": null
+						}
+					}
+				],
+				"warnings": []
+			},
+			"uuid": "2b0b47a4-ab02-4a18-9f8a-8fe9783ecbdc"
+		}
+	],
+	"metadata": {
+		"fixture": "sample-tasks.md"
+	}
 }

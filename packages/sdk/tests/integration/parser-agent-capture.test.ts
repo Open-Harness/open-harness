@@ -7,12 +7,11 @@
  * Run with: bun test tests/unit/parser-agent.test.ts
  */
 
+import { beforeAll, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { beforeAll, describe, expect, test } from "bun:test";
 import { ParserAgent } from "../../src/providers/anthropic/agents/parser-agent.js";
-import type { ParserAgentOutput } from "../../src/harness/task-harness-types.js";
-import { createRecordingContainer, type RecordingRunner } from "../helpers/recording-wrapper.js";
+import { createRecordingContainer } from "../helpers/recording-wrapper.js";
 
 const FIXTURES_DIR = path.resolve(__dirname, "../fixtures");
 const GOLDEN_DIR = path.resolve(__dirname, "../../recordings/golden/parser-agent");
@@ -92,7 +91,10 @@ describe("ParserAgent", () => {
 			expect(events).toContain("complete");
 
 			console.log("Parsed tasks:", result.tasks.length);
-			console.log("Phases:", result.phases.map((p) => p.name));
+			console.log(
+				"Phases:",
+				result.phases.map((p) => p.name),
+			);
 			console.log("Warnings:", result.warnings);
 		}, 60000);
 
@@ -133,9 +135,7 @@ describe("ParserAgent", () => {
 			const phase2Tasks = result.tasks.filter((t) => t.phaseNumber === 2);
 
 			// At least one task should have validation criteria from the Independent Test
-			const hasValidationCriteria = phase2Tasks.some(
-				(t) => t.validationCriteria && t.validationCriteria.length > 0,
-			);
+			const hasValidationCriteria = phase2Tasks.some((t) => t.validationCriteria && t.validationCriteria.length > 0);
 			expect(hasValidationCriteria).toBe(true);
 
 			console.log(
@@ -188,7 +188,10 @@ describe("ParserAgent", () => {
 			const hasCycleWarning = result.warnings.some((w) => w.toLowerCase().includes("cycle"));
 			expect(hasCycleWarning).toBe(true);
 
-			console.log("Cycle warnings:", result.warnings.filter((w) => w.includes("cycle")));
+			console.log(
+				"Cycle warnings:",
+				result.warnings.filter((w) => w.includes("cycle")),
+			);
 		}, 60000);
 	});
 });

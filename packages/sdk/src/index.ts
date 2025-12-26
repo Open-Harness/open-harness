@@ -60,18 +60,6 @@ export {
 // AGENT LAYER (Re-exported from Anthropic Provider)
 // ============================================
 
-// Base Classes
-export { type AgentRunOptions, BaseAnthropicAgent } from "./providers/anthropic/agents/base-anthropic-agent.js";
-
-// Concrete Agents
-export { CodingAgent, type CodingAgentOptions } from "./providers/anthropic/agents/coding-agent.js";
-export { ParserAgent } from "./providers/anthropic/agents/parser-agent.js";
-export { PlannerAgent, type PlannerAgentOptions, type PlannerResult, type Ticket } from "./providers/anthropic/agents/planner-agent.js";
-export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./providers/anthropic/agents/review-agent.js";
-// Core Interface
-export type { AgentDefinition, IAgent, RunnerOptions } from "./providers/anthropic/agents/types.js";
-export { ValidationReviewAgent, type ValidationReviewAgentOptions } from "./providers/anthropic/agents/validation-review-agent.js";
-
 // Unified Callbacks (IAgentCallbacks is the primary callback interface)
 export type {
 	AgentError,
@@ -84,6 +72,24 @@ export type {
 	ToolCallEvent,
 	ToolResultEvent,
 } from "./callbacks/index.js";
+// Base Classes
+export { type AgentRunOptions, BaseAnthropicAgent } from "./providers/anthropic/agents/base-anthropic-agent.js";
+// Concrete Agents
+export { CodingAgent, type CodingAgentOptions } from "./providers/anthropic/agents/coding-agent.js";
+export { ParserAgent } from "./providers/anthropic/agents/parser-agent.js";
+export {
+	PlannerAgent,
+	type PlannerAgentOptions,
+	type PlannerResult,
+	type Ticket,
+} from "./providers/anthropic/agents/planner-agent.js";
+export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./providers/anthropic/agents/review-agent.js";
+// Core Interface
+export type { AgentDefinition, IAgent, RunnerOptions } from "./providers/anthropic/agents/types.js";
+export {
+	ValidationReviewAgent,
+	type ValidationReviewAgentOptions,
+} from "./providers/anthropic/agents/validation-review-agent.js";
 
 // ============================================
 // RUNNER LAYER (LLM Execution Infrastructure)

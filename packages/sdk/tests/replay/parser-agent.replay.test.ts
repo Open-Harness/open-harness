@@ -7,9 +7,9 @@
  * Run with: bun test tests/replay/parser-agent.replay.test.ts
  */
 
+import { describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { describe, expect, test } from "bun:test";
 import { ParserAgent } from "../../src/providers/anthropic/agents/parser-agent.js";
 import { createReplayContainer } from "../helpers/replay-runner.js";
 
@@ -19,10 +19,7 @@ describe("ParserAgent Replay", () => {
 	describe("parse() from recording", () => {
 		test("replays sample-tasks-basic recording", async () => {
 			// Create replay container with the recorded session
-			const { container, replayer } = await createReplayContainer(
-				"golden/parser-agent",
-				"sample-tasks-basic",
-			);
+			const { container, replayer } = await createReplayContainer("golden/parser-agent", "sample-tasks-basic");
 			const parser = container.get(ParserAgent);
 
 			// Load sample tasks (same input as recorded)
@@ -67,10 +64,7 @@ describe("ParserAgent Replay", () => {
 		});
 
 		test("replays sample-tasks-dependencies recording", async () => {
-			const { container, replayer } = await createReplayContainer(
-				"golden/parser-agent",
-				"sample-tasks-dependencies",
-			);
+			const { container } = await createReplayContainer("golden/parser-agent", "sample-tasks-dependencies");
 			const parser = container.get(ParserAgent);
 
 			const tasksFilePath = path.join(FIXTURES_DIR, "sample-tasks.md");
@@ -90,10 +84,7 @@ describe("ParserAgent Replay", () => {
 		});
 
 		test("replays cycle-detection recording", async () => {
-			const { container, replayer } = await createReplayContainer(
-				"golden/parser-agent",
-				"cycle-detection",
-			);
+			const { container } = await createReplayContainer("golden/parser-agent", "cycle-detection");
 			const parser = container.get(ParserAgent);
 
 			const cyclicContent = `# Cyclic Tasks
@@ -114,7 +105,10 @@ describe("ParserAgent Replay", () => {
 			const hasCycleWarning = result.warnings.some((w) => w.toLowerCase().includes("cycle"));
 			expect(hasCycleWarning).toBe(true);
 
-			console.log("[REPLAY] Cycle warnings:", result.warnings.filter((w) => w.includes("cycle")));
+			console.log(
+				"[REPLAY] Cycle warnings:",
+				result.warnings.filter((w) => w.includes("cycle")),
+			);
 		});
 	});
 });

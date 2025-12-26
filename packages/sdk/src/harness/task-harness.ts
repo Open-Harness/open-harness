@@ -12,15 +12,15 @@
 
 import * as fs from "node:fs/promises";
 import { inject, injectable } from "@needle-di/core";
-import { ParserAgent } from "../providers/anthropic/agents/parser-agent.js";
-import { ValidationReviewAgent } from "../providers/anthropic/agents/validation-review-agent.js";
 import type { IAgentCallbacks } from "../callbacks/types.js";
 import { type IEventBus, IEventBusToken, type ITaskHarness, type ITaskHarnessCallbacks } from "../core/tokens.js";
+import { ParserAgent } from "../providers/anthropic/agents/parser-agent.js";
+import { ValidationReviewAgent } from "../providers/anthropic/agents/validation-review-agent.js";
 import type { BackoffConfig } from "./backoff.js";
+import { CompositeRenderer } from "./composite-renderer.js";
 import { resolveDependencies } from "./dependency-resolver.js";
 import type { HarnessEvent } from "./event-protocol.js";
 import { HarnessRecorder, loadStateEvents, reconstructCheckpoint, type StateEventType } from "./harness-recorder.js";
-import { CompositeRenderer } from "./composite-renderer.js";
 import type { IHarnessRenderer, RendererConfig } from "./renderer-interface.js";
 import type {
 	CodingAgentOutput,
@@ -112,7 +112,7 @@ export class TaskHarness implements ITaskHarness {
 		config: TaskHarnessConfig,
 		private parserAgent: ParserAgent = inject(ParserAgent),
 		private reviewAgent: ValidationReviewAgent = inject(ValidationReviewAgent),
-		private _eventBus: IEventBus | null = inject(IEventBusToken, { optional: true }) ?? null,
+		_eventBus: IEventBus | null = inject(IEventBusToken, { optional: true }) ?? null,
 	) {
 		this.config = {
 			...config,
@@ -504,10 +504,7 @@ export class TaskHarness implements ITaskHarness {
 		// Check if all tasks in this phase are done
 		const tasksInPhase = this.state.tasks.filter((t) => t.phaseNumber === task.phaseNumber);
 		const allDone = tasksInPhase.every(
-			(t) =>
-				this.state.validatedTasks[t.id] ||
-				this.state.failedTasks[t.id] ||
-				t.status === "complete",
+			(t) => this.state.validatedTasks[t.id] || this.state.failedTasks[t.id] || t.status === "complete",
 		);
 
 		if (allDone) {
@@ -718,9 +715,10 @@ export class TaskHarness implements ITaskHarness {
 		const failure: FailureRecord = {
 			taskId: task.id,
 			stage: "validation",
-			error: previousAttempts.length > 0
-				? `Validation failed after ${attempts} attempts: ${previousAttempts[previousAttempts.length - 1]?.reasoning}`
-				: "Validation failed",
+			error:
+				previousAttempts.length > 0
+					? `Validation failed after ${attempts} attempts: ${previousAttempts[previousAttempts.length - 1]?.reasoning}`
+					: "Validation failed",
 			retryable: false,
 			timestamp: Date.now(),
 		};
@@ -916,10 +914,7 @@ export class TaskHarness implements ITaskHarness {
 		const durationMs = Date.now() - this.startTime;
 
 		// Calculate total retries across all tasks
-		const totalRetries = Object.values(this.state.retryHistory).reduce(
-			(sum, retries) => sum + retries.length,
-			0,
-		);
+		const totalRetries = Object.values(this.state.retryHistory).reduce((sum, retries) => sum + retries.length, 0);
 
 		return {
 			totalTasks: this.state.tasks.length,

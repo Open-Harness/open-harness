@@ -553,11 +553,11 @@ describe("Harness Exports", () => {
 		// by checking that we can import them
 		expect(exports).toBeDefined();
 		// Verify we can use the types by importing them
-		type Step = typeof exports extends { Step: infer T } ? T : never;
-		type StateDelta = typeof exports extends { StateDelta: infer T } ? T : never;
-		type Constraints = typeof exports extends { Constraints: infer T } ? T : never;
-		type LoadedContext = typeof exports extends { LoadedContext: infer T } ? T : never;
-		type HarnessConfig = typeof exports extends { HarnessConfig: infer T } ? T : never;
+		type _Step = typeof exports extends { Step: infer T } ? T : never;
+		type _StateDelta = typeof exports extends { StateDelta: infer T } ? T : never;
+		type _Constraints = typeof exports extends { Constraints: infer T } ? T : never;
+		type _LoadedContext = typeof exports extends { LoadedContext: infer T } ? T : never;
+		type _HarnessConfig = typeof exports extends { HarnessConfig: infer T } ? T : never;
 
 		// If we get here, types are exported (TypeScript would error if not)
 		expect(true).toBe(true);

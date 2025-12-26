@@ -17,29 +17,29 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Container } from "@needle-di/core";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { AnthropicRunner } from "../../src/providers/anthropic/runner/anthropic-runner.js";
-import {
-	IConfigToken,
-	IAgentRunnerToken,
-	IAnthropicRunnerToken,
-	IReplayRunnerToken,
-	IRecordingFactoryToken,
-	IEventBusToken,
-	IVaultToken,
-	type IConfig,
-	type IAgentRunner,
-	type RunnerCallbacks,
-} from "../../src/core/tokens.js";
+import { Container } from "@needle-di/core";
+import { setDecoratorContainer } from "../../src/core/decorators.js";
+import { EventBus } from "../../src/core/event-bus.js";
 import { RecordingFactory } from "../../src/core/recording-factory.js";
 import { ReplayRunner } from "../../src/core/replay-runner.js";
-import { EventBus } from "../../src/core/event-bus.js";
+import {
+	type IAgentRunner,
+	IAgentRunnerToken,
+	IAnthropicRunnerToken,
+	type IConfig,
+	IConfigToken,
+	IEventBusToken,
+	IRecordingFactoryToken,
+	IReplayRunnerToken,
+	IVaultToken,
+	type RunnerCallbacks,
+} from "../../src/core/tokens.js";
 import { Vault } from "../../src/core/vault.js";
 import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
-import { ReviewAgent } from "../../src/providers/anthropic/agents/review-agent.js";
 import { PlannerAgent } from "../../src/providers/anthropic/agents/planner-agent.js";
-import { setDecoratorContainer } from "../../src/core/decorators.js";
+import { ReviewAgent } from "../../src/providers/anthropic/agents/review-agent.js";
+import { AnthropicRunner } from "../../src/providers/anthropic/runner/anthropic-runner.js";
 
 /**
  * Recorded session data saved to disk.
@@ -124,7 +124,7 @@ export class RecordingRunner implements IAgentRunner {
 		console.log(`Recording saved: ${filePath} (${messageCount} messages)`);
 
 		// Reset
-		const scenarioId = this.currentScenarioId;
+		const _scenarioId = this.currentScenarioId;
 		this.currentScenarioId = null;
 		this.capturedMessages = [];
 

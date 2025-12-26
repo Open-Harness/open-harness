@@ -7,12 +7,12 @@
  * @module factory/harness-factory
  */
 
-import { ParserAgent } from "../providers/anthropic/agents/parser-agent.js";
-import { ValidationReviewAgent } from "../providers/anthropic/agents/validation-review-agent.js";
 import { type ContainerOptions, createContainer } from "../core/container.js";
 import { IEventBusToken } from "../core/tokens.js";
 import { TaskHarness } from "../harness/task-harness.js";
 import type { TaskHarnessConfig } from "../harness/task-harness-types.js";
+import { ParserAgent } from "../providers/anthropic/agents/parser-agent.js";
+import { ValidationReviewAgent } from "../providers/anthropic/agents/validation-review-agent.js";
 
 /**
  * Options for creating a TaskHarness.

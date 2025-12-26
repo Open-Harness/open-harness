@@ -82,9 +82,7 @@ export class CompositeRenderer implements IHarnessRenderer {
 		this.initialized = true;
 
 		// Initialize all renderers, catching errors to avoid breaking the run
-		const results = await Promise.allSettled(
-			this.renderers.map((r) => Promise.resolve(r.initialize(tasks, config))),
-		);
+		const results = await Promise.allSettled(this.renderers.map((r) => Promise.resolve(r.initialize(tasks, config))));
 
 		// Log any failures
 		for (const [index, result] of results.entries()) {
@@ -107,9 +105,7 @@ export class CompositeRenderer implements IHarnessRenderer {
 
 	async finalize(summary: HarnessSummary): Promise<void> {
 		// Finalize all renderers, catching errors
-		const results = await Promise.allSettled(
-			this.renderers.map((r) => Promise.resolve(r.finalize(summary))),
-		);
+		const results = await Promise.allSettled(this.renderers.map((r) => Promise.resolve(r.finalize(summary))));
 
 		// Log any failures
 		for (const [index, result] of results.entries()) {

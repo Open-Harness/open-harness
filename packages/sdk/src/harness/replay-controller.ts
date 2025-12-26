@@ -8,9 +8,9 @@
  */
 
 import type { HarnessEvent } from "./event-protocol.js";
-import { loadHarnessRun, type HarnessRun } from "./harness-recorder.js";
+import { type HarnessRun, loadHarnessRun } from "./harness-recorder.js";
 import type { IHarnessRenderer, RendererConfig } from "./renderer-interface.js";
-import type { NarrativeEntry, ParsedTask } from "./task-harness-types.js";
+import type { ParsedTask } from "./task-harness-types.js";
 
 /**
  * Configuration for replay controller.

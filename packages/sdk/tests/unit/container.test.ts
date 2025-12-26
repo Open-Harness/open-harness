@@ -14,7 +14,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { Container, inject, injectable } from "@needle-di/core";
-import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
 import { createContainer } from "../../src/core/container.js";
 import { Record } from "../../src/core/decorators.js";
 import type { RunnerCallbacks } from "../../src/core/tokens.js";
@@ -25,6 +24,7 @@ import {
 	IRecordingFactoryToken,
 	IVaultToken,
 } from "../../src/core/tokens.js";
+import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
 import { BaseAgent } from "../../src/providers/anthropic/runner/base-agent.js";
 import type { CompactData, SessionResult } from "../../src/providers/anthropic/runner/models.js";
 
@@ -49,12 +49,12 @@ class MockRunner implements IAgentRunner {
 				session_id: "mock_session",
 				model: "mock-model",
 				tools: [],
-			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
+			} as any,
 			{
 				type: "tool_progress",
 				tool_name: "test_tool",
 				elapsed_time_seconds: 0.5,
-			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
+			} as any,
 			{
 				type: "system",
 				subtype: "compact_boundary",
@@ -63,13 +63,13 @@ class MockRunner implements IAgentRunner {
 					trigger: "manual",
 					pre_tokens: 1000,
 				},
-			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
+			} as any,
 			{
 				type: "system",
 				subtype: "status",
 				session_id: "mock_session",
 				status: "compacting",
-			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
+			} as any,
 			{
 				type: "assistant",
 				message: {
@@ -80,7 +80,7 @@ class MockRunner implements IAgentRunner {
 						},
 					],
 				},
-			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
+			} as any,
 			{
 				type: "result",
 				subtype: "success",
@@ -96,7 +96,7 @@ class MockRunner implements IAgentRunner {
 					summary: "Mock task completed",
 					handoff: "",
 				},
-			} as any, // biome-ignore lint/suspicious/noExplicitAny: Partial mocks for testing
+			} as any,
 		];
 
 		// Fire callbacks for each message
@@ -211,7 +211,6 @@ describe("@Record Decorator", () => {
 		class DecoratedService {
 			constructor(private runner: IAgentRunner = inject(IAgentRunnerToken)) {}
 
-			// biome-ignore lint/suspicious/noExplicitAny: Record decorator uses any[] for generic args
 			@Record("smoke", (args: any[]) => args[1])
 			async doWork(prompt: string, _sessionId: string, callbacks?: RunnerCallbacks): Promise<SDKMessage | undefined> {
 				return this.runner.run({
@@ -245,7 +244,6 @@ describe("Promise-based API", () => {
 
 		// Should be a Promise, not an AsyncGenerator
 		expect(result).toBeInstanceOf(Promise);
-		// biome-ignore lint/suspicious/noExplicitAny: Testing that result is not an async iterator
 		expect(typeof (result as any)[Symbol.asyncIterator]).not.toBe("function");
 
 		// Should resolve to SDKMessage

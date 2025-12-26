@@ -30,7 +30,13 @@
 
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
-import type { AgentError, AgentResult, AgentStartMetadata, IAgentCallbacks, TokenUsage } from "../../../callbacks/types.js";
+import type {
+	AgentError,
+	AgentResult,
+	AgentStartMetadata,
+	IAgentCallbacks,
+	TokenUsage,
+} from "../../../callbacks/types.js";
 import { type IAgentRunner, IAgentRunnerToken, type IEventBus, IEventBusToken } from "../../../core/tokens.js";
 import { mapSdkMessageToEvents } from "../runner/event-mapper.js";
 import { type AgentEvent, EventTypeConst } from "../runner/models.js";

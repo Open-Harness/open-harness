@@ -222,7 +222,13 @@ export function isPhaseEvent(event: HarnessEvent): event is PhaseStartEvent | Ph
 /** Check if event is a task event */
 export function isTaskEvent(
 	event: HarnessEvent,
-): event is TaskStartEvent | TaskNarrativeEvent | TaskCompleteEvent | TaskFailedEvent | TaskSkippedEvent | TaskRetryEvent {
+): event is
+	| TaskStartEvent
+	| TaskNarrativeEvent
+	| TaskCompleteEvent
+	| TaskFailedEvent
+	| TaskSkippedEvent
+	| TaskRetryEvent {
 	return event.type.startsWith("task:");
 }
 
