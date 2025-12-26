@@ -229,6 +229,26 @@
 
 ---
 
+## Phase 11: Ultimate Test - Coding Harness Migration (SC-008)
+
+**Purpose**: Prove the system works end-to-end with a real harness and real LLM calls
+
+**Target**: `harnesses/coding/src/index.ts`
+
+**Context Override**: Read `harnesses/coding/` for this phase only (prototype isolation waived for integration test)
+
+- [ ] T060 Add `@Monologue("Planner")` decorator to PlannerAgent.plan() method in SDK
+- [ ] T061 Add `@Monologue("Coder")` decorator to CodingAgent.execute() method in SDK
+- [ ] T062 Add `@Monologue("Reviewer")` decorator to ReviewAgent.review() method in SDK
+- [ ] T063 Update harnesses/coding/src/index.ts to subscribe to narrative events and display them
+- [ ] T064 Run coding harness with real PRD: `cd harnesses/coding && bun run src/index.ts`
+- [ ] T065 Verify narrative output appears in terminal for all three agents (Planner, Coder, Reviewer)
+- [ ] T066 Capture terminal output screenshot/recording as evidence of SC-008 completion
+
+**Checkpoint**: The coding harness runs successfully with visible narrative output from all agents using real Haiku API calls.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -241,6 +261,7 @@
   - US6 (P3) can start after Foundational
 - **E2E Integration (Phase 9)**: Depends on US1-US3 (core functionality)
 - **Polish (Phase 10)**: Depends on all user stories being complete
+- **Ultimate Test (Phase 11)**: Depends on Phase 10 - FINAL GATE before feature is complete
 
 ### User Story Dependencies
 
