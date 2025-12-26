@@ -156,6 +156,7 @@ As a user, I want task execution to continue even if narrative generation fails 
 - **SC-005**: The complete monologue module is implemented (types, service, decorator, prompts, LLM interface) - no empty directories.
 - **SC-006**: End-to-end test demonstrates full task execution with narrative output visible in test assertions.
 - **SC-007**: Zero manual `emitNarrative()` calls remain in TaskHarness after migration.
+- **SC-008**: **Ultimate Test** - The `harnesses/coding` workflow runs successfully with `@Monologue` decorators on PlannerAgent, CodingAgent, and ReviewAgent, producing visible narrative output in the terminal with real Haiku API calls.
 
 ## Assumptions
 
