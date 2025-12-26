@@ -112,7 +112,7 @@ export const IRecordingFactoryToken = new InjectionToken<IRecordingFactory>("IRe
 // Event Bus (Cross-cutting Communication)
 // ============================================================================
 
-import type { AgentEvent } from "../runner/models.js";
+import type { AgentEvent } from "../providers/anthropic/runner/models.js";
 
 export interface IEventBus {
 	publish(event: AgentEvent): void | Promise<void>;

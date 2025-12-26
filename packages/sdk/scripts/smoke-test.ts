@@ -15,7 +15,7 @@
  * Run with: bun packages/sdk/scripts/smoke-test.ts
  */
 
-import type { ReviewResult } from "../src/agents/review-agent.js";
+import type { ReviewResult } from "../src/providers/anthropic/agents/review-agent.js";
 import {
 	BaseHarness,
 	CodingAgent,

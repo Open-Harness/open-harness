@@ -10,10 +10,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { inject, injectable } from "@needle-di/core";
-import type { IAgentCallbacks } from "../callbacks/types.js";
-import { IAnthropicRunnerToken, IEventBusToken } from "../core/tokens.js";
-import type { ReviewAgentInput, ReviewAgentOutput, ValidationResult } from "../harness/task-harness-types.js";
-import { ReviewAgentOutputSchema } from "../harness/task-harness-types.js";
+import type { IAgentCallbacks } from "../../../callbacks/types.js";
+import { IAnthropicRunnerToken, IEventBusToken } from "../../../core/tokens.js";
+import type { ReviewAgentInput, ReviewAgentOutput, ValidationResult } from "../../../harness/task-harness-types.js";
+import { ReviewAgentOutputSchema } from "../../../harness/task-harness-types.js";
 import { zodToSdkSchema } from "../runner/models.js";
 import { BaseAnthropicAgent } from "./base-anthropic-agent.js";
 

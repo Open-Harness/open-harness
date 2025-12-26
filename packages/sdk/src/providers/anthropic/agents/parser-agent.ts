@@ -17,15 +17,15 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Options } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
-import type { IAgentCallbacks } from "../callbacks/types.js";
-import { IAnthropicRunnerToken, type IEventBus, IEventBusToken } from "../core/tokens.js";
+import type { IAgentCallbacks } from "../../../callbacks/types.js";
+import { IAgentRunnerToken, type IEventBus, IEventBusToken } from "../../../core/tokens.js";
 import {
 	type ParsedTask,
 	type ParserAgentInput,
 	type ParserAgentOutput,
 	ParserAgentOutputSchema,
 	type ParserMetadata,
-} from "../harness/task-harness-types.js";
+} from "../../../harness/task-harness-types.js";
 import { zodToSdkSchema } from "../runner/models.js";
 import { BaseAnthropicAgent } from "./base-anthropic-agent.js";
 

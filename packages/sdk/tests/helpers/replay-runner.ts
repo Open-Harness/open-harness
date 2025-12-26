@@ -33,10 +33,9 @@ import {
 import { RecordingFactory } from "../../src/core/recording-factory.js";
 import { EventBus } from "../../src/core/event-bus.js";
 import { Vault } from "../../src/core/vault.js";
-import { CodingAgent } from "../../src/agents/coding-agent.js";
-import { ReviewAgent } from "../../src/agents/review-agent.js";
-import { PlannerAgent } from "../../src/agents/planner-agent.js";
-import { AgentMonologue } from "../../src/agents/monologue.js";
+import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
+import { ReviewAgent } from "../../src/providers/anthropic/agents/review-agent.js";
+import { PlannerAgent } from "../../src/providers/anthropic/agents/planner-agent.js";
 import { setDecoratorContainer } from "../../src/core/decorators.js";
 import type { RecordedAgentSession } from "./recording-wrapper.js";
 
@@ -162,7 +161,6 @@ export async function createReplayContainer(
 	container.bind(CodingAgent);
 	container.bind(ReviewAgent);
 	container.bind(PlannerAgent);
-	container.bind(AgentMonologue);
 
 	// Wire up decorator container
 	setDecoratorContainer(container);

@@ -57,20 +57,20 @@ export {
 } from "./harness/index.js";
 
 // ============================================
-// AGENT LAYER (Provider-Agnostic Agents)
+// AGENT LAYER (Re-exported from Anthropic Provider)
 // ============================================
 
 // Base Classes
-export { type AgentRunOptions, BaseAnthropicAgent } from "./agents/base-anthropic-agent.js";
+export { type AgentRunOptions, BaseAnthropicAgent } from "./providers/anthropic/agents/base-anthropic-agent.js";
 
 // Concrete Agents
-export { CodingAgent, type CodingAgentOptions } from "./agents/coding-agent.js";
-export { ParserAgent } from "./agents/parser-agent.js";
-export { PlannerAgent, type PlannerAgentOptions, type PlannerResult, type Ticket } from "./agents/planner-agent.js";
-export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./agents/review-agent.js";
+export { CodingAgent, type CodingAgentOptions } from "./providers/anthropic/agents/coding-agent.js";
+export { ParserAgent } from "./providers/anthropic/agents/parser-agent.js";
+export { PlannerAgent, type PlannerAgentOptions, type PlannerResult, type Ticket } from "./providers/anthropic/agents/planner-agent.js";
+export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./providers/anthropic/agents/review-agent.js";
 // Core Interface
-export type { AgentDefinition, IAgent, RunnerOptions } from "./agents/types.js";
-export { ValidationReviewAgent, type ValidationReviewAgentOptions } from "./agents/validation-review-agent.js";
+export type { AgentDefinition, IAgent, RunnerOptions } from "./providers/anthropic/agents/types.js";
+export { ValidationReviewAgent, type ValidationReviewAgentOptions } from "./providers/anthropic/agents/validation-review-agent.js";
 
 // Unified Callbacks (IAgentCallbacks is the primary callback interface)
 export type {
@@ -98,11 +98,8 @@ export {
 } from "./factory/harness-factory.js";
 export { createWorkflow } from "./factory/workflow-builder.js";
 
-// Primitives
-export { withMonologue } from "./monologue/wrapper.js";
-
 // Runners
-export { AnthropicRunner } from "./runner/anthropic-runner.js";
+export { AnthropicRunner } from "./providers/anthropic/runner/anthropic-runner.js";
 
 // Task Management
 export { TaskList } from "./workflow/task-list.js";
@@ -117,7 +114,7 @@ export type {
 	CompactData,
 	SessionResult,
 	StatusData,
-} from "./runner/models.js";
+} from "./providers/anthropic/runner/models.js";
 
 export type { Task, TaskStatus } from "./workflow/task-list.js";
 

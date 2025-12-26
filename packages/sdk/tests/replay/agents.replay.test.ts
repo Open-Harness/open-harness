@@ -8,8 +8,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { CodingAgent } from "../../src/agents/coding-agent.js";
-import { ReviewAgent } from "../../src/agents/review-agent.js";
+import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
+import { ReviewAgent } from "../../src/providers/anthropic/agents/review-agent.js";
 import { createReplayContainer } from "../helpers/replay-runner.js";
 
 describe("CodingAgent Replay", () => {

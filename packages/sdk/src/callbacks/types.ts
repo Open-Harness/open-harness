@@ -11,7 +11,7 @@
  * - Extended events may only fire for specific providers
  */
 
-import type { AgentEvent } from "../runner/models.js";
+import type { AgentEvent } from "../providers/anthropic/runner/models.js";
 
 // ============================================================================
 // Agent Result Types
@@ -256,7 +256,7 @@ export type StreamCallbacks = {
 	onToolProgress?: (toolName: string, elapsedSeconds: number, event: AgentEvent) => void;
 	onCompact?: (data: { trigger: "manual" | "auto"; pre_tokens: number }, event: AgentEvent) => void;
 	onStatus?: (data: { status: "compacting" | null }, event: AgentEvent) => void;
-	onResult?: (result: import("../runner/models.js").SessionResult, event: AgentEvent) => void;
+	onResult?: (result: import("../providers/anthropic/runner/models.js").SessionResult, event: AgentEvent) => void;
 	onSessionEnd?: (content: string, isError: boolean, event: AgentEvent) => void;
 	onError?: (error: string, event: AgentEvent) => void;
 };

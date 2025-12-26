@@ -8,7 +8,7 @@
  */
 
 import type { ZodSchema } from "zod";
-import type { AgentResult, IAgentCallbacks } from "../callbacks/index.js";
+import type { AgentResult, IAgentCallbacks } from "../../../callbacks/index.js";
 
 // ============================================================================
 // IAgent Interface - The Core Abstraction

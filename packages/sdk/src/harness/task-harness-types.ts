@@ -550,6 +550,8 @@ export const HarnessSummarySchema = z.object({
 	failedTasks: z.number().int().min(0).describe("Failed count"),
 	/** Tasks that were skipped */
 	skippedTasks: z.number().int().min(0).describe("Skipped count"),
+	/** Total retry attempts across all tasks */
+	totalRetries: z.number().int().min(0).describe("Total retry count"),
 	/** Total execution duration in ms */
 	durationMs: z.number().int().min(0).describe("Total duration"),
 	/** Aggregate token usage */

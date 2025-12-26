@@ -7,8 +7,8 @@
  * @module factory/harness-factory
  */
 
-import { ParserAgent } from "../agents/parser-agent.js";
-import { ValidationReviewAgent } from "../agents/validation-review-agent.js";
+import { ParserAgent } from "../providers/anthropic/agents/parser-agent.js";
+import { ValidationReviewAgent } from "../providers/anthropic/agents/validation-review-agent.js";
 import { type ContainerOptions, createContainer } from "../core/container.js";
 import { IEventBusToken } from "../core/tokens.js";
 import { TaskHarness } from "../harness/task-harness.js";

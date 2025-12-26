@@ -6,11 +6,10 @@
  */
 
 import { Container } from "@needle-di/core";
-import { CodingAgent } from "../agents/coding-agent.js";
-import { AgentMonologue } from "../agents/monologue.js";
-import { PlannerAgent } from "../agents/planner-agent.js";
-import { ReviewAgent } from "../agents/review-agent.js";
-import { AnthropicRunner } from "../runner/anthropic-runner.js";
+import { CodingAgent } from "../providers/anthropic/agents/coding-agent.js";
+import { PlannerAgent } from "../providers/anthropic/agents/planner-agent.js";
+import { ReviewAgent } from "../providers/anthropic/agents/review-agent.js";
+import { AnthropicRunner } from "../providers/anthropic/runner/anthropic-runner.js";
 import { Workflow } from "../workflow/orchestrator.js";
 import { setDecoratorContainer } from "./decorators.js";
 import { EventBus } from "./event-bus.js";
@@ -140,7 +139,6 @@ export function createContainer(options: ContainerOptions = {}): Container {
 	container.bind(CodingAgent);
 	container.bind(ReviewAgent);
 	container.bind(PlannerAgent);
-	container.bind(AgentMonologue);
 
 	// =========================================================================
 	// Application Layer (Workflows)

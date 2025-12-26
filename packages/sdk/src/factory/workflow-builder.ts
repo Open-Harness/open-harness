@@ -5,7 +5,7 @@
  * Users define the orchestration logic via an execute function.
  */
 
-import type { BaseAnthropicAgent } from "../agents/base-anthropic-agent.js";
+import type { BaseAnthropicAgent } from "../providers/anthropic/agents/base-anthropic-agent.js";
 import type { IAgentCallbacks } from "../callbacks/types.js";
 import { type Task, type TaskInput, TaskList } from "../workflow/task-list.js";
 

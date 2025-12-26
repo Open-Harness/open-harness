@@ -12,8 +12,8 @@
 
 import { describe, expect, test } from "bun:test";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { mapSdkMessageToEvents } from "../../src/runner/event-mapper.js";
-import { EventTypeConst } from "../../src/runner/models.js";
+import { mapSdkMessageToEvents } from "../../src/providers/anthropic/runner/event-mapper.js";
+import { EventTypeConst } from "../../src/providers/anthropic/runner/models.js";
 
 // ============================================================================
 // Test Helpers

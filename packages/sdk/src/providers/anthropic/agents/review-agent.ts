@@ -7,8 +7,8 @@
 
 import { inject, injectable } from "@needle-di/core";
 import { z } from "zod";
-import type { IAgentCallbacks } from "../callbacks/types.js";
-import { IAnthropicRunnerToken, IEventBusToken } from "../core/tokens.js";
+import type { IAgentCallbacks } from "../../../callbacks/types.js";
+import { IAnthropicRunnerToken, IEventBusToken } from "../../../core/tokens.js";
 import { zodToSdkSchema } from "../runner/models.js";
 import { PromptRegistry } from "../runner/prompts.js";
 import { BaseAnthropicAgent } from "./base-anthropic-agent.js";

@@ -8,8 +8,8 @@
  */
 
 import { inject, injectable } from "@needle-di/core";
-import type { IAgentCallbacks } from "../callbacks/types.js";
-import { IAnthropicRunnerToken, IEventBusToken } from "../core/tokens.js";
+import type { IAgentCallbacks } from "../../../callbacks/types.js";
+import { IAnthropicRunnerToken, IEventBusToken } from "../../../core/tokens.js";
 import { type CodingResult, CodingResultSdkSchema } from "../runner/models.js";
 import { PromptRegistry } from "../runner/prompts.js";
 import { BaseAnthropicAgent } from "./base-anthropic-agent.js";
