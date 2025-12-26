@@ -343,6 +343,52 @@ When evaluating oharnes solutions, grade against:
 
 ---
 
+## Historical Awareness System
+
+Agents learn from past failures via the anti-patterns registry.
+
+### Pattern Registry
+
+**Location**: `.claude/patterns/anti-patterns.yaml`
+
+```yaml
+code_patterns:      # Grep-able patterns by context
+structural_patterns: # Systemic anti-patterns
+problem_paths:       # High-risk file globs
+```
+
+### How It Works
+
+1. **Retrospectives** identify root causes
+2. **oharnes.close** crystallizes decisions into registry
+3. **Scout** reads registry, outputs "Historical Warnings"
+4. **Verifier** uses patterns + git history checks
+
+### Consumers
+
+| Agent | What It Does |
+|-------|--------------|
+| Scout | Reads registry, warns about problem paths |
+| Verifier | Greps for code_patterns, checks git history |
+
+### Git History Check
+
+Verifier checks if files appear in recent fix commits:
+```bash
+git log -5 --oneline --all --grep="fix" -- {file_path}
+```
+
+Files with troubled history get elevated scrutiny.
+
+### Maintenance
+
+- **Automatic**: oharnes.close updates after retrospectives
+- **Manual**: Add patterns with source reference, bump `last_updated`
+
+See `.claude/patterns/README.md` for full documentation.
+
+---
+
 ## Anti-Patterns
 
 ### Don't
@@ -351,6 +397,7 @@ When evaluating oharnes solutions, grade against:
 - Use sub-agents for simple transforms
 - Make sub-agents that need conversation history
 - Block on minor validation issues
+- Ignore the anti-patterns registry
 
 ### Do
 - Keep controller context minimal
@@ -358,3 +405,4 @@ When evaluating oharnes solutions, grade against:
 - Use sub-agents for scoped, throwaway work
 - Provide clear input/output contracts
 - Use scoring thresholds (70/50) for gates
+- Read `.claude/patterns/anti-patterns.yaml` in Scout and Verifier
