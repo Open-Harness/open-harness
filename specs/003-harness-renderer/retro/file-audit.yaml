@@ -1,0 +1,308 @@
+agent: file-auditor
+timestamp: "2025-12-26T12:00:00Z"
+spec_directory: /Users/abuusama/projects/dao/dao-spec-kit/specs/003-harness-renderer
+summary: "25 paths checked. 6 exist at correct location, 11 missing completely, 3 in wrong location, 5 unexpected files found."
+statistics:
+  total_paths: 25
+  exists_correct: 6
+  missing: 11
+  wrong_location: 3
+  unexpected: 5
+
+findings:
+  # PHASE 1 SETUP - Provider restructure
+  - id: FA001
+    task_ids: [T001]
+    expected_path: packages/sdk/src/providers/anthropic/
+    status: exists_correct
+    severity: low
+    notes: "Directory exists - phase 1 setup completed"
+
+  - id: FA002
+    task_ids: [T002]
+    expected_path: packages/sdk/src/agents/
+    status: missing
+    actual_path: packages/sdk/src/providers/anthropic/agents/
+    severity: low
+    notes: "Task expected source at old location but files have been moved to provider namespace"
+
+  - id: FA003
+    task_ids: [T003]
+    expected_path: packages/sdk/src/runner/
+    status: missing
+    actual_path: packages/sdk/src/providers/anthropic/runner/
+    severity: low
+    notes: "Task expected source at old location but files have been moved to provider namespace"
+
+  - id: FA004
+    task_ids: [T005]
+    expected_path: packages/sdk/src/providers/anthropic/index.ts
+    status: exists_correct
+    severity: low
+    notes: "Barrel export exists"
+
+  - id: FA005
+    task_ids: [T006]
+    expected_path: packages/sdk/src/index.ts
+    status: exists_correct
+    severity: low
+    notes: "Main index exists, may still have orphaned exports"
+
+  # PHASE 2 FOUNDATIONAL - Event Protocol & Interfaces
+  - id: FA006
+    task_ids: [T008]
+    expected_path: packages/sdk/src/renderer/protocol.ts
+    status: wrong_location
+    actual_path: packages/sdk/src/harness/event-protocol.ts
+    severity: high
+    notes: "Protocol types exist but in harness directory instead of renderer directory"
+
+  - id: FA007
+    task_ids: [T009]
+    expected_path: packages/sdk/src/renderer/interface.ts
+    status: wrong_location
+    actual_path: packages/sdk/src/harness/renderer-interface.ts
+    severity: high
+    notes: "Renderer interface exists but in harness directory instead of renderer directory"
+
+  - id: FA008
+    task_ids: [T010]
+    expected_path: packages/sdk/src/renderer/base-renderer.ts
+    status: wrong_location
+    actual_path: packages/sdk/src/harness/base-renderer.ts
+    severity: high
+    notes: "Base renderer exists but in harness directory instead of renderer directory"
+
+  - id: FA009
+    task_ids: [T011]
+    expected_path: packages/sdk/src/providers/anthropic/monologue/types.ts
+    status: missing
+    actual_path: null
+    severity: critical
+    notes: "Monologue types not created - monologue directory exists but empty"
+
+  - id: FA010
+    task_ids: [T012]
+    expected_path: packages/sdk/src/providers/anthropic/monologue/prompts.ts
+    status: missing
+    actual_path: null
+    severity: critical
+    notes: "Monologue prompts constants not created"
+
+  - id: FA011
+    task_ids: [T014]
+    expected_path: packages/sdk/src/renderer/index.ts
+    status: missing
+    actual_path: null
+    severity: high
+    notes: "Renderer barrel export missing - renderer directory does not exist"
+
+  - id: FA012
+    task_ids: [T015]
+    expected_path: packages/sdk/src/providers/anthropic/monologue/index.ts
+    status: missing
+    actual_path: null
+    severity: high
+    notes: "Monologue barrel export missing"
+
+  - id: FA013
+    task_ids: [T013]
+    expected_path: packages/sdk/src/core/tokens.ts
+    status: exists_correct
+    severity: low
+    notes: "Tokens file exists - may need IMonologueGeneratorToken addition"
+
+  - id: FA014
+    task_ids: [T019]
+    expected_path: packages/sdk/src/core/container.ts
+    status: exists_correct
+    severity: low
+    notes: "Container exists - may need generator registration"
+
+  # PHASE 3 USER STORY 1 - Real-time streaming
+  - id: FA015
+    task_ids: [T016]
+    expected_path: packages/sdk/src/providers/anthropic/monologue/generator.ts
+    status: missing
+    actual_path: null
+    severity: critical
+    notes: "AnthropicMonologueGenerator not implemented"
+
+  - id: FA016
+    task_ids: [T017]
+    expected_path: packages/sdk/src/renderer/simple.ts
+    status: missing
+    actual_path: null
+    severity: critical
+    notes: "SimpleConsoleRenderer not implemented - renderer directory does not exist"
+
+  - id: FA017
+    task_ids: [T018]
+    expected_path: packages/sdk/src/providers/anthropic/monologue/decorator.ts
+    status: missing
+    actual_path: null
+    severity: critical
+    notes: "AnthropicMonologue decorator not implemented"
+
+  - id: FA018
+    task_ids: [T020]
+    expected_path: packages/sdk/src/harness/task-harness-types.ts
+    status: exists_correct
+    severity: low
+    notes: "Task harness types exist - may need renderer config addition"
+
+  - id: FA019
+    task_ids: [T021]
+    expected_path: packages/sdk/src/harness/task-harness.ts
+    status: exists_correct
+    severity: low
+    notes: "Task harness exists - may need event rendering integration"
+
+  # PHASE 4-5 - Context & Verbosity (depends on generator)
+  # These are implicitly missing because generator.ts doesn't exist
+
+  # PHASE 6 - Multiple renderers
+  - id: FA020
+    task_ids: [T036]
+    expected_path: packages/sdk/src/renderer/listr2.ts
+    status: missing
+    actual_path: null
+    severity: high
+    notes: "Listr2HarnessRenderer not implemented - renderer directory missing"
+
+  - id: FA021
+    task_ids: [T037, T038, T039, T040]
+    expected_path: packages/sdk/package.json
+    status: exists_correct
+    severity: low
+    notes: "Package.json exists - may need subpath exports and peer dependencies added"
+
+  # PHASE 7 - Replay mode
+  # Depends on renderers not yet created
+
+  # PHASE 8 - Documentation & Polish
+  - id: FA022
+    task_ids: [T047]
+    expected_path: packages/sdk/docs/architecture.md
+    status: missing
+    actual_path: null
+    severity: medium
+    notes: "Architecture documentation not created"
+
+  - id: FA023
+    task_ids: [T048]
+    expected_path: packages/sdk/docs/renderer-guide.md
+    status: missing
+    actual_path: null
+    severity: medium
+    notes: "Renderer guide not created"
+
+  - id: FA024
+    task_ids: [T049]
+    expected_path: packages/sdk/README.md
+    status: exists_correct
+    severity: low
+    notes: "README exists - may need renderer examples added"
+
+  # Unexpected files (not in spec)
+  - id: FA025
+    task_ids: []
+    unexpected_path: packages/sdk/src/harness/composite-renderer.ts
+    status: unexpected
+    severity: low
+    notes: "CompositeRenderer exists in harness but not mentioned in spec"
+
+  - id: FA026
+    task_ids: []
+    unexpected_path: packages/sdk/src/harness/console-renderer.ts
+    status: unexpected
+    severity: low
+    notes: "ConsoleRenderer exists in harness but not mentioned in spec"
+
+  - id: FA027
+    task_ids: []
+    unexpected_path: packages/sdk/docs/api.md
+    status: unexpected
+    severity: low
+    notes: "API documentation exists but renderer-guide.md task expects it elsewhere"
+
+  - id: FA028
+    task_ids: []
+    unexpected_path: packages/sdk/docs/harness-guide.md
+    status: unexpected
+    severity: low
+    notes: "Harness guide documentation exists in docs"
+
+critical_path_issues:
+  - issue: "Renderer module architecture mismatch"
+    description: "Tasks specify files should be in src/renderer/ directory, but actual implementation placed them in src/harness/"
+    affected_tasks: [T008, T009, T010, T014]
+    impact: "High - All renderer foundation tasks completed but in wrong location, breaking module structure"
+    recommendation: "Reorganize files to src/renderer/ or update task specification to match current architecture"
+
+  - issue: "Monologue module not implemented"
+    description: "Directory exists but no implementation files created (types.ts, prompts.ts, generator.ts, decorator.ts, index.ts)"
+    affected_tasks: [T011, T012, T015, T016, T018]
+    impact: "Critical - Blocks all user story implementation (US1-US5)"
+    recommendation: "Implement monologue module according to specification"
+
+  - issue: "Renderer directory structure missing"
+    description: "src/renderer/ directory does not exist; related tasks cannot proceed"
+    affected_tasks: [T008, T009, T010, T014, T017, T020, T036]
+    impact: "Critical - Blocks renderer module creation and all renderer-dependent tasks"
+    recommendation: "Create src/renderer/ directory and reorganize renderer files there"
+
+implementation_status:
+  phase_1_setup:
+    status: "PARTIAL"
+    completed_tasks: [T001, T004, T005, T006]
+    incomplete_tasks: [T002, T003, T007]
+    notes: "Agents and runner moved to provider namespace, but tasks reference old paths"
+
+  phase_2_foundational:
+    status: "INCOMPLETE"
+    completed_tasks: [T013, T019]
+    missing_tasks: [T008, T009, T010, T011, T012, T014, T015]
+    wrong_location_tasks: [T008, T009, T010]
+    notes: "Critical foundation not complete. Protocol/interface in wrong location."
+
+  phase_3_user_story_1:
+    status: "NOT_STARTED"
+    blocked_by: ["Phase 2 foundational incomplete", "Monologue module missing", "Renderer directory missing"]
+    notes: "Cannot proceed until Phase 2 foundation is complete"
+
+  phase_4_through_8:
+    status: "NOT_STARTED"
+    blocked_by: ["Phase 3 not started"]
+    notes: "All dependent on Phase 3"
+
+recommendations:
+  priority_1:
+    - "CREATE src/renderer/ directory structure"
+    - "MOVE or COPY files from src/harness/ to src/renderer/ (event-protocol.ts -> protocol.ts, renderer-interface.ts -> interface.ts, base-renderer.ts -> base-renderer.ts)"
+    - "CREATE src/renderer/index.ts barrel export"
+    - "IMPLEMENT src/providers/anthropic/monologue/types.ts with MonologueConfig and MonologueMetadata"
+    - "IMPLEMENT src/providers/anthropic/monologue/prompts.ts with prompt constants"
+    - "CREATE src/providers/anthropic/monologue/index.ts barrel export"
+
+  priority_2:
+    - "IMPLEMENT src/providers/anthropic/monologue/generator.ts (AnthropicMonologueGenerator service)"
+    - "IMPLEMENT src/renderer/simple.ts (SimpleConsoleRenderer)"
+    - "IMPLEMENT src/providers/anthropic/monologue/decorator.ts (@AnthropicMonologue)"
+    - "UPDATE src/core/tokens.ts to add IMonologueGeneratorToken"
+    - "UPDATE src/core/container.ts to register AnthropicMonologueGenerator"
+
+  priority_3:
+    - "CREATE src/providers/openai/index.ts (placeholder or implementation)"
+    - "CREATE documentation files (architecture.md, renderer-guide.md)"
+    - "UPDATE package.json with subpath exports and peer dependencies"
+    - "VERIFY all imports work with new directory structure"
+
+audit_notes:
+  - "Current implementation moved agents and runner into providers/anthropic namespace (Phase 1 goal achieved)"
+  - "Renderer and protocol files created in harness directory instead of new renderer directory"
+  - "Monologue module directory exists but is completely empty"
+  - "Phase 2 foundation is incomplete and partially mislocated"
+  - "All user story implementation blocked on completion of Phase 2"
+  - "Unexpected files (composite-renderer, console-renderer) suggest partial implementation in harness"
+
