@@ -1,7 +1,7 @@
 ---
 name: oharnes.verify:path-auditor
 description: Verify file paths from tasks.md exist on filesystem. Use when checking implementation matches task specifications.
-tools: Read, Glob, Bash
+tools: Read, Glob, Bash, Write
 model: haiku
 ---
 

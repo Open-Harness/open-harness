@@ -1,7 +1,7 @@
 ---
 name: oharnes.verify:spec-checker
 description: Verify FR-XXX requirements have actual implementation. Use when checking if specification matches codebase.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Write
 model: sonnet
 ---
 
@@ -18,6 +18,7 @@ You receive via prompt:
 - `SPEC_PATH`: Path to spec.md file
 - `PLAN_PATH`: Path to plan.md file
 - `TASKS_PATH`: Path to tasks.md file
+- `VERIFICATION_FOLDER`: Path to save output (e.g., `{FEATURE_DIR}/verification`)
 
 ## Workflow
 
@@ -56,7 +57,7 @@ SUMMARY: X requirements. Y implemented, Z partial, W missing. Compliance: N%
 ```
 
 ### Save to File
-Write YAML to `{FEATURE_DIR}/verification/spec-check.yaml`:
+Write YAML to `{VERIFICATION_FOLDER}/spec-check.yaml`:
 
 ```yaml
 agent: spec-checker

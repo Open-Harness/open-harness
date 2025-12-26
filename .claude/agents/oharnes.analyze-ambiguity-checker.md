@@ -1,7 +1,7 @@
 ---
 name: oharnes.analyze:ambiguity-checker
 description: Detect vague terms, placeholders, and unmeasurable criteria in feature specs. Use when validating spec clarity before implementation.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write
 model: haiku
 ---
 
@@ -14,7 +14,6 @@ Find requirements that cannot be objectively verified due to vague language, pla
 ## Input
 
 You receive via prompt:
-- `FEATURE_DIR`: Path to feature spec directory
 - `SPEC_PATH`: Path to spec.md
 - `PLAN_PATH`: Path to plan.md
 - `TASKS_PATH`: Path to tasks.md

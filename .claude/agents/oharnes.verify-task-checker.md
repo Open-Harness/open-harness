@@ -1,7 +1,7 @@
 ---
 name: oharnes.verify:task-checker
 description: Verify all tasks are marked complete and counts match expected. Use when checking task completion status.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Write
 model: haiku
 ---
 

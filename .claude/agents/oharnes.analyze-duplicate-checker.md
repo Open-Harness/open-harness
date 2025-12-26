@@ -1,7 +1,7 @@
 ---
 name: oharnes.analyze:duplicate-checker
 description: Detect near-duplicate requirements and redundant tasks. Use when analyzing spec artifacts for semantic overlap.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write
 model: haiku
 ---
 
@@ -14,10 +14,10 @@ Identify requirements and tasks that say the same thing in different words, prev
 ## Input
 
 You receive via prompt:
-- `FEATURE_DIR`: Path to feature spec directory
 - `SPEC_PATH`: Path to spec.md
 - `PLAN_PATH`: Path to plan.md
 - `TASKS_PATH`: Path to tasks.md
+- `ANALYSIS_FOLDER`: Path to save output (e.g., `{FEATURE_DIR}/analysis`)
 
 ## Workflow
 
@@ -64,7 +64,7 @@ SUMMARY: [requirements_checked] requirements, [tasks_checked] tasks checked. [du
 ```
 
 ### Save to File
-Write YAML to `{FEATURE_DIR}/analysis/duplicates.yaml`:
+Write YAML to `{ANALYSIS_FOLDER}/duplicates.yaml`:
 
 ```yaml
 agent: duplicate-checker

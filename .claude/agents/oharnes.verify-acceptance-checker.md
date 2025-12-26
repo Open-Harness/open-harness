@@ -1,7 +1,7 @@
 ---
 name: oharnes.verify:acceptance-checker
 description: Verify feature behavior against acceptance criteria from spec.md and verification steps from tasks.md. Use when validating that implementation actually works as specified.
-tools: Read, Bash, Glob, Grep
+tools: Read, Bash, Glob, Grep, Write
 model: sonnet
 ---
 

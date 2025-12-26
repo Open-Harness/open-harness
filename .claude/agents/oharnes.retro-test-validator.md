@@ -1,7 +1,7 @@
 ---
 name: oharnes.retro:test-validator
 description: Run tests and capture failures. Use when investigating test health during retrospective.
-tools: Bash, Read, Glob
+tools: Bash, Read, Glob, Write
 model: haiku
 ---
 

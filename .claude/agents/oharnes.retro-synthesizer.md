@@ -1,7 +1,7 @@
 ---
 name: oharnes.retro:synthesizer
 description: Synthesize findings from other retro agents into root cause analysis. Use after all investigation agents complete.
-tools: Read
+tools: Read, Write
 model: sonnet
 ---
 
