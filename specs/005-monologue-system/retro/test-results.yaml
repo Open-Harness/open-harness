@@ -1,0 +1,112 @@
+agent: test-validator
+timestamp: "2025-12-26T21:03:02Z"
+spec_directory: /Users/abuusama/projects/dao/dao-spec-kit/specs/005-monologue-system
+summary: "219 pass, 2 fail, 1 error"
+statistics:
+  total: 222
+  pass: 219
+  fail: 2
+  error: 1
+  duration_seconds: 296.67
+  expect_calls: 529
+  files_tested: 15
+
+failures:
+  - id: TF001
+    test_file: tests/integration/parser-agent-capture.test.ts
+    test_name: "cycle detection > detects and reports dependency cycles"
+    failure_type: assertion_failure
+    message: "ZodError: Too small: expected string to have >=1 characters at path tasks[].validationCriteria"
+    severity: medium
+    probable_cause: "Parser extracted empty validation criteria strings during cycle detection test. The parser is not properly filtering empty strings from validationCriteria field when parsing task markdown."
+    context: |
+      Test creates cyclic task dependencies (T001 -> T002 -> T003 -> T001) and expects cycle detection warnings.
+      The Zod schema validation failed on 3 tasks with empty validationCriteria strings.
+      Error locations: tasks[0].validationCriteria, tasks[1].validationCriteria, tasks[2].validationCriteria
+
+  - id: TF002
+    test_file: tests/integration/live-sdk.test.ts
+    test_name: "CodingAgent executes with callbacks and captures golden recording"
+    failure_type: timeout
+    message: "Test timed out after 60000ms (60 seconds)"
+    severity: critical
+    probable_cause: "CodingAgent.execute() is taking longer than the 60-second timeout. The agent spawned subprocess (Claude Code) which received SIGTERM signal during execution, causing process termination."
+    context: |
+      Test calls coder.execute() with task 'Write a function that adds two numbers'.
+      Subprocess was killed after 60 seconds with signal SIGTERM.
+      Last log entry: 'killed 1 dangling process'
+      Process exit error: "Claude Code process terminated by signal SIGTERM"
+
+  - id: TE001
+    test_file: tests/integration/live-sdk.test.ts
+    failure_type: unhandled_error
+    severity: critical
+    message: "Unhandled error between tests: Claude Code process terminated by signal SIGTERM at exitHandler"
+    probable_cause: "CodingAgent timeout (TF002) caused process termination without proper cleanup. The SDK's exitHandler caught an AbortError because abortController.signal was already aborted when the SIGTERM occurred."
+    context: |
+      Error originated from @anthropic-ai/claude-agent-sdk/sdk.mjs line 13373
+      Process exit code/signal: SIGTERM
+      The unhandled error prevented ReviewAgent test from running cleanly
+      Location: /Users/abuusama/projects/dao/dao-spec-kit/node_modules/.bun/@anthropic-ai+claude-agent-sdk@0.1.76+68156bc0b5d50bb8/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs
+
+passing_tests_summary:
+  - count: 219 tests passed
+  - includes_tests:
+      - tests/unit/container.test.ts: All container and dependency injection tests
+      - tests/integration/parser-agent-capture.test.ts: 3 of 4 parser agent tests passed (basic parsing, dependencies, file reading)
+      - tests/integration/live-sdk.test.ts: ReviewAgent test completed successfully
+      - tests/replay/agents.replay.test.ts: All replay tests for CodingAgent and ReviewAgent
+      - tests/replay/parser-agent.replay.test.ts: All replay tests for ParserAgent
+      - tests/integration/monologue/e2e-narrative.test.ts: All narrative system end-to-end tests
+
+test_execution_details:
+  test_runner: "bun test v1.3.3"
+  test_command: "bun test 2>&1"
+  files_tested:
+    - tests/unit/container.test.ts
+    - tests/integration/parser-agent-capture.test.ts
+    - tests/integration/live-sdk.test.ts
+    - tests/replay/agents.replay.test.ts
+    - tests/replay/parser-agent.replay.test.ts
+    - tests/integration/monologue/e2e-narrative.test.ts
+    - "And 9 additional test files"
+  total_expect_calls: 529
+
+root_causes:
+  RC001_parser_validation:
+    description: "Parser does not validate or filter empty validationCriteria strings"
+    affected_component: "ParserAgent cycle detection code path"
+    fix_suggestion: "Add validation in parser to ensure validationCriteria array contains only non-empty strings, or skip empty criteria before Zod validation"
+    priority: medium
+
+  RC002_coding_agent_timeout:
+    description: "CodingAgent.execute() exceeds 60-second timeout for typical tasks"
+    affected_component: "CodingAgent class, likely in claude-agent-sdk integration"
+    fix_suggestion: "Increase test timeout from 60s to 120s (line 53 of live-sdk.test.ts), or optimize agent startup/response time"
+    priority: critical
+
+  RC003_process_cleanup:
+    description: "Unhandled process termination during SIGTERM cleanup"
+    affected_component: "@anthropic-ai/claude-agent-sdk/sdk.mjs exitHandler"
+    fix_suggestion: "Add proper signal handling to gracefully terminate the subprocess before timeout occurs, or increase timeout threshold"
+    priority: critical
+
+recommendations:
+  - action: "Increase CodingAgent test timeout from 60s to 120s"
+    file_path: "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/integration/live-sdk.test.ts"
+    line: 53
+    impact: "May resolve TF002 and TE001 if agent completes within 120s"
+
+  - action: "Filter empty validationCriteria in ParserAgent.parse()"
+    file_path: "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/providers/anthropic/agents/parser-agent.ts"
+    impact: "Should resolve TF001 assertion failure"
+
+  - action: "Add signal handling to claude-agent-sdk integration"
+    file_path: "/Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/providers/anthropic"
+    impact: "Prevent unhandled SIGTERM errors during test cleanup"
+
+next_steps:
+  - Investigate actual CodingAgent execution time to determine if 120s timeout is sufficient
+  - Review ParserAgent implementation to understand validationCriteria extraction logic
+  - Consider reducing agent startup overhead or response latency
+  - Add proper cleanup hooks for subprocess management
