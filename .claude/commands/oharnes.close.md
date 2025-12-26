@@ -262,9 +262,21 @@ Outputs:
 
 ### Step 2: Commit
 
-Ask: "Commit these decisions? (y/n)"
+Use AskUserQuestion to confirm commit:
 
-If yes, use the `/commit` skill to create commit:
+```yaml
+questions:
+  - question: "Commit these retrospective decisions?"
+    header: "Commit"
+    multiSelect: false
+    options:
+      - label: "Yes, commit now"
+        description: "Commit decisions.yaml and next-cycle-inputs.md to the repository"
+      - label: "No, I want to review first"
+        description: "Don't commit yet - I'll review the files and commit manually"
+```
+
+If user selects "Yes, commit now", use the `/commit` skill to create commit:
 ```
 docs(retrospective): close {FEATURE_NAME} cycle
 

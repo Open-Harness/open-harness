@@ -1,0 +1,115 @@
+agent: decision-controller
+timestamp: "2025-12-26T22:00:00Z"
+feature: 004-test-infra-audit
+spec_directory: specs/004-test-infra-audit
+
+decisions:
+  - root_cause_id: RC001
+    root_cause_title: "Verifier checked existence, not behavior"
+    decision: "Proposal A: Enhance verifier with behavioral verification phase"
+    score: 4.3
+    implementation:
+      - "Add Step 6 'Behavioral Verification' to verifier workflow"
+      - "For test files: execute `timeout 30s bun run test {test_path}`"
+      - "Grep unit tests for API patterns (createRecordingContainer, fetch, ANTHROPIC_API_KEY)"
+      - "Return behavioral_checks field in output"
+    files:
+      - ".claude/agents/oharnes.implement-verifier.md"
+    user_notes: null
+
+  - root_cause_id: RC002
+    root_cause_title: "Scout validated location, not categorization correctness"
+    decision: "Proposal D: Transform scout into Context Curator"
+    score: 4.8
+    implementation:
+      - "Transform scout from 'file lister' to 'context curator'"
+      - "Output must include WHY files matter (relevance framing)"
+      - "Output must include WHAT to look at (line numbers, interfaces)"
+      - "Output must include HOW to use them (patterns to follow, anti-patterns)"
+      - "Include categorization validation as part of context curation"
+      - "Add 'Categorization Warnings' section flagging mismatches"
+    files:
+      - ".claude/agents/oharnes.implement-scout.md (significant rewrite)"
+    user_notes: "Scout should reduce cognitive load for implementer by doing the context extraction work, not just listing files"
+    context_engineering_principle: "Progressive discovery - extract high-signal content, not file dumps"
+
+  - root_cause_id: RC003
+    root_cause_title: "No behavioral verification gate before completion"
+    decision: "Proposal D: Verification Designer agent"
+    score: 4.7
+    implementation:
+      - "Create new agent: oharnes.implement:verification-designer"
+      - "Agent reads spec.md, tasks.md, and implementation"
+      - "Determines appropriate verification strategy based on risk/complexity"
+      - "Outputs verification_type, commands_to_run, new_tests_needed"
+      - "Adapts to feature type (infra, API, docs, UI)"
+      - "Creates verification plan OR runs existing tests"
+    files:
+      - ".claude/agents/oharnes.implement-verification-designer.md (new)"
+      - ".claude/commands/oharnes.implement.md (dispatch designer)"
+    user_notes: "Gate should be SMART - not just 'run all tests' but context-aware verification appropriate to the feature"
+    context_engineering_principle: "Verification Designer, not Test Runner"
+    folded_issues:
+      - "RC005: Recording directory protection - Designer checks recordings/ unchanged"
+      - "RC006: Timeout discipline - Designer specifies timeouts based on test category"
+
+  - root_cause_id: RC004
+    root_cause_title: "Bun CLI dual-mode confusion undocumented"
+    decision: "Document in constitution.md"
+    score: 4.5
+    implementation:
+      - "Add 'Tool Patterns' section to constitution.md"
+      - "Document: `bun test` = built-in runner (ignores package.json)"
+      - "Document: `bun run test` = npm script runner (respects package.json)"
+      - "Clarify when to use each mode"
+    files:
+      - ".specify/memory/constitution.md"
+    user_notes: null
+
+  - root_cause_id: RC005
+    root_cause_title: "Recording directory state not protected"
+    decision: "Folded into RC003 Verification Designer"
+    score: 4.5
+    implementation:
+      - "Verification Designer checks recordings/ unchanged for safe test runs"
+      - "Part of verification plan output"
+    files: []
+    user_notes: "Covered by Verification Designer agent"
+
+  - root_cause_id: RC006
+    root_cause_title: "Timeout discipline not specified for test execution"
+    decision: "Folded into RC003 Verification Designer"
+    score: 4.3
+    implementation:
+      - "Verification Designer specifies appropriate timeouts per test category"
+      - "Unit tests: 5s, Integration: 30s, E2E: 60s"
+      - "Part of verification plan output"
+    files: []
+    user_notes: "Covered by Verification Designer agent"
+
+skipped_count: 0
+implemented_count: 6
+folded_count: 2
+
+summary:
+  primary_pattern: "static-validation-insufficient"
+  primary_fix: "Add behavioral verification throughout implement workflow"
+  key_insight: "Context engineering - agents should provide high-signal contextualized output, not raw data dumps"
+
+  agents_to_modify:
+    - name: "oharnes.implement:verifier"
+      change: "Add behavioral verification phase"
+      priority: P0
+    - name: "oharnes.implement:scout"
+      change: "Transform into Context Curator"
+      priority: P0
+
+  agents_to_create:
+    - name: "oharnes.implement:verification-designer"
+      purpose: "Smart verification gate - analyze spec/risk, design appropriate verification"
+      priority: P0
+
+  documents_to_update:
+    - name: ".specify/memory/constitution.md"
+      change: "Add Tool Patterns section with Bun CLI behavior"
+      priority: P1
