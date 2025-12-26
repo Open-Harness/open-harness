@@ -25,9 +25,11 @@
 		"capture": "bun scripts/e2e-capture.ts",
 		"harvest": "bun scripts/harvest.ts",
 		"build": "bun build ./src/index.ts --outdir=dist --target=node --format=esm --sourcemap=external && tsc --declaration --emitDeclarationOnly --outDir dist",
-		"test": "bun test tests/**/*.test.ts",
-		"test:unit": "bun test tests/unit/container.test.ts",
-		"test:integration": "bun test tests/integration/live-sdk.test.ts",
+		"test": "bun test tests/unit tests/replay",
+		"test:unit": "bun test tests/unit",
+		"test:replay": "bun test tests/replay",
+		"test:live": "bun test tests/integration",
+		"test:all": "bun test tests/",
 		"smoke": "bun scripts/smoke-test.ts"
 	},
 	"dependencies": {

@@ -68,9 +68,9 @@
 
 **Purpose**: Verify current state and prepare for changes
 
-- [ ] T001 Verify existing test structure matches plan.md in packages/sdk/tests/
-- [ ] T002 [P] Verify existing package.json test scripts in packages/sdk/package.json
-- [ ] T003 [P] Review current recording infrastructure in packages/sdk/tests/helpers/recording-wrapper.ts
+- [X] T001 Verify existing test structure matches plan.md in packages/sdk/tests/
+- [X] T002 [P] Verify existing package.json test scripts in packages/sdk/package.json
+- [X] T003 [P] Review current recording infrastructure in packages/sdk/tests/helpers/recording-wrapper.ts
 
 ---
 
@@ -80,8 +80,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Confirm recording behavior is opt-in (verify startCapture() requirement) in packages/sdk/tests/helpers/recording-wrapper.ts
-- [ ] T005 Document current test category structure in working notes for reference
+- [X] T004 Confirm recording behavior is opt-in (verify startCapture() requirement) in packages/sdk/tests/helpers/recording-wrapper.ts
+- [X] T005 Document current test category structure in working notes for reference
 
 **Checkpoint**: Foundation verified - user story implementation can now begin in parallel
 
@@ -97,12 +97,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Update package.json test script to run only tests/unit and tests/replay in packages/sdk/package.json
-- [ ] T007 [P] [US1] Add test:unit script to run only tests/unit in packages/sdk/package.json
-- [ ] T008 [P] [US1] Add test:replay script to run only tests/replay in packages/sdk/package.json
-- [ ] T009 [US1] Verify default test suite passes without API credentials in packages/sdk/
-- [ ] T010 [US1] Verify default test suite completes in under 30 seconds in packages/sdk/
-- [ ] T011 [US1] Verify no new recording files are created during default test run in packages/sdk/recordings/
+- [X] T006 [US1] Update package.json test script to run only tests/unit and tests/replay in packages/sdk/package.json
+- [X] T007 [P] [US1] Add test:unit script to run only tests/unit in packages/sdk/package.json
+- [X] T008 [P] [US1] Add test:replay script to run only tests/replay in packages/sdk/package.json
+- [X] T009 [US1] Verify default test suite passes without API credentials in packages/sdk/
+- [X] T010 [US1] Verify default test suite completes in under 30 seconds in packages/sdk/
+- [X] T011 [US1] Verify no new recording files are created during default test run in packages/sdk/recordings/
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - `bun test` is safe by default
 
@@ -118,11 +118,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Add test:live script to run only tests/integration in packages/sdk/package.json
-- [ ] T013 [US2] Add test:all script to run all test categories in packages/sdk/package.json
-- [ ] T014 [US2] Remove misleading ANTHROPIC_API_KEY check from live-sdk.test.ts per research.md in packages/sdk/tests/integration/live-sdk.test.ts
-- [ ] T015 [US2] Verify live tests do not auto-record (recording requires explicit startCapture) in packages/sdk/tests/integration/
-- [ ] T016 [US2] Test that test:live command executes successfully with OAuth authentication in packages/sdk/
+- [X] T012 [US2] Add test:live script to run only tests/integration in packages/sdk/package.json
+- [X] T013 [US2] Add test:all script to run all test categories in packages/sdk/package.json
+- [X] T014 [US2] Remove misleading ANTHROPIC_API_KEY check from live-sdk.test.ts per research.md in packages/sdk/tests/integration/live-sdk.test.ts
+- [X] T015 [US2] Verify live tests do not auto-record (recording requires explicit startCapture) in packages/sdk/tests/integration/
+- [X] T016 [US2] Test that test:live command executes successfully with OAuth authentication in packages/sdk/
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -138,15 +138,15 @@
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Create TESTING.md with testing philosophy section in packages/sdk/docs/TESTING.md
-- [ ] T018 [US3] Add test category descriptions (unit, replay, integration) to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T019 [US3] Add step-by-step guide for adding unit tests to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T020 [US3] Add step-by-step guide for adding replay tests to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T021 [US3] Add step-by-step guide for adding integration tests to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T022 [US3] Add guide for capturing new fixtures to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T023 [US3] Add anti-patterns and common mistakes section to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T024 [US3] Add infrastructure extension guide to TESTING.md in packages/sdk/docs/TESTING.md
-- [ ] T025 [US3] Add troubleshooting section with common errors to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T017 [US3] Create TESTING.md with testing philosophy section in packages/sdk/docs/TESTING.md
+- [X] T018 [US3] Add test category descriptions (unit, replay, integration) to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T019 [US3] Add step-by-step guide for adding unit tests to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T020 [US3] Add step-by-step guide for adding replay tests to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T021 [US3] Add step-by-step guide for adding integration tests to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T022 [US3] Add guide for capturing new fixtures to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T023 [US3] Add anti-patterns and common mistakes section to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T024 [US3] Add infrastructure extension guide to TESTING.md in packages/sdk/docs/TESTING.md
+- [X] T025 [US3] Add troubleshooting section with common errors to TESTING.md in packages/sdk/docs/TESTING.md
 
 **Checkpoint**: Documentation complete - developers can follow guides to add any test type
 
@@ -162,15 +162,15 @@
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Execute Dimension 1 audit: Test isolation and dependencies per research.md methodology in packages/sdk/tests/
-- [ ] T027 [P] [US4] Execute Dimension 2 audit: Test performance and execution time per research.md methodology in packages/sdk/tests/
-- [ ] T028 [P] [US4] Execute Dimension 3 audit: Test coverage and gaps per research.md methodology in packages/sdk/
-- [ ] T029 [P] [US4] Execute Dimension 4 audit: Fixture management and staleness per research.md methodology in packages/sdk/recordings/
-- [ ] T030 [P] [US4] Execute Dimension 5 audit: Parallelization and optimization opportunities per research.md methodology in packages/sdk/tests/
-- [ ] T031 [US4] Compile audit findings with severity ratings (critical/high/medium/low) into audit.md in specs/004-test-infra-audit/audit.md
-- [ ] T032 [US4] Add effort estimates (trivial/small/medium/large) to all findings in specs/004-test-infra-audit/audit.md
-- [ ] T033 [US4] Create prioritized action plan in audit.md based on impact and effort in specs/004-test-infra-audit/audit.md
-- [ ] T034 [US4] Verify at least 5 actionable findings beyond the 3 known issues per SC-005 in specs/004-test-infra-audit/audit.md
+- [X] T026 [US4] Execute Dimension 1 audit: Test isolation and dependencies per research.md methodology in packages/sdk/tests/
+- [X] T027 [P] [US4] Execute Dimension 2 audit: Test performance and execution time per research.md methodology in packages/sdk/tests/
+- [X] T028 [P] [US4] Execute Dimension 3 audit: Test coverage and gaps per research.md methodology in packages/sdk/
+- [X] T029 [P] [US4] Execute Dimension 4 audit: Fixture management and staleness per research.md methodology in packages/sdk/recordings/
+- [X] T030 [P] [US4] Execute Dimension 5 audit: Parallelization and optimization opportunities per research.md methodology in packages/sdk/tests/
+- [X] T031 [US4] Compile audit findings with severity ratings (critical/high/medium/low) into audit.md in specs/004-test-infra-audit/audit.md
+- [X] T032 [US4] Add effort estimates (trivial/small/medium/large) to all findings in specs/004-test-infra-audit/audit.md
+- [X] T033 [US4] Create prioritized action plan in audit.md based on impact and effort in specs/004-test-infra-audit/audit.md
+- [X] T034 [US4] Verify at least 5 actionable findings beyond the 3 known issues per SC-005 in specs/004-test-infra-audit/audit.md
 
 **Checkpoint**: Audit complete with at least 5 actionable findings beyond known issues
 
@@ -180,11 +180,11 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T035 [P] Run final verification: default `bun test` completes in <30s without network
-- [ ] T036 [P] Run final verification: all default tests pass without API credentials
-- [ ] T037 [P] Run final verification: zero new recording files created during default test run
-- [ ] T038 Cross-reference TESTING.md content with quickstart.md for consistency in specs/004-test-infra-audit/quickstart.md
-- [ ] T039 Update CLAUDE.md if testing guidelines need to be reflected in project instructions
+- [X] T035 [P] Run final verification: default `bun test` completes in <30s without network
+- [X] T036 [P] Run final verification: all default tests pass without API credentials
+- [X] T037 [P] Run final verification: zero new recording files created during default test run
+- [X] T038 Cross-reference TESTING.md content with quickstart.md for consistency in specs/004-test-infra-audit/quickstart.md
+- [X] T039 Update CLAUDE.md if testing guidelines need to be reflected in project instructions
 
 ---
 

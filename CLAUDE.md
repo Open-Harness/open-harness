@@ -19,7 +19,13 @@ tests/
 
 ## Commands
 
-npm test && npm run lint
+```bash
+# In packages/sdk/:
+bun run test        # Safe tests only (unit + replay, no network)
+bun run test:live   # Integration tests (requires auth)
+bun run typecheck   # Type checking
+bun run lint        # Linting
+```
 
 ## Code Style
 
