@@ -16,13 +16,6 @@ describe("Live SDK Integration", () => {
 	test(
 		"CodingAgent executes with callbacks and captures golden recording",
 		async () => {
-			// Log authentication method
-			if (process.env.ANTHROPIC_API_KEY) {
-				console.log("Using API key authentication");
-			} else {
-				console.log("Using subscription authentication (no API key)");
-			}
-
 			// Create recording container
 			const { container, recorder } = createRecordingContainer("golden/coding-agent");
 			const coder = container.get(CodingAgent);
