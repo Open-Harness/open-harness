@@ -6,6 +6,7 @@
 // ============================================
 // State Management
 // ============================================
+const STORAGE_KEY = 'todos-app-data';
 let todos = [];
 let nextId = 1;
 
@@ -18,6 +19,43 @@ const todoList = document.getElementById('todo-list');
 const emptyState = document.getElementById('empty-state');
 const todoCount = document.querySelector('.todo-count');
 const clearCompletedBtn = document.getElementById('clear-completed');
+
+// ============================================
+// Local Storage Functions
+// ============================================
+
+/**
+ * Loads todos from localStorage
+ */
+function loadFromStorage() {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const data = JSON.parse(stored);
+            todos = data.todos || [];
+            nextId = data.nextId || 1;
+        }
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+        todos = [];
+        nextId = 1;
+    }
+}
+
+/**
+ * Saves todos to localStorage
+ */
+function saveToStorage() {
+    try {
+        const data = {
+            todos,
+            nextId
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
+}
 
 // ============================================
 // Core Functions
@@ -44,6 +82,9 @@ function addTodo() {
     const text = todoInput.value.trim();
 
     if (!text) {
+        // Add shake animation to empty input
+        todoInput.classList.add('shake');
+        setTimeout(() => todoInput.classList.remove('shake'), 500);
         todoInput.focus();
         return;
     }
@@ -54,6 +95,7 @@ function addTodo() {
     todoInput.value = '';
     todoInput.focus();
 
+    saveToStorage();
     render();
 }
 
@@ -65,6 +107,7 @@ function toggleTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (todo) {
         todo.completed = !todo.completed;
+        saveToStorage();
         render();
     }
 }
@@ -74,16 +117,40 @@ function toggleTodo(id) {
  * @param {number} id - The todo ID
  */
 function deleteTodo(id) {
-    todos = todos.filter(t => t.id !== id);
-    render();
+    const todoElement = document.querySelector(`[data-id="${id}"]`);
+    if (todoElement) {
+        // Add fade-out animation
+        todoElement.classList.add('fade-out');
+        setTimeout(() => {
+            todos = todos.filter(t => t.id !== id);
+            saveToStorage();
+            render();
+        }, 300);
+    } else {
+        todos = todos.filter(t => t.id !== id);
+        saveToStorage();
+        render();
+    }
 }
 
 /**
  * Clears all completed todos
  */
 function clearCompleted() {
-    todos = todos.filter(t => !t.completed);
-    render();
+    const completedItems = document.querySelectorAll('.todo-item.completed');
+    if (completedItems.length > 0) {
+        // Add fade-out animation to all completed items
+        completedItems.forEach(item => item.classList.add('fade-out'));
+        setTimeout(() => {
+            todos = todos.filter(t => !t.completed);
+            saveToStorage();
+            render();
+        }, 300);
+    } else {
+        todos = todos.filter(t => !t.completed);
+        saveToStorage();
+        render();
+    }
 }
 
 // ============================================
@@ -99,23 +166,27 @@ function createTodoElement(todo) {
     const li = document.createElement('li');
     li.className = `todo-item${todo.completed ? ' completed' : ''}`;
     li.dataset.id = todo.id;
+    li.setAttribute('role', 'listitem');
 
     // Checkbox
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'todo-checkbox';
+    checkbox.id = `todo-${todo.id}`;
     checkbox.checked = todo.completed;
+    checkbox.setAttribute('aria-label', `Mark "${todo.text}" as ${todo.completed ? 'incomplete' : 'complete'}`);
     checkbox.addEventListener('change', () => toggleTodo(todo.id));
 
-    // Text
-    const text = document.createElement('span');
-    text.className = 'todo-text';
-    text.textContent = todo.text;
+    // Text (wrapped in label for better accessibility)
+    const label = document.createElement('label');
+    label.className = 'todo-text';
+    label.htmlFor = `todo-${todo.id}`;
+    label.textContent = todo.text;
 
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-btn';
-    deleteBtn.setAttribute('aria-label', 'Delete todo');
+    deleteBtn.setAttribute('aria-label', `Delete "${todo.text}"`);
     deleteBtn.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -124,8 +195,16 @@ function createTodoElement(todo) {
     `;
     deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
 
+    // Keyboard navigation for delete button
+    deleteBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            deleteTodo(todo.id);
+        }
+    });
+
     li.appendChild(checkbox);
-    li.appendChild(text);
+    li.appendChild(label);
     li.appendChild(deleteBtn);
 
     return li;
@@ -180,18 +259,25 @@ function render() {
 // Event Listeners
 // ============================================
 
-// Add todo on button click
-addBtn.addEventListener('click', addTodo);
-
-// Add todo on Enter key
-todoInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        addTodo();
-    }
+// Add todo on form submission
+const inputForm = document.querySelector('.input-section');
+inputForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    addTodo();
 });
 
 // Clear completed todos
 clearCompletedBtn.addEventListener('click', clearCompleted);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Focus input with Ctrl/Cmd + K
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        todoInput.focus();
+        todoInput.select();
+    }
+});
 
 // ============================================
 // Initialization
@@ -201,6 +287,7 @@ clearCompletedBtn.addEventListener('click', clearCompleted);
  * Initialize the application
  */
 function init() {
+    loadFromStorage();
     render();
     todoInput.focus();
 }

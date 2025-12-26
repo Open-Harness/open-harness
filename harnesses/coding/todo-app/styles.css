@@ -7,6 +7,19 @@
     box-sizing: border-box;
 }
 
+/* Visually hidden utility for screen readers */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
 :root {
     /* Color Palette */
     --primary-color: #6366f1;
@@ -71,6 +84,18 @@ body {
     color: white;
     padding: var(--spacing-xl);
     text-align: center;
+    animation: slideDown 0.5s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .app-header h1 {
@@ -128,6 +153,18 @@ body {
     color: var(--text-muted);
 }
 
+/* Shake animation for empty input */
+.todo-input.shake {
+    animation: shake 0.5s;
+    border-color: var(--danger-color);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
 .add-btn {
     padding: var(--spacing-md) var(--spacing-lg);
     background: var(--primary-color);
@@ -150,6 +187,11 @@ body {
 
 .add-btn:active {
     transform: translateY(0);
+}
+
+.add-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 /* ============================================
@@ -186,8 +228,14 @@ body {
     transition: all 0.2s ease;
 }
 
-.clear-btn:hover {
+.clear-btn:hover:not(:disabled) {
     background: rgba(239, 68, 68, 0.1);
+    transform: translateY(-1px);
+}
+
+.clear-btn:focus-visible {
+    outline: 2px solid var(--danger-color);
+    outline-offset: 2px;
 }
 
 .clear-btn:disabled {
@@ -226,6 +274,22 @@ body {
     }
 }
 
+/* Fade out animation for deleting items */
+.todo-item.fade-out {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
 .todo-item:hover {
     box-shadow: var(--shadow-sm);
 }
@@ -245,6 +309,16 @@ body {
     height: 20px;
     cursor: pointer;
     accent-color: var(--success-color);
+    transition: transform 0.2s ease;
+}
+
+.todo-checkbox:hover {
+    transform: scale(1.1);
+}
+
+.todo-checkbox:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 /* Todo Text */
@@ -253,6 +327,8 @@ body {
     font-size: 1rem;
     color: var(--text-primary);
     word-break: break-word;
+    cursor: pointer;
+    transition: color 0.2s ease;
 }
 
 /* Delete Button */
@@ -270,13 +346,20 @@ body {
     opacity: 0;
 }
 
-.todo-item:hover .delete-btn {
+.todo-item:hover .delete-btn,
+.delete-btn:focus-visible {
     opacity: 1;
 }
 
 .delete-btn:hover {
     background: rgba(239, 68, 68, 0.1);
     color: var(--danger-color);
+    transform: scale(1.1);
+}
+
+.delete-btn:focus-visible {
+    outline: 2px solid var(--danger-color);
+    outline-offset: 2px;
 }
 
 .delete-btn svg {
@@ -300,11 +383,33 @@ body {
 
 .empty-state.visible {
     display: flex;
+    animation: fadeInScale 0.5s ease;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .empty-state svg {
     margin-bottom: var(--spacing-lg);
     opacity: 0.5;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 .empty-state p {
@@ -317,6 +422,7 @@ body {
 @media (max-width: 640px) {
     body {
         padding: 0;
+        align-items: flex-start;
     }
 
     .container {
@@ -328,15 +434,71 @@ body {
         font-size: 1.5rem;
     }
 
+    .app-header .subtitle {
+        font-size: 0.875rem;
+    }
+
     .app-main {
         padding: var(--spacing-lg);
     }
 
     .input-section {
-        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .todo-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Make delete button always visible on mobile for better UX */
+    .delete-btn {
+        opacity: 1;
+    }
+
+    .todo-item {
+        padding: var(--spacing-md);
+    }
+
+    .list-header {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+    }
+}
+
+/* ============================================
+   Touch Device Optimizations
+   ============================================ */
+@media (hover: none) and (pointer: coarse) {
+    /* Make interactive elements larger for touch */
+    .todo-checkbox {
+        width: 24px;
+        height: 24px;
+    }
+
+    .delete-btn {
+        opacity: 1;
+        padding: var(--spacing-sm);
+    }
+
+    .delete-btn svg {
+        width: 20px;
+        height: 20px;
     }
 
     .add-btn {
-        width: 100%;
+        padding: var(--spacing-lg);
+    }
+}
+
+/* ============================================
+   Reduced Motion Support
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
