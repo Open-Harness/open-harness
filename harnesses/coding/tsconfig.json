@@ -11,9 +11,9 @@
 		"types": ["bun-types"],
 		"baseUrl": ".",
 		"paths": {
-			"@openharnes/sdk": ["node_modules/@openharnes/sdk/src/index.ts"]
+			"@openharness/sdk": ["node_modules/@openharness/sdk/src/index.ts"]
 		}
 	},
 	"include": ["src/**/*.ts"],
-	"exclude": ["node_modules/@openharnes/sdk/src/agents/monologue.ts"]
+	"exclude": ["node_modules/@openharness/sdk/src/agents/monologue.ts"]
 }

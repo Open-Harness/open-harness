@@ -6,6 +6,8 @@
  */
 
 import { Container } from "@needle-di/core";
+import { AnthropicMonologueLLM } from "../monologue/anthropic-llm.js";
+import { setMonologueContainer } from "../monologue/monologue-decorator.js";
 import { CodingAgent } from "../providers/anthropic/agents/coding-agent.js";
 import { PlannerAgent } from "../providers/anthropic/agents/planner-agent.js";
 import { ReviewAgent } from "../providers/anthropic/agents/review-agent.js";
@@ -22,6 +24,7 @@ import {
 	type IConfig,
 	IConfigToken,
 	IEventBusToken,
+	IMonologueLLMToken,
 	type IRecordingFactory,
 	IRecordingFactoryToken,
 	IReplayRunnerToken,
@@ -132,6 +135,12 @@ export function createContainer(options: ContainerOptions = {}): Container {
 		useFactory: () => new EventBus(),
 	});
 
+	// Monologue LLM (narrative generation)
+	container.bind({
+		provide: IMonologueLLMToken,
+		useClass: AnthropicMonologueLLM,
+	});
+
 	// =========================================================================
 	// Domain Layer (Agents)
 	// =========================================================================
@@ -150,6 +159,7 @@ export function createContainer(options: ContainerOptions = {}): Container {
 	// Wire up decorator container
 	// =========================================================================
 	setDecoratorContainer(container);
+	setMonologueContainer(container);
 
 	return container;
 }
