@@ -7,7 +7,7 @@
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { createAgent, withMonologue } from "@dao/sdk";
+import { createAgent, withMonologue } from "@openharnes/sdk";
 import chalk from "chalk";
 import { loadPromptFile } from "../config/loader.js";
 import { JsonFileDataSource } from "../data-sources/json-file.js";

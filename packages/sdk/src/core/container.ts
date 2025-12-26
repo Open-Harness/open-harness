@@ -6,52 +6,35 @@
  */
 
 import { Container } from "@needle-di/core";
-import { CodingAgent } from "../agents/coding-agent.js";
-import { AgentMonologue } from "../agents/monologue.js";
-import { ReviewAgent } from "../agents/review-agent.js";
-import type { AgentEvent } from "../runner/models.js";
+import { CodingAgent } from "../providers/anthropic/agents/coding-agent.js";
+import { PlannerAgent } from "../providers/anthropic/agents/planner-agent.js";
+import { ReviewAgent } from "../providers/anthropic/agents/review-agent.js";
+import { AnthropicRunner } from "../providers/anthropic/runner/anthropic-runner.js";
 import { Workflow } from "../workflow/orchestrator.js";
 import { setDecoratorContainer } from "./decorators.js";
-import { LiveSDKRunner } from "./live-runner.js";
+import { EventBus } from "./event-bus.js";
 import { RecordingFactory } from "./recording-factory.js";
 import { ReplayRunner } from "./replay-runner.js";
 import {
 	type IAgentRunner,
 	IAgentRunnerToken,
+	IAnthropicRunnerToken,
 	type IConfig,
 	IConfigToken,
-	type IEventBus,
 	IEventBusToken,
 	type IRecordingFactory,
 	IRecordingFactoryToken,
+	IReplayRunnerToken,
 	type IVault,
 	IVaultToken,
+	// Task Harness tokens - uncomment when implementations exist:
+	// IParserAgentToken,
+	// ITaskHarnessToken,
 } from "./tokens.js";
 import { Vault } from "./vault.js";
 
 // Re-export for convenience
 export type { IConfig } from "./tokens.js";
-
-/**
- * Simple EventBus implementation
- */
-class EventBus implements IEventBus {
-	private listeners: Array<(event: AgentEvent) => void | Promise<void>> = [];
-
-	publish(event: AgentEvent): void {
-		for (const listener of this.listeners) {
-			listener(event);
-		}
-	}
-
-	subscribe(listener: (event: AgentEvent) => void | Promise<void>): () => void {
-		this.listeners.push(listener);
-		return () => {
-			const index = this.listeners.indexOf(listener);
-			if (index > -1) this.listeners.splice(index, 1);
-		};
-	}
-}
 
 /**
  * Default configuration
@@ -109,10 +92,26 @@ export function createContainer(options: ContainerOptions = {}): Container {
 		useValue: config,
 	});
 
-	// Agent Runner (mode-dependent)
+	// =========================================================================
+	// Provider-Specific Runner Tokens
+	// =========================================================================
+
+	// Anthropic Runner (production)
+	container.bind({
+		provide: IAnthropicRunnerToken,
+		useClass: AnthropicRunner,
+	});
+
+	// Replay Runner (testing)
+	container.bind({
+		provide: IReplayRunnerToken,
+		useClass: ReplayRunner,
+	});
+
+	// Legacy IAgentRunnerToken (mode-dependent, for backward compatibility)
 	container.bind({
 		provide: IAgentRunnerToken,
-		useClass: mode === "replay" ? ReplayRunner : LiveSDKRunner,
+		useClass: mode === "replay" ? ReplayRunner : AnthropicRunner,
 	});
 
 	// Vault
@@ -139,7 +138,7 @@ export function createContainer(options: ContainerOptions = {}): Container {
 
 	container.bind(CodingAgent);
 	container.bind(ReviewAgent);
-	container.bind(AgentMonologue);
+	container.bind(PlannerAgent);
 
 	// =========================================================================
 	// Application Layer (Workflows)

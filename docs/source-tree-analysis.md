@@ -7,12 +7,12 @@ Annotated directory structure for the Open Harness monorepo.
 ```
 open-harness/
 ├── apps/                     # Application packages
-│   ├── cli/                  # @dao/cli - Workflow runner
+│   ├── cli/                  # @openharnes/cli - Workflow runner
 │   ├── docs/                 # Documentation site (Next.js)
 │   ├── server/               # Backend API (Hono)
 │   └── trading-bot/          # Example trading application
 ├── packages/                 # Library packages
-│   ├── sdk/                  # @dao/sdk - Core SDK
+│   ├── sdk/                  # @openharnes/sdk - Core SDK
 │   └── config/               # Shared TypeScript config
 ├── docs/                     # Generated documentation (this folder)
 ├── _bmad/                    # BMad Method tooling
@@ -131,7 +131,7 @@ apps/cli/
 │
 ├── CLAUDE.md                 # AI assistant rules (Bun)
 ├── README.md                 # CLI documentation
-└── package.json              # Dependencies (imports @dao/sdk)
+└── package.json              # Dependencies (imports @openharnes/sdk)
 ```
 
 ## Trading Bot (apps/trading-bot)
@@ -256,7 +256,7 @@ apps/server/
 ## Integration Points
 
 ```
-@dao/cli ─────imports────> @dao/sdk
+@openharnes/cli ─────imports────> @openharnes/sdk
                               │
                               ├─── createAgent()
                               ├─── withMonologue()
