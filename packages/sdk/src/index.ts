@@ -26,6 +26,8 @@
 export type {
 	AgentConfig,
 	AgentRunParams,
+	BackoffConfig,
+	BackoffContext,
 	Constraints,
 	HarnessConfig,
 	LoadedContext,
@@ -33,8 +35,26 @@ export type {
 	StateDelta,
 	Step,
 	StepYield,
+	TopologicalSortResult,
 } from "./harness/index.js";
-export { Agent, BaseHarness, PersistentState } from "./harness/index.js";
+export {
+	Agent,
+	BaseHarness,
+	calculateDelay,
+	createBackoffContext,
+	DEFAULT_BACKOFF_CONFIG,
+	detectCycles,
+	getReadyTasks,
+	isRateLimitError,
+	PersistentState,
+	resolveDependencies,
+	shouldRetry,
+	sleep,
+	TaskHarness,
+	updateBackoffContext,
+	validateDependencies,
+	withBackoff,
+} from "./harness/index.js";
 
 // ============================================
 // AGENT LAYER (Provider-Agnostic Agents)
@@ -45,11 +65,12 @@ export { type AgentRunOptions, BaseAnthropicAgent } from "./agents/base-anthropi
 
 // Concrete Agents
 export { CodingAgent, type CodingAgentOptions } from "./agents/coding-agent.js";
+export { ParserAgent } from "./agents/parser-agent.js";
 export { PlannerAgent, type PlannerAgentOptions, type PlannerResult, type Ticket } from "./agents/planner-agent.js";
 export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./agents/review-agent.js";
-
 // Core Interface
 export type { AgentDefinition, IAgent, RunnerOptions } from "./agents/types.js";
+export { ValidationReviewAgent, type ValidationReviewAgentOptions } from "./agents/validation-review-agent.js";
 
 // Unified Callbacks (IAgentCallbacks is the primary callback interface)
 export type {
@@ -70,6 +91,11 @@ export type {
 
 // Core Factories
 export { createAgent, resetGlobalContainer, setGlobalContainer } from "./factory/agent-factory.js";
+export {
+	type CreateTaskHarnessOptions,
+	createTaskHarness,
+	createTestTaskHarness,
+} from "./factory/harness-factory.js";
 export { createWorkflow } from "./factory/workflow-builder.js";
 
 // Primitives

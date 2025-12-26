@@ -69,6 +69,71 @@ await agent.run('Build a complex feature', 'session_1');
 
 ---
 
+## 🎯 Task Harness: Execute Tasks.md Through Agents
+
+**TaskHarness** is a step-aware orchestration layer that executes `tasks.md` files through SDK agents with validation and recording.
+
+```typescript
+import { createTaskHarness } from 'bun-vi';
+
+const harness = createTaskHarness({
+  config: {
+    mode: 'live',
+    tasksFilePath: './specs/my-feature/tasks.md',
+    projectRoot: process.cwd(),
+  }
+});
+
+// Execute all tasks with dependency ordering
+const summary = await harness.run({
+  onNarrative: (entry) => console.log(`[${entry.agentName}] ${entry.text}`),
+  onTaskCompleted: (task) => console.log(`Completed: ${task.id}`),
+  onTaskValidated: (task, result) => console.log(`Validated: ${task.id} - ${result.passed ? 'PASS' : 'FAIL'}`),
+});
+
+console.log(`Completed ${summary.validatedTasks}/${summary.totalTasks} tasks`);
+```
+
+### Key Features
+
+- **Dependency-Aware Execution**: Tasks are sorted topologically and executed in correct order
+- **Validation Loop**: Each task is validated by a review agent with retry support
+- **Recording/Replay**: Capture runs for deterministic testing
+- **Checkpoint Resume**: Continue from interrupted runs
+
+### Recording Mode
+
+```typescript
+const harness = createTaskHarness({
+  config: {
+    mode: 'live',
+    recordingsDir: './recordings/harness',
+    includeStateSnapshots: true,
+  }
+});
+
+// Run records to recordings/harness/{sessionId}/
+const summary = await harness.run();
+```
+
+### Resume from Checkpoint
+
+```typescript
+// Resume a previously interrupted run
+const harness = createTaskHarness({
+  config: {
+    mode: 'live',
+    recordingsDir: './recordings/harness',
+    sessionId: 'harness-abc123', // Resume this session
+  }
+});
+
+// Automatically skips already-validated tasks
+await harness.run();
+```
+
+---
+
 ## 📚 Core Concepts
 
 ### 1. Agent - Reusable AI Behavior
@@ -234,21 +299,30 @@ import {
   // Factories
   createAgent,
   createWorkflow,
+  createTaskHarness,
   withMonologue,
-  
+
   // Primitives
   TaskList,
   BaseAgent,
-  
-  // Built-in Agents (examples)
+  TaskHarness,
+
+  // Built-in Agents
   CodingAgent,
   ReviewAgent,
-  
+  ParserAgent,
+  ValidationReviewAgent,
+
+  // Recording/Replay
+  HarnessRecorder,
+  loadHarnessRun,
+  reconstructCheckpoint,
+
   // Types
-  StreamCallbacks,
-  AgentEvent,
-  Task,
-  TaskStatus,
+  IAgentCallbacks,
+  TaskHarnessConfig,
+  ParsedTask,
+  HarnessSummary,
   // ... more
 } from 'bun-vi';
 ```
