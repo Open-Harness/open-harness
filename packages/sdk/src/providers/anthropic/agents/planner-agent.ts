@@ -10,6 +10,7 @@ import { inject, injectable } from "@needle-di/core";
 import { z } from "zod";
 import type { IAgentCallbacks } from "../../../callbacks/types.js";
 import { IAnthropicRunnerToken, IEventBusToken } from "../../../core/tokens.js";
+import { Monologue } from "../../../monologue/monologue-decorator.js";
 import type { JSONSchemaFormat } from "../runner/models.js";
 import { PromptRegistry } from "../runner/prompts.js";
 import { BaseAnthropicAgent } from "./base-anthropic-agent.js";
@@ -95,6 +96,7 @@ export class PlannerAgent extends BaseAnthropicAgent {
 	 * });
 	 * ```
 	 */
+	@Monologue("Parser", { sessionIdProvider: (args) => args[1] as string })
 	async plan(prd: string, sessionId: string, options?: PlannerAgentOptions): Promise<PlannerResult> {
 		const prompt = await PromptRegistry.formatPlanner({ prd });
 		return this.run<PlannerResult>(prompt, sessionId, {

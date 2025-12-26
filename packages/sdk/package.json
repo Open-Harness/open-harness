@@ -34,6 +34,7 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "^0.1.76",
+		"@anthropic-ai/sdk": "^0.52.0",
 		"@needle-di/core": "^1.1.0",
 		"handlebars": "^4.7.8",
 		"reflect-metadata": "^0.2.2",

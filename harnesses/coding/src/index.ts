@@ -15,13 +15,15 @@ import {
 	CodingAgent,
 	type CodingResult,
 	createContainer,
+	EventType,
+	IEventBusToken,
 	PlannerAgent,
 	type PlannerResult,
 	ReviewAgent,
 	type ReviewResult,
 	type StepYield,
 	type Ticket,
-} from "@openharnes/sdk";
+} from "@openharness/sdk";
 
 // ============================================
 // Types
@@ -57,6 +59,7 @@ class CodingWorkflowHarness extends BaseHarness<CodingState, WorkflowInput, Work
 	private planner: PlannerAgent;
 	private coder: CodingAgent;
 	private reviewer: ReviewAgent;
+	private unsubscribeNarrative: (() => void) | null = null;
 
 	constructor(prd: string) {
 		super({
@@ -78,6 +81,18 @@ class CodingWorkflowHarness extends BaseHarness<CodingState, WorkflowInput, Work
 		this.planner = container.get(PlannerAgent);
 		this.coder = container.get(CodingAgent);
 		this.reviewer = container.get(ReviewAgent);
+
+		// Subscribe to narrative events from the Monologue system (T063)
+		const eventBus = container.get(IEventBusToken);
+		this.unsubscribeNarrative = eventBus.subscribe(
+			(event) => {
+				// Display narrative in a visually distinct way
+				const agentIcon =
+					event.agent_name === "Parser" ? "📋" : event.agent_name === "Coder" ? "💻" : "🔍";
+				console.log(`\n${agentIcon} [${event.agent_name}] ${event.content}`);
+			},
+			{ eventTypes: [EventType.MONOLOGUE] },
+		);
 	}
 
 	protected async *execute(): AsyncGenerator<StepYield<WorkflowInput, WorkflowOutput>> {
@@ -184,6 +199,16 @@ class CodingWorkflowHarness extends BaseHarness<CodingState, WorkflowInput, Work
 		const state = this.state.getState();
 		return state.phase === "complete";
 	}
+
+	/**
+	 * Cleanup resources including narrative event subscription.
+	 */
+	cleanup(): void {
+		if (this.unsubscribeNarrative) {
+			this.unsubscribeNarrative();
+			this.unsubscribeNarrative = null;
+		}
+	}
 }
 
 // ============================================
@@ -229,6 +254,8 @@ Build a simple TODO application with the following features:
 		p.cancel("Workflow failed");
 		console.error(error);
 		process.exit(1);
+	} finally {
+		harness.cleanup();
 	}
 }
 

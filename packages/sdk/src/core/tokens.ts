@@ -144,7 +144,25 @@ export type RecordedSession = {
 };
 
 // ============================================================================
-// Monologue System
+// Monologue System (New - 005-monologue-system)
+// ============================================================================
+
+// Re-export tokens from monologue module for discoverability
+export {
+	IMonologueConfigToken,
+	IMonologueLLMToken,
+	IMonologueServiceToken,
+} from "../monologue/tokens.js";
+
+// Re-export types for convenience
+export type {
+	IMonologueLLM,
+	IMonologueService,
+	MonologueConfig,
+} from "../monologue/types.js";
+
+// ============================================================================
+// Monologue System (Legacy - to be deprecated)
 // ============================================================================
 
 import type { IAgentCallbacks } from "../callbacks/types.js";

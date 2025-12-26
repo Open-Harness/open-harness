@@ -134,6 +134,11 @@ export { createContainer, createTestContainer } from "./core/container.js";
 // EventBus
 export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./core/event-bus.js";
 
+// Monologue System
+export { Monologue, setMonologueContainer, type MonologueOptions } from "./monologue/index.js";
+export type { NarrativeEntry, NarrativeAgentName, MonologueConfig } from "./monologue/index.js";
+export { EventType, EventTypeConst } from "./providers/anthropic/runner/models.js";
+
 // Token Interfaces
 export type {
 	IAgentRunner,

@@ -40,6 +40,15 @@ TypeScript 5.x (strict mode): Follow standard conventions
 
 
 <!-- MANUAL ADDITIONS START -->
+
+## CRITICAL: Authentication
+
+**DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.
+
+- Live tests work automatically with subscription auth
+- Just run tests/harnesses directly - no env vars needed
+- The SDK uses Claude Code's built-in authentication
+
 BEHAVIORAL DECORATORS:
 ## Think, Explain, and Give Options
 > Command: `*TEO`

@@ -10,6 +10,7 @@
 import { inject, injectable } from "@needle-di/core";
 import type { IAgentCallbacks } from "../../../callbacks/types.js";
 import { IAnthropicRunnerToken, IEventBusToken } from "../../../core/tokens.js";
+import { Monologue } from "../../../monologue/monologue-decorator.js";
 import { type CodingResult, CodingResultSdkSchema } from "../runner/models.js";
 import { PromptRegistry } from "../runner/prompts.js";
 import { BaseAnthropicAgent } from "./base-anthropic-agent.js";
@@ -49,9 +50,13 @@ export class CodingAgent extends BaseAnthropicAgent {
 	 * });
 	 * ```
 	 */
+	@Monologue("Coder", { sessionIdProvider: (args) => args[1] as string })
 	async execute(task: string, sessionId: string, options?: CodingAgentOptions): Promise<CodingResult> {
 		const prompt = await PromptRegistry.formatCoding({ task });
 		return this.run<CodingResult>(prompt, sessionId, {
+			// CodingAgent needs full permissions for file creation and git commits
+			permissionMode: "bypassPermissions",
+			allowDangerouslySkipPermissions: true,
 			outputFormat: CodingResultSdkSchema,
 			callbacks: options?.callbacks,
 			timeoutMs: options?.timeoutMs,
