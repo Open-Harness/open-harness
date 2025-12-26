@@ -119,25 +119,76 @@ Collect SYNTHESIS summary.
 
 Read `{ANALYSIS_FOLDER}/synthesis.yaml` for validation data.
 
-Apply threshold-based decision logic:
+**IMPORTANT**: Severity takes precedence over score. Critical issues ALWAYS block.
 
-- **If `overall_score >= 70`** (recommendation: proceed):
+### Step 1: Check for Critical Issues (BLOCKING)
+
+**If ANY critical severity issues exist** → BLOCK regardless of score:
+
+1. Display critical issues in structured format:
+   ```
+   CRITICAL ISSUES FOUND - Cannot proceed until resolved
+
+   | ID | Location | Issue | Suggested Fix |
+   |----|----------|-------|---------------|
+   {For each critical issue}
+   ```
+
+2. **USE the AskUserQuestion tool** to present resolution options:
+   - **"Fix now"**: Guide user through fixing critical issues in spec/plan/tasks
+   - **"Show details"**: Display full issue context and recommended changes
+   - **"Exit"**: Exit analysis, user will fix manually and re-run
+
+3. After user fixes critical issues:
+   - Re-run affected analysis agents to verify fixes
+   - Only proceed when critical count = 0
+
+4. **DO NOT** proceed to implementation with ANY critical issues, regardless of overall score.
+
+### Step 2: Check Score Threshold (if no critical issues)
+
+- **If `overall_score >= 70`** AND **medium issues exist**:
+  - Display medium issues summary
+  - **USE the AskUserQuestion tool** to present options:
+    - **"Address medium issues"**: Guide through fixes before proceeding
+    - **"Proceed anyway"**: Continue with warning noted in report
+    - **"Show all issues"**: Display full details before deciding
+
+- **If `overall_score >= 70`** AND **no medium issues**:
   - Log validation passed
   - Continue to Report Assembly
   - Prepare handoff to oharnes.implement
 
-- **If `overall_score 50-69`** (recommendation: fix_required):
-  - Display issues to user in structured format
-  - Ask: "Fix issues now or proceed anyway? (fix/proceed)"
-  - If fix: Suggest manual resolution of issues in spec/plan/tasks
-  - If proceed: Continue with warning, note in report
+- **If `overall_score 50-69`**:
+  - Display all issues to user in structured format
+  - **USE the AskUserQuestion tool** to present options:
+    - **"Fix issues"**: Suggest manual resolution of issues in spec/plan/tasks
+    - **"Proceed with warnings"**: Continue with warning, note in report
+    - **"Exit"**: Exit for manual revision
 
-- **If `overall_score < 50`** (recommendation: block):
-  - Display critical gaps to user
+- **If `overall_score < 50`**:
+  - Display all issues to user
   - ERROR: Do not proceed to implementation
   - List blocking_issues and suggested_fixes
   - Recommend manual spec/plan/tasks revision
   - EXIT without handoff
+
+### Summary: Gate Logic
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Critical Issues > 0?                                       │
+│  └─ YES → BLOCK (always, regardless of score)               │
+│     └─ Present fix options, require resolution              │
+│  └─ NO → Continue to score check                            │
+├─────────────────────────────────────────────────────────────┤
+│  Score >= 70?                                               │
+│  └─ YES + Medium issues → Ask user (fix or proceed)         │
+│  └─ YES + No medium → PROCEED                               │
+│  └─ NO (50-69) → Ask user (fix or proceed with warnings)    │
+│  └─ NO (< 50) → BLOCK                                       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Report Assembly
 
@@ -304,4 +355,5 @@ If no tasks file exists:
 - Validate constitution yourself
 - Add your own analysis beyond what agents provide
 - Skip validation gate
+- **EVER proceed with ANY critical issues** (regardless of score)
 - Proceed with score < 50 without user override

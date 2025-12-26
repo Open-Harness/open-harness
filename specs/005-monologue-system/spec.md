@@ -41,7 +41,7 @@ As a developer building agents, I want to enable narratives with a single decora
 
 1. **Given** an agent class with a method, **When** I add `@Monologue('scope')` decorator, **Then** narrative generation is enabled with zero changes to callers.
 2. **Given** an existing agent without monologue, **When** I want to add narratives, **Then** I add one decorator and one import - nothing else.
-3. **Given** a decorated agent method, **When** it is called multiple times in a loop, **Then** each call generates appropriate narratives without duplicate setup.
+3. **Given** a decorated agent method, **When** it is called multiple times in a loop, **Then** each call generates narratives scoped to that call's events without duplicate setup.
 
 ---
 
@@ -99,7 +99,11 @@ As a user, I want task execution to continue even if narrative generation fails 
 
 **Why this priority**: Narratives are observability, not core functionality. A narrative failure should never stop task execution.
 
-**Independent Test**: Configure a mock LLM that throws errors. Run TaskHarness and verify tasks complete successfully with error logged but no narrative events.
+**Independent Test**: Configure a mock LLM that throws errors. Run TaskHarness and verify:
+1. Tasks complete successfully (all assertions pass)
+2. Error logged at `warn` level with failure reason (not `error` - narratives are non-critical)
+3. No `NarrativeEntry` events emitted to EventBus for the failed invocation
+4. Subsequent narrative generations succeed if LLM recovers
 
 **Acceptance Scenarios**:
 

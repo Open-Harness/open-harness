@@ -29,10 +29,18 @@ Controller (command)
 Controllers stay lightweight. Heavy context loading happens in sub-agents where it can be thrown away after use.
 
 ### 3. Verification Gates
-Every command that produces artifacts should validate them before proceeding. Use scoring thresholds:
-- `>= 70`: proceed
-- `50-69`: fix_required (user choice)
-- `< 50`: block
+Every command that produces artifacts should validate them before proceeding.
+
+**CRITICAL RULE**: Severity takes precedence over score. Critical issues ALWAYS block.
+
+Validation logic (in order):
+1. **Critical issues > 0** → BLOCK (regardless of score)
+   - USE the AskUserQuestion tool to present fix options
+   - Must resolve all critical issues before proceeding
+2. **Score >= 70 + medium issues** → Ask user (fix or proceed)
+3. **Score >= 70 + no medium** → PROCEED
+4. **Score 50-69** → fix_required (user choice via AskUserQuestion)
+5. **Score < 50** → BLOCK
 
 **Exception - oharnes.verify**: Uses stricter post-implementation thresholds:
 - `>= 90`: PASS (ready for merge)
