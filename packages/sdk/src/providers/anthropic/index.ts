@@ -14,19 +14,19 @@
 // ============================================================================
 
 export {
+	type AgentRunOptions,
 	BaseAnthropicAgent,
 	CodingAgent,
+	type CodingAgentOptions,
 	ParserAgent,
 	PlannerAgent,
-	ReviewAgent,
-	ValidationReviewAgent,
-	type AgentRunOptions,
-	type CodingAgentOptions,
 	type PlannerAgentOptions,
 	type PlannerResult,
+	ReviewAgent,
 	type ReviewAgentOptions,
 	type ReviewResult,
 	type Ticket,
+	ValidationReviewAgent,
 	type ValidationReviewAgentOptions,
 } from "./agents/index.js";
 
@@ -48,17 +48,17 @@ export type {
 export { AnthropicRunner, LiveSDKRunner } from "./runner/anthropic-runner.js";
 export { mapSdkMessageToEvents } from "./runner/event-mapper.js";
 export {
-	CodingResultSchema,
-	CodingResultSdkSchema,
-	EventType,
-	EventTypeConst,
-	zodToSdkSchema,
 	type AgentEvent as RunnerAgentEvent,
 	type CodingResult,
+	CodingResultSchema,
+	CodingResultSdkSchema,
 	type CompactData,
+	EventType,
+	EventTypeConst,
 	type JSONSchemaFormat,
 	type SessionResult,
 	type StatusData,
+	zodToSdkSchema,
 } from "./runner/models.js";
 export { PromptRegistry } from "./runner/prompts.js";
 

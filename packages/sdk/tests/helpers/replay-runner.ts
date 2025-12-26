@@ -16,27 +16,27 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Container } from "@needle-di/core";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { Container } from "@needle-di/core";
+import { setDecoratorContainer } from "../../src/core/decorators.js";
+import { EventBus } from "../../src/core/event-bus.js";
+import { RecordingFactory } from "../../src/core/recording-factory.js";
 import {
-	IConfigToken,
+	type IAgentRunner,
 	IAgentRunnerToken,
 	IAnthropicRunnerToken,
-	IReplayRunnerToken,
-	IRecordingFactoryToken,
-	IEventBusToken,
-	IVaultToken,
 	type IConfig,
-	type IAgentRunner,
+	IConfigToken,
+	IEventBusToken,
+	IRecordingFactoryToken,
+	IReplayRunnerToken,
+	IVaultToken,
 	type RunnerCallbacks,
 } from "../../src/core/tokens.js";
-import { RecordingFactory } from "../../src/core/recording-factory.js";
-import { EventBus } from "../../src/core/event-bus.js";
 import { Vault } from "../../src/core/vault.js";
 import { CodingAgent } from "../../src/providers/anthropic/agents/coding-agent.js";
-import { ReviewAgent } from "../../src/providers/anthropic/agents/review-agent.js";
 import { PlannerAgent } from "../../src/providers/anthropic/agents/planner-agent.js";
-import { setDecoratorContainer } from "../../src/core/decorators.js";
+import { ReviewAgent } from "../../src/providers/anthropic/agents/review-agent.js";
 import type { RecordedAgentSession } from "./recording-wrapper.js";
 
 /**
@@ -61,7 +61,7 @@ export class GoldenReplayRunner implements IAgentRunner {
 			const content = await fs.readFile(filePath, "utf-8");
 			this.session = JSON.parse(content) as RecordedAgentSession;
 			console.log(`Replay: Loaded ${this.session.messages.length} messages from ${this.scenarioId}`);
-		} catch (error) {
+		} catch (_error) {
 			throw new Error(`Failed to load recording: ${filePath}`);
 		}
 	}

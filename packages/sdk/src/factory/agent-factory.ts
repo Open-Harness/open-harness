@@ -10,13 +10,13 @@
  */
 
 import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import type { IAgentCallbacks } from "../callbacks/types.js";
+import { createContainer } from "../core/container.js";
+import { type IAgentRunner, IAnthropicRunnerToken, type IEventBus, IEventBusToken } from "../core/tokens.js";
 import { BaseAnthropicAgent } from "../providers/anthropic/agents/base-anthropic-agent.js";
 import { CodingAgent } from "../providers/anthropic/agents/coding-agent.js";
 import { PlannerAgent } from "../providers/anthropic/agents/planner-agent.js";
 import { ReviewAgent } from "../providers/anthropic/agents/review-agent.js";
-import type { IAgentCallbacks } from "../callbacks/types.js";
-import { createContainer } from "../core/container.js";
-import { type IAgentRunner, IAnthropicRunnerToken, type IEventBus, IEventBusToken } from "../core/tokens.js";
 
 // ============================================
 // Types

@@ -7,15 +7,13 @@
  */
 
 // Base Classes
-export { BaseAnthropicAgent, type AgentRunOptions } from "./base-anthropic-agent.js";
+export { type AgentRunOptions, BaseAnthropicAgent } from "./base-anthropic-agent.js";
 
 // Concrete Agents
 export { CodingAgent, type CodingAgentOptions } from "./coding-agent.js";
 export { ParserAgent } from "./parser-agent.js";
 export { PlannerAgent, type PlannerAgentOptions, type PlannerResult, type Ticket } from "./planner-agent.js";
 export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./review-agent.js";
-export { ValidationReviewAgent, type ValidationReviewAgentOptions } from "./validation-review-agent.js";
-
 // Core Types
 export type {
 	AgentDefinition,
@@ -26,3 +24,4 @@ export type {
 	RunnerCallbacks,
 	RunnerOptions,
 } from "./types.js";
+export { ValidationReviewAgent, type ValidationReviewAgentOptions } from "./validation-review-agent.js";

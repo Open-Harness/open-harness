@@ -8,55 +8,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { injectable } from "@needle-di/core";
-import { BaseAnthropicAgent } from "../../src/providers/anthropic/agents/base-anthropic-agent.js";
-import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
+import type { IAgentRunner } from "../../src/core/tokens.js";
 import { type AgentConfig, createAgent } from "../../src/factory/agent-factory.js";
-
-// ============================================================================
-// Mock Runner for Testing
-// ============================================================================
-
-@injectable()
-class MockRunner implements IAgentRunner {
-	public callCount = 0;
-	public lastPrompt = "";
-
-	async run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }): Promise<SDKMessage | undefined> {
-		this.callCount++;
-		this.lastPrompt = args.prompt;
-
-		// Simulate SDK result message
-		const resultMessage = {
-			type: "result",
-			subtype: "success",
-			session_id: "mock_session",
-			duration_ms: 100,
-			duration_api_ms: 80,
-			is_error: false,
-			num_turns: 1,
-			total_cost_usd: 0.001,
-			usage: { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
-			structured_output: {
-				stopReason: "finished",
-				summary: "Mock task completed",
-				handoff: "",
-			},
-			result: "Mock task completed",
-			modelUsage: { input_tokens: 10, output_tokens: 20 },
-			permission_denials: [],
-			uuid: "mock-uuid-123",
-		} as unknown as SDKMessage;
-
-		// Fire callback if provided
-		if (args.callbacks?.onMessage) {
-			args.callbacks.onMessage(resultMessage);
-		}
-
-		return resultMessage;
-	}
-}
+import { BaseAnthropicAgent } from "../../src/providers/anthropic/agents/base-anthropic-agent.js";
 
 // ============================================================================
 // Tests

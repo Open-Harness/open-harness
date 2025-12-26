@@ -11,9 +11,9 @@
 import { describe, expect, test } from "bun:test";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { injectable } from "@needle-di/core";
-import { BaseAnthropicAgent } from "../../src/providers/anthropic/agents/base-anthropic-agent.js";
 import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
 import { createWorkflow } from "../../src/factory/workflow-builder.js";
+import { BaseAnthropicAgent } from "../../src/providers/anthropic/agents/base-anthropic-agent.js";
 
 // ============================================================================
 // Mock Runner for Testing

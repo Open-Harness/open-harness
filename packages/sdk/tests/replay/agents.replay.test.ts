@@ -14,10 +14,7 @@ import { createReplayContainer } from "../helpers/replay-runner.js";
 
 describe("CodingAgent Replay", () => {
 	test("replays add-two-numbers recording", async () => {
-		const { container, replayer } = await createReplayContainer(
-			"golden/coding-agent",
-			"add-two-numbers",
-		);
+		const { container, replayer } = await createReplayContainer("golden/coding-agent", "add-two-numbers");
 		const coder = container.get(CodingAgent);
 
 		// Track events
@@ -40,7 +37,7 @@ describe("CodingAgent Replay", () => {
 		expect(events).toContain("start");
 		expect(events).toContain("complete");
 
-		console.log("[REPLAY] CodingAgent summary:", result.summary.substring(0, 100) + "...");
+		console.log("[REPLAY] CodingAgent summary:", `${result.summary.substring(0, 100)}...`);
 		console.log("[REPLAY] Events captured:", events.length);
 		console.log("[REPLAY] Messages replayed:", replayer.getSession()?.messages.length);
 	});
@@ -48,10 +45,7 @@ describe("CodingAgent Replay", () => {
 
 describe("ReviewAgent Replay", () => {
 	test("replays review-add-function recording", async () => {
-		const { container, replayer } = await createReplayContainer(
-			"golden/review-agent",
-			"review-add-function",
-		);
+		const { container, replayer } = await createReplayContainer("golden/review-agent", "review-add-function");
 		const reviewer = container.get(ReviewAgent);
 
 		// Track events
