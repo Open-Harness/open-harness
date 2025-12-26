@@ -1,6 +1,11 @@
 ---
 name: oharnes.implement
 description: Execute implementation with context isolation and verification gates. Controller does the coding; sub-agents gather context and verify.
+handoffs:
+  - label: Verify Implementation
+    agent: oharnes.verify
+    prompt: Run post-implementation verification to validate implementation matches specification.
+    send: true
 ---
 
 # Implementation Controller
@@ -52,7 +57,9 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Task Execution Loop
 
-For each task in tasks.md (in order):
+For each **incomplete** task in tasks.md (marked `- [ ]`, in order):
+
+> **Note**: Tasks already marked `[X]` are skipped. To re-implement a task, manually change it back to `[ ]`.
 
 ### Step 1: Context Scout
 

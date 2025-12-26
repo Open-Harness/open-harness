@@ -82,7 +82,7 @@ requirement_findings:
     description: "Provide default renderer out-of-box"
     status: compliant
     evidence: "ConsoleRenderer implemented in harness/console-renderer.ts"
-    severity: null
+    # Note: severity omitted for compliant items (only include for drift)
 ```
 
 ## Boundaries

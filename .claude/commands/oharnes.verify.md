@@ -148,6 +148,7 @@ Generate `{FEATURE_DIR}/VERIFICATION.md` with this template:
 | Path Audit | {path_audit.status} | {path_audit.score}/100 | {path_audit.issue_count} |
 | Spec Coverage | {spec_check.status} | {spec_check.score}/100 | {spec_check.issue_count} |
 | Gate Tests | {gate_results.status} | {gate_results.score}/100 | {gate_results.issue_count} |
+| Acceptance | {acceptance_check.status} | {acceptance_check.score}/100 | {acceptance_check.issue_count} |
 
 ---
 

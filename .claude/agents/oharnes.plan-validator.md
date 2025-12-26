@@ -57,7 +57,13 @@ You receive via prompt:
    - Cross-reference: Each user story has scenario?
    - Status: `complete` | `partial` | `missing`
 
-7. **Calculate overall score**
+7. **Validate Verification Gates section in plan.md**
+   - Check: `## Verification Gates` section exists?
+   - Check: At least one gate defined (tests, types, lint)?
+   - If missing: Add issue with severity `high` - "Verification Gates section required for /oharnes.verify"
+   - Status: `complete` | `missing`
+
+8. **Calculate overall score**
 
 ## Output Protocol
 

@@ -79,7 +79,7 @@ Write YAML to `{ANALYSIS_FOLDER}/coverage.yaml`:
 ```yaml
 agent: coverage-mapper
 timestamp: "2025-12-26T12:00:00Z"
-feature_directory: specs/003-harness-renderer
+feature_dir: specs/003-harness-renderer
 summary: "12 requirements, 18 tasks. Coverage: 75%. 3 gaps found."
 
 statistics:

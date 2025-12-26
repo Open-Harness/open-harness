@@ -1,6 +1,11 @@
 ---
 name: oharnes.retro
 description: Run a comprehensive retrospective investigation on the current feature. Coordinates multiple investigation agents to analyze what went wrong and why.
+handoffs:
+  - label: Close Retrospective Cycle
+    agent: oharnes.close
+    prompt: Make decisions on retrospective findings and close the cycle.
+    send: true
 ---
 
 # Retrospective Controller

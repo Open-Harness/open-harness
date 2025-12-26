@@ -65,6 +65,7 @@ statistics:
   missing: 3
   wrong_location: 2
   accuracy_percentage: 67
+  issue_count: 5  # number of findings
 findings:
   - id: PA001
     task_id: T005

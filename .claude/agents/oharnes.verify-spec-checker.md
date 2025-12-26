@@ -71,6 +71,7 @@ statistics:
   missing: 2
   divergent: 0
   compliance_percentage: 67
+  issue_count: 4  # number of findings
 findings:
   - id: SC001
     requirement_id: FR-003
@@ -92,7 +93,7 @@ findings:
     status: implemented
     evidence: "Found in src/harness/task-harness.ts:45 - emitter.emit('harness:start')"
     expected_location: "src/harness/task-harness.ts"
-    severity: null
+    # Note: severity omitted for implemented items (only include for issues)
   - id: SC004
     requirement_id: FR-005
     requirement_text: "Provide default renderer out-of-box"

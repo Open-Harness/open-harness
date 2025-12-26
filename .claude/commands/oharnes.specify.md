@@ -5,9 +5,6 @@ handoffs:
   - label: Build Technical Plan
     agent: oharnes.plan
     prompt: Create a plan for the spec. I am building with...
-  - label: Clarify Spec Requirements
-    agent: speckit.clarify
-    prompt: Clarify specification requirements
     send: true
 ---
 
@@ -137,7 +134,7 @@ Given that feature description, do this:
 
       ## Notes
 
-      - Items marked incomplete require spec updates before `/oharnes.clarify` or `/oharnes.plan`
+      - Items marked incomplete require spec updates before `/oharnes.plan`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
@@ -191,7 +188,7 @@ Given that feature description, do this:
 
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
-7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/oharnes.clarify` or `/oharnes.plan`).
+7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/oharnes.plan`).
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

@@ -88,6 +88,7 @@ statistics:
   checkable_failed: 0
   manual_pending: 3
   acceptance_score: 75
+  issue_count: 1  # number of failed criteria
 
 user_stories:
   - id: US-001
