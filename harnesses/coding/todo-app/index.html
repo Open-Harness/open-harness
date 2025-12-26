@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO Application</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1>My TODO List</h1>
+            <p class="subtitle">Stay organized and productive</p>
+        </header>
+
+        <main class="app-main">
+            <div class="input-section">
+                <input
+                    type="text"
+                    id="todo-input"
+                    class="todo-input"
+                    placeholder="What needs to be done?"
+                    autocomplete="off"
+                >
+                <button id="add-btn" class="add-btn" aria-label="Add todo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="todo-list-container">
+                <div class="list-header">
+                    <span class="todo-count">0 tasks</span>
+                    <button id="clear-completed" class="clear-btn">Clear completed</button>
+                </div>
+                <ul id="todo-list" class="todo-list">
+                    <!-- Todo items will be dynamically inserted here -->
+                </ul>
+                <div class="empty-state" id="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <p>No tasks yet. Add one above to get started!</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <p>Built with HTML, CSS & JavaScript</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
