@@ -17,7 +17,7 @@ You receive via prompt:
 - `SPEC_DIRECTORY`: Path to the feature spec
 - `RETRO_FOLDER`: Path to save output
 - `TEST_COMMAND`: Command to run tests (default: `cd packages/sdk && bun test`)
-- `TIMEOUT`: Max seconds to wait (default: 120)
+- `TIMEOUT`: Max seconds to wait (default: 300)
 
 ## Workflow
 
@@ -92,4 +92,4 @@ failures:
 - Fix any tests
 - Modify any files
 - Run tests multiple times
-- Spend more than 5 minutes on analysis
+
