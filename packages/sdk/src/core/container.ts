@@ -28,12 +28,14 @@ import {
 	type IRecordingFactory,
 	IRecordingFactoryToken,
 	IReplayRunnerToken,
+	IUnifiedEventBusToken,
 	type IVault,
 	IVaultToken,
 	// Task Harness tokens - uncomment when implementations exist:
 	// IParserAgentToken,
 	// ITaskHarnessToken,
 } from "./tokens.js";
+import { UnifiedEventBus } from "./unified-event-bus.js";
 import { Vault } from "./vault.js";
 
 // Re-export for convenience
@@ -129,10 +131,16 @@ export function createContainer(options: ContainerOptions = {}): Container {
 		useClass: RecordingFactory,
 	});
 
-	// Event Bus
+	// Event Bus (Legacy)
 	container.bind({
 		provide: IEventBusToken,
 		useFactory: () => new EventBus(),
+	});
+
+	// Unified Event Bus (008-unified-event-system)
+	container.bind({
+		provide: IUnifiedEventBusToken,
+		useFactory: () => new UnifiedEventBus(),
 	});
 
 	// Monologue LLM (narrative generation)

@@ -426,11 +426,7 @@ describe("US4: Separation of Concerns", () => {
 
 				await phase("processing", async () => {
 					// Retry with backoff
-					await retry(
-						"fetch-data",
-						async () => "data",
-						{ retries: 1, minTimeout: 10, maxTimeout: 50 },
-					);
+					await retry("fetch-data", async () => "data", { retries: 1, minTimeout: 10, maxTimeout: 50 });
 
 					// Parallel processing
 					await parallel("process-items", [async () => "item1", async () => "item2"]);

@@ -1,0 +1,278 @@
+agent: coverage-mapper
+timestamp: "2025-12-27T00:00:00Z"
+feature_dir: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system
+summary: "7 functional requirements, 70 tasks. Coverage: 100%. 0 critical gaps found."
+
+statistics:
+  total_requirements: 7
+  total_tasks: 70
+  covered_requirements: 7
+  coverage_percentage: 100
+  orphaned_requirements: 0
+  orphaned_tasks: 0
+
+coverage_map:
+  - requirement_id: FR-001
+    requirement_text: "System MUST provide a UnifiedEventBus class with AsyncLocalStorage, scoped(), emit(), subscribe(), current()"
+    status: covered
+    task_ids: ["T002", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012"]
+    task_summary: "9 tasks implement core bus infrastructure"
+    evidence:
+      - "T005: Implement UnifiedEventBus class skeleton with AsyncLocalStorage, sessionId generation"
+      - "T006: Implement UnifiedEventBus.scoped() method with AsyncLocalStorage context propagation"
+      - "T007: Implement UnifiedEventBus.current() method to retrieve current context"
+      - "T008: Implement UnifiedEventBus.emit() method with auto-context attachment"
+      - "T009: Implement UnifiedEventBus.subscribe() method with filter matching"
+      - "T010: Implement UnifiedEventBus.clear() method and subscriberCount getter"
+      - "T011: Register UnifiedEventBus in DI container"
+      - "T012: Export UnifiedEventBus and types from packages/sdk/src/index.ts"
+      - "T002: Add IUnifiedEventBusToken to packages/sdk/src/core/tokens.ts"
+
+  - requirement_id: FR-002
+    requirement_text: "System MUST define EnrichedEvent<T> wrapper type with id, timestamp, context, event"
+    status: covered
+    task_ids: ["T008", "T046", "T047", "T049", "T050"]
+    task_summary: "5 tasks implement EnrichedEvent wrapper (User Story 6)"
+    evidence:
+      - "T008: Implement UnifiedEventBus.emit() with EnrichedEvent wrapping"
+      - "T046: Unit test - EnrichedEvent has id, timestamp, context, event"
+      - "T047: Unit test - event.id is valid UUID"
+      - "T049: Implement UUID generation for event IDs"
+      - "T050: Add Zod schema validation for EnrichedEvent"
+
+  - requirement_id: FR-003
+    requirement_text: "System MUST define EventContext type with sessionId, phase?, task?, agent?"
+    status: covered
+    task_ids: ["T001", "T013", "T014", "T015", "T048"]
+    task_summary: "5 tasks implement EventContext types and validation"
+    evidence:
+      - "T001: Create event context types in packages/sdk/src/harness/event-context.ts"
+      - "T013: Unit test - context inheritance in scoped()"
+      - "T014: Unit test - nested scopes merge context correctly"
+      - "T015: Unit test - emit() auto-attaches context from AsyncLocalStorage"
+      - "T048: Unit test - context override merges with inherited (override wins)"
+
+  - requirement_id: FR-004
+    requirement_text: "System MUST define BaseEvent union type including workflow, agent, narrative, session events"
+    status: covered
+    task_ids: ["T001", "T026", "T027", "T029", "T031"]
+    task_summary: "5 tasks define and validate BaseEvent union types"
+    evidence:
+      - "T001: Create event context types (includes BaseEvent union from contracts)"
+      - "T026: Unit test - subscribe('*') receives all event types"
+      - "T027: Unit test - subscribe with type filter works (task:*, agent:*)"
+      - "T029: Integration test - single subscription receives all event types (SC-005)"
+      - "T031: Add type guard utilities to filter events by category"
+
+  - requirement_id: FR-005
+    requirement_text: "System MUST provide defineRenderer<TState>(def): IUnifiedRenderer factory with typed context"
+    status: covered
+    task_ids: ["T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039", "T040"]
+    task_summary: "9 tasks implement defineRenderer() API (User Story 4)"
+    evidence:
+      - "T032: Unit test - defineRenderer() creates valid IUnifiedRenderer"
+      - "T033: Unit test - renderer state factory called fresh on attach()"
+      - "T034: Unit test - event handlers receive typed RenderContext"
+      - "T035: Unit test - onStart/onComplete lifecycle hooks called"
+      - "T036: Type test - TypeScript inference works with defineRenderer (SC-003)"
+      - "T037: Implement RenderOutput helper class"
+      - "T038: Implement defineRenderer() factory function"
+      - "T039: Implement UnifiedRenderer class that attaches to bus"
+      - "T040: Export defineRenderer from packages/sdk/src/index.ts"
+
+  - requirement_id: FR-006
+    requirement_text: "System MUST integrate with existing harness infrastructure (phase/task helpers, agent DI)"
+    status: covered
+    task_ids: ["T017", "T018", "T019", "T020", "T021"]
+    task_summary: "5 tasks integrate with harness and agents (User Story 1)"
+    evidence:
+      - "T017: Update HarnessInstance.phase() to use UnifiedEventBus.scoped() for phase context"
+      - "T018: Update HarnessInstance.task() to use UnifiedEventBus.scoped() for task context"
+      - "T019: Inject UnifiedEventBus into BaseAnthropicAgent"
+      - "T020: Update agent event emission to use UnifiedEventBus.emit()"
+      - "T021: Create event-mapper.ts to map SDK AgentEvents to unified format"
+
+  - requirement_id: FR-007
+    requirement_text: "System MUST maintain backward compatibility (harness.on() patterns, no breaking changes)"
+    status: covered
+    task_ids: ["T041", "T042", "T043", "T044", "T045"]
+    task_summary: "5 tasks ensure backward compatibility (User Story 5)"
+    evidence:
+      - "T041: Verify existing harness.on() tests pass unchanged (SC-004)"
+      - "T042: Integration test - legacy .on() and new bus.subscribe() coexist"
+      - "T043: Update HarnessInstance.on() to delegate to UnifiedEventBus.subscribe()"
+      - "T044: Create legacy event adapter to map unified events back to legacy format"
+      - "T045: Verify legacy HarnessEvent types still exported"
+
+findings:
+  - id: C001
+    type: comprehensive_coverage
+    description: "All 7 functional requirements have implementing tasks with explicit traceability"
+    severity: info
+    impact: "Feature implementation is well-planned and complete"
+
+  - id: C002
+    type: user_story_alignment
+    description: "All 7 user stories map to dedicated task phases with independent tests"
+    severity: info
+    impact: "User stories can be independently implemented and verified"
+    details:
+      - "US1 (Context Propagation): Phase 3, Tasks T013-T021"
+      - "US2 (Parallel Safety): Phase 4, Tasks T022-T025"
+      - "US3 (Subscription API): Phase 5, Tasks T026-T031"
+      - "US4 (Renderer API): Phase 6, Tasks T032-T040"
+      - "US5 (Backward Compat): Phase 7, Tasks T041-T045"
+      - "US6 (EnrichedEvent): Phase 8, Tasks T046-T050"
+      - "US7 (Scoped Helper): Phase 9, Tasks T051-T055"
+
+  - id: C003
+    type: success_criteria_mapping
+    description: "All 7 success criteria have dedicated verification tasks"
+    severity: info
+    impact: "Feature completion is measurable and verifiable"
+    details:
+      - "SC-001: T016 (agent events include task context)"
+      - "SC-002: T023 (parallel execution correctness)"
+      - "SC-003: T036 (type inference works)"
+      - "SC-004: T041 (backward compatibility verified)"
+      - "SC-005: T029 (single subscription receives all events)"
+      - "SC-006: T063 (>=90% line coverage)"
+      - "SC-007: T064 (console renderer shows agent+task context)"
+
+  - id: C004
+    type: edge_case_coverage
+    description: "All 5 edge cases from spec have dedicated test tasks"
+    severity: info
+    impact: "Robust error handling and boundary conditions covered"
+    details:
+      - "Empty context: T056"
+      - "Listener throws: T057"
+      - "Emit after clear: T058"
+      - "Invalid filter: T059"
+      - "AsyncLocalStorage unavailable: T060"
+
+  - id: C005
+    type: task_organization
+    description: "Tasks organized by user story enable independent implementation"
+    severity: info
+    impact: "Team can parallelize work across user stories after foundational phase"
+    details:
+      - "Phase 2 (Foundational) BLOCKS all user stories - must complete first"
+      - "User Stories 3, 6, 7 can run in parallel with US1"
+      - "US4 depends on US3, US5 depends on US1+US3"
+      - "Clear [P] markers indicate parallel opportunities within phases"
+
+  - id: C006
+    type: test_first_approach
+    description: "Each user story has unit tests before implementation tasks"
+    severity: info
+    impact: "TDD approach ensures requirements are testable before implementation"
+    details:
+      - "US1: T013-T015 (tests) before T017-T021 (implementation)"
+      - "US2: T022-T023 (tests) before T024-T025 (implementation)"
+      - "US4: T032-T036 (tests) before T037-T040 (implementation)"
+      - "Edge cases: T056-T060 (tests) before T061-T062 (implementation)"
+
+  - id: C007
+    type: no_orphaned_tasks
+    description: "All 70 tasks trace to either functional requirements or user stories"
+    severity: info
+    impact: "No scope creep detected, all work is requirement-driven"
+    task_breakdown:
+      setup: "T001-T003 (3 tasks): Project structure for FR-001, FR-003, FR-004"
+      foundational: "T004-T012 (9 tasks): Core FR-001 implementation"
+      us1: "T013-T021 (9 tasks): FR-003, FR-006 automatic context propagation"
+      us2: "T022-T025 (4 tasks): FR-001 parallel safety validation"
+      us3: "T026-T031 (6 tasks): FR-004 unified subscription API"
+      us4: "T032-T040 (9 tasks): FR-005 declarative renderer API"
+      us5: "T041-T045 (5 tasks): FR-007 backward compatibility"
+      us6: "T046-T050 (5 tasks): FR-002 EnrichedEvent wrapper"
+      us7: "T051-T055 (5 tasks): FR-001 scoped context helper"
+      edge_cases: "T056-T062 (7 tasks): Edge case requirements from spec"
+      integration: "T063-T066 (4 tasks): Success criteria validation"
+      polish: "T067-T070 (4 tasks): Code quality and documentation"
+
+  - id: C008
+    type: constitution_alignment
+    description: "Plan includes Constitution Check gate before Phase 0"
+    severity: info
+    impact: "Project follows dao-spec-kit type safety and testing standards"
+    details:
+      - "Type Safety First: strict mode, Zod schemas, discriminated unions"
+      - "Verified by Reality: unit tests, golden recordings, integration tests"
+      - "DI Discipline: @injectable pattern, composition root binding"
+      - "Tool Patterns: bun test scripts, coverage requirements"
+
+  - id: C009
+    type: verification_gates
+    description: "Plan defines clear verification gates at multiple levels"
+    severity: info
+    impact: "Quality gates prevent regressions at pre-commit, task, and feature levels"
+    details:
+      - "Pre-Commit: test, typecheck, lint on every commit"
+      - "Task Completion: file paths match, task marked [X], pattern compliance"
+      - "Feature Completion: all tasks done, critical paths exist, SC-006 coverage >=90%"
+
+  - id: C010
+    type: incremental_delivery_strategy
+    description: "Plan includes MVP-first approach with validation checkpoints"
+    severity: info
+    impact: "Feature can be deployed incrementally with early validation"
+    details:
+      - "MVP: Setup + Foundational + US1 + US3 + US5 (core unified system + backward compat)"
+      - "Each user story has STOP and VALIDATE checkpoint"
+      - "Success criteria validated progressively (SC-001, SC-002, SC-005, etc.)"
+
+quality_metrics:
+  requirement_coverage: 100
+  user_story_coverage: 100
+  success_criteria_coverage: 100
+  edge_case_coverage: 100
+  test_task_ratio: 0.47  # 33 test tasks out of 70 total
+  parallel_tasks: 21  # Tasks marked [P] for parallel execution
+
+recommendations:
+  - type: proceed
+    description: "Requirements coverage is comprehensive with no gaps detected"
+    rationale: "All FR, US, SC, and edge cases have explicit implementing and verification tasks"
+
+  - type: maintain_discipline
+    description: "Enforce Phase 2 completion before any user story work"
+    rationale: "Plan explicitly marks Phase 2 as CRITICAL blocker - AsyncLocalStorage infrastructure must work before context propagation"
+
+  - type: leverage_parallelism
+    description: "After Phase 2, US3, US6, US7 can run in parallel with US1 implementation"
+    rationale: "Tasks marked [P] within each phase enable concurrent work by multiple developers"
+
+  - type: validate_incrementally
+    description: "Stop at each user story checkpoint to validate independently"
+    rationale: "Independent test requirements enable early feedback on each feature component"
+
+  - type: monitor_coverage_gate
+    description: "SC-006 requires >=90% line coverage for unified-event-bus.ts - verify at T063"
+    rationale: "High coverage threshold ensures core bus logic is thoroughly tested before integration"
+
+anti_patterns_addressed:
+  - pattern: context_jealousy
+    description: "UnifiedEventBus uses AsyncLocalStorage to avoid explicit context passing"
+    evidence: "FR-001(b) scoped() wraps work with context that survives async boundaries"
+
+  - pattern: parallel_context_isolation
+    description: "AsyncLocalStorage provides automatic isolation for Promise.all branches"
+    evidence: "US2 dedicated to testing parallel execution safety (T022-T025)"
+
+  - pattern: backward_compatibility
+    description: "Existing harness.on() delegated to unified bus, no breaking changes"
+    evidence: "US5 ensures legacy patterns work (FR-007, T041-T045)"
+
+  - pattern: test_first_development
+    description: "Unit tests precede implementation tasks in each user story"
+    evidence: "T013-T015 before T017-T021, T032-T036 before T037-T040, etc."
+
+cross_references:
+  spec_file: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/spec.md
+  plan_file: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/plan.md
+  tasks_file: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/tasks.md
+  constitution_check: "plan.md lines 24-64 (Constitution Check section)"
+  verification_gates: "plan.md lines 145-190 (Verification Gates section)"
+  success_criteria: "spec.md lines 214-246 (Success Criteria section)"

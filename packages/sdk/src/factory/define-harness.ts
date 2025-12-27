@@ -11,6 +11,7 @@
  */
 
 import { createContainer } from "../core/container.js";
+import type { IUnifiedEventBus } from "../core/unified-events/types.js";
 import type {
 	FluentEventHandler,
 	FluentHarnessEvent,
@@ -87,8 +88,8 @@ export interface ExecuteContext<TAgents extends Record<string, AgentConstructor<
  * Supports both run: (simple) and execute: (generator) patterns.
  * These are mutually exclusive.
  */
-// biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
 export interface HarnessConfig<
+	// biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
 	TAgents extends Record<string, AgentConstructor<any>>,
 	TState = Record<string, never>,
 	TInput = void,
@@ -114,12 +115,20 @@ export interface HarnessConfig<
 }
 
 /**
+ * Options for harness instance creation.
+ */
+export interface CreateOptions {
+	/** Optional unified event bus for context propagation (008-unified-event-system) */
+	unifiedBus?: IUnifiedEventBus;
+}
+
+/**
  * Factory returned by defineHarness().
  * Call create() to get a runnable instance.
  */
 export interface HarnessFactory<TState, TInput, TResult> {
 	/** Create a new harness instance with the given input */
-	create: (input: TInput) => HarnessInstance<TState, TResult>;
+	create: (input: TInput, options?: CreateOptions) => HarnessInstance<TState, TResult>;
 }
 
 /**
@@ -197,8 +206,8 @@ export interface HarnessResult<TState, TResult> {
  *   .run();
  * ```
  */
-// biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
 export function defineHarness<
+	// biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
 	TAgents extends Record<string, AgentConstructor<any>>,
 	TState = Record<string, never>,
 	TInput = void,
@@ -237,7 +246,7 @@ export function defineHarness<
 
 	// Return factory with create() method
 	return {
-		create(input: TInput): HarnessInstance<TState, TResult> {
+		create(input: TInput, options?: CreateOptions): HarnessInstance<TState, TResult> {
 			// Run state factory (once per create() call) - invariant: "State is created once"
 			const stateFactory = config.state ?? (() => ({}) as TState);
 			const initialState = stateFactory(input);
@@ -254,10 +263,9 @@ export function defineHarness<
 				name: harnessName,
 				agents: resolvedAgents,
 				state: initialState,
-				run: config.run as
-					| ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>)
-					| undefined,
+				run: config.run as ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined,
 				input,
+				unifiedBus: options?.unifiedBus,
 			}) as unknown as HarnessInstance<TState, TResult>;
 		},
 	};

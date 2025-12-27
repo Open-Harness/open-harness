@@ -37,8 +37,15 @@ import type {
 	IAgentCallbacks,
 	TokenUsage,
 } from "../../../callbacks/types.js";
-import { type IAgentRunner, IAgentRunnerToken, type IEventBus, IEventBusToken } from "../../../core/tokens.js";
-import { mapSdkMessageToEvents } from "../runner/event-mapper.js";
+import {
+	type IAgentRunner,
+	IAgentRunnerToken,
+	type IEventBus,
+	IEventBusToken,
+	IUnifiedEventBusToken,
+} from "../../../core/tokens.js";
+import type { IUnifiedEventBus } from "../../../core/unified-events/types.js";
+import { mapSdkMessageToEvents, mapSdkMessageToUnifiedEvents } from "../runner/event-mapper.js";
 import { type AgentEvent, EventTypeConst } from "../runner/models.js";
 
 /**
@@ -73,6 +80,7 @@ export class BaseAnthropicAgent {
 		public readonly name: string,
 		protected runner: IAgentRunner = inject(IAgentRunnerToken),
 		protected eventBus: IEventBus | null = inject(IEventBusToken, { optional: true }) ?? null,
+		protected unifiedBus: IUnifiedEventBus | null = inject(IUnifiedEventBusToken, { optional: true }) ?? null,
 	) {}
 
 	/**
@@ -137,15 +145,28 @@ export class BaseAnthropicAgent {
 	 * Handle a message from the runner, mapping to callbacks and EventBus.
 	 */
 	private handleMessage<TOutput>(msg: SDKMessage, sessionId: string, callbacks?: IAgentCallbacks<TOutput>): void {
-		// Map SDK message to AgentEvents
+		// Map SDK message to AgentEvents (legacy)
 		const events = mapSdkMessageToEvents(msg, this.name, sessionId);
 
 		for (const event of events) {
-			// Publish to EventBus
+			// Publish to legacy EventBus
 			this.publishToEventBus(event);
 
 			// Fire appropriate callback
 			this.fireCallback(event, msg, callbacks);
+		}
+
+		// Also emit to unified bus if available (T020)
+		if (this.unifiedBus) {
+			const unifiedEvents = mapSdkMessageToUnifiedEvents(msg, this.name);
+			for (const event of unifiedEvents) {
+				try {
+					// Emit with agent context override
+					this.unifiedBus.emit(event, { agent: { name: this.name } });
+				} catch {
+					// Silently ignore unified bus errors
+				}
+			}
 		}
 	}
 
