@@ -582,3 +582,122 @@ describe("SDK Exports", () => {
 		expect(true).toBe(true);
 	});
 });
+
+// ============================================================================
+// BACKWARD COMPATIBILITY TESTS (T034 - US7)
+// ============================================================================
+
+describe("Backward Compatibility - US7", () => {
+	test("SDK exports both legacy and fluent APIs (SC-007)", async () => {
+		const sdk = await import("../../src/index.js");
+
+		// Legacy API exports
+		expect(sdk.BaseHarness).toBeDefined();
+		expect(sdk.Agent).toBeDefined();
+		expect(sdk.PersistentState).toBeDefined();
+		expect(sdk.createContainer).toBeDefined();
+
+		// Fluent API exports
+		expect(sdk.defineHarness).toBeDefined();
+		expect(sdk.wrapAgent).toBeDefined();
+		expect(sdk.HarnessInstance).toBeDefined();
+	});
+
+	test("legacy BaseHarness pattern works alongside new API", async () => {
+		// Import both APIs together - this is the key coexistence test
+		const {
+			// Legacy imports
+			BaseHarness,
+			Agent,
+			PersistentState,
+			createContainer,
+			// Fluent imports
+			defineHarness,
+			wrapAgent,
+		} = await import("../../src/index.js");
+
+		// Verify legacy pattern compiles and works
+		class LegacyHarness extends BaseHarness<{ count: number }, string, string> {
+			async *execute() {
+				yield { input: "legacy", output: "works" };
+			}
+		}
+
+		const legacyHarness = new LegacyHarness({ initialState: { count: 0 } });
+		await legacyHarness.run();
+		expect(legacyHarness.getStepHistory().length).toBe(1);
+		expect(legacyHarness.getStepHistory()[0]?.output).toBe("works");
+
+		// Verify fluent pattern compiles and works
+		const { injectable } = await import("@needle-di/core");
+
+		@injectable()
+		class TestAgent {
+			execute(input: string): string {
+				return `fluent-${input}`;
+			}
+		}
+
+		const fluentResult = wrapAgent(TestAgent).run("works");
+		expect(fluentResult).toBe("fluent-works");
+
+		// Both patterns executed successfully in same test
+		expect(legacyHarness.getCurrentStep()).toBe(1);
+		expect(fluentResult).toBeDefined();
+	});
+
+	test("createContainer() still functions correctly", async () => {
+		const { createContainer } = await import("../../src/index.js");
+		const { injectable } = await import("@needle-di/core");
+
+		// This is the pattern users have in existing code
+		const container = createContainer({ mode: "live" });
+
+		@injectable()
+		class TestService {
+			getValue(): string {
+				return "container-works";
+			}
+		}
+
+		// User pattern: container.bind() then container.get()
+		container.bind(TestService);
+		const service = container.get(TestService);
+		expect(service.getValue()).toBe("container-works");
+	});
+
+	test("both APIs can share same agent classes", async () => {
+		const { BaseHarness, defineHarness, wrapAgent } = await import("../../src/index.js");
+		const { injectable } = await import("@needle-di/core");
+
+		// Shared agent class that works with both patterns
+		@injectable()
+		class SharedAgent {
+			process(input: string): string {
+				return `processed-${input}`;
+			}
+
+			execute(input: string): string {
+				return this.process(input);
+			}
+		}
+
+		// Use with fluent API
+		const fluentResult = wrapAgent(SharedAgent).run("fluent");
+		expect(fluentResult).toBe("processed-fluent");
+
+		// Use with legacy API (manual instantiation for simplicity)
+		class LegacyWithSharedAgent extends BaseHarness<Record<string, never>, string, string> {
+			private agent = new SharedAgent();
+
+			async *execute() {
+				const result = this.agent.process("legacy");
+				yield { input: "test", output: result };
+			}
+		}
+
+		const legacyHarness = new LegacyWithSharedAgent({ initialState: {} });
+		await legacyHarness.run();
+		expect(legacyHarness.getStepHistory()[0]?.output).toBe("processed-legacy");
+	});
+});
