@@ -729,3 +729,404 @@ harness.on('phase', (e) => console.log(`=== ${e.name}: ${e.status} ===`));
 harness.on('narrative', (e) => console.log(`[${e.agent}] ${e.text}`));
 await harness.run();  // Auto-cleanup on completion
 ```
+
+---
+
+## Ultimate Test: Full Coding Workflow
+
+This is the north star - what the complete DX looks like with all features implemented. This example serves as the regression test for the entire feature.
+
+### Complete Implementation (~60 lines of business logic)
+
+```typescript
+// harnesses/coding/src/index.ts
+//
+// A complete coding workflow. No DI exposure, no manual subscriptions, no mixed concerns.
+
+import { defineHarness, ParserAgent, CodingAgent, ReviewAgent } from '@openharness/sdk';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 1: Define the harness (pure configuration)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CodingWorkflow = defineHarness({
+  name: 'coding-workflow',
+  mode: 'live',  // or 'replay' for testing
+
+  // Agents are declared, not manually resolved
+  agents: {
+    parser: ParserAgent,
+    coder: CodingAgent,
+    reviewer: ReviewAgent,
+  },
+
+  // State factory - creates fresh state per run
+  state: (input: { tasksPath: string }) => ({
+    phase: 'parsing' as const,
+    tasksPath: input.tasksPath,
+    tasks: [] as ParsedTask[],
+    currentTask: null as ParsedTask | null,
+    results: [] as TaskResult[],
+  }),
+
+  // Pure business logic - no console.log, no subscriptions
+  async *execute({ agents, state, updateState, emit }) {
+
+    // ───── Phase 1: Parse Tasks ─────
+    emit('phase', { name: 'Parsing', status: 'start' });
+
+    const parsed = await agents.parser.parseFile(state.tasksPath);
+    updateState(s => ({ ...s, tasks: parsed.tasks, phase: 'executing' }));
+
+    emit('phase', { name: 'Parsing', status: 'complete', data: { count: parsed.tasks.length } });
+    yield { step: 'parse', input: state.tasksPath, output: parsed };
+
+    // ───── Phase 2: Execute Each Task ─────
+    emit('phase', { name: 'Execution', status: 'start' });
+
+    for (const task of state.tasks) {
+      if (task.status === 'complete') continue;
+
+      updateState(s => ({ ...s, currentTask: task }));
+      emit('task', { id: task.id, status: 'start', description: task.description });
+
+      // Coder works on the task (narratives flow automatically via @Monologue)
+      const result = await agents.coder.execute(task.description, `task-${task.id}`);
+      yield { step: 'code', input: task, output: result };
+
+      // Reviewer validates (narratives flow automatically)
+      const review = await agents.reviewer.review(
+        task.description,
+        result.summary,
+        `review-${task.id}`
+      );
+
+      const taskResult = { task, result, review, passed: review.passed };
+      updateState(s => ({ ...s, results: [...s.results, taskResult] }));
+
+      emit('task', {
+        id: task.id,
+        status: review.passed ? 'complete' : 'failed',
+        validation: review.passed
+      });
+
+      yield { step: 'review', input: result, output: review };
+    }
+
+    emit('phase', { name: 'Execution', status: 'complete' });
+
+    // ───── Phase 3: Summary ─────
+    const passed = state.results.filter(r => r.passed).length;
+    const failed = state.results.filter(r => !r.passed).length;
+
+    emit('summary', { total: state.tasks.length, passed, failed });
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 2: Create instance and attach rendering (completely separate)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const harness = CodingWorkflow.create({
+  tasksPath: './specs/my-feature/tasks.md'
+});
+
+// Rendering is external - attach whatever UI you want
+harness
+  .on('phase', (e) => {
+    if (e.status === 'start') console.log(`\n${'═'.repeat(50)}`);
+    console.log(`  ${e.status === 'start' ? '▶' : '✓'} ${e.name}`);
+    if (e.status === 'complete' && e.data) console.log(`    ${JSON.stringify(e.data)}`);
+  })
+  .on('task', (e) => {
+    const icon = e.status === 'start' ? '○' : e.status === 'complete' ? '●' : '✗';
+    console.log(`  ${icon} [${e.id}] ${e.description?.slice(0, 50) ?? e.status}`);
+  })
+  .on('narrative', (e) => {
+    // These come from @Monologue on agents - first-person LLM summaries
+    console.log(`    💭 [${e.agent}] ${e.text}`);
+  })
+  .on('summary', (e) => {
+    console.log(`\n${'═'.repeat(50)}`);
+    console.log(`  Summary: ${e.passed}/${e.total} passed, ${e.failed} failed`);
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 3: Run (auto-cleanup on completion)
+// ─────────────────────────────────────────────────────────────────────────────
+
+await harness.run();
+
+// No cleanup needed - subscriptions auto-removed
+// No try/finally - harness handles errors gracefully
+```
+
+### Expected Terminal Output
+
+```
+══════════════════════════════════════════════════
+  ▶ Parsing
+    💭 [Parser] I'm reading the tasks file to understand the work ahead...
+    💭 [Parser] Found 5 tasks across 2 phases, with clear dependencies.
+  ✓ Parsing
+    {"count":5}
+
+══════════════════════════════════════════════════
+  ▶ Execution
+  ○ [T001] Create user authentication module
+    💭 [Coder] Starting with the auth module. I'll set up JWT tokens first...
+    💭 [Coder] Writing the login endpoint with password hashing...
+    💭 [Coder] Added refresh token logic for session management.
+    💭 [Reviewer] Checking the implementation against requirements...
+    💭 [Reviewer] Auth flow looks solid. Token expiry is correctly handled.
+  ● [T001] Create user authentication module
+
+  ○ [T002] Add password reset flow
+    💭 [Coder] Now implementing password reset with email verification...
+    💭 [Coder] Created secure token generation with 1-hour expiry.
+    💭 [Reviewer] Validating the reset flow...
+    💭 [Reviewer] Implementation matches spec. Security considerations addressed.
+  ● [T002] Add password reset flow
+  ✓ Execution
+
+══════════════════════════════════════════════════
+  Summary: 5/5 passed, 0 failed
+```
+
+### Testing Version (Same Harness, Different Mode)
+
+```typescript
+// Same workflow definition, replay mode for deterministic tests
+const testHarness = CodingWorkflow.create({
+  tasksPath: './fixtures/sample-tasks.md'
+});
+
+// Collect events instead of logging
+const events: HarnessEvent[] = [];
+testHarness.on('*', (e) => events.push(e));  // Wildcard subscription
+
+await testHarness.run();
+
+// Assert on structured events, not console output
+expect(events.filter(e => e.type === 'task')).toHaveLength(5);
+expect(events.find(e => e.type === 'summary')?.data.passed).toBe(5);
+```
+
+### DX Comparison Table
+
+| Aspect | Before (Current) | After (Target) |
+|--------|------------------|----------------|
+| **Lines of code** | ~150 | ~60 |
+| **DI exposure** | `createContainer()`, `container.get()` | None |
+| **Event handling** | Manual subscribe/unsubscribe | `.on()` with auto-cleanup |
+| **Logging location** | Mixed in execute() | Separate handlers |
+| **Narrative source** | Manual `emitNarrative()` | Automatic via `@Monologue` |
+| **Error handling** | try/finally cleanup | Built into `run()` |
+| **Type safety** | Loose | Full inference on agents |
+| **Testability** | Mock container setup | `mode: 'replay'` one-liner |
+
+---
+
+## DX Exploration: Open Questions
+
+The current design is a strong starting point, but there are several areas worth exploring to make the DX even simpler:
+
+### Question 1: Is async generator the right abstraction?
+
+**Current approach**: `async *execute()` with `yield` for step recording.
+
+```typescript
+async *execute({ agents, state, emit }) {
+  const result = await agents.parser.parseFile(state.tasksPath);
+  yield { step: 'parse', input: state.tasksPath, output: result };  // <-- Is this needed?
+  // ...
+}
+```
+
+**Concerns**:
+- Generators add cognitive overhead
+- `yield` is awkward if you just want to run logic
+- What if you don't care about step recording?
+
+**Alternatives to explore**:
+```typescript
+// Option A: Plain async function (simpler, no yields)
+async execute({ agents, state, emit }) {
+  const result = await agents.parser.parseFile(state.tasksPath);
+  emit('step', { name: 'parse', input: state.tasksPath, output: result });
+}
+
+// Option B: Step helper that handles both
+async execute({ agents, state, step }) {
+  const result = await step('parse', () => agents.parser.parseFile(state.tasksPath));
+  // step() auto-emits start/complete events and captures input/output
+}
+
+// Option C: Declarative phases (no imperative code at all?)
+phases: [
+  { name: 'parse', agent: 'parser', method: 'parseFile', input: (s) => s.tasksPath },
+  { name: 'execute', forEach: (s) => s.tasks, agent: 'coder', method: 'execute' },
+]
+```
+
+### Question 2: Is `emit()` the best pattern for events?
+
+**Current approach**: Manual emit calls scattered through execute().
+
+```typescript
+emit('phase', { name: 'Parsing', status: 'start' });
+// ... work ...
+emit('phase', { name: 'Parsing', status: 'complete' });
+```
+
+**Concerns**:
+- Boilerplate: emit start, do work, emit complete
+- Easy to forget the "complete" emit
+- Event names are stringly-typed
+
+**Alternatives to explore**:
+```typescript
+// Option A: Phase helper with auto start/complete
+await phase('Parsing', async () => {
+  return agents.parser.parseFile(state.tasksPath);
+});
+// Auto-emits phase:start before, phase:complete after (with result)
+
+// Option B: Decorative approach
+@phase('Parsing')
+async parsePhase() {
+  return this.agents.parser.parseFile(this.state.tasksPath);
+}
+
+// Option C: Return-based events (no emit at all)
+async *execute({ agents, state }) {
+  yield { phase: 'Parsing' };  // Start
+  const result = await agents.parser.parseFile(state.tasksPath);
+  yield { phase: 'Parsing', complete: true, data: result };  // Complete
+}
+```
+
+### Question 3: Can we simplify state management?
+
+**Current approach**: `updateState()` with immutable updates.
+
+```typescript
+updateState(s => ({ ...s, tasks: parsed.tasks, phase: 'executing' }));
+```
+
+**Concerns**:
+- Verbose for simple updates
+- Immutable spread is error-prone
+- Do we even need explicit state management?
+
+**Alternatives to explore**:
+```typescript
+// Option A: Mutable state (simpler, but less safe)
+state.tasks = parsed.tasks;
+state.phase = 'executing';
+
+// Option B: Immer-style produce
+updateState(draft => {
+  draft.tasks = parsed.tasks;
+  draft.phase = 'executing';
+});
+
+// Option C: Derive state from events (event-sourcing)
+// State is computed from event stream, not manually tracked
+```
+
+### Question 4: What's the minimal viable harness?
+
+**Current**: Even simple harnesses require state factory, execute generator, etc.
+
+**Goal**: What's the absolute simplest harness you could write?
+
+```typescript
+// Dream: One-liner for simple cases?
+const SimpleWorkflow = defineHarness({
+  agents: { coder: CodingAgent },
+  run: async ({ coder }, input: string) => coder.execute(input),
+});
+
+// Or even simpler for single-agent cases?
+const SimpleWorkflow = wrapAgent(CodingAgent);
+await SimpleWorkflow.run('Write a hello world function');
+```
+
+### Question 5: How should complex control flow work?
+
+**Current**: All logic in one execute function.
+
+**Concern**: What about retries, parallel execution, conditional branches?
+
+```typescript
+// Retry logic - where does it go?
+// Parallel task execution - how to express?
+// Conditional phases - how to skip cleanly?
+
+// Option A: Built-in helpers
+async *execute({ agents, state, retry, parallel }) {
+  const result = await retry(3, () => agents.coder.execute(task));
+  const reviews = await parallel(tasks.map(t => agents.reviewer.review(t)));
+}
+
+// Option B: Separate from harness entirely
+const result = await withRetry(3, () => agents.coder.execute(task));
+```
+
+---
+
+## Handoff: Continue DX Iteration
+
+### Context
+
+Feature 006-fluent-harness-dx aims to create a clean, minimal harness API that:
+- Hides DI internals completely
+- Separates business logic from rendering
+- Leverages the @Monologue system from 005 for automatic narratives
+- Provides type-safe agent access
+
+The internal architecture has been documented (EventBus unification, callback adapters, renderer subscribers). The "Ultimate Test" example shows the target DX.
+
+### Current State
+
+- ✅ User stories defined (US1-US7)
+- ✅ Functional requirements defined (FR-001 to FR-012)
+- ✅ Success criteria defined (SC-001 to SC-008)
+- ✅ Internal architecture documented (diagrams, patterns, prerequisites)
+- ✅ Ultimate Test example written
+- 🔄 DX exploration questions identified but not resolved
+
+### Next Steps: DX Iteration
+
+The goal is to **explore alternative DX patterns** before implementing. Do NOT write code yet. Instead:
+
+1. **Review the 5 open questions** in the "DX Exploration" section
+2. **Generate 2-3 concrete alternatives** for each question
+3. **Create small code sketches** showing how each alternative would look in practice
+4. **Evaluate trade-offs** (simplicity vs power, type safety vs flexibility)
+5. **Propose a recommended approach** for each, with rationale
+6. **Update the spec** with the chosen patterns
+
+### Guiding Principles
+
+- **Simplicity wins**: If two approaches are equally capable, choose the simpler one
+- **Sensible defaults**: The common case should require minimal configuration
+- **Progressive disclosure**: Simple harnesses should be simple; complex ones should be possible
+- **Type safety**: Full TypeScript inference without manual type annotations
+- **Testability**: Every pattern must work in both live and replay modes
+
+### Files to Read
+
+- `specs/backlog/006-fluent-harness-dx.md` - This spec (read fully)
+- `specs/005-monologue-system/spec.md` - Monologue system it builds on
+- `packages/sdk/src/harness/task-harness.ts` - Current implementation to improve
+- `harnesses/coding/src/index.ts` - Real-world harness to simplify
+
+### Output Expected
+
+Updated `006-fluent-harness-dx.md` with:
+1. Resolution for each of the 5 DX exploration questions
+2. Updated type definitions reflecting the chosen patterns
+3. Updated "After" examples using the refined API
+4. Any new user stories or requirements discovered during exploration
