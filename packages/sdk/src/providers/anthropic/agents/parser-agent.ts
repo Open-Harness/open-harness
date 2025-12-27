@@ -86,8 +86,11 @@ export class ParserAgent extends BaseAnthropicAgent {
 			outputFormat: this.buildOutputFormat(),
 		});
 
+		// Sanitize before Zod validation: filter empty validationCriteria
+		const sanitized = this.sanitizeResult(result);
+
 		// Validate with Zod schema
-		const validated = ParserAgentOutputSchema.parse(result);
+		const validated = ParserAgentOutputSchema.parse(sanitized);
 
 		// Post-process: detect cycles and add warnings
 		const processed = this.postProcess(validated, input.tasksFilePath);
@@ -182,6 +185,24 @@ Return a JSON object with: tasks[], phases[], warnings[], and metadata.`;
 	 */
 	private buildOutputFormat(): Options["outputFormat"] {
 		return ParserAgentOutputSdkSchema;
+	}
+
+	/**
+	 * Sanitize LLM result before Zod validation.
+	 *
+	 * Handles edge cases where LLM returns empty strings that would fail schema validation.
+	 * - Filters empty validationCriteria strings (replaces with default)
+	 */
+	private sanitizeResult(result: ParserAgentOutput): ParserAgentOutput {
+		return {
+			...result,
+			tasks: result.tasks.map((task) => ({
+				...task,
+				// Replace empty validationCriteria with a default (schema requires min(1))
+				validationCriteria:
+					task.validationCriteria?.trim() || `Complete task: ${task.description.slice(0, 50)}`,
+			})),
+		};
 	}
 
 	/**

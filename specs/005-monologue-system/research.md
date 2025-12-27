@@ -161,39 +161,49 @@ export function Monologue(scope: string): MethodDecorator {
 
 **Question**: Should IMonologueLLM use the existing @anthropic-ai/claude-agent-sdk or direct Anthropic API?
 
-### Decision: Option (b) - Use @anthropic-ai/sdk directly
+### Decision: Option (a) - Use @anthropic-ai/claude-agent-sdk query()
 
-### Rationale
+**Updated**: Implementation evolved during development to use `query()` from claude-agent-sdk.
 
-The monologue system requires simple text completion (prompt in, text out) with Haiku for <500ms performance:
+### Rationale (Updated Post-Implementation)
 
-1. **Performance**: The claude-agent-sdk adds overhead for agent infrastructure (context management, tool handling, permission systems) that monologue doesn't need. Direct `messages.create()` calls are minimal and fast.
+The `query()` function from claude-agent-sdk proved simpler and more practical:
 
-2. **Simplicity**: Monologue requires only 3 parameters (model, max_tokens, messages). The agent SDK's `query()` function wraps the full agentic loop, which is unnecessary complexity.
+1. **Authentication**: `query()` automatically uses Claude Code subscription authentication. No API key required, no environment variable setup. This matches how the codebase already works.
 
-3. **Testability**: Both SDKs are equally mockable via DI tokens. The direct SDK is simpler to mock with a smaller API surface.
+2. **Simpler Integration**: The agent-sdk is already a dependency. Using `query()` with `maxTurns: 1` achieves simple completion without adding @anthropic-ai/sdk as a separate dependency.
 
-4. **Clear Separation**: The codebase uses claude-agent-sdk for agents (full agentic execution). Using the direct SDK for monologue creates clear separation: agent SDK for agents, direct SDK for simple completions.
+3. **Consistent Error Handling**: The SDK's query function handles authentication errors, rate limits, and other edge cases consistently with the rest of the codebase.
 
-### Implementation
+4. **Practical Simplicity**: While `messages.create()` has a smaller API surface in theory, `query()` with `maxTurns: 1` is equally simple and avoids dual-SDK complexity.
+
+### Implementation (Actual)
 
 ```typescript
-import Anthropic from "@anthropic-ai/sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 
 export class AnthropicMonologueLLM implements IMonologueLLM {
-  private client = new Anthropic();
+  async generate(events: AgentEvent[], history: string[], config: MonologueConfig): Promise<string> {
+    const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
+    let result = "";
 
-  async generate(prompt: string, systemPrompt: string): Promise<string> {
-    const response = await this.client.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 150,
-      system: systemPrompt,
-      messages: [{ role: "user", content: prompt }],
-    });
+    for await (const message of query({
+      prompt: fullPrompt,
+      options: {
+        model: "claude-3-5-haiku-latest",
+        maxTurns: 1, // Single turn for simple completion
+      },
+    })) {
+      if (message.type === "assistant" && message.message?.content) {
+        for (const block of message.message.content) {
+          if (block.type === "text") {
+            result += block.text;
+          }
+        }
+      }
+    }
 
-    return response.content[0].type === "text"
-      ? response.content[0].text
-      : "";
+    return result || "...";
   }
 }
 ```
