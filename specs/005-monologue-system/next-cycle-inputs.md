@@ -98,12 +98,140 @@ After any implementation decision that differs from spec:
 
 ## Deferred Items (Follow-up Features)
 
-### TaskHarness Refactoring (from RC003)
-**What**: 24 `emitNarrative()` calls in TaskHarness need migration
-**Why deferred**: These are STATUS events (third-person), not NARRATIVES (first-person LLM summaries)
-**Migration path**: Convert to `emitEvent({ type: "harness:status" })` in separate feature
+### Architectural Debt Identified
 
-**Suggested feature name**: `006-harness-event-protocol`
+The rendering/event architecture has accumulated debt that needs cleanup. These items were identified during 005 close cycle analysis.
+
+| ID | Item | Priority | Suggested Feature |
+|----|------|----------|-------------------|
+| D001 | Remove legacy callback system | High | 006-event-unification |
+| D002 | RendererEventBridge | High | 006-event-unification |
+| D003 | Rename emitNarrative → emitStatus | Medium | 006-event-unification |
+| D004 | Consolidate narrative storage | Medium | 006-event-unification |
+| D005 | Unify AgentEvent + HarnessEvent | Low | 007-event-protocol-v2 |
+
+---
+
+### D001: Remove Legacy Callback System
+
+**What**: `ITaskHarnessCallbacks` interface and all callback-based event delivery
+**Location**: `packages/sdk/src/core/tokens.ts`, `packages/sdk/src/harness/task-harness.ts`
+**Why remove**: Duplicates EventBus functionality. Creates parallel event paths that can drift.
+
+```typescript
+// CURRENT: Three parallel paths
+callbacks?.onNarrative?.(entry);     // Path 1: Direct callback
+recorder?.recordNarrative(entry);    // Path 2: Recording
+renderer.handleEvent(event);          // Path 3: Renderer
+
+// TARGET: Single path
+eventBus.publish(event);              // Everything subscribes to EventBus
+```
+
+**Migration path**:
+1. Make all callbacks subscribers to EventBus
+2. Deprecate direct callback invocation
+3. Remove callback parameters from methods
+4. Delete ITaskHarnessCallbacks interface
+
+---
+
+### D002: RendererEventBridge (CRITICAL MISSING PIECE)
+
+**What**: Bridge that connects EventBus → Renderer
+**Why needed**: Currently AgentEvents (from @Monologue) never reach the terminal. The monologue system emits to EventBus, but Renderer only receives HarnessEvents.
+
+```typescript
+// Missing component
+class RendererEventBridge {
+  constructor(eventBus: IEventBus, renderer: IHarnessRenderer) {
+    eventBus.subscribe((event) => {
+      if (event.event_type === "MONOLOGUE") {
+        renderer.handleEvent({
+          type: "task:narrative",
+          entry: this.convertToNarrativeEntry(event),
+        });
+      }
+    });
+  }
+}
+```
+
+**Without this**: @Monologue decorators work, but output is invisible.
+
+---
+
+### D003: Rename emitNarrative → emitStatus (from RC003)
+
+**What**: 24 `emitNarrative()` calls in TaskHarness need renaming
+**Why**: These are STATUS events (third-person: "Task T001 starting"), not NARRATIVES (first-person LLM summaries: "I'm reading the config...")
+
+```typescript
+// CURRENT (confusing)
+this.emitNarrative("Harness", "Starting task T001", taskId);
+
+// TARGET (clear)
+this.emitStatus("Starting task T001", taskId);
+// Or: this.emitEvent({ type: "harness:status", message: "..." });
+```
+
+---
+
+### D004: Consolidate Narrative Storage
+
+**What**: Narratives currently stored in THREE places
+**Locations**:
+1. `TaskHarness.narratives[]`
+2. `HarnessRecorder.narratives[]`
+3. `RenderState.narrativeHistory[]`
+
+**Target**: Single source of truth, likely EventBus event stream with optional recording.
+
+---
+
+### D005: Unify Event Types
+
+**What**: Two separate event type systems that don't connect
+- `AgentEvent` (11 types from SDK): tool_call, text, thinking, etc.
+- `HarnessEvent` (13+ types): task:start, phase:complete, etc.
+
+**Target**: Single unified event stream with namespaced types:
+```typescript
+type UnifiedEvent =
+  | { type: "agent:tool_call"; ... }
+  | { type: "agent:narrative"; ... }
+  | { type: "harness:status"; ... }
+  | { type: "task:start"; ... }
+```
+
+---
+
+### Suggested Feature: 006-event-unification
+
+**Scope**: D001, D002, D003, D004
+**Goal**: Single event stream, single storage, EventBus as backbone
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     TARGET ARCHITECTURE                         │
+└─────────────────────────────────────────────────────────────────┘
+
+     Agents (@Monologue)          TaskHarness
+            │                          │
+            │ agent:narrative          │ harness:status
+            │                          │ task:start/complete
+            ▼                          ▼
+         ┌─────────────────────────────────┐
+         │           EventBus              │◄── SINGLE SOURCE
+         │         (unified)               │
+         └──────────────┬──────────────────┘
+                        │
+         ┌──────────────┼──────────────┐
+         │              │              │
+         ▼              ▼              ▼
+    Renderer       Recorder       (Future)
+    Subscriber     Subscriber     Subscribers
+```
 
 ---
 
