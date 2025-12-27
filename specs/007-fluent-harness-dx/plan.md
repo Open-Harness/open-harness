@@ -195,7 +195,13 @@ defineHarness(config)
 From DX Exploration (resolved):
 
 1. **Dual API** (`run:` + `execute:`): Simple async function OR generator with yields
+   - **MUTUALLY EXCLUSIVE**: Provide exactly one, not both
+   - TypeScript enforces via discriminated union: `{ run: ... } | { execute: ... }`
+   - Level 2 uses `run:` (async function), Level 3 uses `execute:` (async generator)
 2. **Hybrid Events**: `phase()`/`task()` helpers + `emit()` escape hatch
+   - **LIFECYCLE**: Helpers bound fresh at each `run()` invocation
+   - Auto-cleanup when `run()` returns (subscriptions cleared, no state bleed)
+   - Each `run()` call gets its own ExecuteContext with isolated helpers
 3. **Mutable State**: Direct mutation for simplicity
 4. **Progressive Levels**: Three API levels for different complexity needs
 5. **Context-Integrated Control Flow**: `retry()` and `parallel()` helpers with auto-emitted events (consistent with phase/task pattern)
