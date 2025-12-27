@@ -12,6 +12,7 @@ import { describe, expect, test } from "bun:test";
 import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { injectable } from "@needle-di/core";
 import type { IAgentRunner, RunnerCallbacks } from "../../src/core/tokens.js";
+import type { WorkflowContext } from "../../src/factory/workflow-builder.js";
 import { createWorkflow } from "../../src/factory/workflow-builder.js";
 import { BaseAnthropicAgent } from "../../src/providers/anthropic/agents/base-anthropic-agent.js";
 
@@ -237,7 +238,7 @@ describe("Workflow Builder", () => {
 
 		test("run passes context to execute function", async () => {
 			const mockAgent = new MockAgent();
-			let receivedContext: any = null;
+			let receivedContext: WorkflowContext<{ mock: MockAgent }> | null = null;
 
 			const workflow = createWorkflow({
 				name: "ContextWorkflow",
@@ -251,9 +252,11 @@ describe("Workflow Builder", () => {
 			await workflow.run();
 
 			expect(receivedContext).not.toBeNull();
-			expect(receivedContext.agents.mock).toBe(mockAgent);
-			expect(receivedContext.tasks).toHaveLength(1);
-			expect(receivedContext.state).toBeDefined();
+			// TypeScript narrowing after null check
+			const context = receivedContext as unknown as WorkflowContext<{ mock: MockAgent }>;
+			expect(context.agents.mock).toBe(mockAgent);
+			expect(context.tasks).toHaveLength(1);
+			expect(context.state).toBeDefined();
 		});
 
 		test("run returns final state", async () => {

@@ -49,12 +49,12 @@ class MockRunner implements IAgentRunner {
 				session_id: "mock_session",
 				model: "mock-model",
 				tools: [],
-			} as any,
+			} as unknown as SDKMessage,
 			{
 				type: "tool_progress",
 				tool_name: "test_tool",
 				elapsed_time_seconds: 0.5,
-			} as any,
+			} as unknown as SDKMessage,
 			{
 				type: "system",
 				subtype: "compact_boundary",
@@ -63,13 +63,13 @@ class MockRunner implements IAgentRunner {
 					trigger: "manual",
 					pre_tokens: 1000,
 				},
-			} as any,
+			} as unknown as SDKMessage,
 			{
 				type: "system",
 				subtype: "status",
 				session_id: "mock_session",
 				status: "compacting",
-			} as any,
+			} as unknown as SDKMessage,
 			{
 				type: "assistant",
 				message: {
@@ -80,7 +80,7 @@ class MockRunner implements IAgentRunner {
 						},
 					],
 				},
-			} as any,
+			} as unknown as SDKMessage,
 			{
 				type: "result",
 				subtype: "success",
@@ -96,7 +96,7 @@ class MockRunner implements IAgentRunner {
 					summary: "Mock task completed",
 					handoff: "",
 				},
-			} as any,
+			} as unknown as SDKMessage,
 		];
 
 		// Fire callbacks for each message
@@ -211,7 +211,7 @@ describe("@Record Decorator", () => {
 		class DecoratedService {
 			constructor(private runner: IAgentRunner = inject(IAgentRunnerToken)) {}
 
-			@Record("smoke", (args: any[]) => args[1])
+			@Record("smoke", (args: unknown[]) => args[1] as string)
 			async doWork(prompt: string, _sessionId: string, callbacks?: RunnerCallbacks): Promise<SDKMessage | undefined> {
 				return this.runner.run({
 					prompt,
@@ -244,7 +244,9 @@ describe("Promise-based API", () => {
 
 		// Should be a Promise, not an AsyncGenerator
 		expect(result).toBeInstanceOf(Promise);
-		expect(typeof (result as any)[Symbol.asyncIterator]).not.toBe("function");
+		expect(typeof (result as unknown as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator]).not.toBe(
+			"function",
+		);
 
 		// Should resolve to SDKMessage
 		const resolved = await result;
