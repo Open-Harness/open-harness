@@ -18,7 +18,7 @@ export function add(a: number, b: number): number {
 		throw new TypeError("Both arguments must be numbers");
 	}
 
-	if (isNaN(a) || isNaN(b)) {
+	if (Number.isNaN(a) || Number.isNaN(b)) {
 		throw new TypeError("Arguments cannot be NaN");
 	}
 
