@@ -1,0 +1,54 @@
+agent: decision-controller
+timestamp: "2025-12-27T20:15:00Z"
+feature: 007-fluent-harness-dx
+spec_directory: specs/007-fluent-harness-dx
+
+decisions:
+  - root_cause_id: RC001
+    root_cause_title: "Generator execute() API declared but not implemented"
+    decision: "Remove execute from types"
+    score: 4.5
+    implementation:
+      - "Delete execute?: property from HarnessConfig interface in define-harness.ts:113"
+      - "Remove StepYield import if no longer referenced"
+      - "Update any documentation referencing generator execution"
+    user_notes: null
+    rationale: "No users depend on this non-working feature. Removing the type prevents type-safe lies where TypeScript accepts code that silently fails at runtime."
+
+  - root_cause_id: RC002
+    root_cause_title: "State update helpers specified but undefined"
+    decision: "Skipped"
+    reason: "User decided: Will follow existing pattern in future cycle. Need to research established patterns before implementing."
+
+  - root_cause_id: RC003
+    root_cause_title: "Feature branch contaminated with unrelated commit"
+    decision: "Delete file with new commit"
+    score: 4.0
+    implementation:
+      - "Delete add_numbers.py from repository root"
+      - "Commit with message explaining cleanup"
+    user_notes: null
+    rationale: "Python file is completely unrelated to TypeScript SDK feature. Deleting with new commit is simpler than reverting while still cleaning up the branch."
+
+skipped_count: 1
+implemented_count: 2
+
+process_improvements_identified:
+  - gate: "Type-Runtime Alignment Check"
+    description: "Validator should check that TypeScript types match runtime behavior"
+    implementation: "Add runtime tests that verify all typed APIs have corresponding runtime logic"
+    prevents: "Type-safe lies like execute: accepted by TypeScript but ignored at runtime"
+
+  - gate: "Branch Commit Relevance Check"
+    description: "Pre-commit hook validates files relate to feature branch name"
+    implementation: "Check file extensions and module patterns against branch naming"
+    prevents: "Cross-contamination like Python files on TypeScript feature branches"
+
+lessons_learned:
+  - title: "Types without runtime are documentation lies"
+    description: "Adding type definitions without runtime implementation creates false confidence"
+    prevention: "Add runtime exercising tests for all typed APIs"
+
+  - title: "Branch hygiene matters even in feature work"
+    description: "Unrelated commits pollute feature history and confuse retrospectives"
+    prevention: "Verify current branch before committing unrelated work"
