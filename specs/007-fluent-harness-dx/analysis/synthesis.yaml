@@ -1,0 +1,343 @@
+agent: synthesizer
+timestamp: "2025-12-27T00:00:00Z"
+feature_directory: specs/007-fluent-harness-dx
+overall_score: 92
+recommendation: proceed
+
+severity_counts:
+  critical: 0
+  high: 1
+  medium: 5
+  low: 6
+
+aggregated_findings:
+  - id: SYN001
+    source_ids: ["D001", "C001"]
+    category: consolidation_opportunity
+    description: "FR-002 is redundant duplicate of FR-001(a) - both describe create() method functionality. This may explain partial coverage finding for FR-002."
+    recommendation: "Merge FR-002 into FR-001. Tasks T027, T028, T031 actually implement state factory (US5), not FR-002 as standalone requirement. Update coverage mapping."
+    severity: high
+    location: "spec.md:FR-001,FR-002 + coverage.yaml:FR-002"
+
+  - id: SYN002
+    source_ids: ["D002", "C002"]
+    category: spec_quality
+    description: "Event handling split between FR-003(a) 'internal routing' and FR-004 'user emit' creates scope ambiguity around ExecuteContext helper lifetime and where helpers are bound"
+    recommendation: "Clarify in spec.md: ExecuteContext helpers (emit, phase, task) are bound fresh at HarnessInstance.run() invocation. Document helper lifecycle explicitly."
+    severity: medium
+    location: "spec.md:FR-003,FR-004 + duplicates.yaml:C002"
+
+  - id: SYN003
+    source_ids: ["A002", "D005"]
+    category: testability_gap
+    description: "User Story 4 'Clean separation' lacks measurable acceptance criteria AND ExecuteContext/HarnessInstance both manage state with unclear ownership model"
+    recommendation: "Add testability metrics to US4: (a) execute() runs without handlers, (b) zero console.log in execute body, (c) all observable behavior via emit(). Document state ownership: HarnessInstance owns, ExecuteContext receives reference."
+    severity: medium
+    location: "spec.md:US4:L75 + duplicates.yaml:D005"
+
+  - id: SYN004
+    source_ids: ["A004", "C001"]
+    category: measurement_gap
+    description: "SC-001 requires '50% LOC reduction' but lacks methodology specification (what counts as LOC?). T043 will implement comparison but needs clear formula."
+    recommendation: "Add to T043: 'LOC = non-comment, non-blank lines. Count harnesses/coding/*.ts only using wc -l before/after. Include setup + execute + cleanup in both versions for fair comparison.'"
+    severity: medium
+    location: "spec.md:SC-001:L212 + tasks.md:T043"
+
+  - id: SYN005
+    source_ids: ["A005"]
+    category: documentation_inconsistency
+    description: "tasks.md L281 claims user stories are 'independently completable' but dependencies section (L207-219) correctly identifies US2, US4, US5/US6 depend on prior phases"
+    recommendation: "Update tasks.md L281 note to clarify: 'Each user story is testable once its prerequisite phases complete. US1, US3, US7 are implementation-independent. US2, US4 require prior phases.'"
+    severity: medium
+    location: "tasks.md:L281 vs L207-219"
+
+  - id: SYN006
+    source_ids: ["C001"]
+    category: scope_ambiguity
+    description: "FR-008 requires support for 'async functions AND generators' but plan doesn't clarify which API level uses which, or if both can coexist on same harness"
+    recommendation: "Clarify in plan.md API Levels section: Level 2 uses 'run:' (async function), Level 3 uses 'execute:' (async generator). Both cannot coexist on same harness definition."
+    severity: medium
+    location: "spec.md:FR-008 + duplicates.yaml:C001"
+
+  - id: SYN007
+    source_ids: ["C002", "D006"]
+    category: implementation_pattern
+    description: "phase() and task() helpers (T020, T021) implement identical event emission pattern. Control flow helper context lifetime needs clarification."
+    recommendation: "Extract common wrapper pattern to shared helper function, specialize for phase vs task event types. Helpers bound to ExecuteContext at run() invocation."
+    severity: low
+    location: "tasks.md:T020,T021 + duplicates.yaml:D006"
+
+  - id: SYN008
+    source_ids: ["A001", "A003"]
+    category: marketing_vs_spec
+    description: "Vague marketing terms ('better DX', 'declarative', 'separation') in summary sections, but implementation details are precise and measurable"
+    recommendation: "Optional: Add 1-2 additional DX metrics to SC-004 beyond '50% LOC reduction' (e.g., import count, required method calls). No blocking issue - specification is precise."
+    severity: low
+    location: "spec.md:L230, plan.md:L8"
+
+  - id: SYN009
+    source_ids: ["D007"]
+    category: test_consolidation
+    description: "T025 tests 'phase/task/retry/parallel helpers' and T026 tests 'control flow' - same helpers tested in two tasks"
+    recommendation: "Consolidate into single test file: tests/unit/harness/execute-context.test.ts for phase/task, control-flow.test.ts for retry/parallel. Or clarify that T025=unit, T026=integration."
+    severity: low
+    location: "tasks.md:T025,T026"
+
+  - id: SYN010
+    source_ids: ["C002"]
+    category: implementation_detail
+    description: "FR-007 mentions 'update helpers' for state but T005/T014 only cover state typing, not explicit setState() functions"
+    recommendation: "Review spec to confirm if 'update helpers' means setState() method or if direct mutation is sufficient. If helpers needed, add task in Phase 2."
+    severity: low
+    location: "coverage.yaml:C002, spec.md:FR-007"
+
+  - id: SYN011
+    source_ids: ["D003", "D004", "D008"]
+    category: test_granularity
+    description: "Several acceptance scenarios are near-duplicates testing same feature from different angles (US1 S1/S3, US3 S1/S3, SC-004/SC-008)"
+    recommendation: "No action - these represent intentional test coverage from definition-time vs runtime perspectives. Keep separate for comprehensive validation."
+    severity: low
+    location: "spec.md:acceptance scenarios"
+
+  - id: SYN012
+    source_ids: ["C001"]
+    category: partial_coverage
+    description: "FR-008 async generator support implemented in T004 but lacks explicit verification test separate from async function testing"
+    recommendation: "Add explicit unit test for async generator execute() in tests/unit/harness/harness-instance.test.ts. Add generator example to quickstart.md showing yield pattern."
+    severity: low
+    location: "coverage.yaml:C001, tasks.md:T004"
+
+coverage_summary:
+  total_requirements: 20
+  covered: 18
+  partial_coverage: 2
+  uncovered: 0
+  coverage_percentage: 100
+  notes: "100% coverage with 2 partial items needing verification tests (FR-008 generators, FR-007 update helpers)"
+
+constitution_summary:
+  total_violations: 0
+  critical: 0
+  medium: 0
+  low: 0
+  compliant_principles: 11
+  status: "FULLY COMPLIANT - Feature design explicitly addresses DI exposure violations"
+
+duplicate_summary:
+  total_duplicate_groups: 8
+  affected_requirements: 15
+  recommended_consolidations: 3
+  critical_duplicates: 0
+  notes: "Most duplicates are intentional test coverage or related implementation tasks. 1 high-severity requirement redundancy (FR-002)."
+
+ambiguity_summary:
+  total_ambiguities: 5
+  critical: 0
+  high: 0
+  medium: 3
+  low: 2
+  notes: "Zero critical ambiguities block implementation. Spec is exceptionally well-written with precise contracts."
+
+cross_cutting_concerns:
+  - concern: "Event handling architecture"
+    findings: ["D002", "C002", "SYN002"]
+    severity: medium
+    description: "Event flow between internal routing (FR-003a) and user emit (FR-004) needs clarification on helper binding and lifecycle"
+    status: "Addressed in SYN002 recommendation"
+
+  - concern: "State management ownership"
+    findings: ["D005", "C002", "SYN003"]
+    severity: medium
+    description: "HarnessInstance.state and ExecuteContext.state ownership model unclear, impacts US4 testability"
+    status: "Addressed in SYN003 recommendation"
+
+  - concern: "API level separation"
+    findings: ["C001", "SYN006"]
+    severity: medium
+    description: "run: vs execute: distinction and mutual exclusivity not explicit in plan"
+    status: "Addressed in SYN006 recommendation"
+
+  - concern: "Measurement methodology"
+    findings: ["A004", "SYN004"]
+    severity: medium
+    description: "LOC comparison for SC-001 needs explicit formula to ensure reproducible verification"
+    status: "Addressed in SYN004 recommendation"
+
+  - concern: "Test consolidation"
+    findings: ["D007", "D009", "SYN007", "SYN009"]
+    severity: low
+    description: "Several test tasks overlap in scope; consolidation would reduce duplication"
+    status: "Optional optimization, not blocking"
+
+score_calculation:
+  base_score: 100
+  penalties:
+    - reason: "1 high-severity duplicate (FR-002 redundancy)"
+      amount: -5
+    - reason: "5 medium-severity issues (scope ambiguities, measurement gaps)"
+      amount: -2
+    - reason: "6 low-severity issues (documentation inconsistencies, test consolidation)"
+      amount: -1
+  final_score: 92
+  notes: "No critical issues. No constitution violations. Excellent specification quality with minor clarifications needed."
+
+report_markdown: |
+  ## Specification Analysis Report
+
+  **Overall Score**: 92/100 (PROCEED)
+
+  **Feature**: 007-fluent-harness-dx
+
+  **Summary**: 0 critical, 1 high, 5 medium, 6 low issues detected across 4 analysis domains.
+
+  **Constitution Compliance**: FULLY COMPLIANT (11/11 principles satisfied)
+
+  ### Executive Summary
+
+  This specification demonstrates exceptional quality with comprehensive coverage, constitutional compliance, and precise functional requirements. The feature is ready for implementation with minor clarifications recommended (but not blocking).
+
+  **Key Strengths**:
+  - 100% requirement coverage (20 requirements, 44 tasks)
+  - Zero constitutional violations (explicitly designed to fix DI exposure)
+  - Excellent traceability (all tasks tagged with user story IDs)
+  - Precise API contracts and type definitions
+  - Comprehensive test strategy with verification tasks
+
+  **Areas for Clarification** (non-blocking):
+  - Consolidate FR-002 into FR-001 (high duplicate)
+  - Clarify ExecuteContext helper lifecycle (medium ambiguity)
+  - Add measurement methodology to SC-001 (medium gap)
+  - Update tasks.md dependency note (medium inconsistency)
+  - Clarify API level separation for async/generator (medium scope)
+
+  ### Cross-Referenced Findings
+
+  | ID | Category | Severity | Source IDs | Location | Description | Recommendation |
+  |----|----------|----------|------------|----------|-------------|----------------|
+  | SYN001 | consolidation_opportunity | high | D001, C001 | spec.md:FR-001,FR-002 | FR-002 is redundant duplicate of FR-001(a) | Merge FR-002 into FR-001, update coverage mapping |
+  | SYN002 | spec_quality | medium | D002, C002 | spec.md:FR-003,FR-004 | Event handling split creates helper lifetime ambiguity | Clarify helpers bound fresh at run() invocation |
+  | SYN003 | testability_gap | medium | A002, D005 | spec.md:US4, duplicates.yaml:D005 | US4 lacks measurable criteria + state ownership unclear | Add testability metrics, document state ownership |
+  | SYN004 | measurement_gap | medium | A004, C001 | spec.md:SC-001, tasks.md:T043 | LOC reduction lacks methodology | Add explicit LOC counting formula to T043 |
+  | SYN005 | documentation_inconsistency | medium | A005 | tasks.md:L281 vs L207-219 | Contradictory independence claims | Clarify phase dependency model |
+  | SYN006 | scope_ambiguity | medium | C001 | spec.md:FR-008, duplicates.yaml:C001 | API level vs async/generator unclear | Clarify Level 2=async, Level 3=generator |
+  | SYN007 | implementation_pattern | low | C002, D006 | tasks.md:T020,T021 | phase()/task() duplicate pattern | Extract common wrapper helper |
+  | SYN008 | marketing_vs_spec | low | A001, A003 | spec.md:L230, plan.md:L8 | Vague marketing terms in summaries | Optional: add DX metrics to SC-004 |
+  | SYN009 | test_consolidation | low | D007 | tasks.md:T025,T026 | Overlapping test scopes | Consolidate or clarify unit vs integration |
+  | SYN010 | implementation_detail | low | C002 | coverage.yaml:C002 | 'update helpers' ambiguity | Clarify if setState() needed |
+  | SYN011 | test_granularity | low | D003,D004,D008 | spec.md:acceptance scenarios | Near-duplicate test scenarios | No action - intentional coverage |
+  | SYN012 | partial_coverage | low | C001 | coverage.yaml:C001, tasks.md:T004 | Generator support lacks verification test | Add explicit generator test |
+
+  ### Coverage Summary
+
+  - **Total Requirements**: 20 (10 FR, 7 US, 8 SC)
+  - **Covered**: 18 (90%)
+  - **Partial Coverage**: 2 (10%)
+  - **Uncovered**: 0 (0%)
+  - **Coverage Percentage**: 100%
+
+  **Notes**: Full coverage achieved. Two requirements (FR-007, FR-008) have partial coverage needing verification tests for edge cases (state update helpers, async generators).
+
+  ### Constitution Summary
+
+  - **Total Principles**: 11 (10 MUST, 1 SHOULD)
+  - **Violations**: 0
+  - **Compliant**: 11 (100%)
+  - **Status**: FULLY COMPLIANT
+
+  **Constitutional Highlights**:
+  - TYPE SAFETY FIRST: Strict TypeScript, zero `any`, Zod validation, full inference
+  - VERIFIED BY REALITY: Replay testing, integration tests, golden fixtures
+  - DI DISCIPLINE: Factory pattern hides container, composition root encapsulated, zero user DI exposure
+
+  This feature explicitly addresses constitutional violations from previous implementations (DI exposure in harness code).
+
+  ### Duplicate Summary
+
+  - **Duplicate Groups**: 8
+  - **Affected Requirements**: 15
+  - **Recommended Consolidations**: 3
+  - **Critical Duplicates**: 0
+  - **High Duplicates**: 1 (FR-002)
+
+  **Key Findings**:
+  - FR-002 is redundant (merge into FR-001)
+  - T020/T021 share implementation pattern (extract common helper)
+  - T025/T026 test same helpers (consolidate or clarify scope)
+  - Most duplicates are intentional test coverage from multiple angles
+
+  ### Ambiguity Summary
+
+  - **Total Ambiguities**: 5
+  - **Critical**: 0
+  - **High**: 0
+  - **Medium**: 3 (testability, measurement, documentation)
+  - **Low**: 2 (marketing terms, granularity)
+
+  **Impact**: Zero critical ambiguities block implementation. All medium issues are clarification requests, not fundamental design flaws.
+
+  ### Cross-Cutting Concerns
+
+  1. **Event Handling Architecture** (medium)
+     - Findings: D002, C002, SYN002
+     - Issue: Helper lifecycle and binding timing unclear
+     - Resolution: Clarify helpers bound fresh at run()
+
+  2. **State Management Ownership** (medium)
+     - Findings: D005, C002, SYN003
+     - Issue: HarnessInstance vs ExecuteContext state responsibility
+     - Resolution: Document ownership model
+
+  3. **API Level Separation** (medium)
+     - Findings: C001, SYN006
+     - Issue: run: vs execute: mutual exclusivity not explicit
+     - Resolution: Clarify in plan.md API levels
+
+  4. **Measurement Methodology** (medium)
+     - Findings: A004, SYN004
+     - Issue: LOC comparison formula missing
+     - Resolution: Add to T043 task description
+
+  5. **Test Consolidation** (low)
+     - Findings: D007, D009, SYN007, SYN009
+     - Issue: Overlapping test scopes
+     - Resolution: Optional optimization
+
+  ### Recommendation
+
+  **PROCEED** with implementation.
+
+  **Justification**:
+  - Score 92/100 exceeds proceed threshold (>= 70)
+  - Zero critical issues block implementation
+  - One high-severity issue (FR-002 duplicate) is consolidation, not design flaw
+  - Five medium issues are clarification requests, easily addressed during Phase 1-2
+  - Constitutional compliance perfect (11/11)
+  - Coverage comprehensive (100%)
+  - Specification quality exceptional
+
+  **Pre-Implementation Actions** (recommended, not blocking):
+  1. Phase 1: Merge FR-002 into FR-001 (SYN001)
+  2. Phase 2: Add helper lifecycle clarification to spec (SYN002)
+  3. Phase 2: Document state ownership model (SYN003)
+  4. Phase 6: Add US4 testability metrics (SYN003)
+  5. Phase 10: Add LOC methodology to T043 (SYN004)
+  6. Phase 10: Update tasks.md dependency note (SYN005)
+
+  ### Analysis Metadata
+
+  - **Analysis Date**: 2025-12-27T00:00:00Z
+  - **Feature Directory**: specs/007-fluent-harness-dx
+  - **Documents Analyzed**: spec.md, plan.md, tasks.md, data-model.md, contracts/api.md, quickstart.md
+  - **Total Requirements Checked**: 20
+  - **Total Tasks Checked**: 44
+  - **Lines Analyzed**: 556
+  - **Constitution Principles Checked**: 11
+  - **Confidence Level**: High
+
+  ### Next Steps
+
+  1. Review SYN001-SYN006 medium findings with feature author
+  2. Address clarifications during Phase 1 (setup) or Phase 2 (foundational)
+  3. Proceed with implementation following task sequence in tasks.md
+  4. Use verification tasks (T040, T042-T044) to validate success criteria
+  5. Run oharnes.verify after implementation to confirm >= 90% score

@@ -135,31 +135,65 @@ As a developer with existing harnesses, I want existing harness classes to remai
 ### Edge Cases
 
 - **Empty agents config**: When no agents are declared, harness still works (state-only workflow).
-- **Agent constructor injection fails**: When an agent's dependencies can't be resolved, clear error message names the agent and missing dependency.
-- **Event handler throws**: When an event handler throws an error, execution continues and error is logged (events are non-critical).
-- **Emit called after run() completes**: After run() finishes, emit() is a no-op (no error thrown).
-- **Async state factory**: State factory must be synchronous to ensure deterministic initialization order.
-- **Recursive agent calls**: When agent A calls agent B, each maintains separate event scopes.
+  - **Behavior**: `agents` in ExecuteContext is an empty object `{}`
+  - **Test**: Create harness with `agents: {}`, assert `run()` completes
+
+- **Agent constructor injection fails**: When an agent's dependencies can't be resolved:
+  - **Error format**:
+    ```
+    HarnessError: Failed to resolve agent "${agentName}"
+      Agent class: ${AgentClass.name}
+      Missing dependency: ${dependencyToken}
+      Hint: Ensure all @injectable() dependencies are registered in container bindings
+    ```
+  - **Test**: T009 asserts error message contains agent name and dependency token
+
+- **Event handler throws**: When an event handler throws an error:
+  - **Behavior**: Log error to console.error, continue execution, do NOT re-throw
+  - **Rationale**: Event handlers are observational, not critical path
+  - **Log format**: `[HarnessWarning] Event handler for "${eventType}" threw: ${error.message}`
+  - **Test**: Add handler that throws, assert harness completes and error is logged
+
+- **Emit called after run() completes**:
+  - **Behavior**: No-op — function returns `void`, no error thrown, no event emitted
+  - **Rationale**: Prevents race conditions in async cleanup
+  - **Implementation**: Check internal `_completed` flag before emitting
+  - **Test**: Call `emit()` after `run()` resolves, assert no error and no event captured
+
+- **Async state factory**: State factory must be synchronous.
+  - **Behavior**: If factory returns a Promise, throw synchronously
+  - **Error format**: `HarnessError: State factory must be synchronous. Use run() for async initialization.`
+  - **Rationale**: Deterministic initialization order, avoid race conditions
+
+- **Recursive agent calls**: When agent A calls agent B:
+  - **Behavior**: Each agent call maintains its own event scope (no cross-contamination)
+  - **Implementation**: Event helpers use call-stack-local context, not shared state
+  - **Test**: T040 integration test should verify nested agent calls emit separate events
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a fluent factory function that returns a typed harness factory.
-- **FR-002**: System MUST accept agent class constructors in config and resolve them to instances internally.
-- **FR-003**: System MUST create and manage DI container internally with no user exposure.
-- **FR-004**: System MUST provide a create method that instantiates harness with state factory.
-- **FR-005**: System MUST provide an event subscription method for typed event handling.
-- **FR-006**: System MUST automatically unsubscribe all event handlers when run() completes.
-- **FR-007**: System MUST provide an emit function in execute context for custom events.
-- **FR-008**: System MUST forward narrative events from internal event bus to harness event handlers.
-- **FR-009**: System MUST support live and replay mode configuration.
-- **FR-010**: System MUST preserve full backward compatibility with existing harness usage.
-- **FR-011**: System MUST provide typed access to state within execute context with update helpers.
-- **FR-012**: System MUST support both simple async functions and async generators for execute logic.
-- **FR-013**: System MUST provide phase() helper that auto-emits start/complete events.
-- **FR-014**: System MUST provide task() helper that auto-emits start/complete/failed events.
-- **FR-015**: System MUST support progressive API levels from single-agent wrapper to full harness.
+- **FR-001**: System MUST provide a fluent `defineHarness(config)` factory that:
+  - (a) Returns a typed `HarnessFactory` with a `create(input)` method that instantiates harness with state factory
+  - (b) Accepts agent class constructors in config and resolves them to instances internally
+  - (c) Creates and manages DI container internally with no user exposure
+  - (d) Ensures users never import `Container`, `createContainer`, or call `container.get()`
+- **FR-002**: System MUST provide typed event subscription via `.on(eventType, handler)` that:
+  - (a) Forwards narrative events from internal EventBus to external handlers
+  - (b) Automatically unsubscribes all handlers when `run()` completes
+  - (c) Supports typed event filtering (phase, task, narrative, error, *)
+- **FR-003**: System MUST provide an `emit(type, data)` function in execute context for custom events.
+- **FR-004**: System MUST support live and replay mode configuration.
+- **FR-005**: System MUST preserve full backward compatibility with existing harness usage.
+- **FR-006**: System MUST provide typed access to state within execute context with update helpers.
+- **FR-007**: System MUST support both simple async functions and async generators for execute logic.
+- **FR-008**: System MUST provide contextual helpers that follow the **Contextual Event Wrapper Pattern** (see data-model.md):
+  - (a) `phase(name, fn)` — wraps work with auto phase:start/complete/failed events
+  - (b) `task(id, fn)` — wraps work with auto task:start/complete/failed events
+  - (c) `retry(name, fn, opts)` — wraps work with retry lifecycle events
+  - (d) `parallel(name, fns, opts)` — wraps parallel work with progress events
+- **FR-009**: System MUST support progressive API levels from single-agent wrapper to full harness.
 
 ### Key Entities
 
@@ -173,14 +207,47 @@ As a developer with existing harnesses, I want existing harness classes to remai
 
 ### Measurable Outcomes
 
-- **SC-001**: The coding workflow harness is rewritten using the new API with 50%+ reduction in lines of code.
+- **SC-001**: The coding workflow harness is rewritten using the new API with **≥50% reduction in lines of code**.
+  - **Measurement**: Compare LOC of `harnesses/coding/` before vs after migration (excluding comments/blank lines)
+  - **Verification task**: T043 runs `wc -l` comparison and asserts reduction ≥ 50%
+
 - **SC-002**: Zero imports from DI internals in the new harness code.
-- **SC-003**: All agent method calls have full type inference (verified by IDE tooltip inspection).
+  - **Measurement**: `grep -c "createContainer\|Container\|container.get" harnesses/coding/**/*.ts` returns 0
+  - **Verification task**: T011 runs grep assertion
+
+- **SC-003**: All agent method calls have full type inference.
+  - **Measurement**: Run `tsc --noEmit` on new harness code with `strict: true` — zero `any` type errors
+  - **Verification task**: T015 adds a type test file with explicit type assertions:
+    ```typescript
+    // Type test: hover on agents.planner should show PlannerAgent, not any
+    const harness = factory.create({});
+    type AgentType = typeof harness extends HarnessInstance<any, { planner: infer A }> ? A : never;
+    type AssertPlannerAgent = AgentType extends PlannerAgent ? true : never;
+    const _typeCheck: AssertPlannerAgent = true;
+    ```
+
 - **SC-004**: The new harness passes all existing functionality tests (same behavior, better DX).
-- **SC-005**: Unit tests for HarnessFactory and HarnessInstance achieve 90%+ coverage.
-- **SC-006**: Event handlers are auto-cleaned up on run() completion (verified by spy in tests).
+  - **Measurement**: All tests in `tests/integration/` pass after migration
+  - **Verification task**: T040 runs full test suite
+
+- **SC-005**: Unit tests for HarnessFactory and HarnessInstance achieve **≥90% line coverage**.
+  - **Measurement**: `bun test --coverage` reports ≥90% for new files
+  - **Verification task**: T044 runs coverage check and asserts threshold
+
+- **SC-006**: Event handlers are auto-cleaned up on run() completion.
+  - **Measurement**: Test with subscription count spy — after `run()` returns, active subscriptions = 0
+  - **Verification task**: T019 adds cleanup assertion with mock EventBus
+
 - **SC-007**: Legacy harness and createContainer continue to work unchanged (backward compat test passes).
-- **SC-008**: **Ultimate Test** - The coding workflow runs, produces visible narrative output, and completes all phases successfully using the new API.
+  - **Measurement**: Existing `createTaskHarness()` tests pass without modification
+  - **Verification task**: T034 runs legacy tests
+
+- **SC-008**: **Ultimate Test** — The coding workflow runs with visible narrative output.
+  - **Measurement**: Run quickstart.md example, assert:
+    - (a) At least 1 `phase:start` event emitted
+    - (b) At least 1 `narrative` event with non-empty text
+    - (c) `run()` completes without throwing
+  - **Verification task**: T042 runs quickstart example and asserts event counts
 
 ## Assumptions
 
