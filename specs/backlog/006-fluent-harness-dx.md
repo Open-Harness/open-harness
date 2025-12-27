@@ -166,71 +166,148 @@ As a developer with existing harnesses, I want `BaseHarness` to remain available
 - **ExecuteContext**: Object passed to execute() containing `agents`, `state`, `emit()`, and `yield()`.
 - **HarnessEvent**: Union type of all emittable events (phase, step, narrative, error).
 
-### Type Definitions (Draft)
+### Type Definitions (Resolved)
 
 ```typescript
-// Configuration for defineHarness()
+// ─────────────────────────────────────────────────────────────────────────────
+// Level 1: wrapAgent (one-liner)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function wrapAgent<TAgent extends AgentConstructor>(
+  agentClass: TAgent
+): WrappedAgent<InstanceType<TAgent>>;
+
+interface WrappedAgent<TAgent> {
+  on: <E extends HarnessEventType>(type: E, handler: HarnessEventHandler<E>) => this;
+  run: (...args: Parameters<TAgent['execute']>) => Promise<ReturnType<TAgent['execute']>>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Level 2 & 3: defineHarness
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Configuration for defineHarness() - supports both run: and execute: (mutually exclusive)
 interface HarnessConfig<
   TAgents extends Record<string, AgentConstructor>,
-  TState,
-  TInput = void
+  TState = {},
+  TInput = void,
+  TResult = void
 > {
-  name: string;
-  mode: 'live' | 'replay';
+  // Optional with defaults
+  name?: string;                        // Default: 'anonymous-harness'
+  mode?: 'live' | 'replay';             // Default: 'live'
+
+  // Required
   agents: TAgents;
-  state: (input: TInput) => TState;
-  events?: {
-    onNarrative?: boolean;
-    onPhase?: boolean;
-    onStep?: boolean;
-  };
-  execute: (context: ExecuteContext<TAgents, TState>) => AsyncGenerator<StepYield>;
+
+  // Optional state factory (defaults to empty object)
+  state?: (input: TInput) => TState;
+
+  // EITHER run: OR execute: (mutually exclusive)
+  run?: (
+    context: ExecuteContext<TAgents, TState>,
+    input: TInput
+  ) => Promise<TResult>;
+
+  execute?: (
+    context: ExecuteContext<TAgents, TState>
+  ) => AsyncGenerator<StepYield, TResult>;
 }
 
-// Context passed to execute()
+// Context passed to both run() and execute()
 interface ExecuteContext<TAgents, TState> {
-  agents: ResolvedAgents<TAgents>;  // Instances, not constructors
-  state: TState;
-  updateState: (updater: (s: TState) => TState) => void;
-  emit: <E extends HarnessEventType>(type: E, data: HarnessEventData<E>) => void;
+  agents: ResolvedAgents<TAgents>;      // Instances, not constructors
+  state: TState;                         // Mutable state object
+
+  // Event helpers (auto start/complete)
+  phase: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
+  task: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
+
+  // Escape hatch for custom events
+  emit: (type: string, data: Record<string, unknown>) => void;
 }
 
-// Harness factory returned by defineHarness()
-interface HarnessFactory<TAgents, TState, TInput> {
-  create: (input: TInput) => HarnessInstance<TState>;
+// Type helper: converts agent constructors to instances
+type ResolvedAgents<T extends Record<string, AgentConstructor>> = {
+  [K in keyof T]: InstanceType<T[K]>;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Harness Factory and Instance
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Factory returned by defineHarness()
+interface HarnessFactory<TState, TInput, TResult> {
+  create: (input: TInput) => HarnessInstance<TState, TResult>;
 }
 
 // Running harness instance
-interface HarnessInstance<TState> {
+interface HarnessInstance<TState, TResult> {
+  // Chainable event subscription
   on: <E extends HarnessEventType>(type: E, handler: HarnessEventHandler<E>) => this;
-  run: () => Promise<HarnessResult<TState>>;
-  getState: () => TState;
+
+  // Execute the harness
+  run: () => Promise<HarnessResult<TState, TResult>>;
+
+  // Access current state
+  readonly state: TState;
 }
 
-// Event types
-type HarnessEventType = 'phase' | 'step' | 'narrative' | 'error';
+// Result of harness.run()
+interface HarnessResult<TState, TResult> {
+  result: TResult;
+  state: TState;
+  events: HarnessEvent[];
+  duration: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+type HarnessEventType = 'phase' | 'task' | 'step' | 'narrative' | 'error' | '*';
 
 interface PhaseEvent {
+  type: 'phase';
   name: string;
   status: 'start' | 'complete';
   data?: Record<string, unknown>;
 }
 
+interface TaskEvent {
+  type: 'task';
+  id: string;
+  status: 'start' | 'complete' | 'failed';
+  data?: Record<string, unknown>;
+}
+
 interface StepEvent {
+  type: 'step';
   step: string;
   input: unknown;
   output: unknown;
 }
 
 interface NarrativeEvent {
+  type: 'narrative';
   agent: string;
   text: string;
   timestamp: Date;
 }
 
 interface ErrorEvent {
+  type: 'error';
   message: string;
   cause?: unknown;
+}
+
+type HarnessEvent = PhaseEvent | TaskEvent | StepEvent | NarrativeEvent | ErrorEvent;
+
+// Step yield (for execute: generator)
+interface StepYield {
+  step: string;
+  input?: unknown;
+  output?: unknown;
 }
 ```
 
@@ -689,15 +766,14 @@ try {
 }
 ```
 
-### After (New API)
+### After (New API - using run:)
 
 ```typescript
-// 40 lines, focused on business logic
+// 35 lines, focused on business logic
 import { defineHarness, PlannerAgent, CodingAgent } from '@openharness/sdk';
 
 const CodingWorkflow = defineHarness({
   name: 'coding-workflow',
-  mode: 'live',
 
   agents: {
     planner: PlannerAgent,
@@ -705,29 +781,86 @@ const CodingWorkflow = defineHarness({
   },
 
   state: (input: { prd: string }) => ({
-    phase: 'planning' as const,
     prd: input.prd,
     tickets: [] as Ticket[],
   }),
 
-  async *execute({ agents, state, updateState, emit }) {
-    emit('phase', { name: 'planning', status: 'start' });
+  // Using run: for simple async function (no generator)
+  run: async ({ agents, state, phase, task }) => {
+    await phase('Planning', async () => {
+      const result = await agents.planner.plan(state.prd);
+      state.tickets = result.tickets;
+      return { count: result.tickets.length };
+    });
 
-    const result = await agents.planner.plan(state.prd);
-    updateState(s => ({ ...s, tickets: result.tickets, phase: 'execution' }));
+    await phase('Execution', async () => {
+      for (const ticket of state.tickets) {
+        await task(ticket.id, async () => {
+          const result = await agents.coder.execute(ticket.description);
+          return { success: result.success };
+        });
+      }
+    });
 
-    emit('phase', { name: 'planning', status: 'complete', data: { count: result.tickets.length } });
-    yield { step: 'plan', input: state.prd, output: result };
-
-    // ... more phases
+    return state.tickets;
   },
 });
 
-// Usage - rendering is external
+// Usage - rendering is external, auto-cleanup on completion
 const harness = CodingWorkflow.create({ prd });
-harness.on('phase', (e) => console.log(`=== ${e.name}: ${e.status} ===`));
-harness.on('narrative', (e) => console.log(`[${e.agent}] ${e.text}`));
-await harness.run();  // Auto-cleanup on completion
+harness
+  .on('phase', (e) => console.log(`=== ${e.name}: ${e.status} ===`))
+  .on('narrative', (e) => console.log(`[${e.agent}] ${e.text}`));
+await harness.run();
+```
+
+### After (New API - using execute: with yields)
+
+```typescript
+// Same workflow, but with step recording via yields
+import { defineHarness, PlannerAgent, CodingAgent } from '@openharness/sdk';
+
+const CodingWorkflow = defineHarness({
+  name: 'coding-workflow',
+
+  agents: {
+    planner: PlannerAgent,
+    coder: CodingAgent,
+  },
+
+  state: (input: { prd: string }) => ({
+    prd: input.prd,
+    tickets: [] as Ticket[],
+  }),
+
+  // Using execute: for generator with yields (step recording)
+  async *execute({ agents, state, phase, task }) {
+    const planResult = await phase('Planning', async () => {
+      const result = await agents.planner.plan(state.prd);
+      state.tickets = result.tickets;
+      return result;
+    });
+
+    yield { step: 'plan', input: state.prd, output: planResult };
+
+    await phase('Execution', async () => {
+      for (const ticket of state.tickets) {
+        const codeResult = await task(ticket.id, async () => {
+          return agents.coder.execute(ticket.description);
+        });
+
+        yield { step: `code-${ticket.id}`, input: ticket, output: codeResult };
+      }
+    });
+  },
+});
+
+// Usage - identical to run: version
+const harness = CodingWorkflow.create({ prd });
+harness
+  .on('phase', (e) => console.log(`=== ${e.name}: ${e.status} ===`))
+  .on('narrative', (e) => console.log(`[${e.agent}] ${e.text}`));
+await harness.run();
 ```
 
 ---
@@ -736,7 +869,7 @@ await harness.run();  // Auto-cleanup on completion
 
 This is the north star - what the complete DX looks like with all features implemented. This example serves as the regression test for the entire feature.
 
-### Complete Implementation (~60 lines of business logic)
+### Complete Implementation (~50 lines of business logic)
 
 ```typescript
 // harnesses/coding/src/index.ts
@@ -751,7 +884,6 @@ import { defineHarness, ParserAgent, CodingAgent, ReviewAgent } from '@openharne
 
 const CodingWorkflow = defineHarness({
   name: 'coding-workflow',
-  mode: 'live',  // or 'replay' for testing
 
   // Agents are declared, not manually resolved
   agents: {
@@ -762,63 +894,96 @@ const CodingWorkflow = defineHarness({
 
   // State factory - creates fresh state per run
   state: (input: { tasksPath: string }) => ({
-    phase: 'parsing' as const,
     tasksPath: input.tasksPath,
     tasks: [] as ParsedTask[],
-    currentTask: null as ParsedTask | null,
     results: [] as TaskResult[],
   }),
 
-  // Pure business logic - no console.log, no subscriptions
-  async *execute({ agents, state, updateState, emit }) {
+  // Pure business logic using run: (async function)
+  run: async ({ agents, state, phase, task, emit }) => {
 
     // ───── Phase 1: Parse Tasks ─────
-    emit('phase', { name: 'Parsing', status: 'start' });
-
-    const parsed = await agents.parser.parseFile(state.tasksPath);
-    updateState(s => ({ ...s, tasks: parsed.tasks, phase: 'executing' }));
-
-    emit('phase', { name: 'Parsing', status: 'complete', data: { count: parsed.tasks.length } });
-    yield { step: 'parse', input: state.tasksPath, output: parsed };
+    await phase('Parsing', async () => {
+      const parsed = await agents.parser.parseFile(state.tasksPath);
+      state.tasks = parsed.tasks;  // Mutable state - simple!
+      return { count: parsed.tasks.length };
+    });
 
     // ───── Phase 2: Execute Each Task ─────
-    emit('phase', { name: 'Execution', status: 'start' });
+    await phase('Execution', async () => {
+      for (const t of state.tasks) {
+        if (t.status === 'complete') continue;
 
-    for (const task of state.tasks) {
-      if (task.status === 'complete') continue;
+        // task() helper auto-emits task:start and task:complete
+        await task(t.id, async () => {
+          // Coder works on the task (narratives flow automatically via @Monologue)
+          const result = await agents.coder.execute(t.description, `task-${t.id}`);
 
-      updateState(s => ({ ...s, currentTask: task }));
-      emit('task', { id: task.id, status: 'start', description: task.description });
+          // Reviewer validates (narratives flow automatically)
+          const review = await agents.reviewer.review(
+            t.description,
+            result.summary,
+            `review-${t.id}`
+          );
 
-      // Coder works on the task (narratives flow automatically via @Monologue)
-      const result = await agents.coder.execute(task.description, `task-${task.id}`);
-      yield { step: 'code', input: task, output: result };
+          state.results.push({ task: t, result, review, passed: review.passed });
+          return { passed: review.passed };
+        });
+      }
+    });
 
-      // Reviewer validates (narratives flow automatically)
-      const review = await agents.reviewer.review(
-        task.description,
-        result.summary,
-        `review-${task.id}`
-      );
-
-      const taskResult = { task, result, review, passed: review.passed };
-      updateState(s => ({ ...s, results: [...s.results, taskResult] }));
-
-      emit('task', {
-        id: task.id,
-        status: review.passed ? 'complete' : 'failed',
-        validation: review.passed
-      });
-
-      yield { step: 'review', input: result, output: review };
-    }
-
-    emit('phase', { name: 'Execution', status: 'complete' });
-
-    // ───── Phase 3: Summary ─────
+    // ───── Summary ─────
     const passed = state.results.filter(r => r.passed).length;
     const failed = state.results.filter(r => !r.passed).length;
+    emit('summary', { total: state.tasks.length, passed, failed });
 
+    return state.results;
+  },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALTERNATIVE: Using execute: with yields for step recording
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CodingWorkflowWithYields = defineHarness({
+  name: 'coding-workflow',
+  agents: { parser: ParserAgent, coder: CodingAgent, reviewer: ReviewAgent },
+  state: (input: { tasksPath: string }) => ({
+    tasksPath: input.tasksPath,
+    tasks: [] as ParsedTask[],
+    results: [] as TaskResult[],
+  }),
+
+  async *execute({ agents, state, phase, task, emit }) {
+    // Phase 1: Parse
+    const parsed = await phase('Parsing', async () => {
+      const result = await agents.parser.parseFile(state.tasksPath);
+      state.tasks = result.tasks;
+      return result;
+    });
+    yield { step: 'parse', input: state.tasksPath, output: parsed };
+
+    // Phase 2: Execute
+    await phase('Execution', async () => {
+      for (const t of state.tasks) {
+        if (t.status === 'complete') continue;
+
+        await task(t.id, async () => {
+          const result = await agents.coder.execute(t.description, `task-${t.id}`);
+          yield { step: `code-${t.id}`, input: t, output: result };
+
+          const review = await agents.reviewer.review(t.description, result.summary, `review-${t.id}`);
+          yield { step: `review-${t.id}`, input: result, output: review };
+
+          state.results.push({ task: t, result, review, passed: review.passed });
+          return { passed: review.passed };
+        });
+      }
+    });
+
+    // Summary
+    const passed = state.results.filter(r => r.passed).length;
+    const failed = state.results.filter(r => !r.passed).length;
     emit('summary', { total: state.tasks.length, passed, failed });
   },
 });
@@ -916,217 +1081,341 @@ expect(events.find(e => e.type === 'summary')?.data.passed).toBe(5);
 
 | Aspect | Before (Current) | After (Target) |
 |--------|------------------|----------------|
-| **Lines of code** | ~150 | ~60 |
-| **DI exposure** | `createContainer()`, `container.get()` | None |
-| **Event handling** | Manual subscribe/unsubscribe | `.on()` with auto-cleanup |
-| **Logging location** | Mixed in execute() | Separate handlers |
+| **Lines of code** | ~150 | ~50 |
+| **DI exposure** | `createContainer()`, `container.get()` | None (hidden inside `defineHarness`) |
+| **Event handling** | Manual `subscribe()`/`unsubscribe()` | `.on()` with auto-cleanup |
+| **Phase/task events** | Manual `emit('phase', {start})` + `emit('phase', {complete})` | `phase()` / `task()` helpers |
+| **State updates** | `updateState(s => ({...s, x}))` | Direct mutation: `state.x = y` |
+| **Logging location** | Mixed in execute() | Separate handlers via `.on()` |
 | **Narrative source** | Manual `emitNarrative()` | Automatic via `@Monologue` |
-| **Error handling** | try/finally cleanup | Built into `run()` |
+| **Error handling** | `try/finally { cleanup() }` | Built into `run()` |
 | **Type safety** | Loose | Full inference on agents |
-| **Testability** | Mock container setup | `mode: 'replay'` one-liner |
+| **Testability** | Mock container setup | `mode: 'replay'` option |
+| **API levels** | One size fits all | 3 levels: `wrapAgent` → simple → full |
 
 ---
 
-## DX Exploration: Open Questions
+## DX Exploration: Resolutions
 
-The current design is a strong starting point, but there are several areas worth exploring to make the DX even simpler:
+All 5 DX questions have been explored and resolved. Below are the decisions with rationale.
 
-### Question 1: Is async generator the right abstraction?
+### Decision Summary
 
-**Current approach**: `async *execute()` with `yield` for step recording.
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| **Q1: Generator** | Dual API (`run:` + `execute:`) | Simple cases stay simple; complex cases have full power |
+| **Q2: Events** | Hybrid (`phase()`/`task()` + `emit()`) | Helpers for common patterns; escape hatch for custom |
+| **Q3: State** | Mutable state object | Simplest mental model; users can add immer if needed |
+| **Q4: Minimal** | 3 progressive levels | `wrapAgent` → simple `defineHarness` → full `defineHarness` |
+| **Q5: Control flow** | BYOL (bring your own library) | No SDK opinion; users pick their preferred tools |
 
-```typescript
-async *execute({ agents, state, emit }) {
-  const result = await agents.parser.parseFile(state.tasksPath);
-  yield { step: 'parse', input: state.tasksPath, output: result };  // <-- Is this needed?
-  // ...
-}
-```
+---
 
-**Concerns**:
-- Generators add cognitive overhead
-- `yield` is awkward if you just want to run logic
-- What if you don't care about step recording?
+### Resolution 1: Dual API for Execute Pattern
 
-**Alternatives to explore**:
-```typescript
-// Option A: Plain async function (simpler, no yields)
-async execute({ agents, state, emit }) {
-  const result = await agents.parser.parseFile(state.tasksPath);
-  emit('step', { name: 'parse', input: state.tasksPath, output: result });
-}
-
-// Option B: Step helper that handles both
-async execute({ agents, state, step }) {
-  const result = await step('parse', () => agents.parser.parseFile(state.tasksPath));
-  // step() auto-emits start/complete events and captures input/output
-}
-
-// Option C: Declarative phases (no imperative code at all?)
-phases: [
-  { name: 'parse', agent: 'parser', method: 'parseFile', input: (s) => s.tasksPath },
-  { name: 'execute', forEach: (s) => s.tasks, agent: 'coder', method: 'execute' },
-]
-```
-
-### Question 2: Is `emit()` the best pattern for events?
-
-**Current approach**: Manual emit calls scattered through execute().
+**Decision**: Support both `run:` (simple async function) and `execute:` (generator with yields).
 
 ```typescript
-emit('phase', { name: 'Parsing', status: 'start' });
-// ... work ...
-emit('phase', { name: 'Parsing', status: 'complete' });
-```
-
-**Concerns**:
-- Boilerplate: emit start, do work, emit complete
-- Easy to forget the "complete" emit
-- Event names are stringly-typed
-
-**Alternatives to explore**:
-```typescript
-// Option A: Phase helper with auto start/complete
-await phase('Parsing', async () => {
-  return agents.parser.parseFile(state.tasksPath);
-});
-// Auto-emits phase:start before, phase:complete after (with result)
-
-// Option B: Decorative approach
-@phase('Parsing')
-async parsePhase() {
-  return this.agents.parser.parseFile(this.state.tasksPath);
-}
-
-// Option C: Return-based events (no emit at all)
-async *execute({ agents, state }) {
-  yield { phase: 'Parsing' };  // Start
-  const result = await agents.parser.parseFile(state.tasksPath);
-  yield { phase: 'Parsing', complete: true, data: result };  // Complete
-}
-```
-
-### Question 3: Can we simplify state management?
-
-**Current approach**: `updateState()` with immutable updates.
-
-```typescript
-updateState(s => ({ ...s, tasks: parsed.tasks, phase: 'executing' }));
-```
-
-**Concerns**:
-- Verbose for simple updates
-- Immutable spread is error-prone
-- Do we even need explicit state management?
-
-**Alternatives to explore**:
-```typescript
-// Option A: Mutable state (simpler, but less safe)
-state.tasks = parsed.tasks;
-state.phase = 'executing';
-
-// Option B: Immer-style produce
-updateState(draft => {
-  draft.tasks = parsed.tasks;
-  draft.phase = 'executing';
-});
-
-// Option C: Derive state from events (event-sourcing)
-// State is computed from event stream, not manually tracked
-```
-
-### Question 4: What's the minimal viable harness?
-
-**Current**: Even simple harnesses require state factory, execute generator, etc.
-
-**Goal**: What's the absolute simplest harness you could write?
-
-```typescript
-// Dream: One-liner for simple cases?
+// SIMPLE: Just run logic, return result (no generator)
 const SimpleWorkflow = defineHarness({
   agents: { coder: CodingAgent },
-  run: async ({ coder }, input: string) => coder.execute(input),
+  run: async ({ agents, state, phase, emit }, input: string) => {
+    return agents.coder.execute(input);
+  }
 });
 
-// Or even simpler for single-agent cases?
-const SimpleWorkflow = wrapAgent(CodingAgent);
-await SimpleWorkflow.run('Write a hello world function');
+// COMPLEX: Generator for yields/streaming/step recording
+const ComplexWorkflow = defineHarness({
+  agents: { parser: ParserAgent, coder: CodingAgent },
+  async *execute({ agents, state, phase, task, emit }) {
+    await phase('Parse', async () => {
+      const result = await agents.parser.parseFile(state.path);
+      state.tasks = result.tasks;
+      return { count: result.tasks.length };
+    });
+
+    // yield for step recording (generator-only feature)
+    yield { step: 'parse', input: state.path, output: state.tasks };
+
+    for (const t of state.tasks) {
+      const result = await agents.coder.execute(t.description);
+      yield { step: `code-${t.id}`, input: t, output: result };
+    }
+  }
+});
 ```
 
-### Question 5: How should complex control flow work?
-
-**Current**: All logic in one execute function.
-
-**Concern**: What about retries, parallel execution, conditional branches?
-
-```typescript
-// Retry logic - where does it go?
-// Parallel task execution - how to express?
-// Conditional phases - how to skip cleanly?
-
-// Option A: Built-in helpers
-async *execute({ agents, state, retry, parallel }) {
-  const result = await retry(3, () => agents.coder.execute(task));
-  const reviews = await parallel(tasks.map(t => agents.reviewer.review(t)));
-}
-
-// Option B: Separate from harness entirely
-const result = await withRetry(3, () => agents.coder.execute(task));
-```
+**Rationale**: Generators add value for pause points and streaming, but most harnesses just run through phases sequentially. Offer both paths.
 
 ---
 
-## Handoff: Continue DX Iteration
+### Resolution 2: Hybrid Event Pattern
 
-### Context
+**Decision**: Provide `phase()` and `task()` helpers for common patterns, plus raw `emit()` as escape hatch.
 
-Feature 006-fluent-harness-dx aims to create a clean, minimal harness API that:
-- Hides DI internals completely
-- Separates business logic from rendering
-- Leverages the @Monologue system from 005 for automatic narratives
-- Provides type-safe agent access
+```typescript
+async *execute({ agents, state, phase, task, emit }) {
+  // phase() helper: auto-emits phase:start and phase:complete
+  await phase('Parsing', async () => {
+    const result = await agents.parser.parseFile(state.path);
+    state.tasks = result.tasks;
+    return { count: result.tasks.length };  // Becomes phase complete data
+  });
 
-The internal architecture has been documented (EventBus unification, callback adapters, renderer subscribers). The "Ultimate Test" example shows the target DX.
+  await phase('Execution', async () => {
+    for (const t of state.tasks) {
+      // task() helper: auto-emits task:start and task:complete
+      await task(t.id, async () => {
+        const codeResult = await agents.coder.execute(t.description);
+        const review = await agents.reviewer.review(t.description, codeResult.summary);
+        state.results.push({ task: t, codeResult, review });
+        return { passed: review.passed };
+      });
+    }
+  });
 
-### Current State
+  // emit() escape hatch: custom events not covered by helpers
+  emit('summary', { total: state.tasks.length, passed: state.results.filter(r => r.review.passed).length });
+}
+```
 
-- ✅ User stories defined (US1-US7)
-- ✅ Functional requirements defined (FR-001 to FR-012)
-- ✅ Success criteria defined (SC-001 to SC-008)
-- ✅ Internal architecture documented (diagrams, patterns, prerequisites)
-- ✅ Ultimate Test example written
-- 🔄 DX exploration questions identified but not resolved
+**Events emitted by helpers**:
+- `phase('X', fn)` → `phase:start { name: 'X' }` → runs fn → `phase:complete { name: 'X', data: returnValue }`
+- `task(id, fn)` → `task:start { id }` → runs fn → `task:complete { id, data: returnValue }`
 
-### Next Steps: DX Iteration
+**Rationale**: Eliminates the "forgot to emit complete" bug. Single call site for common patterns. Escape hatch preserves flexibility.
 
-The goal is to **explore alternative DX patterns** before implementing. Do NOT write code yet. Instead:
+---
 
-1. **Review the 5 open questions** in the "DX Exploration" section
-2. **Generate 2-3 concrete alternatives** for each question
-3. **Create small code sketches** showing how each alternative would look in practice
-4. **Evaluate trade-offs** (simplicity vs power, type safety vs flexibility)
-5. **Propose a recommended approach** for each, with rationale
-6. **Update the spec** with the chosen patterns
+### Resolution 3: Mutable State
 
-### Guiding Principles
+**Decision**: State is a plain mutable object. No `updateState()` needed.
 
-- **Simplicity wins**: If two approaches are equally capable, choose the simpler one
-- **Sensible defaults**: The common case should require minimal configuration
-- **Progressive disclosure**: Simple harnesses should be simple; complex ones should be possible
-- **Type safety**: Full TypeScript inference without manual type annotations
-- **Testability**: Every pattern must work in both live and replay modes
+```typescript
+const Workflow = defineHarness({
+  state: (input: { path: string }) => ({
+    path: input.path,
+    tasks: [] as Task[],
+    results: [] as TaskResult[],
+  }),
 
-### Files to Read
+  async *execute({ agents, state }) {
+    const parsed = await agents.parser.parseFile(state.path);
 
-- `specs/backlog/006-fluent-harness-dx.md` - This spec (read fully)
-- `specs/005-monologue-system/spec.md` - Monologue system it builds on
-- `packages/sdk/src/harness/task-harness.ts` - Current implementation to improve
-- `harnesses/coding/src/index.ts` - Real-world harness to simplify
+    // Direct mutation - simple!
+    state.tasks = parsed.tasks;
 
-### Output Expected
+    for (const task of state.tasks) {
+      const result = await agents.coder.execute(task);
+      state.results.push(result);  // Push directly
+    }
+  }
+});
 
-Updated `006-fluent-harness-dx.md` with:
-1. Resolution for each of the 5 DX exploration questions
-2. Updated type definitions reflecting the chosen patterns
-3. Updated "After" examples using the refined API
-4. Any new user stories or requirements discovered during exploration
+// Access state after run
+const harness = Workflow.create({ path: './tasks.md' });
+await harness.run();
+console.log(harness.state.tasks);  // Current state
+```
+
+**Rationale**: Immutable updates add complexity without clear benefit for harness use cases. Users who need immutability can use immer themselves.
+
+---
+
+### Resolution 4: Three Progressive API Levels
+
+**Decision**: Support three levels of API complexity with sensible defaults.
+
+#### Level 1: Single-Agent Wrapper (One-liner)
+
+```typescript
+import { wrapAgent, CodingAgent } from '@openharness/sdk';
+
+// Absolute minimum - wrap any agent
+const result = await wrapAgent(CodingAgent).run('Write a hello world function');
+console.log(result.summary);
+
+// With event handling
+await wrapAgent(CodingAgent)
+  .on('narrative', (e) => console.log(`💭 ${e.text}`))
+  .run('Write a hello world function');
+```
+
+#### Level 2: Simple defineHarness (Minimal Config)
+
+```typescript
+const SimpleWorkflow = defineHarness({
+  agents: { coder: CodingAgent },
+  run: async ({ agents }, input: string) => agents.coder.execute(input),
+});
+
+const result = await SimpleWorkflow.create().run('Build a todo app');
+
+// Defaults applied:
+// - name: 'anonymous-harness'
+// - mode: 'live'
+// - state: () => ({})
+```
+
+#### Level 3: Full defineHarness (Complete API)
+
+```typescript
+const CodingWorkflow = defineHarness({
+  name: 'coding-workflow',
+  mode: 'live',
+
+  agents: {
+    parser: ParserAgent,
+    coder: CodingAgent,
+    reviewer: ReviewAgent,
+  },
+
+  state: (input: { path: string }) => ({
+    path: input.path,
+    tasks: [] as Task[],
+    results: [] as TaskResult[],
+  }),
+
+  // Using run: (async function)
+  run: async ({ agents, state, phase, task, emit }) => {
+    await phase('Parse', async () => {
+      const parsed = await agents.parser.parseFile(state.path);
+      state.tasks = parsed.tasks;
+      return { count: parsed.tasks.length };
+    });
+
+    await phase('Execute', async () => {
+      for (const t of state.tasks) {
+        await task(t.id, async () => {
+          const codeResult = await agents.coder.execute(t.description);
+          const review = await agents.reviewer.review(t.description, codeResult.summary);
+          state.results.push({ task: t, codeResult, review });
+          return { passed: review.passed };
+        });
+      }
+    });
+
+    emit('summary', {
+      total: state.tasks.length,
+      passed: state.results.filter(r => r.review.passed).length
+    });
+
+    return state.results;
+  }
+});
+
+// OR using execute: (generator for step recording)
+const CodingWorkflowWithYields = defineHarness({
+  name: 'coding-workflow',
+  mode: 'live',
+  agents: { parser: ParserAgent, coder: CodingAgent, reviewer: ReviewAgent },
+  state: (input: { path: string }) => ({
+    path: input.path,
+    tasks: [] as Task[],
+    results: [] as TaskResult[],
+  }),
+
+  async *execute({ agents, state, phase, task, emit }) {
+    const parsed = await phase('Parse', async () => {
+      const result = await agents.parser.parseFile(state.path);
+      state.tasks = result.tasks;
+      return result;
+    });
+
+    yield { step: 'parse', input: state.path, output: parsed };
+
+    await phase('Execute', async () => {
+      for (const t of state.tasks) {
+        const result = await task(t.id, async () => {
+          const codeResult = await agents.coder.execute(t.description);
+          yield { step: `code-${t.id}`, input: t, output: codeResult };
+
+          const review = await agents.reviewer.review(t.description, codeResult.summary);
+          yield { step: `review-${t.id}`, input: codeResult, output: review };
+
+          state.results.push({ task: t, codeResult, review });
+          return { passed: review.passed };
+        });
+      }
+    });
+
+    emit('summary', {
+      total: state.tasks.length,
+      passed: state.results.filter(r => r.review.passed).length
+    });
+  }
+});
+```
+
+**Rationale**: Progressive disclosure - users start simple and add complexity only when needed.
+
+---
+
+### Resolution 5: BYOL for Control Flow
+
+**Decision**: No SDK opinion on retry/parallel/timeout. Users bring their own libraries.
+
+```typescript
+import pRetry from 'p-retry';
+import pLimit from 'p-limit';
+
+async *execute({ agents, state, phase }) {
+  await phase('Execute', async () => {
+    // Use any retry library
+    const result = await pRetry(
+      () => agents.coder.execute(state.task),
+      { retries: 3 }
+    );
+
+    // Use any concurrency library
+    const limit = pLimit(3);
+    const reviews = await Promise.all(
+      state.tasks.map(t => limit(() => agents.reviewer.review(t)))
+    );
+
+    // Use standard Promise.race for timeout
+    const parsed = await Promise.race([
+      agents.parser.parseFile(state.path),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000))
+    ]);
+  });
+}
+```
+
+**Rationale**:
+- Keeps SDK surface area small
+- Users can use battle-tested libraries they already know
+- No need to learn SDK-specific APIs for common patterns
+- Libraries like `p-retry`, `p-limit`, `p-timeout` are well-maintained
+
+---
+
+### Context API Summary
+
+| Helper | Available In | Purpose |
+|--------|--------------|---------|
+| `agents` | Both `run:` and `execute:` | Resolved agent instances |
+| `state` | Both | Mutable state object |
+| `phase(name, fn)` | Both | Wraps work with auto start/complete events |
+| `task(id, fn)` | Both | Wraps task with auto start/complete events |
+| `emit(type, data)` | Both | Raw event emission (escape hatch) |
+| `yield { step, ... }` | `execute:` only | Step recording for replay/debugging |
+
+---
+
+## Status: DX Exploration Complete
+
+All 5 DX questions have been resolved:
+
+- ✅ Q1: Dual API (`run:` + `execute:`)
+- ✅ Q2: Hybrid events (`phase()`/`task()` + `emit()`)
+- ✅ Q3: Mutable state
+- ✅ Q4: Three progressive levels (`wrapAgent` → simple → full)
+- ✅ Q5: BYOL for control flow
+
+### Next Steps
+
+1. **Update Type Definitions** - Reflect the resolved API patterns
+2. **Update Ultimate Test** - Use the new API surface
+3. **Create proper feature spec** - Move from backlog to active feature
+4. **Implement** - Build the `defineHarness()` function and helpers
