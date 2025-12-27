@@ -50,7 +50,7 @@ describe("Live SDK Integration", () => {
 			console.log("Summary:", result.summary);
 			console.log("Events:", events);
 		},
-		{ timeout: 60000 }, // 60 seconds for coding task
+		{ timeout: 120000 }, // 120 seconds for coding task (subprocess needs time to start)
 	);
 
 	test(
