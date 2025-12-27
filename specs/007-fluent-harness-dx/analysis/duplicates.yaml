@@ -1,0 +1,228 @@
+agent: duplicate-checker
+timestamp: "2025-12-27T00:00:00Z"
+summary: "28 requirements, 44 tasks checked. 8 duplicates found."
+
+statistics:
+  requirements_checked: 28
+  tasks_checked: 44
+  duplicates_found: 8
+
+findings:
+  - id: D001
+    type: near_duplicate
+    items: ["FR-001", "FR-002"]
+    similarity: 82%
+    reason: |
+      FR-001 requires defineHarness() factory that creates HarnessFactory with create() method.
+      FR-002 states "System MUST provide a create(input) method".
+      Both describe the same create() method functionality - FR-002 is redundant sub-part of FR-001(a).
+    recommendation: "Merge FR-002 into FR-001, remove as separate requirement"
+    severity: high
+
+  - id: D002
+    type: near_duplicate
+    items: ["FR-003(a)", "FR-004"]
+    similarity: 78%
+    reason: |
+      FR-003(a) specifies "Forwards narrative events from internal EventBus to external handlers".
+      FR-004 states "System MUST provide an emit(type, data) function in execute context".
+      Both address event emission/forwarding - FR-003(a) is internal routing, FR-004 is user-facing emit.
+      Overlap in event handling responsibility. Could be clearer about split between internal and user emit.
+    recommendation: "Clarify event flow: FR-003(a) internal routing, FR-004 user emit. Consider naming distinction."
+    severity: medium
+
+  - id: D003
+    type: near_duplicate
+    items: ["US1 Acceptance Scenario 1", "US1 Acceptance Scenario 3"]
+    similarity: 85%
+    reason: |
+      US1 Scenario 1: "developer creating new harness, use fluent API, never see Container/createContainer/container.get()"
+      US1 Scenario 3: "harness is running, agent is used, has all dependencies injected"
+      Both validate that DI is hidden - Scenario 1 checks at definition, Scenario 3 checks at runtime.
+      Could be consolidated into single scenario with both definition and runtime checks.
+    recommendation: "Combine into single scenario: 'Define and run harness with agents, verify no DI exposure and deps injected'"
+    severity: low
+
+  - id: D004
+    type: near_duplicate
+    items: ["US3 Acceptance Scenario 1", "US3 Acceptance Scenario 3"]
+    similarity: 76%
+    reason: |
+      US3 Scenario 1: "event handlers registered via fluent API, agents emit events, handlers are called with typed data"
+      US3 Scenario 3: "multiple event types registered with different handlers, each receives only its type"
+      Both test event routing to handlers. Scenario 3 is more specific (multi-type) but overlaps with Scenario 1 (single handler).
+      Implementation addresses both concerns in same code path.
+    recommendation: "Scenario 1 tests handler invocation, Scenario 3 tests filtering - keep separate but note shared implementation"
+    severity: low
+
+  - id: D005
+    type: near_duplicate
+    items: ["T004", "T005"]
+    similarity: 79%
+    reason: |
+      T004: "Implement HarnessInstance class with on(), run(), and state"
+      T005: "Implement ExecuteContext class with agents, state, emit()"
+      Both create classes that provide state access. HarnessInstance.state and ExecuteContext.state overlap.
+      Different purposes but shared state storage responsibility - implementation should clarify ownership.
+    recommendation: "Clarify: HarnessInstance holds state, ExecuteContext receives reference. Document state ownership model."
+    severity: medium
+
+  - id: D006
+    type: near_duplicate
+    items: ["T020", "T021"]
+    similarity: 81%
+    reason: |
+      T020: "Implement phase() helper with auto start/complete/failed events"
+      T021: "Implement task() helper with auto start/complete/failed events"
+      Both implement identical event emission pattern for different lifecycle types.
+      Could share implementation but with different event type constants.
+    recommendation: "Extract common wrapper pattern to shared helper, specialize for phase vs task events"
+    severity: low
+
+  - id: D007
+    type: near_duplicate
+    items: ["T025", "T026"]
+    similarity: 72%
+    reason: |
+      T025: "Add tests for phase/task/retry/parallel helpers"
+      T026: "Add control flow tests"
+      Both test the same control flow helpers (phase, task, retry, parallel).
+      T025 lists specific helpers, T026 is general. One test file should cover both.
+    recommendation: "Consolidate into single test file: tests/unit/harness/execute-context.test.ts for phase/task, control-flow.test.ts for retry/parallel"
+    severity: low
+
+  - id: D008
+    type: near_duplicate
+    items: ["SC-004", "SC-008"]
+    similarity: 74%
+    reason: |
+      SC-004: "new harness passes all existing functionality tests (same behavior, better DX)"
+      SC-008: "Ultimate Test - coding workflow runs with visible narrative output (phase:start, narrative events, run() completes)"
+      SC-004 is generic "all tests pass", SC-008 is specific narrative output test.
+      SC-008 is a special case of SC-004 focused on narrative events. Separation may be intentional for emphasis.
+    recommendation: "Keep both but clarify: SC-004 = comprehensive test suite, SC-008 = narrative-specific end-to-end validation"
+    severity: low
+
+related_items:
+  - id: R001
+    type: related_but_distinct
+    items: ["US5 (State Factory)", "US6 (Mode Configuration)"]
+    similarity: 65%
+    reason: |
+      Both are P2 features bundled in Phase 7 together.
+      US5 focuses on state initialization pattern (factory function).
+      US6 focuses on runner mode selection (live/replay).
+      Share common implementation (both in defineHarness config) but are conceptually separate concerns.
+    recommendation: "Consider splitting Phase 7 into Phase 7a (State Factory) and Phase 7b (Mode), allowing independent completion"
+    severity: low
+
+  - id: R002
+    type: related_but_distinct
+    items: ["T011", "T015"]
+    similarity: 68%
+    reason: |
+      T011: "unit test verifying no container imports needed"
+      T015: "type inference test verifying autocomplete works"
+      Both validate implementation success but from different angles (compile-time vs runtime).
+      T011 checks negative case (no imports), T015 checks positive case (correct types).
+    recommendation: "Keep separate - test different aspects of the same feature (DI hiding + type safety)"
+    severity: low
+
+  - id: R003
+    type: related_but_distinct
+    items: ["FR-009(a)", "T020", "T021"]
+    similarity: 71%
+    reason: |
+      FR-009(a) specifies "phase(name, fn) wraps work with auto phase:start/complete/failed events"
+      T020 implements phase() helper
+      T021 implements task() helper
+      Requirements and tasks have expected 1:1 mapping. This is normal relationship, not duplicate.
+    recommendation: "No action - this is correct FR-to-Task traceability"
+    severity: none
+
+conflicts:
+  - id: C001
+    type: scope_ambiguity
+    items: ["FR-008", "Plan API Levels"]
+    description: |
+      FR-008: "System MUST support both simple async functions and async generators for execute logic"
+      Plan defines 3 API levels but doesn't explicitly say Level 2 uses simple async, Level 3 uses generators.
+      Ambiguity: Can a harness have both? If user specifies both run: and execute:, which wins?
+    recommendation: "Clarify in plan.md: Level 2 uses 'run:' (async function), Level 3 uses 'execute:' (async generator). Both cannot coexist on same harness."
+    severity: medium
+
+  - id: C002
+    type: context_ambiguity
+    items: ["ExecuteContext", "HarnessInstance"]
+    description: |
+      ExecuteContext passed to execute() function should have access to phase(), task(), emit(), retry(), parallel() helpers.
+      HarnessInstance.run() must wire these helpers. Current task descriptions don't explicitly state where helpers live.
+      Does execute context get fresh helpers per run, or are they bound at factory creation time?
+    recommendation: "Spec should clarify: helpers are bound to ExecuteContext at HarnessInstance.run() invocation, fresh per run"
+    severity: medium
+
+  - id: C003
+    type: logical_inconsistency
+    items: ["Edge Case: Emit called after run() completes", "FR-004"]
+    description: |
+      Edge case specifies "Emit called after run() completes: No-op, no error, no event emitted".
+      FR-004 specifies "System MUST provide an emit(type, data) function in execute context".
+      If emit is available in execute context and execute() completes, emit() becomes unreachable.
+      The edge case implies async cleanup that could call emit, but spec doesn't mention this scenario.
+    recommendation: "Clarify: emit() is only available during execute() function execution. Accessing after run() completes is developer error, not use case."
+    severity: low
+
+---
+
+## Analysis Notes
+
+### Requirements Extracted
+
+**Functional Requirements** (FR):
+- FR-001: defineHarness() factory with create() method
+- FR-002: create(input) method [DUPLICATE of FR-001(a)]
+- FR-003: Event subscription via .on() with auto-cleanup
+- FR-004: emit(type, data) in execute context
+- FR-005: Live/replay mode configuration
+- FR-006: Backward compatibility
+- FR-007: Typed state access
+- FR-008: Support async functions and generators
+- FR-009: Control flow helpers (phase, task, retry, parallel)
+- FR-010: Progressive API levels
+
+**User Stories** (7 total):
+- US1: Zero DI Exposure (P1)
+- US2: Typed Agent Access (P1)
+- US3: Declarative Event Handling (P1)
+- US4: Separation of Concerns (P1)
+- US5: State Factory Pattern (P2)
+- US6: Mode Configuration (P2)
+- US7: Backward Compatibility (P2)
+
+**Success Criteria** (SC):
+- SC-001 through SC-008 (8 measurable outcomes)
+
+### Tasks Extracted
+
+**Total Tasks**: 44
+- Phase 1 (Setup): T001-T003 (3 tasks)
+- Phase 2 (Foundational): T004-T007 (4 tasks)
+- Phase 3-8 (User Stories): T008-T035 (28 tasks)
+- Phase 9 (wrapAgent): T036-T039 (4 tasks)
+- Phase 10 (Polish): T040-T044 (5 tasks)
+
+### Key Findings
+
+1. **Redundant Requirements**: FR-002 is subsumed by FR-001(a) - both describe create() method
+2. **Task Consolidation Opportunities**: Phase 7 could be split; test tasks could be consolidated
+3. **Scope Ambiguity**: Unclear which API level (2 vs 3) uses async functions vs generators
+4. **Context Clarity**: ExecuteContext helpers need clearer lifetime specification
+5. **No Critical Duplicates**: Most findings are near-duplicates or related items that reflect design choices
+
+### Severity Distribution
+
+- Critical: 0
+- High: 1 (FR-002 redundancy)
+- Medium: 3 (scope/context/logical issues)
+- Low: 4 (granularity and organization)
+
