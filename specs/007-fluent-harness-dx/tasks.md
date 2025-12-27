@@ -113,8 +113,7 @@
 ### Implementation for User Story 3
 
 - [ ] T016 [US3] Implement subscription tracking in HarnessInstance in packages/sdk/src/harness/harness-instance.ts
-- [ ] T017 [US3] Implement auto-cleanup of subscriptions when run() completes in packages/sdk/src/harness/harness-instance.ts
-- [ ] T018 [US3] Connect internal EventBus to external .on() handlers in packages/sdk/src/harness/harness-instance.ts
+- [ ] T017 [US3] Connect internal EventBus to external .on() handlers with auto-cleanup when run() completes in packages/sdk/src/harness/harness-instance.ts
 - [ ] T019 [US3] Add test verifying event handlers receive events and auto-cleanup in tests/unit/harness/harness-instance.test.ts
 
 **Checkpoint**: User Story 3 complete - declarative events with auto-cleanup
@@ -129,10 +128,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Implement phase() helper with auto start/complete events in packages/sdk/src/harness/execute-context.ts
-- [ ] T021 [US4] Implement task() helper with auto start/complete/failed events in packages/sdk/src/harness/execute-context.ts
-- [ ] T022 [US4] Implement retry() helper with all retry events in packages/sdk/src/harness/control-flow.ts
-- [ ] T023 [US4] Implement parallel() helper with all parallel events in packages/sdk/src/harness/control-flow.ts
+- [ ] T020 [US4] Implement phase() helper with auto start/complete/failed events per Contextual Event Wrapper Pattern in packages/sdk/src/harness/execute-context.ts
+- [ ] T021 [US4] Implement task() helper with auto start/complete/failed events per Contextual Event Wrapper Pattern in packages/sdk/src/harness/execute-context.ts
+- [ ] T022 [US4] Implement retry() helper with retry:start/attempt/backoff/success/failure events per Contextual Event Wrapper Pattern in packages/sdk/src/harness/control-flow.ts
+- [ ] T023 [US4] Implement parallel() helper with parallel:start/item:complete/complete events per Contextual Event Wrapper Pattern in packages/sdk/src/harness/control-flow.ts
 - [ ] T024 [US4] Wire control flow helpers to ExecuteContext in packages/sdk/src/harness/execute-context.ts
 - [ ] T025 [US4] Add tests for phase/task/retry/parallel helpers in tests/unit/harness/execute-context.test.ts
 - [ ] T026 [P] [US4] Add control flow tests in tests/unit/harness/control-flow.test.ts
@@ -195,7 +194,7 @@
 
 **Purpose**: End-to-end verification and cross-cutting concerns
 
-- [ ] T040 Create integration test with replay recordings in tests/integration/fluent-harness.test.ts
+- [ ] T040 Create integration test with replay recordings in tests/integration/fluent-harness.test.ts (must include recursive agent call test per spec edge case)
 - [ ] T041 Update package exports in packages/sdk/src/index.ts with all new APIs
 - [ ] T042 Run quickstart.md examples as verification (SC-008 Ultimate Test)
 - [ ] T043 Verify SC-001: coding harness has 50%+ code reduction
