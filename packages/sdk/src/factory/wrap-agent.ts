@@ -93,9 +93,8 @@ class WrappedAgentImpl<T extends ExecutableAgent> implements WrappedAgent<T> {
 			if (this._shouldDeliver(event, subscription.type)) {
 				try {
 					subscription.handler(event);
-				} catch (error) {
-					const message = error instanceof Error ? error.message : String(error);
-					console.error(`[WrapAgent] Event handler error: ${message}`);
+				} catch (_error) {
+					// Event handler errors are non-critical - silently continue
 				}
 			}
 		}

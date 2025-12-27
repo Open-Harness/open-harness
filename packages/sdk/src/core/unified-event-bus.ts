@@ -184,9 +184,8 @@ export class UnifiedEventBus implements IUnifiedEventBus {
 				try {
 					// Fire-and-forget: invoke listener but don't await
 					listener(enrichedEvent);
-				} catch (error) {
-					// Log error but continue delivering to other subscribers
-					console.error("[UnifiedEventBus] Listener threw error:", error);
+				} catch (_error) {
+					// Silently continue - fire-and-forget pattern
 				}
 			}
 		}

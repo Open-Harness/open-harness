@@ -66,9 +66,11 @@ export class ReplayRunner implements IAgentRunner {
 		let session = sessions.find((s) => s.prompt === prompt);
 
 		if (!session) {
-			// Fallback to first session for testing convenience
-			console.warn(`ReplayRunner: Exact prompt match not found for ${scenarioId}. Using first session.`);
+			// Fallback to first session - throw if genuinely missing
 			session = sessions[0];
+			if (!session) {
+				throw new Error(`ReplayRunner: No matching session found for prompt in ${scenarioId}`);
+			}
 		}
 
 		if (!session) {

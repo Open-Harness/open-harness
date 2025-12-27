@@ -193,9 +193,8 @@ class UnifiedRenderer<TState> implements IUnifiedRenderer {
 			if (matchesFilter(event.event.type, pattern)) {
 				try {
 					handler(context);
-				} catch (error) {
-					// Log but don't crash
-					console.error(`[${this.name}] Handler error for "${pattern}":`, error);
+				} catch (_error) {
+					// Handler errors are non-critical - silently continue
 				}
 			}
 		}

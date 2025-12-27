@@ -58,6 +58,9 @@ export type StreamCallbacks = {
 /**
  * @deprecated For new agents, consider using BaseAnthropicAgent from
  * '../agents/base-anthropic-agent.js' which provides typed IAgentCallbacks.
+ *
+ * Migration guide: See docs/deprecation-schedule.md
+ * Removal target: v1.0.0
  */
 @injectable()
 export class BaseAgent {

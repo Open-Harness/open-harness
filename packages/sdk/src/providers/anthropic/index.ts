@@ -45,7 +45,7 @@ export type {
 // Runner
 // ============================================================================
 
-export { AnthropicRunner, LiveSDKRunner } from "./runner/anthropic-runner.js";
+export { AnthropicRunner } from "./runner/anthropic-runner.js";
 export { mapSdkMessageToEvents } from "./runner/event-mapper.js";
 export {
 	type AgentEvent as RunnerAgentEvent,
