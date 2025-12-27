@@ -227,6 +227,72 @@ export type { HarnessInstanceConfig, HarnessResult } from "./harness/harness-ins
 export { HarnessInstance } from "./harness/harness-instance.js";
 
 // ============================================
+// UNIFIED EVENT SYSTEM (008-unified-event-system)
+// ============================================
+
+// DI Token
+export { IUnifiedEventBusToken } from "./core/tokens.js";
+// Core class and utilities
+export { UnifiedEventBus } from "./core/unified-event-bus.js";
+export { matchesFilter } from "./core/unified-events/filter.js";
+// Types
+export type {
+	// Base event types (FR-004)
+	AgentCompleteEvent,
+	// Context types (FR-003)
+	AgentContext,
+	AgentStartEvent,
+	AgentTextEvent,
+	AgentThinkingEvent,
+	AgentToolCompleteEvent,
+	AgentToolStartEvent,
+	BaseEvent,
+	BaseEventPayload,
+	// Enriched event (FR-002)
+	EnrichedEvent,
+	EventContext,
+	// Event bus interface (FR-001)
+	EventFilter as UnifiedEventFilter,
+	ExtensionEvent,
+	HarnessCompleteEvent,
+	HarnessStartEvent,
+	IUnifiedEventBus,
+	NarrativeEvent as UnifiedNarrativeEvent,
+	NarrativeImportance,
+	PhaseCompleteEvent,
+	PhaseContext,
+	PhaseStartEvent,
+	SessionAbortEvent,
+	SessionPromptEvent,
+	SessionReplyEvent,
+	TaskCompleteEvent,
+	TaskContext,
+	TaskFailedEvent,
+	TaskStartEvent,
+	UnifiedEventListener,
+	Unsubscribe,
+} from "./core/unified-events/index.js";
+// Type guards
+export {
+	isAgentEvent,
+	isNarrativeEvent as isUnifiedNarrativeEvent,
+	isSessionEvent,
+	isWorkflowEvent,
+} from "./core/unified-events/types.js";
+// Renderer API (FR-005)
+export {
+	defineRenderer,
+	type EventHandler as RendererEventHandler,
+	type IUnifiedRenderer,
+	type RenderContext,
+	type RendererDefinition,
+	RenderOutput,
+	type RenderOutputConfig,
+	type Spinner,
+	type UnifiedRendererConfig,
+} from "./harness/index.js";
+
+// ============================================
 // DEPRECATED EXPORTS (for backward compatibility)
 // ============================================
 
