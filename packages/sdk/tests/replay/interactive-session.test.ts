@@ -255,7 +255,7 @@ describe("Interactive Session Replay", () => {
 			harness.attach(attachment);
 			harness.startSession();
 
-			const completePromise = harness.complete();
+			harness.complete();
 			await new Promise((r) => setTimeout(r, 20));
 
 			// Find prompt event
