@@ -29,7 +29,7 @@
 // Console Transport
 // ============================================================================
 
-export { consoleTransport, type ConsoleTransportOptions } from "./console/index.js";
+export { type ConsoleTransportOptions, consoleTransport } from "./console/index.js";
 
 // ============================================================================
 // Re-exports from Core (convenience)

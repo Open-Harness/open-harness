@@ -93,7 +93,9 @@ class ConsoleFormatter {
 				return `${prefix}${this.c("bold")}${SYMBOLS.start} Harness Started${this.c("reset")}${contextStr}`;
 			case "harness:complete": {
 				const e = payload as { success: boolean; tasksCompleted: number; tasksFailed: number; duration: number };
-				const status = e.success ? `${this.c("green")}${SYMBOLS.complete} Complete` : `${this.c("red")}${SYMBOLS.failed} Failed`;
+				const status = e.success
+					? `${this.c("green")}${SYMBOLS.complete} Complete`
+					: `${this.c("red")}${SYMBOLS.failed} Failed`;
 				return `${prefix}${status}${this.c("reset")} (${e.tasksCompleted} completed, ${e.tasksFailed} failed, ${this.formatDuration(e.duration)})`;
 			}
 
@@ -210,7 +212,11 @@ class ConsoleFormatter {
 		return `${this.c("gray")}[${this.formatDuration(elapsed)}]${this.c("reset")} `;
 	}
 
-	private formatContext(context: { phase?: { name: string }; task?: { id: string }; agent?: { name: string } }): string {
+	private formatContext(context: {
+		phase?: { name: string };
+		task?: { id: string };
+		agent?: { name: string };
+	}): string {
 		const parts: string[] = [];
 		if (context.phase) parts.push(`phase:${context.phase.name}`);
 		if (context.task) parts.push(`task:${context.task.id}`);
