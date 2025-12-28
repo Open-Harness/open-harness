@@ -11,8 +11,8 @@
  */
 
 import { describe, expect, mock, test } from "bun:test";
-import { UnifiedEventBus } from "../../src/core/unified-event-bus.js";
-import type { BaseEvent, EnrichedEvent, Transport } from "../../src/core/unified-events/types.js";
+import { UnifiedEventBus } from "../../src/infra/unified-event-bus.js";
+import type { BaseEvent, EnrichedEvent, Transport } from "../../src/infra/unified-events/types.js";
 import { type ChannelContext, createChannel, defineChannel, type IChannel } from "../../src/harness/define-channel.js";
 
 // Helper: Create a mock Transport for testing

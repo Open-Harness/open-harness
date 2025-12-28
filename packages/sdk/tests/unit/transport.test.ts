@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { injectable } from "@needle-di/core";
-import type { Attachment, Transport } from "../../src/core/unified-events/types.js";
+import type { Attachment, Transport } from "../../src/infra/unified-events/types.js";
 import { defineHarness } from "../../src/factory/define-harness.js";
 import type { FluentHarnessEvent } from "../../src/harness/event-types.js";
 

@@ -12,8 +12,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { UnifiedEventBus } from "../../src/core/unified-event-bus.js";
-import type { EnrichedEvent, EventContext } from "../../src/core/unified-events/types.js";
+import { UnifiedEventBus } from "../../src/infra/unified-event-bus.js";
+import type { EnrichedEvent, EventContext } from "../../src/infra/unified-events/types.js";
 
 describe("UnifiedEventBus", () => {
 	let bus: UnifiedEventBus;

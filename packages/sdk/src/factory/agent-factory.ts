@@ -8,7 +8,7 @@
 
 import type { Container } from "@needle-di/core";
 import type { IAgentCallbacks } from "../callbacks/types.js";
-import { createContainer } from "../core/container.js";
+import { createContainer } from "../infra/container.js";
 
 // ============================================
 // Types

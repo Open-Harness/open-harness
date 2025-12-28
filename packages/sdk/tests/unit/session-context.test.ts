@@ -7,8 +7,8 @@
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import type { InjectedMessage, UserResponse } from "../../src/core/unified-events/types.js";
-import { AsyncQueue } from "../../src/harness/async-queue.js";
+import type { InjectedMessage, UserResponse } from "../../src/infra/unified-events/types.js";
+import { AsyncQueue } from "../../src/utils/async-queue.js";
 import { SessionContext, type SessionContextDeps } from "../../src/harness/session-context.js";
 
 /**

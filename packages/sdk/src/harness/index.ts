@@ -21,7 +21,7 @@ export {
 	sleep,
 	updateBackoffContext,
 	withBackoff,
-} from "./backoff.js";
+} from "../utils/backoff.js";
 
 // Dependency Resolver
 export {
@@ -31,16 +31,16 @@ export {
 	resolveDependencies,
 	type TopologicalSortResult,
 	validateDependencies,
-} from "./dependency-resolver.js";
+} from "../utils/dependency-resolver.js";
 
 // ============================================================================
 // Fluent Harness API (007-fluent-harness-dx)
 // ============================================================================
 
 // Types from unified-events
-export type { InjectedMessage, WaitOptions } from "../core/unified-events/types.js";
+export type { InjectedMessage, WaitOptions } from "../infra/unified-events/types.js";
 // Async Queue
-export { AsyncQueue } from "./async-queue.js";
+export { AsyncQueue } from "../utils/async-queue.js";
 // Control Flow Helpers
 export {
 	createParallelHelper,
