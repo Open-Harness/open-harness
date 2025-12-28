@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { injectable } from "@needle-di/core";
-import type { Attachment } from "../../src/core/unified-events/types.js";
+import type { Attachment } from "../../src/infra/unified-events/types.js";
 import { defineHarness } from "../../src/factory/define-harness.js";
 
 // Simple mock agent for testing
@@ -90,9 +90,10 @@ describe("Interactive Session Replay", () => {
 			const promptEvent = events.find((e) => e.type === "session:prompt" || e.type === "user:prompt");
 			expect(promptEvent).toBeDefined();
 			expect(promptEvent?.promptId).toBeDefined();
+			if (!promptEvent?.promptId) throw new Error("Test setup failed: no promptId");
 
 			// Reply
-			harness.reply(promptEvent!.promptId!, { content: "yes", timestamp: new Date() });
+			harness.reply(promptEvent.promptId, { content: "yes", timestamp: new Date() });
 
 			// Wait for completion
 			const result = await completePromise;
@@ -140,8 +141,8 @@ describe("Interactive Session Replay", () => {
 			const promptEvents: Array<{ promptId: string; prompt: string }> = [];
 			harness.subscribe((event: unknown) => {
 				const e = event as { type: string; promptId?: string; prompt?: string };
-				if (e.type === "session:prompt" || e.type === "user:prompt") {
-					promptEvents.push({ promptId: e.promptId!, prompt: e.prompt! });
+				if ((e.type === "session:prompt" || e.type === "user:prompt") && e.promptId && e.prompt) {
+					promptEvents.push({ promptId: e.promptId, prompt: e.prompt });
 				}
 			});
 
@@ -158,7 +159,10 @@ describe("Interactive Session Replay", () => {
 				}
 
 				// Reply
-				harness.reply(promptEvents[i]!.promptId, { content: userResponses[i]!, timestamp: new Date() });
+				const event = promptEvents[i];
+				const response = userResponses[i];
+				if (!event || !response) throw new Error("Test setup failed");
+				harness.reply(event.promptId, { content: response, timestamp: new Date() });
 			}
 
 			const result = await completePromise;
@@ -210,9 +214,10 @@ describe("Interactive Session Replay", () => {
 
 			expect(capturedPromptId).toBeDefined();
 			expect(capturedChoices).toEqual(["Option A", "Option B", "Option C"]);
+			if (!capturedPromptId) throw new Error("Test setup failed: no capturedPromptId");
 
 			// Reply with choice
-			harness.reply(capturedPromptId!, {
+			harness.reply(capturedPromptId, {
 				content: "Option B",
 				choice: "Option B",
 				timestamp: new Date(),
@@ -255,7 +260,7 @@ describe("Interactive Session Replay", () => {
 			harness.attach(attachment);
 			harness.startSession();
 
-			harness.complete();
+			void harness.complete(); // Don't await - we're testing event collection
 			await new Promise((r) => setTimeout(r, 20));
 
 			// Find prompt event

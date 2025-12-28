@@ -1,0 +1,500 @@
+timestamp: "2025-12-28T12:00:00Z"
+agent: type-analyzer
+
+# ============================================================================
+# DUPLICATE TYPES - Same name, different definitions
+# ============================================================================
+duplicate_types:
+  # ---------------------------------------------------------------------------
+  # RendererConfig - Known duplicate
+  # ---------------------------------------------------------------------------
+  - name: "RendererConfig"
+    locations:
+      - file: src/harness/renderer-interface.ts
+        definition: |
+          Classic harness renderer config with mode, sessionId, showTimestamps,
+          collapseCompleted, showTokenUsage, replaySpeed, verbosity (VerbosityLevel).
+          Used by IHarnessRenderer.initialize().
+      - file: src/harness/define-renderer.ts
+        definition: |
+          Unified event renderer config with verbosity (string enum), colors, unicode.
+          Used by defineRenderer() and IUnifiedRenderer.
+    differences: |
+      - renderer-interface.ts has harness-specific options: mode, sessionId,
+        replaySpeed, showTimestamps, collapseCompleted, showTokenUsage
+      - define-renderer.ts has display options: colors, unicode
+      - Both have verbosity but define-renderer uses inline enum
+    canonical: "src/harness/renderer-interface.ts"
+    resolution: |
+      Split into:
+      1. HarnessRendererConfig (harness-specific options)
+      2. DisplayConfig (colors, unicode, verbosity)
+      IUnifiedRenderer should compose both.
+
+  # ---------------------------------------------------------------------------
+  # NarrativeEvent - Known triplicate
+  # ---------------------------------------------------------------------------
+  - name: "NarrativeEvent"
+    locations:
+      - file: src/harness/event-types.ts
+        definition: |
+          Fluent API narrative: { type: "narrative", agent: string, text: string,
+          timestamp: Date }. Simple text-based event for @Monologue decorator.
+      - file: src/harness/event-context.ts
+        definition: |
+          Unified event system narrative: extends BaseEventPayload with
+          { type: "narrative", text: string, importance: NarrativeImportance }.
+          Part of BaseEvent union.
+      - file: src/monologue/types.ts
+        definition: |
+          Monologue system output: { timestamp: number, agentName: NarrativeAgentName,
+          taskId: string|null, text: string, metadata?: NarrativeMetadata }.
+          LLM-generated narrative with generation metadata.
+    differences: |
+      1. event-types.ts: Uses agent (string), timestamp (Date), no importance
+      2. event-context.ts: Uses importance, no agent, extends BaseEventPayload
+      3. monologue/types.ts: Uses agentName (enum), taskId, full metadata,
+         timestamp (number), no type discriminator
+      These represent different concerns:
+      - Fluent events (runtime event bus)
+      - Unified events (cross-cutting context propagation)
+      - Monologue output (LLM-generated agent narratives)
+    canonical: "src/harness/event-context.ts"
+    resolution: |
+      Consolidate to single NarrativeEvent with optional fields:
+      { type: "narrative", text: string, importance?: NarrativeImportance,
+        agent?: string, taskId?: string, metadata?: MonologueMetadata }.
+      Monologue system should emit this type directly.
+
+  # ---------------------------------------------------------------------------
+  # SessionPromptEvent - Known duplicate
+  # ---------------------------------------------------------------------------
+  - name: "SessionPromptEvent"
+    locations:
+      - file: src/harness/event-types.ts
+        definition: |
+          Fluent API: { type: "session:prompt", promptId: string, prompt: string,
+          choices?: string[], timestamp: Date }
+      - file: src/harness/event-context.ts
+        definition: |
+          Unified events: extends BaseEventPayload with
+          { type: "session:prompt", promptId: string, prompt: string, choices?: string[] }
+    differences: |
+      - event-types.ts has timestamp: Date at top level
+      - event-context.ts has no timestamp (added via EnrichedEvent wrapper)
+      - Otherwise identical
+    canonical: "src/harness/event-context.ts"
+    resolution: |
+      Use event-context.ts version. Fluent API should use EnrichedEvent wrapper
+      for timestamp. Remove from event-types.ts.
+
+  # ---------------------------------------------------------------------------
+  # NarrativeEntry - Quadruplicate (data model + event)
+  # ---------------------------------------------------------------------------
+  - name: "NarrativeEntry"
+    locations:
+      - file: src/harness/task-harness-types.ts
+        definition: |
+          Harness recording type with Zod schema:
+          { timestamp: number, agentName: "Parser"|"Coder"|"Reviewer"|"Harness",
+            taskId: string|null, text: string }
+      - file: src/harness/event-protocol.ts
+        definition: |
+          Event protocol narrative: { timestamp: number, agentName: AgentName,
+          taskId: string|null, text: string, importance?: NarrativeImportance }
+          Used in TaskNarrativeEvent.entry
+      - file: src/monologue/types.ts
+        definition: |
+          Monologue output: { timestamp: number, agentName: NarrativeAgentName,
+          taskId: string|null, text: string, metadata?: NarrativeMetadata }
+          NarrativeAgentName excludes "Harness"
+      - file: src/core/tokens.ts
+        definition: |
+          Interface token: INarrativeEntry with agentName including "Harness"
+    differences: |
+      - task-harness-types.ts includes "Harness" as valid agent
+      - monologue/types.ts explicitly excludes "Harness" per module doc
+      - event-protocol.ts adds importance field
+      - core/tokens.ts uses I-prefix interface pattern
+      Mixing concerns: recording data vs event payload vs LLM output
+    canonical: "src/harness/task-harness-types.ts"
+    resolution: |
+      1. Keep NarrativeEntry in task-harness-types.ts for recording
+      2. Rename event-protocol version to NarrativeEventPayload
+      3. Monologue system should transform its output to common format
+      4. Remove INarrativeEntry from tokens.ts (use concrete type)
+
+  # ---------------------------------------------------------------------------
+  # TaskStartEvent / TaskCompleteEvent / TaskFailedEvent
+  # ---------------------------------------------------------------------------
+  - name: "TaskStartEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: |
+          { type: "task:start", task: ParsedTask }
+          Contains full parsed task object
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "task:start", taskId: string }
+          Only contains task ID reference
+    differences: |
+      - event-protocol.ts includes full ParsedTask object (heavy)
+      - event-context.ts includes only taskId (lightweight)
+      Protocol version is for TaskHarness rendering (needs full task).
+      Context version is for unified event propagation (minimal).
+    canonical: "src/harness/event-context.ts"
+    resolution: |
+      Keep both but with clear names:
+      - TaskStartEvent in event-context.ts (unified, lightweight)
+      - TaskExecutionStartEvent in event-protocol.ts (harness, heavy)
+      Update IHarnessRenderer to use new name.
+
+  - name: "TaskCompleteEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: |
+          { type: "task:complete", taskId: string, result: TaskResult }
+          Contains full TaskResult with token usage, duration, etc.
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "task:complete", taskId: string, result?: unknown }
+          Generic result, no specific type
+    differences: |
+      - event-protocol.ts requires typed TaskResult
+      - event-context.ts uses unknown result type
+    canonical: "src/harness/event-context.ts"
+    resolution: Same as TaskStartEvent - rename protocol version.
+
+  - name: "TaskFailedEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: |
+          { type: "task:failed", taskId: string, failure: FailureRecord }
+          Contains FailureRecord with stage, retryable flag
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "task:failed", taskId: string,
+          error: string, stack?: string }
+    differences: |
+      - event-protocol.ts uses FailureRecord structure
+      - event-context.ts uses flat error/stack fields
+    canonical: "src/harness/event-context.ts"
+    resolution: Same as above - rename protocol version.
+
+  # ---------------------------------------------------------------------------
+  # PhaseStartEvent / PhaseCompleteEvent
+  # ---------------------------------------------------------------------------
+  - name: "PhaseStartEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: |
+          { type: "phase:start", phase: string, phaseNumber: number, taskCount: number }
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "phase:start", name: string, phaseNumber?: number }
+    differences: |
+      - event-protocol.ts uses 'phase' field, requires phaseNumber and taskCount
+      - event-context.ts uses 'name' field, optional phaseNumber, no taskCount
+    canonical: "src/harness/event-context.ts"
+    resolution: |
+      Unify field names to 'name'. Add optional taskCount.
+      Rename protocol version to PhaseExecutionStartEvent.
+
+  - name: "PhaseCompleteEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: "{ type: 'phase:complete', phaseNumber: number }"
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "phase:complete", name: string, phaseNumber?: number }
+    differences: |
+      - event-protocol.ts only has phaseNumber
+      - event-context.ts has both name and optional phaseNumber
+    canonical: "src/harness/event-context.ts"
+    resolution: Same as PhaseStartEvent.
+
+  # ---------------------------------------------------------------------------
+  # HarnessStartEvent / HarnessCompleteEvent
+  # ---------------------------------------------------------------------------
+  - name: "HarnessStartEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: |
+          { type: "harness:start", tasks: ParsedTask[], sessionId: string,
+            mode: "live"|"replay" }
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "harness:start", sessionId: string,
+            mode: "live"|"replay", taskCount: number, sessionMode?: boolean }
+    differences: |
+      - event-protocol.ts includes full tasks array
+      - event-context.ts uses taskCount (number), adds sessionMode flag
+    canonical: "src/harness/event-context.ts"
+    resolution: |
+      Keep both with clear purposes:
+      - HarnessStartEvent (event-context.ts) - lightweight event bus
+      - HarnessExecutionStartEvent (event-protocol.ts) - TaskHarness renderer
+
+  - name: "HarnessCompleteEvent"
+    locations:
+      - file: src/harness/event-protocol.ts
+        definition: "{ type: 'harness:complete', summary: HarnessSummary }"
+      - file: src/harness/event-context.ts
+        definition: |
+          extends BaseEventPayload { type: "harness:complete", success: boolean,
+            tasksCompleted: number, tasksFailed: number, duration: number }
+    differences: |
+      - event-protocol.ts uses HarnessSummary object (includes token usage)
+      - event-context.ts uses inline fields (subset of HarnessSummary)
+    canonical: "src/harness/event-context.ts"
+    resolution: Same as HarnessStartEvent.
+
+  # ---------------------------------------------------------------------------
+  # HarnessResult
+  # ---------------------------------------------------------------------------
+  - name: "HarnessResult"
+    locations:
+      - file: src/harness/harness-instance.ts
+        definition: |
+          { result: TResult, state: TState, events: FluentHarnessEvent[], duration: number }
+      - file: src/factory/define-harness.ts
+        definition: |
+          { result: TResult, state: TState, events: FluentHarnessEvent[], duration: number }
+    differences: "Identical definitions in two files"
+    canonical: "src/harness/harness-instance.ts"
+    resolution: |
+      Export from harness-instance.ts only.
+      define-harness.ts should import from harness-instance.ts.
+
+  # ---------------------------------------------------------------------------
+  # HarnessInstance interface
+  # ---------------------------------------------------------------------------
+  - name: "HarnessInstance"
+    locations:
+      - file: src/factory/define-harness.ts
+        definition: |
+          Interface with on(), run(), state properties.
+          Public API for harness consumers.
+      - file: src/harness/harness-instance.ts
+        definition: |
+          Class implementing Transport interface.
+          Full implementation with attach(), startSession(), complete(), etc.
+    differences: |
+      - define-harness.ts has minimal interface (on, run, state)
+      - harness-instance.ts class has full Transport implementation
+      Interface is subset of class - designed for abstraction.
+    canonical: "src/harness/harness-instance.ts"
+    resolution: |
+      Keep both but clarify:
+      - IHarnessInstance interface in define-harness.ts (public API)
+      - HarnessInstance class in harness-instance.ts (implementation)
+      Rename interface to IHarnessInstance to follow convention.
+
+# ============================================================================
+# MISSING EXPORTS - Internal types that should be public
+# ============================================================================
+missing_exports:
+  - type: "AsyncQueue"
+    location: src/harness/async-queue.ts
+    reason: |
+      Useful utility for consumers implementing custom transports or
+      session handlers. Currently only internal to HarnessInstance.
+    export_from: src/harness/index.ts
+
+  - type: "SessionContext"
+    location: src/harness/session-context.ts
+    reason: |
+      Needed by consumers implementing custom session handlers.
+      ISessionContext interface is exported but not the implementation.
+    export_from: src/harness/index.ts
+
+  - type: "Deferred<T>"
+    location: src/harness/harness-instance.ts
+    reason: |
+      Common utility pattern for promise resolution control.
+      Should be extracted to utils and exported.
+    export_from: src/core/utils.ts (new file)
+
+  - type: "SessionContextDeps"
+    location: src/harness/session-context.ts
+    reason: |
+      Needed for custom session context implementations.
+    export_from: src/harness/index.ts
+
+  - type: "TransportStatus"
+    location: src/core/unified-events/types.ts
+    reason: |
+      Already re-exported in index.ts but not clearly documented.
+      Consumers need this for status checking.
+    export_from: Already exported, document better
+
+  - type: "Cleanup"
+    location: src/core/unified-events/types.ts
+    reason: |
+      Attachment cleanup function type. Needed for type-safe attachments.
+    export_from: Already exported via unified-events/index.ts
+
+# ============================================================================
+# IMPORT ISSUES - Importing from wrong places
+# ============================================================================
+import_issues:
+  - file: src/core/unified-events/types.ts
+    imports_from: "../../harness/event-context.js"
+    should_import_from: "Re-exports are fine here"
+    status: "OK - types.ts is the consolidation point that re-exports"
+    note: |
+      This file correctly re-exports harness/event-context types.
+      It's the intended pattern for unified-events module.
+
+  - file: src/harness/define-renderer.ts
+    imports_from: "../core/unified-events/types.js"
+    should_import_from: "../core/unified-events/index.js"
+    status: "ISSUE"
+    fix: "Import from index.js for better encapsulation"
+
+  - file: src/harness/harness-instance.ts
+    imports_from: "../core/unified-events/types.js"
+    should_import_from: "../core/unified-events/index.js"
+    status: "ISSUE"
+    fix: "Import from index.js for better encapsulation"
+
+  - file: src/factory/define-harness.ts
+    imports_from: "../core/unified-events/types.js"
+    should_import_from: "../core/unified-events/index.js"
+    status: "ISSUE"
+    fix: "Import from index.js for better encapsulation"
+
+# ============================================================================
+# OVERLAPPING TYPES - Almost the same but slightly different
+# ============================================================================
+overlapping_types:
+  - name: "VerbosityLevel vs verbosity enum"
+    locations:
+      - file: src/harness/event-protocol.ts
+        type: 'VerbosityLevel = "minimal" | "normal" | "verbose"'
+      - file: src/harness/define-renderer.ts
+        type: 'verbosity: "minimal" | "normal" | "verbose"'
+    issue: |
+      Same values but VerbosityLevel is a named type alias while
+      define-renderer.ts uses inline enum. No shared reference.
+    resolution: |
+      Import and use VerbosityLevel from event-protocol.ts in
+      define-renderer.ts RendererConfig.
+
+  - name: "AgentName vs NarrativeAgentName"
+    locations:
+      - file: src/harness/event-protocol.ts
+        type: 'AgentName = "Parser" | "Coder" | "Reviewer" | "Validator" | "Harness"'
+      - file: src/monologue/types.ts
+        type: 'NarrativeAgentName = "Parser" | "Coder" | "Reviewer" | "Validator"'
+    issue: |
+      Almost identical but AgentName includes "Harness".
+      Monologue explicitly excludes Harness per design (Harness emits progress, not narratives).
+    resolution: |
+      Keep both - they serve different purposes:
+      - AgentName: All agents that can emit events
+      - NarrativeAgentName: Agents that generate LLM narratives
+      Document the distinction clearly.
+
+  - name: "FluentHarnessEvent vs BaseEvent vs HarnessEvent"
+    locations:
+      - file: src/harness/event-types.ts
+        type: "FluentHarnessEvent - union of Fluent API events"
+      - file: src/harness/event-context.ts
+        type: "BaseEvent - union of unified event types"
+      - file: src/harness/event-protocol.ts
+        type: "HarnessEvent - union of TaskHarness events"
+    issue: |
+      Three separate event unions with overlapping but different members.
+      Confusing for consumers about which to use where.
+    resolution: |
+      Consolidate to two event systems:
+      1. BaseEvent (unified-events) - all runtime events with EnrichedEvent wrapper
+      2. HarnessProtocolEvent (event-protocol) - TaskHarness-specific events
+      FluentHarnessEvent should map to BaseEvent subset.
+
+  - name: "INarrativeEntry vs NarrativeEntry"
+    locations:
+      - file: src/core/tokens.ts
+        type: "INarrativeEntry interface"
+      - file: src/harness/task-harness-types.ts
+        type: "NarrativeEntry (inferred from Zod schema)"
+    issue: |
+      Both are essentially the same structure. INarrativeEntry uses
+      I-prefix interface pattern typical for DI tokens, but the concrete
+      type already exists.
+    resolution: |
+      Remove INarrativeEntry from tokens.ts.
+      Use NarrativeEntry from task-harness-types.ts.
+      Update IAgentCallbacks to use concrete type.
+
+  - name: "MonologueMetadata vs NarrativeMetadata"
+    locations:
+      - file: src/harness/event-protocol.ts
+        type: "MonologueMetadata { eventCount, historyLength, isFinal? }"
+      - file: src/monologue/types.ts
+        type: "NarrativeMetadata { eventCount, historyLength, isFinal, model, latencyMs }"
+    issue: |
+      NarrativeMetadata is superset of MonologueMetadata.
+      MonologueMetadata in event-protocol is used in TaskNarrativeEvent.
+    resolution: |
+      Use NarrativeMetadata from monologue/types.ts as canonical.
+      Remove MonologueMetadata from event-protocol.ts.
+      Or merge: MonologueMetadata for event-bus (lightweight),
+      NarrativeMetadata for monologue internals (full).
+
+# ============================================================================
+# GENERIC VS SPECIFIC ISSUES
+# ============================================================================
+generic_vs_specific:
+  - issue: "TaskResult vs unknown result"
+    locations:
+      - generic: src/harness/event-context.ts TaskCompleteEvent.result: unknown
+      - specific: src/harness/event-protocol.ts TaskCompleteEvent.result: TaskResult
+    problem: |
+      Event bus uses generic unknown, protocol uses specific TaskResult.
+      Consumers can't safely type-check result without casting.
+    resolution: |
+      Use generic form in event bus (unknown or generic <T>).
+      Protocol events for TaskHarness keep specific types.
+      Document that unified events use weak typing for flexibility.
+
+  - issue: "Record<string, unknown> vs specific data types"
+    locations:
+      - generic: src/harness/event-types.ts PhaseEvent.data: Record<string, unknown>
+      - generic: src/harness/event-types.ts TaskEvent.data: Record<string, unknown>
+    problem: |
+      data field is completely untyped bag. Hard to know what's available.
+    resolution: |
+      Either remove data field (use specific events instead) or
+      document common data keys per event type.
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+summary:
+  total_duplicates: 12
+  critical_issues:
+    - NarrativeEvent (3 definitions with different purposes)
+    - NarrativeEntry (4 definitions)
+    - RendererConfig (2 definitions for different renderer types)
+    - Task/Phase/Harness events (protocol vs context versions)
+
+  recommended_actions:
+    - priority_1:
+        - Consolidate NarrativeEvent to single type with optional fields
+        - Rename event-protocol types with "Execution" suffix to distinguish
+        - Extract VerbosityLevel to shared location
+    - priority_2:
+        - Rename RendererConfig in define-renderer.ts to UnifiedRendererConfig
+        - Export AsyncQueue and SessionContext for custom implementations
+        - Fix import paths to use index.js barrel exports
+    - priority_3:
+        - Remove INarrativeEntry from tokens.ts
+        - Consolidate MonologueMetadata/NarrativeMetadata
+        - Document AgentName vs NarrativeAgentName distinction
+
+  breaking_changes:
+    - Renaming RendererConfig will affect existing code
+    - Renaming event-protocol types will affect IHarnessRenderer implementations
+    - Any NarrativeEntry consolidation affects monologue consumers

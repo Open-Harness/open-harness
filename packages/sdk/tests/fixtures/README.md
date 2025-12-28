@@ -6,9 +6,8 @@ Recorded LLM sessions for replay testing.
 
 ```
 fixtures/
-  └── agents/          # Individual agent recordings
-      └── smoke/
-          └── smoke_session.jsonl
+  ├── golden/        # Curated test scenarios
+  └── artifacts/     # Auto-generated recordings (gitignored)
 ```
 
 ## Format
@@ -19,39 +18,32 @@ Each `.jsonl` file contains recorded sessions:
 {"prompt": "...", "options": {...}, "messages": [...SDK messages...]}
 ```
 
-## Creating Fixtures
+## Recording (Opt-in)
 
-Use the @Record decorator or Vault directly:
+Recording is opt-in via `@Record` decorator from `@openharness/anthropic`:
 
 ```typescript
-import { createContainer } from "../../src/core/container.js";
-import { IVaultToken } from "../../src/core/tokens.js";
+import { createContainer } from "../../src/infra/container.js";
 
+// Configure recording directory (defaults to ./tests/fixtures/artifacts)
 const container = createContainer({
   mode: "live",
-  config: { recordingsDir: "./tests/fixtures" }
+  config: { recordingsDir: "./tests/fixtures/artifacts" }
 });
 
-const vault = container.get(IVaultToken);
-const session = await vault.startSession("agents", "my-fixture");
-
-// Run agent...
-// Session captures via @Record decorator or RecordingFactory
+// Apply @Record decorator to methods you want to record
+// See @openharness/anthropic documentation
 ```
 
 ## Using Fixtures in Tests
 
 ```typescript
-import { createContainer } from "../../src/core/container.js";
-import { ReplayRunner } from "../../src/core/replay-runner.js";
+import { createContainer } from "../../src/infra/container.js";
 
 const container = createContainer({
   mode: "replay",
-  config: { recordingsDir: "./tests/fixtures" }
+  config: { recordingsDir: "./tests/fixtures/golden" }
 });
-
-const runner = container.get(ReplayRunner);
-runner.setScenario("my-fixture");
 
 // runner.run() will replay from the fixture
 ```
@@ -60,4 +52,4 @@ runner.setScenario("my-fixture");
 
 1. Keep fixtures small - one scenario per file
 2. Name descriptively - `coding-adds-function.jsonl` not `test1.jsonl`
-3. Commit to git - fixtures are test data
+3. Commit golden fixtures to git, gitignore artifacts

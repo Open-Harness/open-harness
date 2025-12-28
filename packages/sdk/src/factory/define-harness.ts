@@ -10,8 +10,8 @@
  * @module factory/define-harness
  */
 
-import { createContainer } from "../core/container.js";
-import type { Attachment, IUnifiedEventBus } from "../core/unified-events/types.js";
+import { createContainer } from "../infra/container.js";
+import type { Attachment, IUnifiedEventBus } from "../infra/unified-events/types.js";
 import type {
 	FluentEventHandler,
 	FluentHarnessEvent,

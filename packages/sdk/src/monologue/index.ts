@@ -5,8 +5,7 @@
  * Use the @Monologue decorator to enable narratives without code changes.
  */
 
-// LLM Implementation (T013)
-export { AnthropicMonologueLLM } from "./anthropic-llm.js";
+// LLM Implementation - Use @openharness/anthropic for AnthropicMonologueLLM
 export type { MonologueOptions } from "./monologue-decorator.js";
 // Decorator (T021)
 export { Monologue, setMonologueContainer } from "./monologue-decorator.js";

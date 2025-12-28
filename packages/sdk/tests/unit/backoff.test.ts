@@ -15,7 +15,7 @@ import {
 	sleep,
 	updateBackoffContext,
 	withBackoff,
-} from "../../src/harness/backoff.js";
+} from "../../src/utils/backoff.js";
 
 describe("backoff", () => {
 	describe("DEFAULT_BACKOFF_CONFIG", () => {

@@ -1,65 +1,55 @@
 /**
- * Open Harness SDK - Extensible Workflow SDK for Anthropic Agents
+ * Open Harness SDK - Provider-Agnostic Workflow SDK
  *
- * THREE-LAYER ARCHITECTURE:
+ * ARCHITECTURE:
  *
- * LAYER 1 - HARNESS (Step-Aware Orchestration):
- * - BaseHarness: Abstract class for step-aware execution
- * - Agent: Lightweight wrapper for step-aware agent logic
- * - PersistentState: State management with bounded context
+ * LAYER 1 - HARNESS (Fluent Orchestration):
+ * - defineHarness: Factory for typed workflow harnesses
+ * - wrapAgent: Single agent wrapper for quick tasks
+ * - HarnessInstance: Runtime execution with event streaming
  *
  * LAYER 2 - AGENTS (Provider-Agnostic Agent System):
  * - IAgent<TInput, TOutput>: Core interface for typed agents
- * - BaseAnthropicAgent: Base class for Anthropic/Claude agents
  * - IAgentCallbacks: Unified callback interface
  *
- * LAYER 3 - RUNNERS (LLM Execution Infrastructure):
- * - AnthropicRunner: Production runner for Claude API
- * - ReplayRunner: Testing runner with recorded responses
- * - DI Container: Dependency injection for all components
+ * LAYER 3 - CHANNELS (Event Transport):
+ * - defineChannel: Factory for event consumers (renderers, loggers, etc.)
+ * - Transport: Bidirectional event interface
+ *
+ * For Anthropic/Claude provider, use @openharness/anthropic
  */
 
 // ============================================
-// HARNESS LAYER (Step-Aware Orchestration)
+// HARNESS LAYER (Fluent Orchestration)
 // ============================================
 
+// Core Utilities
 export type {
-	AgentConfig,
-	AgentRunParams,
 	BackoffConfig,
 	BackoffContext,
-	Constraints,
-	HarnessConfig,
-	LoadedContext,
-	PersistentStateConfig,
-	StateDelta,
-	Step,
-	StepYield,
 	TopologicalSortResult,
 } from "./harness/index.js";
 export {
-	Agent,
-	BaseHarness,
 	calculateDelay,
 	createBackoffContext,
 	DEFAULT_BACKOFF_CONFIG,
 	detectCycles,
 	getReadyTasks,
 	isRateLimitError,
-	PersistentState,
 	resolveDependencies,
 	shouldRetry,
 	sleep,
-	TaskHarness,
 	updateBackoffContext,
 	validateDependencies,
 	withBackoff,
 } from "./harness/index.js";
 
 // ============================================
-// AGENT LAYER (Re-exported from Anthropic Provider)
+// AGENT LAYER (Provider-Agnostic)
 // ============================================
 
+// Core Interface (re-exported from core)
+export type { IAgent, RunnerOptions } from "@openharness/core";
 // Unified Callbacks (IAgentCallbacks is the primary callback interface)
 export type {
 	AgentError,
@@ -72,40 +62,13 @@ export type {
 	ToolCallEvent,
 	ToolResultEvent,
 } from "./callbacks/index.js";
-// Base Classes
-export { type AgentRunOptions, BaseAnthropicAgent } from "./providers/anthropic/agents/base-anthropic-agent.js";
-// Concrete Agents
-export { CodingAgent, type CodingAgentOptions } from "./providers/anthropic/agents/coding-agent.js";
-export { ParserAgent } from "./providers/anthropic/agents/parser-agent.js";
-export {
-	PlannerAgent,
-	type PlannerAgentOptions,
-	type PlannerResult,
-	type Ticket,
-} from "./providers/anthropic/agents/planner-agent.js";
-export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./providers/anthropic/agents/review-agent.js";
-// Core Interface
-export type { AgentDefinition, IAgent, RunnerOptions } from "./providers/anthropic/agents/types.js";
-export {
-	ValidationReviewAgent,
-	type ValidationReviewAgentOptions,
-} from "./providers/anthropic/agents/validation-review-agent.js";
 
 // ============================================
-// RUNNER LAYER (LLM Execution Infrastructure)
+// FACTORY LAYER
 // ============================================
 
 // Core Factories
 export { createAgent, resetGlobalContainer, setGlobalContainer } from "./factory/agent-factory.js";
-export {
-	type CreateTaskHarnessOptions,
-	createTaskHarness,
-	createTestTaskHarness,
-} from "./factory/harness-factory.js";
-export { createWorkflow } from "./factory/workflow-builder.js";
-
-// Runners
-export { AnthropicRunner } from "./providers/anthropic/runner/anthropic-runner.js";
 
 // Task Management
 export { TaskList } from "./workflow/task-list.js";
@@ -114,25 +77,19 @@ export { TaskList } from "./workflow/task-list.js";
 // TYPES
 // ============================================
 
-export type {
-	AgentEvent,
-	CodingResult,
-	CompactData,
-	SessionResult,
-	StatusData,
-} from "./providers/anthropic/runner/models.js";
-
+// Runner Callbacks
+export type { RunnerCallbacks } from "./infra/tokens.js";
 export type { Task, TaskStatus } from "./workflow/task-list.js";
 
 // ============================================
 // DI CONTAINER
 // ============================================
 
-export type { ContainerOptions } from "./core/container.js";
-export { createContainer, createTestContainer } from "./core/container.js";
+export type { ContainerOptions } from "./infra/container.js";
+export { createContainer, createTestContainer } from "./infra/container.js";
 
 // EventBus
-export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./core/event-bus.js";
+export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./infra/event-bus.js";
 // Token Interfaces
 export type {
 	IAgentRunner,
@@ -144,7 +101,7 @@ export type {
 	IPromptRegistry,
 	IRecordingDecorator,
 	IVault,
-} from "./core/tokens.js";
+} from "./infra/tokens.js";
 // DI Tokens
 export {
 	IAgentRunnerToken,
@@ -157,11 +114,25 @@ export {
 	IRecordingDecoratorToken,
 	IReplayRunnerToken,
 	IVaultToken,
-} from "./core/tokens.js";
-export type { MonologueConfig, NarrativeAgentName, NarrativeEntry } from "./monologue/index.js";
+} from "./infra/tokens.js";
+// Monologue System Types
+export type {
+	AgentEvent as MonologueAgentEvent,
+	IMonologueLLM,
+	MonologueConfig,
+	NarrativeAgentName,
+	NarrativeEntry,
+} from "./monologue/index.js";
 // Monologue System
-export { Monologue, type MonologueOptions, setMonologueContainer } from "./monologue/index.js";
-export { EventType, EventTypeConst } from "./providers/anthropic/runner/models.js";
+export {
+	DEFAULT_MONOLOGUE_PROMPT,
+	IMonologueLLMToken,
+	Monologue,
+	type MonologueOptions,
+	setMonologueContainer,
+	TERSE_PROMPT,
+	VERBOSE_PROMPT,
+} from "./monologue/index.js";
 
 // ============================================
 // FLUENT HARNESS API (007-fluent-harness-dx)
@@ -209,7 +180,6 @@ export type {
 	RetryStartEvent,
 	RetrySuccessEvent,
 	StepEvent,
-	StepYield as FluentStepYield,
 	TaskEvent,
 } from "./harness/event-types.js";
 // Type guard functions for fluent API
@@ -231,10 +201,10 @@ export { HarnessInstance } from "./harness/harness-instance.js";
 // ============================================
 
 // DI Token
-export { IUnifiedEventBusToken } from "./core/tokens.js";
+export { IUnifiedEventBusToken } from "./infra/tokens.js";
 // Core class and utilities
-export { UnifiedEventBus } from "./core/unified-event-bus.js";
-export { matchesFilter } from "./core/unified-events/filter.js";
+export { UnifiedEventBus } from "./infra/unified-event-bus.js";
+export { matchesFilter } from "./infra/unified-events/filter.js";
 // Types
 export type {
 	// Base event types (FR-004)
@@ -271,24 +241,29 @@ export type {
 	TaskStartEvent,
 	UnifiedEventListener,
 	Unsubscribe,
-} from "./core/unified-events/index.js";
+} from "./infra/unified-events/index.js";
 // Type guards
 export {
 	isAgentEvent,
 	isNarrativeEvent as isUnifiedNarrativeEvent,
 	isSessionEvent,
 	isWorkflowEvent,
-} from "./core/unified-events/types.js";
-// Renderer API (FR-005)
+} from "./infra/unified-events/types.js";
+
+// ============================================
+// CHANNEL SYSTEM
+// ============================================
+
+// Channel API
 export {
-	defineRenderer,
-	type EventHandler as RendererEventHandler,
-	type IUnifiedRenderer,
-	type RenderContext,
-	type RendererDefinition,
+	type ChannelConfig,
+	type ChannelContext,
+	type ChannelDefinition,
+	type ChannelEventHandler,
+	createChannel,
+	defineChannel,
+	type IChannel,
 	RenderOutput,
 	type RenderOutputConfig,
 	type Spinner,
-	toAttachment,
-	type UnifiedRendererConfig,
 } from "./harness/index.js";

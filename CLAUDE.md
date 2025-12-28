@@ -1,6 +1,17 @@
-# dao-spec-kit Development Guidelines
+# Open Harness Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-12-25
+Auto-generated from all feature plans. Last updated: 2025-12-28
+
+## Knowledge Base
+
+The `.knowledge/` folder is an Obsidian vault containing:
+- **Canonical docs**: `.knowledge/docs/` - Public documentation (tracked)
+- **Product thinking**: `.knowledge/product/` - Vision, roadmap, decisions (tracked)
+- **Private investor materials**: `.knowledge/private/PITCH.md` - Symlinked OUT (gitignored)
+- **Reference**: `.knowledge/CLAUDE.md` explains the full setup
+
+Read `.knowledge/private/PITCH.md` for business context and investor narrative.
+Read `.knowledge/docs/why.md` for developer philosophy.
 
 ## Active Technologies
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, listr2 (optional peer) (003-harness-renderer)
@@ -55,8 +66,25 @@ TypeScript 5.x (strict mode): Follow standard conventions
 - The SDK uses Claude Code's built-in authentication
 
 BEHAVIORAL DECORATORS:
+
+## Think, Repete, and Give Options
+> Command: `*TRO`
+> Description: Think, Repete, and Give Options
+> Activate `prompting` skill
+    1. ULTRATHINK
+    2. think about the the users request
+    3. deeply understand the problem
+    4. connect their thoughts together to form coherent pros
+    5. identify the implicit assumptions and constraints that are not explicitly stated
+    5. generate the best response optimised using the `prompting` skill
+    6. present the response to the user using the ASK USER TOOL
+    
+    **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
+    **CRITICAL**: Always use the `prompting` skill to generate the best response.
+
 ## Think, Explain, and Give Options
 > Command: `*TEO`
+> Description: Think, Explain, and Give Options
     1. ULTRATHINK
     2. think about the problem in multiple ways
     3. generate an appropriate rhubric for the domain
@@ -64,13 +92,18 @@ BEHAVIORAL DECORATORS:
     5. grade the solutions against the rubric
     6. choose your preferred solution and explain why
     7. present the solutions to the user using the ASK USER TOOL
+    
+    **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
 
 ## Think, Explain Methodology
 > Command: `*TEM`
+> Description: Think, Explain Methodology
+
     1. ULTRATHINK
     2. think about the problem in multiple ways
     3. choose your preferred solution and explain why
     3. generate an appropriate methodology for the domain
     4. present the methodology to the user using the ASK USER TOOL
 
+    **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
 <!-- MANUAL ADDITIONS END -->

@@ -11,7 +11,7 @@ import {
 	getReadyTasks,
 	resolveDependencies,
 	validateDependencies,
-} from "../../src/harness/dependency-resolver.js";
+} from "../../src/utils/dependency-resolver.js";
 
 describe("dependency-resolver", () => {
 	describe("resolveDependencies", () => {

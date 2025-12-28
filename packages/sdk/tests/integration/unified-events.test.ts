@@ -14,8 +14,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { injectable } from "@needle-di/core";
-import { UnifiedEventBus } from "../../src/core/unified-event-bus.js";
-import type { EnrichedEvent } from "../../src/core/unified-events/types.js";
+import { UnifiedEventBus } from "../../src/infra/unified-event-bus.js";
+import type { EnrichedEvent } from "../../src/infra/unified-events/types.js";
 import { defineHarness } from "../../src/index.js";
 
 // ============================================================================
