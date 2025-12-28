@@ -86,6 +86,24 @@
         "typescript": "^5",
       },
     },
+    "packages/anthropic": {
+      "name": "@openharness/anthropic",
+      "version": "0.1.0",
+      "dependencies": {
+        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+        "@anthropic-ai/sdk": "^0.52.0",
+        "@needle-di/core": "^1.1.0",
+        "@openharness/core": "workspace:*",
+        "@openharness/sdk": "workspace:*",
+        "zod": "^4.2.1",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/config": {
       "name": "@openharnes/config",
       "version": "0.0.0",
@@ -119,6 +137,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.10",
+        "@openharness/anthropic": "workspace:*",
         "@types/bun": "latest",
       },
       "peerDependencies": {
@@ -373,6 +392,8 @@
     "@openharnes/cli": ["@openharnes/cli@workspace:apps/cli"],
 
     "@openharnes/config": ["@openharnes/config@workspace:packages/config"],
+
+    "@openharness/anthropic": ["@openharness/anthropic@workspace:packages/anthropic"],
 
     "@openharness/core": ["@openharness/core@workspace:packages/core"],
 

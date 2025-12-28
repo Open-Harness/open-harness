@@ -13,8 +13,8 @@ import {
 	type CodingResult,
 	defineHarness,
 	PlannerAgent,
-	type ReviewResult,
 	ReviewAgent,
+	type ReviewResult,
 	type Ticket,
 } from "@openharness/sdk";
 
@@ -49,10 +49,7 @@ const CodingWorkflow = defineHarness({
 		await phase("Execution", async () => {
 			for (const ticket of state.tickets) {
 				await task(ticket.id, async () => {
-					const code = await agents.coder.execute(
-						`${ticket.title}\n${ticket.description}`,
-						`session-${ticket.id}`,
-					);
+					const code = await agents.coder.execute(`${ticket.title}\n${ticket.description}`, `session-${ticket.id}`);
 					state.codeResults.set(ticket.id, code);
 
 					const review = await agents.reviewer.review(
