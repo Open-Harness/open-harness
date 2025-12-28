@@ -14,13 +14,13 @@
  * ```
  */
 export function add(a: number, b: number): number {
-  if (typeof a !== 'number' || typeof b !== 'number') {
-    throw new TypeError('Both arguments must be numbers');
-  }
+	if (typeof a !== "number" || typeof b !== "number") {
+		throw new TypeError("Both arguments must be numbers");
+	}
 
-  if (isNaN(a) || isNaN(b)) {
-    throw new TypeError('Arguments cannot be NaN');
-  }
+	if (isNaN(a) || isNaN(b)) {
+		throw new TypeError("Arguments cannot be NaN");
+	}
 
-  return a + b;
+	return a + b;
 }
