@@ -2,15 +2,38 @@
  * Unified Event Bus Types
  *
  * Interface and type definitions for the unified event system.
- * Re-exports context types from harness/event-context.ts for convenience.
- * Also defines Transport and Attachment types for bidirectional communication.
+ * Imports core types from @openharness/core and defines SDK-specific extensions.
  *
  * @module core/unified-events/types
  */
 
 import { z } from "zod";
+import type {
+	AgentCompleteEvent,
+	AgentStartEvent,
+	AgentTextEvent,
+	AgentThinkingEvent,
+	AgentToolCompleteEvent,
+	AgentToolStartEvent,
+	BaseEvent,
+	EnrichedEvent,
+	EventContext,
+	EventFilter,
+	HarnessCompleteEvent,
+	HarnessStartEvent,
+	NarrativeEvent,
+	PhaseCompleteEvent,
+	PhaseStartEvent,
+	SessionAbortEvent,
+	SessionPromptEvent,
+	SessionReplyEvent,
+	TaskCompleteEvent,
+	TaskFailedEvent,
+	TaskStartEvent,
+	Unsubscribe,
+} from "@openharness/core";
 
-// Re-export all context and event types from harness
+// Re-export all context and event types from core
 export type {
 	AgentCompleteEvent,
 	AgentContext,
@@ -20,11 +43,8 @@ export type {
 	AgentToolCompleteEvent,
 	AgentToolStartEvent,
 	BaseEvent,
-	// Base event types
 	BaseEventPayload,
-	// Enriched event
 	EnrichedEvent,
-	// Context types
 	EventContext,
 	EventFilter,
 	ExtensionEvent,
@@ -42,35 +62,11 @@ export type {
 	TaskContext,
 	TaskFailedEvent,
 	TaskStartEvent,
-	// Listener types
-	UnifiedEventListener,
 	Unsubscribe,
-} from "../../harness/event-context.js";
+} from "@openharness/core";
 
-import type {
-	AgentCompleteEvent,
-	AgentStartEvent,
-	AgentTextEvent,
-	AgentThinkingEvent,
-	AgentToolCompleteEvent,
-	AgentToolStartEvent,
-	BaseEvent,
-	EventContext,
-	EventFilter,
-	HarnessCompleteEvent,
-	HarnessStartEvent,
-	NarrativeEvent,
-	PhaseCompleteEvent,
-	PhaseStartEvent,
-	SessionAbortEvent,
-	SessionPromptEvent,
-	SessionReplyEvent,
-	TaskCompleteEvent,
-	TaskFailedEvent,
-	TaskStartEvent,
-	UnifiedEventListener,
-	Unsubscribe,
-} from "../../harness/event-context.js";
+// SDK-specific alias
+export type { EventListener as UnifiedEventListener } from "@openharness/core";
 
 // ============================================================================
 // TYPE GUARDS (FR-004)
@@ -120,6 +116,9 @@ export function isSessionEvent(event: BaseEvent): event is SessionPromptEvent | 
 /**
  * Unified Event Bus interface.
  * Central event infrastructure with AsyncLocalStorage context propagation.
+ *
+ * This extends the core IEventBus with SDK-specific features like
+ * AsyncLocalStorage scoping and the `scoped()` method.
  */
 export interface IUnifiedEventBus {
 	/**
@@ -147,8 +146,8 @@ export interface IUnifiedEventBus {
 	 * @param listener - Callback for matching events
 	 * @returns Unsubscribe function
 	 */
-	subscribe(listener: UnifiedEventListener): Unsubscribe;
-	subscribe(filter: EventFilter, listener: UnifiedEventListener): Unsubscribe;
+	subscribe(listener: (event: EnrichedEvent) => void | Promise<void>): Unsubscribe;
+	subscribe(filter: EventFilter, listener: (event: EnrichedEvent) => void | Promise<void>): Unsubscribe;
 
 	/**
 	 * Get current context from AsyncLocalStorage.
@@ -175,7 +174,7 @@ export interface IUnifiedEventBus {
 /**
  * Event listener callback type for Transport subscriptions.
  */
-export type EventListener = (event: import("../../harness/event-context.js").EnrichedEvent) => void | Promise<void>;
+export type EventListener = (event: EnrichedEvent) => void | Promise<void>;
 
 /**
  * Transport execution status.
@@ -196,8 +195,10 @@ export type TransportStatus = "idle" | "running" | "complete" | "aborted";
  * - Status: status, sessionActive
  *
  * HarnessInstance implements this interface directly.
+ *
+ * NOTE: This extends core's EventHub with async iteration support.
  */
-export interface Transport extends AsyncIterable<import("../../harness/event-context.js").EnrichedEvent> {
+export interface Transport extends AsyncIterable<EnrichedEvent> {
 	// ═══════════════════════════════════════════════════════════════════════
 	// EVENTS (OUT) - Harness → Consumer
 	// ═══════════════════════════════════════════════════════════════════════
@@ -239,7 +240,7 @@ export interface Transport extends AsyncIterable<import("../../harness/event-con
 	 * }
 	 * ```
 	 */
-	[Symbol.asyncIterator](): AsyncIterator<import("../../harness/event-context.js").EnrichedEvent>;
+	[Symbol.asyncIterator](): AsyncIterator<EnrichedEvent>;
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// COMMANDS (IN) - Consumer → Harness
