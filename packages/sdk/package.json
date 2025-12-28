@@ -16,7 +16,6 @@
 		"prompts"
 	],
 	"scripts": {
-		"bmad": "claude --mcp-config .mcp.json",
 		"typecheck": "tsc --noEmit",
 		"check-types": "tsc --noEmit",
 		"lint": "biome check .",
