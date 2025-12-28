@@ -17,13 +17,15 @@
 
 import {
 	BaseHarness,
-	CodingAgent,
-	type CodingResult,
 	createContainer,
-	ReviewAgent,
 	type StepYield,
 } from "../src/index.js";
-import type { ReviewResult } from "../src/providers/anthropic/agents/review-agent.js";
+import {
+	CodingAgent,
+	type CodingResult,
+	ReviewAgent,
+	type ReviewResult,
+} from "@openharness/anthropic";
 
 // ============================================
 // Types

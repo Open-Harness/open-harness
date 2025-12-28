@@ -1,5 +1,5 @@
 /**
- * Open Harness SDK - Extensible Workflow SDK for Anthropic Agents
+ * Open Harness SDK - Provider-Agnostic Workflow SDK
  *
  * THREE-LAYER ARCHITECTURE:
  *
@@ -10,13 +10,13 @@
  *
  * LAYER 2 - AGENTS (Provider-Agnostic Agent System):
  * - IAgent<TInput, TOutput>: Core interface for typed agents
- * - BaseAnthropicAgent: Base class for Anthropic/Claude agents
  * - IAgentCallbacks: Unified callback interface
  *
  * LAYER 3 - RUNNERS (LLM Execution Infrastructure):
- * - AnthropicRunner: Production runner for Claude API
- * - ReplayRunner: Testing runner with recorded responses
+ * - IAgentRunner: Provider-agnostic runner interface
  * - DI Container: Dependency injection for all components
+ *
+ * For Anthropic/Claude provider, use @openharness/anthropic
  */
 
 // ============================================
@@ -57,7 +57,7 @@ export {
 } from "./harness/index.js";
 
 // ============================================
-// AGENT LAYER (Re-exported from Anthropic Provider)
+// AGENT LAYER (Provider-Agnostic)
 // ============================================
 
 // Unified Callbacks (IAgentCallbacks is the primary callback interface)
@@ -72,24 +72,9 @@ export type {
 	ToolCallEvent,
 	ToolResultEvent,
 } from "./callbacks/index.js";
-// Base Classes
-export { type AgentRunOptions, BaseAnthropicAgent } from "./providers/anthropic/agents/base-anthropic-agent.js";
-// Concrete Agents
-export { CodingAgent, type CodingAgentOptions } from "./providers/anthropic/agents/coding-agent.js";
-export { ParserAgent } from "./providers/anthropic/agents/parser-agent.js";
-export {
-	PlannerAgent,
-	type PlannerAgentOptions,
-	type PlannerResult,
-	type Ticket,
-} from "./providers/anthropic/agents/planner-agent.js";
-export { ReviewAgent, type ReviewAgentOptions, type ReviewResult } from "./providers/anthropic/agents/review-agent.js";
-// Core Interface
-export type { AgentDefinition, IAgent, RunnerOptions } from "./providers/anthropic/agents/types.js";
-export {
-	ValidationReviewAgent,
-	type ValidationReviewAgentOptions,
-} from "./providers/anthropic/agents/validation-review-agent.js";
+
+// Core Interface (re-exported from core)
+export type { IAgent, RunnerOptions } from "@openharness/core";
 
 // ============================================
 // RUNNER LAYER (LLM Execution Infrastructure)
@@ -104,9 +89,6 @@ export {
 } from "./factory/harness-factory.js";
 export { createWorkflow } from "./factory/workflow-builder.js";
 
-// Runners
-export { AnthropicRunner } from "./providers/anthropic/runner/anthropic-runner.js";
-
 // Task Management
 export { TaskList } from "./workflow/task-list.js";
 
@@ -114,15 +96,24 @@ export { TaskList } from "./workflow/task-list.js";
 // TYPES
 // ============================================
 
-export type {
-	AgentEvent,
-	CodingResult,
-	CompactData,
-	SessionResult,
-	StatusData,
-} from "./providers/anthropic/runner/models.js";
-
 export type { Task, TaskStatus } from "./workflow/task-list.js";
+
+// Task Harness Types (provider-agnostic)
+export type {
+	ParsedTask,
+	ParserAgentInput,
+	ParserAgentOutput,
+	ParserMetadata,
+	ReviewAgentInput,
+	ReviewAgentOutput,
+	ValidationResult,
+	TaskFlags,
+	PhaseInfo,
+} from "./harness/task-harness-types.js";
+export { ParserAgentOutputSchema, ReviewAgentOutputSchema } from "./harness/task-harness-types.js";
+
+// Runner Callbacks
+export type { RunnerCallbacks } from "./core/tokens.js";
 
 // ============================================
 // DI CONTAINER
@@ -158,10 +149,17 @@ export {
 	IReplayRunnerToken,
 	IVaultToken,
 } from "./core/tokens.js";
-export type { MonologueConfig, NarrativeAgentName, NarrativeEntry } from "./monologue/index.js";
+// Monologue System Types
+export type {
+	AgentEvent as MonologueAgentEvent,
+	IMonologueLLM,
+	MonologueConfig,
+	NarrativeAgentName,
+	NarrativeEntry,
+} from "./monologue/index.js";
+export { DEFAULT_MONOLOGUE_PROMPT, IMonologueLLMToken, TERSE_PROMPT, VERBOSE_PROMPT } from "./monologue/index.js";
 // Monologue System
 export { Monologue, type MonologueOptions, setMonologueContainer } from "./monologue/index.js";
-export { EventType, EventTypeConst } from "./providers/anthropic/runner/models.js";
 
 // ============================================
 // FLUENT HARNESS API (007-fluent-harness-dx)

@@ -7,8 +7,7 @@
  * @module monologue/monologue-decorator
  */
 
-import { type IContainer, IEventBusToken, IMonologueLLMToken } from "../core/tokens.js";
-import type { AgentEvent } from "../providers/anthropic/runner/models.js";
+import { type AgentEvent, type IContainer, IEventBusToken, IMonologueLLMToken } from "../core/tokens.js";
 import { createMonologueService, type MonologueCallback } from "./monologue-service.js";
 import type { MonologueConfig, NarrativeAgentName } from "./types.js";
 
