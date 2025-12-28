@@ -125,6 +125,19 @@
         "typescript": "^5",
       },
     },
+    "packages/transports": {
+      "name": "@openharness/transports",
+      "version": "0.1.0",
+      "dependencies": {
+        "@openharness/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
   },
   "catalog": {
     "@types/bun": "^1.3.4",
@@ -364,6 +377,8 @@
     "@openharness/core": ["@openharness/core@workspace:packages/core"],
 
     "@openharness/sdk": ["@openharness/sdk@workspace:packages/sdk"],
+
+    "@openharness/transports": ["@openharness/transports@workspace:packages/transports"],
 
     "@sec-ant/readable-stream": ["@sec-ant/readable-stream@0.4.1", "", {}, "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="],
 
