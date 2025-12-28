@@ -6,7 +6,7 @@
  */
 
 // Runners
-export { AnthropicRunner, LiveSDKRunner } from "./anthropic-runner.js";
+export { AnthropicRunner } from "./anthropic-runner.js";
 
 // Event Mapping (shared between agents)
 export { mapSdkMessageToEvents } from "./event-mapper.js";

@@ -38,10 +38,14 @@ describe("add", () => {
 	});
 
 	test("throws TypeError for non-number arguments", () => {
-		expect(() => add("2" as any, 3)).toThrow(TypeError);
-		expect(() => add(2, "3" as any)).toThrow(TypeError);
-		expect(() => add(null as any, 5)).toThrow(TypeError);
-		expect(() => add(5, undefined as any)).toThrow(TypeError);
+		// @ts-expect-error Testing invalid input
+		expect(() => add("2", 3)).toThrow(TypeError);
+		// @ts-expect-error Testing invalid input
+		expect(() => add(2, "3")).toThrow(TypeError);
+		// @ts-expect-error Testing invalid input
+		expect(() => add(null, 5)).toThrow(TypeError);
+		// @ts-expect-error Testing invalid input
+		expect(() => add(5, undefined)).toThrow(TypeError);
 	});
 
 	test("throws TypeError for NaN arguments", () => {
