@@ -14,12 +14,7 @@
 import { Container } from "@needle-di/core";
 import { setMonologueContainer } from "../monologue/monologue-decorator.js";
 import { EventBus } from "./event-bus.js";
-import {
-	type IConfig,
-	IConfigToken,
-	IEventBusToken,
-	IUnifiedEventBusToken,
-} from "./tokens.js";
+import { type IConfig, IConfigToken, IEventBusToken, IUnifiedEventBusToken } from "./tokens.js";
 import { UnifiedEventBus } from "./unified-event-bus.js";
 
 // Re-export for convenience

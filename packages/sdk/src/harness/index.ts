@@ -25,8 +25,8 @@ export {
 
 // Dependency Resolver
 export {
-	detectCycles,
 	type DependencyTask,
+	detectCycles,
 	getReadyTasks,
 	resolveDependencies,
 	type TopologicalSortResult,
@@ -37,15 +37,40 @@ export {
 // Fluent Harness API (007-fluent-harness-dx)
 // ============================================================================
 
-// Harness Instance - Runtime execution
-export { HarnessInstance } from "./harness-instance.js";
-
+// Types from unified-events
+export type { InjectedMessage, WaitOptions } from "../core/unified-events/types.js";
+// Async Queue
+export { AsyncQueue } from "./async-queue.js";
+// Control Flow Helpers
+export {
+	createParallelHelper,
+	createRetryHelper,
+	type EmitFn,
+	parallel,
+	retry,
+} from "./control-flow.js";
+// Event Context (re-exports from core)
+export type {
+	AgentContext,
+	EventContext,
+	PhaseContext,
+	TaskContext,
+} from "./event-context.js";
 // Event Types - All fluent harness events
+// Type Guards
 export {
 	type ErrorEvent,
 	type FluentEventHandler,
 	type FluentHarnessEvent,
 	type HarnessEventType,
+	isErrorEvent,
+	isNarrativeEvent,
+	isParallelEvent,
+	isPhaseEvent,
+	isRetryEvent,
+	isSessionEvent,
+	isStepEvent,
+	isTaskEvent,
 	type NarrativeEvent,
 	type ParallelCompleteEvent,
 	type ParallelEvent,
@@ -67,50 +92,16 @@ export {
 	type StepEvent,
 	type TaskEvent,
 } from "./event-types.js";
-
-// Type Guards
-export {
-	isErrorEvent,
-	isNarrativeEvent,
-	isParallelEvent,
-	isPhaseEvent,
-	isRetryEvent,
-	isSessionEvent,
-	isStepEvent,
-	isTaskEvent,
-} from "./event-types.js";
-
-// Control Flow Helpers
-export {
-	createParallelHelper,
-	createRetryHelper,
-	type EmitFn,
-	parallel,
-	retry,
-} from "./control-flow.js";
-
+// Harness Instance - Runtime execution
+export { HarnessInstance } from "./harness-instance.js";
 // Session Context
 export { SessionContext } from "./session-context.js";
-
-// Types from unified-events
-export type { InjectedMessage, WaitOptions } from "../core/unified-events/types.js";
-
-// Async Queue
-export { AsyncQueue } from "./async-queue.js";
-
-// Event Context (re-exports from core)
-export {
-	type AgentContext,
-	type EventContext,
-	type PhaseContext,
-	type TaskContext,
-} from "./event-context.js";
 
 // ============================================================================
 // Channel System
 // ============================================================================
 
-// New Channel API
+// Channel API
 export {
 	type ChannelConfig,
 	type ChannelContext,
@@ -119,17 +110,6 @@ export {
 	createChannel,
 	defineChannel,
 	type IChannel,
-} from "./define-channel.js";
-
-// Backwards compatibility (deprecated)
-export {
-	defineRenderer,
-	type EventHandler,
-	type IUnifiedRenderer,
-	type RenderContext,
-	type RendererConfig as UnifiedRendererConfig,
-	type RendererDefinition,
-	toAttachment,
 } from "./define-channel.js";
 
 // Render Output Helpers
