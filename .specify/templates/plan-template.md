@@ -102,3 +102,89 @@ directories captured above]
 |-----------|------------|-------------------------------------|
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+
+## Context Scope
+
+<!--
+  PURPOSE: Prevents prototype contamination during implementation.
+  The implementing agent should ONLY see relevant context, not prototype/spike code
+  that might influence architectural decisions away from the specification.
+
+  This section addresses RC001 from 003-harness-renderer retrospective:
+  "Prototype in context caused architectural divergence"
+-->
+
+### Include in Agent Context
+
+> Directories and files the implementing agent SHOULD access
+
+- `src/` - main source code
+- `specs/[###-feature]/` - this feature's specification and plan
+- `tests/` - existing test patterns
+- [Add feature-specific paths]
+
+### Exclude from Agent Context
+
+> Directories and files the implementing agent should NOT access (prototype isolation)
+
+- `examples/` - prototype/example code (may cause architectural divergence)
+- `*.spike.*` - spike/exploration branches
+- `**/prototype/` - prototype directories
+- `node_modules/`, `dist/`, `build/` - generated/external files
+- [Add project-specific exclusions, e.g., `listr2/examples/`]
+
+**Rationale**: [Explain any non-obvious exclusions]
+
+## Verification Gates
+
+<!--
+  PURPOSE: Define what validation must pass at each stage.
+  Catches implementation drift BEFORE problems compound.
+
+  This section addresses RC003/RC005 from 003-harness-renderer retrospective:
+  "Spec-kit /implement has no verification gates"
+  "Tasks.md path specifications ignored"
+-->
+
+### Pre-Commit Gates
+
+> Must pass before ANY commit during implementation
+
+- [ ] All tests pass: `[test command, e.g., bun test]`
+- [ ] Type checking passes: `[type command, e.g., tsc --noEmit]`
+- [ ] Linting passes: `[lint command, e.g., bun run lint]`
+- [ ] No console.log/debug statements in production code
+
+### Task Completion Gates
+
+> Verified after each task is marked complete
+
+- [ ] Task file paths match actual created/modified files
+- [ ] Task marked `[X]` in tasks.md
+- [ ] New code follows patterns from plan.md Project Structure
+
+### Feature Completion Gates
+
+> Must pass before feature is considered complete
+
+- [ ] All tasks marked `[X]` in tasks.md
+- [ ] All critical file paths exist (see below)
+- [ ] Integration test passes with real dependencies
+- [ ] Documentation updated if public API changed
+
+### Critical File Paths
+
+> These files MUST exist at feature completion (validates against tasks.md paths)
+
+```text
+[List critical paths from your feature, e.g.:]
+src/[module]/index.ts           # Barrel export
+src/[module]/types.ts           # Type definitions
+tests/[module]/[module].test.ts # Test file
+```
+
+### Test Coverage Expectations
+
+- **Minimum line coverage**: [e.g., 70%] for new code
+- **Required test types**: [e.g., Contract tests for all API endpoints]
+- **Skip flag**: `--skip-tests` available for iterative development (must pass before merge)

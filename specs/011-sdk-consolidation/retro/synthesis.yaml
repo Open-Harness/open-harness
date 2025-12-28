@@ -1,0 +1,354 @@
+agent: synthesizer
+timestamp: "2025-12-28T14:10:00Z"
+spec_directory: specs/011-sdk-consolidation
+overall_severity: success
+summary: "Manual SDK consolidation successfully eliminated dual API problem through strategic deletion and intelligent architectural decisions. 15 file deletions (5,900 lines removed) achieved API unification. Strategic divergence on naming (defineChannel > defineTransport) improved clarity. Architectural pause mid-implementation prevented larger mistakes."
+
+root_causes:
+  - id: RC001
+    title: "Success Factor: Architectural pause prevented premature commitment"
+    description: "Implementation paused after moving task-harness to examples/ (wrong approach), allowing 1.5 hours of architectural review that led to better solution"
+    evidence:
+      - timeline.yaml: "T007-T011 show WIP pause from 10:20 to 11:52"
+      - timeline.yaml: "A002 documents pause recognized task-harness is not an example"
+      - spec-drift.yaml: "RF003 confirms examples/task-harness correctly deleted after reconsideration"
+    severity: success_pattern
+    type: process_strength
+    impact: |
+      The pause pattern demonstrates resolve-and-resume discipline:
+      1. Recognized incorrect approach (task-harness in examples/)
+      2. Paused work to document concerns (HANDOFF.md)
+      3. Created comprehensive decision plan (DELETION-PLAN.md)
+      4. Documented target architecture (POST-CLEANUP-ARCHITECTURE.md)
+      5. Executed cleanly with confidence
+
+      This prevented technical debt accumulation and reduced rework.
+
+  - id: RC002
+    title: "Success Factor: Strategic naming divergence improved API clarity"
+    description: "Implementation chose defineChannel over spec's defineTransport, avoiding naming conflicts and improving conceptual clarity"
+    evidence:
+      - spec-drift.yaml: "AD001 documents defineRenderer → defineChannel rename rationale"
+      - spec-drift.yaml: "RF007 shows implementation chose defineChannel (better than spec)"
+      - file-audit.yaml: "FA022 confirms define-channel.ts exists with 400 lines"
+    severity: success_pattern
+    type: architectural_improvement
+    impact: |
+      The spec proposed renaming Transport interface → EventHub and defineRenderer → defineTransport.
+      Implementation identified this would create confusion:
+      - "Transport" already used for the interface
+      - "defineTransport" would be ambiguous with Transport type
+
+      Solution: defineChannel
+      - Clearer conceptual model (bidirectional communication channels)
+      - No naming collision
+      - Aligns with Pino's "transport" terminology for output destinations
+
+      This shows intelligent deviation from spec when spec has unresolved conflicts.
+
+  - id: RC003
+    title: "Success Factor: Scorched-earth deletion over deprecation cycle"
+    description: "Implementation chose complete deletion of OLD API instead of gradual deprecation, accelerating cleanup"
+    evidence:
+      - timeline.yaml: "T011 shows DELETION-PLAN created with 224 lines of justification"
+      - timeline.yaml: "T013 shows 9438 deletions executed comprehensively"
+      - file-audit.yaml: "All 15 planned deletions verified (FA001-FA018)"
+    severity: success_pattern
+    type: strategic_decision
+    impact: |
+      DELETION-PLAN.md identified two parallel APIs:
+      - OLD: TaskHarness class (935 lines) with hardcoded agents, broken imports
+      - NEW: defineHarness() factory (282 lines) with DI composition
+
+      Decision: Delete OLD API entirely in one commit rather than:
+      - Gradual deprecation (creates maintenance burden)
+      - Coexistence period (creates confusion)
+      - Migration tooling (overkill for internal codebase)
+
+      Result:
+      - Clean API surface (single pattern)
+      - No legacy code maintenance
+      - Clear forcing function for migration
+
+      Trade-off: Breaking changes for users, but acceptable for internal tooling.
+
+  - id: RC004
+    title: "Risk Identified: 4,200 lines of test deletion without visible migration"
+    description: "Final commits deleted extensive test infrastructure without evidence of replacement tests for new API"
+    evidence:
+      - timeline.yaml: "A001 shows 4214 lines of tests deleted across 14 files"
+      - timeline.yaml: "T015 deleted harness.test.ts (699 lines), event-mapper.test.ts (525 lines), monologue-decorator.test.ts (458 lines)"
+      - test-results.yaml: "291 tests passing, but unclear if they cover new API comprehensively"
+    severity: medium
+    type: test_coverage_gap
+    impact: |
+      Tests deleted:
+      - harness.test.ts (699 lines) - tested OLD TaskHarness
+      - event-mapper.test.ts (525 lines) - tested OLD event mapping
+      - monologue-decorator.test.ts (458 lines) - tested OLD narrative system
+      - container.test.ts (412 lines) - tested OLD DI container
+      - workflow-builder.test.ts (334 lines) - tested OLD workflow API
+
+      New test evidence:
+      - define-channel.test.ts shows 262 line additions (renamed from define-renderer.test.ts)
+      - 291 tests passing overall
+
+      GAP: Unclear if new defineHarness() and defineChannel() have equivalent test coverage.
+
+      Recommendation: Audit test coverage for new API surface area.
+
+  - id: RC005
+    title: "Success Factor: Dual event layer maintained for separation of concerns"
+    description: "Implementation kept BaseEvent (core) + FluentHarnessEvent (SDK) instead of forced consolidation, improving architecture"
+    evidence:
+      - spec-drift.yaml: "AD004 documents intentional two-layer event system"
+      - spec-drift.yaml: "RF010 shows partial type consolidation but dual systems kept"
+      - file-audit.yaml: "FA020 confirms event-types.ts retained (385 lines)"
+    severity: success_pattern
+    type: architectural_improvement
+    impact: |
+      Spec wanted single event system (consolidate event-protocol.ts, event-types.ts, event-context.ts).
+
+      Implementation chose two intentional layers:
+      1. BaseEvent (@openharness/core) - universal events for all harnesses
+      2. FluentHarnessEvent (SDK) - workflow-specific events (phase, task, retry, parallel)
+
+      Benefits:
+      - Core package stays lean and generic
+      - SDK can have opinionated workflow events
+      - Clear separation of concerns
+      - Future: Other packages can define their own event extensions
+
+      This is BETTER than spec's single-system approach.
+
+responsibility_attribution:
+  - component: "Manual Implementation (Human)"
+    responsibility: "Executed strategic architectural decisions with intelligent divergence from spec"
+    evidence: "defineChannel naming, dual event layers, scorched-earth deletion"
+    verdict: success
+
+  - component: "Architectural Pause Process"
+    responsibility: "Prevented premature commitment to wrong solution (task-harness in examples/)"
+    evidence: "1.5 hour pause led to comprehensive deletion plan"
+    verdict: success
+
+  - component: "Spec/Research Documents"
+    responsibility: "Provided comprehensive analysis but had some unresolved conflicts (naming)"
+    evidence: "Transport interface vs Transport type collision in ADR-001"
+    verdict: partial_success
+
+  - component: "Test Infrastructure"
+    responsibility: "Possible gap in test coverage after 4,214 line deletion"
+    evidence: "No visible migration of OLD API tests to NEW API"
+    verdict: needs_verification
+
+remediation:
+  immediate:
+    - action: "Audit test coverage for defineHarness() and defineChannel() APIs"
+      priority: medium
+      rationale: "4,214 lines of tests deleted, only 262 lines added to define-channel.test.ts"
+
+    - action: "Add JSDoc to defineChannel explaining rename from defineRenderer"
+      priority: low
+      rationale: "Prevent confusion for developers reading old specs/docs"
+
+  process_improvements:
+    - action: "Document 'architectural pause' pattern as oharnes best practice"
+      priority: high
+      rationale: "Pause-and-plan prevented larger mistake. Should be formalized in CLAUDE.md"
+      implementation: |
+        Add to CLAUDE.md decision framework:
+
+        **When to Pause Implementation**:
+        - Recognize solution doesn't match spec intent
+        - Create HANDOFF.md documenting concerns
+        - Create decision plan (e.g., DELETION-PLAN.md)
+        - Create target architecture (e.g., POST-CLEANUP-ARCHITECTURE.md)
+        - Resume with confidence
+
+        **Pattern**: Resolve-and-resume > continue-with-doubt
+
+    - action: "Add 'test migration checklist' to manual implementation protocol"
+      priority: medium
+      rationale: "Large deletions should verify equivalent coverage in new code"
+      implementation: |
+        Before deleting test files:
+        1. List what functionality they covered
+        2. Verify new tests cover equivalent scenarios
+        3. Document coverage gaps if any
+        4. Add follow-up task if coverage deferred
+
+    - action: "Create 'intelligent divergence' guideline for spec compliance"
+      priority: medium
+      rationale: "Implementation correctly improved on spec (defineChannel). Should encourage this."
+      implementation: |
+        Add to CLAUDE.md:
+
+        **When to Diverge from Spec**:
+        - Spec has unresolved conflicts (naming collisions)
+        - Better solution identified during implementation
+        - Simplification reduces breaking changes
+
+        **Requirements**:
+        - Document rationale clearly
+        - Show why divergence is improvement
+        - Update spec with actual approach
+        - Add to synthesis as AD-XXX finding
+
+  verification_gates:
+    - gate: "Test coverage threshold check"
+      trigger: "When deleting >500 lines of test code"
+      action: "Require coverage report showing equivalent or better coverage"
+
+    - gate: "API deletion review"
+      trigger: "When deleting public API exports"
+      action: "Require migration guide or justification for breaking change"
+
+    - gate: "Architectural pause checkpoint"
+      trigger: "When implementation diverges from spec approach"
+      action: "Create HANDOFF.md, assess options, document decision"
+
+pattern_detected: "successful-manual-consolidation-with-strategic-divergence"
+cycle_count: 1
+recurring: false
+
+success_metrics:
+  files_deleted: 15
+  directories_deleted: 2
+  lines_removed: 5900
+  api_unification: "Dual API reduced to single defineHarness() pattern"
+  test_health: "291 tests passing, 0 failures"
+  architectural_improvements:
+    - "defineChannel naming (clearer than defineTransport)"
+    - "Dual event layers (better separation of concerns)"
+    - "Avoided folder reorganization (reduced disruption)"
+  process_strengths:
+    - "Architectural pause prevented larger mistake"
+    - "Comprehensive deletion plan before execution"
+    - "Strategic divergence with documented rationale"
+
+lessons_learned:
+  what_went_well:
+    - lesson: "Pausing to reassess prevented premature commitment to wrong solution"
+      context: "Task-harness moved to examples/ was wrong, pause identified it"
+      applicable_to: "All oharnes commands with complex restructuring"
+
+    - lesson: "Scorched-earth deletion cleaner than deprecation for internal APIs"
+      context: "OLD TaskHarness completely removed, forcing migration to NEW API"
+      applicable_to: "Breaking changes in internal tooling"
+
+    - lesson: "Strategic naming divergence improved clarity over literal spec compliance"
+      context: "defineChannel chosen over defineTransport to avoid confusion"
+      applicable_to: "API design where spec has unresolved conflicts"
+
+    - lesson: "Dual-layer architecture better than forced consolidation"
+      context: "BaseEvent (core) + FluentHarnessEvent (SDK) separation"
+      applicable_to: "Multi-package architectures with layered abstractions"
+
+  what_could_improve:
+    - lesson: "Test coverage verification should precede large test deletions"
+      context: "4,214 lines of tests deleted without visible migration evidence"
+      applicable_to: "All implementations that delete test infrastructure"
+
+    - lesson: "Migration guide should accompany breaking API changes"
+      context: "TaskHarness users need clear path to defineHarness()"
+      applicable_to: "Breaking changes in public APIs"
+
+    - lesson: "Folder reorganization deferred but should have timeline"
+      context: "Spec proposed events/transports folders, skipped for speed"
+      applicable_to: "Structural changes that can be deferred but shouldn't be forgotten"
+
+  transferable_patterns:
+    - pattern: "Architectural pause with decision documentation"
+      when: "Implementation approach doesn't feel right"
+      how: |
+        1. Stop coding
+        2. Create HANDOFF.md with concerns
+        3. Create decision plan (DELETION-PLAN, etc.)
+        4. Document target state
+        5. Resume with clarity
+
+    - pattern: "Intelligent divergence with rationale"
+      when: "Spec has conflicts or better solution identified"
+      how: |
+        1. Identify specific conflict/improvement
+        2. Document why divergence is better
+        3. Update spec with actual approach
+        4. Add to synthesis as AD-XXX
+
+    - pattern: "Scorched-earth for internal breaking changes"
+      when: "OLD API is broken/unmaintainable and users are few"
+      how: |
+        1. Verify NEW API is complete
+        2. Create comprehensive deletion plan
+        3. Execute in single commit
+        4. Provide migration examples
+        5. Force transition (no coexistence period)
+
+recommendations_for_future:
+  - recommendation: "Add architectural pause pattern to CLAUDE.md decision framework"
+    priority: high
+    rationale: "Proven success pattern that prevented larger mistake"
+
+  - recommendation: "Create test coverage verification gate for deletions >500 lines"
+    priority: medium
+    rationale: "Ensure test migrations happen alongside code migrations"
+
+  - recommendation: "Encourage intelligent divergence when spec has conflicts"
+    priority: medium
+    rationale: "defineChannel example shows implementation can improve on spec"
+
+  - recommendation: "Add migration guide template for breaking API changes"
+    priority: low
+    rationale: "Help users transition smoothly"
+
+  - recommendation: "Schedule folder reorganization as follow-up task"
+    priority: low
+    rationale: "Deferred for speed but spec's events/transports split has merit at scale"
+
+anti_patterns_to_avoid:
+  - anti_pattern: "Continuing implementation when approach feels wrong"
+    better_approach: "Pause, document concerns, create decision plan"
+    evidence: "Task-harness in examples/ was wrong, pause caught it"
+
+  - anti_pattern: "Literal spec compliance when spec has conflicts"
+    better_approach: "Identify conflict, propose better solution, document divergence"
+    evidence: "defineChannel better than spec's defineTransport (naming collision)"
+
+  - anti_pattern: "Gradual deprecation for broken internal APIs"
+    better_approach: "Scorched-earth deletion with migration examples"
+    evidence: "OLD TaskHarness completely removed, clean API surface achieved"
+
+final_assessment: |
+  SUCCESSFUL MANUAL CONSOLIDATION WITH STRATEGIC ARCHITECTURAL IMPROVEMENTS
+
+  Completion Status:
+  - 14/14 planned file deletions executed (FA001-FA015)
+  - 2/2 planned directory deletions executed (FA017-FA018)
+  - 11/11 core files retained correctly (FA019-FA029)
+  - API unification achieved (single defineHarness pattern)
+  - 291 tests passing, 0 failures
+
+  Strategic Improvements:
+  1. defineChannel naming (clearer than spec's defineTransport)
+  2. Dual event layers (better separation than forced consolidation)
+  3. Avoided premature folder reorganization (reduced disruption)
+  4. Scorched-earth deletion (cleaner than deprecation cycle)
+
+  Process Strengths:
+  - Architectural pause prevented larger mistake
+  - Comprehensive planning before execution
+  - Intelligent divergence with rationale
+
+  Identified Gaps:
+  - Test coverage verification after 4,214 line deletion (medium severity)
+  - Migration guide not yet created (low severity)
+  - Folder reorganization deferred (low severity)
+
+  Key Success Factor: The "pause-and-plan" pattern at commits T007-T011 prevented
+  premature commitment to wrong solution (task-harness in examples/). This discipline
+  should be codified as oharnes best practice.
+
+  Overall: Clean execution with intelligent architectural decisions. The divergences
+  from spec IMPROVED the outcome. This is a model for how manual implementations
+  should handle spec conflicts and architectural reconsideration.

@@ -12,6 +12,55 @@ description: "Task list template for feature implementation"
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
+## Context Manifest
+
+<!--
+  PURPOSE: Defines what context the implementing agent should access per task.
+  Prevents prototype contamination by explicitly scoping file access.
+
+  This section addresses RC001/RC005 from 003-harness-renderer retrospective:
+  "Prototype in context caused architectural divergence"
+  "Tasks.md path specifications ignored"
+
+  The Context Scout agent uses this to build minimal context per task.
+-->
+
+### Default Context Rules
+
+> Applies to ALL tasks unless overridden in a specific phase
+
+**Read from** (implementing agent SHOULD access):
+- `specs/[###-feature]/spec.md` - requirements and user stories
+- `specs/[###-feature]/plan.md` - implementation plan and structure
+- `specs/[###-feature]/data-model.md` - entity definitions (if exists)
+- `specs/[###-feature]/contracts/` - API contracts (if exists)
+- `src/` - existing source code patterns
+
+**Do NOT read from** (prototype isolation):
+- `examples/` - prototype code that may cause divergence
+- `**/prototype/` - prototype directories
+- `*.spike.*` - spike/exploration code
+- Other feature specs (stay focused on current feature)
+- [Add project-specific exclusions from plan.md Context Scope]
+
+### Phase-Specific Overrides
+
+<!--
+  Optional: Add per-phase context rules if certain phases need different access.
+  Example: Phase 3 might need access to a specific base class pattern.
+-->
+
+> Only add overrides when a phase needs DIFFERENT context than the defaults
+
+**Phase 2 (Foundational)**:
+- Additional read: [e.g., `src/core/base.ts` - base patterns to follow]
+
+**Phase 3 (User Story 1)**:
+- Additional read: [e.g., `src/models/` - existing model patterns]
+- Exclude: [e.g., `src/legacy/` - deprecated patterns to avoid]
+
+---
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)

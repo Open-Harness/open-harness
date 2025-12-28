@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harness Dashboard - DAO Spec Kit</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #141b2d;
+            --bg-tertiary: #1e2742;
+            --bg-card: #252d47;
+            --bg-hover: #2d3655;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-error: #ef4444;
+            --accent-info: #3b82f6;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1f3a 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Session Header */
+        .session-header {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+            border-radius: 12px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .session-header-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .session-title {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .session-info {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .info-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+
+        .info-badge.live {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--accent-success);
+            color: var(--accent-success);
+        }
+
+        .info-badge.replay {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--accent-info);
+            color: var(--accent-info);
+        }
+
+        .progress-container {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Phase Container */
+        .phase-container {
+            margin-bottom: 32px;
+        }
+
+        .phase-header {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 16px;
+            border-left: 4px solid var(--accent-primary);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .phase-header:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .phase-header.active {
+            border-left-color: var(--accent-success);
+            background: linear-gradient(90deg, var(--bg-card) 0%, rgba(16, 185, 129, 0.1) 100%);
+        }
+
+        .phase-header.complete {
+            border-left-color: var(--accent-info);
+            opacity: 0.8;
+        }
+
+        .phase-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .phase-meta {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Task Section */
+        .task-section {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+
+        .task-section:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .task-section.running {
+            border-left: 4px solid var(--accent-primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .task-section.complete {
+            border-left: 4px solid var(--accent-success);
+        }
+
+        .task-section.failed {
+            border-left: 4px solid var(--accent-error);
+        }
+
+        .task-section.validating {
+            border-left: 4px solid var(--accent-warning);
+        }
+
+        .task-section.awaiting-input {
+            border-left: 4px solid var(--accent-secondary);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-left-color: var(--accent-secondary); }
+            50% { border-left-color: var(--accent-primary); }
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            gap: 16px;
+        }
+
+        .task-header-left {
+            flex: 1;
+        }
+
+        .task-id {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 4px;
+        }
+
+        .task-description {
+            font-size: 15px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .task-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.pending {
+            background: rgba(100, 116, 139, 0.2);
+            color: var(--text-muted);
+        }
+
+        .status-badge.running {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-primary);
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.complete {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-success);
+        }
+
+        .status-badge.failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-error);
+        }
+
+        .status-badge.validating {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-warning);
+        }
+
+        .status-badge.awaiting-input {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-secondary);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Monologue Stream */
+        .monologue-container {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .monologue-entry {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .monologue-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .monologue-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .agent-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .monologue-timestamp {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .monologue-content {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .monologue-content :deep(h1),
+        .monologue-content :deep(h2),
+        .monologue-content :deep(h3) {
+            color: var(--text-primary);
+            margin-top: 12px;
+            margin-bottom: 8px;
+        }
+
+        .monologue-content :deep(code) {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            color: var(--accent-primary);
+        }
+
+        .monologue-content :deep(pre) {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 12px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .monologue-content :deep(pre code) {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        .monologue-content :deep(strong) {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .monologue-content :deep(ul),
+        .monologue-content :deep(ol) {
+            margin-left: 20px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .monologue-content :deep(li) {
+            margin-bottom: 4px;
+        }
+
+        /* Metadata Panel */
+        .metadata-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .metadata-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metadata-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .metadata-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Human-in-the-Loop Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--border-color);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .modal-context {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .question-container {
+            margin-bottom: 24px;
+        }
+
+        .question-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .option-item:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-tertiary);
+            transform: translateX(4px);
+        }
+
+        .option-item.selected {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .option-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .option-item.selected .option-checkbox {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .option-item.selected .option-checkbox::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .option-label {
+            flex: 1;
+            color: var(--text-primary);
+        }
+
+        .option-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Summary Footer */
+        .summary-footer {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px 32px;
+            margin-top: 32px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .summary-stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .summary-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-color);
+        }
+
+        /* Task Data Panel */
+        .task-data-panel {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .task-data-section {
+            margin-bottom: 20px;
+        }
+
+        .task-data-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .task-data-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .task-data-value {
+            color: var(--text-primary);
+            line-height: 1.7;
+        }
+
+        .task-data-value code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .file-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .file-list li {
+            padding: 4px 0;
+            color: var(--text-secondary);
+        }
+
+        .file-list li::before {
+            content: '📄 ';
+            margin-right: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Session Header -->
+        <div class="session-header">
+            <div class="session-header-left">
+                <div class="session-title">🚀 Harness Dashboard</div>
+                <div class="session-info">
+                    <div class="info-badge" id="sessionMode">LIVE</div>
+                    <div class="info-badge" id="sessionId">Session: abc123</div>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Progress</span>
+                    <span id="progressText">0/0 tasks</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phases Container -->
+        <div id="phasesContainer"></div>
+
+        <!-- Summary Footer -->
+        <div class="summary-footer" id="summaryFooter" style="display: none;">
+            <div class="summary-title">Session Summary</div>
+            <div class="summary-stats" id="summaryStats"></div>
+        </div>
+    </div>
+
+    <!-- Human-in-the-Loop Modal -->
+    <div class="modal-overlay" id="inputModal" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-icon">🤔</div>
+                <div class="modal-title">Input Required</div>
+            </div>
+            <div id="modalContext"></div>
+            <div id="modalQuestions"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="cancelInput()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitInput()">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard State
+        const state = {
+            sessionId: 'abc123',
+            mode: 'live',
+            startTime: Date.now(),
+            phases: [],
+            tasks: new Map(),
+            currentPhaseNumber: null,
+            pendingQuestions: null,
+            questionContext: null,
+            isBlocking: false,
+            summary: null
+        };
+
+        // Initialize Marked for Markdown rendering
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        // Event Handlers
+        function handleHarnessStart(event) {
+            state.sessionId = event.sessionId || 'abc123';
+            state.mode = event.mode || 'live';
+            state.startTime = Date.now();
+            
+            document.getElementById('sessionId').textContent = `Session: ${state.sessionId}`;
+            document.getElementById('sessionMode').textContent = state.mode.toUpperCase();
+            document.getElementById('sessionMode').className = `info-badge ${state.mode}`;
+            
+            if (event.tasks) {
+                event.tasks.forEach(task => {
+                    addTask(task);
+                });
+            }
+            
+            updateProgress();
+        }
+
+        function handlePhaseStart(event) {
+            const phase = {
+                number: event.phaseNumber,
+                name: event.phase,
+                status: 'active',
+                taskIds: []
+            };
+            
+            state.phases.push(phase);
+            state.currentPhaseNumber = event.phaseNumber;
+            renderPhases();
+        }
+
+        function handlePhaseComplete(event) {
+            const phase = state.phases.find(p => p.number === event.phaseNumber);
+            if (phase) {
+                phase.status = 'complete';
+                renderPhases();
+            }
+        }
+
+        function handleTaskStart(event) {
+            const task = event.task;
+            addTask(task);
+            
+            const taskState = state.tasks.get(task.id);
+            if (taskState) {
+                taskState.status = 'running';
+                taskState.startTime = Date.now();
+            }
+            
+            const phase = state.phases.find(p => p.number === task.phaseNumber);
+            if (phase && !phase.taskIds.includes(task.id)) {
+                phase.taskIds.push(task.id);
+            }
+            
+            renderPhases();
+        }
+
+        function handleTaskNarrative(event) {
+            const taskState = state.tasks.get(event.taskId);
+            if (taskState) {
+                if (!taskState.narratives) {
+                    taskState.narratives = [];
+                }
+                taskState.narratives.push(event.entry);
+                renderPhases();
+            }
+        }
+
+        function handleTaskComplete(event) {
+            const taskState = state.tasks.get(event.taskId);
+            if (taskState) {
+                taskState.status = 'complete';
+                taskState.endTime = Date.now();
+                taskState.durationMs = event.result.durationMs;
+                taskState.result = event.result;
+                taskState.tokenUsage = event.result.tokenUsage;
+            }
+            updateProgress();
+            renderPhases();
+        }
+
+        function handleTaskFailed(event) {
+            const taskState = state.tasks.get(event.taskId);
+            if (taskState) {
+                taskState.status = 'failed';
+                taskState.endTime = Date.now();
+                taskState.failure = event.failure;
+            }
+            updateProgress();
+            renderPhases();
+        }
+
+        function handleValidationStart(event) {
+            const taskState = state.tasks.get(event.taskId);
+            if (taskState) {
+                taskState.status = 'validating';
+            }
+            renderPhases();
+        }
+
+        function handleValidationComplete(event) {
+            const taskState = state.tasks.get(event.taskId);
+            if (taskState) {
+                taskState.validationResult = event.result;
+                if (taskState.status === 'validating') {
+                    taskState.status = 'complete';
+                }
+            }
+            renderPhases();
+        }
+
+        function handleHumanRequest(event) {
+            state.pendingQuestions = event.questions || [];
+            state.questionContext = event.context || null;
+            state.isBlocking = event.blocking || false;
+            
+            showInputModal();
+        }
+
+        function handleHarnessComplete(event) {
+            state.summary = event.summary;
+            showSummary();
+            updateProgress();
+        }
+
+        // UI Functions
+        function addTask(task) {
+            if (!state.tasks.has(task.id)) {
+                state.tasks.set(task.id, {
+                    task: task,
+                    status: 'pending',
+                    startTime: null,
+                    endTime: null,
+                    durationMs: null,
+                    narratives: [],
+                    result: null,
+                    validationResult: null,
+                    failure: null,
+                    retryCount: 0,
+                    maxRetries: 3,
+                    tokenUsage: null
+                });
+            }
+        }
+
+        function renderPhases() {
+            const container = document.getElementById('phasesContainer');
+            container.innerHTML = '';
+            
+            state.phases.forEach(phase => {
+                const phaseDiv = document.createElement('div');
+                phaseDiv.className = 'phase-container';
+                
+                const header = document.createElement('div');
+                header.className = `phase-header ${phase.status}`;
+                
+                const title = document.createElement('div');
+                title.className = 'phase-title';
+                title.textContent = phase.name;
+                
+                const meta = document.createElement('div');
+                meta.className = 'phase-meta';
+                const taskCount = phase.taskIds.length;
+                const completedCount = phase.taskIds.filter(id => {
+                    const task = state.tasks.get(id);
+                    return task && task.status === 'complete';
+                }).length;
+                meta.textContent = `${completedCount}/${taskCount} tasks completed`;
+                
+                header.appendChild(title);
+                header.appendChild(meta);
+                phaseDiv.appendChild(header);
+                
+                phase.taskIds.forEach(taskId => {
+                    const taskState = state.tasks.get(taskId);
+                    if (taskState) {
+                        phaseDiv.appendChild(renderTask(taskState));
+                    }
+                });
+                
+                container.appendChild(phaseDiv);
+            });
+        }
+
+        function renderTask(taskState) {
+            const task = taskState.task;
+            const div = document.createElement('div');
+            div.className = `task-section ${taskState.status}`;
+            
+            // Task Header
+            const header = document.createElement('div');
+            header.className = 'task-header';
+            
+            const headerLeft = document.createElement('div');
+            headerLeft.className = 'task-header-left';
+            
+            const taskId = document.createElement('div');
+            taskId.className = 'task-id';
+            taskId.textContent = task.id;
+            
+            const description = document.createElement('div');
+            description.className = 'task-description';
+            description.textContent = task.description;
+            
+            const meta = document.createElement('div');
+            meta.className = 'task-meta';
+            
+            if (task.dependencies && task.dependencies.length > 0) {
+                const deps = document.createElement('div');
+                deps.className = 'task-meta-item';
+                deps.innerHTML = `<span>🔗</span> <span>deps: ${task.dependencies.join(', ')}</span>`;
+                meta.appendChild(deps);
+            }
+            
+            if (task.filePaths && task.filePaths.length > 0) {
+                const files = document.createElement('div');
+                files.className = 'task-meta-item';
+                files.innerHTML = `<span>📄</span> <span>${task.filePaths.length} files</span>`;
+                meta.appendChild(files);
+            }
+            
+            headerLeft.appendChild(taskId);
+            headerLeft.appendChild(description);
+            headerLeft.appendChild(meta);
+            
+            const statusBadge = document.createElement('div');
+            statusBadge.className = `status-badge ${taskState.status}`;
+            statusBadge.textContent = taskState.status;
+            
+            header.appendChild(headerLeft);
+            header.appendChild(statusBadge);
+            div.appendChild(header);
+            
+            // Monologue
+            if (taskState.narratives && taskState.narratives.length > 0) {
+                const monologueContainer = document.createElement('div');
+                monologueContainer.className = 'monologue-container';
+                
+                taskState.narratives.forEach(entry => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'monologue-entry';
+                    
+                    const entryHeader = document.createElement('div');
+                    entryHeader.className = 'monologue-header';
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'agent-avatar';
+                    avatar.textContent = entry.agentName ? entry.agentName[0] : 'A';
+                    
+                    const agentName = document.createElement('div');
+                    agentName.className = 'agent-name';
+                    agentName.textContent = entry.agentName || 'Agent';
+                    
+                    const timestamp = document.createElement('div');
+                    timestamp.className = 'monologue-timestamp';
+                    timestamp.textContent = new Date(entry.timestamp).toLocaleTimeString();
+                    
+                    entryHeader.appendChild(avatar);
+                    entryHeader.appendChild(agentName);
+                    entryHeader.appendChild(timestamp);
+                    
+                    const content = document.createElement('div');
+                    content.className = 'monologue-content';
+                    content.innerHTML = marked.parse(entry.text || '');
+                    
+                    entryDiv.appendChild(entryHeader);
+                    entryDiv.appendChild(content);
+                    monologueContainer.appendChild(entryDiv);
+                });
+                
+                div.appendChild(monologueContainer);
+            }
+            
+            // Metadata
+            if (taskState.result || taskState.durationMs || taskState.tokenUsage) {
+                const metadataPanel = document.createElement('div');
+                metadataPanel.className = 'metadata-panel';
+                
+                if (taskState.durationMs !== null) {
+                    const duration = document.createElement('div');
+                    duration.className = 'metadata-item';
+                    duration.innerHTML = `
+                        <div class="metadata-label">Duration</div>
+                        <div class="metadata-value">${(taskState.durationMs / 1000).toFixed(1)}s</div>
+                    `;
+                    metadataPanel.appendChild(duration);
+                }
+                
+                if (taskState.tokenUsage) {
+                    const tokens = document.createElement('div');
+                    tokens.className = 'metadata-item';
+                    const total = (taskState.tokenUsage.inputTokens || 0) + (taskState.tokenUsage.outputTokens || 0);
+                    tokens.innerHTML = `
+                        <div class="metadata-label">Tokens</div>
+                        <div class="metadata-value">${total.toLocaleString()}</div>
+                    `;
+                    metadataPanel.appendChild(tokens);
+                }
+                
+                if (taskState.result && taskState.result.filesModified) {
+                    const files = document.createElement('div');
+                    files.className = 'metadata-item';
+                    files.innerHTML = `
+                        <div class="metadata-label">Files Modified</div>
+                        <div class="metadata-value">${taskState.result.filesModified.length}</div>
+                    `;
+                    metadataPanel.appendChild(files);
+                }
+                
+                if (taskState.validationResult) {
+                    const validation = document.createElement('div');
+                    validation.className = 'metadata-item';
+                    const passed = taskState.validationResult.passed;
+                    validation.innerHTML = `
+                        <div class="metadata-label">Validation</div>
+                        <div class="metadata-value" style="color: ${passed ? 'var(--accent-success)' : 'var(--accent-error)'}">
+                            ${passed ? '✓ Passed' : '✗ Failed'}
+                        </div>
+                    `;
+                    metadataPanel.appendChild(validation);
+                }
+                
+                div.appendChild(metadataPanel);
+            }
+            
+            return div;
+        }
+
+        function updateProgress() {
+            const totalTasks = state.tasks.size;
+            const completedTasks = Array.from(state.tasks.values()).filter(
+                t => t.status === 'complete'
+            ).length;
+            
+            const percentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            
+            document.getElementById('progressText').textContent = `${completedTasks}/${totalTasks} tasks`;
+            document.getElementById('progressFill').style.width = `${percentage}%`;
+        }
+
+        function showInputModal() {
+            const modal = document.getElementById('inputModal');
+            const contextDiv = document.getElementById('modalContext');
+            const questionsDiv = document.getElementById('modalQuestions');
+            
+            // Context
+            if (state.questionContext) {
+                const context = document.createElement('div');
+                context.className = 'modal-context';
+                context.innerHTML = marked.parse(state.questionContext);
+                contextDiv.innerHTML = '';
+                contextDiv.appendChild(context);
+            } else {
+                contextDiv.innerHTML = '';
+            }
+            
+            // Questions
+            questionsDiv.innerHTML = '';
+            state.pendingQuestions.forEach((question, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-container';
+                
+                const questionText = document.createElement('div');
+                questionText.className = 'question-text';
+                questionText.innerHTML = marked.parse(question.question);
+                questionDiv.appendChild(questionText);
+                
+                if (question.type === 'select' || question.type === 'multiselect') {
+                    const optionsList = document.createElement('div');
+                    optionsList.className = 'options-list';
+                    
+                    question.options.forEach((option, oIndex) => {
+                        const optionItem = document.createElement('div');
+                        optionItem.className = 'option-item';
+                        optionItem.dataset.questionIndex = qIndex;
+                        optionItem.dataset.optionValue = option.value;
+                        
+                        if (question.type === 'select') {
+                            optionItem.onclick = () => selectOption(qIndex, option.value);
+                        } else {
+                            optionItem.onclick = () => toggleOption(qIndex, option.value);
+                        }
+                        
+                        const checkbox = document.createElement('div');
+                        checkbox.className = 'option-checkbox';
+                        
+                        const label = document.createElement('div');
+                        label.className = 'option-label';
+                        label.innerHTML = `
+                            <div>${option.label}</div>
+                            ${option.description ? `<div class="option-description">${option.description}</div>` : ''}
+                        `;
+                        
+                        optionItem.appendChild(checkbox);
+                        optionItem.appendChild(label);
+                        optionsList.appendChild(optionItem);
+                    });
+                    
+                    questionDiv.appendChild(optionsList);
+                } else if (question.type === 'text') {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'text-input';
+                    input.placeholder = question.placeholder || 'Enter your response...';
+                    input.dataset.questionIndex = qIndex;
+                    questionDiv.appendChild(input);
+                } else if (question.type === 'confirm') {
+                    const optionsList = document.createElement('div');
+                    optionsList.className = 'options-list';
+                    
+                    ['Yes', 'No'].forEach((label, oIndex) => {
+                        const optionItem = document.createElement('div');
+                        optionItem.className = 'option-item';
+                        optionItem.dataset.questionIndex = qIndex;
+                        optionItem.dataset.optionValue = oIndex === 0 ? 'true' : 'false';
+                        optionItem.onclick = () => selectOption(qIndex, oIndex === 0 ? 'true' : 'false');
+                        
+                        const checkbox = document.createElement('div');
+                        checkbox.className = 'option-checkbox';
+                        
+                        const labelDiv = document.createElement('div');
+                        labelDiv.className = 'option-label';
+                        labelDiv.textContent = label;
+                        
+                        optionItem.appendChild(checkbox);
+                        optionItem.appendChild(labelDiv);
+                        optionsList.appendChild(optionItem);
+                    });
+                    
+                    questionDiv.appendChild(optionsList);
+                }
+                
+                questionsDiv.appendChild(questionDiv);
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        function selectOption(questionIndex, value) {
+            const question = state.pendingQuestions[questionIndex];
+            if (question.type === 'select' || question.type === 'confirm') {
+                // Remove all selections for this question
+                document.querySelectorAll(`[data-question-index="${questionIndex}"]`).forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                // Select this option
+                const optionItem = document.querySelector(`[data-question-index="${questionIndex}"][data-option-value="${value}"]`);
+                if (optionItem) {
+                    optionItem.classList.add('selected');
+                }
+            }
+        }
+
+        function toggleOption(questionIndex, value) {
+            const optionItem = document.querySelector(`[data-question-index="${questionIndex}"][data-option-value="${value}"]`);
+            if (optionItem) {
+                optionItem.classList.toggle('selected');
+            }
+        }
+
+        function submitInput() {
+            const responses = [];
+            
+            state.pendingQuestions.forEach((question, qIndex) => {
+                if (question.type === 'select' || question.type === 'confirm') {
+                    const selected = document.querySelector(`[data-question-index="${qIndex}"].selected`);
+                    if (selected) {
+                        const value = selected.dataset.optionValue;
+                        responses.push({
+                            questionId: question.id,
+                            value: question.type === 'confirm' ? value === 'true' : value,
+                            timestamp: Date.now()
+                        });
+                    }
+                } else if (question.type === 'multiselect') {
+                    const selected = Array.from(document.querySelectorAll(`[data-question-index="${qIndex}"].selected`));
+                    const values = selected.map(item => item.dataset.optionValue);
+                    responses.push({
+                        questionId: question.id,
+                        value: values,
+                        timestamp: Date.now()
+                    });
+                } else if (question.type === 'text') {
+                    const input = document.querySelector(`[data-question-index="${qIndex}"]`);
+                    if (input && input.value) {
+                        responses.push({
+                            questionId: question.id,
+                            value: input.value,
+                            timestamp: Date.now()
+                        });
+                    }
+                }
+            });
+            
+            // Emit response event (in real implementation, this would go to event bus)
+            console.log('Human response:', responses);
+            
+            // Close modal
+            document.getElementById('inputModal').style.display = 'none';
+            state.pendingQuestions = null;
+            state.questionContext = null;
+            state.isBlocking = false;
+        }
+
+        function cancelInput() {
+            document.getElementById('inputModal').style.display = 'none';
+            state.pendingQuestions = null;
+            state.questionContext = null;
+            state.isBlocking = false;
+        }
+
+        function showSummary() {
+            if (!state.summary) return;
+            
+            const footer = document.getElementById('summaryFooter');
+            const stats = document.getElementById('summaryStats');
+            
+            stats.innerHTML = `
+                <div class="summary-stat">
+                    <div class="summary-stat-label">Total Tasks</div>
+                    <div class="summary-stat-value">${state.summary.totalTasks}</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-label">Completed</div>
+                    <div class="summary-stat-value">${state.summary.completedTasks}</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-label">Failed</div>
+                    <div class="summary-stat-value">${state.summary.failedTasks}</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-label">Duration</div>
+                    <div class="summary-stat-value">${(state.summary.durationMs / 1000).toFixed(1)}s</div>
+                </div>
+            `;
+            
+            footer.style.display = 'block';
+        }
+
+        // Demo Mode - Simulate Events
+        function startDemo() {
+            // Harness Start
+            handleHarnessStart({
+                sessionId: 'demo-123',
+                mode: 'live',
+                tasks: [
+                    {
+                        id: 'T001',
+                        phase: 'Phase 1: Setup',
+                        phaseNumber: 1,
+                        description: 'Initialize project structure',
+                        filePaths: ['package.json', 'tsconfig.json'],
+                        dependencies: [],
+                        status: 'pending'
+                    },
+                    {
+                        id: 'T002',
+                        phase: 'Phase 1: Setup',
+                        phaseNumber: 1,
+                        description: 'Configure TypeScript',
+                        filePaths: ['tsconfig.json'],
+                        dependencies: ['T001'],
+                        status: 'pending'
+                    },
+                    {
+                        id: 'T003',
+                        phase: 'Phase 2: Implementation',
+                        phaseNumber: 2,
+                        description: 'Implement validation logic',
+                        filePaths: ['src/validation.ts'],
+                        dependencies: ['T002'],
+                        status: 'pending'
+                    }
+                ]
+            });
+            
+            setTimeout(() => {
+                handlePhaseStart({ phase: 'Phase 1: Setup', phaseNumber: 1, taskCount: 2 });
+            }, 500);
+            
+            setTimeout(() => {
+                handleTaskStart({
+                    task: {
+                        id: 'T001',
+                        phase: 'Phase 1: Setup',
+                        phaseNumber: 1,
+                        description: 'Initialize project structure',
+                        filePaths: ['package.json', 'tsconfig.json'],
+                        dependencies: [],
+                        status: 'pending'
+                    }
+                });
+            }, 1000);
+            
+            setTimeout(() => {
+                handleTaskNarrative({
+                    taskId: 'T001',
+                    entry: {
+                        timestamp: Date.now(),
+                        agentName: 'Coder',
+                        taskId: 'T001',
+                        text: "I'm reading the existing project structure to understand what needs to be initialized..."
+                    }
+                });
+            }, 1500);
+            
+            setTimeout(() => {
+                handleTaskNarrative({
+                    taskId: 'T001',
+                    entry: {
+                        timestamp: Date.now(),
+                        agentName: 'Coder',
+                        taskId: 'T001',
+                        text: "Found the project root. Now creating `package.json` with the required dependencies:\n\n- TypeScript 5.x\n- @anthropic-ai/claude-agent-sdk\n- zod"
+                    }
+                });
+            }, 2500);
+            
+            setTimeout(() => {
+                handleTaskComplete({
+                    taskId: 'T001',
+                    result: {
+                        taskId: 'T001',
+                        success: true,
+                        summary: 'Created project structure',
+                        filesModified: ['package.json', 'tsconfig.json'],
+                        durationMs: 3500,
+                        tokenUsage: {
+                            inputTokens: 1200,
+                            outputTokens: 800,
+                            cacheReadInputTokens: 0,
+                            cacheCreationInputTokens: 0
+                        }
+                    }
+                });
+            }, 4000);
+            
+            setTimeout(() => {
+                handleTaskStart({
+                    task: {
+                        id: 'T002',
+                        phase: 'Phase 1: Setup',
+                        phaseNumber: 1,
+                        description: 'Configure TypeScript',
+                        filePaths: ['tsconfig.json'],
+                        dependencies: ['T001'],
+                        status: 'pending'
+                    }
+                });
+            }, 4500);
+            
+            setTimeout(() => {
+                handleTaskNarrative({
+                    taskId: 'T002',
+                    entry: {
+                        timestamp: Date.now(),
+                        agentName: 'Coder',
+                        taskId: 'T002',
+                        text: "Configuring TypeScript with **strict mode** enabled. Setting up compiler options for optimal type safety."
+                    }
+                });
+            }, 5000);
+            
+            setTimeout(() => {
+                handleValidationStart({ taskId: 'T002' });
+            }, 6000);
+            
+            setTimeout(() => {
+                handleValidationComplete({
+                    taskId: 'T002',
+                    result: {
+                        taskId: 'T002',
+                        passed: true,
+                        reasoning: 'TypeScript config is valid',
+                        suggestedFixes: [],
+                        confidence: 0.95,
+                        checksPerformed: []
+                    }
+                });
+            }, 6500);
+            
+            setTimeout(() => {
+                handleTaskComplete({
+                    taskId: 'T002',
+                    result: {
+                        taskId: 'T002',
+                        success: true,
+                        summary: 'TypeScript configured',
+                        filesModified: ['tsconfig.json'],
+                        durationMs: 2500,
+                        tokenUsage: {
+                            inputTokens: 800,
+                            outputTokens: 500,
+                            cacheReadInputTokens: 0,
+                            cacheCreationInputTokens: 0
+                        }
+                    }
+                });
+            }, 7000);
+            
+            setTimeout(() => {
+                handlePhaseComplete({ phaseNumber: 1 });
+            }, 7500);
+            
+            setTimeout(() => {
+                handlePhaseStart({ phase: 'Phase 2: Implementation', phaseNumber: 2, taskCount: 1 });
+            }, 8000);
+            
+            setTimeout(() => {
+                handleTaskStart({
+                    task: {
+                        id: 'T003',
+                        phase: 'Phase 2: Implementation',
+                        phaseNumber: 2,
+                        description: 'Implement validation logic',
+                        filePaths: ['src/validation.ts'],
+                        dependencies: ['T002'],
+                        status: 'pending'
+                    }
+                });
+            }, 8500);
+            
+            setTimeout(() => {
+                handleTaskNarrative({
+                    taskId: 'T003',
+                    entry: {
+                        timestamp: Date.now(),
+                        agentName: 'Coder',
+                        taskId: 'T003',
+                        text: "I'm analyzing the validation requirements. I found two possible approaches:\n\n1. **Zod schemas** - Type-safe and composable\n2. **Manual validation** - Explicit and no dependencies"
+                    }
+                });
+            }, 9000);
+            
+            setTimeout(() => {
+                handleHumanRequest({
+                    questions: [{
+                        id: 'q1',
+                        type: 'select',
+                        question: 'Which validation approach should I use?',
+                        context: '**Context:** The existing codebase uses both Zod and manual validation. I need to standardize on one approach.',
+                        options: [
+                            { label: 'Zod schemas', value: 'zod', description: 'Type-safe, composable' },
+                            { label: 'Manual validation', value: 'manual', description: 'Explicit, no dependencies' },
+                            { label: 'Keep both', value: 'both', description: 'Maintain compatibility' }
+                        ]
+                    }],
+                    context: 'I found two possible approaches for the validation system.',
+                    taskId: 'T003',
+                    blocking: true
+                });
+            }, 10000);
+        }
+
+        // Start demo on load
+        window.addEventListener('DOMContentLoaded', () => {
+            startDemo();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && state.pendingQuestions) {
+                cancelInput();
+            }
+            if (e.key === 'Enter' && state.pendingQuestions && e.ctrlKey) {
+                submitInput();
+            }
+        });
+    </script>
+</body>
+</html>

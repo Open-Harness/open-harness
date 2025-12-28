@@ -23,7 +23,8 @@
 
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["./src/*"]
+			"@/*": ["./src/*"],
+			"@openharness/core": ["../core/src/index.ts"]
 		},
 
 		"experimentalDecorators": true,
@@ -35,5 +36,6 @@
 		"noPropertyAccessFromIndexSignature": false
 	},
 
-	"exclude": ["dist", "node_modules"]
+	"include": ["src/**/*", "tests/**/*"],
+	"exclude": ["dist", "node_modules", "scripts"]
 }

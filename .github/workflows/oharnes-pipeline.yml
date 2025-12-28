@@ -1,0 +1,388 @@
+name: Oharnes Pipeline
+
+on:
+    push:
+        branches:
+            # Match spec branches: 001-feature-name, 012-another-feature, etc.
+            - "[0-9][0-9][0-9]-*"
+
+jobs:
+    oharnes-pipeline:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # Required to create PRs and commit
+            pull-requests: write # Required to create PRs and add comments
+            issues: read
+            id-token: write
+            actions: read
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Full history needed for git operations
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup Git
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+            - name: Configure Git for pushing
+              run: |
+                  # Set up remote URL with token for pushing
+                  git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+                  git fetch origin
+                  git checkout ${{ github.ref_name }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Extract branch info
+              id: branch-info
+              run: |
+                  BRANCH_NAME="${{ github.ref_name }}"
+                  echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+                  # Extract feature number and name from branch (e.g., "012-feature-name" -> "012", "feature-name")
+                  FEATURE_NUM=$(echo "${BRANCH_NAME}" | grep -oE '^[0-9]+' || echo "")
+                  FEATURE_NAME=$(echo "${BRANCH_NAME}" | sed 's/^[0-9]\+-//' || echo "")
+
+                  echo "feature_num=${FEATURE_NUM}" >> $GITHUB_OUTPUT
+                  echo "feature_name=${FEATURE_NAME}" >> $GITHUB_OUTPUT
+
+                  # Check if spec.md exists (indicates this is a spec branch)
+                  if [ -f "specs/${BRANCH_NAME}/spec.md" ]; then
+                    echo "spec_exists=true" >> $GITHUB_OUTPUT
+                    echo "feature_dir=specs/${BRANCH_NAME}" >> $GITHUB_OUTPUT
+                  else
+                    echo "spec_exists=false" >> $GITHUB_OUTPUT
+                    echo "Feature spec not found for branch ${BRANCH_NAME}. Skipping pipeline."
+                    exit 1
+                  fi
+
+            - name: Check if PR already exists
+              id: pr-check
+              run: |
+                  BRANCH_NAME="${{ steps.branch-info.outputs.branch_name }}"
+                  PR_EXISTS=$(gh pr list --head "${BRANCH_NAME}" --json number --jq '.[0].number' || echo "")
+
+                  if [ -n "${PR_EXISTS}" ] && [ "${PR_EXISTS}" != "null" ]; then
+                    echo "pr_number=${PR_EXISTS}" >> $GITHUB_OUTPUT
+                    echo "pr_exists=true" >> $GITHUB_OUTPUT
+                    echo "PR #${PR_EXISTS} already exists for branch ${BRANCH_NAME}"
+                  else
+                    echo "pr_exists=false" >> $GITHUB_OUTPUT
+                    echo "No existing PR found for branch ${BRANCH_NAME}"
+                  fi
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Create draft PR if needed
+              id: create-pr
+              if: steps.pr-check.outputs.pr_exists == 'false'
+              run: |
+                  BRANCH_NAME="${{ steps.branch-info.outputs.branch_name }}"
+                  FEATURE_NAME="${{ steps.branch-info.outputs.feature_name }}"
+
+                  PR_NUMBER=$(gh pr create \
+                    --draft \
+                    --title "Spec: ${FEATURE_NAME}" \
+                    --body "## Specification Pipeline
+
+                  This PR contains the specification artifacts for **${FEATURE_NAME}**.
+
+                  ### Pipeline Status
+
+                  - [ ] Plan generation
+                  - [ ] Task generation  
+                  - [ ] Analysis
+                  - [ ] Ready for implementation
+
+                  ---
+
+                  This PR will be automatically updated as the pipeline progresses." \
+                    --base dev \
+                    --head "${BRANCH_NAME}" \
+                    --json number --jq '.[0].number' || echo "")
+
+                  if [ -z "${PR_NUMBER}" ] || [ "${PR_NUMBER}" == "null" ]; then
+                    echo "Failed to create PR"
+                    exit 1
+                  fi
+
+                  echo "pr_number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+                  echo "Created draft PR #${PR_NUMBER}"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Check if plan already exists
+              id: check-plan
+              run: |
+                  FEATURE_DIR="${{ steps.branch-info.outputs.feature_dir }}"
+                  if [ -f "${FEATURE_DIR}/plan.md" ]; then
+                    echo "plan_exists=true" >> $GITHUB_OUTPUT
+                    echo "Plan already exists, skipping plan generation"
+                  else
+                    echo "plan_exists=false" >> $GITHUB_OUTPUT
+                    echo "Plan does not exist, will generate"
+                  fi
+
+            - name: Update PR checklist - Plan started
+              if: steps.check-plan.outputs.plan_exists == 'false'
+              run: |
+                  PR_NUMBER="${{ steps.pr-check.outputs.pr_number || steps.create-pr.outputs.pr_number }}"
+                  gh pr comment "${PR_NUMBER}" --body "## Pipeline Progress
+
+                  - [x] Plan generation (in progress...)
+                  - [ ] Task generation
+                  - [ ] Analysis
+                  - [ ] Ready for implementation"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Run Plan
+              id: plan
+              if: steps.check-plan.outputs.plan_exists == 'false'
+              uses: anthropics/claude-code-action@v1
+              with:
+                  claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+                  track_progress: true
+                  prompt: |
+                      BRANCH_NAME: ${{ steps.branch-info.outputs.branch_name }}
+                      FEATURE_DIR: ${{ steps.branch-info.outputs.feature_dir }}
+
+                      Run the `/oharnes.plan` command for the feature in ${FEATURE_DIR}.
+
+                      This should:
+                      1. Generate plan.md, research.md, data-model.md, contracts/, and quickstart.md
+                      2. Follow the plan workflow from .claude/commands/oharnes.plan.md
+                      3. Complete all phases (Phase 0: Research, Phase 1: Design & Contracts, Phase 2: Validation)
+
+                      After completion, commit all generated artifacts to the branch and push to origin.
+
+                      IMPORTANT: 
+                      - Commit with message: "docs(plan): generate plan artifacts for [feature-name]"
+                      - Push commits to origin after committing
+                      - Use: git add [files] && git commit -m "[message]" && git push origin HEAD
+                  claude_args: '--allowed-tools "Bash(git:*),Bash(gh pr:*)"'
+
+            - name: Check if tasks already exists
+              id: check-tasks
+              run: |
+                  FEATURE_DIR="${{ steps.branch-info.outputs.feature_dir }}"
+                  if [ -f "${FEATURE_DIR}/tasks.md" ]; then
+                    echo "tasks_exists=true" >> $GITHUB_OUTPUT
+                    echo "Tasks already exists, skipping task generation"
+                  else
+                    echo "tasks_exists=false" >> $GITHUB_OUTPUT
+                    echo "Tasks does not exist, will generate"
+                  fi
+
+            - name: Update PR checklist - Plan complete, Tasks started
+              if: |
+                  (steps.check-plan.outputs.plan_exists == 'false' && steps.plan.outcome == 'success') ||
+                  (steps.check-plan.outputs.plan_exists == 'true' && steps.check-tasks.outputs.tasks_exists == 'false')
+              run: |
+                  PR_NUMBER="${{ steps.pr-check.outputs.pr_number || steps.create-pr.outputs.pr_number }}"
+                  PLAN_STATUS="✅"
+                  if [ "${{ steps.check-plan.outputs.plan_exists }}" == "true" ]; then
+                    PLAN_STATUS="⏭️ (already exists)"
+                  fi
+                  gh pr comment "${PR_NUMBER}" --body "## Pipeline Progress
+
+                  - [x] Plan generation ${PLAN_STATUS}
+                  - [x] Task generation (in progress...)
+                  - [ ] Analysis
+                  - [ ] Ready for implementation"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Run Tasks
+              id: tasks
+              if: |
+                  (steps.check-plan.outputs.plan_exists == 'false' && steps.plan.outcome == 'success') ||
+                  (steps.check-plan.outputs.plan_exists == 'true' && steps.check-tasks.outputs.tasks_exists == 'false')
+              uses: anthropics/claude-code-action@v1
+              with:
+                  claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+                  track_progress: true
+                  prompt: |
+                      BRANCH_NAME: ${{ steps.branch-info.outputs.branch_name }}
+                      FEATURE_DIR: ${{ steps.branch-info.outputs.feature_dir }}
+
+                      Run the `/oharnes.tasks` command for the feature in ${FEATURE_DIR}.
+
+                      This should:
+                      1. Generate tasks.md based on plan.md and spec.md
+                      2. Follow the task generation workflow from .claude/commands/oharnes.tasks.md
+                      3. Organize tasks by user story phases
+                      4. Skip user approval prompts (auto-approve in CI)
+                      5. Commit tasks.md to the branch and push to origin
+
+                      IMPORTANT: 
+                      - Do not ask for user approval - this is running in CI
+                      - Commit with message: "docs(tasks): generate tasks.md for [feature-name]"
+                      - Push commits to origin after committing
+                      - Use: git add tasks.md && git commit -m "[message]" && git push origin HEAD
+                  claude_args: '--allowed-tools "Bash(git:*),Bash(gh pr:*)"'
+
+            - name: Check if analysis already exists
+              id: check-analysis
+              run: |
+                  FEATURE_DIR="${{ steps.branch-info.outputs.feature_dir }}"
+                  if [ -f "${FEATURE_DIR}/ANALYSIS.md" ]; then
+                    echo "analysis_exists=true" >> $GITHUB_OUTPUT
+                    echo "Analysis already exists, skipping analysis"
+                  else
+                    echo "analysis_exists=false" >> $GITHUB_OUTPUT
+                    echo "Analysis does not exist, will generate"
+                  fi
+
+            - name: Update PR checklist - Tasks complete, Analysis started
+              if: |
+                  (steps.check-tasks.outputs.tasks_exists == 'false' && steps.tasks.outcome == 'success') ||
+                  (steps.check-tasks.outputs.tasks_exists == 'true' && steps.check-analysis.outputs.analysis_exists == 'false')
+              run: |
+                  PR_NUMBER="${{ steps.pr-check.outputs.pr_number || steps.create-pr.outputs.pr_number }}"
+                  PLAN_STATUS="✅"
+                  TASKS_STATUS="✅"
+                  if [ "${{ steps.check-plan.outputs.plan_exists }}" == "true" ]; then
+                    PLAN_STATUS="⏭️ (already exists)"
+                  fi
+                  if [ "${{ steps.check-tasks.outputs.tasks_exists }}" == "true" ]; then
+                    TASKS_STATUS="⏭️ (already exists)"
+                  fi
+                  gh pr comment "${PR_NUMBER}" --body "## Pipeline Progress
+
+                  - [x] Plan generation ${PLAN_STATUS}
+                  - [x] Task generation ${TASKS_STATUS}
+                  - [x] Analysis (in progress...)
+                  - [ ] Ready for implementation"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Run Analysis
+              id: analyze
+              if: |
+                  (steps.check-tasks.outputs.tasks_exists == 'false' && steps.tasks.outcome == 'success') ||
+                  (steps.check-tasks.outputs.tasks_exists == 'true' && steps.check-analysis.outputs.analysis_exists == 'false')
+              uses: anthropics/claude-code-action@v1
+              with:
+                  claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+                  track_progress: true
+                  prompt: |
+                      BRANCH_NAME: ${{ steps.branch-info.outputs.branch_name }}
+                      FEATURE_DIR: ${{ steps.branch-info.outputs.feature_dir }}
+
+                      Run the `/oharnes.analyze` command for the feature in ${FEATURE_DIR}.
+
+                      This should:
+                      1. Validate spec/plan/tasks consistency
+                      2. Generate ANALYSIS.md with findings
+                      3. Follow the analysis workflow from .claude/commands/oharnes.analyze.md
+                      4. If validation passes (score >= 70), commit ANALYSIS.md to the branch
+                      5. If validation fails, document issues but still commit (for visibility)
+
+                      IMPORTANT: 
+                      - Do not handoff to implement (this is CI, not implementation time)
+                      - Skip user prompts for fixes (auto-proceed with warnings if needed)
+                      - Always commit the analysis report regardless of score
+                      - Commit with message: "docs(analysis): generate ANALYSIS.md for [feature-name]"
+                      - Push commits to origin after committing
+                      - Use: git add ANALYSIS.md && git commit -m "[message]" && git push origin HEAD
+                  claude_args: '--allowed-tools "Bash(git:*),Bash(gh pr:*)"'
+
+            - name: Update PR checklist - Analysis complete
+              if: |
+                  (steps.check-analysis.outputs.analysis_exists == 'false' && steps.analyze.outcome == 'success') ||
+                  (steps.check-analysis.outputs.analysis_exists == 'true')
+              run: |
+                  PR_NUMBER="${{ steps.pr-check.outputs.pr_number || steps.create-pr.outputs.pr_number }}"
+
+                  PLAN_STATUS="✅"
+                  TASKS_STATUS="✅"
+                  ANALYSIS_STATUS="✅"
+
+                  if [ "${{ steps.check-plan.outputs.plan_exists }}" == "true" ]; then
+                    PLAN_STATUS="⏭️ (already exists)"
+                  fi
+                  if [ "${{ steps.check-tasks.outputs.tasks_exists }}" == "true" ]; then
+                    TASKS_STATUS="⏭️ (already exists)"
+                  fi
+                  if [ "${{ steps.check-analysis.outputs.analysis_exists }}" == "true" ]; then
+                    ANALYSIS_STATUS="⏭️ (already exists)"
+                  fi
+
+                  # Check if ANALYSIS.md exists and read score if available
+                  FEATURE_DIR="${{ steps.branch-info.outputs.feature_dir }}"
+                  ANALYSIS_FILE="${FEATURE_DIR}/ANALYSIS.md"
+
+                  if [ -f "${ANALYSIS_FILE}" ]; then
+                    # Try to extract score from ANALYSIS.md (look for "Overall Score: XX/100")
+                    SCORE=$(grep -i "Overall Score" "${ANALYSIS_FILE}" | grep -oE '[0-9]+' | head -1 || echo "")
+                    
+                    if [ -n "${SCORE}" ]; then
+                      if [ "${SCORE}" -ge 70 ]; then
+                        STATUS_EMOJI="✅"
+                        STATUS_TEXT="passed (score: ${SCORE}/100)"
+                      elif [ "${SCORE}" -ge 50 ]; then
+                        STATUS_EMOJI="⚠️"
+                        STATUS_TEXT="warnings (score: ${SCORE}/100)"
+                      else
+                        STATUS_EMOJI="❌"
+                        STATUS_TEXT="failed (score: ${SCORE}/100)"
+                      fi
+                    else
+                      STATUS_EMOJI="✅"
+                      STATUS_TEXT="complete"
+                    fi
+                  else
+                    STATUS_EMOJI="✅"
+                    STATUS_TEXT="complete"
+                  fi
+
+                  gh pr comment "${PR_NUMBER}" --body "## Pipeline Progress
+
+                  - [x] Plan generation ${PLAN_STATUS}
+                  - [x] Task generation ${TASKS_STATUS}
+                  - [x] Analysis ${STATUS_EMOJI} ${STATUS_TEXT}
+                  - [x] Ready for implementation ✅
+
+                  ---
+
+                  ### Next Steps
+
+                  Review the generated artifacts:
+                  - \`spec.md\` - Feature specification
+                  - \`plan.md\` - Implementation plan
+                  - \`tasks.md\` - Task breakdown
+                  - \`ANALYSIS.md\` - Pre-implementation analysis
+
+                  When ready, mark this PR as ready for review and begin implementation."
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Handle failures
+              if: failure()
+              run: |
+                  PR_NUMBER="${{ steps.pr-check.outputs.pr_number || steps.create-pr.outputs.pr_number }}"
+
+                  FAILED_STEP="unknown"
+                  if [ "${{ steps.analyze.outcome }}" != "success" ] && [ "${{ steps.analyze.outcome }}" != "skipped" ]; then
+                    FAILED_STEP="Analysis"
+                  elif [ "${{ steps.tasks.outcome }}" != "success" ] && [ "${{ steps.tasks.outcome }}" != "skipped" ]; then
+                    FAILED_STEP="Task generation"
+                  elif [ "${{ steps.plan.outcome }}" != "success" ]; then
+                    FAILED_STEP="Plan generation"
+                  fi
+
+                  gh pr comment "${PR_NUMBER}" --body "## Pipeline Error ❌
+
+                  The pipeline failed during **${FAILED_STEP}**.
+
+                  Please check the workflow logs for details and fix any issues before retrying.
+
+                  You can trigger a re-run by pushing new commits to this branch."
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

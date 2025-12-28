@@ -1,0 +1,46 @@
+agent: test-validator
+timestamp: "2025-12-28T00:00:00Z"
+spec_directory: /Users/abuusama/projects/dao/dao-spec-kit/specs/010-transport-architecture
+summary: "465 pass, 0 fail, 0 error"
+statistics:
+  total: 465
+  pass: 465
+  fail: 0
+  error: 0
+  duration_seconds: 225
+  expect_calls: 1222
+  test_files: 27
+test_files:
+  - path: tests/unit/container.test.ts
+    tests: 1
+    status: pass
+  - path: tests/integration/parser-agent-capture.test.ts
+    tests: 1
+    status: pass
+  - path: tests/integration/quickstart-patterns.test.ts
+    tests: 1
+    status: pass
+  - path: tests/replay/agents.replay.test.ts
+    tests: 1
+    status: pass
+  - path: tests/replay/live-sdk.replay.test.ts
+    tests: 1
+    status: pass
+  - path: tests/replay/parser-agent.replay.test.ts
+    tests: 1
+    status: pass
+  - path: tests/integration/monologue/e2e-narrative.test.ts
+    tests: 1
+    status: pass
+failures: []
+test_execution:
+  command: "bun test"
+  working_directory: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk
+  platform: darwin
+  node_version: "bun v1.3.3 (274e01c7)"
+health_status: healthy
+notes: |
+  All 465 tests passed with 0 failures or errors.
+  Test suite execution completed successfully across 27 test files.
+  Average test duration: 225.41 seconds.
+  No issues detected in the test run.

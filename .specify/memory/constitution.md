@@ -2,22 +2,14 @@
 ================================================================================
 SYNC IMPACT REPORT
 ================================================================================
-Version change: 2.0.1 → 3.0.0
-Bump rationale: MAJOR - Restructured for clarity; moved implementation details
-                to supporting docs
+Version change: 3.0.0 → 3.1.0
+Bump rationale: MINOR - Added Tool Patterns section
 
 Changes:
-- Condensed all principles to 4-5 bullets each (no code blocks)
-- Removed Development Workflow section → moved to CONTRIBUTING.md
-- Removed Quality Gates table → moved to CONTRIBUTING.md
-- Removed code examples → moved to docs/patterns/
+- Added "Tool Patterns" section with Bun CLI dual modes documentation
+- Documents `bun test` vs `bun run test` distinction (RC004 from 004-test-infra-audit)
 
-Templates: All compatible (no principle changes, only structural)
-
-Follow-up:
-- Create CONTRIBUTING.md with workflow + quality gates
-- Create docs/patterns/testing.md with recorder examples
-- Create docs/patterns/di.md with DI examples
+Templates: All compatible (additive change)
 ================================================================================
 -->
 
@@ -59,6 +51,23 @@ Internals use Needle DI properly. Externals hide DI behind factories.
 - Factory functions (`createAgent()`, `createWorkflow()`) MUST hide container complexity
 - Users MUST NOT need to understand DI to use the SDK
 
+## Tool Patterns
+
+### Bun CLI Dual Modes
+
+Bun has two distinct test execution modes that are easily confused.
+
+| Command | Behavior |
+|---------|----------|
+| `bun test` | Built-in test runner. **Ignores package.json scripts.** |
+| `bun run test` | npm script runner. **Executes package.json "test" script.** |
+
+**When to use each**:
+- Use `bun run test` when package.json scripts configure test behavior (paths, preloads, filters)
+- Use `bun test` only for quick ad-hoc test runs where you specify paths directly
+
+**Common mistake**: Running `bun test` expecting it to respect package.json configuration. It won't. This caused test misclassification in 004-test-infra-audit.
+
 ## Governance
 
 This constitution supersedes informal practices. Amendments require:
@@ -69,4 +78,4 @@ This constitution supersedes informal practices. Amendments require:
 
 Violations require documented justification. Repeated violations signal the constitution needs amendment—discuss rather than ignore.
 
-**Version**: 3.0.0 | **Ratified**: 2025-12-25 | **Last Amended**: 2025-12-25
+**Version**: 3.1.0 | **Ratified**: 2025-12-25 | **Last Amended**: 2025-12-26
