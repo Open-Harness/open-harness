@@ -22,10 +22,13 @@ export type { IConfig } from "./tokens.js";
 
 /**
  * Default configuration
+ *
+ * NOTE: Recording is opt-in via @Record decorator from @openharness/anthropic.
+ * The recordingsDir is only used when recording is explicitly enabled.
  */
 const defaultConfig: IConfig = {
 	isReplayMode: process.env.REPLAY_MODE === "true",
-	recordingsDir: "./recordings",
+	recordingsDir: "./tests/fixtures/artifacts",
 };
 
 export type ContainerMode = "live" | "replay";

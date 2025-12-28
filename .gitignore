@@ -1,7 +1,9 @@
 # ============================================
-# bun-vi SDK - Git Ignore
+# bmad
 # ============================================
-
+_bmad/
+_bmad-output/
+_bmad/bmm/data/
 # ============================================
 # Core Bun/Vite/Node
 # ============================================
@@ -105,6 +107,18 @@ claude-quickstarts/
 # ============================================
 _bmad/_memory/
 _bmad/bmm/data/
+
+# ============================================
+# Knowledge Base (Obsidian vault)
+# ============================================
+# Private folder is symlinked OUT - never track it
+.knowledge/private
+# Daily notes are personal
+.knowledge/daily/
+# Obsidian workspace/cache files
+.knowledge/.obsidian/workspace.json
+.knowledge/.obsidian/workspace-mobile.json
+.knowledge/.obsidian/cache
 
 # ============================================
 # Config Files (generated/local)
