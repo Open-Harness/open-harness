@@ -8,7 +8,14 @@
  */
 
 import { matchesFilter } from "../core/unified-events/filter.js";
-import type { BaseEvent, EnrichedEvent, IUnifiedEventBus, Unsubscribe } from "../core/unified-events/types.js";
+import type {
+	Attachment,
+	BaseEvent,
+	EnrichedEvent,
+	IUnifiedEventBus,
+	Transport,
+	Unsubscribe,
+} from "../core/unified-events/types.js";
 import { RenderOutput } from "./render-output.js";
 
 // ============================================================================
@@ -282,4 +289,112 @@ export function defineRenderer<TState = Record<string, never>>(
 	config?: Partial<RendererConfig>,
 ): IUnifiedRenderer {
 	return new UnifiedRenderer(definition, config);
+}
+
+// ============================================================================
+// ATTACHMENT ADAPTER (T021 - Transport Architecture)
+// ============================================================================
+
+/**
+ * Convert an IUnifiedRenderer to an Attachment for use with Transport.attach().
+ *
+ * This adapter allows existing renderers to work with the new Transport architecture.
+ * The renderer subscribes to all events via transport.subscribe() and returns a cleanup
+ * function that will be called when the harness completes.
+ *
+ * @param renderer - An IUnifiedRenderer instance
+ * @returns Attachment function compatible with Transport.attach()
+ *
+ * @example
+ * ```typescript
+ * const renderer = defineRenderer({
+ *   name: 'Console',
+ *   on: { '*': ({ event }) => console.log(event) }
+ * });
+ *
+ * harness.attach(toAttachment(renderer)).run();
+ * ```
+ */
+export function toAttachment(renderer: IUnifiedRenderer): Attachment {
+	return (transport: Transport) => {
+		// Create a minimal event bus adapter that forwards transport events
+		const subscriptions: Unsubscribe[] = [];
+		let attached = false;
+		let subscriberCount = 0;
+
+		// Wrap transport events as EnrichedEvent for the unified bus interface
+		const wrapAsEnrichedEvent = (event: { type: string; timestamp?: Date; [key: string]: unknown }): EnrichedEvent => ({
+			id: crypto.randomUUID(),
+			timestamp: event.timestamp ?? new Date(),
+			context: { sessionId: "" },
+			event: event as BaseEvent,
+		});
+
+		// Create a proxy that looks like IUnifiedEventBus but uses transport.subscribe
+		// This adapts the Transport interface to what IUnifiedRenderer.attach() expects
+		const busProxy: IUnifiedEventBus = {
+			emit: () => {
+				// Renderers can emit but we don't forward to transport (renderers are consumers)
+			},
+			subscribe: (filterOrListener: unknown, maybeListener?: unknown): Unsubscribe => {
+				// Handle both overloads: subscribe(listener) and subscribe(filter, listener)
+				let unifiedListener: (event: EnrichedEvent) => void;
+				if (typeof filterOrListener === "function") {
+					unifiedListener = filterOrListener as (event: EnrichedEvent) => void;
+				} else if (typeof maybeListener === "function") {
+					// Filter is ignored for simplicity - renderer gets all events
+					unifiedListener = maybeListener as (event: EnrichedEvent) => void;
+				} else {
+					// Invalid call - return no-op
+					return () => {
+						// No-op unsubscribe
+					};
+				}
+
+				// Subscribe to transport and wrap events
+				const unsub = transport.subscribe((rawEvent) => {
+					// Transport events are FluentHarnessEvent, wrap as EnrichedEvent
+					const event = rawEvent as unknown as { type: string; timestamp?: Date; [key: string]: unknown };
+					const enriched = wrapAsEnrichedEvent(event);
+					unifiedListener(enriched);
+				});
+				subscriptions.push(unsub);
+				subscriberCount++;
+
+				return () => {
+					unsub();
+					subscriberCount--;
+				};
+			},
+			scoped: <T>(_: unknown, fn: () => T | Promise<T>) => fn(), // No scoping in this adapter
+			current: () => ({ sessionId: "" }), // Minimal context
+			clear: () => {
+				// Clear all subscriptions
+				for (const unsub of subscriptions) {
+					unsub();
+				}
+				subscriptions.length = 0;
+				subscriberCount = 0;
+			},
+			get subscriberCount() {
+				return subscriberCount;
+			},
+		};
+
+		// Attach renderer to our proxy bus
+		renderer.attach(busProxy);
+		attached = true;
+
+		// Return cleanup function
+		return () => {
+			if (attached) {
+				renderer.detach();
+				attached = false;
+			}
+			// Unsubscribe all
+			for (const unsub of subscriptions) {
+				unsub();
+			}
+		};
+	};
 }

@@ -11,7 +11,7 @@
  */
 
 import { createContainer } from "../core/container.js";
-import type { IUnifiedEventBus } from "../core/unified-events/types.js";
+import type { Attachment, IUnifiedEventBus } from "../core/unified-events/types.js";
 import type {
 	FluentEventHandler,
 	FluentHarnessEvent,
@@ -112,6 +112,13 @@ export interface HarnessConfig<
 
 	/** Generator execution with step recording via yields */
 	execute?: (context: ExecuteContext<TAgents, TState>) => AsyncGenerator<StepYield, TResult>;
+
+	/**
+	 * Pre-registered attachments (T058).
+	 * These attachments are applied to every instance created by this factory.
+	 * Use for environment-based configuration (debug logging, metrics, etc.).
+	 */
+	attachments?: Attachment[];
 }
 
 /**
@@ -266,6 +273,8 @@ export function defineHarness<
 				run: config.run as ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined,
 				input,
 				unifiedBus: options?.unifiedBus,
+				// T059: Pass pre-registered attachments to instance
+				attachments: config.attachments,
 			}) as unknown as HarnessInstance<TState, TResult>;
 		},
 	};
