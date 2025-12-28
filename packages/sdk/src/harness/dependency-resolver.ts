@@ -7,7 +7,15 @@
  * @module harness/dependency-resolver
  */
 
-import type { ParsedTask } from "./task-harness-types.js";
+/**
+ * Minimal task interface for dependency resolution.
+ * Only requires id and dependencies, optionally status.
+ */
+export interface DependencyTask {
+	id: string;
+	dependencies: string[];
+	status?: string;
+}
 
 /**
  * Result of topological sort operation.
@@ -49,7 +57,7 @@ export interface TopologicalSortResult {
  * // result.success = true
  * ```
  */
-export function resolveDependencies(tasks: Pick<ParsedTask, "id" | "dependencies">[]): TopologicalSortResult {
+export function resolveDependencies(tasks: Pick<DependencyTask, "id" | "dependencies">[]): TopologicalSortResult {
 	const taskIds = new Set(tasks.map((t) => t.id));
 	const inDegree = new Map<string, number>();
 	const adjList = new Map<string, string[]>();
@@ -127,7 +135,7 @@ export function resolveDependencies(tasks: Pick<ParsedTask, "id" | "dependencies
  * @param validIds - Set of valid task IDs
  * @returns Array of detected cycles
  */
-export function detectCycles(tasks: Pick<ParsedTask, "id" | "dependencies">[], validIds?: Set<string>): string[][] {
+export function detectCycles(tasks: Pick<DependencyTask, "id" | "dependencies">[], validIds?: Set<string>): string[][] {
 	const taskMap = new Map(tasks.map((t) => [t.id, t]));
 	const validTaskIds = validIds ?? new Set(tasks.map((t) => t.id));
 
@@ -183,7 +191,7 @@ export function detectCycles(tasks: Pick<ParsedTask, "id" | "dependencies">[], v
  * @returns Array of tasks ready to execute
  */
 export function getReadyTasks(
-	tasks: Pick<ParsedTask, "id" | "dependencies" | "status">[],
+	tasks: Pick<DependencyTask, "id" | "dependencies" | "status">[],
 	completedIds: Set<string>,
 ): string[] {
 	return tasks
@@ -205,7 +213,7 @@ export function getReadyTasks(
  * @param tasks - Tasks to validate
  * @returns Array of warning messages for invalid references
  */
-export function validateDependencies(tasks: Pick<ParsedTask, "id" | "dependencies">[]): string[] {
+export function validateDependencies(tasks: Pick<DependencyTask, "id" | "dependencies">[]): string[] {
 	const taskIds = new Set(tasks.map((t) => t.id));
 	const warnings: string[] = [];
 
