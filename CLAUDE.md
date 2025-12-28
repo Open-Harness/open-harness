@@ -9,6 +9,7 @@ Auto-generated from all feature plans. Last updated: 2025-12-25
 - JSON fixture files in `recordings/golden/`, JSONL E2E recordings in `tests/fixtures/e2e/` (004-test-infra-audit)
 - TypeScript 5.x (strict mode) + @anthropic-ai/sdk (NEW), @needle-di/core, zod (005-monologue-system)
 - N/A (in-memory buffer, history ephemeral per-session) (005-monologue-system)
+- N/A (state in memory) (007-fluent-harness-dx)
 
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod (002-sdk-validation)
 
@@ -34,9 +35,9 @@ bun run lint        # Linting
 TypeScript 5.x (strict mode): Follow standard conventions
 
 ## Recent Changes
+- 007-fluent-harness-dx: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod
 - 005-monologue-system: Added TypeScript 5.x (strict mode) + @anthropic-ai/sdk (NEW), @needle-di/core, zod
 - 004-test-infra-audit: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, bun:tes
-- 003-harness-renderer: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, listr2 (optional peer)
 
 
 <!-- MANUAL ADDITIONS START -->
