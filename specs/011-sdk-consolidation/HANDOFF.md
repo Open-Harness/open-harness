@@ -1,282 +1,303 @@
-# SDK Consolidation Handoff
+# SDK Consolidation Handoff (Updated)
 
-## Goal
+## Current State
 
-Make `@openharness/sdk` **provider-agnostic**. All Anthropic-specific code moves to `@openharness/anthropic`.
+**Commit:** `ee55afe`
+**Branch:** `refactor-02`
 
-**Why?** The SDK should be a reusable workflow orchestration layer that can work with any LLM provider, not just Anthropic.
+We paused mid-refactor because we realized the architecture is wrong.
 
 ---
 
-## Current State (Commit: 5035423)
+## What We Did
 
-### What's Complete ✅
+1. **Created `@openharness/anthropic` package** ✅
+   - Moved all agents (ParserAgent, CodingAgent, etc.)
+   - Moved AnthropicRunner
+   - Moved recording system (Vault, ReplayRunner)
+   - Package builds and tests pass
 
-**Phase 1: Create @openharness/anthropic**
-- Package structure created at `packages/anthropic/`
-- All agents moved: `CodingAgent`, `ReviewAgent`, `ParserAgent`, `PlannerAgent`, `ValidationReviewAgent`
-- Runner moved: `AnthropicRunner`, `event-mapper`, `models`
-- Recording system moved: `Vault`, `ReplayRunner`, `RecordingFactory`, `@Record` decorator
-- `AnthropicMonologueLLM` moved
-- **Package builds and tests pass** (2/2 replay tests)
+2. **Started SDK cleanup**
+   - Deleted `providers/anthropic/` directory
+   - Updated container.ts, tokens.ts for provider-agnostic
 
-**Phase 2: SDK Cleanup (Partial)**
-- Deleted `providers/anthropic/` directory
-- Deleted duplicate recording files from `core/`
-- Updated `container.ts` to be provider-agnostic (no agent bindings)
-- Updated `tokens.ts` with generic types (`AgentEvent`, `GenericMessage`, `GenericRunnerOptions`)
-- Updated `event-bus.ts` and `callbacks/types.ts` to use generic types
-- Simplified `agent-factory.ts` (deprecated `createAgent()`)
-- Deleted `workflow-builder.ts` and `orchestrator.ts`
+3. **Moved TaskHarness to examples/** ❌ (WRONG APPROACH)
+   - Moved 12 files to `examples/task-harness/`
+   - This is when we realized the problem
 
-### What's Broken ❌
+---
 
-**SDK does NOT typecheck.** The following files have broken imports:
+## The Problem
 
-| File | Broken Imports | Purpose |
-|------|----------------|---------|
-| `factory/harness-factory.ts` | `ParserAgent`, `ValidationReviewAgent` | Creates TaskHarness with DI |
-| `harness/task-harness.ts` | `ParserAgent`, `ValidationReviewAgent` | Main task execution orchestrator |
-| `harness/types.ts` | `StreamCallbacks` from deleted path | Type definitions for harness |
+We moved **12 files (~2000+ lines)** to examples:
 
-**Test files with broken imports** (many):
-- `tests/helpers/recording-wrapper.ts`
-- `tests/helpers/replay-runner.ts`
-- `tests/replay/*.test.ts`
-- `tests/integration/*.test.ts`
-- `tests/unit/agent-factory.test.ts`
+| File | Lines | Purpose |
+|------|-------|---------|
+| `task-harness.ts` | 935 | Main orchestration |
+| `task-harness-types.ts` | 650 | Zod schemas |
+| `base-renderer.ts` | ~450 | Abstract renderer |
+| `console-renderer.ts` | ~230 | Terminal output |
+| `harness-recorder.ts` | ~200 | Recording system |
+| `replay-controller.ts` | ~300 | Replay playback |
+| ... | ... | ... |
+
+**This is NOT an example.** An example should be:
+- ~50-100 lines
+- Glanceable
+- Copy-paste-able
+- Uses SDK primitives
 
 ---
 
 ## The Architectural Tension
 
-### The Problem
+### Two Harness APIs Exist
 
-The **TaskHarness** system is a significant feature that orchestrates multi-step task execution. It depends on:
+1. **TaskHarness (OLD)** - 935-line class with:
+   - Hardcoded agent dependencies
+   - Custom state management
+   - Recording/replay
+   - Renderer infrastructure
+   - Phase/task lifecycle
 
-1. **ParserAgent** - Parses `tasks.md` into structured tasks
-2. **ValidationReviewAgent** - Reviews/validates completed tasks
-3. **CodingAgent** (indirectly) - Executes code tasks
+2. **defineHarness() (NEW)** - Fluent factory with:
+   - Any agents via DI
+   - User-defined state
+   - Built-in phase/task helpers
+   - Transport interface for attachments
+   - Session mode for interactivity
 
-These are all Anthropic-specific implementations.
-
-### The Question
-
-**How do we preserve TaskHarness functionality while making SDK provider-agnostic?**
+**defineHarness() was built to REPLACE TaskHarness complexity.**
 
 ---
 
-## Dependency Map (To Be Researched)
-
-### SDK → Anthropic Dependencies
-
-We need to understand what SDK code depends on Anthropic implementations:
-
-```
-packages/sdk/src/
-├── factory/
-│   └── harness-factory.ts → ParserAgent, ValidationReviewAgent (BROKEN)
-├── harness/
-│   ├── task-harness.ts → ParserAgent, ValidationReviewAgent (BROKEN)
-│   └── types.ts → StreamCallbacks (BROKEN)
-├── callbacks/
-│   └── types.ts → AgentEvent (FIXED - now uses tokens.ts)
-├── core/
-│   ├── container.ts → (FIXED - no agent bindings)
-│   ├── event-bus.ts → AgentEvent (FIXED - now uses tokens.ts)
-│   └── tokens.ts → (FIXED - generic types)
-└── monologue/
-    └── monologue-decorator.ts → AgentEvent (FIXED - now uses tokens.ts)
-```
-
-### Anthropic → SDK Dependencies
-
-The anthropic package imports from SDK:
-
-```
-packages/anthropic/src/
-├── agents/*.ts → IAgentCallbacks, EventBus, tokens from @openharness/sdk
-├── runner/*.ts → tokens, callbacks from @openharness/sdk
-├── recording/*.ts → IConfig, RunnerCallbacks from @openharness/sdk
-└── monologue/*.ts → IMonologueLLM, MonologueConfig from @openharness/sdk
-```
-
-### Interface Inventory
-
-SDK already defines these interfaces in `tokens.ts`:
+## What a Real Example Should Look Like
 
 ```typescript
-// Already defined and NOT coupled to Anthropic:
-interface IParserAgent { parse(input: IParserAgentInput): Promise<IParserAgentOutput> }
-interface IParserAgentInput { tasksFilePath: string; tasksContent: string; specFilePath?: string }
-interface IParserAgentOutput { tasks: IParsedTask[]; phases: IPhaseInfo[]; warnings: string[]; metadata: IParserMetadata }
-interface IParsedTask { id: string; phase: string; description: string; ... }
+// examples/task-harness/index.ts (~50 lines)
+import { defineHarness } from '@openharness/sdk';
+import { ParserAgent, CodingAgent, ReviewAgent } from '@openharness/anthropic';
 
-// Also defined:
-interface ITaskHarness { run(callbacks?): Promise<IHarnessSummary>; getState(); ... }
-interface IValidationResult { taskId: string; passed: boolean; reasoning: string; ... }
+const TaskHarness = defineHarness({
+  name: 'task-harness',
+  agents: {
+    parser: ParserAgent,
+    coder: CodingAgent,
+    reviewer: ReviewAgent
+  },
+  state: ({ tasksPath }) => ({
+    tasks: [] as ParsedTask[],
+    completed: new Set<string>(),
+  }),
+  run: async ({ agents, state, phase, task }) => {
+    // Phase 1: Parse tasks.md
+    state.tasks = await phase('parse', async () => {
+      const content = await Bun.file(tasksPath).text();
+      return agents.parser.parse({ content });
+    });
+
+    // Phase 2: Execute each task
+    for (const t of state.tasks) {
+      await task(t.id, async () => {
+        const result = await agents.coder.execute(t.description);
+        await agents.reviewer.validate(t, result);
+        state.completed.add(t.id);
+      });
+    }
+
+    return {
+      total: state.tasks.length,
+      completed: state.completed.size
+    };
+  }
+});
+
+// Usage
+const result = await TaskHarness
+  .create({ tasksPath: 'specs/feature/tasks.md' })
+  .attach(consoleRenderer)  // <- This is the question: where does this come from?
+  .run();
+
+console.log(`Completed ${result.completed}/${result.total} tasks`);
 ```
 
-**Key Insight:** The *interfaces* for TaskHarness already exist in SDK. The problem is the *factory* and *harness implementation* import concrete agent classes instead of using these interfaces.
+---
+
+## The Key Questions
+
+### 1. What about renderers?
+
+TaskHarness has:
+- `IHarnessRenderer` interface
+- `BaseRenderer` abstract class
+- `ConsoleRenderer` implementation
+- `CompositeRenderer` for multiple outputs
+
+**Question:** Are these SDK primitives or TaskHarness-specific?
+
+If they're useful for ANY harness, they should be in SDK:
+```typescript
+import { ConsoleRenderer } from '@openharness/sdk';
+```
+
+If they're TaskHarness-specific, they should be deleted (defineHarness uses Attachments).
+
+### 2. What about recording/replay?
+
+TaskHarness has:
+- `HarnessRecorder` for recording runs
+- `ReplayController` for playback
+
+**Question:** Is this useful for ANY harness?
+
+The Anthropic package already has `Vault` + `ReplayRunner` for agent-level recording.
+Harness-level recording might be a separate concern.
+
+### 3. What about task state management?
+
+TaskHarness has:
+- `task-state.ts` with functional state transitions
+- `dependency-resolver.ts` for topological sorting
+
+**Question:** Are these useful primitives?
+
+Dependency resolution might be useful for any workflow.
+But `task-state.ts` is specific to TaskHarness's state shape.
+
+### 4. What about the type schemas?
+
+`task-harness-types.ts` has 650 lines of Zod schemas:
+- `ParsedTask`, `PhaseInfo`, `TaskFlags`
+- `ParserAgentInput/Output`
+- `ReviewAgentInput/Output`
+- `HarnessSummary`, etc.
+
+**Question:** Where do these belong?
+
+- Agent input/output types → `@openharness/anthropic`
+- Harness types → User's responsibility (their harness, their types)
+- Generic task types → Maybe a shared package?
 
 ---
 
-## Research Questions
+## Options Going Forward
 
-Before deciding on a solution, we need to answer:
+### Option A: Delete TaskHarness Entirely
 
-### 1. What uses TaskHarness?
-- Is it used by external consumers?
-- Is it used by the listr2 harness renderer?
-- What would break if the API changes?
+**Approach:** TaskHarness was the prototype. defineHarness() is the product.
 
-### 2. What uses harness-factory?
-- Who calls `createTaskHarness()`?
-- Can callers provide their own agents?
+- Delete all TaskHarness files
+- Examples use defineHarness()
+- Move useful primitives to SDK (renderers, dependency resolver)
 
-### 3. What's the test coverage situation?
-- Which tests are provider-agnostic (keep in SDK)?
-- Which tests need real agents (move to anthropic)?
+**Pros:** Clean separation, forces modern API usage
+**Cons:** Users who liked TaskHarness must rewrite
 
-### 4. What about the fluent harness API (007)?
-- Does `defineHarness()` depend on Anthropic?
-- Is `HarnessInstance` provider-agnostic?
+### Option B: TaskHarness as defineHarness() Wrapper
 
-### 5. Cross-package dependencies
-- Does anything in `@openharness/core` need updating?
-- Does `@openharness/transports` have any dependencies on this?
-
----
-
-## Potential Solutions
-
-### Option A: Interface-Based Decoupling
-
-Keep TaskHarness in SDK but make it accept agent instances via parameters:
+**Approach:** Rewrite TaskHarness as a thin wrapper around defineHarness():
 
 ```typescript
-// Current (broken)
-export function createTaskHarness(options: CreateTaskHarnessOptions): TaskHarness {
-  const parser = container.get(ParserAgent);  // Hardcoded!
-  const reviewer = container.get(ValidationReviewAgent);  // Hardcoded!
-  return new TaskHarness(config, parser, reviewer, eventBus);
+// @openharness/anthropic/harnesses/task-harness.ts
+export const TaskHarness = defineHarness({
+  name: 'task-harness',
+  agents: { parser: ParserAgent, coder: CodingAgent, reviewer: ValidationReviewAgent },
+  // ... implementation using SDK primitives
+});
+
+// Export factory
+export function createTaskHarness(config: TaskHarnessConfig) {
+  return TaskHarness.create(config);
 }
-
-// Proposed
-export function createTaskHarness(options: {
-  config: TaskHarnessConfig;
-  parserAgent: IParserAgent;    // Interface from SDK
-  reviewAgent: IReviewAgent;    // Interface from SDK (needs definition)
-}): TaskHarness {
-  return new TaskHarness(config, options.parserAgent, options.reviewAgent, eventBus);
-}
 ```
 
-**Pros:** Preserves SDK API, users bring their own agents
-**Cons:** Requires users to instantiate agents manually
+**Pros:** Preserves API, shows how to use defineHarness()
+**Cons:** Still maintenance burden
 
-### Option B: Move TaskHarness to Anthropic
+### Option C: Move Infrastructure to SDK, Delete TaskHarness
 
-The entire harness system is tightly coupled, so move it:
+**Approach:** Extract the USEFUL parts as SDK primitives:
+
+1. **Renderers** → `@openharness/sdk`
+   - `defineRenderer()` (already exists!)
+   - `ConsoleRenderer` as example attachment
+
+2. **Dependency Resolution** → `@openharness/sdk`
+   - `resolveDependencies()` function
+   - Generic topological sort
+
+3. **Recording** → Keep in `@openharness/anthropic`
+   - Agent-level recording with Vault
+   - Harness-level is user's concern
+
+4. **TaskHarness** → Delete
+   - Examples show defineHarness() usage
+
+**Pros:** SDK gets useful primitives, clean architecture
+**Cons:** Work to extract and test
+
+---
+
+## Recommended Path: Option C
+
+1. **Identify useful primitives** in TaskHarness code
+2. **Move to SDK** as standalone utilities
+3. **Delete TaskHarness** from everywhere
+4. **Create simple example** using defineHarness()
+5. **Document** the migration path
+
+---
+
+## Files to Analyze
 
 ```
-packages/anthropic/src/harness/
-├── task-harness.ts
-├── harness-factory.ts
-└── types.ts
+examples/task-harness/src/
+├── task-harness.ts        # DELETE (use defineHarness)
+├── task-harness-types.ts  # SPLIT (agent types → anthropic, rest → user)
+├── task-state.ts          # DELETE (user manages state)
+├── harness-factory.ts     # DELETE (defineHarness replaces this)
+├── dependency-resolver.ts # MAYBE SDK (generic utility)
+├── event-protocol.ts      # DELETE (defineHarness has event system)
+├── harness-recorder.ts    # DELETE (anthropic has recording)
+├── replay-controller.ts   # DELETE (anthropic has replay)
+├── renderer-interface.ts  # CHECK (defineRenderer already in SDK?)
+├── base-renderer.ts       # CHECK (needed?)
+├── console-renderer.ts    # MAYBE SDK (as example attachment)
+├── composite-renderer.ts  # DELETE (attachments handle this)
 ```
-
-**Pros:** Clean separation, SDK becomes minimal
-**Cons:** API breakage, feature seems misplaced in "anthropic" package
-
-### Option C: Provider Registration Pattern
-
-SDK defines harness infrastructure, providers register implementations:
-
-```typescript
-// In SDK
-const container = createContainer();
-
-// In user code
-import { registerAnthropicProvider } from '@openharness/anthropic';
-registerAnthropicProvider(container);
-
-// Now TaskHarness can resolve agents via DI
-const harness = createTaskHarness({ config });
-```
-
-**Pros:** Clean architecture, extensible
-**Cons:** More ceremony for users, complex DI setup
-
-### Option D: Hybrid (Recommended direction)
-
-- Keep harness *infrastructure* in SDK (base classes, types, interfaces)
-- Move harness *implementation* to anthropic (or make it interface-based)
-- Factory accepts either interface-based agents OR uses DI
 
 ---
 
 ## Next Steps
 
-1. **Research** - Map out all dependencies between packages
-2. **Decide** - Choose architecture based on findings
-3. **Implement** - Complete the refactor
-4. **Test** - Ensure both packages work together
-5. **Document** - Update API docs
+1. **Architectural Decision:** Agree on Option A, B, or C
+2. **If Option C:**
+   - Check if `defineRenderer()` already covers renderer needs
+   - Check if dependency resolver is worth keeping
+   - Create minimal example harness
+3. **Clean up:**
+   - Delete TaskHarness from SDK
+   - Delete examples/task-harness (it's wrong)
+   - Create proper simple example
 
 ---
 
-## Files to Investigate
+## SDK Should Export
 
-```bash
-# Find all imports from providers/anthropic (now broken)
-grep -r "providers/anthropic" packages/sdk/src/ --include="*.ts"
+After cleanup, SDK exports should be:
 
-# Find all uses of TaskHarness
-grep -r "TaskHarness\|createTaskHarness" packages/ --include="*.ts"
+**Core Primitives:**
+- `defineHarness()`, `HarnessInstance`
+- `BaseHarness`, `PersistentState`
+- `EventBus`, `UnifiedEventBus`
+- `createContainer()`, DI tokens
 
-# Find all uses of ParserAgent
-grep -r "ParserAgent" packages/ --include="*.ts"
+**Transport/Attachments:**
+- `Transport` interface
+- `Attachment` type
+- `defineRenderer()` (if keeping)
 
-# Check what the fluent API depends on
-grep -r "import.*from" packages/sdk/src/factory/define-harness.ts
-grep -r "import.*from" packages/sdk/src/harness/harness-instance.ts
-```
+**Control Flow:**
+- `retry()`, `parallel()` helpers
 
----
-
-## Package Structure Reference
-
-### Current (Target)
-
-```
-@openharness/core          → Interfaces (IAgent, IAgentCallbacks)
-@openharness/sdk           → Provider-agnostic orchestration
-@openharness/anthropic     → Anthropic agents + runner + recording
-@openharness/transports    → Output destinations
-```
-
-### What Should Live Where?
-
-| Component | Current Location | Proposed Location | Reason |
-|-----------|------------------|-------------------|--------|
-| BaseHarness | sdk | sdk | Provider-agnostic |
-| PersistentState | sdk | sdk | Provider-agnostic |
-| EventBus | sdk | sdk | Provider-agnostic |
-| UnifiedEventBus | sdk | sdk | Provider-agnostic |
-| TaskHarness | sdk (broken) | ??? | Depends on decision |
-| harness-factory | sdk (broken) | ??? | Depends on decision |
-| defineHarness | sdk | sdk (check) | May be provider-agnostic |
-| HarnessInstance | sdk | sdk (check) | May be provider-agnostic |
-| CodingAgent | anthropic | anthropic ✅ | Provider-specific |
-| ParserAgent | anthropic | anthropic ✅ | Provider-specific |
-| AnthropicRunner | anthropic | anthropic ✅ | Provider-specific |
-| Vault/Recording | anthropic | anthropic ✅ | Uses SDKMessage |
-
----
-
-## Commit Reference
-
-- **Last working commit:** `65b6159` (before consolidation started)
-- **Current WIP commit:** `5035423` (anthropic done, SDK broken)
-- **Branch:** `refactor-02`
+**NO TaskHarness. NO agent-specific interfaces.**
