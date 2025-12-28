@@ -25,6 +25,8 @@ Read `.knowledge/docs/why.md` for developer philosophy.
 - N/A (in-memory event bus, no persistence) (008-unified-event-system)
 - JSON fixture files in `recordings/golden/`, test fixtures as embedded data (009-tech-debt-cleanup)
 - N/A (in-memory event bus, message queues) (010-transport-architecture)
+- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod (013-anthropic-refactor)
+- N/A (no persistence layer in this package) (013-anthropic-refactor)
 
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod (002-sdk-validation)
 
@@ -50,9 +52,9 @@ bun run lint        # Linting
 TypeScript 5.x (strict mode): Follow standard conventions
 
 ## Recent Changes
+- 013-anthropic-refactor: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod
 - 010-transport-architecture: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod
 - 009-tech-debt-cleanup: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, bun:tes
-- 008-unified-event-system: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, node:async_hooks (AsyncLocalStorage)
 
 
 <!-- MANUAL ADDITIONS START -->
