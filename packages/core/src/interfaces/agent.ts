@@ -55,12 +55,14 @@ export interface RunnerOptions {
 
 /**
  * Arguments for running an agent.
+ *
+ * @template TOptions - Provider-specific options type (defaults to RunnerOptions)
  */
-export interface RunArgs {
+export interface RunArgs<TOptions = RunnerOptions> {
 	/** The prompt to send to the LLM */
 	prompt: string;
 	/** Configuration options */
-	options: RunnerOptions;
+	options: TOptions;
 	/** Event callbacks */
 	callbacks?: RunnerCallbacks;
 }
@@ -93,13 +95,29 @@ export interface AgentEvent {
  *
  * This interface abstracts the actual LLM execution. Each provider
  * implements this interface, mapping their SDK to the common format.
+ *
+ * @template TOptions - Provider-specific options type (defaults to RunnerOptions)
+ * @template TResult - Provider-specific result type (defaults to AgentResult)
+ *
+ * @example
+ * ```typescript
+ * // Generic usage (provider-agnostic code)
+ * const runner: IAgentRunner = getRunner();
+ *
+ * // Anthropic-specific usage
+ * import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+ * const anthropicRunner: IAgentRunner<Options, SDKMessage | undefined> = new AnthropicRunner();
+ *
+ * // OpenAI-specific usage (future)
+ * const openaiRunner: IAgentRunner<OpenAIOptions, OpenAIResponse> = new OpenAIRunner();
+ * ```
  */
-export interface IAgentRunner {
+export interface IAgentRunner<TOptions = RunnerOptions, TResult = AgentResult> {
 	/**
 	 * Run a prompt and return the result.
 	 *
 	 * @param args - Run arguments including prompt, options, and callbacks
-	 * @returns Promise resolving to AgentResult
+	 * @returns Promise resolving to provider-specific result
 	 */
-	run(args: RunArgs): Promise<AgentResult>;
+	run(args: RunArgs<TOptions>): Promise<TResult>;
 }
