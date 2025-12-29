@@ -122,6 +122,18 @@ export interface IEventBus {
 export const IEventBusToken = new InjectionToken<IEventBus>("IEventBus");
 
 // ============================================================================
+// Unified Event Bus (008-unified-event-system)
+// ============================================================================
+
+import type { IUnifiedEventBus } from "./unified-events/types.js";
+
+/**
+ * Token for UnifiedEventBus - combines AgentEvent and HarnessEvent streams
+ * with automatic AsyncLocalStorage context propagation.
+ */
+export const IUnifiedEventBusToken = new InjectionToken<IUnifiedEventBus>("IUnifiedEventBus");
+
+// ============================================================================
 // Container Interface (for decorators)
 // ============================================================================
 
