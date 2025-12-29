@@ -7,18 +7,8 @@
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import { Container } from "@needle-di/core";
-import type { GenericMessage, IAgentRunner, RunnerCallbacks } from "@openharness/sdk";
-import {
-	EventBus,
-	IAgentRunnerToken,
-	IConfigToken,
-	IEventBusToken,
-	IUnifiedEventBusToken,
-	setMonologueContainer,
-	UnifiedEventBus,
-} from "@openharness/sdk";
-import { setDecoratorContainer } from "../../src/infra/recording/decorators.js";
+import type { GenericMessage } from "@openharness/sdk";
+import { IAgentRunnerToken } from "@openharness/sdk";
 // Import preset agents
 // Import schemas for type checking
 import {
@@ -37,15 +27,17 @@ import { resetFactoryContainer, setFactoryContainer } from "../../src/provider/f
 
 // Import prompt template factory for override tests
 import { createPromptTemplate } from "../../src/provider/prompt-template.js";
+import { createTestContainer, MockAgentRunner } from "../helpers/test-container.js";
 
 /**
- * Mock runner for integration tests.
+ * Preset-specific mock runner with predefined results for each agent type.
  */
-class MockAgentRunner implements IAgentRunner {
-	lastPrompt?: string;
+class PresetMockRunner extends MockAgentRunner {
 	mockResults: Map<string, GenericMessage> = new Map();
 
 	constructor() {
+		super();
+
 		// Default mock results for each agent type
 		this.mockResults.set("CodingAgent", {
 			type: "result",
@@ -89,10 +81,10 @@ class MockAgentRunner implements IAgentRunner {
 		} as unknown as GenericMessage);
 	}
 
-	async run(args: {
+	override async run(args: {
 		prompt: string;
 		options: unknown;
-		callbacks?: RunnerCallbacks;
+		callbacks?: import("@openharness/sdk").RunnerCallbacks;
 	}): Promise<GenericMessage | undefined> {
 		this.lastPrompt = args.prompt;
 
@@ -115,34 +107,18 @@ class MockAgentRunner implements IAgentRunner {
 }
 
 /**
- * Create a test container with mock runner.
+ * Create test container with PresetMockRunner for preset tests.
  */
-function createMockContainer(): { container: Container; mockRunner: MockAgentRunner } {
-	const container = new Container();
-	const mockRunner = new MockAgentRunner();
+function createMockContainer() {
+	const { container } = createTestContainer();
+	const mockRunner = new PresetMockRunner();
 
-	container.bind({
-		provide: IConfigToken,
-		useValue: { isReplayMode: false, recordingsDir: "./test-recordings" },
-	});
-
+	// Replace the default mock runner with our preset-specific one
+	// Note: rebinding directly overrides the previous binding in NeedleDI
 	container.bind({
 		provide: IAgentRunnerToken,
 		useValue: mockRunner,
 	});
-
-	container.bind({
-		provide: IEventBusToken,
-		useFactory: () => new EventBus(),
-	});
-
-	container.bind({
-		provide: IUnifiedEventBusToken,
-		useFactory: () => new UnifiedEventBus(),
-	});
-
-	setDecoratorContainer(container);
-	setMonologueContainer(container);
 
 	return { container, mockRunner };
 }

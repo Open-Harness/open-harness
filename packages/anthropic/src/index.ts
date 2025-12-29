@@ -55,6 +55,8 @@ export type {
 	StreamOptions,
 } from "./provider/index.js";
 export {
+	// Event mapper (provider-specific)
+	AnthropicEventMapper,
 	// Prompt template factory
 	createPromptTemplate,
 	createStaticPrompt,
@@ -70,7 +72,6 @@ export {
 // ============================================================================
 
 export { AnthropicRunner } from "./infra/runner/anthropic-runner.js";
-export { mapSdkMessageToEvents, mapSdkMessageToUnifiedEvents } from "./infra/runner/event-mapper.js";
 export {
 	type AgentEvent,
 	type CodingResult,

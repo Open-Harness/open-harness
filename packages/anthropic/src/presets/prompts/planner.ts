@@ -90,10 +90,7 @@ Return a JSON object with a "tasks" array:
  * Guides the agent to break down a PRD into development tasks.
  * Uses {{prd}} variable for interpolation.
  */
-export const PlannerPromptTemplate = createPromptTemplate<
-	typeof PLANNER_TEMPLATE,
-	PlannerInput
->(
+export const PlannerPromptTemplate = createPromptTemplate<typeof PLANNER_TEMPLATE, PlannerInput>(
 	PLANNER_TEMPLATE,
 	PlannerInputSchema,
 );

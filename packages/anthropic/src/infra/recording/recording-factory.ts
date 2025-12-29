@@ -44,7 +44,11 @@ export class Recorder implements IRecorder {
 		prompt: string;
 		options: Options;
 		callbacks?: RunnerCallbacks;
-		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<GenericMessage | undefined>;
+		runFn: (args: {
+			prompt: string;
+			options: Options;
+			callbacks?: RunnerCallbacks;
+		}) => Promise<GenericMessage | undefined>;
 	}): Promise<GenericMessage | undefined> {
 		const { prompt, options, callbacks, runFn } = args;
 		const filePath = join(this.config.recordingsDir, this.category, `${this.id}.jsonl`);

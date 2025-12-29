@@ -21,9 +21,10 @@
  * @module provider
  */
 
+// Event mapper (provider-specific)
+export { AnthropicEventMapper } from "./anthropic-event-mapper.js";
 // Factory function
 export { defineAnthropicAgent, resetFactoryContainer, setFactoryContainer } from "./factory.js";
-
 // Prompt template factory
 export { createPromptTemplate, createStaticPrompt } from "./prompt-template.js";
 

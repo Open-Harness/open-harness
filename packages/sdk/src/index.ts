@@ -68,7 +68,7 @@ export type {
 // ============================================
 
 // Core Factories
-export { createAgent, resetGlobalContainer, setGlobalContainer } from "./factory/agent-factory.js";
+export { resetGlobalContainer, setGlobalContainer } from "./factory/agent-factory.js";
 
 // Task Management
 export { TaskList } from "./workflow/task-list.js";
@@ -87,15 +87,14 @@ export type { Task, TaskStatus } from "./workflow/task-list.js";
 export type { ContainerOptions } from "./infra/container.js";
 export { createContainer, createTestContainer } from "./infra/container.js";
 
-// EventBus
-export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./infra/event-bus.js";
+// Legacy EventBus types (for compatibility only)
+export type { EventFilter, EventListener, SubscribeOptions } from "./infra/event-bus.js";
 // Token Interfaces
 export type {
 	GenericMessage,
 	GenericRunnerOptions,
 	IAgentRunner,
 	IConfig,
-	IEventBus,
 	IMonologueConfig,
 	IMonologueDecorator,
 	IMonologueRunner,
@@ -109,7 +108,6 @@ export {
 	IAgentRunnerToken,
 	IAnthropicRunnerToken,
 	IConfigToken,
-	IEventBusToken,
 	IMonologueDecoratorToken,
 	IMonologueRunnerToken,
 	IPromptRegistryToken,

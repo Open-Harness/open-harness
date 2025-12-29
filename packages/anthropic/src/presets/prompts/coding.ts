@@ -83,10 +83,7 @@ Example handoff: \`commit:a1b2c3d4e5f6789012345678901234567890abcd\`
  * Guides the agent to implement code based on a task description.
  * Uses {{task}} variable for interpolation.
  */
-export const CodingPromptTemplate = createPromptTemplate<
-	typeof CODING_TEMPLATE,
-	CodingInput
->(
+export const CodingPromptTemplate = createPromptTemplate<typeof CODING_TEMPLATE, CodingInput>(
 	CODING_TEMPLATE,
 	CodingInputSchema,
 );
