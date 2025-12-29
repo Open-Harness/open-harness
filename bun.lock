@@ -106,6 +106,22 @@
         "typescript": "^5",
       },
     },
+    "packages/channels": {
+      "name": "@openharness/transports",
+      "version": "0.1.0",
+      "dependencies": {
+        "@clack/prompts": "^0.11.0",
+        "@openharness/core": "workspace:*",
+        "@openharness/sdk": "workspace:*",
+        "picocolors": "^1.1.1",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/config": {
       "name": "@openharnes/config",
       "version": "0.0.0",
@@ -140,19 +156,6 @@
       "devDependencies": {
         "@biomejs/biome": "2.3.10",
         "@openharness/anthropic": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "packages/transports": {
-      "name": "@openharness/transports",
-      "version": "0.1.0",
-      "dependencies": {
-        "@openharness/core": "workspace:*",
-      },
-      "devDependencies": {
         "@types/bun": "latest",
       },
       "peerDependencies": {
@@ -401,7 +404,7 @@
 
     "@openharness/sdk": ["@openharness/sdk@workspace:packages/sdk"],
 
-    "@openharness/transports": ["@openharness/transports@workspace:packages/transports"],
+    "@openharness/transports": ["@openharness/transports@workspace:packages/channels"],
 
     "@sec-ant/readable-stream": ["@sec-ant/readable-stream@0.4.1", "", {}, "sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg=="],
 

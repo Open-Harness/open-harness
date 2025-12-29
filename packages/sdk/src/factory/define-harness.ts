@@ -11,6 +11,7 @@
  */
 
 import { createContainer } from "../infra/container.js";
+import { IUnifiedEventBusToken } from "../infra/tokens.js";
 import type { Attachment, IUnifiedEventBus } from "../infra/unified-events/types.js";
 import type {
 	FluentEventHandler,
@@ -377,6 +378,12 @@ export function defineHarness<
 				throw new Error("HarnessError: State factory must be synchronous. Use run() for async initialization.");
 			}
 
+			// Get UnifiedEventBus from container (T015: Fix agent events not reaching channels)
+			// The container already has a UnifiedEventBus registered (via createContainer)
+			// Agents inject this bus, so the harness needs to use the SAME bus to emit events
+			// Otherwise agent events go to one bus, harness events go to another
+			const unifiedBus = options?.unifiedBus ?? container.get(IUnifiedEventBusToken);
+
 			// Create and return HarnessInstance
 			// Agent resolution happens lazily when run() is called
 			// Type assertion needed because HarnessInstance uses unknown for TInput internally
@@ -387,7 +394,7 @@ export function defineHarness<
 				state: initialState,
 				run: config.run as ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined,
 				input,
-				unifiedBus: options?.unifiedBus,
+				unifiedBus, // Pass the container's bus so harness and agents share the same event bus
 				// T059: Pass pre-registered attachments to instance
 				attachments: config.attachments,
 			}) as unknown as HarnessInstance<TState, TResult>;

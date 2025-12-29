@@ -576,6 +576,25 @@ export class HarnessInstance<TAgents extends Record<string, Agent>, TState, TRes
 			}
 		}
 
+		// T015: Subscribe to UnifiedEventBus and forward events to channels
+		// This allows agent events (agent:start, agent:text, agent:tool:*, etc.) to reach channels
+		// Channels subscribe to the harness transport (via _emit), not directly to the bus
+		if (this._unifiedBus) {
+			const busUnsubscribe = this._unifiedBus.subscribe((enrichedEvent) => {
+				// Convert from EnrichedEvent to FluentHarnessEvent format
+				// EnrichedEvent has: { id, timestamp, context, event: { type, ...data } }
+				// FluentHarnessEvent has: { type, timestamp, ...data }
+				const baseEvent = enrichedEvent.event;
+				const fluentEvent: FluentHarnessEvent = {
+					type: baseEvent.type,
+					timestamp: enrichedEvent.timestamp,
+					...baseEvent,
+				};
+				this._emit(fluentEvent);
+			});
+			this._cleanups.push(busUnsubscribe);
+		}
+
 		try {
 			// Create execute context with bound helpers
 			const context = this._createExecuteContext();

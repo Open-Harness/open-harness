@@ -46,19 +46,29 @@ import type {
 /**
  * Register Anthropic provider in a container.
  *
- * Binds AnthropicRunner to IAgentRunnerToken and AgentBuilder for agent execution.
+ * Binds AnthropicRunner or ReplayRunner to IAgentRunnerToken based on container mode.
+ * Also binds AgentBuilder for agent execution.
  * This is called by helpers (executeAgent/streamAgent) and harness to set up DI.
  *
  * @param container - Container to register provider in
  */
 export function registerAnthropicProvider(container: Container): void {
-	// Import AgentBuilder here to avoid circular dependency at module load time
+	// Import AgentBuilder and ReplayRunner here to avoid circular dependency at module load time
 	// biome-ignore lint/performance/noBarrelFile: sync import after module init
 	const { AgentBuilder } = require("./builder.js");
+	// biome-ignore lint/performance/noBarrelFile: sync import after module init
+	const { ReplayRunner } = require("../infra/recording/replay-runner.js");
+	// biome-ignore lint/performance/noBarrelFile: sync import after module init
+	const { IConfigToken } = require("@openharness/sdk");
 
+	// Check if we're in replay mode
+	const config = container.get(IConfigToken);
+	const useReplay = config.isReplayMode === true;
+
+	// Bind appropriate runner based on mode
 	container.bind({
 		provide: IAgentRunnerToken,
-		useClass: AnthropicRunner,
+		useClass: useReplay ? ReplayRunner : AnthropicRunner,
 	});
 
 	container.bind({

@@ -1,22 +1,21 @@
 /**
- * Console Transport - Colorful terminal output for harness events
+ * Console Channel - Colorful terminal output for harness events
  *
- * Follows the Pino pattern: receives EventHub, subscribes to events,
- * formats and outputs to console, returns cleanup function.
+ * Uses defineChannel for state management, pattern matching, and lifecycle hooks.
  *
- * @module @openharness/transports/console
+ * @module @openharness/channels/console
  */
 
-import type { EnrichedEvent, EventHub, Transport } from "@openharness/core";
+import { defineChannel } from "@openharness/sdk";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 /**
- * Console transport options.
+ * Console channel options.
  */
-export interface ConsoleTransportOptions {
+export interface ConsoleChannelOptions {
 	/** Enable ANSI colors (default: auto-detect TTY) */
 	colors?: boolean;
 	/** Show timestamps (default: false) */
@@ -25,6 +24,14 @@ export interface ConsoleTransportOptions {
 	showContext?: boolean;
 	/** Verbosity level (default: normal) */
 	verbosity?: "minimal" | "normal" | "verbose";
+}
+
+/**
+ * Console channel state.
+ */
+interface ConsoleState {
+	formatter: ConsoleFormatter;
+	startTime: number;
 }
 
 // ============================================================================
@@ -68,14 +75,14 @@ class ConsoleFormatter {
 	private verbosity: "minimal" | "normal" | "verbose";
 	private startTime: number = Date.now();
 
-	constructor(options: ConsoleTransportOptions = {}) {
+	constructor(options: ConsoleChannelOptions = {}) {
 		this.useColors = options.colors ?? (typeof process !== "undefined" && process.stdout?.isTTY) ?? false;
 		this.showTimestamps = options.timestamps ?? false;
 		this.showContext = options.showContext ?? true;
 		this.verbosity = options.verbosity ?? "normal";
 	}
 
-	format(event: EnrichedEvent): string | null {
+	format(event: { event: { type: string; [key: string]: unknown }; timestamp: Date; context: Record<string, unknown> }): string | null {
 		const { event: payload, context } = event;
 		const type = payload.type;
 
@@ -88,51 +95,40 @@ class ConsoleFormatter {
 		const contextStr = this.showContext ? this.formatContext(context) : "";
 
 		switch (type) {
-			// Harness lifecycle
-			case "harness:start":
-				return `${prefix}${this.c("bold")}${SYMBOLS.start} Harness Started${this.c("reset")}${contextStr}`;
-			case "harness:complete": {
-				const e = payload as { success: boolean; tasksCompleted: number; tasksFailed: number; duration: number };
-				const status = e.success
-					? `${this.c("green")}${SYMBOLS.complete} Complete`
-					: `${this.c("red")}${SYMBOLS.failed} Failed`;
-				return `${prefix}${status}${this.c("reset")} (${e.tasksCompleted} completed, ${e.tasksFailed} failed, ${this.formatDuration(e.duration)})`;
-			}
-
 			// Phase lifecycle
-			case "phase:start": {
-				const e = payload as { name: string; phaseNumber?: number };
-				return `${prefix}${this.c("cyan")}Phase ${e.phaseNumber ?? ""}: ${e.name}${this.c("reset")}`;
-			}
-			case "phase:complete": {
-				const e = payload as { name: string };
-				return `${prefix}${this.c("green")}${SYMBOLS.complete} Phase complete: ${e.name}${this.c("reset")}`;
+			case "phase": {
+				const e = payload as unknown as { name: string; status: string; phaseNumber?: number };
+				if (e.status === "start") {
+					return `${prefix}${this.c("cyan")}Phase ${e.phaseNumber ?? ""}: ${e.name}${this.c("reset")}`;
+				} else if (e.status === "complete") {
+					return `${prefix}${this.c("green")}${SYMBOLS.complete} Phase complete: ${e.name}${this.c("reset")}`;
+				}
+				return null;
 			}
 
 			// Task lifecycle
-			case "task:start": {
-				const e = payload as { taskId: string };
-				return `${prefix}${this.c("blue")}${SYMBOLS.start} Task ${e.taskId}${this.c("reset")}`;
-			}
-			case "task:complete": {
-				const e = payload as { taskId: string };
-				return `${prefix}${this.c("green")}${SYMBOLS.complete} Task ${e.taskId}${this.c("reset")}`;
-			}
-			case "task:failed": {
-				const e = payload as { taskId: string; error: string };
-				return `${prefix}${this.c("red")}${SYMBOLS.failed} Task ${e.taskId}: ${e.error}${this.c("reset")}`;
+			case "task": {
+				const e = payload as unknown as { id: string; status: string; error?: string };
+				if (e.status === "start") {
+					return `${prefix}${this.c("blue")}${SYMBOLS.start} Task ${e.id}${this.c("reset")}`;
+				} else if (e.status === "complete") {
+					return `${prefix}${this.c("green")}${SYMBOLS.complete} Task ${e.id}${this.c("reset")}`;
+				} else if (e.status === "failed") {
+					return `${prefix}${this.c("red")}${SYMBOLS.failed} Task ${e.id}: ${e.error || "error"}${this.c("reset")}`;
+				}
+				return null;
 			}
 
 			// Agent events
 			case "agent:start": {
-				const e = payload as { agentName: string };
+				const e = payload as unknown as { agentName: string };
 				if (this.verbosity === "verbose") {
 					return `${prefix}${this.c("magenta")}${SYMBOLS.start} Agent ${e.agentName}${this.c("reset")}`;
 				}
 				return null;
 			}
 			case "agent:thinking": {
-				const e = payload as { content: string };
+				const e = payload as unknown as { content: string };
 				if (this.verbosity === "verbose") {
 					const truncated = e.content.length > 100 ? `${e.content.slice(0, 100)}...` : e.content;
 					return `${prefix}${this.c("dim")}${SYMBOLS.thinking} ${truncated}${this.c("reset")}`;
@@ -140,24 +136,24 @@ class ConsoleFormatter {
 				return null;
 			}
 			case "agent:text": {
-				const e = payload as { content: string };
+				const e = payload as unknown as { content: string };
 				if (this.verbosity === "verbose") {
 					return `${prefix}${this.c("dim")}${SYMBOLS.text} ${e.content}${this.c("reset")}`;
 				}
 				return null;
 			}
 			case "agent:tool:start": {
-				const e = payload as { toolName: string };
+				const e = payload as unknown as { toolName: string };
 				return `${prefix}${this.c("yellow")}${SYMBOLS.tool} ${e.toolName}${this.c("reset")}`;
 			}
 			case "agent:tool:complete": {
-				const e = payload as { toolName: string; isError?: boolean };
+				const e = payload as unknown as { toolName: string; isError?: boolean };
 				const symbol = e.isError ? SYMBOLS.failed : SYMBOLS.complete;
 				const color = e.isError ? "red" : "green";
 				return `${prefix}${this.c(color)}${symbol} ${e.toolName}${this.c("reset")}`;
 			}
 			case "agent:complete": {
-				const e = payload as { agentName: string; success: boolean };
+				const e = payload as unknown as { agentName: string; success: boolean };
 				if (this.verbosity === "verbose") {
 					const symbol = e.success ? SYMBOLS.complete : SYMBOLS.failed;
 					const color = e.success ? "green" : "red";
@@ -168,21 +164,21 @@ class ConsoleFormatter {
 
 			// Narrative
 			case "narrative": {
-				const e = payload as { text: string; importance: string };
+				const e = payload as unknown as { text: string; importance: string };
 				return `${prefix}${this.c("cyan")}${SYMBOLS.narrative} ${e.text}${this.c("reset")}`;
 			}
 
 			// Session events
 			case "session:prompt": {
-				const e = payload as { prompt: string };
+				const e = payload as unknown as { prompt: string };
 				return `${prefix}${this.c("yellow")}${SYMBOLS.prompt} ${e.prompt}${this.c("reset")}`;
 			}
 			case "session:reply": {
-				const e = payload as { content: string };
+				const e = payload as unknown as { content: string };
 				return `${prefix}${this.c("green")}${SYMBOLS.reply} ${e.content}${this.c("reset")}`;
 			}
 			case "session:abort": {
-				const e = payload as { reason?: string };
+				const e = payload as unknown as { reason?: string };
 				return `${prefix}${this.c("red")}${SYMBOLS.abort} Aborted${e.reason ? `: ${e.reason}` : ""}${this.c("reset")}`;
 			}
 
@@ -195,18 +191,10 @@ class ConsoleFormatter {
 	}
 
 	private isImportantEvent(type: string): boolean {
-		return (
-			type === "harness:start" ||
-			type === "harness:complete" ||
-			type.startsWith("phase:") ||
-			type === "task:start" ||
-			type === "task:complete" ||
-			type === "task:failed" ||
-			type === "narrative"
-		);
+		return type === "phase" || type === "task" || type === "narrative";
 	}
 
-	private getPrefix(event: EnrichedEvent): string {
+	private getPrefix(event: { timestamp: Date }): string {
 		if (!this.showTimestamps) return "";
 		const elapsed = event.timestamp.getTime() - this.startTime;
 		return `${this.c("gray")}[${this.formatDuration(elapsed)}]${this.c("reset")} `;
@@ -240,46 +228,48 @@ class ConsoleFormatter {
 }
 
 // ============================================================================
-// TRANSPORT FACTORY
+// CHANNEL FACTORY
 // ============================================================================
 
 /**
- * Create a console transport that outputs formatted events to stdout.
+ * Create a console channel that outputs formatted events to stdout.
  *
- * Follows the Pino pattern:
- * - Receives an EventHub (from harness)
- * - Subscribes to all events
- * - Formats and outputs to console
- * - Returns cleanup function
+ * Uses defineChannel pattern with:
+ * - State management for formatter and timing
+ * - Wildcard pattern matching for all events
+ * - Lifecycle hooks for initialization
  *
- * @param options - Transport options
- * @returns Transport factory function
+ * @param options - Channel options
+ * @returns Attachment for use with harness.attach()
  *
  * @example
  * ```typescript
  * import { defineHarness } from "@openharness/sdk";
- * import { consoleTransport } from "@openharness/transports";
+ * import { consoleChannel } from "@openharness/channels";
  *
  * const harness = defineHarness({ ... })
- *   .attach(consoleTransport({ colors: true, timestamps: true }));
+ *   .attach(consoleChannel({ colors: true, timestamps: true }));
  *
  * await harness.run();
  * ```
  */
-export function consoleTransport(options: ConsoleTransportOptions = {}): Transport {
-	return (hub: EventHub) => {
-		const formatter = new ConsoleFormatter(options);
-
-		const unsubscribe = hub.subscribe(undefined, (event: EnrichedEvent) => {
-			const formatted = formatter.format(event);
-			if (formatted) {
-				console.log(formatted);
-			}
-		});
-
-		return unsubscribe;
-	};
+export function consoleChannel(options: ConsoleChannelOptions = {}) {
+	return defineChannel({
+		name: "Console",
+		state: (): ConsoleState => ({
+			formatter: new ConsoleFormatter(options),
+			startTime: Date.now(),
+		}),
+		on: {
+			"*": ({ state, event }: any) => {
+				const formatted = state.formatter.format(event);
+				if (formatted) {
+					console.log(formatted);
+				}
+			},
+		},
+	});
 }
 
 // Re-export types
-export type { ConsoleTransportOptions as ConsoleOptions };
+export type { ConsoleChannelOptions as ConsoleOptions };

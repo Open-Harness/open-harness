@@ -13,6 +13,10 @@
 		"./console": {
 			"import": "./dist/console/index.js",
 			"types": "./dist/console/index.d.ts"
+		},
+		"./clack": {
+			"import": "./dist/clack/index.js",
+			"types": "./dist/clack/index.d.ts"
 		}
 	},
 	"scripts": {
@@ -20,7 +24,10 @@
 		"build": "tsc -p tsconfig.build.json"
 	},
 	"dependencies": {
-		"@openharness/core": "workspace:*"
+		"@clack/prompts": "^0.11.0",
+		"@openharness/core": "workspace:*",
+		"@openharness/sdk": "workspace:*",
+		"picocolors": "^1.1.1"
 	},
 	"devDependencies": {
 		"@types/bun": "latest"

@@ -1,52 +1,36 @@
 /**
- * @openharness/transports
+ * @openharness/channels
  *
- * Transport implementations for the Open Harness SDK.
+ * Channel implementations for the Open Harness SDK.
  *
- * Transports are event destinations that receive events from the harness
- * and do something with them (output to console, send over network, etc).
- *
- * Following the Pino/Winston pattern:
- * - EventHub: The source (harness emits events)
- * - Transport: A factory function that subscribes to events
+ * Channels are event consumers built with defineChannel pattern:
+ * - State management for rendering state
+ * - Pattern matching for event filtering
+ * - Lifecycle hooks for setup/cleanup
  *
  * @example
  * ```typescript
  * import { defineHarness } from "@openharness/sdk";
- * import { consoleTransport } from "@openharness/transports";
+ * import { consoleChannel, clackChannel } from "@openharness/channels";
  *
  * const harness = defineHarness({ ... })
- *   .attach(consoleTransport({ colors: true }))
- *   .attach(wsTransport({ port: 8080 }));  // future
+ *   .attach(consoleChannel({ colors: true }))
+ *   .attach(clackChannel({ showTasks: true }));
  *
  * await harness.run();
  * ```
  *
- * @module @openharness/transports
+ * @module @openharness/channels
  */
 
 // ============================================================================
-// Console Transport
+// Console Channel
 // ============================================================================
 
-export { type ConsoleTransportOptions, consoleTransport } from "./console/index.js";
+export { type ConsoleChannelOptions, consoleChannel } from "./console/index.js";
 
 // ============================================================================
-// Re-exports from Core (convenience)
+// Clack Channel
 // ============================================================================
 
-export type {
-	Cleanup,
-	EventHub,
-	Transport,
-	TransportOptions,
-	TransportStatus,
-} from "@openharness/core";
-
-// ============================================================================
-// Future Transports (placeholders)
-// ============================================================================
-
-// export { wsTransport } from "./websocket/index.js";
-// export { httpTransport } from "./http/index.js";
-// export { sseTransport } from "./sse/index.js";
+export { type ClackChannelOptions, clackChannel } from "./clack/index.js";

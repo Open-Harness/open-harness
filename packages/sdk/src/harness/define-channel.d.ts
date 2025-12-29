@@ -15,18 +15,6 @@
  * @module harness/define-channel
  */
 import type { Attachment, BaseEvent, EnrichedEvent, IUnifiedEventBus, Transport } from "../infra/unified-events/types.js";
-import { RenderOutput } from "./render-output.js";
-/**
- * Channel configuration.
- */
-export interface ChannelConfig {
-    /** Verbosity level */
-    verbosity: "minimal" | "normal" | "verbose";
-    /** Enable colors in output */
-    colors: boolean;
-    /** Enable Unicode symbols */
-    unicode: boolean;
-}
 /**
  * Context passed to event handlers.
  */
@@ -37,10 +25,6 @@ export interface ChannelContext<TState> {
     event: EnrichedEvent<BaseEvent>;
     /** Emit custom events back to bus */
     emit: (type: string, data: Record<string, unknown>) => void;
-    /** Channel configuration */
-    config: ChannelConfig;
-    /** Terminal output helpers (for console channels) */
-    output: RenderOutput;
     /** The transport (for bidirectional communication) */
     transport?: Transport;
 }
@@ -85,7 +69,6 @@ export interface IChannel {
  * and optionally send commands back to the harness.
  *
  * @param definition - Channel configuration
- * @param config - Optional channel config overrides
  * @returns Attachment function for use with harness.attach()
  *
  * @example
@@ -116,12 +99,13 @@ export interface IChannel {
  * // Console renderer channel
  * const consoleChannel = defineChannel({
  *   name: 'Console',
+ *   state: () => ({ output: new RenderOutput() }),
  *   on: {
- *     'task:start': ({ event, output }) => {
- *       output.line(`Starting: ${event.event.type}`);
+ *     'task:start': ({ state, event }) => {
+ *       state.output.line(`Starting: ${event.event.type}`);
  *     },
- *     'task:complete': ({ output }) => {
- *       output.success('Done!');
+ *     'task:complete': ({ state }) => {
+ *       state.output.line('✓ Done!');
  *     },
  *   },
  * });
@@ -131,14 +115,13 @@ export interface IChannel {
  *   .run();
  * ```
  */
-export declare function defineChannel<TState = Record<string, never>>(definition: ChannelDefinition<TState>, config?: Partial<ChannelConfig>): Attachment;
+export declare function defineChannel<TState = Record<string, never>>(definition: ChannelDefinition<TState>): Attachment;
 /**
  * Create a channel and get the IChannel interface.
  * Use this if you need access to the channel's attach/detach methods
  * for use with legacy IUnifiedEventBus directly.
  *
  * @param definition - Channel configuration
- * @param config - Optional channel config overrides
  * @returns IChannel instance
  */
-export declare function createChannel<TState = Record<string, never>>(definition: ChannelDefinition<TState>, config?: Partial<ChannelConfig>): IChannel;
+export declare function createChannel<TState = Record<string, never>>(definition: ChannelDefinition<TState>): IChannel;
