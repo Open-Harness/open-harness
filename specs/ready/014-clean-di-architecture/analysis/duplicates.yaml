@@ -1,0 +1,136 @@
+agent: duplicate-checker
+timestamp: "2025-12-29T00:00:00Z"
+summary: "20 functional requirements, 50 tasks checked. 7 duplicates/conflicts found."
+statistics:
+  requirements_checked: 20
+  tasks_checked: 50
+  duplicates_found: 7
+findings:
+  - id: D001
+    type: near_duplicate
+    items: ["FR-002", "FR-003"]
+    similarity: 78%
+    reason: "FR-002 requires executeAgent() helper function, FR-003 requires streamAgent() helper function. Both are execution helpers with nearly identical signatures differing only in return type (direct result vs AgentHandle)."
+    recommendation: "Keep separate but ensure implementation shares core logic. Both are essential API surface - executeAgent for simple cases, streamAgent for progressive/cancellable execution."
+    severity: low
+
+  - id: D002
+    type: near_duplicate
+    items: ["FR-007", "FR-008"]
+    similarity: 82%
+    reason: "FR-007 requires executeAgent/streamAgent to create temporary container if none provided. FR-008 requires Harness to create its own container. Both describe the same composition root pattern applied to different contexts."
+    recommendation: "Keep separate but document the pattern consistently. These represent the same architectural principle (isolated containers) applied to two execution modes (standalone vs harness)."
+    severity: low
+
+  - id: D003
+    type: near_duplicate
+    items: ["T008", "T009"]
+    similarity: 88%
+    reason: "T008 creates executeAgent() in helpers.ts, T009 creates streamAgent() in same file. Both tasks create execution helper functions in same location with parallel implementations (both accept definition, create container if needed, build agent, invoke execute/stream)."
+    recommendation: "Keep as separate parallelizable tasks [P] but extract shared logic into private helper (e.g., resolveAgentWithContainer) during implementation to avoid code duplication."
+    severity: medium
+
+  - id: D004
+    type: related_but_distinct
+    items: ["FR-001", "FR-012"]
+    similarity: 68%
+    reason: "FR-001 requires defineAnthropicAgent() to return plain config object. FR-012 requires preset agents to be refactored to return plain config objects. FR-012 is the application of FR-001's pattern to specific preset agents."
+    recommendation: "Keep separate. FR-001 defines the API contract, FR-012 ensures presets follow it. This is specification (FR-001) vs implementation requirement (FR-012). Proper layering."
+    severity: low
+
+  - id: D005
+    type: near_duplicate
+    items: ["FR-015", "FR-004"]
+    similarity: 74%
+    reason: "FR-015 requires developers to pass custom container to executeAgent() for testing. FR-004 requires Harness to accept agent definitions and resolve using injectable AgentBuilder. Both describe container-based dependency injection but for different execution contexts."
+    recommendation: "Keep separate but ensure consistent terminology and DI patterns. These represent the two execution modes (standalone with optional container vs harness with internal container)."
+    severity: low
+
+  - id: D006
+    type: conflict
+    items: ["SC-001", "FR-002", "User Story 1 Scenario 1"]
+    similarity: 85%
+    reason: "SC-001 claims 'developers can execute preset agents standalone with exactly 1 line of code (excluding import)'. User Story 1 Scenario 1 shows executeAgent(PlannerAgent, { prd: '...' }) which is indeed 1 line. However, SC-001 doesn't clarify whether this applies only to preset agents or also custom agents (which require defineAnthropicAgent() call first, making it 2+ lines)."
+    recommendation: "CLARIFY SC-001: Add explicit note that '1 line of code' applies to preset agent execution only. Custom agents require defineAnthropicAgent() definition first (covered by User Story 3)."
+    severity: high
+
+  - id: D007
+    type: near_duplicate
+    items: ["T032", "T033"]
+    similarity: 88%
+    reason: "T032 tests AgentBuilder.build() with mock IAgentRunner, T033 tests same method with mock IUnifiedEventBus. Both test the same builder method with different mock dependencies injected via constructor."
+    recommendation: "Keep separate for granular test coverage and clear failure diagnostics. Both correctly marked [P] for parallel execution. Consider whether a single comprehensive integration test covering both mocks together would also be valuable."
+    severity: low
+
+consistency_checks:
+  - check: "Task coverage of requirements"
+    status: pass
+    details: "All functional requirements have corresponding implementation tasks. FR-010 verified by T041 (input validation test), FR-011 by T042 (template rendering test), FR-018 by T043 (event emission integration test)."
+
+  - check: "User story traceability"
+    status: pass
+    details: "All implementation tasks properly tagged with [US1], [US2], [US3], or [US4] labels. User stories map cleanly to implementation phases 3-6."
+
+  - check: "Parallel task independence"
+    status: pass
+    details: "All [P] marked tasks operate on different files or independent aspects. Examples: T013-T015 (different preset files), T026-T027 (different example agents), T032-T036 (different test files), T041-T043 (different verification aspects)."
+
+  - check: "Phase dependency correctness"
+    status: pass
+    details: "Phase 2 (Foundational) correctly blocks all user story phases. User Story dependencies properly enforced: US2 depends on US1 (needs preset agents as configs), US3 depends on US1+US2 (needs both execution modes), US4 depends on all previous (testing infrastructure)."
+
+  - check: "Success criteria alignment"
+    status: partial
+    details: "SC-001 has ambiguity requiring clarification (see D006). Other success criteria (SC-002 through SC-010) align well with requirements and tasks. SC-003 (95%+ DI audit score) properly verified by T045-T046."
+
+  - check: "Recent changes integration"
+    status: pass
+    details: "Verified that removed items (FR-006, FR-009, old T050) do not appear in current documents. Merged task T007 present as single consolidated task. New verification tasks T041-T043 correctly added to Phase 6 with [P] parallelization and proper [US4] tagging."
+
+recommendations:
+  priority_fixes:
+    - item: D006
+      action: "CLARIFY SC-001 in spec.md: Add explicit note that '1 line of code' metric applies to preset agent execution (executeAgent(PlannerAgent, {...})). Custom agents require defineAnthropicAgent() call first, which is acceptable overhead for extensibility (User Story 3, Priority P2)."
+      blocking: false
+      severity: high
+
+  improvements:
+    - item: D003
+      action: "During implementation of T008 and T009, extract shared logic (container resolution, agent building) into private helper function to avoid code duplication while keeping tasks separate for parallel execution."
+      blocking: false
+      severity: medium
+
+    - item: D007
+      action: "Consider adding a third test (T032c) that validates AgentBuilder with BOTH mock dependencies together, ensuring they integrate correctly. Current T032 and T033 test them in isolation."
+      blocking: false
+      severity: low
+
+  documentation:
+    - item: D002
+      action: "Add note to FR-007 and FR-008 documentation explaining that both use the same container creation utility but with different lifecycle scopes (temporary vs harness-scoped)."
+      blocking: false
+
+    - item: D004
+      action: "Add cross-reference from FR-012 back to FR-001 to make the relationship explicit: 'All preset agents MUST follow the pattern defined in FR-001'."
+      blocking: false
+
+severity_breakdown:
+  critical: 0
+  high: 1      # D006 - Success criteria ambiguity
+  medium: 1    # D003 - Implementation duplication risk
+  low: 5       # D001, D002, D004, D005, D007
+
+impact_assessment:
+  blocked_by_duplicates: 0
+  implementation_risk: "Low - duplicates are mostly in complementary requirements and parallel tasks, not conflicts. D003 can be addressed during implementation with shared helper functions."
+  clarity_risk: "Medium - D006 could cause confusion about success criteria. Requires clarification before final validation."
+  test_risk: "Low - verification tasks (T041-T043) properly added to ensure FR-010, FR-011, FR-018 compliance."
+
+notes:
+  - "No conflicting requirements found - all duplicates are near-duplicates representing parallel concerns or complementary patterns."
+  - "Strong requirement-to-task traceability via [US1-US4] labels enables independent user story implementation."
+  - "Phase structure prevents execution conflicts with explicit dependency gates documented in tasks.md."
+  - "Recent changes correctly applied: FR-006 and FR-009 removed, T007 consolidated (previously split into T007-T009), T041-T043 added for explicit verification, old T050 removed."
+  - "User Story 1 acceptance scenarios clearly demonstrate the '1 line of code' claim (SC-001) applies to preset agents, supporting recommended clarification."
+  - "All [P] parallel tasks are truly independent (different files or orthogonal concerns), reducing merge conflict risk."
+  - "No service locator anti-patterns, global state, or DI violations found in requirement descriptions - architecture maintains pure DI principles throughout."

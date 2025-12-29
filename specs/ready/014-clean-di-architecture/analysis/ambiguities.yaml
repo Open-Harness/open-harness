@@ -1,0 +1,169 @@
+agent: ambiguity-checker
+timestamp: "2025-12-29T19:30:00Z"
+feature_dir: specs/ready/014-clean-di-architecture
+summary: "230 items checked. 7 ambiguities found (0 critical, 5 medium, 2 low)."
+statistics:
+  items_checked: 230
+  vague_terms: 4
+  placeholders: 0
+  unmeasurable: 3
+  total_findings: 7
+  severity_breakdown:
+    critical: 0
+    medium: 5
+    low: 2
+findings:
+  - id: A001
+    type: vague_term
+    location: spec.md:L14
+    text: "enables rapid prototyping and simple use cases"
+    issue: "No definition of 'rapid' or 'simple' - subjective terms without metrics"
+    recommendation: "Define 'rapid prototyping' (e.g., <5 minutes from install to first agent execution) and 'simple use cases' (e.g., single-agent workflows with <100 lines of code)"
+    severity: low
+
+  - id: A002
+    type: unmeasurable
+    location: spec.md:L21
+    text: "receive real-time agent progress events during execution"
+    issue: "No definition of 'real-time' latency expectations"
+    recommendation: "Define maximum acceptable latency for event delivery (e.g., <100ms from event occurrence to channel delivery, or clarify 'real-time' means asynchronous/non-blocking without specific latency guarantee)"
+    severity: medium
+
+  - id: A003
+    type: unmeasurable
+    location: spec.md:L38
+    text: "channels receive error event with context"
+    issue: "No specification of what 'context' must include in error events"
+    recommendation: "Define required error context fields (e.g., phase name, agent name, error type, error message, stack trace). Should match existing event system patterns."
+    severity: medium
+
+  - id: A004
+    type: unmeasurable
+    location: spec.md:L52
+    text: "TypeScript enforces type safety between template and schema"
+    issue: "Enforcement method unclear - compile-time type checking or runtime validation?"
+    recommendation: "Clarify: Type safety enforced at compile-time via TypeScript inference (type errors prevent mismatched templates). Add verification task using negative test case (intentional mismatch should fail tsc --noEmit). Note: plan.md:L122-L128 defines verification method but not enforcement mechanism."
+    severity: medium
+
+  - id: A005
+    type: vague_term
+    location: spec.md:L119
+    text: "exactly 1 line of code (excluding import)"
+    issue: "Ambiguous whether chained method calls count as 'one line' (e.g., executeAgent().then())"
+    recommendation: "Clarify: one statement/expression (method chaining allowed) or one physical line of source code. Example: executeAgent(PlannerAgent, { prd: 'Build TODO' }) is 1 line; adding .then() is still 1 statement but may span lines."
+    severity: low
+
+  - id: A006
+    type: unmeasurable
+    location: spec.md:L128
+    text: "Documentation clearly explains framework/user boundary"
+    issue: "No measurable criteria for 'clearly explains' - subjective quality assessment"
+    recommendation: "Define documentation success criteria: (1) includes diagram showing public vs internal APIs, (2) lists all exported types with usage examples, (3) provides before/after examples showing what users see vs internal implementation, (4) explains when to use executeAgent vs harness"
+    severity: medium
+
+  - id: A007
+    type: vague_term
+    location: plan.md:L8
+    text: "maintaining clean developer experience"
+    issue: "Subjective term 'clean' without measurable attributes"
+    recommendation: "Define clean DX attributes: (1) no DI concepts in public API (verified by plan.md:L94-L105 API encapsulation check), (2) <3 imports required for basic usage, (3) TypeScript IntelliSense shows <10 methods on main API objects, (4) common operations achievable in <2 function calls"
+    severity: medium
+
+resolved_items:
+  - id: R001
+    original_finding: "spec.md:L22 - 'receive a clear Zod validation error' - no criteria for clarity"
+    resolution: "plan.md:L80-L92 defines clear error format (field name + expected type + actual value). Verification in T041."
+    location: plan.md:L80-L92
+
+  - id: R002
+    original_finding: "spec.md:L124 - '95%+ score' - no rubric specified"
+    resolution: "plan.md:L48-L60 defines DI compliance scoring method with explicit grep patterns and point deductions. Verification in T044-T046."
+    location: plan.md:L48-L60
+
+  - id: R003
+    original_finding: "spec.md:L132 - 'All NeedleDI anti-patterns eliminated' - no verification method"
+    resolution: "plan.md:L49-L60 defines specific grep patterns for detection (service locator, global state, ambient context). Automated verification via T012 and T045."
+    location: plan.md:L49-L60
+
+  - id: R004
+    original_finding: "spec.md:L134 - 'Clear separation between definition and execution' - unmeasurable"
+    resolution: "plan.md:L110-L119 defines separation criteria: zero methods in definitions, JSON-serializable, execution logic only in builder/executable. Verification in T037."
+    location: plan.md:L110-L119
+
+  - id: R005
+    original_finding: "spec.md:L143 - 'acceptable overhead' - no threshold"
+    resolution: "plan.md:L20 defines performance goal (<5ms container creation p95, <10ms agent resolution p95 on GitHub Actions standard runners). Acceptable = within these thresholds."
+    location: plan.md:L20
+
+  - id: R006
+    original_finding: "plan.md:L20 - Performance overhead conditions unclear"
+    resolution: "plan.md:L70-L78 defines benchmark conditions: GitHub Actions standard runner (2-core, 7GB RAM), p95 latency, 100 iterations, console.time measurement."
+    location: plan.md:L70-L78
+
+  - id: R007
+    original_finding: "plan.md:L39 - 'complexity hidden in builder' - how verified?"
+    resolution: "plan.md:L94-L105 defines API surface encapsulation verification: tsc --declaration + grep for Container|injectable|Token (expect zero matches). Verification in T051."
+    location: plan.md:L94-L105
+
+  - id: R008
+    original_finding: "plan.md:L268 - 80%+ coverage - tool and type unclear"
+    resolution: "plan.md:L63-L68 specifies tool (bun test --coverage), type (line coverage), target (80%+ for builder.ts, helpers.ts, factory.ts). Verification in T040."
+    location: plan.md:L63-L68
+
+  - id: R009
+    original_finding: "spec.md:L70 - 'no global state leaks' - verification method unclear"
+    resolution: "plan.md:L130-L138 defines verification: test suite with --random-seed, isolated containers, grep for module-level containers, tests pass regardless of order. Verification in T038 and T040."
+    location: plan.md:L130-L138
+
+recommendations:
+  - title: "Clarify Real-Time Event Delivery Expectations"
+    description: "Acceptance scenario mentions 'real-time' events but doesn't specify latency requirements or whether it means synchronous vs asynchronous delivery"
+    affected_requirements:
+      - spec.md:L21 (User Story 1, acceptance scenario 2)
+    suggested_action: "Add to plan.md verification methods: Define 'real-time' as asynchronous event delivery with <100ms latency (p95), OR clarify it means non-blocking delivery without specific latency guarantee. Add verification task if latency matters."
+
+  - title: "Define Error Event Context Schema"
+    description: "Error event 'context' mentioned in acceptance criteria but structure not specified"
+    affected_requirements:
+      - spec.md:L38 (User Story 2, acceptance scenario 3)
+    suggested_action: "Add to data-model.md: Define ErrorEventContext interface with required fields (phase, agent, errorType, message, stack?). Reference existing event system patterns from 008-unified-event-system."
+
+  - title: "Add Type Safety Enforcement Mechanism"
+    description: "Verification method exists (plan.md:L122-L128) but enforcement mechanism not explained"
+    affected_requirements:
+      - spec.md:L52 (User Story 3, acceptance scenario 1)
+    suggested_action: "Add explanation in plan.md: TypeScript's structural typing infers template variable types from input schema via mapped types. Mismatched variables fail at compile-time. Verification via T052 negative test."
+
+  - title: "Quantify Documentation Clarity"
+    description: "SC-010 requires clear documentation but success criteria are subjective"
+    affected_requirements:
+      - spec.md:L128 (SC-010)
+    suggested_action: "Add verification task: Documentation review checklist covering (1) API boundary diagram exists, (2) all exported types documented with examples, (3) before/after code samples provided, (4) decision guide for executeAgent vs harness included."
+
+  - title: "Define Clean Developer Experience Metrics"
+    description: "Plan summary mentions 'clean developer experience' but metrics are implicit"
+    affected_requirements:
+      - plan.md:L8 (Summary)
+      - spec.md:L120 (SC-002)
+    suggested_action: "Add to success metrics section: Clean DX verified by (1) API encapsulation check (T051), (2) import count <3 for basic usage, (3) IntelliSense surface <10 methods, (4) common tasks <2 function calls. Create checklist in T044 documentation task."
+
+notes:
+  - "MAJOR IMPROVEMENT: Verification Methods section (plan.md:L44-L138) resolves 9 of 18 previous ambiguities"
+  - "No critical blockers found - all remaining ambiguities are clarifications that improve specification precision"
+  - "Remaining findings focus on acceptance scenario details (event latency, error context) and subjective quality attributes (clarity, clean DX)"
+  - "Feature is well-specified overall with strong measurability for technical requirements (DI compliance, performance, coverage)"
+  - "Documentation and developer experience requirements could benefit from more concrete success criteria"
+  - "Consider adding explicit verification tasks for the 5 medium-severity findings in Phase 7"
+
+improvement_summary: |
+  The addition of the Verification Methods section significantly improved specification clarity:
+  - DI compliance now has explicit scoring rubric (grep patterns + point values)
+  - Performance benchmarks have defined conditions (hardware, percentile, iterations)
+  - Coverage measurement specifies tool (bun test --coverage) and threshold (80% line coverage)
+  - Error message format is explicitly defined (field + type + value)
+  - API surface validation has automated verification (tsc --declaration + grep)
+  - Type safety has verification method (negative test cases)
+  - Global state isolation has multiple checks (random seed, grep, test isolation)
+
+  Remaining ambiguities are primarily in acceptance scenarios (event context, latency) and
+  subjective quality attributes (clarity, clean DX) which can be addressed during implementation.

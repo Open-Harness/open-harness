@@ -11,7 +11,7 @@
 
 A developer wants to execute a preset agent (PlannerAgent, CodingAgent, ReviewAgent) without a harness for quick experimentation or scripting.
 
-**Why this priority**: Core functionality that enables rapid prototyping and simple use cases. If users can't execute agents standalone, the framework loses its approachability.
+**Why this priority**: Core functionality that enables rapid prototyping (<5 minutes from install to first agent execution) and simple use cases (<100 lines of code for single-agent workflows). If users can't execute agents standalone, the framework loses its approachability.
 
 **Independent Test**: Developer imports a preset agent, calls `executeAgent()` helper with input, and receives typed output without touching containers or DI concepts.
 
@@ -88,10 +88,8 @@ A developer wants to test agents or harnesses with mock infrastructure (runner, 
 - **FR-003**: System MUST provide `streamAgent()` helper function that returns AgentHandle for streaming execution
 - **FR-004**: Harness MUST accept agent definitions in `agents` config and resolve them using injectable `AgentBuilder` service
 - **FR-005**: `AgentBuilder` MUST be an injectable service with dependencies on `IAgentRunnerToken` and `IUnifiedEventBusToken`
-- **FR-006**: System MUST eliminate global container singleton from factory.ts
 - **FR-007**: `executeAgent()` and `streamAgent()` MUST create temporary container if none provided in options
 - **FR-008**: Harness MUST create its own container and use it to build all agents
-- **FR-009**: Agent definitions MUST be serializable (plain objects, no methods or closures)
 - **FR-010**: System MUST validate input against agent's input schema before execution
 - **FR-011**: System MUST render prompt template with input data using template variables
 - **FR-012**: All preset agents (PlannerAgent, CodingAgent, ReviewAgent) MUST be refactored to return plain configuration objects
@@ -118,7 +116,7 @@ A developer wants to test agents or harnesses with mock infrastructure (runner, 
 
 ### Measurable Outcomes
 
-- **SC-001**: Developers can execute preset agents standalone with exactly 1 line of code (excluding import)
+- **SC-001**: Developers can execute preset agents standalone with exactly 1 line of code (one statement/expression, method chaining allowed, excluding import) - custom agents require defineAnthropicAgent() call first, then 1 line for execution
 - **SC-002**: Developers can create multi-agent harnesses without seeing any DI concepts (no container, no tokens, no @injectable)
 - **SC-003**: All agents pass DI compliance audit with 95%+ score (no service locator, no global state, pure constructor injection)
 - **SC-004**: Developers can test agents with mock infrastructure by passing custom container to executeAgent() options

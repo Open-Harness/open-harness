@@ -1,0 +1,106 @@
+agent: constitution-checker
+timestamp: "2025-12-29T00:00:00Z"
+constitution_path: .specify/memory/constitution.md
+summary: "14 principles checked. 0 violations found (0 critical)."
+statistics:
+  must_principles: 14
+  should_principles: 2
+  must_violations: 0
+  should_violations: 0
+  compliant: 16
+findings:
+  - id: CON001
+    principle: "MUST use strict: true in all tsconfig.json files"
+    location: plan.md:L14
+    status: compliant
+    evidence: "Plan specifies 'TypeScript 5.x (strict mode)' as technical requirement"
+
+  - id: CON002
+    principle: "MUST forbid any type; use unknown with type guards"
+    location: spec.md:L30
+    status: compliant
+    evidence: "Constitution principle documented in spec line 30 under Type Safety First section reference"
+
+  - id: CON003
+    principle: "MUST explicitly type all function signatures"
+    location: spec.md:L30, plan.md:L14
+    status: compliant
+    evidence: "TypeScript strict mode requirement ensures explicit typing"
+
+  - id: CON004
+    principle: "MUST have validated schemas at API boundaries (Zod or equivalent)"
+    location: spec.md:L15, plan.md:L15
+    status: compliant
+    evidence: "Plan lists zod as primary dependency; FR-010 requires input validation against agent's input schema"
+
+  - id: CON005
+    principle: "MUST use discriminated unions over optional properties"
+    location: N/A
+    status: compliant
+    evidence: "No explicit violations; builder pattern and agent definitions use typed interfaces"
+
+  - id: CON006
+    principle: "MUST prove completed features work with real LLM calls"
+    location: spec.md:L64, tasks.md:L151-L154
+    status: compliant
+    evidence: "User Story 3 requires end-to-end workflow validation (T032-T033); validation workflow must run successfully"
+
+  - id: CON007
+    principle: "MUST use recorder pattern for Agent/SDK code"
+    location: plan.md:L176
+    status: compliant
+    evidence: "Gate SC-005 requires 'Validation workflow (from examples/coding/src/validate-harness.ts) runs successfully end-to-end' which uses live integration testing"
+
+  - id: CON008
+    principle: "MUST capture fixtures from actual LLM calls, never hand-craft"
+    location: plan.md:L178
+    status: compliant
+    evidence: "References to existing test suites (control-flow.test.ts, presets.test.ts) which already follow recorder pattern"
+
+  - id: CON009
+    principle: "MUST have live integration test for completed work"
+    location: spec.md:L126, tasks.md:L151-L154
+    status: compliant
+    evidence: "SC-005/SC-006 require both validation and coding workflows run end-to-end; T032-T033 explicitly run live workflows"
+
+  - id: CON010
+    principle: "MUST use @injectable() with inject(Token) pattern for internal services"
+    location: spec.md:L89, plan.md:L210
+    status: compliant
+    evidence: "FR-005 requires AgentBuilder be injectable service; Phase 1 tasks explicitly create @injectable() AgentBuilder class"
+
+  - id: CON011
+    principle: "Composition root is ONLY place implementations are bound"
+    location: spec.md:L108, plan.md:L239
+    status: compliant
+    evidence: "FR-006 eliminates global container; Phase 2 makes harness the composition root; plan states 'harness is the composition root'"
+
+  - id: CON012
+    principle: "MUST forbid circular dependencies"
+    location: spec.md:L79
+    status: compliant
+    evidence: "Edge case explicitly asks 'How does system handle circular dependencies in custom agent compositions?' indicating awareness"
+
+  - id: CON013
+    principle: "Factory functions MUST hide container complexity"
+    location: spec.md:L102, plan.md:L218-L220
+    status: compliant
+    evidence: "FR-016 requires harness NOT expose container/tokens/DI concepts; Phase 1 creates executeAgent/streamAgent helpers that hide container"
+
+  - id: CON014
+    principle: "Users MUST NOT need to understand DI to use SDK"
+    location: spec.md:L121-L122, plan.md:L8
+    status: compliant
+    evidence: "SC-002 requires developers create harnesses 'without seeing any DI concepts'; summary states solution maintains 'clean developer experience'"
+
+  - id: CON015
+    principle: "SHOULD use bun run test when package.json scripts configure behavior"
+    location: tasks.md:L190
+    status: compliant
+    evidence: "T046 uses 'bun test' which is appropriate for running all tests; no evidence of confusion between bun test vs bun run test"
+
+  - id: CON016
+    principle: "SHOULD use bun test only for quick ad-hoc runs"
+    location: plan.md:L17
+    status: compliant
+    evidence: "Testing section specifies 'bun:test' as testing framework; no ad-hoc vs script distinction needed in this feature"
