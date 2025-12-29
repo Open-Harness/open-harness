@@ -224,10 +224,10 @@ describe("Event Mapper", () => {
 		});
 
 		test("empty content array returns empty events", () => {
-			const msg: SDKMessage = {
+			const msg = {
 				type: "assistant",
 				message: { content: [] },
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 

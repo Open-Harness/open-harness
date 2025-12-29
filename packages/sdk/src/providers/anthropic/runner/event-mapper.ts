@@ -7,6 +7,7 @@
  */
 
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { BaseEvent } from "../../../core/unified-events/types.js";
 import { type AgentEvent, EventTypeConst } from "./models.js";
 
 /**
@@ -167,6 +168,85 @@ export function mapSdkMessageToEvents(msg: SDKMessage, agentName: string, sessio
 		default:
 			// Unknown message types are intentionally ignored.
 			// New SDK message types should be handled explicitly above.
+			break;
+	}
+
+	return events;
+}
+
+/**
+ * Map an SDK message to unified BaseEvent(s) for the unified event system.
+ *
+ * Unlike mapSdkMessageToEvents, this produces events matching the unified
+ * event-context.ts types (AgentThinkingEvent, AgentToolStartEvent, etc.)
+ * that are emitted via UnifiedEventBus.
+ *
+ * @param msg - The SDK message to map
+ * @param agentName - Name of the agent for event attribution
+ * @returns Array of unified BaseEvent objects
+ */
+export function mapSdkMessageToUnifiedEvents(msg: SDKMessage, agentName: string): BaseEvent[] {
+	const events: BaseEvent[] = [];
+
+	switch (msg.type) {
+		case "system":
+			if (msg.subtype === "init") {
+				events.push({
+					type: "agent:start",
+					agentName,
+				});
+			}
+			break;
+
+		case "assistant":
+			if (Array.isArray(msg.message.content)) {
+				for (const block of msg.message.content) {
+					if (block.type === "text") {
+						events.push({
+							type: "agent:text",
+							content: block.text,
+						});
+					} else if (block.type === "thinking") {
+						events.push({
+							type: "agent:thinking",
+							content: block.thinking,
+						});
+					} else if (block.type === "tool_use") {
+						events.push({
+							type: "agent:tool:start",
+							toolName: block.name,
+							input: block.input as unknown,
+						});
+					}
+				}
+			}
+			break;
+
+		case "user":
+			if (Array.isArray(msg.message.content)) {
+				for (const block of msg.message.content) {
+					if (block.type === "tool_result") {
+						events.push({
+							type: "agent:tool:complete",
+							toolName: "unknown", // Tool name not available in result
+							result: block.content,
+							isError: block.is_error,
+						});
+					}
+				}
+			}
+			break;
+
+		case "result":
+			events.push({
+				type: "agent:complete",
+				agentName,
+				success: msg.subtype === "success",
+			});
+			break;
+
+		default:
+			// Unknown message types are intentionally ignored.
 			break;
 	}
 
