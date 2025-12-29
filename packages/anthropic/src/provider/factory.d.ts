@@ -22,17 +22,16 @@
  * @module provider/factory
  */
 import type { Container } from "@needle-di/core";
-import type { AnthropicAgent, AnthropicAgentDefinition, ExecuteOptions } from "./types.js";
+import type { AnthropicAgentDefinition, ExecuteOptions } from "./types.js";
 /**
- * Reset the global container. Useful for testing.
- * @internal
+ * Register Anthropic provider in a container.
+ *
+ * Binds AnthropicRunner to IAgentRunnerToken and AgentBuilder for agent execution.
+ * This is called by helpers (executeAgent/streamAgent) and harness to set up DI.
+ *
+ * @param container - Container to register provider in
  */
-export declare function resetFactoryContainer(): void;
-/**
- * Set a custom container. Useful for testing or custom setups.
- * @internal
- */
-export declare function setFactoryContainer(container: Container): void;
+export declare function registerAnthropicProvider(container: Container): void;
 /**
  * Wrap an execute function with recording support.
  *
@@ -89,4 +88,44 @@ export declare function wrapWithMonologue<TInput, TOutput>(fn: (input: TInput, o
  * @param definition - Agent configuration
  * @returns Agent object with execute() and stream() methods
  */
-export declare function defineAnthropicAgent<TInput, TOutput>(definition: AnthropicAgentDefinition<TInput, TOutput>): AnthropicAgent<TInput, TOutput>;
+/**
+ * Define an Anthropic agent with typed inputs and outputs.
+ *
+ * Returns a plain configuration object (AnthropicAgentDefinition).
+ * To execute the agent, use executeAgent() or streamAgent() helpers,
+ * or pass the definition to AgentBuilder.build() in a harness.
+ *
+ * **Builder Pattern** (eliminates global container anti-pattern):
+ * - This function returns ONLY configuration (no execute/stream methods)
+ * - Execution happens via executeAgent(definition, input) or harness
+ * - AgentBuilder constructs executable agents from definitions
+ * - No global state, clean DI, fully testable
+ *
+ * @param definition - Agent configuration with name, prompt, schemas
+ * @returns Plain configuration object (pass to executeAgent or builder)
+ *
+ * @example
+ * ```typescript
+ * // Define agent (returns config, not executable)
+ * const MyAgent = defineAnthropicAgent({
+ *   name: "MyAgent",
+ *   prompt: "Do this task: {{task}}",
+ *   inputSchema: z.object({ task: z.string() }),
+ *   outputSchema: z.object({ result: z.string() }),
+ * });
+ *
+ * // Execute using helper (creates temporary container)
+ * const output = await executeAgent(MyAgent, { task: "Hello" });
+ *
+ * // Or use in harness (harness manages container)
+ * const harness = defineHarness({
+ *   agents: { myAgent: MyAgent },
+ *   // ...
+ * });
+ * ```
+ */
+export declare function defineAnthropicAgent<TInput, TOutput>(definition: AnthropicAgentDefinition<TInput, TOutput>): AnthropicAgentDefinition<TInput, TOutput> & {
+    __builder?: unknown;
+    __registerProvider?: unknown;
+};
+export { executeAgent, streamAgent } from "./helpers.js";

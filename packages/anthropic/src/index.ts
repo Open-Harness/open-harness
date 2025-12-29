@@ -40,6 +40,7 @@ export type {
 	AgentHandle,
 	AnthropicAgent,
 	AnthropicAgentDefinition,
+	ExecutableAgent,
 	// Preset types
 	CodingInput,
 	CodingOutput,
@@ -55,6 +56,8 @@ export type {
 	StreamOptions,
 } from "./provider/index.js";
 export {
+	// Builder pattern
+	AgentBuilder,
 	// Event mapper (provider-specific)
 	AnthropicEventMapper,
 	// Prompt template factory
@@ -62,11 +65,11 @@ export {
 	createStaticPrompt,
 	// Factory function
 	defineAnthropicAgent,
+	// Execution helpers
+	executeAgent,
+	streamAgent,
 	// Provider registration
 	registerAnthropicProvider,
-	// Container utilities (for testing)
-	resetFactoryContainer,
-	setFactoryContainer,
 } from "./provider/index.js";
 
 // ============================================================================

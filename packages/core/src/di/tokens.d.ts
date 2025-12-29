@@ -23,7 +23,7 @@ export declare const IConfigToken: InjectionToken<IConfig>;
  * Token for the primary agent runner.
  * In production, this resolves to the configured provider's runner.
  */
-export declare const IAgentRunnerToken: InjectionToken<IAgentRunner<import("@openharness/sdk").RunnerOptions, import("@openharness/sdk").AgentResult<unknown>>>;
+export declare const IAgentRunnerToken: InjectionToken<IAgentRunner<import("@openharness/sdk").RunnerOptions, import("../index.js").AgentResult<unknown>>>;
 /**
  * Token for the event bus.
  */

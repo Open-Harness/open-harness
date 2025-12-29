@@ -164,6 +164,7 @@ describe("defineAnthropicAgent", () => {
 
 		test("interrupt can be called without error", () => {
 			const { container } = createTestContainer();
+			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
 				name: "InterruptAgent",
@@ -172,7 +173,7 @@ describe("defineAnthropicAgent", () => {
 				outputSchema: TestOutputSchema,
 			});
 
-			const handle = streamAgent(agent, { task: "test" }, { container });
+			const handle = agent.stream({ task: "test" });
 
 			// Should not throw
 			expect(() => handle.interrupt()).not.toThrow();
@@ -180,6 +181,7 @@ describe("defineAnthropicAgent", () => {
 
 		test("result promise resolves to output", async () => {
 			const { container, mockRunner } = createTestContainer();
+			setFactoryContainer(container);
 
 			mockRunner.mockResult = {
 				type: "result",
@@ -194,7 +196,7 @@ describe("defineAnthropicAgent", () => {
 				outputSchema: TestOutputSchema,
 			});
 
-			const handle = streamAgent(agent, { task: "test" }, { container });
+			const handle = agent.stream({ task: "test" });
 			const output = await handle.result;
 
 			expect(output).toEqual({ result: "stream result" });
@@ -203,6 +205,9 @@ describe("defineAnthropicAgent", () => {
 
 	describe("agent options", () => {
 		test("accepts optional SDK options", () => {
+			const { container } = createTestContainer();
+			setFactoryContainer(container);
+
 			const agent = defineAnthropicAgent({
 				name: "OptionsAgent",
 				prompt: createPromptTemplate("Task: {{task}}"),
@@ -215,10 +220,12 @@ describe("defineAnthropicAgent", () => {
 			});
 
 			expect(agent).toBeDefined();
-			expect(agent.options).toBeDefined();
 		});
 
 		test("accepts recording options", () => {
+			const { container } = createTestContainer();
+			setFactoryContainer(container);
+
 			const agent = defineAnthropicAgent({
 				name: "RecordingAgent",
 				prompt: createPromptTemplate("Task: {{task}}"),
@@ -231,10 +238,12 @@ describe("defineAnthropicAgent", () => {
 			});
 
 			expect(agent).toBeDefined();
-			expect(agent.recording).toBeDefined();
 		});
 
 		test("accepts monologue options", () => {
+			const { container } = createTestContainer();
+			setFactoryContainer(container);
+
 			const agent = defineAnthropicAgent({
 				name: "MonologueAgent",
 				prompt: createPromptTemplate("Task: {{task}}"),
@@ -247,17 +256,51 @@ describe("defineAnthropicAgent", () => {
 			});
 
 			expect(agent).toBeDefined();
-			expect(agent.monologue).toBeDefined();
 		});
 	});
 
-	// Container management tests removed - no longer applicable in builder pattern
-	// Agents are now stateless config objects, container is managed by executeAgent/streamAgent helpers
+	describe("container management", () => {
+		test("resetFactoryContainer clears the container", () => {
+			const { container: container1 } = createTestContainer();
+			setFactoryContainer(container1);
+
+			// Create an agent
+			const agent1 = defineAnthropicAgent({
+				name: "Agent1",
+				prompt: "test",
+				inputSchema: TestInputSchema,
+				outputSchema: TestOutputSchema,
+			});
+
+			// Reset
+			resetFactoryContainer();
+
+			// Set a new container
+			const { container: container2 } = createTestContainer();
+			setFactoryContainer(container2);
+
+			// Creating another agent should work
+			const agent2 = defineAnthropicAgent({
+				name: "Agent2",
+				prompt: "test",
+				inputSchema: TestInputSchema,
+				outputSchema: TestOutputSchema,
+			});
+
+			expect(agent1.name).toBe("Agent1");
+			expect(agent2.name).toBe("Agent2");
+		});
+	});
 });
 
 describe("prompt override", () => {
+	beforeEach(() => {
+		resetFactoryContainer();
+	});
+
 	test("execute uses override prompt when provided", async () => {
 		const { container, mockRunner } = createTestContainer();
+		setFactoryContainer(container);
 
 		const defaultPrompt = createPromptTemplate("Default: {{task}}");
 		const overridePrompt = createPromptTemplate("Override: {{task}}");
@@ -270,7 +313,7 @@ describe("prompt override", () => {
 		});
 
 		// Execute with override prompt
-		await executeAgent(agent, { task: "test task" }, { container, prompt: overridePrompt });
+		await agent.execute({ task: "test task" }, { prompt: overridePrompt });
 
 		// Should use override prompt, not default
 		expect(mockRunner.lastPrompt).toBe("Override: test task");
@@ -278,6 +321,7 @@ describe("prompt override", () => {
 
 	test("execute uses default prompt when no override provided", async () => {
 		const { container, mockRunner } = createTestContainer();
+		setFactoryContainer(container);
 
 		const agent = defineAnthropicAgent({
 			name: "DefaultPromptAgent",
@@ -287,7 +331,7 @@ describe("prompt override", () => {
 		});
 
 		// Execute without override
-		await executeAgent(agent, { task: "test task" }, { container });
+		await agent.execute({ task: "test task" });
 
 		// Should use default prompt
 		expect(mockRunner.lastPrompt).toBe("Default: test task");
@@ -295,6 +339,7 @@ describe("prompt override", () => {
 
 	test("override prompt with different template structure", async () => {
 		const { container, mockRunner } = createTestContainer();
+		setFactoryContainer(container);
 
 		const agent = defineAnthropicAgent({
 			name: "DifferentTemplateAgent",
@@ -306,13 +351,14 @@ describe("prompt override", () => {
 		// Use an override with more elaborate formatting
 		const customPrompt = createPromptTemplate("[CUSTOM MODE]\nTask: {{task}}\nPlease process carefully.");
 
-		await executeAgent(agent, { task: "important task" }, { container, prompt: customPrompt });
+		await agent.execute({ task: "important task" }, { prompt: customPrompt });
 
 		expect(mockRunner.lastPrompt).toBe("[CUSTOM MODE]\nTask: important task\nPlease process carefully.");
 	});
 
 	test("stream uses override prompt when provided", async () => {
 		const { container, mockRunner } = createTestContainer();
+		setFactoryContainer(container);
 
 		const agent = defineAnthropicAgent({
 			name: "StreamOverrideAgent",
@@ -322,7 +368,7 @@ describe("prompt override", () => {
 		});
 
 		const overridePrompt = createPromptTemplate("Stream override: {{task}}");
-		const handle = streamAgent(agent, { task: "test" }, { container, prompt: overridePrompt });
+		const handle = agent.stream({ task: "test" }, { prompt: overridePrompt });
 
 		await handle.result;
 
@@ -331,10 +377,17 @@ describe("prompt override", () => {
 });
 
 describe("type safety", () => {
+	beforeEach(() => {
+		resetFactoryContainer();
+	});
+
 	// These tests verify compile-time type safety
 	// They should compile without errors
 
-	test("agent definition preserves type information", () => {
+	test("input schema type is enforced at compile time", () => {
+		const { container } = createTestContainer();
+		setFactoryContainer(container);
+
 		const StringInputSchema = z.object({
 			message: z.string(),
 		});
@@ -346,12 +399,18 @@ describe("type safety", () => {
 			outputSchema: z.object({ response: z.string() }),
 		});
 
-		// Agent definition should have the schemas
-		expect(agent.inputSchema).toBe(StringInputSchema);
-		expect(agent.outputSchema).toBeDefined();
+		// This should compile - correct type
+		const validInput = { message: "hello" };
+		expect(() => agent.execute(validInput)).not.toThrow();
+
+		// TypeScript would catch: agent.execute({ wrong: "key" })
+		// But we can test runtime validation
 	});
 
-	test("output schema type is preserved in definition", () => {
+	test("output schema type is available", () => {
+		const { container } = createTestContainer();
+		setFactoryContainer(container);
+
 		const OutputSchema = z.object({
 			code: z.string(),
 			language: z.string(),
@@ -364,7 +423,8 @@ describe("type safety", () => {
 			outputSchema: OutputSchema,
 		});
 
-		// The definition preserves the schema for later building
-		expect(agent.outputSchema).toBe(OutputSchema);
+		// The returned promise should be typed as { code: string, language: string }
+		// This is verified at compile time
+		expect(agent).toBeDefined();
 	});
 });

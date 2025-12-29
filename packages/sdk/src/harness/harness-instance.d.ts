@@ -9,7 +9,7 @@
  * @module harness/harness-instance
  */
 import type { Attachment, EnrichedEvent, EventFilter, EventListener, IUnifiedEventBus, Transport, TransportStatus, Unsubscribe, UserResponse } from "../infra/unified-events/types.js";
-import type { AgentConstructor, ExecuteContext, ResolvedAgents } from "../factory/define-harness.js";
+import type { Agent, ExecuteContext, ResolvedAgents } from "../factory/define-harness.js";
 import type { FluentEventHandler, FluentHarnessEvent, HarnessEventType } from "./event-types.js";
 /**
  * Result of harness.run().
@@ -28,11 +28,11 @@ export interface HarnessResult<TState, TResult> {
 /**
  * Configuration passed to HarnessInstance constructor.
  */
-export interface HarnessInstanceConfig<TAgents extends Record<string, AgentConstructor<any>>, TState, TInput, TResult> {
+export interface HarnessInstanceConfig<TAgents extends Record<string, Agent>, TState, TInput, TResult> {
     /** Harness name for debugging */
     name: string;
-    /** Resolved agent instances */
-    agents: ResolvedAgents<TAgents>;
+    /** Resolved agent instances or resolver function (lazy resolution for 014-clean-di-architecture) */
+    agents: ResolvedAgents<TAgents> | (() => Promise<ResolvedAgents<TAgents>>);
     /** Initial state */
     state: TState;
     /** User's run function (simple async) */
@@ -51,8 +51,9 @@ export interface HarnessInstanceConfig<TAgents extends Record<string, AgentConst
  * Implements the Transport interface for bidirectional communication.
  * HarnessInstance IS the Transport - no separate transport accessor needed.
  */
-export declare class HarnessInstance<TAgents extends Record<string, AgentConstructor<any>>, TState, TResult> implements Partial<Transport> {
-    private readonly _agents;
+export declare class HarnessInstance<TAgents extends Record<string, Agent>, TState, TResult> implements Partial<Transport> {
+    private readonly _agentsOrResolver;
+    private _resolvedAgents;
     private _state;
     private readonly _runFn;
     private readonly _input;
@@ -71,6 +72,11 @@ export declare class HarnessInstance<TAgents extends Record<string, AgentConstru
     private _promptIdCounter;
     private _sessionContext;
     constructor(config: HarnessInstanceConfig<TAgents, TState, unknown, TResult>);
+    /**
+     * Resolve agents lazily (014-clean-di-architecture).
+     * Agents can be either pre-resolved or provided as a resolver function.
+     */
+    private resolveAgents;
     /**
      * Access current state (readonly from external perspective).
      */

@@ -21,6 +21,8 @@
  * @module provider
  */
 export { AnthropicEventMapper } from "./anthropic-event-mapper.js";
-export { defineAnthropicAgent, resetFactoryContainer, setFactoryContainer } from "./factory.js";
+export { AgentBuilder } from "./builder.js";
+export { defineAnthropicAgent, registerAnthropicProvider } from "./factory.js";
+export { executeAgent, streamAgent } from "./helpers.js";
 export { createPromptTemplate, createStaticPrompt } from "./prompt-template.js";
-export type { AgentHandle, AnthropicAgent, AnthropicAgentDefinition, CodingInput, CodingOutput, ExecuteOptions, ExtractVars, PlannerInput, PlannerOutput, PlannerTask, PromptTemplate, ReviewInput, ReviewIssue, ReviewOutput, StreamOptions, } from "./types.js";
+export type { AgentHandle, AnthropicAgent, AnthropicAgentDefinition, ExecutableAgent, CodingInput, CodingOutput, ExecuteOptions, ExtractVars, PlannerInput, PlannerOutput, PlannerTask, PromptTemplate, ReviewInput, ReviewIssue, ReviewOutput, StreamOptions, } from "./types.js";

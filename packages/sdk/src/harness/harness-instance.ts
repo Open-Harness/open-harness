@@ -22,7 +22,7 @@ import type {
 	Unsubscribe,
 	UserResponse,
 } from "../infra/unified-events/types.js";
-import type { AgentConstructor, ExecuteContext, ResolvedAgents } from "../factory/define-harness.js";
+import type { Agent, ExecuteContext, ResolvedAgents } from "../factory/define-harness.js";
 import { AsyncQueue } from "../utils/async-queue.js";
 import { createParallelHelper, createRetryHelper } from "./control-flow.js";
 import type { FluentEventHandler, FluentHarnessEvent, HarnessEventType, PhaseEvent, TaskEvent } from "./event-types.js";
@@ -72,12 +72,12 @@ interface Subscription {
  * Configuration passed to HarnessInstance constructor.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
-export interface HarnessInstanceConfig<TAgents extends Record<string, AgentConstructor<any>>, TState, TInput, TResult> {
+export interface HarnessInstanceConfig<TAgents extends Record<string, Agent>, TState, TInput, TResult> {
 	/** Harness name for debugging */
 	name: string;
 
-	/** Resolved agent instances */
-	agents: ResolvedAgents<TAgents>;
+	/** Resolved agent instances or resolver function (lazy resolution for 014-clean-di-architecture) */
+	agents: ResolvedAgents<TAgents> | (() => Promise<ResolvedAgents<TAgents>>);
 
 	/** Initial state */
 	state: TState;
@@ -107,10 +107,11 @@ export interface HarnessInstanceConfig<TAgents extends Record<string, AgentConst
  * HarnessInstance IS the Transport - no separate transport accessor needed.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
-export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any>>, TState, TResult>
+export class HarnessInstance<TAgents extends Record<string, Agent>, TState, TResult>
 	implements Partial<Transport>
 {
-	private readonly _agents: ResolvedAgents<TAgents>;
+	private readonly _agentsOrResolver: ResolvedAgents<TAgents> | (() => Promise<ResolvedAgents<TAgents>>);
+	private _resolvedAgents: ResolvedAgents<TAgents> | null = null;
 	private _state: TState;
 	private readonly _runFn: ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined;
 	private readonly _input: unknown;
@@ -144,7 +145,7 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 	private _sessionContext: SessionContext | undefined;
 
 	constructor(config: HarnessInstanceConfig<TAgents, TState, unknown, TResult>) {
-		this._agents = config.agents;
+		this._agentsOrResolver = config.agents;
 		this._state = config.state;
 		this._runFn = config.run;
 		this._input = config.input;
@@ -156,6 +157,24 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 				this._attachments.push(attachment);
 			}
 		}
+	}
+
+	/**
+	 * Resolve agents lazily (014-clean-di-architecture).
+	 * Agents can be either pre-resolved or provided as a resolver function.
+	 */
+	private async resolveAgents(): Promise<ResolvedAgents<TAgents>> {
+		if (this._resolvedAgents) {
+			return this._resolvedAgents;
+		}
+
+		if (typeof this._agentsOrResolver === "function") {
+			this._resolvedAgents = await this._agentsOrResolver();
+		} else {
+			this._resolvedAgents = this._agentsOrResolver;
+		}
+
+		return this._resolvedAgents;
 	}
 
 	/**
@@ -546,6 +565,9 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 		// T020: Transition status to 'running'
 		this._status = "running";
 
+		// 014-clean-di-architecture: Resolve agents lazily before execution
+		await this.resolveAgents();
+
 		// T017: Call attachments on run() start, store returned cleanup
 		for (const attachment of this._attachments) {
 			const cleanup = attachment(this as unknown as Transport);
@@ -669,8 +691,13 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 	private _createExecuteContext(): ExecuteContext<TAgents, TState> {
 		const self = this;
 
+		// Agents must be resolved before this is called (ensured by run())
+		if (!this._resolvedAgents) {
+			throw new Error("Agents not resolved - this should never happen");
+		}
+
 		return {
-			agents: this._agents,
+			agents: this._resolvedAgents,
 			state: this._state,
 
 			// Phase helper - wraps with auto events and unified context (T017)

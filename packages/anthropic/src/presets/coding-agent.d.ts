@@ -26,12 +26,15 @@ import { CodingInputSchema, CodingOutputSchema, CodingPromptTemplate } from "./p
  * - Structured output: `{ code: string, explanation?: string, language?: string }`
  * - Git commit workflow built into prompt
  */
-export declare const CodingAgent: import("../index.js").AnthropicAgent<{
+export declare const CodingAgent: import("../index.js").AnthropicAgentDefinition<{
     task: string;
 }, {
     code: string;
     explanation?: string | undefined;
     language?: string | undefined;
-}>;
+}> & {
+    __builder?: unknown;
+    __registerProvider?: unknown;
+};
 export { CodingInputSchema, CodingOutputSchema, CodingPromptTemplate };
 export type { CodingInput, CodingOutput } from "../provider/types.js";

@@ -103,7 +103,6 @@ export { SessionContext } from "./session-context.js";
 
 // Channel API
 export {
-	type ChannelConfig,
 	type ChannelContext,
 	type ChannelDefinition,
 	type ChannelEventHandler,
@@ -111,6 +110,3 @@ export {
 	defineChannel,
 	type IChannel,
 } from "./define-channel.js";
-
-// Render Output Helpers
-export { RenderOutput, type RenderOutputConfig, type Spinner } from "./render-output.js";

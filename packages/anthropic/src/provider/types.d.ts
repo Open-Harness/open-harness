@@ -80,6 +80,8 @@ export interface AnthropicAgentDefinition<TInput, TOutput> {
         /** Scope identifier for monologue context */
         scope?: string;
     };
+    /** Index signature for SDK compatibility */
+    [key: string]: unknown;
 }
 /**
  * Options for `agent.execute()` method.
@@ -166,6 +168,42 @@ export interface AnthropicAgent<TInput, TOutput> {
     execute(input: TInput, options?: ExecuteOptions<TOutput>): Promise<TOutput>;
     /**
      * Run agent with streaming handle for interaction control.
+     *
+     * @param input - Input data matching inputSchema
+     * @param options - Optional streaming options
+     * @returns Handle for controlling execution
+     */
+    stream(input: TInput, options?: StreamOptions<TOutput>): AgentHandle<TOutput>;
+}
+/**
+ * ExecutableAgent - Stateless agent returned by AgentBuilder.build()
+ *
+ * This is the clean interface for agent execution in the builder pattern.
+ * Unlike AnthropicAgent, it has no name field (stateless, constructed fresh).
+ *
+ * Created by AgentBuilder using injected dependencies (IAgentRunner, IUnifiedEventBus).
+ *
+ * @template TInput - Input data type matching agent's inputSchema
+ * @template TOutput - Output data type matching agent's outputSchema
+ */
+export interface ExecutableAgent<TInput, TOutput> {
+    /**
+     * Run agent and return typed output.
+     *
+     * Validates input, renders prompt, calls runner, parses output.
+     *
+     * @param input - Input data matching inputSchema
+     * @param options - Optional execution options
+     * @returns Promise resolving to typed output
+     * @throws Error if input validation fails
+     * @throws Error if execution times out
+     * @throws Error if output validation fails
+     */
+    execute(input: TInput, options?: ExecuteOptions<TOutput>): Promise<TOutput>;
+    /**
+     * Run agent with streaming handle for interaction control.
+     *
+     * Validates input, renders prompt, returns handle for streaming execution.
      *
      * @param input - Input data matching inputSchema
      * @param options - Optional streaming options

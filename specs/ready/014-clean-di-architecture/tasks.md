@@ -71,9 +71,9 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 **Purpose**: Project initialization and validation of approach
 
-- [ ] T001 Review NeedleDI anti-patterns document from .claude/skills/needle-di/references/rubrics.md
-- [ ] T002 Review existing InternalAnthropicAgent in packages/anthropic/src/provider/internal-agent.ts to understand builder requirements
-- [ ] T003 [P] Validate agent definition serialization (create test prototype with JSON.stringify)
+- [X] T001 Review NeedleDI anti-patterns document from .claude/skills/needle-di/references/rubrics.md
+- [X] T002 Review existing InternalAnthropicAgent in packages/anthropic/src/provider/internal-agent.ts to understand builder requirements
+- [X] T003 [P] Validate agent definition serialization (create test prototype with JSON.stringify)
 
 ---
 
@@ -83,15 +83,15 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create packages/anthropic/src/provider/types.ts with AnthropicAgentDefinition and ExecutableAgent interfaces
-- [ ] T005 Create packages/anthropic/src/provider/builder.ts with @injectable() AgentBuilder class
-- [ ] T006 [P] Implement AgentBuilder.build() method that constructs ExecutableAgent with execute/stream methods
-- [ ] T007 Refactor packages/anthropic/src/provider/factory.ts to return plain AnthropicAgentDefinition objects and eliminate all global container state (remove getGlobalContainer() function and _globalContainer module-level variable)
-- [ ] T008 [P] Create packages/anthropic/src/provider/helpers.ts with executeAgent() function (depends on T010: uses resolveAgentBuilder() for container resolution)
-- [ ] T009 [P] Create streamAgent() function in packages/anthropic/src/provider/helpers.ts (depends on T010: uses resolveAgentBuilder() for container resolution)
-- [ ] T010 [P] Implement shared container resolution helpers in packages/anthropic/src/provider/helpers.ts: (a) createTemporaryContainer() for temporary container creation, (b) resolveAgentBuilder() private helper that handles container resolution (checks options.container, creates temporary if needed, resolves AgentBuilder) - this eliminates duplication between T008 and T009
-- [ ] T011 Update packages/anthropic/src/provider/index.ts to export new helpers and types
-- [ ] T012 Verify no global containers remain using grep for "let.*Container.*=" and "getGlobalContainer"
+- [X] T004 Create packages/anthropic/src/provider/types.ts with AnthropicAgentDefinition and ExecutableAgent interfaces
+- [X] T005 Create packages/anthropic/src/provider/builder.ts with @injectable() AgentBuilder class
+- [X] T006 [P] Implement AgentBuilder.build() method that constructs ExecutableAgent with execute/stream methods
+- [X] T007 Refactor packages/anthropic/src/provider/factory.ts to return plain AnthropicAgentDefinition objects and eliminate all global container state (remove getGlobalContainer() function and _globalContainer module-level variable)
+- [X] T008 [P] Create packages/anthropic/src/provider/helpers.ts with executeAgent() function (depends on T010: uses resolveAgentBuilder() for container resolution)
+- [X] T009 [P] Create streamAgent() function in packages/anthropic/src/provider/helpers.ts (depends on T010: uses resolveAgentBuilder() for container resolution)
+- [X] T010 [P] Implement shared container resolution helpers in packages/anthropic/src/provider/helpers.ts: (a) createTemporaryContainer() for temporary container creation, (b) resolveAgentBuilder() private helper that handles container resolution (checks options.container, creates temporary if needed, resolves AgentBuilder) - this eliminates duplication between T008 and T009
+- [X] T011 Update packages/anthropic/src/provider/index.ts to export new helpers and types
+- [X] T012 Verify no global containers remain using grep for "let.*Container.*=" and "getGlobalContainer"
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -105,13 +105,13 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Refactor packages/anthropic/src/presets/planner-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T014 [P] [US1] Refactor packages/anthropic/src/presets/coding-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T015 [P] [US1] Refactor packages/anthropic/src/presets/review-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T016 [US1] Update packages/anthropic/src/presets/index.ts to export preset agent definitions
-- [ ] T017 [US1] Verify executeAgent() works with PlannerAgent definition in manual test
-- [ ] T018 [US1] Verify streamAgent() works with preset agents in manual test
-- [ ] T019 [US1] Run preset integration tests and verify all pass (packages/anthropic/tests/presets.test.ts)
+- [X] T013 [P] [US1] Refactor packages/anthropic/src/presets/planner-agent.ts to return config object from defineAnthropicAgent()
+- [X] T014 [P] [US1] Refactor packages/anthropic/src/presets/coding-agent.ts to return config object from defineAnthropicAgent()
+- [X] T015 [P] [US1] Refactor packages/anthropic/src/presets/review-agent.ts to return config object from defineAnthropicAgent()
+- [X] T016 [US1] Update packages/anthropic/src/presets/index.ts to export preset agent definitions
+- [X] T017 [US1] Verify executeAgent() works with PlannerAgent definition in manual test
+- [X] T018 [US1] Verify streamAgent() works with preset agents in manual test
+- [X] T019 [US1] Run preset integration tests and verify all pass (packages/anthropic/tests/presets.test.ts)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - standalone execution works
 
@@ -125,12 +125,12 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Modify packages/sdk/src/factory/define-harness.ts to detect agent definitions (check for name + prompt fields)
-- [ ] T021 [US2] Update harness to bind AgentBuilder to container after creation in packages/sdk/src/factory/define-harness.ts
-- [ ] T022 [US2] Implement agent resolution using builder.build(agentDefinition) in packages/sdk/src/factory/define-harness.ts
-- [ ] T023 [US2] Update registerAnthropicProvider() to bind AgentBuilder in packages/anthropic/src/provider/register.ts
-- [ ] T024 [US2] Verify harness creates isolated container per instance (no shared state)
-- [ ] T025 [US2] Run harness control-flow tests and verify all 17 tests pass (packages/sdk/tests/harness/control-flow.test.ts)
+- [X] T020 [US2] Modify packages/sdk/src/factory/define-harness.ts to detect agent definitions (check for name + prompt fields)
+- [X] T021 [US2] Update harness to bind AgentBuilder to container after creation in packages/sdk/src/factory/define-harness.ts
+- [X] T022 [US2] Implement agent resolution using builder.build(agentDefinition) in packages/sdk/src/factory/define-harness.ts
+- [X] T023 [US2] Update registerAnthropicProvider() to bind AgentBuilder in packages/anthropic/src/provider/register.ts
+- [X] T024 [US2] Verify harness creates isolated container per instance (no shared state)
+- [X] T025 [US2] Run harness control-flow tests and verify all 17 tests pass (packages/sdk/tests/harness/control-flow.test.ts)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - standalone execution AND harness workflows
 

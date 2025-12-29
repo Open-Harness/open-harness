@@ -23,7 +23,7 @@ import {
 	ReviewInputSchema,
 	ReviewOutputSchema,
 } from "../../src/presets/index.js";
-import { resetFactoryContainer, setFactoryContainer } from "../../src/provider/factory.js";
+import { executeAgent, streamAgent } from "../../src/provider/factory.js";
 
 // Import prompt template factory for override tests
 import { createPromptTemplate } from "../../src/provider/prompt-template.js";
@@ -124,25 +124,21 @@ function createMockContainer() {
 }
 
 describe("Preset Agents", () => {
-	beforeEach(() => {
-		resetFactoryContainer();
-	});
-
 	describe("CodingAgent", () => {
-		test("can be imported and has required interface", () => {
+		test("can be imported and is a valid definition", () => {
 			expect(CodingAgent).toBeDefined();
 			expect(CodingAgent.name).toBe("CodingAgent");
-			expect(typeof CodingAgent.execute).toBe("function");
-			expect(typeof CodingAgent.stream).toBe("function");
+			expect(CodingAgent.prompt).toBeDefined();
+			expect(CodingAgent.inputSchema).toBeDefined();
+			expect(CodingAgent.outputSchema).toBeDefined();
 		});
 
 		test("executes with typed input and returns typed output", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
-			const result = await CodingAgent.execute({
+			const result = await executeAgent(CodingAgent, {
 				task: "Write a function that adds two numbers",
-			});
+			}, { container });
 
 			expect(result).toBeDefined();
 			expect(typeof result.code).toBe("string");
@@ -151,29 +147,28 @@ describe("Preset Agents", () => {
 
 		test("validates input against schema", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
 			// Empty task should fail validation
-			await expect(CodingAgent.execute({ task: "" })).rejects.toThrow("Input validation failed");
+			await expect(executeAgent(CodingAgent, { task: "" }, { container })).rejects.toThrow("Input validation failed");
 		});
 	});
 
 	describe("ReviewAgent", () => {
-		test("can be imported and has required interface", () => {
+		test("can be imported and is a valid definition", () => {
 			expect(ReviewAgent).toBeDefined();
 			expect(ReviewAgent.name).toBe("ReviewAgent");
-			expect(typeof ReviewAgent.execute).toBe("function");
-			expect(typeof ReviewAgent.stream).toBe("function");
+			expect(ReviewAgent.prompt).toBeDefined();
+			expect(ReviewAgent.inputSchema).toBeDefined();
+			expect(ReviewAgent.outputSchema).toBeDefined();
 		});
 
 		test("executes with typed input and returns typed output", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
-			const result = await ReviewAgent.execute({
+			const result = await executeAgent(ReviewAgent, {
 				task: "Write a function that adds two numbers",
 				implementationSummary: "Created add() function. commit:abc123...",
-			});
+			}, { container });
 
 			expect(result).toBeDefined();
 			expect(typeof result.approved).toBe("boolean");
@@ -182,33 +177,32 @@ describe("Preset Agents", () => {
 
 		test("validates input against schema", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
 			// Missing implementationSummary should fail
 			await expect(
-				ReviewAgent.execute({
+				executeAgent(ReviewAgent, {
 					task: "test",
 					implementationSummary: "",
-				}),
+				}, { container }),
 			).rejects.toThrow("Input validation failed");
 		});
 	});
 
 	describe("PlannerAgent", () => {
-		test("can be imported and has required interface", () => {
+		test("can be imported and is a valid definition", () => {
 			expect(PlannerAgent).toBeDefined();
 			expect(PlannerAgent.name).toBe("PlannerAgent");
-			expect(typeof PlannerAgent.execute).toBe("function");
-			expect(typeof PlannerAgent.stream).toBe("function");
+			expect(PlannerAgent.prompt).toBeDefined();
+			expect(PlannerAgent.inputSchema).toBeDefined();
+			expect(PlannerAgent.outputSchema).toBeDefined();
 		});
 
 		test("executes with typed input and returns typed output", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
-			const result = await PlannerAgent.execute({
+			const result = await executeAgent(PlannerAgent, {
 				prd: "Build a todo list app",
-			});
+			}, { container });
 
 			expect(result).toBeDefined();
 			expect(Array.isArray(result.tasks)).toBe(true);
@@ -221,10 +215,9 @@ describe("Preset Agents", () => {
 
 		test("validates input against schema", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
 			// Empty PRD should fail
-			await expect(PlannerAgent.execute({ prd: "" })).rejects.toThrow("Input validation failed");
+			await expect(executeAgent(PlannerAgent, { prd: "" }, { container })).rejects.toThrow("Input validation failed");
 		});
 	});
 
@@ -263,7 +256,6 @@ describe("Preset Agents", () => {
 
 		test("agent accepts custom prompt override", async () => {
 			const { container, mockRunner } = createMockContainer();
-			setFactoryContainer(container);
 
 			// Import defineAnthropicAgent dynamically to create fresh agent
 			const { defineAnthropicAgent } = await import("../../src/provider/factory.js");
@@ -279,7 +271,7 @@ describe("Preset Agents", () => {
 				outputSchema: CodingOutputSchema,
 			});
 
-			await agent.execute({ task: "write hello world" }, { prompt: overridePrompt });
+			await executeAgent(agent, { task: "write hello world" }, { container, prompt: overridePrompt });
 
 			// Verify the custom prompt was used
 			expect(mockRunner.lastPrompt).toContain("[CUSTOM CODING MODE]");
@@ -288,7 +280,6 @@ describe("Preset Agents", () => {
 
 		test("agent uses default prompt when no override provided", async () => {
 			const { container, mockRunner } = createMockContainer();
-			setFactoryContainer(container);
 
 			const { defineAnthropicAgent } = await import("../../src/provider/factory.js");
 
@@ -299,7 +290,7 @@ describe("Preset Agents", () => {
 				outputSchema: CodingOutputSchema,
 			});
 
-			await agent.execute({ task: "build a function" });
+			await executeAgent(agent, { task: "build a function" }, { container });
 
 			// Should use default prompt
 			expect(mockRunner.lastPrompt).toContain("Default Coding:");
@@ -314,7 +305,6 @@ describe("Preset Agents", () => {
 
 		test("override prompt preserves type safety", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
 			const { defineAnthropicAgent } = await import("../../src/provider/factory.js");
 
@@ -332,20 +322,19 @@ describe("Preset Agents", () => {
 			});
 
 			// This should work - prompt matches input schema
-			const result = await agent.execute({ task: "test" }, { prompt: typedOverride });
+			const result = await executeAgent(agent, { task: "test" }, { container, prompt: typedOverride });
 
 			expect(result).toBeDefined();
 		});
 
 		test("preset agents can be used with override (functional verification)", async () => {
 			const { container } = createMockContainer();
-			setFactoryContainer(container);
 
 			// This test verifies that CodingAgent WORKS with override
 			// (even if we can't inspect the runner due to caching)
 			const customPrompt = createPromptTemplate("Custom: {{task}}");
 
-			const result = await CodingAgent.execute({ task: "test task" }, { prompt: customPrompt });
+			const result = await executeAgent(CodingAgent, { task: "test task" }, { container, prompt: customPrompt });
 
 			// The mock always returns success, so result should be defined
 			expect(result).toBeDefined();

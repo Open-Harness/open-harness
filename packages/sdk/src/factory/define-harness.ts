@@ -22,6 +22,10 @@ import type {
 } from "../harness/event-types.js";
 import { HarnessInstance as HarnessInstanceImpl } from "../harness/harness-instance.js";
 
+// Type-only import for AgentBuilder (used in dynamic import)
+// biome-ignore lint/suspicious/noExplicitAny: Type declaration for dynamic import
+type AgentBuilderType = new (...args: any[]) => { build: (def: unknown) => unknown };
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -35,12 +39,34 @@ import { HarnessInstance as HarnessInstanceImpl } from "../harness/harness-insta
 export type AgentConstructor<T = any> = new (...args: unknown[]) => T;
 
 /**
- * Type helper: converts agent constructor record to instance record.
- * Preserves the full instance type including all methods and properties.
+ * Agent definition from providers (e.g., AnthropicAgentDefinition).
+ * Matches the shape of objects returned by defineAnthropicAgent().
+ */
+export interface AgentDefinition {
+	name: string;
+	prompt: unknown;
+	[key: string]: unknown;
+}
+
+/**
+ * Union type for agents - accepts both classes and definitions.
+ */
+export type Agent = AgentConstructor | AgentDefinition;
+
+/**
+ * Type helper: converts agent record to resolved instance record.
+ * Handles both agent constructors (classes) and agent definitions (config objects).
+ *
+ * For agent constructors: extracts InstanceType
+ * For agent definitions: resolves to ExecutableAgent (runtime type)
  */
 // biome-ignore lint/suspicious/noExplicitAny: Required to accept any agent shape
-export type ResolvedAgents<T extends Record<string, AgentConstructor<any>>> = {
-	[K in keyof T]: InstanceType<T[K]>;
+export type ResolvedAgents<T extends Record<string, Agent>> = {
+	[K in keyof T]: T[K] extends AgentConstructor<infer R>
+		? R
+		: T[K] extends AgentDefinition
+			? { execute: (...args: any[]) => Promise<any>; stream: (...args: any[]) => any }
+			: never;
 };
 
 /**
@@ -48,7 +74,7 @@ export type ResolvedAgents<T extends Record<string, AgentConstructor<any>>> = {
  * Provides access to agents, state, and event helpers.
  */
 // biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
-export interface ExecuteContext<TAgents extends Record<string, AgentConstructor<any>>, TState> {
+export interface ExecuteContext<TAgents extends Record<string, Agent>, TState> {
 	/** Resolved agent instances (not constructors) */
 	agents: ResolvedAgents<TAgents>;
 
@@ -90,7 +116,7 @@ export interface ExecuteContext<TAgents extends Record<string, AgentConstructor<
  */
 export interface HarnessConfig<
 	// biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
-	TAgents extends Record<string, AgentConstructor<any>>,
+	TAgents extends Record<string, Agent>,
 	TState = Record<string, never>,
 	TInput = void,
 	TResult = void,
@@ -143,6 +169,9 @@ export interface HarnessFactory<TState, TInput, TResult> {
  * Supports chainable event subscription and execution.
  */
 export interface HarnessInstance<TState, TResult> {
+	/** Attach a consumer to the transport (e.g., renderer, logger). Returns this for chaining. */
+	attach: (attachment: Attachment) => this;
+
 	/** Chainable event subscription. Returns this for chaining. */
 	on: <E extends HarnessEventType>(type: E, handler: FluentEventHandler<E>) => this;
 
@@ -215,7 +244,7 @@ export interface HarnessResult<TState, TResult> {
  */
 export function defineHarness<
 	// biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
-	TAgents extends Record<string, AgentConstructor<any>>,
+	TAgents extends Record<string, Agent>,
 	TState = Record<string, never>,
 	TInput = void,
 	TResult = void,
@@ -227,28 +256,113 @@ export function defineHarness<
 	// Create container ONCE (captured in closure) - invariant: "Agent resolution happens once"
 	const container = createContainer({ mode });
 
-	// Bind user-provided agent constructors to container
-	for (const AgentClass of Object.values(config.agents)) {
-		// Use container.bind() to register agent for resolution
-		container.bind(AgentClass as new (...args: unknown[]) => unknown);
+	// Helper function to detect agent definitions (T020)
+	// Agent definitions have 'name' and 'prompt' fields (plain objects)
+	// Agent classes are constructor functions
+	function isAgentDefinition(agent: unknown): agent is { name: string; prompt: unknown } {
+		return (
+			typeof agent === "object" &&
+			agent !== null &&
+			"name" in agent &&
+			"prompt" in agent &&
+			typeof (agent as { name?: unknown }).name === "string"
+		);
 	}
 
-	// Resolve all agents ONCE (not per create() call)
-	// This ensures agents are singletons per harness definition
-	const resolvedAgents = {} as ResolvedAgents<TAgents>;
-	for (const [name, AgentClass] of Object.entries(config.agents)) {
-		try {
-			resolvedAgents[name as keyof TAgents] = container.get(AgentClass) as InstanceType<TAgents[keyof TAgents]>;
-		} catch (error) {
-			// Provide helpful error message per spec edge case
-			const message = error instanceof Error ? error.message : String(error);
-			throw new Error(
-				`HarnessError: Failed to resolve agent "${name}"\n` +
-					`  Agent class: ${AgentClass.name}\n` +
-					`  Error: ${message}\n` +
-					`  Hint: Ensure all @injectable() dependencies are registered in container bindings`,
-			);
+	// Bind user-provided agents to container (T020-T021)
+	// Supports both agent definitions (config objects) and agent classes
+	for (const agent of Object.values(config.agents)) {
+		if (isAgentDefinition(agent)) {
+			// Agent definition - AgentBuilder will handle it later
+			// No binding needed here (builder is bound separately)
+			continue;
 		}
+		// Agent class - bind as before
+		container.bind(agent as new (...args: unknown[]) => unknown);
+	}
+
+	// Lazy agent resolution with caching (avoids synchronous require() in ESM)
+	// Agents are resolved on first create() call and cached for subsequent calls
+	let resolvedAgentsCache: ResolvedAgents<TAgents> | null = null;
+	let resolutionPromise: Promise<ResolvedAgents<TAgents>> | null = null;
+
+	async function resolveAgents(): Promise<ResolvedAgents<TAgents>> {
+		// Return cached agents if already resolved
+		if (resolvedAgentsCache) {
+			return resolvedAgentsCache;
+		}
+
+		// Return in-flight resolution if already started
+		if (resolutionPromise) {
+			return resolutionPromise;
+		}
+
+		// Start resolution
+		resolutionPromise = (async () => {
+			const resolved = {} as ResolvedAgents<TAgents>;
+
+			for (const [name, agent] of Object.entries(config.agents)) {
+				try {
+					if (isAgentDefinition(agent)) {
+						// Agent definition - use AgentBuilder to build executable agent (T022)
+						// Get AgentBuilder from the definition's __builder property (014-clean-di-architecture)
+						const agentWithBuilder = agent as typeof agent & {
+							__builder?: AgentBuilderType;
+							__registerProvider?: (container: { bind: (binding: unknown) => void }) => void;
+						};
+						const AgentBuilder = agentWithBuilder.__builder;
+						const registerProvider = agentWithBuilder.__registerProvider;
+
+						if (!AgentBuilder) {
+							throw new Error(
+								`Agent definition "${agent.name}" is missing __builder property. ` +
+									`Ensure the agent was created with defineAnthropicAgent().`,
+							);
+						}
+
+						// Register provider dependencies (IAgentRunner, etc.) if available
+						if (registerProvider && !container.has(AgentBuilder)) {
+							registerProvider(container as { bind: (binding: unknown) => void });
+						}
+
+						// Ensure AgentBuilder is bound to container
+						if (!container.has(AgentBuilder)) {
+							container.bind({
+								provide: AgentBuilder,
+								useClass: AgentBuilder,
+							});
+						}
+
+						// Resolve builder and build agent from definition
+						const builder = container.get(AgentBuilder) as { build: (def: unknown) => unknown };
+						// biome-ignore lint/suspicious/noExplicitAny: Dynamic agent resolution requires any
+						(resolved as any)[name] = builder.build(agent);
+					} else {
+						// Agent class - resolve as before
+						// biome-ignore lint/suspicious/noExplicitAny: Dynamic agent resolution requires any
+						(resolved as any)[name] = container.get(agent);
+					}
+				} catch (error) {
+					// Provide helpful error message per spec edge case
+					const message = error instanceof Error ? error.message : String(error);
+					const agentType = isAgentDefinition(agent) ? "definition" : "class";
+					const agentName = isAgentDefinition(agent) ? agent.name : (agent as { name?: string }).name ?? "unknown";
+					throw new Error(
+						`HarnessError: Failed to resolve agent "${name}"\n` +
+							`  Agent type: ${agentType}\n` +
+							`  Agent name: ${agentName}\n` +
+							`  Error: ${message}\n` +
+							`  Hint: Ensure all @injectable() dependencies are registered in container bindings`,
+					);
+				}
+			}
+
+			// Cache resolved agents
+			resolvedAgentsCache = resolved;
+			return resolved;
+		})();
+
+		return resolutionPromise;
 	}
 
 	// Return factory with create() method
@@ -264,11 +378,12 @@ export function defineHarness<
 			}
 
 			// Create and return HarnessInstance
+			// Agent resolution happens lazily when run() is called
 			// Type assertion needed because HarnessInstance uses unknown for TInput internally
 			// The runtime behavior is correct - we preserve the typed run function
 			return new HarnessInstanceImpl({
 				name: harnessName,
-				agents: resolvedAgents,
+				agents: resolveAgents, // Pass resolver function instead of resolved agents
 				state: initialState,
 				run: config.run as ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined,
 				input,

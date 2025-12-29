@@ -30,8 +30,8 @@
  *
  * @module @openharness/anthropic
  */
-export type { AgentHandle, AnthropicAgent, AnthropicAgentDefinition, CodingInput, CodingOutput, ExecuteOptions, ExtractVars, PlannerInput, PlannerOutput, PlannerTask, PromptTemplate, ReviewInput, ReviewIssue, ReviewOutput, StreamOptions, } from "./provider/index.js";
-export { AnthropicEventMapper, createPromptTemplate, createStaticPrompt, defineAnthropicAgent, resetFactoryContainer, setFactoryContainer, } from "./provider/index.js";
+export type { AgentHandle, AnthropicAgent, AnthropicAgentDefinition, ExecutableAgent, CodingInput, CodingOutput, ExecuteOptions, ExtractVars, PlannerInput, PlannerOutput, PlannerTask, PromptTemplate, ReviewInput, ReviewIssue, ReviewOutput, StreamOptions, } from "./provider/index.js";
+export { AgentBuilder, AnthropicEventMapper, createPromptTemplate, createStaticPrompt, defineAnthropicAgent, executeAgent, streamAgent, registerAnthropicProvider, } from "./provider/index.js";
 export { AnthropicRunner } from "./infra/runner/anthropic-runner.js";
 export { type AgentEvent, type CodingResult, CodingResultSchema, CodingResultSdkSchema, type CompactData, EventType, EventTypeConst, type JSONSchemaFormat, type SessionResult, type StatusData, zodToSdkSchema, } from "./infra/runner/models.js";
 export { type IContainer, Record, setDecoratorContainer, setRecordingFactoryToken, } from "./infra/recording/decorators.js";

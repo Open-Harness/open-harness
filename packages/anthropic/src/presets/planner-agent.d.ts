@@ -28,7 +28,7 @@ import { PlannerInputSchema, PlannerOutputSchema, PlannerPromptTemplate } from "
  * - Structured output: `{ tasks: PlannerTask[] }`
  * - Dependency-aware task ordering
  */
-export declare const PlannerAgent: import("../index.js").AnthropicAgent<{
+export declare const PlannerAgent: import("../index.js").AnthropicAgentDefinition<{
     prd: string;
 }, {
     tasks: {
@@ -37,6 +37,9 @@ export declare const PlannerAgent: import("../index.js").AnthropicAgent<{
         description: string;
         dependencies: string[];
     }[];
-}>;
+}> & {
+    __builder?: unknown;
+    __registerProvider?: unknown;
+};
 export { PlannerInputSchema, PlannerOutputSchema, PlannerPromptTemplate };
 export type { PlannerInput, PlannerOutput, PlannerTask } from "../provider/types.js";

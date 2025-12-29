@@ -28,7 +28,7 @@ import { ReviewInputSchema, ReviewOutputSchema, ReviewPromptTemplate } from "./p
  * - Structured output: `{ approved: boolean, issues: ReviewIssue[], suggestions?: string[] }`
  * - Inspects actual git commits for review
  */
-export declare const ReviewAgent: import("../index.js").AnthropicAgent<{
+export declare const ReviewAgent: import("../index.js").AnthropicAgentDefinition<{
     task: string;
     implementationSummary: string;
 }, {
@@ -39,6 +39,9 @@ export declare const ReviewAgent: import("../index.js").AnthropicAgent<{
         location?: string | undefined;
     }[];
     suggestions?: string[] | undefined;
-}>;
+}> & {
+    __builder?: unknown;
+    __registerProvider?: unknown;
+};
 export { ReviewInputSchema, ReviewOutputSchema, ReviewPromptTemplate };
 export type { ReviewInput, ReviewIssue, ReviewOutput } from "../provider/types.js";

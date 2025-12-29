@@ -322,55 +322,6 @@ describe("T034: Event handlers receive typed ChannelContext", () => {
 		expect(emittedEvents[1]?.type).toBe("custom:event");
 	});
 
-	test("context contains config", () => {
-		const bus = new UnifiedEventBus();
-		let receivedConfig: { verbosity: string; colors: boolean; unicode: boolean } | null = null;
-
-		const channel = createChannel(
-			{
-				name: "TestChannel",
-				on: {
-					"test:event": ({ config }) => {
-						receivedConfig = config;
-					},
-				},
-			},
-			{ verbosity: "verbose", colors: false },
-		);
-
-		channel.attach(bus);
-		bus.emit({ type: "test:event" });
-		channel.detach();
-
-		expect(receivedConfig).not.toBeNull();
-		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
-		expect(receivedConfig!.verbosity).toBe("verbose");
-		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
-		expect(receivedConfig!.colors).toBe(false);
-	});
-
-	test("context contains output helpers", () => {
-		const bus = new UnifiedEventBus();
-		let hasOutputHelpers = false;
-
-		const channel = createChannel({
-			name: "TestChannel",
-			on: {
-				"test:event": ({ output }) => {
-					hasOutputHelpers =
-						typeof output.line === "function" &&
-						typeof output.spinner === "function" &&
-						typeof output.progress === "function";
-				},
-			},
-		});
-
-		channel.attach(bus);
-		bus.emit({ type: "test:event" });
-		channel.detach();
-
-		expect(hasOutputHelpers).toBe(true);
-	});
 });
 
 // ============================================================================
@@ -468,30 +419,24 @@ describe("T035: onStart/onComplete lifecycle hooks called", () => {
 		expect(finalCount).toBe(3);
 	});
 
-	test("lifecycle hooks can use output helpers", () => {
+	test("lifecycle hooks can access state", () => {
 		const bus = new UnifiedEventBus();
-		const outputLog: string[] = [];
+		let hookCalled = false;
 
-		const channel = createChannel(
-			{
-				name: "TestChannel",
-				on: {},
-				onStart: ({ output }) => {
-					// Replace write function to capture output
-					(output as unknown as { config: { write: (s: string) => void } }).config = {
-						...(output as unknown as { config: object }).config,
-						write: (s: string) => outputLog.push(s),
-					};
-				},
+		const channel = createChannel({
+			name: "TestChannel",
+			state: () => ({ value: 42 }),
+			on: {},
+			onStart: ({ state }) => {
+				hookCalled = state.value === 42;
 			},
-			{},
-		);
+		});
 
 		channel.attach(bus);
 		channel.detach();
 
-		// Hook was called, confirming output is available
-		expect(true).toBe(true);
+		// Hook was called with correct state
+		expect(hookCalled).toBe(true);
 	});
 
 	test("both hooks work together in correct order", () => {
@@ -778,8 +723,8 @@ describe("T036: defineChannel() returns Attachment directly", () => {
 		// Cast to expected type for assertions
 		const ctx = receivedContext as ChannelContext<{ count: number }>;
 		expect(ctx.state.count).toBe(42);
-		expect(ctx.config).toBeDefined();
-		expect(ctx.output).toBeDefined();
+		expect(ctx.event).toBeDefined();
+		expect(ctx.emit).toBeDefined();
 
 		if (cleanup) cleanup();
 	});

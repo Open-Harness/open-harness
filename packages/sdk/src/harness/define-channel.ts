@@ -24,23 +24,10 @@ import type {
 	Transport,
 	Unsubscribe,
 } from "../infra/unified-events/types.js";
-import { RenderOutput } from "./render-output.js";
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-/**
- * Channel configuration.
- */
-export interface ChannelConfig {
-	/** Verbosity level */
-	verbosity: "minimal" | "normal" | "verbose";
-	/** Enable colors in output */
-	colors: boolean;
-	/** Enable Unicode symbols */
-	unicode: boolean;
-}
 
 /**
  * Context passed to event handlers.
@@ -52,10 +39,6 @@ export interface ChannelContext<TState> {
 	event: EnrichedEvent<BaseEvent>;
 	/** Emit custom events back to bus */
 	emit: (type: string, data: Record<string, unknown>) => void;
-	/** Channel configuration */
-	config: ChannelConfig;
-	/** Terminal output helpers (for console channels) */
-	output: RenderOutput;
 	/** The transport (for bidirectional communication) */
 	transport?: Transport;
 }
@@ -97,16 +80,6 @@ export interface IChannel {
 }
 
 // ============================================================================
-// DEFAULT VALUES
-// ============================================================================
-
-const DEFAULT_CONFIG: ChannelConfig = {
-	verbosity: "normal",
-	colors: true,
-	unicode: true,
-};
-
-// ============================================================================
 // CHANNEL CLASS
 // ============================================================================
 
@@ -126,18 +99,11 @@ class Channel<TState> implements IChannel {
 	private bus: IUnifiedEventBus | null = null;
 	private unsubscribe: Unsubscribe | null = null;
 	private channelState: TState;
-	private config: ChannelConfig;
-	private output: RenderOutput;
 	private currentTransport: Transport | undefined;
 
-	constructor(definition: ChannelDefinition<TState>, config?: Partial<ChannelConfig>) {
+	constructor(definition: ChannelDefinition<TState>) {
 		this.name = definition.name;
 		this.definition = definition;
-		this.config = { ...DEFAULT_CONFIG, ...config };
-		this.output = new RenderOutput({
-			colors: this.config.colors,
-			unicode: this.config.unicode,
-		});
 		// Initialize with empty state - factory is called on attach()
 		this.channelState = {} as TState;
 	}
@@ -158,12 +124,6 @@ class Channel<TState> implements IChannel {
 
 		// Fresh state on attach
 		this.channelState = this.definition.state?.() ?? ({} as TState);
-
-		// Create render output with current config
-		this.output = new RenderOutput({
-			colors: this.config.colors,
-			unicode: this.config.unicode,
-		});
 
 		// Subscribe to all events
 		this.unsubscribe = bus.subscribe((event) => {
@@ -318,8 +278,6 @@ class Channel<TState> implements IChannel {
 					this.bus.emit({ type, ...data } as BaseEvent);
 				}
 			},
-			config: this.config,
-			output: this.output,
 			transport: this.currentTransport,
 		};
 	}
@@ -349,7 +307,6 @@ class Channel<TState> implements IChannel {
  * and optionally send commands back to the harness.
  *
  * @param definition - Channel configuration
- * @param config - Optional channel config overrides
  * @returns Attachment function for use with harness.attach()
  *
  * @example
@@ -380,12 +337,13 @@ class Channel<TState> implements IChannel {
  * // Console renderer channel
  * const consoleChannel = defineChannel({
  *   name: 'Console',
+ *   state: () => ({ output: new RenderOutput() }),
  *   on: {
- *     'task:start': ({ event, output }) => {
- *       output.line(`Starting: ${event.event.type}`);
+ *     'task:start': ({ state, event }) => {
+ *       state.output.line(`Starting: ${event.event.type}`);
  *     },
- *     'task:complete': ({ output }) => {
- *       output.success('Done!');
+ *     'task:complete': ({ state }) => {
+ *       state.output.line('✓ Done!');
  *     },
  *   },
  * });
@@ -397,9 +355,8 @@ class Channel<TState> implements IChannel {
  */
 export function defineChannel<TState = Record<string, never>>(
 	definition: ChannelDefinition<TState>,
-	config?: Partial<ChannelConfig>,
 ): Attachment {
-	const channel = new Channel(definition, config);
+	const channel = new Channel(definition);
 	return channel.toAttachment();
 }
 
@@ -409,12 +366,10 @@ export function defineChannel<TState = Record<string, never>>(
  * for use with legacy IUnifiedEventBus directly.
  *
  * @param definition - Channel configuration
- * @param config - Optional channel config overrides
  * @returns IChannel instance
  */
 export function createChannel<TState = Record<string, never>>(
 	definition: ChannelDefinition<TState>,
-	config?: Partial<ChannelConfig>,
 ): IChannel {
-	return new Channel(definition, config);
+	return new Channel(definition);
 }

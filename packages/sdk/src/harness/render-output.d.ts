@@ -95,4 +95,16 @@ export declare class RenderOutput {
      * Add a blank line.
      */
     newline(): void;
+    /**
+     * Write a success line with indicator.
+     *
+     * @param text - Success message
+     */
+    success(text: string): void;
+    /**
+     * Write a failure line with indicator.
+     *
+     * @param text - Failure message
+     */
+    fail(text: string): void;
 }

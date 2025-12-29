@@ -23,13 +23,12 @@
 
 // Event mapper (provider-specific)
 export { AnthropicEventMapper } from "./anthropic-event-mapper.js";
+// Builder pattern (injectable service)
+export { AgentBuilder } from "./builder.js";
 // Factory function
-export {
-	defineAnthropicAgent,
-	registerAnthropicProvider,
-	resetFactoryContainer,
-	setFactoryContainer,
-} from "./factory.js";
+export { defineAnthropicAgent, registerAnthropicProvider } from "./factory.js";
+// Execution helpers
+export { executeAgent, streamAgent } from "./helpers.js";
 // Prompt template factory
 export { createPromptTemplate, createStaticPrompt } from "./prompt-template.js";
 
@@ -39,6 +38,7 @@ export type {
 	// Core types
 	AnthropicAgent,
 	AnthropicAgentDefinition,
+	ExecutableAgent,
 	// Preset types (for presets layer)
 	CodingInput,
 	CodingOutput,

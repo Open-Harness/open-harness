@@ -1,16 +1,12 @@
+import { consoleAttachment } from "./console";
 import { CodingWorkflow } from "./harness";
-import { ConsoleChannel } from "./console-channel";
 
 async function main() {
 	const prd = `Build a TODO app: add items, mark complete, delete items`;
 
-	// Attach channel for beautiful console output
-	const result = await CodingWorkflow.create({ prd })
-		.attach(ConsoleChannel)
-		.run();
+	// Attach console output
+	const result = await CodingWorkflow.create({ prd }).attach(consoleAttachment).run();
 
-	// Note: No manual event listeners needed!
-	// The channel handles all output formatting
 	console.log(`\nComplete! ${result.result.tasks.length} tasks processed.`);
 }
 

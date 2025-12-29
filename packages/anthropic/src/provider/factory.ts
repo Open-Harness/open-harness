@@ -40,58 +40,31 @@ import type {
 } from "./types.js";
 
 // ============================================================================
-// Singleton Container
+// Container Registration
 // ============================================================================
-
-let _globalContainer: Container | null = null;
-
-/**
- * Get or create the global container with lazy initialization.
- *
- * The container is configured for live mode and has decorator containers set up.
- */
-function getGlobalContainer(): Container {
-	if (!_globalContainer) {
-		_globalContainer = createContainer({ mode: "live" });
-		// Set decorator containers for @Record and @Monologue compatibility
-		setDecoratorContainer(_globalContainer);
-		setMonologueContainer(_globalContainer);
-		// Register Anthropic provider
-		registerAnthropicProvider(_globalContainer);
-	}
-	return _globalContainer;
-}
 
 /**
  * Register Anthropic provider in a container.
  *
- * Binds the AnthropicRunner to IAgentRunnerToken.
+ * Binds AnthropicRunner to IAgentRunnerToken and AgentBuilder for agent execution.
+ * This is called by helpers (executeAgent/streamAgent) and harness to set up DI.
  *
  * @param container - Container to register provider in
  */
 export function registerAnthropicProvider(container: Container): void {
+	// Import AgentBuilder here to avoid circular dependency at module load time
+	// biome-ignore lint/performance/noBarrelFile: sync import after module init
+	const { AgentBuilder } = require("./builder.js");
+
 	container.bind({
 		provide: IAgentRunnerToken,
 		useClass: AnthropicRunner,
 	});
-}
 
-/**
- * Reset the global container. Useful for testing.
- * @internal
- */
-export function resetFactoryContainer(): void {
-	_globalContainer = null;
-}
-
-/**
- * Set a custom container. Useful for testing or custom setups.
- * @internal
- */
-export function setFactoryContainer(container: Container): void {
-	_globalContainer = container;
-	setDecoratorContainer(container);
-	setMonologueContainer(container);
+	container.bind({
+		provide: AgentBuilder,
+		useClass: AgentBuilder,
+	});
 }
 
 // ============================================================================
@@ -192,133 +165,57 @@ export function wrapWithMonologue<TInput, TOutput>(
  * @param definition - Agent configuration
  * @returns Agent object with execute() and stream() methods
  */
+/**
+ * Define an Anthropic agent with typed inputs and outputs.
+ *
+ * Returns a plain configuration object (AnthropicAgentDefinition).
+ * To execute the agent, use executeAgent() or streamAgent() helpers,
+ * or pass the definition to AgentBuilder.build() in a harness.
+ *
+ * **Builder Pattern** (eliminates global container anti-pattern):
+ * - This function returns ONLY configuration (no execute/stream methods)
+ * - Execution happens via executeAgent(definition, input) or harness
+ * - AgentBuilder constructs executable agents from definitions
+ * - No global state, clean DI, fully testable
+ *
+ * @param definition - Agent configuration with name, prompt, schemas
+ * @returns Plain configuration object (pass to executeAgent or builder)
+ *
+ * @example
+ * ```typescript
+ * // Define agent (returns config, not executable)
+ * const MyAgent = defineAnthropicAgent({
+ *   name: "MyAgent",
+ *   prompt: "Do this task: {{task}}",
+ *   inputSchema: z.object({ task: z.string() }),
+ *   outputSchema: z.object({ result: z.string() }),
+ * });
+ *
+ * // Execute using helper (creates temporary container)
+ * const output = await executeAgent(MyAgent, { task: "Hello" });
+ *
+ * // Or use in harness (harness manages container)
+ * const harness = defineHarness({
+ *   agents: { myAgent: MyAgent },
+ *   // ...
+ * });
+ * ```
+ */
 export function defineAnthropicAgent<TInput, TOutput>(
 	definition: AnthropicAgentDefinition<TInput, TOutput>,
-): AnthropicAgent<TInput, TOutput> {
-	const { name, prompt, inputSchema, outputSchema, options: sdkOptions, recording, monologue } = definition;
+): AnthropicAgentDefinition<TInput, TOutput> & { __builder?: unknown; __registerProvider?: unknown } {
+	// Import AgentBuilder to attach to definition (for harness lazy resolution)
+	// biome-ignore lint/performance/noBarrelFile: sync import after module init
+	const { AgentBuilder } = require("./builder.js");
 
-	// Lazy initialization state - deferred until first execution
-	let _internalAgent: InternalAnthropicAgent | null = null;
-	let _outputFormat: unknown = null;
-
-	/**
-	 * Get or create the internal agent (lazy initialization).
-	 * Defers container access until first execution.
-	 */
-	function getInternalAgent(): InternalAnthropicAgent {
-		if (!_internalAgent) {
-			// Get or create global container
-			const container = getGlobalContainer();
-
-			// Get runner and event bus from container
-			const runner = container.get(IAgentRunnerToken) as IAgentRunner;
-			const unifiedBus = container.get(IUnifiedEventBusToken, { optional: true }) as IUnifiedEventBus | null;
-
-			// Create internal agent instance
-			_internalAgent = new InternalAnthropicAgent(name, runner, unifiedBus);
-		}
-		return _internalAgent;
-	}
-
-	/**
-	 * Get or create the output format (lazy initialization).
-	 */
-	function getOutputFormat(): unknown {
-		if (!_outputFormat) {
-			// Convert output schema to SDK format
-			// Note: zodToSdkSchema expects ZodObject but we accept any ZodType for flexibility
-			// biome-ignore lint/suspicious/noExplicitAny: outputSchema is validated at runtime
-			_outputFormat = zodToSdkSchema(outputSchema as any);
-		}
-		return _outputFormat;
-	}
-
-	/**
-	 * Render prompt from template or static string.
-	 */
-	function renderPrompt(input: TInput, overrideTemplate?: PromptTemplate<unknown>): string {
-		const template = overrideTemplate ?? prompt;
-
-		if (typeof template === "string") {
-			return template;
-		}
-
-		// PromptTemplate - render with input data
-		return template.render(input as unknown as Record<string, unknown>);
-	}
-
-	/**
-	 * Core execute implementation.
-	 */
-	async function executeCore(input: TInput, execOptions?: ExecuteOptions<TOutput>): Promise<TOutput> {
-		// Validate input
-		const parseResult = inputSchema.safeParse(input);
-		if (!parseResult.success) {
-			throw new Error(`Input validation failed: ${parseResult.error.message}`);
-		}
-
-		// Render prompt
-		const renderedPrompt = renderPrompt(parseResult.data, execOptions?.prompt);
-
-		// Generate session ID if not provided
-		const sessionId = execOptions?.sessionId ?? randomUUID();
-
-		// Run agent (lazily initialized)
-		// Note: sdkOptions is Partial<Options> which extends GenericRunnerOptions
-		return getInternalAgent().run<TOutput>(renderedPrompt, sessionId, {
-			...(sdkOptions as Record<string, unknown>),
-			outputFormat: getOutputFormat(),
-			callbacks: execOptions?.callbacks,
-			timeoutMs: execOptions?.timeoutMs,
-		});
-	}
-
-	// Apply recording wrapper if enabled
-	let executeFn = executeCore;
-	executeFn = wrapWithRecording(executeFn, recording, name);
-	executeFn = wrapWithMonologue(executeFn, monologue, name);
-
-	/**
-	 * Execute agent and await result.
-	 */
-	async function execute(input: TInput, options?: ExecuteOptions<TOutput>): Promise<TOutput> {
-		return executeFn(input, options);
-	}
-
-	/**
-	 * Stream agent with interaction handle.
-	 *
-	 * Note: Streaming is a thin wrapper over execute for now.
-	 * Full streaming with interrupt/streamInput/setModel will be implemented
-	 * when the SDK supports those features.
-	 */
-	function stream(input: TInput, options?: StreamOptions<TOutput>): AgentHandle<TOutput> {
-		// Create abort controller for interruption
-		const abortController = new AbortController();
-
-		// Start execution
-		const resultPromise = execute(input, options);
-
-		return {
-			interrupt: () => {
-				abortController.abort();
-			},
-			streamInput: (_inputText: string) => {
-				// TODO: Implement when SDK supports mid-execution input
-				console.warn("streamInput() is not yet implemented");
-			},
-			setModel: (_model: string) => {
-				// TODO: Implement when SDK supports model switching
-				console.warn("setModel() is not yet implemented");
-			},
-			result: resultPromise,
-		};
-	}
-
-	// Return agent object
+	// Attach builder class and provider registration to definition (014-clean-di-architecture)
+	// This allows the harness to build the agent without importing the module
 	return {
-		name,
-		execute,
-		stream,
+		...definition,
+		__builder: AgentBuilder,
+		__registerProvider: registerAnthropicProvider,
 	};
 }
+
+// Re-export helpers for convenience
+export { executeAgent, streamAgent } from "./helpers.js";

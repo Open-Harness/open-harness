@@ -18,17 +18,36 @@ import type { FluentEventHandler, FluentHarnessEvent, HarnessEventType, Parallel
  */
 export type AgentConstructor<T = any> = new (...args: unknown[]) => T;
 /**
- * Type helper: converts agent constructor record to instance record.
- * Preserves the full instance type including all methods and properties.
+ * Agent definition from providers (e.g., AnthropicAgentDefinition).
+ * Matches the shape of objects returned by defineAnthropicAgent().
  */
-export type ResolvedAgents<T extends Record<string, AgentConstructor<any>>> = {
-    [K in keyof T]: InstanceType<T[K]>;
+export interface AgentDefinition {
+    name: string;
+    prompt: unknown;
+    [key: string]: unknown;
+}
+/**
+ * Union type for agents - accepts both classes and definitions.
+ */
+export type Agent = AgentConstructor | AgentDefinition;
+/**
+ * Type helper: converts agent record to resolved instance record.
+ * Handles both agent constructors (classes) and agent definitions (config objects).
+ *
+ * For agent constructors: extracts InstanceType
+ * For agent definitions: resolves to ExecutableAgent (runtime type)
+ */
+export type ResolvedAgents<T extends Record<string, Agent>> = {
+    [K in keyof T]: T[K] extends AgentConstructor<infer R> ? R : T[K] extends AgentDefinition ? {
+        execute: (...args: any[]) => Promise<any>;
+        stream: (...args: any[]) => any;
+    } : never;
 };
 /**
  * Context passed to both run() and execute() functions.
  * Provides access to agents, state, and event helpers.
  */
-export interface ExecuteContext<TAgents extends Record<string, AgentConstructor<any>>, TState> {
+export interface ExecuteContext<TAgents extends Record<string, Agent>, TState> {
     /** Resolved agent instances (not constructors) */
     agents: ResolvedAgents<TAgents>;
     /** Mutable state object */
@@ -61,7 +80,7 @@ export interface ExecuteContext<TAgents extends Record<string, AgentConstructor<
  * Supports both run: (simple) and execute: (generator) patterns.
  * These are mutually exclusive.
  */
-export interface HarnessConfig<TAgents extends Record<string, AgentConstructor<any>>, TState = Record<string, never>, TInput = void, TResult = void> {
+export interface HarnessConfig<TAgents extends Record<string, Agent>, TState = Record<string, never>, TInput = void, TResult = void> {
     /** Optional harness name for debugging/logging. Default: 'anonymous-harness' */
     name?: string;
     /** Execution mode. Default: 'live' */
@@ -101,6 +120,8 @@ export interface HarnessFactory<TState, TInput, TResult> {
  * Supports chainable event subscription and execution.
  */
 export interface HarnessInstance<TState, TResult> {
+    /** Attach a consumer to the transport (e.g., renderer, logger). Returns this for chaining. */
+    attach: (attachment: Attachment) => this;
     /** Chainable event subscription. Returns this for chaining. */
     on: <E extends HarnessEventType>(type: E, handler: FluentEventHandler<E>) => this;
     /** Execute the harness. Returns result with state and collected events. */
@@ -160,4 +181,4 @@ export interface HarnessResult<TState, TResult> {
  *   .run();
  * ```
  */
-export declare function defineHarness<TAgents extends Record<string, AgentConstructor<any>>, TState = Record<string, never>, TInput = void, TResult = void>(config: HarnessConfig<TAgents, TState, TInput, TResult>): HarnessFactory<TState, TInput, TResult>;
+export declare function defineHarness<TAgents extends Record<string, Agent>, TState = Record<string, never>, TInput = void, TResult = void>(config: HarnessConfig<TAgents, TState, TInput, TResult>): HarnessFactory<TState, TInput, TResult>;

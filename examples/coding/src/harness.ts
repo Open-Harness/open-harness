@@ -8,16 +8,15 @@
  * - Auto-cleanup of subscriptions
  */
 
-import { defineHarness } from "@openharness/sdk";
 import {
 	CodingAgent,
-	PlannerAgent,
-	ReviewAgent,
 	type CodingOutput,
-	type PlannerOutput,
+	PlannerAgent,
 	type PlannerTask,
+	ReviewAgent,
 	type ReviewOutput,
 } from "@openharness/anthropic/presets";
+import { defineHarness } from "@openharness/sdk";
 
 // State (shared between harness and external code)
 interface CodingState {
@@ -35,12 +34,12 @@ const CodingHarness = defineHarness({
 
 	state: (input: { prd: string }): CodingState => ({
 		prd: input.prd,
-		tickets: [],
+		tasks: [],
 		codeResults: new Map(),
 		reviewResults: new Map(),
 	}),
 
-	run: async ({ agents, state, phase, task }) => {
+	run: async ({ agents, state, phase, task }, _input) => {
 		/*
 		 * Phase 1: Planning
 		 * - this phase is responsible for planning the tasks

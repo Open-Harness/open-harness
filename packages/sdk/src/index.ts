@@ -256,14 +256,10 @@ export {
 
 // Channel API
 export {
-	type ChannelConfig,
 	type ChannelContext,
 	type ChannelDefinition,
 	type ChannelEventHandler,
 	createChannel,
 	defineChannel,
 	type IChannel,
-	RenderOutput,
-	type RenderOutputConfig,
-	type Spinner,
 } from "./harness/index.js";
