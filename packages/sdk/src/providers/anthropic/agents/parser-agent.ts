@@ -199,8 +199,7 @@ Return a JSON object with: tasks[], phases[], warnings[], and metadata.`;
 			tasks: result.tasks.map((task) => ({
 				...task,
 				// Replace empty validationCriteria with a default (schema requires min(1))
-				validationCriteria:
-					task.validationCriteria?.trim() || `Complete task: ${task.description.slice(0, 50)}`,
+				validationCriteria: task.validationCriteria?.trim() || `Complete task: ${task.description.slice(0, 50)}`,
 			})),
 		};
 	}
