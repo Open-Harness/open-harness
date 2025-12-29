@@ -203,3 +203,20 @@ export type {
 
 // Replay Controller
 export { ReplayController, type ReplayControllerConfig } from "./replay-controller.js";
+
+// ============================================================================
+// Unified Event System Renderer (008-unified-event-system)
+// ============================================================================
+
+// Declarative Renderer API
+export {
+	defineRenderer,
+	type EventHandler,
+	type IUnifiedRenderer,
+	type RenderContext,
+	type RendererConfig as UnifiedRendererConfig,
+	type RendererDefinition,
+} from "./define-renderer.js";
+
+// Render Output Helpers
+export { RenderOutput, type RenderOutputConfig, type Spinner } from "./render-output.js";

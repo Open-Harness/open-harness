@@ -9,17 +9,10 @@
  * @module harness/harness-instance
  */
 
+import type { IUnifiedEventBus } from "../core/unified-events/types.js";
 import type { AgentConstructor, ExecuteContext, ResolvedAgents } from "../factory/define-harness.js";
 import { createParallelHelper, createRetryHelper } from "./control-flow.js";
-import type {
-	FluentEventHandler,
-	FluentHarnessEvent,
-	HarnessEventType,
-	ParallelOptions,
-	PhaseEvent,
-	RetryOptions,
-	TaskEvent,
-} from "./event-types.js";
+import type { FluentEventHandler, FluentHarnessEvent, HarnessEventType, PhaseEvent, TaskEvent } from "./event-types.js";
 
 // ============================================================================
 // TYPES
@@ -70,6 +63,9 @@ export interface HarnessInstanceConfig<TAgents extends Record<string, AgentConst
 
 	/** Input passed to create() */
 	input: TInput;
+
+	/** Optional unified event bus for context propagation (008-unified-event-system) */
+	unifiedBus?: IUnifiedEventBus;
 }
 
 // ============================================================================
@@ -87,6 +83,7 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 	private _state: TState;
 	private readonly _runFn: ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined;
 	private readonly _input: unknown;
+	private readonly _unifiedBus: IUnifiedEventBus | undefined;
 
 	private readonly _subscriptions: Subscription[] = [];
 	private readonly _events: FluentHarnessEvent[] = [];
@@ -98,6 +95,7 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 		this._state = config.state;
 		this._runFn = config.run;
 		this._input = config.input;
+		this._unifiedBus = config.unifiedBus;
 	}
 
 	/**
@@ -225,92 +223,135 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 			agents: this._agents,
 			state: this._state,
 
-			// Phase helper - wraps with auto events
+			// Phase helper - wraps with auto events and unified context (T017)
 			async phase<T>(name: string, fn: () => Promise<T>): Promise<T> {
-				const timestamp = new Date();
+				// Wrapper function that handles phase execution with events
+				const executePhase = async (): Promise<T> => {
+					const timestamp = new Date();
 
-				// Emit start event
-				self._emit({
-					type: "phase",
-					name,
-					status: "start",
-					timestamp,
-				} as PhaseEvent);
-
-				try {
-					const result = await fn();
-
-					// Emit complete event
+					// Emit start event (inside scope so it inherits context)
 					self._emit({
 						type: "phase",
 						name,
-						status: "complete",
-						timestamp: new Date(),
-						result,
+						status: "start",
+						timestamp,
 					} as PhaseEvent);
 
-					return result;
-				} catch (error) {
-					// Emit failed event
-					const message = error instanceof Error ? error.message : String(error);
-					const stack = error instanceof Error ? error.stack : undefined;
+					// Emit to unified bus if available
+					if (self._unifiedBus) {
+						self._unifiedBus.emit({ type: "phase:start", name });
+					}
 
-					self._emit({
-						type: "phase",
-						name,
-						status: "failed",
-						timestamp: new Date(),
-						error: message,
-						stack,
-					} as PhaseEvent);
+					try {
+						const result = await fn();
 
-					// Always re-throw (Contextual Event Wrapper Pattern)
-					throw error;
+						// Emit complete event
+						self._emit({
+							type: "phase",
+							name,
+							status: "complete",
+							timestamp: new Date(),
+							result,
+						} as PhaseEvent);
+
+						// Emit to unified bus if available
+						if (self._unifiedBus) {
+							self._unifiedBus.emit({ type: "phase:complete", name });
+						}
+
+						return result;
+					} catch (error) {
+						// Emit failed event
+						const message = error instanceof Error ? error.message : String(error);
+						const stack = error instanceof Error ? error.stack : undefined;
+
+						self._emit({
+							type: "phase",
+							name,
+							status: "failed",
+							timestamp: new Date(),
+							error: message,
+							stack,
+						} as PhaseEvent);
+
+						// Always re-throw (Contextual Event Wrapper Pattern)
+						throw error;
+					}
+				};
+
+				// If unified bus available, wrap in scoped context for context propagation
+				if (self._unifiedBus) {
+					return self._unifiedBus.scoped({ phase: { name } }, executePhase);
 				}
+				return executePhase();
 			},
 
-			// Task helper - wraps with auto events
+			// Task helper - wraps with auto events and unified context (T018)
 			async task<T>(id: string, fn: () => Promise<T>): Promise<T> {
-				const timestamp = new Date();
+				// Wrapper function that handles task execution with events
+				const executeTask = async (): Promise<T> => {
+					const timestamp = new Date();
 
-				// Emit start event
-				self._emit({
-					type: "task",
-					id,
-					status: "start",
-					timestamp,
-				} as TaskEvent);
-
-				try {
-					const result = await fn();
-
-					// Emit complete event
+					// Emit start event (inside scope so it inherits context)
 					self._emit({
 						type: "task",
 						id,
-						status: "complete",
-						timestamp: new Date(),
-						result,
+						status: "start",
+						timestamp,
 					} as TaskEvent);
 
-					return result;
-				} catch (error) {
-					// Emit failed event
-					const message = error instanceof Error ? error.message : String(error);
-					const stack = error instanceof Error ? error.stack : undefined;
+					// Emit to unified bus if available
+					if (self._unifiedBus) {
+						self._unifiedBus.emit({ type: "task:start", taskId: id });
+					}
 
-					self._emit({
-						type: "task",
-						id,
-						status: "failed",
-						timestamp: new Date(),
-						error: message,
-						stack,
-					} as TaskEvent);
+					try {
+						const result = await fn();
 
-					// Always re-throw (Contextual Event Wrapper Pattern)
-					throw error;
+						// Emit complete event
+						self._emit({
+							type: "task",
+							id,
+							status: "complete",
+							timestamp: new Date(),
+							result,
+						} as TaskEvent);
+
+						// Emit to unified bus if available
+						if (self._unifiedBus) {
+							self._unifiedBus.emit({ type: "task:complete", taskId: id, result });
+						}
+
+						return result;
+					} catch (error) {
+						// Emit failed event
+						const message = error instanceof Error ? error.message : String(error);
+						const stack = error instanceof Error ? error.stack : undefined;
+
+						self._emit({
+							type: "task",
+							id,
+							status: "failed",
+							timestamp: new Date(),
+							error: message,
+							stack,
+						} as TaskEvent);
+
+						// Emit to unified bus if available
+						if (self._unifiedBus) {
+							self._unifiedBus.emit({ type: "task:failed", taskId: id, error: message, stack });
+						}
+
+						// Always re-throw (Contextual Event Wrapper Pattern)
+						throw error;
+					}
+				};
+
+				// If unified bus available, wrap in scoped context for context propagation
+				if (self._unifiedBus) {
+					return self._unifiedBus.scoped({ task: { id } }, executeTask);
 				}
+				return executeTask();
 			},
 
 			// Emit escape hatch for custom events
