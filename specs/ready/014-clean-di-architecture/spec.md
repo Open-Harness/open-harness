@@ -11,15 +11,15 @@
 
 A developer wants to execute a preset agent (PlannerAgent, CodingAgent, ReviewAgent) without a harness for quick experimentation or scripting.
 
-**Why this priority**: Core functionality that enables rapid prototyping (<5 minutes from install to first agent execution) and simple use cases (<100 lines of code for single-agent workflows). If users can't execute agents standalone, the framework loses its approachability.
+**Why this priority**: Core functionality that enables rapid prototyping (<5 minutes from npm install to first successful agent execution, excluding documentation reading time, measured wall-clock time) and simple use cases (<100 lines of code for single-agent workflows, counting only application code excluding imports, type definitions, and comments). If users can't execute agents standalone, the framework loses its approachability.
 
 **Independent Test**: Developer imports a preset agent, calls `executeAgent()` helper with input, and receives typed output without touching containers or DI concepts.
 
 **Acceptance Scenarios**:
 
 1. **Given** developer has installed `@openharness/anthropic/presets`, **When** they import `PlannerAgent` and call `executeAgent(PlannerAgent, { prd: "Build TODO app" })`, **Then** they receive typed `PlannerOutput` with task list
-2. **Given** developer wants progress updates, **When** they pass a `ConsoleChannel` instance to `executeAgent()` options, **Then** they receive real-time agent progress events during execution
-3. **Given** developer executes agent with invalid input schema, **When** input validation fails, **Then** they receive a clear Zod validation error before agent execution starts
+2. **Given** developer wants progress updates, **When** they pass a `ConsoleChannel` instance to `executeAgent()` options, **Then** they receive real-time agent progress events (definition: asynchronous/non-blocking delivery with <100ms p95 latency, see plan.md "Real-Time Event Delivery") during execution
+3. **Given** developer executes agent with invalid input schema, **When** input validation fails, **Then** they receive a clear Zod validation error (definition: plan.md "Error Message Clarity" - field name + expected type + actual value) before agent execution starts
 
 ---
 
@@ -49,8 +49,8 @@ A developer wants to create a custom agent using `defineAnthropicAgent()` with t
 
 **Acceptance Scenarios**:
 
-1. **Given** developer creates custom prompt template with `{{variable}}` placeholders, **When** they define agent with input schema matching template variables, **Then** TypeScript enforces type safety between template and schema
-2. **Given** developer defines custom agent, **When** they execute it via `executeAgent()`, **Then** it behaves identically to preset agents (same execution path, same event emission)
+1. **Given** developer creates custom prompt template with `{{variable}}` placeholders, **When** they define agent with input schema matching template variables, **Then** TypeScript enforces type safety between template and schema (verification: plan.md "Type Safety Enforcement" - compile-time errors on mismatches, verified by T052 negative tests)
+2. **Given** developer defines custom agent, **When** they execute it via `executeAgent()`, **Then** it behaves identically to preset agents (identical behaviors: uses AgentBuilder.build(), emits events via IUnifiedEventBus, accepts same ExecuteOptions, returns same ExecutableAgent interface)
 3. **Given** developer uses custom agent in harness, **When** harness resolves agents, **Then** custom agent is built using same builder pattern as presets
 
 ---
@@ -125,14 +125,14 @@ A developer wants to test agents or harnesses with mock infrastructure (runner, 
 - **SC-007**: All existing harness tests pass without modification (17/17 passing in control-flow.test.ts)
 - **SC-008**: Agent definitions are serializable (can JSON.stringify and parse without losing functionality)
 - **SC-009**: Zero global state remains in factory.ts or provider layer (verified by grep for module-level containers)
-- **SC-010**: Documentation clearly explains framework/user boundary (what users see vs what's internal)
+- **SC-010**: Documentation clearly explains framework/user boundary (what users see vs what's internal) - verified by checklist: (1) API boundary diagram exists, (2) all exported types documented with examples, (3) before/after code samples provided, (4) decision guide for executeAgent vs harness included (see plan.md "Documentation Clarity")
 
 ### Quality Indicators
 
-- All NeedleDI anti-patterns eliminated from codebase
+- All NeedleDI anti-patterns eliminated from codebase (threshold: 95%+ DI compliance score per SC-003, allowing maximum 1 violation)
 - Single Composition Root pattern enforced (harness is the composition root)
 - All dependencies injected via constructor (no property or method injection)
-- Clear separation between agent definition (data) and agent execution (service)
+- Clear separation between agent definition (data) and agent execution (service) - verified by: definition contains zero methods (only data fields), is JSON-serializable (see plan.md "Pattern Index")
 - Test suite demonstrates mocking infrastructure without modifying production code
 
 ## Assumptions

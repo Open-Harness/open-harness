@@ -1,169 +1,190 @@
 agent: ambiguity-checker
-timestamp: "2025-12-29T19:30:00Z"
+timestamp: "2025-12-29T12:00:00Z"
 feature_dir: specs/ready/014-clean-di-architecture
-summary: "230 items checked. 7 ambiguities found (0 critical, 5 medium, 2 low)."
+summary: "489 items checked. 8 ambiguities found (0 critical, 5 medium, 3 low)."
 statistics:
-  items_checked: 230
+  items_checked: 489
   vague_terms: 4
   placeholders: 0
-  unmeasurable: 3
-  total_findings: 7
+  unmeasurable: 4
+  total_findings: 8
   severity_breakdown:
     critical: 0
     medium: 5
-    low: 2
+    low: 3
+
 findings:
   - id: A001
-    type: vague_term
-    location: spec.md:L14
-    text: "enables rapid prototyping and simple use cases"
-    issue: "No definition of 'rapid' or 'simple' - subjective terms without metrics"
-    recommendation: "Define 'rapid prototyping' (e.g., <5 minutes from install to first agent execution) and 'simple use cases' (e.g., single-agent workflows with <100 lines of code)"
-    severity: low
+    type: unmeasurable
+    location: spec.md:L54
+    text: "behaves identically to preset agents (identical behaviors: uses AgentBuilder.build(), emits events via IUnifiedEventBus, accepts same ExecuteOptions, returns same ExecutableAgent interface)"
+    issue: "While specific behaviors are listed, 'identically' is difficult to verify in practice - no explicit test strategy mentioned"
+    recommendation: "Add explicit verification: 'T028-T031 verify custom agents pass the same integration test suite as preset agents (PlannerAgent, CodingAgent, ReviewAgent). Tests must verify: (1) Builder construction path identical, (2) Event emission pattern matches, (3) ExecuteOptions handling identical, (4) Return type structure matches.'"
+    severity: medium
 
   - id: A002
     type: unmeasurable
-    location: spec.md:L21
-    text: "receive real-time agent progress events during execution"
-    issue: "No definition of 'real-time' latency expectations"
-    recommendation: "Define maximum acceptable latency for event delivery (e.g., <100ms from event occurrence to channel delivery, or clarify 'real-time' means asynchronous/non-blocking without specific latency guarantee)"
+    location: spec.md:L135
+    text: "Clear separation between agent definition (data) and agent execution (service) - verified by: definition contains zero methods (only data fields), is JSON-serializable (see plan.md 'Pattern Index')"
+    issue: "'Clear' is subjective even with verification criteria - what about edge cases with getters/setters or computed properties?"
+    recommendation: "Strengthen verification: 'Agent definition types must: (1) Contain zero methods or functions (TypeScript error on method properties), (2) Pass JSON.stringify() without data loss (round-trip test), (3) Have no getters/setters (plain object properties only), (4) Generate .d.ts with only data properties.'"
     severity: medium
 
   - id: A003
-    type: unmeasurable
-    location: spec.md:L38
-    text: "channels receive error event with context"
-    issue: "No specification of what 'context' must include in error events"
-    recommendation: "Define required error context fields (e.g., phase name, agent name, error type, error message, stack trace). Should match existing event system patterns."
+    type: vague_term
+    location: plan.md:L209
+    text: "IntelliSense Surface: Main API objects expose <10 methods to users"
+    issue: "What qualifies as 'main API objects' is ambiguous - does this count all exported types or just entry points?"
+    recommendation: "Define scope explicitly: 'Main API objects = executeAgent function, streamAgent function, Harness class instance, and preset agent definition objects (PlannerAgent, CodingAgent, ReviewAgent). Verification: Count publicly accessible methods in generated .d.ts for these symbols only. Internal types (AgentBuilder, Container) excluded.'"
     severity: medium
 
   - id: A004
     type: unmeasurable
-    location: spec.md:L52
-    text: "TypeScript enforces type safety between template and schema"
-    issue: "Enforcement method unclear - compile-time type checking or runtime validation?"
-    recommendation: "Clarify: Type safety enforced at compile-time via TypeScript inference (type errors prevent mismatched templates). Add verification task using negative test case (intentional mismatch should fail tsc --noEmit). Note: plan.md:L122-L128 defines verification method but not enforcement mechanism."
+    location: plan.md:L217
+    text: "IDE autocomplete shows only relevant user-facing methods"
+    issue: "'Only relevant' and 'user-facing' require subjective judgment - no objective verification method"
+    recommendation: "Replace with measurable criterion aligned with FR-016: 'Generated .d.ts files for package exports (index.ts) contain zero DI-related types in public signatures (no Container, injectable decorator, or Token types visible to autocomplete). Verify using: tsc --declaration && grep -E \"Container|injectable|Token\" dist/*.d.ts (expect zero matches).'"
     severity: medium
 
   - id: A005
-    type: vague_term
-    location: spec.md:L119
-    text: "exactly 1 line of code (excluding import)"
-    issue: "Ambiguous whether chained method calls count as 'one line' (e.g., executeAgent().then())"
-    recommendation: "Clarify: one statement/expression (method chaining allowed) or one physical line of source code. Example: executeAgent(PlannerAgent, { prd: 'Build TODO' }) is 1 line; adding .then() is still 1 statement but may span lines."
-    severity: low
+    type: unmeasurable
+    location: tasks.md:L10
+    text: "Tests are NOT requested in this feature specification. All testing happens through existing test suites."
+    issue: "Contradicts Phase 6 (T032-T043) which creates 12+ new test files for DI compliance, builder unit tests, and verification"
+    recommendation: "Clarify statement: 'No new test INFRASTRUCTURE is required (existing bun:test framework sufficient). Phase 6 adds new test CASES and test FILES for DI compliance verification, but uses existing tooling. See T032-T043 for specific test files to create.'"
+    severity: medium
 
   - id: A006
     type: unmeasurable
-    location: spec.md:L128
-    text: "Documentation clearly explains framework/user boundary"
-    issue: "No measurable criteria for 'clearly explains' - subjective quality assessment"
-    recommendation: "Define documentation success criteria: (1) includes diagram showing public vs internal APIs, (2) lists all exported types with usage examples, (3) provides before/after examples showing what users see vs internal implementation, (4) explains when to use executeAgent vs harness"
-    severity: medium
+    location: tasks.md:L117
+    text: "T017 [US1] Verify executeAgent() works with PlannerAgent definition in manual test"
+    issue: "'Works' has no acceptance criteria - successful execution? Correct output? Type safety?"
+    recommendation: "Define verification steps explicitly: 'Manual test must verify: (1) Import succeeds: `import { PlannerAgent, executeAgent } from \"@openharness/anthropic\"`, (2) Execution completes: `const result = await executeAgent(PlannerAgent, { prd: \"test\" })`, (3) Typed output received: result has expected shape/type, (4) No DI concepts required: user code contains zero references to Container/tokens/builder.'"
+    severity: low
 
   - id: A007
+    type: unmeasurable
+    location: tasks.md:L118
+    text: "T018 [US1] Verify streamAgent() works with preset agents in manual test"
+    issue: "Same as A006 - 'works' is not objectively defined"
+    recommendation: "Define verification steps: '(1) Call streamAgent with preset: `const handle = streamAgent(CodingAgent, input)`, (2) Iterate chunks: `for await (const chunk of handle) { ... }`, (3) Assert stream completes without errors, (4) Verify cancellation works: `handle.cancel()`.'"
+    severity: low
+
+  - id: A008
     type: vague_term
-    location: plan.md:L8
-    text: "maintaining clean developer experience"
-    issue: "Subjective term 'clean' without measurable attributes"
-    recommendation: "Define clean DX attributes: (1) no DI concepts in public API (verified by plan.md:L94-L105 API encapsulation check), (2) <3 imports required for basic usage, (3) TypeScript IntelliSense shows <10 methods on main API objects, (4) common operations achievable in <2 function calls"
-    severity: medium
+    location: plan.md:L30
+    text: "Simplicity Scales: Solution uses plain objects (simplest possible) + standard builder pattern"
+    issue: "'Simplest possible' is subjective without comparison to alternatives"
+    recommendation: "Add objective verification from plan.md:L118-120: 'Agent definitions require zero runtime dependencies beyond Zod schemas. Verification: Analyze import statements in definition type files - must import only from \"zod\" and internal type-only imports (no runtime dependencies on SDK or DI framework).'"
+    severity: low
 
-resolved_items:
-  - id: R001
-    original_finding: "spec.md:L22 - 'receive a clear Zod validation error' - no criteria for clarity"
-    resolution: "plan.md:L80-L92 defines clear error format (field name + expected type + actual value). Verification in T041."
-    location: plan.md:L80-L92
+resolved_by_recent_fixes:
+  - id: FIXED-001
+    finding: "spec.md:L14 - 'rapid prototyping' time measurement ambiguous"
+    resolution: "Now explicitly defined as '<5 minutes from npm install to first successful agent execution, excluding documentation reading time, measured wall-clock time'"
+    location: "spec.md:L14"
+    status: "RESOLVED"
 
-  - id: R002
-    original_finding: "spec.md:L124 - '95%+ score' - no rubric specified"
-    resolution: "plan.md:L48-L60 defines DI compliance scoring method with explicit grep patterns and point deductions. Verification in T044-T046."
-    location: plan.md:L48-L60
+  - id: FIXED-002
+    finding: "spec.md:L14 - 'simple use cases' LOC counting unclear"
+    resolution: "Now precisely defined as '<100 lines of code for single-agent workflows, counting only application code excluding imports, type definitions, and comments'"
+    location: "spec.md:L14"
+    status: "RESOLVED"
 
-  - id: R003
-    original_finding: "spec.md:L132 - 'All NeedleDI anti-patterns eliminated' - no verification method"
-    resolution: "plan.md:L49-L60 defines specific grep patterns for detection (service locator, global state, ambient context). Automated verification via T012 and T045."
-    location: plan.md:L49-L60
+  - id: FIXED-003
+    finding: "spec.md:L22 - 'real-time agent progress events' latency undefined"
+    resolution: "Now cross-references plan.md 'Real-Time Event Delivery' with concrete definition: asynchronous/non-blocking delivery with <100ms p95 latency"
+    location: "spec.md:L22, plan.md:L156-164"
+    status: "RESOLVED"
 
-  - id: R004
-    original_finding: "spec.md:L134 - 'Clear separation between definition and execution' - unmeasurable"
-    resolution: "plan.md:L110-L119 defines separation criteria: zero methods in definitions, JSON-serializable, execution logic only in builder/executable. Verification in T037."
-    location: plan.md:L110-L119
+  - id: FIXED-004
+    finding: "spec.md:L22 - 'clear Zod validation error' subjective"
+    resolution: "Now cross-references plan.md 'Error Message Clarity' with 3-part structure: field name + expected type + actual value"
+    location: "spec.md:L22, plan.md:L83-93"
+    status: "RESOLVED"
 
-  - id: R005
-    original_finding: "spec.md:L143 - 'acceptable overhead' - no threshold"
-    resolution: "plan.md:L20 defines performance goal (<5ms container creation p95, <10ms agent resolution p95 on GitHub Actions standard runners). Acceptable = within these thresholds."
-    location: plan.md:L20
+  - id: FIXED-005
+    finding: "spec.md:L52 - 'TypeScript enforces type safety' mechanism unclear"
+    resolution: "Now references plan.md:L124-143 'Type Safety Enforcement' with compile-time verification method using tsc --noEmit and T052 negative tests"
+    location: "spec.md:L52 (cross-ref added), plan.md:L124-143"
+    status: "RESOLVED"
 
-  - id: R006
-    original_finding: "plan.md:L20 - Performance overhead conditions unclear"
-    resolution: "plan.md:L70-L78 defines benchmark conditions: GitHub Actions standard runner (2-core, 7GB RAM), p95 latency, 100 iterations, console.time measurement."
-    location: plan.md:L70-L78
+  - id: FIXED-006
+    finding: "spec.md:L128 - 'Documentation clearly explains' too vague"
+    resolution: "Now includes verification checklist with 5 objective items: API boundary diagram, exported types docs, before/after samples, decision guide, migration examples (see plan.md L183-200)"
+    location: "spec.md:L128, plan.md:L183-200"
+    status: "RESOLVED"
 
-  - id: R007
-    original_finding: "plan.md:L39 - 'complexity hidden in builder' - how verified?"
-    resolution: "plan.md:L94-L105 defines API surface encapsulation verification: tsc --declaration + grep for Container|injectable|Token (expect zero matches). Verification in T051."
-    location: plan.md:L94-L105
+  - id: FIXED-007
+    finding: "plan.md:L20 - 'cold start' performance measurement unclear"
+    resolution: "Now precisely defined: 'First container creation after process start, before any require/import caching. Measurement protocol: Create container in fresh process (new bun test invocation), measure time from new Container() to first .get() call'"
+    location: "plan.md:L76-78"
+    status: "RESOLVED"
 
-  - id: R008
-    original_finding: "plan.md:L268 - 80%+ coverage - tool and type unclear"
-    resolution: "plan.md:L63-L68 specifies tool (bun test --coverage), type (line coverage), target (80%+ for builder.ts, helpers.ts, factory.ts). Verification in T040."
-    location: plan.md:L63-L68
-
-  - id: R009
-    original_finding: "spec.md:L70 - 'no global state leaks' - verification method unclear"
-    resolution: "plan.md:L130-L138 defines verification: test suite with --random-seed, isolated containers, grep for module-level containers, tests pass regardless of order. Verification in T038 and T040."
-    location: plan.md:L130-L138
+  - id: FIXED-008
+    finding: "plan.md:L158 - 'real-time' could imply hard real-time guarantees"
+    resolution: "Clarified with explicit note: 'Real-time refers to asynchronous streaming without blocking the agent execution thread, not hard real-time guarantees. <100ms p95 latency target.'"
+    location: "plan.md:L156-164"
+    status: "RESOLVED"
 
 recommendations:
-  - title: "Clarify Real-Time Event Delivery Expectations"
-    description: "Acceptance scenario mentions 'real-time' events but doesn't specify latency requirements or whether it means synchronous vs asynchronous delivery"
-    affected_requirements:
-      - spec.md:L21 (User Story 1, acceptance scenario 2)
-    suggested_action: "Add to plan.md verification methods: Define 'real-time' as asynchronous event delivery with <100ms latency (p95), OR clarify it means non-blocking delivery without specific latency guarantee. Add verification task if latency matters."
+  priority_fixes:
+    - issue: A005
+      action: "Clarify testing statement in tasks.md:L10 - specify 'new test CASES, not new test INFRASTRUCTURE' to eliminate contradiction with Phase 6"
+      effort: "5 minutes"
+      impact: "high - eliminates major confusion about testing scope"
+      file: "tasks.md"
 
-  - title: "Define Error Event Context Schema"
-    description: "Error event 'context' mentioned in acceptance criteria but structure not specified"
-    affected_requirements:
-      - spec.md:L38 (User Story 2, acceptance scenario 3)
-    suggested_action: "Add to data-model.md: Define ErrorEventContext interface with required fields (phase, agent, errorType, message, stack?). Reference existing event system patterns from 008-unified-event-system."
+    - issue: A006_A007
+      action: "Add explicit acceptance criteria to T017 and T018 manual verification tasks"
+      effort: "10 minutes"
+      impact: "medium - makes verification reproducible and objective"
+      file: "tasks.md"
 
-  - title: "Add Type Safety Enforcement Mechanism"
-    description: "Verification method exists (plan.md:L122-L128) but enforcement mechanism not explained"
-    affected_requirements:
-      - spec.md:L52 (User Story 3, acceptance scenario 1)
-    suggested_action: "Add explanation in plan.md: TypeScript's structural typing infers template variable types from input schema via mapped types. Mismatched variables fail at compile-time. Verification via T052 negative test."
+  optional_improvements:
+    - issue: A003_A004
+      action: "Define 'main API objects' scope and convert IntelliSense/autocomplete criteria to measurable .d.ts analysis aligned with FR-016"
+      effort: "15 minutes"
+      impact: "medium - strengthens developer experience verification"
+      file: "plan.md"
 
-  - title: "Quantify Documentation Clarity"
-    description: "SC-010 requires clear documentation but success criteria are subjective"
-    affected_requirements:
-      - spec.md:L128 (SC-010)
-    suggested_action: "Add verification task: Documentation review checklist covering (1) API boundary diagram exists, (2) all exported types documented with examples, (3) before/after code samples provided, (4) decision guide for executeAgent vs harness included."
+    - issue: A001
+      action: "Add explicit test verification strategy to spec.md:L54 - reference T028-T031 and specify that custom agents must pass same integration test suite"
+      effort: "10 minutes"
+      impact: "low - improves traceability but behavior already well-specified"
+      file: "spec.md"
 
-  - title: "Define Clean Developer Experience Metrics"
-    description: "Plan summary mentions 'clean developer experience' but metrics are implicit"
-    affected_requirements:
-      - plan.md:L8 (Summary)
-      - spec.md:L120 (SC-002)
-    suggested_action: "Add to success metrics section: Clean DX verified by (1) API encapsulation check (T051), (2) import count <3 for basic usage, (3) IntelliSense surface <10 methods, (4) common tasks <2 function calls. Create checklist in T044 documentation task."
+    - issue: A002
+      action: "Strengthen 'clear separation' verification with additional constraints: no getters/setters, TypeScript errors on method properties"
+      effort: "10 minutes"
+      impact: "low - current verification already strong, this adds defense-in-depth"
+      file: "spec.md"
+
+quality_assessment:
+  overall_score: 92
+  strengths:
+    - "Zero critical ambiguities - all blocking requirements are well-defined"
+    - "Zero placeholders (TODO, TBD) - specification is complete"
+    - "Excellent measurement protocols for performance metrics (p95, wall-clock, cold start definitions)"
+    - "Strong cross-referencing between spec.md and plan.md for complex terms"
+    - "All technical requirements have objective verification methods (grep patterns, test tasks, metrics)"
+    - "Recent fixes successfully resolved 8 previously identified ambiguities"
+
+  weaknesses:
+    - "Some verification tasks (T017, T018) lack explicit acceptance criteria"
+    - "Developer experience metrics (IntelliSense, autocomplete) need more precise definitions"
+    - "Minor contradictions between high-level statements (tasks.md:L10) and detailed tasks (Phase 6)"
+    - "A few subjective quality terms ('clear', 'simplest') could use stronger objective verification"
+
+  implementation_readiness: "READY"
+  reasoning: "All P1 user stories (1 and 2) have unambiguous requirements with clear verification methods. P2 stories (3 and 4) have minor ambiguities but they are low-severity clarifications, not blockers. The 8 remaining findings are improvements to verification methodology, not gaps in core requirements."
 
 notes:
-  - "MAJOR IMPROVEMENT: Verification Methods section (plan.md:L44-L138) resolves 9 of 18 previous ambiguities"
-  - "No critical blockers found - all remaining ambiguities are clarifications that improve specification precision"
-  - "Remaining findings focus on acceptance scenario details (event latency, error context) and subjective quality attributes (clarity, clean DX)"
-  - "Feature is well-specified overall with strong measurability for technical requirements (DI compliance, performance, coverage)"
-  - "Documentation and developer experience requirements could benefit from more concrete success criteria"
-  - "Consider adding explicit verification tasks for the 5 medium-severity findings in Phase 7"
-
-improvement_summary: |
-  The addition of the Verification Methods section significantly improved specification clarity:
-  - DI compliance now has explicit scoring rubric (grep patterns + point values)
-  - Performance benchmarks have defined conditions (hardware, percentile, iterations)
-  - Coverage measurement specifies tool (bun test --coverage) and threshold (80% line coverage)
-  - Error message format is explicitly defined (field + type + value)
-  - API surface validation has automated verification (tsc --declaration + grep)
-  - Type safety has verification method (negative test cases)
-  - Global state isolation has multiple checks (random seed, grep, test isolation)
-
-  Remaining ambiguities are primarily in acceptance scenarios (event context, latency) and
-  subjective quality attributes (clarity, clean DX) which can be addressed during implementation.
+  - "SIGNIFICANT IMPROVEMENT from previous analysis: 8 major ambiguities resolved through cross-referencing and concrete thresholds"
+  - "All performance requirements now have precise measurement protocols (wall-clock time, p95 latency, cold start definition)"
+  - "Quality attributes ('clear', 'simple', 'real-time') now cross-reference plan.md definitions with verification checklists"
+  - "LOC counting and time measurements now precisely specify what to include/exclude"
+  - "Medium-severity findings are primarily about test verification steps and DX metrics - important for quality but not blocking"
+  - "The plan.md Verification Methods section (L44-L242) provides excellent objective criteria that resolve most spec.md vagueness"
+  - "Pattern Index (plan.md:L227-241) clarifies intentional near-duplicates, preventing false duplicate detection"
+  - "Constitution Check (plan.md:L24-42) provides clear pass/fail criteria for architectural principles"
