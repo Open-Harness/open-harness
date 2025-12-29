@@ -14,14 +14,14 @@
 
 import { describe, expect, test } from "bun:test";
 import { injectable } from "@needle-di/core";
-import { defineHarness, wrapAgent } from "../../src/index.js";
 import type {
 	FluentHarnessEvent,
 	NarrativeEvent,
+	ParallelStartEvent,
 	PhaseEvent,
 	RetryStartEvent,
-	ParallelStartEvent,
 } from "../../src/harness/event-types.js";
+import { defineHarness, wrapAgent } from "../../src/index.js";
 
 // ============================================================================
 // MOCK AGENTS (Matching quickstart.md patterns)
@@ -30,7 +30,7 @@ import type {
 // Mock for ParserAgent pattern
 @injectable()
 class MockParserAgent {
-	async parseFile(path: string): Promise<{ tasks: Array<{ id: string; description: string }> }> {
+	async parseFile(_path: string): Promise<{ tasks: Array<{ id: string; description: string }> }> {
 		return {
 			tasks: [
 				{ id: "T001", description: "Build login form" },
@@ -43,7 +43,7 @@ class MockParserAgent {
 // Mock for PlannerAgent pattern
 @injectable()
 class MockPlannerAgent {
-	async plan(input: string): Promise<{ tasks: Array<{ description: string }> }> {
+	async plan(_input: string): Promise<{ tasks: Array<{ description: string }> }> {
 		return {
 			tasks: [{ description: "Step 1: Setup" }, { description: "Step 2: Implement" }],
 		};
@@ -61,7 +61,7 @@ class MockCodingAgent {
 // Mock for ReviewAgent pattern
 @injectable()
 class MockReviewAgent {
-	async review(task: string, code: string): Promise<{ passed: boolean; feedback: string }> {
+	async review(_task: string, _code: string): Promise<{ passed: boolean; feedback: string }> {
 		return { passed: true, feedback: "Looks good!" };
 	}
 }
@@ -345,7 +345,7 @@ describe("SC-008: Ultimate Test", () => {
 
 				await phase("Execute", async () => {
 					for (const task of state.tasks) {
-						const code = await agents.coder.execute(task.description);
+						await agents.coder.execute(task.description);
 						emit("narrative", { text: `Coded: ${task.id}`, agent: "MockCoder" });
 					}
 				});

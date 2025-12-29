@@ -11,8 +11,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { injectable } from "@needle-di/core";
-import { defineHarness, wrapAgent } from "../../src/index.js";
 import type { FluentHarnessEvent, NarrativeEvent, PhaseEvent, TaskEvent } from "../../src/harness/event-types.js";
+import { defineHarness, wrapAgent } from "../../src/index.js";
 
 // ============================================================================
 // MOCK AGENTS
@@ -21,9 +21,10 @@ import type { FluentHarnessEvent, NarrativeEvent, PhaseEvent, TaskEvent } from "
 /**
  * Mock agent that emits narrative events via callback pattern.
  * Simulates an agent that produces output over time.
+ * NOTE: Kept for future use in narrative event tests
  */
 @injectable()
-class MockNarrativeAgent {
+class _MockNarrativeAgent {
 	private narrativeCallback?: (text: string) => void;
 
 	setNarrativeCallback(cb: (text: string) => void) {

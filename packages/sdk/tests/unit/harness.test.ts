@@ -608,11 +608,7 @@ describe("Backward Compatibility - US7", () => {
 		const {
 			// Legacy imports
 			BaseHarness,
-			Agent,
-			PersistentState,
-			createContainer,
 			// Fluent imports
-			defineHarness,
 			wrapAgent,
 		} = await import("../../src/index.js");
 
@@ -667,7 +663,7 @@ describe("Backward Compatibility - US7", () => {
 	});
 
 	test("both APIs can share same agent classes", async () => {
-		const { BaseHarness, defineHarness, wrapAgent } = await import("../../src/index.js");
+		const { BaseHarness, wrapAgent } = await import("../../src/index.js");
 		const { injectable } = await import("@needle-di/core");
 
 		// Shared agent class that works with both patterns

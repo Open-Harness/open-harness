@@ -13,7 +13,7 @@ import { injectable } from "@needle-di/core";
 // Import ONLY the fluent API - NOT createContainer or any DI internals
 // This test verifies US1: "no container imports needed"
 import { defineHarness } from "../../../src/factory/define-harness.js";
-import type { HarnessEventType, PhaseEvent } from "../../../src/harness/event-types.js";
+import type { PhaseEvent } from "../../../src/harness/event-types.js";
 
 // ============================================================================
 // TEST AGENT - Simple injectable agent for testing
@@ -441,7 +441,7 @@ describe("US3: Declarative Event Handling", () => {
 
 		const Factory = defineHarness({
 			agents: { simple: SimpleAgent },
-			run: async ({ phase, emit }) => {
+			run: async ({ phase }) => {
 				await phase("main", async () => "done");
 				return "done";
 			},
