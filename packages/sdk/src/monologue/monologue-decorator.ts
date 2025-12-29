@@ -7,7 +7,7 @@
  * @module monologue/monologue-decorator
  */
 
-import { type AgentEvent, type IContainer, IEventBusToken, IMonologueLLMToken } from "../infra/tokens.js";
+import { type IContainer, IMonologueLLMToken, IUnifiedEventBusToken } from "../infra/tokens.js";
 import { createMonologueService, type MonologueCallback } from "./monologue-service.js";
 import type { MonologueConfig, NarrativeAgentName } from "./types.js";
 
@@ -90,29 +90,27 @@ export function Monologue(scope: NarrativeAgentName, options?: MonologueOptions)
 		descriptor.value = async function (...args: unknown[]): Promise<unknown> {
 			// Get services from container
 			const container = getContainer();
-			const eventBus = container.get(IEventBusToken);
+			const eventBus = container.get(IUnifiedEventBusToken);
 			const llm = container.get(IMonologueLLMToken);
 
 			// Generate session ID
 			const sessionId = options?.sessionIdProvider?.(args) ?? generateSessionId();
 			const taskId = options?.taskIdProvider?.(args);
 
-			// Create callback that publishes to EventBus + user callback
+			// Create callback that publishes to UnifiedEventBus + user callback
 			const callback: MonologueCallback = {
 				onNarrative: (entry) => {
-					// Publish to EventBus as MONOLOGUE event
-					const event: AgentEvent = {
-						timestamp: new Date(),
-						event_type: "monologue",
-						agent_name: entry.agentName,
-						content: entry.text,
-						session_id: sessionId,
-						metadata: {
-							taskId: entry.taskId,
-							...entry.metadata,
-						},
+					// Publish to UnifiedEventBus as narrative event
+					const event = {
+						type: "narrative" as const,
+						text: entry.text,
+						importance: "normal" as const,
+						agentName: entry.agentName,
 					};
-					eventBus.publish(event);
+					eventBus.emit(event, {
+						agent: { name: entry.agentName },
+						task: entry.taskId ? { id: entry.taskId } : undefined,
+					});
 
 					// Also call user callback if provided
 					options?.callback?.onNarrative?.(entry);
@@ -132,11 +130,17 @@ export function Monologue(scope: NarrativeAgentName, options?: MonologueOptions)
 				callback,
 			});
 
-			// Subscribe to EventBus for this agent's events
-			const unsubscribe = eventBus.subscribe(async (event: AgentEvent) => {
-				// Map SDK AgentEvent to monologue AgentEvent
-				const monologueEvent = mapToMonologueEvent(event, scope, sessionId);
-				await service.addEvent(monologueEvent);
+			// Subscribe to UnifiedEventBus for this agent's events
+			const unsubscribe = eventBus.subscribe(async (enrichedEvent) => {
+				// Only process agent events for this scope
+				if (!enrichedEvent.event.type.startsWith("agent:")) return;
+				if (enrichedEvent.context.agent?.name !== scope) return;
+
+				// Map UnifiedEvent to monologue AgentEvent
+				const monologueEvent = mapUnifiedEventToMonologue(enrichedEvent, scope, sessionId);
+				if (monologueEvent) {
+					await service.addEvent(monologueEvent);
+				}
 			});
 
 			try {
@@ -164,66 +168,77 @@ function generateSessionId(): string {
 }
 
 /**
- * Map SDK AgentEvent to monologue AgentEvent format.
+ * Map UnifiedEvent (BaseEvent) to monologue AgentEvent format.
  */
-function mapToMonologueEvent(event: AgentEvent, agentName: string, sessionId: string): import("./types.js").AgentEvent {
-	// The SDK AgentEvent has different field names, map them
+function mapUnifiedEventToMonologue(
+	enrichedEvent: import("../infra/unified-events/types.js").EnrichedEvent,
+	agentName: string,
+	sessionId: string,
+): import("./types.js").AgentEvent | null {
+	const event = enrichedEvent.event;
+
+	// Map unified event types to monologue event types
+	let eventType: import("./types.js").AgentEventType;
+	let payload: import("./types.js").AgentEventPayload;
+
+	switch (event.type) {
+		case "agent:text":
+			eventType = "text";
+			payload = {
+				type: "text",
+				content: (event as import("../infra/unified-events/types.js").AgentTextEvent).content,
+			};
+			break;
+
+		case "agent:thinking":
+			eventType = "thinking";
+			payload = {
+				type: "thinking",
+				content: (event as import("../infra/unified-events/types.js").AgentThinkingEvent).content,
+			};
+			break;
+
+		case "agent:tool:start": {
+			eventType = "tool_call";
+			const toolStartEvent = event as import("../infra/unified-events/types.js").AgentToolStartEvent;
+			payload = {
+				type: "tool_call",
+				tool_name: toolStartEvent.toolName,
+				tool_input: toolStartEvent.input,
+			};
+			break;
+		}
+
+		case "agent:tool:complete": {
+			eventType = "tool_result";
+			const toolCompleteEvent = event as import("../infra/unified-events/types.js").AgentToolCompleteEvent;
+			payload = {
+				type: "tool_result",
+				tool_name: toolCompleteEvent.toolName || "unknown",
+				result: toolCompleteEvent.result,
+				error: toolCompleteEvent.isError ? "Tool execution error" : undefined,
+			};
+			break;
+		}
+
+		case "agent:complete":
+			eventType = "completion";
+			payload = {
+				type: "completion",
+				summary: undefined,
+			};
+			break;
+
+		default:
+			// Ignore other event types (harness, phase, task, etc.)
+			return null;
+	}
+
 	return {
-		event_type: mapEventType(event.event_type),
+		event_type: eventType,
 		agent_name: agentName,
 		session_id: sessionId,
 		timestamp: Date.now(),
-		payload: mapPayload(event),
+		payload,
 	};
-}
-
-/**
- * Map SDK event type to monologue event type.
- */
-function mapEventType(sdkType: string): import("./types.js").AgentEventType {
-	const typeMap: Record<string, import("./types.js").AgentEventType> = {
-		tool_call: "tool_call",
-		tool_result: "tool_result",
-		text: "text",
-		thinking: "thinking",
-		result: "completion",
-		// Note: SDK uses "result" for completion, not "stop"
-	};
-	return typeMap[sdkType] ?? "text";
-}
-
-/**
- * Map SDK event to monologue payload.
- */
-function mapPayload(event: AgentEvent): import("./types.js").AgentEventPayload {
-	switch (event.event_type) {
-		case "tool_call":
-			return {
-				type: "tool_call",
-				tool_name: event.tool_name ?? "unknown",
-				tool_input: event.tool_input,
-			};
-		case "tool_result":
-			return {
-				type: "tool_result",
-				tool_name: event.tool_name ?? "unknown",
-				result: event.tool_result, // SDK uses tool_result, not result
-				error: event.is_error ? "Tool execution error" : undefined, // Convert boolean to string
-			};
-		case "thinking":
-			return {
-				type: "thinking",
-				content: event.content ?? "",
-			};
-		case "result":
-			return {
-				type: "completion",
-				summary: event.content ?? undefined, // Convert null to undefined
-			};
-		default:
-			return {
-				type: "text",
-				content: event.content ?? "",
-			};
-	}
 }

@@ -9,8 +9,6 @@ export type {
 	IAgentCallbacks,
 	NarrativeConfig,
 	ProgressEvent,
-	// Legacy compatibility
-	StreamCallbacks,
 	TokenUsage,
 	ToolCallEvent,
 	ToolResultEvent,
