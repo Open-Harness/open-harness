@@ -20,36 +20,7 @@
  *
  * @module provider
  */
-
-// Event mapper (provider-specific)
 export { AnthropicEventMapper } from "./anthropic-event-mapper.js";
-// Factory function
-export {
-	defineAnthropicAgent,
-	registerAnthropicProvider,
-	resetFactoryContainer,
-	setFactoryContainer,
-} from "./factory.js";
-// Prompt template factory
+export { defineAnthropicAgent, resetFactoryContainer, setFactoryContainer } from "./factory.js";
 export { createPromptTemplate, createStaticPrompt } from "./prompt-template.js";
-
-// Type exports
-export type {
-	AgentHandle,
-	// Core types
-	AnthropicAgent,
-	AnthropicAgentDefinition,
-	// Preset types (for presets layer)
-	CodingInput,
-	CodingOutput,
-	ExecuteOptions,
-	ExtractVars,
-	PlannerInput,
-	PlannerOutput,
-	PlannerTask,
-	PromptTemplate,
-	ReviewInput,
-	ReviewIssue,
-	ReviewOutput,
-	StreamOptions,
-} from "./types.js";
+export type { AgentHandle, AnthropicAgent, AnthropicAgentDefinition, CodingInput, CodingOutput, ExecuteOptions, ExtractVars, PlannerInput, PlannerOutput, PlannerTask, PromptTemplate, ReviewInput, ReviewIssue, ReviewOutput, StreamOptions, } from "./types.js";

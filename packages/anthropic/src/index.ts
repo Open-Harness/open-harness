@@ -62,6 +62,8 @@ export {
 	createStaticPrompt,
 	// Factory function
 	defineAnthropicAgent,
+	// Provider registration
+	registerAnthropicProvider,
 	// Container utilities (for testing)
 	resetFactoryContainer,
 	setFactoryContainer,
