@@ -3,52 +3,74 @@
  *
  * Anthropic/Claude provider implementation for the Open Harness SDK.
  *
- * This package contains all Anthropic-specific code:
- * - AnthropicRunner: LLM execution via Claude Agent SDK
- * - Agents: CodingAgent, ReviewAgent, ParserAgent, etc.
- * - Recording: Replay and recording system for testing
+ * ## Factory API
+ *
+ * Use `defineAnthropicAgent()` to create custom agents:
+ *
+ * ```typescript
+ * import { defineAnthropicAgent, createPromptTemplate } from "@openharness/anthropic";
+ * import { z } from "zod";
+ *
+ * const MyAgent = defineAnthropicAgent({
+ *   name: "MyAgent",
+ *   prompt: createPromptTemplate("Task: {{task}}"),
+ *   inputSchema: z.object({ task: z.string() }),
+ *   outputSchema: z.object({ result: z.string() }),
+ * });
+ *
+ * const result = await MyAgent.execute({ task: "Hello" });
+ * ```
+ *
+ * ## Preset Agents
+ *
+ * Pre-built agents available from `@openharness/anthropic/presets`:
+ * - `CodingAgent` - Code generation and implementation
+ * - `ReviewAgent` - Code review and validation
+ * - `PlannerAgent` - Planning and task breakdown
  *
  * @module @openharness/anthropic
  */
 
 // ============================================================================
-// Agents
+// Factory API
 // ============================================================================
 
-export {
-	type AgentRunOptions,
-	BaseAnthropicAgent,
-	CodingAgent,
-	type CodingAgentOptions,
-	ParserAgent,
-	PlannerAgent,
-	type PlannerAgentOptions,
-	type PlannerResult,
-	ReviewAgent,
-	type ReviewAgentOptions,
-	type ReviewResult,
-	type Ticket,
-	ValidationReviewAgent,
-	type ValidationReviewAgentOptions,
-} from "./agents/index.js";
-
-// Agent types (re-export for convenience)
+// Factory API Types
 export type {
-	AgentDefinition,
-	AgentEvent as AnthropicAgentEvent,
-	IAgent,
-	IAgentRunner as IAnthropicAgentRunner,
-	RunArgs as AnthropicRunArgs,
-	RunnerCallbacks as AnthropicRunnerCallbacks,
-	RunnerOptions as AnthropicRunnerOptions,
-} from "./agents/types.js";
+	AgentHandle,
+	AnthropicAgent,
+	AnthropicAgentDefinition,
+	// Preset types
+	CodingInput,
+	CodingOutput,
+	ExecuteOptions,
+	ExtractVars,
+	PlannerInput,
+	PlannerOutput,
+	PlannerTask,
+	PromptTemplate,
+	ReviewInput,
+	ReviewIssue,
+	ReviewOutput,
+	StreamOptions,
+} from "./provider/index.js";
+export {
+	// Prompt template factory
+	createPromptTemplate,
+	createStaticPrompt,
+	// Factory function
+	defineAnthropicAgent,
+	// Container utilities (for testing)
+	resetFactoryContainer,
+	setFactoryContainer,
+} from "./provider/index.js";
 
 // ============================================================================
 // Runner
 // ============================================================================
 
-export { AnthropicRunner } from "./runner/anthropic-runner.js";
-export { mapSdkMessageToEvents, mapSdkMessageToUnifiedEvents } from "./runner/event-mapper.js";
+export { AnthropicRunner } from "./infra/runner/anthropic-runner.js";
+export { mapSdkMessageToEvents, mapSdkMessageToUnifiedEvents } from "./infra/runner/event-mapper.js";
 export {
 	type AgentEvent,
 	type CodingResult,
@@ -61,27 +83,31 @@ export {
 	type SessionResult,
 	type StatusData,
 	zodToSdkSchema,
-} from "./runner/models.js";
-export { PromptRegistry } from "./runner/prompts.js";
+} from "./infra/runner/models.js";
 
 // ============================================================================
 // Recording
 // ============================================================================
 
-export { ReplayRunner } from "./recording/replay-runner.js";
-export { Recorder, RecordingFactory } from "./recording/recording-factory.js";
-export { Vault } from "./recording/vault.js";
-export { Record, setDecoratorContainer, setRecordingFactoryToken, type IContainer } from "./recording/decorators.js";
+export {
+	type IContainer,
+	Record,
+	setDecoratorContainer,
+	setRecordingFactoryToken,
+} from "./infra/recording/decorators.js";
+export { Recorder, RecordingFactory } from "./infra/recording/recording-factory.js";
+export { ReplayRunner } from "./infra/recording/replay-runner.js";
 export type {
 	IRecorder,
 	IRecordingFactory,
 	IVault,
 	IVaultSession,
 	RecordedSession,
-} from "./recording/types.js";
+} from "./infra/recording/types.js";
+export { Vault } from "./infra/recording/vault.js";
 
 // ============================================================================
 // Monologue
 // ============================================================================
 
-export { AnthropicMonologueLLM } from "./monologue/anthropic-llm.js";
+export { AnthropicMonologueLLM } from "./infra/monologue/anthropic-llm.js";

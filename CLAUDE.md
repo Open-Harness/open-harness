@@ -12,6 +12,7 @@ The `.knowledge/` folder is an Obsidian vault containing:
 
 Read `.knowledge/private/PITCH.md` for business context and investor narrative.
 Read `.knowledge/docs/why.md` for developer philosophy.
+Read `.knowledge/docs/how-it-works.md` for architecture and code examples.
 
 ## Active Technologies
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, listr2 (optional peer) (003-harness-renderer)

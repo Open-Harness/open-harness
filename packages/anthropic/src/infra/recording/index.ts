@@ -8,13 +8,11 @@
  * - @Record: Decorator for automatic recording
  */
 
-// Types
-export type { IRecorder, IRecordingFactory, IVault, IVaultSession, RecordedSession } from "./types.js";
-
+// Decorators
+export { type IContainer, Record, setDecoratorContainer, setRecordingFactoryToken } from "./decorators.js";
+export { Recorder, RecordingFactory } from "./recording-factory.js";
 // Classes
 export { ReplayRunner } from "./replay-runner.js";
-export { Recorder, RecordingFactory } from "./recording-factory.js";
+// Types
+export type { IRecorder, IRecordingFactory, IVault, IVaultSession, RecordedSession } from "./types.js";
 export { Vault } from "./vault.js";
-
-// Decorators
-export { Record, setDecoratorContainer, setRecordingFactoryToken, type IContainer } from "./decorators.js";

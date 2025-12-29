@@ -3,14 +3,28 @@
  *
  * Reads from recorded .jsonl files and fires callbacks as if live.
  * No async generators - pure Promise + callbacks.
+ *
+ * Node.js compatible - uses fs/promises instead of Bun APIs.
  */
 
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
-import type { IAgentRunner, IConfig, RunnerCallbacks } from "@openharness/sdk";
+import type { GenericMessage, IAgentRunner, RunnerCallbacks } from "@openharness/sdk";
 import { IConfigToken } from "@openharness/sdk";
 import type { RecordedSession } from "./types.js";
+
+/**
+ * Check if a file exists and read it, or return null.
+ */
+async function tryReadFile(path: string): Promise<string | null> {
+	try {
+		return await readFile(path, "utf-8");
+	} catch {
+		return null;
+	}
+}
 
 @injectable()
 export class ReplayRunner implements IAgentRunner {
@@ -30,7 +44,7 @@ export class ReplayRunner implements IAgentRunner {
 		prompt: string;
 		options: Options & { scenarioId?: string };
 		callbacks?: RunnerCallbacks;
-	}): Promise<SDKMessage | undefined> {
+	}): Promise<GenericMessage | undefined> {
 		const { prompt, options, callbacks } = args;
 		const scenarioId = options.scenarioId ?? this.currentScenarioId;
 
@@ -44,11 +58,10 @@ export class ReplayRunner implements IAgentRunner {
 			join(this.config.recordingsDir, "agents", `${scenarioId}.jsonl`),
 		];
 
-		let content = "";
+		let content: string | null = null;
 		for (const p of possiblePaths) {
-			const file = Bun.file(p);
-			if (await file.exists()) {
-				content = await file.text();
+			content = await tryReadFile(p);
+			if (content) {
 				break;
 			}
 		}
@@ -79,7 +92,7 @@ export class ReplayRunner implements IAgentRunner {
 		}
 
 		// Replay messages via callbacks
-		let lastMessage: SDKMessage | undefined;
+		let lastMessage: GenericMessage | undefined;
 		for (const message of session.messages) {
 			lastMessage = message;
 			if (callbacks?.onMessage) {

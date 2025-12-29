@@ -77,8 +77,7 @@ export { TaskList } from "./workflow/task-list.js";
 // TYPES
 // ============================================
 
-// Runner Callbacks
-export type { RunnerCallbacks } from "./infra/tokens.js";
+// Workflow Types
 export type { Task, TaskStatus } from "./workflow/task-list.js";
 
 // ============================================
@@ -92,6 +91,8 @@ export { createContainer, createTestContainer } from "./infra/container.js";
 export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./infra/event-bus.js";
 // Token Interfaces
 export type {
+	GenericMessage,
+	GenericRunnerOptions,
 	IAgentRunner,
 	IConfig,
 	IEventBus,
@@ -101,6 +102,7 @@ export type {
 	IPromptRegistry,
 	IRecordingDecorator,
 	IVault,
+	RunnerCallbacks,
 } from "./infra/tokens.js";
 // DI Tokens
 export {
