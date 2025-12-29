@@ -11,7 +11,10 @@
 		"types": ["bun-types"],
 		"baseUrl": ".",
 		"paths": {
-			"@openharness/sdk": ["node_modules/@openharness/sdk/src/index.ts"]
+			"@openharness/sdk": ["../../packages/sdk/src/index.ts"],
+			"@openharness/anthropic": ["../../packages/anthropic/src/index.ts"],
+			"@openharness/anthropic/presets": ["../../packages/anthropic/src/presets/index.ts"],
+			"@openharness/anthropic/provider": ["../../packages/anthropic/src/provider/index.ts"]
 		}
 	},
 	"include": ["src/**/*.ts"],

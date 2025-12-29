@@ -10,17 +10,25 @@
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
+		"./presets": {
+			"import": "./dist/presets/index.js",
+			"types": "./dist/presets/index.d.ts"
+		},
+		"./provider": {
+			"import": "./dist/provider/index.js",
+			"types": "./dist/provider/index.d.ts"
+		},
 		"./agents": {
 			"import": "./dist/agents/index.js",
 			"types": "./dist/agents/index.d.ts"
 		},
 		"./runner": {
-			"import": "./dist/runner/index.js",
-			"types": "./dist/runner/index.d.ts"
+			"import": "./dist/infra/runner/index.js",
+			"types": "./dist/infra/runner/index.d.ts"
 		},
 		"./recording": {
-			"import": "./dist/recording/index.js",
-			"types": "./dist/recording/index.d.ts"
+			"import": "./dist/infra/recording/index.js",
+			"types": "./dist/infra/recording/index.d.ts"
 		}
 	},
 	"scripts": {
