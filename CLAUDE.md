@@ -10,6 +10,8 @@ Auto-generated from all feature plans. Last updated: 2025-12-25
 - TypeScript 5.x (strict mode) + @anthropic-ai/sdk (NEW), @needle-di/core, zod (005-monologue-system)
 - N/A (in-memory buffer, history ephemeral per-session) (005-monologue-system)
 - N/A (state in memory) (007-fluent-harness-dx)
+- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, node:async_hooks (AsyncLocalStorage) (008-unified-event-system)
+- N/A (in-memory event bus, no persistence) (008-unified-event-system)
 
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod (002-sdk-validation)
 
@@ -35,9 +37,9 @@ bun run lint        # Linting
 TypeScript 5.x (strict mode): Follow standard conventions
 
 ## Recent Changes
+- 008-unified-event-system: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, node:async_hooks (AsyncLocalStorage)
 - 007-fluent-harness-dx: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod
 - 005-monologue-system: Added TypeScript 5.x (strict mode) + @anthropic-ai/sdk (NEW), @needle-di/core, zod
-- 004-test-infra-audit: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, bun:tes
 
 
 <!-- MANUAL ADDITIONS START -->
