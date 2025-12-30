@@ -2,7 +2,6 @@
 // See docs/reference/protocol-types.md for authoritative definitions
 
 import type { BaseEvent, EnrichedEvent } from "./events.js";
-import type { Attachment } from "./harness.js";
 import type { Hub } from "./hub.js";
 
 export interface ChannelContext<TState> {

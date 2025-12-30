@@ -8,6 +8,7 @@
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "types": [],
+    "lib": ["ES2022"],
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts"]

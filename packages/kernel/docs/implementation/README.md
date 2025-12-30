@@ -1,0 +1,40 @@
+# Implementation Guide
+
+This section defines how to **compile the canonical spec into working code**.
+
+## The Rule
+
+**Docs are canonical; code must conform.**
+
+The spec (`docs/spec/`, `docs/flow/`) defines what the system does. The implementation (`src/`) must match the spec exactly. Conformance tests prove this.
+
+## Workflow
+
+```
+Spec → Conformance → Code
+```
+
+1. **Spec** (`docs/spec/`, `docs/flow/`) - What the system does
+2. **Conformance** (`docs/implementation/conformance.md`) - How to prove code matches spec
+3. **Code** (`src/`) - Implementation that passes conformance tests
+
+## Documentation
+
+- [Roadmap](roadmap.md) - Milestone ordering + done criteria + authoritative scripts
+- [Conformance](conformance.md) - Test tiers, fixture policy, behavioral gates
+- [Traceability](traceability.md) - Spec → test-spec → tests → live scripts mapping
+
+## Key Principles
+
+1. **Conformance-first**: Every milestone must pass conformance gates before advancing
+2. **Vertical slices**: Each milestone delivers a working end-to-end feature
+3. **Authoritative scripts**: Every milestone has a "prove it works" script
+4. **No spec drift**: Code changes must either update docs or prove conformance
+
+## Getting Started
+
+1. Read the [Roadmap](roadmap.md) to understand milestone ordering
+2. Read [Conformance](conformance.md) to understand test requirements
+3. Check [Traceability](traceability.md) to see what's implemented vs interface-only
+4. Start with Milestone 0 (conformance scaffolding)
+5. Proceed milestone-by-milestone, only advancing when gates pass

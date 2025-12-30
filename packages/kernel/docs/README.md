@@ -95,6 +95,15 @@ flowchart TB
 - [Validation Guide](testing/validation.md) - Multi-layer validation strategy and checklists
 - [Workflow Guide](testing/workflow.md) - Step-by-step testing workflow
 
+### Implementation
+
+- [Implementation Overview](implementation/README.md) - How to compile spec into code
+- [Roadmap](implementation/roadmap.md) - Milestone ordering + done criteria + authoritative scripts
+- [Conformance](implementation/conformance.md) - Test tiers, fixture policy, behavioral gates
+- [Traceability](implementation/traceability.md) - Spec → test-spec → tests → live scripts mapping
+
+**Workflow**: Spec → Conformance → Code
+
 ### Decisions
 
 - [0001-naming-flow-vs-workflow](decisions/0001-naming-flow-vs-workflow.md)
