@@ -3,8 +3,8 @@
 
 import type {
 	AgentDefinition,
-	ExecutableAgent,
 	AgentExecuteContext,
+	ExecutableAgent,
 } from "../protocol/agent.js";
 import type { BaseEvent, EnrichedEvent } from "../protocol/events.js";
 import type {
@@ -16,7 +16,7 @@ import type {
 	HarnessResult,
 	SessionContext,
 } from "../protocol/harness.js";
-import type { HubStatus, UserResponse } from "../protocol/hub.js";
+import type { UserResponse } from "../protocol/hub.js";
 import { HubImpl } from "./hub.js";
 
 /**
@@ -186,14 +186,22 @@ class SimpleInbox implements AgentInbox {
 
 	async pop(): Promise<{ content: string; timestamp: Date }> {
 		if (this.messages.length > 0) {
-			return this.messages.shift()!;
+			const message = this.messages.shift();
+			if (!message) {
+				throw new Error("Expected message to be available");
+			}
+			return message;
 		}
 		// Block until message available (simplified)
 		return new Promise((resolve) => {
 			const check = setInterval(() => {
 				if (this.messages.length > 0) {
 					clearInterval(check);
-					resolve(this.messages.shift()!);
+					const message = this.messages.shift();
+					if (!message) {
+						throw new Error("Expected message to be available");
+					}
+					resolve(message);
 				}
 			}, 10);
 		});
@@ -225,9 +233,10 @@ export class HarnessInstanceImpl<TState, TResult>
 	readonly state: TState;
 	private readonly attachments: Cleanup[] = [];
 	private readonly agentDefs: Record<string, AgentDefinition>;
-	private readonly runFn: (ctx: ExecuteContext<Record<string, AgentDefinition>, TState>) => Promise<TResult>;
+	private readonly runFn: (
+		ctx: ExecuteContext<Record<string, AgentDefinition>, TState>,
+	) => Promise<TResult>;
 	private readonly workflowName: string;
-	private readonly sessionId: string;
 	private _sessionContext: SessionContextImpl | null = null;
 	private readonly inboxes = new Map<string, SimpleInbox>();
 	private runIdCounter = 0;
@@ -237,11 +246,12 @@ export class HarnessInstanceImpl<TState, TResult>
 		sessionId: string,
 		state: TState,
 		agentDefs: Record<string, AgentDefinition>,
-		runFn: (ctx: ExecuteContext<Record<string, AgentDefinition>, TState>) => Promise<TResult>,
+		runFn: (
+			ctx: ExecuteContext<Record<string, AgentDefinition>, TState>,
+		) => Promise<TResult>,
 	) {
 		super(sessionId);
 		this.workflowName = workflowName;
-		this.sessionId = sessionId;
 		this.state = state;
 		this.agentDefs = agentDefs;
 		this.runFn = runFn;
@@ -266,10 +276,12 @@ export class HarnessInstanceImpl<TState, TResult>
 	}
 
 	private getInbox(runId: string): SimpleInbox {
-		if (!this.inboxes.has(runId)) {
-			this.inboxes.set(runId, new SimpleInbox());
+		let inbox = this.inboxes.get(runId);
+		if (!inbox) {
+			inbox = new SimpleInbox();
+			this.inboxes.set(runId, inbox);
 		}
-		return this.inboxes.get(runId)!;
+		return inbox;
 	}
 
 	async run(): Promise<HarnessResult<TState, TResult>> {
@@ -297,12 +309,20 @@ export class HarnessInstanceImpl<TState, TResult>
 			const agents = Object.fromEntries(
 				Object.entries(this.agentDefs).map(([key, def]) => [
 					key,
-					wrapAgent(def, this, () => this.getRunId(), (runId) => this.getInbox(runId)),
+					wrapAgent(
+						def,
+						this,
+						() => this.getRunId(),
+						(runId) => this.getInbox(runId),
+					),
 				]),
 			) as ExecuteContext<Record<string, AgentDefinition>, TState>["agents"];
 
 			// Create phase helper
-			const phase = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+			const phase = async <T>(
+				name: string,
+				fn: () => Promise<T>,
+			): Promise<T> => {
 				this.emit({
 					type: "phase:start",
 					name,
@@ -438,14 +458,17 @@ export function defineHarness<
 			input: TInput,
 			options?: { sessionIdOverride?: string },
 		): HarnessInstance<TState, TResult> {
-			const sessionId = options?.sessionIdOverride ?? `${config.name}-${Date.now()}`;
+			const sessionId =
+				options?.sessionIdOverride ?? `${config.name}-${Date.now()}`;
 			const state = config.state(input);
 			const instance = new HarnessInstanceImpl(
 				config.name,
 				sessionId,
 				state,
 				config.agents as Record<string, AgentDefinition>,
-				config.run as (ctx: ExecuteContext<Record<string, AgentDefinition>, TState>) => Promise<TResult>,
+				config.run as (
+					ctx: ExecuteContext<Record<string, AgentDefinition>, TState>,
+				) => Promise<TResult>,
 			);
 			return instance;
 		},

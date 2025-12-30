@@ -2,8 +2,15 @@
 // Executes fixture steps against a Harness instance and collects observations
 
 import { defineHarness } from "../../src/engine/harness.js";
-import type { BaseEvent, EnrichedEvent, EventContext } from "../../src/protocol/events.js";
-import type { Attachment, HarnessInstance } from "../../src/protocol/harness.js";
+import type {
+	BaseEvent,
+	EnrichedEvent,
+	EventContext,
+} from "../../src/protocol/events.js";
+import type {
+	Attachment,
+	HarnessInstance,
+} from "../../src/protocol/harness.js";
 import type { HubStatus } from "../../src/protocol/hub.js";
 import type { HarnessFixture } from "./fixture-loader.js";
 
@@ -139,7 +146,9 @@ export async function runHarnessFixture(
 
 				case "attach": {
 					if (!harnessInstance) {
-						throw new Error("attach step requires harness instance (create first)");
+						throw new Error(
+							"attach step requires harness instance (create first)",
+						);
 					}
 
 					const attachment: Attachment = (hub) => {
@@ -199,7 +208,9 @@ export async function runHarnessFixture(
 
 				case "emit": {
 					if (!harnessInstance || !step.event) {
-						throw new Error("emit step requires harness instance and event field");
+						throw new Error(
+							"emit step requires harness instance and event field",
+						);
 					}
 					harnessInstance.emit(step.event as BaseEvent);
 					break;
@@ -240,9 +251,7 @@ export async function runHarnessFixture(
 /**
  * Normalize events for deterministic comparison.
  */
-export function normalizeHarnessEvents(
-	events: EnrichedEvent[],
-): Array<{
+export function normalizeHarnessEvents(events: EnrichedEvent[]): Array<{
 	event: unknown;
 	context: EventContext;
 }> {

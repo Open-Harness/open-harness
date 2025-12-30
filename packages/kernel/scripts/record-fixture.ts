@@ -14,11 +14,18 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHub, type HubImpl } from "../src/engine/hub.js";
 import { defineHarness } from "../src/engine/harness.js";
+import { createHub, type HubImpl } from "../src/engine/hub.js";
 import type { EnrichedEvent } from "../src/protocol/events.js";
-import type { Attachment, HarnessFactory, HarnessInstance } from "../src/protocol/harness.js";
-import type { HubFixture, HarnessFixture } from "../tests/helpers/fixture-loader.js";
+import type {
+	Attachment,
+	HarnessFactory,
+	HarnessInstance,
+} from "../src/protocol/harness.js";
+import type {
+	HarnessFixture,
+	HubFixture,
+} from "../tests/helpers/fixture-loader.js";
 
 const [component, fixtureName] = process.argv.slice(2);
 
@@ -34,12 +41,14 @@ function createHarnessWithSessionId<TInput, TState, TResult>(
 	input: TInput,
 	sessionId: string,
 ): HarnessInstance<TState, TResult> {
-	return (factory as HarnessFactory<TInput, TState, TResult> & {
-		create(
-			input: TInput,
-			options?: { sessionIdOverride?: string },
-		): HarnessInstance<TState, TResult>;
-	}).create(input, { sessionIdOverride: sessionId });
+	return (
+		factory as HarnessFactory<TInput, TState, TResult> & {
+			create(
+				input: TInput,
+				options?: { sessionIdOverride?: string },
+			): HarnessInstance<TState, TResult>;
+		}
+	).create(input, { sessionIdOverride: sessionId });
 }
 
 // Define Hub scenarios
@@ -321,7 +330,6 @@ const hubScenarios: Record<string, () => Promise<HubFixture>> = {
 		const afterStartSessionActive = hub.sessionActive;
 
 		(hub as HubImpl).setStatus("running");
-		const afterSetStatus = hub.status;
 
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -408,16 +416,10 @@ const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
 			run: async () => ({ ok: true }),
 		});
 
-		const instance = createHarnessWithSessionId(
-			harnessFactory,
-			{},
-			sessionId,
-		);
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
 		const received: EnrichedEvent[] = [];
-		let attachmentReceivedHub = false;
 
 		const attachment: Attachment = (hub) => {
-			attachmentReceivedHub = true;
 			return hub.subscribe("*", (event) => {
 				received.push(event);
 			});
@@ -471,11 +473,7 @@ const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
 			},
 		});
 
-		const instance = createHarnessWithSessionId(
-			harnessFactory,
-			{},
-			sessionId,
-		);
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
 		const received: EnrichedEvent[] = [];
 
 		instance.subscribe("*", (event) => {
@@ -530,11 +528,7 @@ const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
 			run: async () => ({ result: "success" }),
 		});
 
-		const instance = createHarnessWithSessionId(
-			harnessFactory,
-			{},
-			sessionId,
-		);
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
 		const received: EnrichedEvent[] = [];
 
 		instance.subscribe("*", (event) => {
@@ -568,7 +562,8 @@ const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
 			metadata: {
 				recordedAt: new Date().toISOString(),
 				component: "harness",
-				description: "run executes and returns HarnessResult with lifecycle events",
+				description:
+					"run executes and returns HarnessResult with lifecycle events",
 			},
 		};
 	},
@@ -590,11 +585,7 @@ const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
 			},
 		});
 
-		const instance = createHarnessWithSessionId(
-			harnessFactory,
-			{},
-			sessionId,
-		);
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
 		const received: EnrichedEvent[] = [];
 
 		instance.subscribe("*", (event) => {
