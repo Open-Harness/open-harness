@@ -1,0 +1,313 @@
+# SDK Consolidation Issues List
+# Generated from 6 parallel discovery agents
+# Date: 2025-12-28
+
+issues:
+
+  # ==========================================================================
+  # DUPLICATE SYSTEMS
+  # ==========================================================================
+
+  - id: ISSUE-001
+    category: duplicate
+    severity: critical
+    title: "THREE event type systems"
+    location: "src/harness/{event-protocol.ts,event-types.ts,event-context.ts}"
+    problem: |
+      - event-protocol.ts: HarnessEvent (legacy, for IHarnessRenderer)
+      - event-types.ts: FluentHarnessEvent (fluent API)
+      - event-context.ts: BaseEvent (unified bus - KEEP THIS)
+    action: consolidate
+    target: "Keep event-context.ts BaseEvent as canonical"
+    breaking: true
+
+  - id: ISSUE-002
+    category: duplicate
+    severity: critical
+    title: "FOUR renderer patterns"
+    location: "src/harness/{base-renderer,console-renderer,define-renderer,composite-renderer}.ts"
+    problem: |
+      1. IHarnessRenderer + BaseHarnessRenderer + ConsoleRenderer (legacy)
+      2. IUnifiedRenderer + defineRenderer() (new, KEEP)
+      3. CompositeRenderer (legacy multiplexer)
+      4. Plain Attachment functions
+    action: consolidate
+    target: "Keep defineRenderer() pattern, delete legacy renderers"
+    breaking: true
+
+  - id: ISSUE-003
+    category: duplicate
+    severity: high
+    title: "FIVE harness classes"
+    location: "src/harness/{base-harness,agent,task-harness,harness-instance}.ts"
+    problem: |
+      - BaseHarness: abstract, ZERO usages
+      - Agent: wrapper, replaced by defineHarness
+      - TaskHarness: domain-specific, KEEP
+      - HarnessInstance: fluent API, KEEP
+    action: delete
+    target: "Delete BaseHarness and Agent"
+    breaking: false
+
+  # ==========================================================================
+  # TYPE CONFLICTS
+  # ==========================================================================
+
+  - id: ISSUE-004
+    category: conflict
+    severity: critical
+    title: "NarrativeEvent defined 3 times"
+    locations:
+      - "src/harness/event-types.ts: {agent, text, timestamp}"
+      - "src/harness/event-context.ts: {text, importance}"
+      - "src/monologue/types.ts: {agentName, taskId, metadata}"
+    action: consolidate
+    target: "Single NarrativeEvent with optional fields"
+    breaking: true
+
+  - id: ISSUE-005
+    category: conflict
+    severity: high
+    title: "SessionPromptEvent defined 2 times"
+    locations:
+      - "src/harness/event-types.ts: has timestamp: Date"
+      - "src/harness/event-context.ts: no timestamp"
+    action: consolidate
+    target: "Keep event-context.ts version"
+    breaking: true
+
+  - id: ISSUE-006
+    category: conflict
+    severity: high
+    title: "RendererConfig defined 2 times"
+    locations:
+      - "src/harness/renderer-interface.ts: mode, sessionId, replaySpeed"
+      - "src/harness/define-renderer.ts: colors, unicode, verbosity"
+    action: rename
+    target: "Rename to HarnessRendererConfig vs DisplayConfig"
+    breaking: true
+
+  - id: ISSUE-007
+    category: conflict
+    severity: medium
+    title: "NarrativeEntry defined 4 times"
+    locations:
+      - "src/harness/task-harness-types.ts"
+      - "src/harness/event-protocol.ts"
+      - "src/monologue/types.ts"
+      - "src/core/tokens.ts (INarrativeEntry)"
+    action: consolidate
+    target: "Keep task-harness-types.ts version"
+    breaking: true
+
+  # ==========================================================================
+  # ORPHAN CODE
+  # ==========================================================================
+
+  - id: ISSUE-008
+    category: orphan
+    severity: high
+    title: "BaseHarness unused"
+    location: "src/harness/base-harness.ts"
+    problem: "Abstract class with 0 subclasses, 0 imports, 0 tests"
+    action: delete
+    breaking: false
+
+  - id: ISSUE-009
+    category: orphan
+    severity: high
+    title: "Agent class unused"
+    location: "src/harness/agent.ts"
+    problem: "Replaced by defineHarness + wrapAgent"
+    action: delete
+    breaking: false
+
+  - id: ISSUE-010
+    category: orphan
+    severity: high
+    title: "CompositeRenderer unused"
+    location: "src/harness/composite-renderer.ts"
+    problem: "Replaced by multiple .attach() calls"
+    action: delete
+    breaking: false
+
+  - id: ISSUE-011
+    category: orphan
+    severity: low
+    title: "Empty dashboard directory"
+    location: "src/dashboard/"
+    problem: "0 files in 3 subdirectories"
+    action: delete
+    breaking: false
+
+  # ==========================================================================
+  # NAMING ISSUES
+  # ==========================================================================
+
+  - id: ISSUE-012
+    category: naming
+    severity: critical
+    title: "Transport interface should be EventHub"
+    location: "src/core/unified-events/types.ts"
+    problem: "Transport implies one-way, but it's bidirectional"
+    action: rename
+    target: "Transport → EventHub"
+    breaking: true
+
+  - id: ISSUE-013
+    category: naming
+    severity: critical
+    title: "Attachment should be Transport"
+    location: "src/core/unified-events/types.ts"
+    problem: "Following Pino model, transports carry to destinations"
+    action: rename
+    target: "Attachment → Transport"
+    breaking: true
+
+  - id: ISSUE-014
+    category: naming
+    severity: high
+    title: "toAttachment should be toTransport"
+    location: "src/harness/define-renderer.ts"
+    problem: "Consistent with Attachment → Transport rename"
+    action: rename
+    target: "toAttachment() → toTransport()"
+    breaking: true
+
+  - id: ISSUE-015
+    category: naming
+    severity: medium
+    title: "defineRenderer should be defineTransport"
+    location: "src/harness/define-renderer.ts"
+    problem: "Not just renderers need state - any transport can"
+    action: rename
+    target: "defineRenderer() → defineTransport()"
+    breaking: true
+
+  # ==========================================================================
+  # STRUCTURE ISSUES
+  # ==========================================================================
+
+  - id: ISSUE-016
+    category: structure
+    severity: high
+    title: "harness/ directory overcrowded"
+    location: "src/harness/ (26 files)"
+    problem: "6+ concerns in one folder: events, rendering, state, utils, recording"
+    action: reorganize
+    target: "Split into events/, transports/, recording/, utils/"
+    breaking: false
+
+  - id: ISSUE-017
+    category: structure
+    severity: medium
+    title: "Event types in wrong place"
+    location: "src/harness/event-context.ts"
+    problem: "Events are cross-cutting, not harness-specific"
+    action: move
+    target: "src/events/types.ts"
+    breaking: false
+
+  - id: ISSUE-018
+    category: structure
+    severity: medium
+    title: "Utilities mixed with harness code"
+    locations:
+      - "src/harness/async-queue.ts"
+      - "src/harness/backoff.ts"
+      - "src/harness/dependency-resolver.ts"
+    problem: "Generic utilities not harness-specific"
+    action: move
+    target: "src/utils/"
+    breaking: false
+
+  # ==========================================================================
+  # TEST QUALITY
+  # ==========================================================================
+
+  - id: ISSUE-019
+    category: test-quality
+    severity: high
+    title: "45 flaky setTimeout patterns"
+    locations:
+      - "tests/unit/transport.test.ts (12)"
+      - "tests/replay/interactive-session.test.ts (6)"
+      - "tests/unit/harness/control-flow.test.ts (6)"
+    problem: "Timing-dependent tests cause CI flakiness"
+    action: fix
+    target: "Replace with event-based coordination"
+    breaking: false
+
+  - id: ISSUE-020
+    category: test-quality
+    severity: medium
+    title: "4 Math.random() in tests"
+    location: "tests/integration/unified-events.test.ts"
+    problem: "Non-deterministic test behavior"
+    action: fix
+    target: "Use fixed delays or seeded random"
+    breaking: false
+
+  - id: ISSUE-021
+    category: test-quality
+    severity: high
+    title: "38% test coverage"
+    problem: "42 of 68 source files lack direct tests"
+    high_priority_untested:
+      - "src/core/replay-runner.ts"
+      - "src/harness/replay-controller.ts"
+      - "src/harness/harness-recorder.ts"
+      - "src/providers/anthropic/agents/*.ts"
+    action: add-tests
+    breaking: false
+
+  # ==========================================================================
+  # DOCUMENTATION
+  # ==========================================================================
+
+  - id: ISSUE-022
+    category: documentation
+    severity: high
+    title: "0 README files in src/"
+    problem: "No folder-level documentation anywhere"
+    folders_needing_readme:
+      - "src/ (architecture overview)"
+      - "src/harness/ (event systems guide)"
+      - "src/core/ (DI container)"
+      - "src/factory/ (API levels)"
+    action: document
+    breaking: false
+
+  - id: ISSUE-023
+    category: documentation
+    severity: high
+    title: "Undocumented critical concepts"
+    concepts:
+      - "Event Systems (3 different systems)"
+      - "API Levels (wrapAgent vs defineHarness)"
+      - "Transport Architecture"
+      - "Session Mode (HITL workflows)"
+    action: document
+    breaking: false
+
+# ==========================================================================
+# SUMMARY
+# ==========================================================================
+
+summary:
+  total_issues: 23
+  by_category:
+    duplicate: 3
+    conflict: 4
+    orphan: 4
+    naming: 4
+    structure: 3
+    test-quality: 3
+    documentation: 2
+  by_severity:
+    critical: 6
+    high: 11
+    medium: 4
+    low: 2
+  breaking_changes: 10
+  safe_deletions: 4
