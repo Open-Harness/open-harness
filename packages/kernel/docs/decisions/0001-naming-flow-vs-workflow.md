@@ -1,0 +1,36 @@
+# Decision 0001: Naming Flow vs Workflow
+
+## Status
+
+Accepted
+
+## Context
+
+The term "workflow" is overloaded:
+- It can mean "a harness run" (kernel concept)
+- It can mean "a YAML DAG definition" (flow layer concept)
+- It's used in product marketing contexts
+
+This creates confusion when discussing the system.
+
+## Decision
+
+Use **Flow** for the YAML DAG concept:
+- **FlowSpec**: YAML definition of a DAG
+- **FlowRun**: one execution of a FlowSpec
+- **FlowYaml**: the parsed YAML structure
+
+Keep **workflow** only for:
+- Legacy references (when discussing the old spike)
+- Product marketing (if needed)
+
+## Consequences
+
+- YAML top-level key is `flow:` (not `workflow:`)
+- All canonical docs use "Flow" terminology
+- The kernel layer remains "Harness" (not "Workflow")
+
+## Alternatives considered
+
+- Keep "workflow" everywhere - rejected because it's too overloaded
+- Use "DAG" - rejected because it's too technical and doesn't convey the declarative nature
