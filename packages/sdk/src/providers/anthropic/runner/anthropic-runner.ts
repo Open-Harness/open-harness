@@ -37,8 +37,3 @@ export class AnthropicRunner implements IAgentRunner {
 		return lastMessage;
 	}
 }
-
-/**
- * @deprecated Use AnthropicRunner instead. This alias exists for migration.
- */
-export const LiveSDKRunner = AnthropicRunner;

@@ -179,11 +179,8 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 			if (this._shouldDeliver(event, subscription.type)) {
 				try {
 					subscription.handler(event);
-				} catch (error) {
-					// Event handler errors are non-critical (spec.md:151-155)
-					const message = error instanceof Error ? error.message : String(error);
-					const eventType = event.type;
-					console.error(`[HarnessWarning] ${this._name}: Event handler for "${eventType}" threw: ${message}`);
+				} catch (_error) {
+					// Event handler errors are non-critical (spec.md:151-155) - silently continue
 				}
 			}
 		}

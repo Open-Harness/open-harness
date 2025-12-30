@@ -47,6 +47,11 @@ export interface IAgentRunner {
 
 /**
  * @deprecated Use provider-specific tokens instead (IAnthropicRunnerToken, etc.)
+ *
+ * Migration guide:
+ * - Replace `inject(IAgentRunnerToken)` with `inject(IAnthropicRunnerToken)`
+ * - See docs/deprecation-schedule.md for full migration path
+ * Removal target: v1.0.0
  */
 export const IAgentRunnerToken = new InjectionToken<IAgentRunner>("IAgentRunner");
 
