@@ -1,5 +1,7 @@
 # Minimal Kernel: What “Unification” Means
 
+Back: [[DOCS-INDEX]]
+
 This spike intentionally collapses the system into **four primitives**:
 
 - **Harness**: orchestration + state + structured control flow

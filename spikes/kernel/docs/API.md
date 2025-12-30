@@ -2,6 +2,8 @@
 
 This is the minimal public contract we want to preserve while rebuilding internals.
 
+Back: [[DOCS-INDEX]]
+
 ## defineHarness
 
 ```ts

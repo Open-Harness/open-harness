@@ -1,5 +1,7 @@
 # Minimal Kernel Design
 
+Back: [[DOCS-INDEX]]
+
 ## Goal
 
 Define the **smallest possible** library that still expresses the OpenHarness idea:

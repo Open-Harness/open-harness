@@ -2,6 +2,8 @@
 
 The kernel only commits to a **small, stable** set of events. Everything else is an extension event.
 
+Back: [[DOCS-INDEX]]
+
 All events are delivered in the canonical envelope:
 
 ```ts
