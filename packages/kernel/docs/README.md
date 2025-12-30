@@ -101,6 +101,7 @@ flowchart TB
 - [Roadmap](implementation/roadmap.md) - Milestone ordering + done criteria + authoritative scripts
 - [Conformance](implementation/conformance.md) - Test tiers, fixture policy, behavioral gates
 - [Traceability](implementation/traceability.md) - Spec → test-spec → tests → live scripts mapping
+- [TAP Pattern](implementation/patterns/tap.md) - Temporal Accumulation Pattern (implementation pattern)
 
 **Workflow**: Spec → Conformance → Code
 
