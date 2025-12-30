@@ -1,1 +1,0 @@
-{"sessionId":"record-subscribe-basic","scenario":"subscribe-basic","steps":[{"type":"emit","event":{"type":"harness:start","name":"test"}}],"expect":{"events":[{"event":{"type":"harness:start","name":"test"},"context":{"sessionId":"record-subscribe-basic"}}]},"metadata":{"recordedAt":"2025-12-30T11:26:32.174Z","component":"hub","description":"Basic subscription scenario"}}
