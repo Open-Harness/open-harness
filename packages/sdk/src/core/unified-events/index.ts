@@ -20,17 +20,24 @@ export type {
 	AgentThinkingEvent,
 	AgentToolCompleteEvent,
 	AgentToolStartEvent,
+	// Transport types (010-transport-architecture)
+	Attachment,
 	BaseEvent,
 	// Base event types (FR-004)
 	BaseEventPayload,
+	Cleanup,
 	// Enriched event (FR-002)
 	EnrichedEvent,
 	// Context types (FR-003)
 	EventContext,
 	EventFilter,
+	EventListener,
 	ExtensionEvent,
 	HarnessCompleteEvent,
 	HarnessStartEvent,
+	InjectedMessage,
+	// Session context interface
+	ISessionContext,
 	// Event bus types (FR-001)
 	IUnifiedEventBus,
 	NarrativeEvent,
@@ -45,8 +52,13 @@ export type {
 	TaskContext,
 	TaskFailedEvent,
 	TaskStartEvent,
+	// Transport types
+	Transport,
+	TransportStatus,
 	UnifiedEventListener,
 	Unsubscribe,
+	UserResponse,
+	WaitOptions,
 } from "./types.js";
 
 // ============================================================================
@@ -54,3 +66,6 @@ export type {
 // ============================================================================
 
 export { matchesFilter } from "./filter.js";
+
+// Zod schemas for runtime validation
+export { isAgentEvent, isNarrativeEvent, isSessionEvent, isWorkflowEvent, UserResponseSchema } from "./types.js";

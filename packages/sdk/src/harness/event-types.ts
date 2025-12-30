@@ -15,7 +15,16 @@
  * All possible harness event types.
  * Use '*' for wildcard subscription to all events.
  */
-export type HarnessEventType = "phase" | "task" | "step" | "narrative" | "error" | "retry" | "parallel" | "*";
+export type HarnessEventType =
+	| "phase"
+	| "task"
+	| "step"
+	| "narrative"
+	| "error"
+	| "retry"
+	| "parallel"
+	| "session"
+	| "*";
 
 // ============================================================================
 // CORE EVENT INTERFACES
@@ -204,6 +213,50 @@ export interface ParallelCompleteEvent {
 export type ParallelEvent = ParallelStartEvent | ParallelItemCompleteEvent | ParallelCompleteEvent;
 
 // ============================================================================
+// SESSION EVENT INTERFACES (User Story 2)
+// ============================================================================
+
+/**
+ * Session prompt event - emitted when workflow calls waitForUser().
+ */
+export interface SessionPromptEvent {
+	type: "session:prompt";
+	promptId: string;
+	prompt: string;
+	choices?: string[];
+	timestamp: Date;
+}
+
+/**
+ * Session reply event - emitted when transport.reply() resolves a prompt.
+ */
+export interface SessionReplyEvent {
+	type: "session:reply";
+	promptId: string;
+	response: {
+		content: string;
+		choice?: string;
+		timestamp: Date;
+	};
+	timestamp: Date;
+}
+
+/**
+ * Session abort event - emitted when transport.abort() is called (T051).
+ */
+export interface SessionAbortEvent {
+	type: "session:abort";
+	/** Optional abort reason */
+	reason?: string;
+	timestamp: Date;
+}
+
+/**
+ * Union of all session events.
+ */
+export type SessionEvent = SessionPromptEvent | SessionReplyEvent | SessionAbortEvent;
+
+// ============================================================================
 // HARNESS EVENT UNION
 // ============================================================================
 
@@ -218,7 +271,8 @@ export type FluentHarnessEvent =
 	| NarrativeEvent
 	| ErrorEvent
 	| RetryEvent
-	| ParallelEvent;
+	| ParallelEvent
+	| SessionEvent;
 
 // ============================================================================
 // EVENT HANDLER TYPES
@@ -242,9 +296,11 @@ export type FluentEventHandler<E extends HarnessEventType> = E extends "phase"
 						? (event: RetryEvent) => void
 						: E extends "parallel"
 							? (event: ParallelEvent) => void
-							: E extends "*"
-								? (event: FluentHarnessEvent) => void
-								: never;
+							: E extends "session"
+								? (event: SessionEvent) => void
+								: E extends "*"
+									? (event: FluentHarnessEvent) => void
+									: never;
 
 // ============================================================================
 // STEP YIELD (GENERATOR ONLY)
@@ -297,6 +353,11 @@ export function isRetryEvent(event: FluentHarnessEvent): event is RetryEvent {
 /** Check if event is a parallel event */
 export function isParallelEvent(event: FluentHarnessEvent): event is ParallelEvent {
 	return typeof event.type === "string" && event.type.startsWith("parallel:");
+}
+
+/** Check if event is a session event */
+export function isSessionEvent(event: FluentHarnessEvent): event is SessionEvent {
+	return typeof event.type === "string" && event.type.startsWith("session:");
 }
 
 // ============================================================================
