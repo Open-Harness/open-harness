@@ -1,8 +1,14 @@
-# OpenHarness Minimal Kernel (Spike Bundle)
+# OpenHarness Minimal Kernel (Legacy Spike)
 
-This folder is a **copy/paste spike**: docs + types + tiny reference implementations for the smallest OpenHarness-style kernel.
+**⚠️ Legacy spike - canonical docs now live in `spikes/kernel-v2/`**
 
-Docs entrypoint: `docs/README.md`.
+This folder is kept as reference material. All canonical documentation and protocol definitions now live in:
+- **`spikes/kernel-v2/docs/README.md`** - canonical spec entrypoint
+- **`spikes/kernel-v2/src/protocol/`** - protocol types
+
+This legacy spike (`spikes/kernel/`) contains:
+- Original spike implementation (for reference)
+- Legacy docs (deprecated, see v2 for canonical)
 
 ## What this kernel includes (the irreducibles)
 

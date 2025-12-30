@@ -1,0 +1,14 @@
+{
+    "name": "spike-kernel-v2",
+    "module": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "dependencies": {},
+    "devDependencies": {
+        "@biomejs/biome": "2.3.10",
+        "@types/bun": "latest"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    }
+}

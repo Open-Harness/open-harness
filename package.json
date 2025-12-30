@@ -5,6 +5,7 @@
     "packages": [
       "apps/*",
       "packages/*",
+      "depricated/*",
       "examples/*",
       "spikes/*"
     ],
