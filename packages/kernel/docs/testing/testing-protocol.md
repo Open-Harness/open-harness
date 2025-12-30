@@ -74,12 +74,25 @@ Each fixture file contains one or more scenarios (one JSON object per line):
 {
   "sessionId": "record-1234567890",
   "scenario": "subscribe-basic",
-  "events": [
+  "steps": [
     {
+      "type": "emit",
       "event": { "type": "harness:start", "name": "test" },
       "contextOverride": null
     }
   ],
+  "expect": {
+    "events": [
+      {
+        "event": { "type": "harness:start", "name": "test" },
+        "context": {
+          "sessionId": "record-1234567890"
+        }
+      }
+    ],
+    "status": null,
+    "sessionActive": null
+  },
   "metadata": {
     "recordedAt": "2025-12-28T10:00:00Z",
     "component": "hub",
@@ -89,10 +102,86 @@ Each fixture file contains one or more scenarios (one JSON object per line):
 ```
 
 **Fields**:
-- `sessionId`: Unique session identifier
+- `sessionId`: Unique session identifier (used when creating Hub instance)
 - `scenario`: Scenario name (matches fixture filename)
-- `events`: Array of event data (event payload + optional context override)
+- `steps`: Array of execution steps (see Step Types below)
+- `expect`: Expected outcomes for deterministic assertions (see Expectations below)
 - `metadata`: Recording metadata (optional but recommended)
+
+**Step Types**:
+
+Each step in the `steps` array has a `type` field indicating the operation:
+
+- `emit`: Emit an event
+  ```json
+  {
+    "type": "emit",
+    "event": { "type": "harness:start", "name": "test" },
+    "contextOverride": { "phase": { "name": "Planning" } }
+  }
+  ```
+
+- `startSession`: Activate session mode
+  ```json
+  { "type": "startSession" }
+  ```
+
+- `send`: Send a general message
+  ```json
+  { "type": "send", "message": "hello" }
+  ```
+
+- `sendTo`: Send message to agent
+  ```json
+  { "type": "sendTo", "agent": "agentName", "message": "hello" }
+  ```
+
+- `sendToRun`: Send message to specific run
+  ```json
+  { "type": "sendToRun", "runId": "run-123", "message": "hello" }
+  ```
+
+- `reply`: Reply to a prompt
+  ```json
+  {
+    "type": "reply",
+    "promptId": "prompt-123",
+    "response": {
+      "content": "yes",
+      "choice": "yes",
+      "timestamp": "2025-12-28T10:00:00Z"
+    }
+  }
+  ```
+
+- `abort`: Abort the session
+  ```json
+  { "type": "abort", "reason": "user cancelled" }
+  ```
+
+- `setStatus`: Set hub status (for testing status tracking)
+  ```json
+  { "type": "setStatus", "status": "running" }
+  ```
+
+**Expectations**:
+
+The `expect` section defines what should be observed:
+
+- `events`: Array of expected enriched events (normalized for comparison)
+  - Compare `event` payload and relevant `context` fields
+  - Ignore `id` and `timestamp` values (assert separately that they exist and are correct types)
+  - Order matters: events should appear in the same sequence
+
+- `status`: Expected hub status after steps complete (null = no assertion)
+  ```json
+  "status": "running"
+  ```
+
+- `sessionActive`: Expected sessionActive value after steps complete (null = no assertion)
+  ```json
+  "sessionActive": true
+  ```
 
 ### Golden vs Scratch
 

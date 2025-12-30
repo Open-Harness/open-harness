@@ -101,32 +101,23 @@ Create `tests/replay/<component>.<feature>.test.ts`:
 
 ```typescript
 import { describe, test, expect } from "bun:test";
-import { createHub } from "../../src/engine/hub.js";
 import { loadFixture } from "../helpers/fixture-loader.js";
+import { runHubFixture } from "../helpers/hub-fixture-runner.js";
 
 describe("Hub Subscription (replay)", () => {
   test("subscribes and receives events", async () => {
     // Load the recorded scenario
-    const scenario = await loadFixture("hub/subscribe-basic");
+    const fixture = await loadFixture("hub/subscribe-basic");
     
-    // Create hub instance
-    const hub = createHub({ sessionId: scenario.sessionId });
+    // Run the fixture scenario
+    const result = await runHubFixture(fixture);
     
-    // Replay the scenario
-    const received: any[] = [];
-    hub.subscribe("*", (event) => {
-      received.push(event);
-    });
-    
-    // Emit events (from fixture)
-    for (const eventData of scenario.events) {
-      hub.emit(eventData.event, eventData.contextOverride);
-    }
-    
-    // Assertions match spec R1
-    expect(received).toHaveLength(1);
-    expect(received[0].event.type).toBe("harness:start");
-    expect(received[0].context.sessionId).toBe(scenario.sessionId);
+    // Assertions match spec R1 and fixture expectations
+    expect(result.events).toHaveLength(fixture.expect.events.length);
+    expect(result.events[0].event.type).toBe("harness:start");
+    expect(result.events[0].context.sessionId).toBe(fixture.sessionId);
+    expect(result.events[0].id).toBeDefined();
+    expect(result.events[0].timestamp).toBeInstanceOf(Date);
   });
 });
 ```

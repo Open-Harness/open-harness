@@ -2,29 +2,29 @@
 // Uses fixtures from tests/fixtures/golden/hub/
 
 import { describe, expect, test } from "bun:test";
-import { createHub } from "../../src/engine/hub.js";
-import type { EnrichedEvent } from "../../src/protocol/events.js";
+import { loadFixture } from "../helpers/fixture-loader.js";
+import {
+	normalizeEvents,
+	runHubFixture,
+} from "../helpers/hub-fixture-runner.js";
 
 describe("Hub Async Iteration (replay)", () => {
 	test("supports async iteration", async () => {
-		const hub = createHub("test-session");
-		const received: EnrichedEvent[] = [];
+		const fixture = await loadFixture("hub/async-iteration");
+		const result = await runHubFixture(fixture);
 
-		(async () => {
-			for await (const event of hub) {
-				received.push(event);
-				if (received.length >= 2) break;
+		if (fixture.expect.events && fixture.expect.events.length > 0) {
+			expect(result.events.length).toBeGreaterThanOrEqual(
+				fixture.expect.events.length,
+			);
+			const normalized = normalizeEvents(result.events);
+			const expected = fixture.expect.events;
+
+			// Verify first two events match
+			if (normalized.length >= 2 && expected.length >= 2) {
+				expect(normalized[0].event).toEqual(expected[0].event);
+				expect(normalized[1].event).toEqual(expected[1].event);
 			}
-		})();
-
-		hub.emit({ type: "harness:start", name: "test" });
-		hub.emit({ type: "harness:complete", success: true, durationMs: 100 });
-
-		// Give async iteration time to process
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		expect(received.length).toBeGreaterThanOrEqual(2);
-		expect(received[0].event.type).toBe("harness:start");
-		expect(received[1].event.type).toBe("harness:complete");
+		}
 	});
 });

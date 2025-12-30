@@ -7,8 +7,21 @@
  * Usage: bun scripts/live/hub-live.ts
  */
 
-import { createHub } from "../../src/engine/hub.js";
-import type { EnrichedEvent } from "../../src/protocol/events.js";
+import { loadFixture } from "../../tests/helpers/fixture-loader.js";
+import {
+	normalizeEvents,
+	runHubFixture,
+} from "../../tests/helpers/hub-fixture-runner.js";
+
+const HUB_FIXTURES = [
+	"hub/subscribe-basic",
+	"hub/subscribe-filter",
+	"hub/scoped-context",
+	"hub/unsubscribe",
+	"hub/async-iteration",
+	"hub/commands",
+	"hub/status",
+];
 
 async function runLiveTest() {
 	console.log("🧪 Running Hub live test...");
@@ -16,134 +29,90 @@ async function runLiveTest() {
 	let passed = 0;
 	let failed = 0;
 
-	// Test 1: Basic subscription
-	try {
-		const hub = createHub("live-test");
-		const received: EnrichedEvent[] = [];
+	for (const fixturePath of HUB_FIXTURES) {
+		try {
+			const fixture = await loadFixture(fixturePath);
+			const result = await runHubFixture(fixture);
 
-		hub.subscribe("*", (event) => {
-			received.push(event);
-		});
+			// Verify events match expectations
+			if (fixture.expect.events) {
+				const normalized = normalizeEvents(result.events);
+				const expected = fixture.expect.events;
 
-		hub.emit({ type: "harness:start", name: "test" });
+				if (normalized.length < expected.length) {
+					console.error(
+						`  ✗ ${fixture.scenario}: Expected ${expected.length} events, got ${normalized.length}`,
+					);
+					failed++;
+					continue;
+				}
 
-		if (received.length === 1 && received[0].event.type === "harness:start") {
-			console.log("  ✓ Basic subscription");
-			passed++;
-		} else {
-			console.error("  ✗ Basic subscription failed");
-			failed++;
-		}
-	} catch (error) {
-		console.error("  ✗ Basic subscription error:", error);
-		failed++;
-	}
+				// Compare events using JSON stringify for deep equality
+				let eventsMatch = true;
+				for (let i = 0; i < expected.length; i++) {
+					const normalizedEvent = JSON.stringify({
+						event: normalized[i].event,
+						context: {
+							sessionId: normalized[i].context.sessionId,
+							phase: normalized[i].context.phase,
+							task: normalized[i].context.task,
+							agent: normalized[i].context.agent,
+						},
+					});
+					const expectedEvent = JSON.stringify({
+						event: expected[i].event,
+						context: expected[i].context,
+					});
 
-	// Test 2: Event filtering
-	try {
-		const hub = createHub("live-test");
-		const received: EnrichedEvent[] = [];
+					if (normalizedEvent !== expectedEvent) {
+						eventsMatch = false;
+						break;
+					}
+				}
 
-		hub.subscribe("agent:*", (event) => {
-			received.push(event);
-		});
-
-		hub.emit({ type: "agent:start", agentName: "test", runId: "run-1" });
-		hub.emit({ type: "harness:start", name: "test" });
-
-		if (received.length === 1 && received[0].event.type === "agent:start") {
-			console.log("  ✓ Event filtering");
-			passed++;
-		} else {
-			console.error("  ✗ Event filtering failed");
-			failed++;
-		}
-	} catch (error) {
-		console.error("  ✗ Event filtering error:", error);
-		failed++;
-	}
-
-	// Test 3: Context scoping
-	try {
-		const hub = createHub("live-test");
-		const received: EnrichedEvent[] = [];
-
-		hub.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		await hub.scoped({ phase: { name: "Planning" } }, async () => {
-			hub.emit({ type: "phase:start", name: "Planning" });
-		});
-
-		if (
-			received.length === 1 &&
-			received[0].context.phase?.name === "Planning"
-		) {
-			console.log("  ✓ Context scoping");
-			passed++;
-		} else {
-			console.error("  ✗ Context scoping failed");
-			failed++;
-		}
-	} catch (error) {
-		console.error("  ✗ Context scoping error:", error);
-		failed++;
-	}
-
-	// Test 4: Unsubscribe
-	try {
-		const hub = createHub("live-test");
-		const received: EnrichedEvent[] = [];
-
-		const unsubscribe = hub.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		hub.emit({ type: "harness:start", name: "test" });
-		unsubscribe();
-		hub.emit({ type: "harness:complete", success: true, durationMs: 100 });
-
-		if (received.length === 1) {
-			console.log("  ✓ Unsubscribe");
-			passed++;
-		} else {
-			console.error("  ✗ Unsubscribe failed");
-			failed++;
-		}
-	} catch (error) {
-		console.error("  ✗ Unsubscribe error:", error);
-		failed++;
-	}
-
-	// Test 5: Async iteration
-	try {
-		const hub = createHub("live-test");
-		const received: EnrichedEvent[] = [];
-
-		(async () => {
-			for await (const event of hub) {
-				received.push(event);
-				if (received.length >= 2) break;
+				if (!eventsMatch) {
+					console.error(
+						`  ✗ ${fixture.scenario}: Events don't match expectations`,
+					);
+					failed++;
+					continue;
+				}
 			}
-		})();
 
-		hub.emit({ type: "harness:start", name: "test" });
-		hub.emit({ type: "harness:complete", success: true, durationMs: 100 });
+			// Verify status if expected
+			if (
+				fixture.expect.status !== null &&
+				fixture.expect.status !== undefined
+			) {
+				if (result.status !== fixture.expect.status) {
+					console.error(
+						`  ✗ ${fixture.scenario}: Expected status ${fixture.expect.status}, got ${result.status}`,
+					);
+					failed++;
+					continue;
+				}
+			}
 
-		// Give async iteration time to process
-		await new Promise((resolve) => setTimeout(resolve, 10));
+			// Verify sessionActive if expected
+			if (
+				fixture.expect.sessionActive !== null &&
+				fixture.expect.sessionActive !== undefined
+			) {
+				if (result.sessionActive !== fixture.expect.sessionActive) {
+					console.error(
+						`  ✗ ${fixture.scenario}: Expected sessionActive ${fixture.expect.sessionActive}, got ${result.sessionActive}`,
+					);
+					failed++;
+					continue;
+				}
+			}
 
-		if (received.length >= 2) {
-			console.log("  ✓ Async iteration");
+			console.log(`  ✓ ${fixture.scenario}`);
 			passed++;
-		} else {
-			console.error("  ✗ Async iteration failed");
+		} catch (error) {
+			console.error(`  ✗ ${fixturePath}:`, error);
 			failed++;
 		}
-	} catch (error) {
-		console.error("  ✗ Async iteration error:", error);
-		failed++;
 	}
 
 	console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);

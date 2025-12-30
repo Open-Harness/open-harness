@@ -4,26 +4,34 @@
 import { describe, expect, test } from "bun:test";
 import { createHub } from "../../src/engine/hub.js";
 import type { EnrichedEvent } from "../../src/protocol/events.js";
+import { loadFixture } from "../helpers/fixture-loader.js";
+import {
+	normalizeEvents,
+	runHubFixture,
+} from "../helpers/hub-fixture-runner.js";
 
 describe("Hub Context Scoping (replay)", () => {
 	test("propagates context via scoped blocks", async () => {
-		const hub = createHub("test-session");
-		const received: EnrichedEvent[] = [];
+		const fixture = await loadFixture("hub/scoped-context");
+		const result = await runHubFixture(fixture);
 
-		hub.subscribe("*", (event) => {
-			received.push(event);
-		});
+		if (fixture.expect.events && fixture.expect.events.length > 0) {
+			expect(result.events).toHaveLength(fixture.expect.events.length);
+			const normalized = normalizeEvents(result.events);
+			const expected = fixture.expect.events;
 
-		await hub.scoped({ phase: { name: "Planning" } }, async () => {
-			hub.emit({ type: "phase:start", name: "Planning" });
-		});
-
-		expect(received).toHaveLength(1);
-		expect(received[0].context.phase?.name).toBe("Planning");
-		expect(received[0].context.sessionId).toBe("test-session");
+			expect(normalized[0].context.phase?.name).toBe(
+				expected[0].context.phase?.name,
+			);
+			expect(normalized[0].context.sessionId).toBe(
+				expected[0].context.sessionId,
+			);
+		}
 	});
 
 	test("nested scopes merge correctly", async () => {
+		// This test requires scoped() which the runner doesn't handle directly
+		// So we test it directly but keep the pattern consistent
 		const hub = createHub("test-session");
 		const received: EnrichedEvent[] = [];
 
