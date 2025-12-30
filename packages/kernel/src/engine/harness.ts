@@ -1,11 +1,7 @@
 // Engine: Harness
 // Implements docs/spec/harness.md
 
-import type {
-	AgentDefinition,
-	AgentExecuteContext,
-	ExecutableAgent,
-} from "../protocol/agent.js";
+import type { AgentDefinition, AgentExecuteContext, ExecutableAgent } from "../protocol/agent.js";
 import type { BaseEvent, EnrichedEvent } from "../protocol/events.js";
 import type {
 	Attachment,
@@ -46,10 +42,7 @@ class SessionContextImpl implements SessionContext {
 		});
 	}
 
-	async waitForUser(
-		prompt: string,
-		options?: { choices?: string[]; allowText?: boolean },
-	): Promise<UserResponse> {
+	async waitForUser(prompt: string, options?: { choices?: string[]; allowText?: boolean }): Promise<UserResponse> {
 		const promptId = `prompt-${Date.now()}-${Math.random()}`;
 		this.hub.emit({
 			type: "session:prompt",
@@ -226,16 +219,11 @@ class SimpleInbox implements AgentInbox {
 /**
  * Harness instance implementation.
  */
-export class HarnessInstanceImpl<TState, TResult>
-	extends HubImpl
-	implements HarnessInstance<TState, TResult>
-{
+export class HarnessInstanceImpl<TState, TResult> extends HubImpl implements HarnessInstance<TState, TResult> {
 	readonly state: TState;
 	private readonly attachments: Cleanup[] = [];
 	private readonly agentDefs: Record<string, AgentDefinition>;
-	private readonly runFn: (
-		ctx: ExecuteContext<Record<string, AgentDefinition>, TState>,
-	) => Promise<TResult>;
+	private readonly runFn: (ctx: ExecuteContext<Record<string, AgentDefinition>, TState>) => Promise<TResult>;
 	private readonly workflowName: string;
 	private _sessionContext: SessionContextImpl | null = null;
 	private readonly inboxes = new Map<string, SimpleInbox>();
@@ -246,9 +234,7 @@ export class HarnessInstanceImpl<TState, TResult>
 		sessionId: string,
 		state: TState,
 		agentDefs: Record<string, AgentDefinition>,
-		runFn: (
-			ctx: ExecuteContext<Record<string, AgentDefinition>, TState>,
-		) => Promise<TResult>,
+		runFn: (ctx: ExecuteContext<Record<string, AgentDefinition>, TState>) => Promise<TResult>,
 	) {
 		super(sessionId);
 		this.workflowName = workflowName;
@@ -319,10 +305,7 @@ export class HarnessInstanceImpl<TState, TResult>
 			) as ExecuteContext<Record<string, AgentDefinition>, TState>["agents"];
 
 			// Create phase helper
-			const phase = async <T>(
-				name: string,
-				fn: () => Promise<T>,
-			): Promise<T> => {
+			const phase = async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
 				this.emit({
 					type: "phase:start",
 					name,
@@ -442,33 +425,22 @@ export class HarnessInstanceImpl<TState, TResult>
 /**
  * Define a harness factory.
  */
-export function defineHarness<
-	TInput,
-	TState,
-	TResult,
-	TAgentDefs extends Record<string, AgentDefinition>,
->(config: {
+export function defineHarness<TInput, TState, TResult, TAgentDefs extends Record<string, AgentDefinition>>(config: {
 	name: string;
 	agents: TAgentDefs;
 	state: (input: TInput) => TState;
 	run: (ctx: ExecuteContext<TAgentDefs, TState>) => Promise<TResult>;
 }): HarnessFactory<TInput, TState, TResult> {
 	return {
-		create(
-			input: TInput,
-			options?: { sessionIdOverride?: string },
-		): HarnessInstance<TState, TResult> {
-			const sessionId =
-				options?.sessionIdOverride ?? `${config.name}-${Date.now()}`;
+		create(input: TInput, options?: { sessionIdOverride?: string }): HarnessInstance<TState, TResult> {
+			const sessionId = options?.sessionIdOverride ?? `${config.name}-${Date.now()}`;
 			const state = config.state(input);
 			const instance = new HarnessInstanceImpl(
 				config.name,
 				sessionId,
 				state,
 				config.agents as Record<string, AgentDefinition>,
-				config.run as (
-					ctx: ExecuteContext<Record<string, AgentDefinition>, TState>,
-				) => Promise<TResult>,
+				config.run as (ctx: ExecuteContext<Record<string, AgentDefinition>, TState>) => Promise<TResult>,
 			);
 			return instance;
 		},
