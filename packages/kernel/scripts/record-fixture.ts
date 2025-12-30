@@ -16,6 +16,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineHarness } from "../src/engine/harness.js";
 import { createHub, type HubImpl } from "../src/engine/hub.js";
+import { AgentInboxImpl } from "../src/engine/inbox.js";
 import type { AgentDefinition } from "../src/protocol/agent.js";
 import type { EnrichedEvent } from "../src/protocol/events.js";
 import type {
@@ -23,11 +24,13 @@ import type {
 	HarnessFactory,
 	HarnessInstance,
 } from "../src/protocol/harness.js";
+import { createAnthropicTextAgent } from "../src/providers/anthropic.js";
 import type {
 	AgentFixture,
 	FlowFixture,
 	HarnessFixture,
 	HubFixture,
+	ProviderFixture,
 } from "../tests/helpers/fixture-loader.js";
 
 const [component, fixtureName] = process.argv.slice(2);
@@ -1216,6 +1219,45 @@ const flowScenarios: Record<string, () => Promise<FlowFixture>> = {
 	},
 };
 
+// Define Provider scenarios
+const providerScenarios: Record<
+	string,
+	Record<string, () => Promise<ProviderFixture>>
+> = {
+	anthropic: {
+		text: async () => {
+			const sessionId = "record-provider-anthropic-text";
+			const prompt = "Say hello";
+			const agent = createAnthropicTextAgent({
+				replay: { [prompt]: "Hello!" },
+			});
+			const hub = createHub(sessionId);
+			const inbox = new AgentInboxImpl();
+			const output = await agent.execute(
+				{ prompt },
+				{ hub, inbox, runId: "run-0" },
+			);
+
+			return {
+				sessionId,
+				scenario: "text",
+				cases: [
+					{
+						name: "basic",
+						input: { prompt },
+						expected: output,
+					},
+				],
+				metadata: {
+					recordedAt: new Date().toISOString(),
+					component: "providers/anthropic",
+					description: "Anthropic text adapter replay output",
+				},
+			};
+		},
+	},
+};
+
 async function recordFixture() {
 	if (component === "hub") {
 		const scenarioFn = hubScenarios[fixtureName];
@@ -1322,9 +1364,43 @@ async function recordFixture() {
 
 		console.log(`✅ Recorded fixture to: ${fixturePath}`);
 		console.log(`📝 Review and promote to golden/ when ready`);
+	} else if (component.startsWith("providers/")) {
+		const providerName = component.split("/")[1];
+		const scenarios = providerName
+			? providerScenarios[providerName]
+			: undefined;
+		const scenarioFn = scenarios?.[fixtureName];
+		if (!scenarioFn) {
+			console.error(`Unknown Provider fixture: ${component}/${fixtureName}`);
+			console.error(
+				`Available fixtures: ${Object.keys(providerScenarios)
+					.map((name) => `providers/${name}`)
+					.join(", ")}`,
+			);
+			process.exit(1);
+		}
+
+		const fixture = await withFrozenTime(scenarioFn);
+
+		// Write to scratch directory
+		const __filename = fileURLToPath(import.meta.url);
+		const __dirname = dirname(__filename);
+		const kernelDir = join(__dirname, "..");
+		const scratchDir = join(kernelDir, "tests/fixtures/scratch", component);
+		await mkdir(scratchDir, { recursive: true });
+
+		const fixturePath = join(scratchDir, `${fixtureName}.jsonl`);
+		const jsonl = `${JSON.stringify(fixture)}\n`;
+
+		await writeFile(fixturePath, jsonl, "utf-8");
+
+		console.log(`✅ Recorded fixture to: ${fixturePath}`);
+		console.log(`📝 Review and promote to golden/ when ready`);
 	} else {
 		console.error(`Unknown component: ${component}`);
-		console.error(`Supported components: hub, harness, agent, flow`);
+		console.error(
+			`Supported components: hub, harness, agent, flow, providers/<name>`,
+		);
 		process.exit(1);
 	}
 }

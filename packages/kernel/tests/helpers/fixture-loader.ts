@@ -157,6 +157,23 @@ export interface FlowFixture {
 	};
 }
 
+export interface ProviderFixtureCase {
+	name: string;
+	input: unknown;
+	expected?: unknown;
+}
+
+export interface ProviderFixture {
+	sessionId: string;
+	scenario: string;
+	cases: ProviderFixtureCase[];
+	metadata?: {
+		recordedAt?: string;
+		component?: string;
+		description?: string;
+	};
+}
+
 /**
  * Load a Hub fixture from golden/ or scratch/ directory.
  * @param path - Path like "hub/subscribe-basic" (component/fixture-name)
@@ -308,6 +325,42 @@ export async function loadFlowFixture(
 
 	// JSONL format: one JSON object per line, take the first one
 	const fixture = JSON.parse(lines[0]) as FlowFixture;
+
+	if (!fixture.sessionId || !fixture.scenario || !fixture.cases) {
+		throw new Error(`Invalid fixture format: ${fixturePath}`);
+	}
+
+	return fixture;
+}
+
+/**
+ * Load a Provider fixture from golden/ or scratch/ directory.
+ * @param path - Path like "providers/anthropic/text" (component/fixture-name)
+ * @param fromScratch - If true, load from scratch/ instead of golden/
+ */
+export async function loadProviderFixture(
+	path: string,
+	fromScratch = false,
+): Promise<ProviderFixture> {
+	const baseDir = fromScratch ? "scratch" : "golden";
+	// Helper is in tests/helpers/, so go up one level to get to tests/
+	const __filename = fileURLToPath(import.meta.url);
+	const __dirname = dirname(__filename);
+	const testsDir = join(__dirname, "..");
+	const fixturePath = join(testsDir, "fixtures", baseDir, `${path}.jsonl`);
+
+	const content = await readFile(fixturePath, "utf-8");
+	const lines = content
+		.trim()
+		.split("\n")
+		.filter((line) => line.trim());
+
+	if (lines.length === 0) {
+		throw new Error(`Fixture file is empty: ${fixturePath}`);
+	}
+
+	// JSONL format: one JSON object per line, take the first one
+	const fixture = JSON.parse(lines[0]) as ProviderFixture;
 
 	if (!fixture.sessionId || !fixture.scenario || !fixture.cases) {
 		throw new Error(`Invalid fixture format: ${fixturePath}`);

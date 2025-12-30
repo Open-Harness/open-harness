@@ -9,3 +9,4 @@ export * from "./protocol/events.js";
 export * from "./protocol/flow.js";
 export * from "./protocol/harness.js";
 export * from "./protocol/hub.js";
+export * from "./providers/index.js";
