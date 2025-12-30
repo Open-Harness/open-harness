@@ -25,6 +25,7 @@ import type {
 } from "../src/protocol/harness.js";
 import type {
 	AgentFixture,
+	FlowFixture,
 	HarnessFixture,
 	HubFixture,
 } from "../tests/helpers/fixture-loader.js";
@@ -923,6 +924,298 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 	},
 };
 
+// Define Flow scenarios
+const flowScenarios: Record<string, () => Promise<FlowFixture>> = {
+	"flowspec-structure": async () => {
+		const sessionId = "record-flow-flowspec-structure";
+		return {
+			sessionId,
+			scenario: "flowspec-structure",
+			cases: [
+				{
+					name: "minimal",
+					input: { name: "demo" },
+					valid: true,
+					expected: { name: "demo", version: 1, policy: { failFast: true } },
+				},
+				{
+					name: "full",
+					input: {
+						name: "demo",
+						version: 2,
+						description: "desc",
+						input: { country: "Benin" },
+						policy: { failFast: false },
+					},
+					valid: true,
+					expected: {
+						name: "demo",
+						version: 2,
+						description: "desc",
+						input: { country: "Benin" },
+						policy: { failFast: false },
+					},
+				},
+				{
+					name: "missing-name",
+					input: { version: 1 },
+					valid: false,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "FlowSpec structure validation cases",
+			},
+		};
+	},
+
+	"nodespec-structure": async () => {
+		const sessionId = "record-flow-nodespec-structure";
+		return {
+			sessionId,
+			scenario: "nodespec-structure",
+			cases: [
+				{
+					name: "valid",
+					input: { id: "facts", type: "echo", input: { text: "hi" } },
+					valid: true,
+				},
+				{
+					name: "invalid-id",
+					input: { id: "1bad", type: "echo", input: {} },
+					valid: false,
+				},
+				{
+					name: "missing-input",
+					input: { id: "facts", type: "echo" },
+					valid: false,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "NodeSpec structure validation cases",
+			},
+		};
+	},
+
+	"when-expr": async () => {
+		const sessionId = "record-flow-when-expr";
+		return {
+			sessionId,
+			scenario: "when-expr",
+			cases: [
+				{
+					name: "equals",
+					input: { equals: { var: "facts.ok", value: true } },
+					valid: true,
+				},
+				{
+					name: "not",
+					input: { not: { equals: { var: "facts.ok", value: true } } },
+					valid: true,
+				},
+				{
+					name: "and",
+					input: {
+						and: [
+							{ equals: { var: "a", value: 1 } },
+							{ equals: { var: "b", value: 2 } },
+						],
+					},
+					valid: true,
+				},
+				{
+					name: "or",
+					input: {
+						or: [
+							{ equals: { var: "a", value: 1 } },
+							{ equals: { var: "b", value: 2 } },
+						],
+					},
+					valid: true,
+				},
+				{
+					name: "invalid",
+					input: { equals: { value: true } },
+					valid: false,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "WhenExpr grammar cases",
+			},
+		};
+	},
+
+	"binding-paths": async () => {
+		const sessionId = "record-flow-binding-paths";
+		return {
+			sessionId,
+			scenario: "binding-paths",
+			context: {
+				flow: { input: { country: "Benin" } },
+				facts: { capital: "Porto-Novo" },
+				isFrench: { value: true },
+			},
+			cases: [
+				{
+					name: "strict",
+					template: "{{flow.input.country}}",
+					expected: "Benin",
+				},
+				{
+					name: "node-path",
+					template: "Capital: {{facts.capital}}",
+					expected: "Capital: Porto-Novo",
+				},
+				{
+					name: "optional-missing",
+					template: "{{?missing}}",
+					expected: "",
+				},
+				{
+					name: "default-missing",
+					template: '{{missing | default:"Unknown"}}',
+					expected: "Unknown",
+				},
+				{
+					name: "strict-missing",
+					template: "{{missing}}",
+					error: true,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "Binding path resolution cases",
+			},
+		};
+	},
+
+	edges: async () => {
+		const sessionId = "record-flow-edges";
+		return {
+			sessionId,
+			scenario: "edges",
+			cases: [
+				{
+					name: "valid",
+					input: {
+						flow: { name: "demo" },
+						nodes: [
+							{ id: "a", type: "echo", input: { text: "a" } },
+							{ id: "b", type: "echo", input: { text: "b" } },
+						],
+						edges: [{ from: "a", to: "b" }],
+					},
+					valid: true,
+				},
+				{
+					name: "missing-edge-target",
+					input: {
+						flow: { name: "demo" },
+						nodes: [{ id: "a", type: "echo", input: { text: "a" } }],
+						edges: [{ from: "a", to: "missing" }],
+					},
+					valid: false,
+				},
+				{
+					name: "missing-edges-array",
+					input: {
+						flow: { name: "demo" },
+						nodes: [{ id: "a", type: "echo", input: { text: "a" } }],
+					},
+					valid: false,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "Edge validation cases",
+			},
+		};
+	},
+
+	"node-policy": async () => {
+		const sessionId = "record-flow-node-policy";
+		return {
+			sessionId,
+			scenario: "node-policy",
+			cases: [
+				{
+					name: "timeout",
+					input: { timeoutMs: 1000 },
+					valid: true,
+				},
+				{
+					name: "retry",
+					input: { retry: { maxAttempts: 2, backoffMs: 50 } },
+					valid: true,
+				},
+				{
+					name: "continue",
+					input: { continueOnError: true },
+					valid: true,
+				},
+				{
+					name: "invalid-retry",
+					input: { retry: { maxAttempts: 0 } },
+					valid: false,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "NodePolicy validation cases",
+			},
+		};
+	},
+
+	"flowyaml-structure": async () => {
+		const sessionId = "record-flow-flowyaml-structure";
+		return {
+			sessionId,
+			scenario: "flowyaml-structure",
+			cases: [
+				{
+					name: "valid",
+					input: {
+						flow: { name: "demo" },
+						nodes: [{ id: "a", type: "echo", input: { text: "a" } }],
+						edges: [],
+					},
+					valid: true,
+				},
+				{
+					name: "duplicate-ids",
+					input: {
+						flow: { name: "demo" },
+						nodes: [
+							{ id: "a", type: "echo", input: { text: "a" } },
+							{ id: "a", type: "echo", input: { text: "b" } },
+						],
+						edges: [],
+					},
+					valid: false,
+				},
+				{
+					name: "missing-nodes",
+					input: { flow: { name: "demo" }, edges: [] },
+					valid: false,
+				},
+			],
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "flow",
+				description: "FlowYaml structure validation cases",
+			},
+		};
+	},
+};
+
 async function recordFixture() {
 	if (component === "hub") {
 		const scenarioFn = hubScenarios[fixtureName];
@@ -1003,9 +1296,35 @@ async function recordFixture() {
 
 		console.log(`✅ Recorded fixture to: ${fixturePath}`);
 		console.log(`📝 Review and promote to golden/ when ready`);
+	} else if (component === "flow") {
+		const scenarioFn = flowScenarios[fixtureName];
+		if (!scenarioFn) {
+			console.error(`Unknown Flow fixture: ${fixtureName}`);
+			console.error(
+				`Available fixtures: ${Object.keys(flowScenarios).join(", ")}`,
+			);
+			process.exit(1);
+		}
+
+		const fixture = await withFrozenTime(scenarioFn);
+
+		// Write to scratch directory
+		const __filename = fileURLToPath(import.meta.url);
+		const __dirname = dirname(__filename);
+		const kernelDir = join(__dirname, "..");
+		const scratchDir = join(kernelDir, "tests/fixtures/scratch", component);
+		await mkdir(scratchDir, { recursive: true });
+
+		const fixturePath = join(scratchDir, `${fixtureName}.jsonl`);
+		const jsonl = `${JSON.stringify(fixture)}\n`;
+
+		await writeFile(fixturePath, jsonl, "utf-8");
+
+		console.log(`✅ Recorded fixture to: ${fixturePath}`);
+		console.log(`📝 Review and promote to golden/ when ready`);
 	} else {
 		console.error(`Unknown component: ${component}`);
-		console.error(`Supported components: hub, harness, agent`);
+		console.error(`Supported components: hub, harness, agent, flow`);
 		process.exit(1);
 	}
 }

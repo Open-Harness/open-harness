@@ -2,6 +2,7 @@
 
 // Engine exports (implementations)
 export * from "./engine/index.js";
+export * from "./flow/index.js";
 export * from "./protocol/agent.js";
 export * from "./protocol/channel.js";
 export * from "./protocol/events.js";
