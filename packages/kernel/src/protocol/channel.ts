@@ -11,12 +11,22 @@ export interface ChannelContext<TState> {
 	emit: (event: BaseEvent) => void;
 }
 
-export type ChannelHandler<TState> = (ctx: ChannelContext<TState>) => void | Promise<void>;
+export type ChannelHandler<TState> = (
+	ctx: ChannelContext<TState>,
+) => void | Promise<void>;
 
 export interface ChannelDefinition<TState> {
 	name: string;
 	state?: () => TState;
-	onStart?: (ctx: { hub: Hub; state: TState; emit: (event: BaseEvent) => void }) => void | Promise<void>;
-	onComplete?: (ctx: { hub: Hub; state: TState; emit: (event: BaseEvent) => void }) => void | Promise<void>;
+	onStart?: (ctx: {
+		hub: Hub;
+		state: TState;
+		emit: (event: BaseEvent) => void;
+	}) => void | Promise<void>;
+	onComplete?: (ctx: {
+		hub: Hub;
+		state: TState;
+		emit: (event: BaseEvent) => void;
+	}) => void | Promise<void>;
 	on: Record<string, ChannelHandler<TState>>;
 }

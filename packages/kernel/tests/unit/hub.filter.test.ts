@@ -25,7 +25,9 @@ describe("matchesFilter", () => {
 
 	test("matches array of patterns", () => {
 		expect(matchesFilter("agent:start", ["agent:*", "harness:*"])).toBe(true);
-		expect(matchesFilter("harness:complete", ["agent:*", "harness:*"])).toBe(true);
+		expect(matchesFilter("harness:complete", ["agent:*", "harness:*"])).toBe(
+			true,
+		);
 		expect(matchesFilter("task:start", ["agent:*", "harness:*"])).toBe(false);
 	});
 });

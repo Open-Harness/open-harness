@@ -2,7 +2,13 @@
 // Implements docs/spec/hub.md
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { BaseEvent, EnrichedEvent, EventContext, EventFilter, EventListener } from "../protocol/events.js";
+import type {
+	BaseEvent,
+	EnrichedEvent,
+	EventContext,
+	EventFilter,
+	EventListener,
+} from "../protocol/events.js";
 import type { Hub, HubStatus, UserResponse } from "../protocol/hub.js";
 import { createEnrichedEvent, matchesFilter } from "./events.js";
 
@@ -29,7 +35,10 @@ export class HubImpl implements Hub {
 
 	subscribe(listener: EventListener): () => void;
 	subscribe(filter: EventFilter, listener: EventListener): () => void;
-	subscribe(filterOrListener: EventFilter | EventListener, listener?: EventListener): () => void {
+	subscribe(
+		filterOrListener: EventFilter | EventListener,
+		listener?: EventListener,
+	): () => void {
 		let filter: EventFilter;
 		let actualListener: EventListener;
 
@@ -72,7 +81,10 @@ export class HubImpl implements Hub {
 		}
 	}
 
-	scoped<T>(context: Partial<EventContext>, fn: () => T | Promise<T>): T | Promise<T> {
+	scoped<T>(
+		context: Partial<EventContext>,
+		fn: () => T | Promise<T>,
+	): T | Promise<T> {
 		const current = this.current();
 		const merged = { ...current, ...context };
 		return this._context.run(merged, fn);
