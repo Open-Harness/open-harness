@@ -36,7 +36,7 @@ class SessionContextImpl implements SessionContext {
 			this.messages.push({
 				content: (event.event as { content: string }).content,
 				agent: (event.event as { agentName?: string }).agentName,
-				timestamp: new Date(event.context.timestamp || Date.now()),
+				timestamp: event.timestamp,
 			});
 		});
 
