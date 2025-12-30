@@ -58,10 +58,9 @@ export class AnthropicMonologueLLM implements IMonologueLLM {
 			}
 
 			return response.trim();
-		} catch (error) {
-			// Log error but don't throw - narratives shouldn't block execution
-			console.error("[MonologueLLM] Generation error:", error);
-			return ""; // Empty string signals failure, will be handled by service
+		} catch (_error) {
+			// Narratives shouldn't block execution - empty string signals failure
+			return "";
 		}
 	}
 

@@ -119,12 +119,7 @@ export class Workflow<
 			tasks: this.taskList.getAll(),
 		};
 
-		try {
-			await this.config.execute(context);
-		} catch (error) {
-			console.error(`Workflow "${this.config.name}" error:`, error);
-			throw error;
-		}
+		await this.config.execute(context);
 
 		return this.state;
 	}

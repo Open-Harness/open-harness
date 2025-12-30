@@ -32,7 +32,8 @@ describe("Agent Factory", () => {
 		});
 
 		test("createAgent with unknown type throws error", () => {
-			expect(() => createAgent("unknown" as any)).toThrow("Unknown built-in agent type: unknown");
+			// @ts-expect-error Testing invalid input
+			expect(() => createAgent("unknown")).toThrow("Unknown built-in agent type: unknown");
 		});
 	});
 

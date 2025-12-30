@@ -39,41 +39,29 @@ export class Workflow {
 	 */
 	async run(tasks: Task[], options?: WorkflowOptions): Promise<void> {
 		for (const task of tasks) {
-			console.log(`Starting Task: ${task.id}`);
 			const sessionId = `session_${task.id}`;
 
 			// 1. Coding Phase
-			console.log(`Coding phase...`);
 			const coderResult = await this.coder.execute(task.description, sessionId, {
 				callbacks: options?.callbacks,
 				timeoutMs: options?.timeoutMs,
 			});
 
-			console.log(`Coder finished with reason: ${coderResult.stopReason}`);
-
 			if (coderResult.stopReason === "failed") {
-				console.error(`Task ${task.id} BLOCKED: ${coderResult.summary}`);
 				return; // Stop workflow on failure
 			}
 
 			if (coderResult.stopReason === "compact") {
-				console.log(`Task ${task.id} needs compaction. Restarting...`);
 				// In a real system, we'd handle state transfer here
 				continue;
 			}
 
 			// 2. Review Phase
-			console.log(`Reviewing implementation...`);
-			const reviewResult = await this.reviewer.review(task.description, coderResult.summary, `${sessionId}_rev`, {
+			await this.reviewer.review(task.description, coderResult.summary, `${sessionId}_rev`, {
 				timeoutMs: options?.timeoutMs,
 			});
 
-			if (reviewResult.decision === "approve") {
-				console.log(`Task ${task.id} APPROVED and COMMITTED.`);
-			} else {
-				console.warn(`Task ${task.id} REJECTED: ${reviewResult.feedback}`);
-				// In a real system, we'd loop back to Coder here
-			}
+			// Review result available for logging/callbacks if needed
 		}
 	}
 }

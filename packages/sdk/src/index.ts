@@ -291,12 +291,3 @@ export {
 	type Spinner,
 	type UnifiedRendererConfig,
 } from "./harness/index.js";
-
-// ============================================
-// DEPRECATED EXPORTS (for backward compatibility)
-// ============================================
-
-/**
- * @deprecated Use IAgentCallbacks instead. Will be removed in next major version.
- */
-export type { StreamCallbacks } from "./callbacks/types.js";
