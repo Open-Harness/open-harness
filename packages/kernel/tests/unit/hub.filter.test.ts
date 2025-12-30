@@ -1,7 +1,7 @@
 // Unit tests for Hub filter matching logic
 // Tests pure logic without fixtures
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { matchesFilter } from "../../src/engine/events.js";
 
 describe("matchesFilter", () => {

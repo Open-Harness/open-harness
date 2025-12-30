@@ -1,13 +1,14 @@
 // Replay tests for Hub context scoping
 // Uses fixtures from tests/fixtures/golden/hub/
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createHub } from "../../src/engine/hub.js";
+import type { EnrichedEvent } from "../../src/protocol/events.js";
 
 describe("Hub Context Scoping (replay)", () => {
 	test("propagates context via scoped blocks", async () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("*", (event) => {
 			received.push(event);
@@ -24,7 +25,7 @@ describe("Hub Context Scoping (replay)", () => {
 
 	test("nested scopes merge correctly", async () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("*", (event) => {
 			received.push(event);

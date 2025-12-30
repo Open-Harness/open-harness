@@ -1,13 +1,14 @@
 // Replay tests for Hub async iteration
 // Uses fixtures from tests/fixtures/golden/hub/
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createHub } from "../../src/engine/hub.js";
+import type { EnrichedEvent } from "../../src/protocol/events.js";
 
 describe("Hub Async Iteration (replay)", () => {
 	test("supports async iteration", async () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		(async () => {
 			for await (const event of hub) {

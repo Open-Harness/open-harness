@@ -4,9 +4,9 @@
 import { randomUUID } from "node:crypto";
 import type {
 	BaseEvent,
+	EnrichedEvent,
 	EventContext,
 	EventFilter,
-	EnrichedEvent,
 } from "../protocol/events.js";
 
 /**

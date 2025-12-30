@@ -1,8 +1,8 @@
 // Replay tests for Hub status tracking
 // Uses fixtures from tests/fixtures/golden/hub/
 
-import { describe, test, expect } from "bun:test";
-import { createHub } from "../../src/engine/hub.js";
+import { describe, expect, test } from "bun:test";
+import { createHub, type HubImpl } from "../../src/engine/hub.js";
 
 describe("Hub Status Tracking (replay)", () => {
 	test("tracks hub status and session state", () => {
@@ -11,12 +11,12 @@ describe("Hub Status Tracking (replay)", () => {
 		expect(hub.status).toBe("idle");
 		expect(hub.sessionActive).toBe(false);
 
-		(hub as any).startSession();
+		(hub as HubImpl).startSession();
 
 		expect(hub.sessionActive).toBe(true);
 		expect(hub.status).toBe("idle"); // Status unchanged by startSession
 
-		(hub as any).setStatus("running");
+		(hub as HubImpl).setStatus("running");
 		expect(hub.status).toBe("running");
 	});
 });

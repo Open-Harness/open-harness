@@ -1,13 +1,14 @@
 /**
  * Authoritative live test for Hub implementation.
- * 
+ *
  * This script runs all replay scenarios against the real Hub implementation.
  * MUST pass before marking Hub milestone complete.
- * 
+ *
  * Usage: bun scripts/live/hub-live.ts
  */
 
 import { createHub } from "../../src/engine/hub.js";
+import type { EnrichedEvent } from "../../src/protocol/events.js";
 
 async function runLiveTest() {
 	console.log("🧪 Running Hub live test...");
@@ -18,7 +19,7 @@ async function runLiveTest() {
 	// Test 1: Basic subscription
 	try {
 		const hub = createHub("live-test");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("*", (event) => {
 			received.push(event);
@@ -41,7 +42,7 @@ async function runLiveTest() {
 	// Test 2: Event filtering
 	try {
 		const hub = createHub("live-test");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("agent:*", (event) => {
 			received.push(event);
@@ -65,7 +66,7 @@ async function runLiveTest() {
 	// Test 3: Context scoping
 	try {
 		const hub = createHub("live-test");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("*", (event) => {
 			received.push(event);
@@ -93,7 +94,7 @@ async function runLiveTest() {
 	// Test 4: Unsubscribe
 	try {
 		const hub = createHub("live-test");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		const unsubscribe = hub.subscribe("*", (event) => {
 			received.push(event);
@@ -118,7 +119,7 @@ async function runLiveTest() {
 	// Test 5: Async iteration
 	try {
 		const hub = createHub("live-test");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		(async () => {
 			for await (const event of hub) {

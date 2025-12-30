@@ -1,7 +1,14 @@
 // Protocol: Hub
 // See docs/reference/protocol-types.md for authoritative definitions
 
-import type { BaseEvent, EnrichedEvent, EventContext, EventFilter, EventListener, Unsubscribe } from "./events.js";
+import type {
+	BaseEvent,
+	EnrichedEvent,
+	EventContext,
+	EventFilter,
+	EventListener,
+	Unsubscribe,
+} from "./events.js";
 
 export type HubStatus = "idle" | "running" | "complete" | "aborted";
 
@@ -16,7 +23,10 @@ export interface Hub extends AsyncIterable<EnrichedEvent> {
 	subscribe(listener: EventListener): Unsubscribe;
 	subscribe(filter: EventFilter, listener: EventListener): Unsubscribe;
 	emit(event: BaseEvent, override?: Partial<EventContext>): void;
-	scoped<T>(context: Partial<EventContext>, fn: () => T | Promise<T>): T | Promise<T>;
+	scoped<T>(
+		context: Partial<EventContext>,
+		fn: () => T | Promise<T>,
+	): T | Promise<T>;
 	current(): EventContext;
 
 	// Commands in (bidirectional)

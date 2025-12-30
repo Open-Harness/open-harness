@@ -70,7 +70,7 @@ export interface NodeRunContext {
 }
 
 // Note: ZodSchema is a type placeholder - actual implementation will use zod
-export type ZodSchema<T> = unknown;
+export type ZodSchema<_T> = unknown;
 
 export interface NodeTypeDefinition<TIn, TOut> {
 	type: string;

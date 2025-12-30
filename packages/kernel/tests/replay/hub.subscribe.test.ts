@@ -1,13 +1,14 @@
 // Replay tests for Hub subscription
 // Uses fixtures from tests/fixtures/golden/hub/
 
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { createHub } from "../../src/engine/hub.js";
+import type { EnrichedEvent } from "../../src/protocol/events.js";
 
 describe("Hub Subscription (replay)", () => {
 	test("subscribes and receives events", () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		const unsubscribe = hub.subscribe("*", (event) => {
 			received.push(event);
@@ -17,7 +18,11 @@ describe("Hub Subscription (replay)", () => {
 
 		expect(received).toHaveLength(1);
 		expect(received[0].event.type).toBe("harness:start");
-		expect(received[0].event.name).toBe("test");
+
+		// Safe cast after assertion
+		const event = received[0].event as Extract<EnrichedEvent["event"], { type: "harness:start" }>;
+		expect(event.name).toBe("test");
+
 		expect(received[0].context.sessionId).toBe("test-session");
 		expect(received[0].id).toBeDefined();
 		expect(received[0].timestamp).toBeInstanceOf(Date);
@@ -27,7 +32,7 @@ describe("Hub Subscription (replay)", () => {
 
 	test("filters events by pattern", () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("agent:*", (event) => {
 			received.push(event);
@@ -42,7 +47,7 @@ describe("Hub Subscription (replay)", () => {
 
 	test("unsubscribe stops receiving events", () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		const unsubscribe = hub.subscribe("*", (event) => {
 			received.push(event);

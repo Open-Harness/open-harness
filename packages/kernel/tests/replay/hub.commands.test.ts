@@ -1,13 +1,14 @@
 // Replay tests for Hub commands
 // Uses fixtures from tests/fixtures/golden/hub/
 
-import { describe, test, expect } from "bun:test";
-import { createHub } from "../../src/engine/hub.js";
+import { describe, expect, test } from "bun:test";
+import { createHub, type HubImpl } from "../../src/engine/hub.js";
+import type { EnrichedEvent } from "../../src/protocol/events.js";
 
 describe("Hub Commands (replay)", () => {
 	test("commands emit session:message events", () => {
 		const hub = createHub("test-session");
-		const received: any[] = [];
+		const received: EnrichedEvent[] = [];
 
 		hub.subscribe("session:*", (event) => {
 			received.push(event);
@@ -20,16 +21,24 @@ describe("Hub Commands (replay)", () => {
 		expect(received).toHaveLength(0);
 
 		// Activate session
-		(hub as any).startSession();
+		(hub as HubImpl).startSession();
 
 		hub.send("message");
 		hub.sendTo("agent", "message");
 		hub.sendToRun("runId", "message");
 
 		expect(received).toHaveLength(3);
+
 		expect(received[0].event.type).toBe("session:message");
-		expect(received[0].event.content).toBe("message");
-		expect(received[1].event.agentName).toBe("agent");
-		expect(received[2].event.runId).toBe("runId");
+		const event0 = received[0].event as Extract<EnrichedEvent["event"], { type: "session:message" }>;
+		expect(event0.content).toBe("message");
+
+		expect(received[1].event.type).toBe("session:message");
+		const event1 = received[1].event as Extract<EnrichedEvent["event"], { type: "session:message" }>;
+		expect(event1.agentName).toBe("agent");
+
+		expect(received[2].event.type).toBe("session:message");
+		const event2 = received[2].event as Extract<EnrichedEvent["event"], { type: "session:message" }>;
+		expect(event2.runId).toBe("runId");
 	});
 });

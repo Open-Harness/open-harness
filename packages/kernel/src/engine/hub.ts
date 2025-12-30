@@ -2,13 +2,7 @@
 // Implements docs/spec/hub.md
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import type {
-	BaseEvent,
-	EventContext,
-	EventFilter,
-	EventListener,
-	EnrichedEvent,
-} from "../protocol/events.js";
+import type { BaseEvent, EnrichedEvent, EventContext, EventFilter, EventListener } from "../protocol/events.js";
 import type { Hub, HubStatus, UserResponse } from "../protocol/hub.js";
 import { createEnrichedEvent, matchesFilter } from "./events.js";
 
@@ -35,10 +29,7 @@ export class HubImpl implements Hub {
 
 	subscribe(listener: EventListener): () => void;
 	subscribe(filter: EventFilter, listener: EventListener): () => void;
-	subscribe(
-		filterOrListener: EventFilter | EventListener,
-		listener?: EventListener,
-	): () => void {
+	subscribe(filterOrListener: EventFilter | EventListener, listener?: EventListener): () => void {
 		let filter: EventFilter;
 		let actualListener: EventListener;
 
@@ -47,7 +38,10 @@ export class HubImpl implements Hub {
 			actualListener = filterOrListener;
 		} else {
 			filter = filterOrListener;
-			actualListener = listener!;
+			if (!listener) {
+				throw new Error("Listener is required when filter is provided");
+			}
+			actualListener = listener;
 		}
 
 		const entry: ListenerEntry = { filter, listener: actualListener };
@@ -157,7 +151,10 @@ export class HubImpl implements Hub {
 		try {
 			while (true) {
 				if (queue.length > 0) {
-					yield queue.shift()!;
+					const event = queue.shift();
+					if (event) {
+						yield event;
+					}
 				} else {
 					yield await new Promise<EnrichedEvent>((res) => {
 						resolve = res;
