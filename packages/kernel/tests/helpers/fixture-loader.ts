@@ -104,6 +104,38 @@ export interface HarnessFixture {
 	};
 }
 
+export interface AgentFixtureStep {
+	type: "create" | "run";
+	name?: string;
+	input?: unknown;
+}
+
+export interface AgentFixtureExpect {
+	events?: Array<{
+		event: unknown;
+		context: {
+			sessionId: string;
+			phase?: { name: string; number?: number };
+			task?: { id: string };
+			agent?: { name: string; type?: string };
+		};
+	}>;
+	result?: unknown;
+	status?: string | null;
+}
+
+export interface AgentFixture {
+	sessionId: string;
+	scenario: string;
+	steps: AgentFixtureStep[];
+	expect: AgentFixtureExpect;
+	metadata?: {
+		recordedAt?: string;
+		component?: string;
+		description?: string;
+	};
+}
+
 /**
  * Load a Hub fixture from golden/ or scratch/ directory.
  * @param path - Path like "hub/subscribe-basic" (component/fixture-name)
@@ -173,6 +205,47 @@ export async function loadHarnessFixture(
 
 	// JSONL format: one JSON object per line, take the first one
 	const fixture = JSON.parse(lines[0]) as HarnessFixture;
+
+	if (
+		!fixture.sessionId ||
+		!fixture.scenario ||
+		!fixture.steps ||
+		!fixture.expect
+	) {
+		throw new Error(`Invalid fixture format: ${fixturePath}`);
+	}
+
+	return fixture;
+}
+
+/**
+ * Load an Agent fixture from golden/ or scratch/ directory.
+ * @param path - Path like "agent/inbox-basic" (component/fixture-name)
+ * @param fromScratch - If true, load from scratch/ instead of golden/
+ */
+export async function loadAgentFixture(
+	path: string,
+	fromScratch = false,
+): Promise<AgentFixture> {
+	const baseDir = fromScratch ? "scratch" : "golden";
+	// Helper is in tests/helpers/, so go up one level to get to tests/
+	const __filename = fileURLToPath(import.meta.url);
+	const __dirname = dirname(__filename);
+	const testsDir = join(__dirname, "..");
+	const fixturePath = join(testsDir, "fixtures", baseDir, `${path}.jsonl`);
+
+	const content = await readFile(fixturePath, "utf-8");
+	const lines = content
+		.trim()
+		.split("\n")
+		.filter((line) => line.trim());
+
+	if (lines.length === 0) {
+		throw new Error(`Fixture file is empty: ${fixturePath}`);
+	}
+
+	// JSONL format: one JSON object per line, take the first one
+	const fixture = JSON.parse(lines[0]) as AgentFixture;
 
 	if (
 		!fixture.sessionId ||

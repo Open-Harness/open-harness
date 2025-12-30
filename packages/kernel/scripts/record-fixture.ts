@@ -16,6 +16,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineHarness } from "../src/engine/harness.js";
 import { createHub, type HubImpl } from "../src/engine/hub.js";
+import type { AgentDefinition } from "../src/protocol/agent.js";
 import type { EnrichedEvent } from "../src/protocol/events.js";
 import type {
 	Attachment,
@@ -23,6 +24,7 @@ import type {
 	HarnessInstance,
 } from "../src/protocol/harness.js";
 import type {
+	AgentFixture,
 	HarnessFixture,
 	HubFixture,
 } from "../tests/helpers/fixture-loader.js";
@@ -49,6 +51,17 @@ function createHarnessWithSessionId<TInput, TState, TResult>(
 			): HarnessInstance<TState, TResult>;
 		}
 	).create(input, { sessionIdOverride: sessionId });
+}
+
+async function withFrozenTime<T>(fn: () => Promise<T>): Promise<T> {
+	const originalNow = Date.now;
+	const frozen = Date.now();
+	Date.now = () => frozen;
+	try {
+		return await fn();
+	} finally {
+		Date.now = originalNow;
+	}
 }
 
 // Define Hub scenarios
@@ -621,6 +634,293 @@ const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
 			},
 		};
 	},
+
+	"inbox-routing": async () => {
+		const sessionId = "record-harness-inbox-routing";
+		const agent: AgentDefinition<{ label: string }, string> = {
+			name: "echo",
+			execute: async (input, ctx) => {
+				const message = await Promise.race([
+					ctx.inbox.pop(),
+					new Promise<{ content: string; timestamp: Date }>((resolve) => {
+						setTimeout(
+							() =>
+								resolve({
+									content: `timeout:${input.label}`,
+									timestamp: new Date(),
+								}),
+							100,
+						);
+					}),
+				]);
+				return `${input.label}:${message.content}`;
+			},
+		};
+
+		const harnessFactory = defineHarness({
+			name: "test-harness",
+			agents: { echo: agent },
+			state: () => ({}),
+			run: async ({ agents, hub }) => {
+				const runIds: string[] = [];
+				const unsubscribe = hub.subscribe("agent:start", (event) => {
+					const runId = (event.event as { runId: string }).runId;
+					runIds.push(runId);
+					if (runIds.length === 1) {
+						hub.sendToRun(runId, "first");
+					}
+					if (runIds.length === 2) {
+						hub.sendToRun(runId, "second");
+					}
+				});
+
+				const results = await Promise.all([
+					agents.echo.execute({ label: "one" }),
+					agents.echo.execute({ label: "two" }),
+				]);
+
+				unsubscribe();
+
+				return { runIds, results };
+			},
+		});
+
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
+		const received: EnrichedEvent[] = [];
+
+		instance.subscribe("*", (event) => {
+			received.push(event);
+		});
+
+		const result = await instance.run();
+
+		return {
+			sessionId,
+			scenario: "inbox-routing",
+			steps: [
+				{
+					type: "create",
+					name: "test-harness",
+					input: {},
+				},
+				{
+					type: "run",
+				},
+			],
+			expect: {
+				events: received.map((e) => ({
+					event: e.event,
+					context: e.context,
+				})),
+				result: result.result,
+			},
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "harness",
+				description: "sendToRun routes messages to agent inbox",
+			},
+		};
+	},
+};
+
+// Define Agent scenarios
+const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
+	"inbox-basic": async () => {
+		const sessionId = "record-agent-inbox-basic";
+		const agent: AgentDefinition<
+			{ label: string },
+			{ first: string; drained: string[]; iter: string }
+		> = {
+			name: "receiver",
+			execute: async (input, ctx) => {
+				const first = await Promise.race([
+					ctx.inbox.pop(),
+					new Promise<{ content: string; timestamp: Date }>((resolve) => {
+						setTimeout(
+							() =>
+								resolve({
+									content: `timeout:${input.label}:pop`,
+									timestamp: new Date(),
+								}),
+							100,
+						);
+					}),
+				]);
+
+				const drained = ctx.inbox.drain();
+				const iterator = ctx.inbox[Symbol.asyncIterator]();
+				const iterResult = await Promise.race([
+					iterator.next(),
+					new Promise<IteratorResult<{ content: string; timestamp: Date }>>(
+						(resolve) => {
+							setTimeout(
+								() =>
+									resolve({
+										value: {
+											content: `timeout:${input.label}:iter`,
+											timestamp: new Date(),
+										},
+										done: false,
+									}),
+								100,
+							);
+						},
+					),
+				]);
+
+				return {
+					first: first.content,
+					drained: drained.map((message) => message.content),
+					iter: iterResult.value.content,
+				};
+			},
+		};
+
+		const harnessFactory = defineHarness({
+			name: "test-harness",
+			agents: { receiver: agent },
+			state: () => ({}),
+			run: async ({ agents, hub }) => {
+				let runId: string | null = null;
+				const unsubscribe = hub.subscribe("agent:start", (event) => {
+					runId = (event.event as { runId: string }).runId;
+					hub.sendToRun(runId, "first");
+					hub.sendToRun(runId, "second");
+					setTimeout(() => {
+						if (runId) {
+							hub.sendToRun(runId, "third");
+						}
+					}, 10);
+				});
+
+				const result = await agents.receiver.execute({ label: "basic" });
+				unsubscribe();
+
+				return { runId, result };
+			},
+		});
+
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
+		const received: EnrichedEvent[] = [];
+
+		instance.subscribe("*", (event) => {
+			received.push(event);
+		});
+
+		const result = await instance.run();
+
+		return {
+			sessionId,
+			scenario: "inbox-basic",
+			steps: [
+				{
+					type: "create",
+					name: "test-harness",
+					input: {},
+				},
+				{
+					type: "run",
+				},
+			],
+			expect: {
+				events: received.map((e) => ({
+					event: e.event,
+					context: e.context,
+				})),
+				result: result.result,
+			},
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "agent",
+				description: "Agent inbox supports pop, drain, and async iteration",
+			},
+		};
+	},
+
+	"runid-uniqueness": async () => {
+		const sessionId = "record-agent-runid-uniqueness";
+		const agent: AgentDefinition<
+			{ label: string },
+			{ runId: string; message: string }
+		> = {
+			name: "receiver",
+			execute: async (input, ctx) => {
+				const message = await Promise.race([
+					ctx.inbox.pop(),
+					new Promise<{ content: string; timestamp: Date }>((resolve) => {
+						setTimeout(
+							() =>
+								resolve({
+									content: `timeout:${input.label}`,
+									timestamp: new Date(),
+								}),
+							100,
+						);
+					}),
+				]);
+				return { runId: ctx.runId, message: message.content };
+			},
+		};
+
+		const harnessFactory = defineHarness({
+			name: "test-harness",
+			agents: { receiver: agent },
+			state: () => ({}),
+			run: async ({ agents, hub }) => {
+				const runIds: string[] = [];
+				const unsubscribe = hub.subscribe("agent:start", (event) => {
+					const runId = (event.event as { runId: string }).runId;
+					runIds.push(runId);
+					hub.sendToRun(runId, `message:${runId}`);
+				});
+
+				const results = await Promise.all([
+					agents.receiver.execute({ label: "one" }),
+					agents.receiver.execute({ label: "two" }),
+				]);
+
+				unsubscribe();
+
+				return { runIds, results };
+			},
+		});
+
+		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
+		const received: EnrichedEvent[] = [];
+
+		instance.subscribe("*", (event) => {
+			received.push(event);
+		});
+
+		const result = await instance.run();
+
+		return {
+			sessionId,
+			scenario: "runid-uniqueness",
+			steps: [
+				{
+					type: "create",
+					name: "test-harness",
+					input: {},
+				},
+				{
+					type: "run",
+				},
+			],
+			expect: {
+				events: received.map((e) => ({
+					event: e.event,
+					context: e.context,
+				})),
+				result: result.result,
+			},
+			metadata: {
+				recordedAt: new Date().toISOString(),
+				component: "agent",
+				description: "RunId is unique per execution and routes correctly",
+			},
+		};
+	},
 };
 
 async function recordFixture() {
@@ -634,7 +934,7 @@ async function recordFixture() {
 			process.exit(1);
 		}
 
-		const fixture = await scenarioFn();
+		const fixture = await withFrozenTime(scenarioFn);
 
 		// Write to scratch directory
 		// Script is in packages/kernel/scripts/, so go up one level to get to packages/kernel/
@@ -661,7 +961,33 @@ async function recordFixture() {
 			process.exit(1);
 		}
 
-		const fixture = await scenarioFn();
+		const fixture = await withFrozenTime(scenarioFn);
+
+		// Write to scratch directory
+		const __filename = fileURLToPath(import.meta.url);
+		const __dirname = dirname(__filename);
+		const kernelDir = join(__dirname, "..");
+		const scratchDir = join(kernelDir, "tests/fixtures/scratch", component);
+		await mkdir(scratchDir, { recursive: true });
+
+		const fixturePath = join(scratchDir, `${fixtureName}.jsonl`);
+		const jsonl = `${JSON.stringify(fixture)}\n`;
+
+		await writeFile(fixturePath, jsonl, "utf-8");
+
+		console.log(`✅ Recorded fixture to: ${fixturePath}`);
+		console.log(`📝 Review and promote to golden/ when ready`);
+	} else if (component === "agent") {
+		const scenarioFn = agentScenarios[fixtureName];
+		if (!scenarioFn) {
+			console.error(`Unknown Agent fixture: ${fixtureName}`);
+			console.error(
+				`Available fixtures: ${Object.keys(agentScenarios).join(", ")}`,
+			);
+			process.exit(1);
+		}
+
+		const fixture = await withFrozenTime(scenarioFn);
 
 		// Write to scratch directory
 		const __filename = fileURLToPath(import.meta.url);
@@ -679,7 +1005,7 @@ async function recordFixture() {
 		console.log(`📝 Review and promote to golden/ when ready`);
 	} else {
 		console.error(`Unknown component: ${component}`);
-		console.error(`Supported components: hub, harness`);
+		console.error(`Supported components: hub, harness, agent`);
 		process.exit(1);
 	}
 }

@@ -19,6 +19,7 @@ const HARNESS_FIXTURES = [
 	"harness/session",
 	"harness/run-lifecycle",
 	"harness/phase-task",
+	"harness/inbox-routing",
 ];
 
 async function runLiveTest() {

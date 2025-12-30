@@ -77,6 +77,54 @@ function createHarnessFactory(scenario: string) {
 				},
 			});
 		}
+		case "inbox-routing": {
+			return defineHarness({
+				name: "test-harness",
+				agents: {
+					echo: {
+						name: "echo",
+						execute: async (input: { label: string }, ctx): Promise<string> => {
+							const message = await Promise.race([
+								ctx.inbox.pop(),
+								new Promise<{ content: string; timestamp: Date }>((resolve) => {
+									setTimeout(
+										() =>
+											resolve({
+												content: `timeout:${input.label}`,
+												timestamp: new Date(),
+											}),
+										100,
+									);
+								}),
+							]);
+							return `${input.label}:${message.content}`;
+						},
+					},
+				},
+				state: () => ({}),
+				run: async ({ agents, hub }) => {
+					const runIds: string[] = [];
+					const unsubscribe = hub.subscribe("agent:start", (event) => {
+						const runId = (event.event as { runId: string }).runId;
+						runIds.push(runId);
+						if (runIds.length === 1) {
+							hub.sendToRun(runId, "first");
+						}
+						if (runIds.length === 2) {
+							hub.sendToRun(runId, "second");
+						}
+					});
+
+					const results = await Promise.all([
+						agents.echo.execute({ label: "one" }),
+						agents.echo.execute({ label: "two" }),
+					]);
+
+					unsubscribe();
+					return { runIds, results };
+				},
+			});
+		}
 		default: {
 			throw new Error(`Unknown harness scenario: ${scenario}`);
 		}
@@ -121,131 +169,146 @@ export async function runHarnessFixture(
 	// Subscribe to all events to capture them
 	let unsubscribe: (() => void) | null = null;
 
-	try {
-		// Execute each step
-		for (const step of fixture.steps) {
-			switch (step.type) {
-				case "create": {
-					if (!step.name || step.input === undefined) {
-						throw new Error("create step requires name and input fields");
-					}
+	const withFrozenTime = async <T>(fn: () => Promise<T>): Promise<T> => {
+		const originalNow = Date.now;
+		const frozen = Date.now();
+		Date.now = () => frozen;
+		try {
+			return await fn();
+		} finally {
+			Date.now = originalNow;
+		}
+	};
 
-					// Recreate the harness factory based on scenario name
-					harnessFactory = createHarnessFactory(
-						fixture.scenario,
-					) as HarnessFactoryWithSessionId<unknown, unknown, unknown>;
+	return await withFrozenTime(async () => {
+		try {
+			// Execute each step
+			for (const step of fixture.steps) {
+				switch (step.type) {
+					case "create": {
+						if (!step.name || step.input === undefined) {
+							throw new Error("create step requires name and input fields");
+						}
 
-					harnessInstance = harnessFactory.create(step.input, {
-						sessionIdOverride: fixture.sessionId,
-					});
-					unsubscribe = harnessInstance.subscribe("*", (event) => {
-						received.push(event);
-					});
-					break;
-				}
+						// Recreate the harness factory based on scenario name
+						harnessFactory = createHarnessFactory(
+							fixture.scenario,
+						) as HarnessFactoryWithSessionId<unknown, unknown, unknown>;
 
-				case "attach": {
-					if (!harnessInstance) {
-						throw new Error(
-							"attach step requires harness instance (create first)",
-						);
-					}
-
-					const attachment: Attachment = (hub) => {
-						// Simple attachment that subscribes
-						return hub.subscribe("*", () => {
-							// Attachment received hub
+						harnessInstance = harnessFactory.create(step.input, {
+							sessionIdOverride: fixture.sessionId,
 						});
-					};
-
-					harnessInstance.attach(attachment);
-					break;
-				}
-
-				case "startSession": {
-					if (!harnessInstance) {
-						throw new Error("startSession step requires harness instance");
+						unsubscribe = harnessInstance.subscribe("*", (event) => {
+							received.push(event);
+						});
+						break;
 					}
-					harnessInstance.startSession();
-					break;
-				}
 
-				case "send": {
-					if (!harnessInstance || !step.message) {
-						throw new Error("send step requires harness instance and message");
+					case "attach": {
+						if (!harnessInstance) {
+							throw new Error(
+								"attach step requires harness instance (create first)",
+							);
+						}
+
+						const attachment: Attachment = (hub) => {
+							// Simple attachment that subscribes
+							return hub.subscribe("*", () => {
+								// Attachment received hub
+							});
+						};
+
+						harnessInstance.attach(attachment);
+						break;
 					}
-					harnessInstance.send(step.message);
-					break;
-				}
 
-				case "run": {
-					if (!harnessInstance) {
-						throw new Error("run step requires harness instance");
+					case "startSession": {
+						if (!harnessInstance) {
+							throw new Error("startSession step requires harness instance");
+						}
+						harnessInstance.startSession();
+						break;
 					}
-					const runResult = await harnessInstance.run();
-					result = runResult.result;
-					finalState = runResult.state;
-					break;
-				}
 
-				case "phase": {
-					if (!step.phaseName) {
-						throw new Error("phase step requires phaseName field");
+					case "send": {
+						if (!harnessInstance || !step.message) {
+							throw new Error(
+								"send step requires harness instance and message",
+							);
+						}
+						harnessInstance.send(step.message);
+						break;
 					}
-					// Phase is executed within run(), so this is for reference
-					// In actual fixtures, phases are part of the run function
-					break;
-				}
 
-				case "task": {
-					if (!step.taskId) {
-						throw new Error("task step requires taskId field");
+					case "run": {
+						if (!harnessInstance) {
+							throw new Error("run step requires harness instance");
+						}
+						const runResult = await harnessInstance.run();
+						result = runResult.result;
+						finalState = runResult.state;
+						break;
 					}
-					// Task is executed within run(), so this is for reference
-					// In actual fixtures, tasks are part of the run function
-					break;
-				}
 
-				case "emit": {
-					if (!harnessInstance || !step.event) {
-						throw new Error(
-							"emit step requires harness instance and event field",
-						);
+					case "phase": {
+						if (!step.phaseName) {
+							throw new Error("phase step requires phaseName field");
+						}
+						// Phase is executed within run(), so this is for reference
+						// In actual fixtures, phases are part of the run function
+						break;
 					}
-					harnessInstance.emit(step.event as BaseEvent);
-					break;
-				}
 
-				default: {
-					const unknownStep = step as { type: string };
-					throw new Error(`Unknown step type: ${unknownStep.type}`);
+					case "task": {
+						if (!step.taskId) {
+							throw new Error("task step requires taskId field");
+						}
+						// Task is executed within run(), so this is for reference
+						// In actual fixtures, tasks are part of the run function
+						break;
+					}
+
+					case "emit": {
+						if (!harnessInstance || !step.event) {
+							throw new Error(
+								"emit step requires harness instance and event field",
+							);
+						}
+						harnessInstance.emit(step.event as BaseEvent);
+						break;
+					}
+
+					default: {
+						const unknownStep = step as { type: string };
+						throw new Error(`Unknown step type: ${unknownStep.type}`);
+					}
 				}
 			}
+
+			// Give async operations time to complete
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Capture final state if not set
+			if (finalState === null && harnessInstance) {
+				finalState = harnessInstance.state;
+			}
+
+			const durationMs = Date.now() - startTime;
+
+			return {
+				events: received,
+				state: finalState,
+				result,
+				durationMs,
+				status: harnessInstance?.status ?? null,
+				sessionActive: harnessInstance?.sessionActive ?? null,
+			};
+		} finally {
+			if (unsubscribe) {
+				unsubscribe();
+			}
 		}
-
-		// Give async operations time to complete
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		// Capture final state if not set
-		if (finalState === null && harnessInstance) {
-			finalState = harnessInstance.state;
-		}
-
-		const durationMs = Date.now() - startTime;
-
-		return {
-			events: received,
-			state: finalState,
-			result,
-			durationMs,
-			status: harnessInstance?.status ?? null,
-			sessionActive: harnessInstance?.sessionActive ?? null,
-		};
-	} finally {
-		if (unsubscribe) {
-			unsubscribe();
-		}
-	}
+	});
 }
 
 /**

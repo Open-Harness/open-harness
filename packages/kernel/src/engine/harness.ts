@@ -4,6 +4,7 @@
 import type {
 	AgentDefinition,
 	AgentExecuteContext,
+	AgentInbox,
 	ExecutableAgent,
 } from "../protocol/agent.js";
 import type { BaseEvent, EnrichedEvent } from "../protocol/events.js";
@@ -18,6 +19,7 @@ import type {
 } from "../protocol/harness.js";
 import type { UserResponse } from "../protocol/hub.js";
 import { HubImpl } from "./hub.js";
+import { AgentInboxImpl } from "./inbox.js";
 
 /**
  * Session context implementation for interactive workflows.
@@ -163,67 +165,6 @@ function wrapAgent<TIn, TOut>(
 }
 
 /**
- * Simple inbox implementation (basic for Milestone 3, full routing in Milestone 4).
- */
-interface AgentInbox {
-	pop(): Promise<{ content: string; timestamp: Date }>;
-	drain(): Array<{ content: string; timestamp: Date }>;
-	[Symbol.asyncIterator](): AsyncIterableIterator<{
-		content: string;
-		timestamp: Date;
-	}>;
-}
-
-class SimpleInbox implements AgentInbox {
-	private readonly messages: Array<{ content: string; timestamp: Date }> = [];
-
-	push(message: string): void {
-		this.messages.push({
-			content: message,
-			timestamp: new Date(),
-		});
-	}
-
-	async pop(): Promise<{ content: string; timestamp: Date }> {
-		if (this.messages.length > 0) {
-			const message = this.messages.shift();
-			if (!message) {
-				throw new Error("Expected message to be available");
-			}
-			return message;
-		}
-		// Block until message available (simplified)
-		return new Promise((resolve) => {
-			const check = setInterval(() => {
-				if (this.messages.length > 0) {
-					clearInterval(check);
-					const message = this.messages.shift();
-					if (!message) {
-						throw new Error("Expected message to be available");
-					}
-					resolve(message);
-				}
-			}, 10);
-		});
-	}
-
-	drain(): Array<{ content: string; timestamp: Date }> {
-		const messages = [...this.messages];
-		this.messages.length = 0;
-		return messages;
-	}
-
-	async *[Symbol.asyncIterator](): AsyncIterableIterator<{
-		content: string;
-		timestamp: Date;
-	}> {
-		while (true) {
-			yield await this.pop();
-		}
-	}
-}
-
-/**
  * Harness instance implementation.
  */
 export class HarnessInstanceImpl<TState, TResult>
@@ -238,7 +179,7 @@ export class HarnessInstanceImpl<TState, TResult>
 	) => Promise<TResult>;
 	private readonly workflowName: string;
 	private _sessionContext: SessionContextImpl | null = null;
-	private readonly inboxes = new Map<string, SimpleInbox>();
+	private readonly inboxes = new Map<string, AgentInboxImpl>();
 	private runIdCounter = 0;
 
 	constructor(
@@ -275,13 +216,21 @@ export class HarnessInstanceImpl<TState, TResult>
 		return `run-${this.runIdCounter++}`;
 	}
 
-	private getInbox(runId: string): SimpleInbox {
+	private getInbox(runId: string): AgentInboxImpl {
 		let inbox = this.inboxes.get(runId);
 		if (!inbox) {
-			inbox = new SimpleInbox();
+			inbox = new AgentInboxImpl();
 			this.inboxes.set(runId, inbox);
 		}
 		return inbox;
+	}
+
+	sendToRun(runId: string, message: string): void {
+		const inbox = this.inboxes.get(runId);
+		if (inbox) {
+			inbox.push(message);
+		}
+		super.sendToRun(runId, message);
 	}
 
 	async run(): Promise<HarnessResult<TState, TResult>> {
