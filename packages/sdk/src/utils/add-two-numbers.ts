@@ -16,9 +16,7 @@
 export function addTwoNumbers(num1: number, num2: number): number {
 	// Validate that both arguments are numbers
 	if (typeof num1 !== "number" || typeof num2 !== "number") {
-		throw new TypeError(
-			`Expected two numbers, but received ${typeof num1} and ${typeof num2}`,
-		);
+		throw new TypeError(`Expected two numbers, but received ${typeof num1} and ${typeof num2}`);
 	}
 
 	// Check for NaN values

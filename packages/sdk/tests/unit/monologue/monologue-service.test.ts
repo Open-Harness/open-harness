@@ -361,7 +361,7 @@ describe("MonologueService - Metadata", () => {
 
 		expect(emittedEntries.length).toBeGreaterThan(0);
 		const emittedEntry = emittedEntries[0];
-		if (emittedEntry && emittedEntry.metadata) {
+		if (emittedEntry?.metadata) {
 			expect(emittedEntry.metadata.model).toBe("haiku");
 			expect(emittedEntry.metadata.latencyMs).toBeGreaterThanOrEqual(0);
 		}

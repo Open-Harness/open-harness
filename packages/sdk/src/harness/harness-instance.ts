@@ -78,7 +78,6 @@ export interface HarnessInstanceConfig<TAgents extends Record<string, AgentConst
  */
 // biome-ignore lint/suspicious/noExplicitAny: Required for flexible agent typing
 export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any>>, TState, TResult> {
-	private readonly _name: string;
 	private readonly _agents: ResolvedAgents<TAgents>;
 	private _state: TState;
 	private readonly _runFn: ((context: ExecuteContext<TAgents, TState>, input: unknown) => Promise<TResult>) | undefined;
@@ -90,7 +89,6 @@ export class HarnessInstance<TAgents extends Record<string, AgentConstructor<any
 	private _completed = false;
 
 	constructor(config: HarnessInstanceConfig<TAgents, TState, unknown, TResult>) {
-		this._name = config.name;
 		this._agents = config.agents;
 		this._state = config.state;
 		this._runFn = config.run;
