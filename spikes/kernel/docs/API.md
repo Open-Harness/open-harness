@@ -75,7 +75,8 @@ Kernel-level contract (registered with `defineHarness({ agents })`):
 ```ts
 export interface AgentDefinition<TIn, TOut> {
   name: string;
-  execute(input: TIn, ctx: { hub: Hub; inbox: AgentInbox }): Promise<TOut>;
+  emitsStartComplete?: boolean;
+  execute(input: TIn, ctx: { hub: Hub; inbox: AgentInbox; runId: string }): Promise<TOut>;
 }
 ```
 

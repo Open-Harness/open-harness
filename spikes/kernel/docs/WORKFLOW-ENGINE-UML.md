@@ -82,7 +82,7 @@ classDiagram
   }
 
   class WorkflowCompiler {
-    +compile(def: WorkflowDefinition): CompiledWorkflow
+    +compile(def: WorkflowYaml): CompiledWorkflow
   }
 
   class BindingResolver {

@@ -41,7 +41,7 @@ Persistence, UI, collaboration, replay, and multi-user are **explicitly deferred
 
 ## Major abstractions
 
-### 1) WorkflowDefinition (data)
+### 1) WorkflowYaml (data)
 
 Represents the YAML file after parsing and validation.
 
@@ -61,7 +61,7 @@ Required fields for MVP:
 - `id: string`
 - `type: string` (registry key)
 - `input: object` (templated strings allowed)
-- `when?: When` (conditional gating)
+- `when?: WhenExpr` (conditional gating)
 - `policy?: NodePolicy` (retry/timeout)
 - `config?: object` (node-type-specific configuration)
 
@@ -191,8 +191,8 @@ MVP recommendation:
 
 See:
 
-- `docs/WORKFLOW-ENGINE-UML.md` for component/class/sequence diagrams
-- `docs/WORKFLOW-YAML-SCHEMA.md` for the canonical YAML contract
+- [[WORKFLOW-ENGINE-UML]] for component/class/sequence diagrams
+- [[WORKFLOW-YAML-SCHEMA]] for the canonical YAML contract
 
 ---
 
@@ -200,5 +200,5 @@ See:
 
 See:
 
-- `docs/WORKFLOW-ENGINE-MVP.md`
+- [[WORKFLOW-ENGINE-MVP]]
 

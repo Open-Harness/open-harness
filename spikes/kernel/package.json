@@ -1,5 +1,5 @@
 {
-  "name": "spike-minimal-kernel",
+  "name": "spike-kernel",
   "module": "src/index.ts",
   "type": "module",
   "private": true,

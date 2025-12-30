@@ -8,8 +8,8 @@ This document is the **scope contract** for the YAML DAG MVP.
 
 ### 1) Workflow definition format (YAML)
 
-- **Versioned metadata**
-- **Workflow inputs** (defaults)
+- **`workflow.version`** (versioned workflow)
+- **`workflow.input`** (workflow inputs / defaults)
 - **Nodes**
   - `id`, `type`, `input`, optional `when`, optional `policy`, optional `config`
 - **Edges**
@@ -17,7 +17,7 @@ This document is the **scope contract** for the YAML DAG MVP.
 
 Canonical spec:
 
-- `docs/WORKFLOW-YAML-SCHEMA.md`
+- [[WORKFLOW-YAML-SCHEMA]]
 
 ### 2) Node registry (TypeScript)
 

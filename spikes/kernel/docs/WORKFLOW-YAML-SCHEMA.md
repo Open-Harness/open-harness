@@ -2,6 +2,11 @@
 
 This document is the **single source of truth** for the YAML workflow format used by the DAG workflow engine.
 
+See also:
+
+- [[WORKFLOW-ENGINE-INDEX]]
+- [[WORKFLOW-ENGINE-ARCHITECTURE]]
+
 Goals:
 
 - **Stable authoring format** (CLI + future UI)

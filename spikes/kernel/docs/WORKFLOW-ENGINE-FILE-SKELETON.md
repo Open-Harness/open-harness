@@ -22,7 +22,7 @@ spikes/kernel/
 
     # NEW: workflow engine layer (YAML DAG)
     workflow/
-      types.ts           # WorkflowDefinition, NodeSpec, policies, capabilities
+      types.ts           # WorkflowYaml, NodeSpec, policies, capabilities
       schema.ts          # Zod schemas for YAML shape validation
       parser.ts          # YAML -> JS object
       compiler.ts        # DAG validation + topo + dependency graph

@@ -3,7 +3,7 @@
 // Why this exists:
 // - This spike lives inside a monorepo where dependencies are already present under
 //   `packages/anthropic/node_modules/**`.
-// - We want `spike-minimal-kernel` examples to be runnable without doing an install here.
+// - We want `spikes/kernel` examples to be runnable without doing an install here.
 //
 // In a real package, you'd just depend on `@anthropic-ai/claude-agent-sdk` normally and remove this file.
 

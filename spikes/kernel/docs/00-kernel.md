@@ -17,7 +17,9 @@ Instead:
 - Agents emit canonical events (agent lifecycle, tool calls, thinking, etc.)
 - Channels subscribe to those events to render / persist / stream
 - Channels can also send commands back into the running Harness (user input, abort, replies)
-- Channels can also send **messages into running agents** (Anthropic-style streaming input) via `hub.sendTo(agentName, message)`
+- Channels can also send **messages into running agents** (Anthropic-style streaming input):
+  - Prefer run-scoped injection: `hub.sendToRun(runId, message)`
+  - Convenience: `hub.sendTo(agentName, message)` works only when exactly one run of that agent is active
 
 ## What makes the bus “unified”
 

@@ -23,6 +23,11 @@ There should be **one canonical thing** that everything talks to:
 
 In code we call this the **`Transport`** (aka “hub”), but you can also name it `UnifiedEventBus` if you prefer.
 
+Terminology note:
+
+- In this spike’s code we consistently call it the **Hub** (`src/hub.ts`).
+- “Transport” can be treated as a synonym, but we try to keep the public docs aligned on **Hub**.
+
 ## One canonical event envelope
 
 Everything uses the same envelope:
