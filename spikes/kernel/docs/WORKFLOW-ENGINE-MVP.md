@@ -1,43 +1,14 @@
-# Workflow Engine MVP Spec (What to build now vs later)
+# Flow Engine MVP Spec (Deprecated)
 
-This document is the **scope contract** for the YAML DAG MVP.
+This document has been consolidated into `docs/README.md`:
+
+- `./README.md` (see “How Flow runs on the Kernel”)
+
+This file is kept only to avoid breaking old references.
 
 ---
 
-## MVP (must include)
-
-### 1) Workflow definition format (YAML)
-
-- **`workflow.version`** (versioned workflow)
-- **`workflow.input`** (workflow inputs / defaults)
-- **Nodes**
-  - `id`, `type`, `input`, optional `when`, optional `policy`, optional `config`
-- **Edges**
-  - **required** explicit edge list (B1)
-
-Canonical spec:
-
-- [[WORKFLOW-YAML-SCHEMA]]
-
-### 2) Node registry (TypeScript)
-
-- `registerNodeType(def)`
-- `def.inputSchema` + `def.outputSchema` (Zod)
-- `def.run(ctx, input)` execution
-- `def.capabilities` (at minimum: `supportsInbox`, `isStreaming`, `isLongLived`)
-
-### 3) Engine execution semantics
-
-- **Deterministic node completion**
-  - “task-like nodes” must end (even if underlying provider session is open)
-  - “long-lived nodes” explicitly opt in and are not part of MVP
-- **Sequential scheduling** (topological)
-- **If/else via `when`**
-- **Basic failure strategy**
-  - workflow-level: `failFast: true` default
-  - node-level: `continueOnError?: boolean`
-
-### 4) Policies
+All details have moved to `docs/README.md`. This file intentionally contains no additional spec text.
 
 - `timeoutMs` per node (enforced by engine)
 - `retry` per node:

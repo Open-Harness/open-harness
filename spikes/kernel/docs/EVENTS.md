@@ -1,8 +1,12 @@
-# Minimal Event Set
+# Minimal Event Set (Deprecated)
+
+This document has been consolidated into `docs/README.md`:
+
+- `./README.md` (see “Kernel: event model”)
+
+This file is kept only to avoid breaking old references.
 
 The kernel only commits to a **small, stable** set of events. Everything else is an extension event.
-
-Back: [[DOCS-INDEX]]
 
 All events are delivered in the canonical envelope:
 

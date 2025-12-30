@@ -1,6 +1,8 @@
-# Proposed folder + file skeleton (engine + YAML)
+# Proposed folder + file skeleton (Deprecated)
 
-This is the recommended structure to turn the current spike into a “real MVP” while keeping boundaries clean.
+This document has been consolidated into `docs/README.md`:
+
+- `./README.md` (see “Where to look in code”)
 
 > Note: “kernel” already exists (`src/hub.ts`, `src/harness.ts`, `src/channel.ts`, etc.).
 > This skeleton adds a **workflow engine layer** without rewriting the kernel.

@@ -1,12 +1,8 @@
-# Workflow Engine Docs Index
+# Flow Engine Docs Index (Deprecated)
 
-Back: [[DOCS-INDEX]]
+All documentation has been consolidated into a single GitHub-friendly doc:
 
-Start here:
+- `README.md`: `./README.md`
 
-- [[WORKFLOW-ENGINE-ARCHITECTURE]] — major abstractions and boundaries
-- [[WORKFLOW-YAML-SCHEMA]] — canonical YAML contract (fields, control flow, policies, bindings)
-- [[WORKFLOW-ENGINE-UML]] — component/class/sequence diagrams (Mermaid)
-- [[WORKFLOW-ENGINE-MVP]] — MVP vs later scope contract
-- [[WORKFLOW-ENGINE-FILE-SKELETON]] — proposed folder/file skeleton
+This file is kept only to avoid breaking old references.
 

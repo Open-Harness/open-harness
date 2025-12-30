@@ -2,7 +2,7 @@
 
 This folder is a **copy/paste spike**: docs + types + tiny reference implementations for the smallest OpenHarness-style kernel.
 
-Docs entrypoint: [[DOCS-INDEX]] (or `docs/DOCS-INDEX.md` on GitHub).
+Docs entrypoint: `docs/README.md`.
 
 ## What this kernel includes (the irreducibles)
 
@@ -34,7 +34,7 @@ bun spikes/kernel/examples/simple.ts
 bun spikes/kernel/examples/basic.ts
 bun spikes/kernel/examples/inbox-injection.ts
 
-# YAML workflow demo:
+# YAML flow (DAG) demo:
 bun spikes/kernel/examples/run-yaml-workflow.ts
 ```
 

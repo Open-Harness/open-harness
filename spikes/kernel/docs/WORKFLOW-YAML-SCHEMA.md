@@ -1,14 +1,10 @@
-# Workflow YAML Schema (Canonical Contract)
+# Workflow YAML Schema (Deprecated)
 
-This document is the **single source of truth** for the YAML workflow format used by the DAG workflow engine.
+This document has been consolidated into `docs/README.md` and renamed conceptually to **FlowSpec**:
 
-See also:
+- `./README.md` (see “Flow layer: YAML contract (FlowSpec)”)
 
-- Back: [[DOCS-INDEX]]
-- [[WORKFLOW-ENGINE-INDEX]]
-- [[WORKFLOW-ENGINE-ARCHITECTURE]]
-
-Goals:
+This file is kept only to avoid breaking old references.
 
 - **Stable authoring format** (CLI + future UI)
 - **Minimal, predictable control-flow** (DAG + gated nodes)

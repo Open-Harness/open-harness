@@ -1,6 +1,10 @@
-# Minimal Kernel Design
+# Minimal Kernel Design (Deprecated)
 
-Back: [[DOCS-INDEX]]
+This document has been consolidated into `docs/README.md`:
+
+- `./README.md` (see “Kernel” sections)
+
+This file is kept only to avoid breaking old references.
 
 ## Goal
 

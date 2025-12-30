@@ -1,6 +1,10 @@
-# Workflow Engine UML (Mermaid)
+# Flow Engine UML (Deprecated)
 
-These diagrams are “UML-ish” via Mermaid to keep them editable in Markdown.
+All relevant diagrams have been consolidated into `docs/README.md`:
+
+- `./README.md` (see “Diagrams (Mermaid)”)
+
+This file is kept only to avoid breaking old references.
 
 ---
 

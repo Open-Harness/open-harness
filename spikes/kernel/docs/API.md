@@ -1,8 +1,10 @@
-# Minimal Kernel API (Spike)
+# Minimal Kernel API (Deprecated)
 
-This is the minimal public contract we want to preserve while rebuilding internals.
+This document has been consolidated into `docs/README.md`:
 
-Back: [[DOCS-INDEX]]
+- `./README.md` (see “Kernel: API”)
+
+This file is kept only to avoid breaking old references.
 
 ## defineHarness
 
