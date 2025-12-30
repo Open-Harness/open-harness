@@ -330,6 +330,7 @@ const hubScenarios: Record<string, () => Promise<HubFixture>> = {
 		const afterStartSessionActive = hub.sessionActive;
 
 		(hub as HubImpl).setStatus("running");
+		const finalStatus = hub.status;
 
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
