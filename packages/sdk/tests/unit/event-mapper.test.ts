@@ -211,11 +211,11 @@ describe("Event Mapper", () => {
 				type: "assistant",
 				message: {
 					content: [
-						{ type: "unknown_block_type" as any, data: "ignored" },
+						{ type: "unknown_block_type" as unknown as never, data: "ignored" },
 						{ type: "text", text: "This is included." },
 					],
 				},
-			} as SDKMessage;
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
@@ -237,8 +237,8 @@ describe("Event Mapper", () => {
 		test("non-array content returns empty events", () => {
 			const msg: SDKMessage = {
 				type: "assistant",
-				message: { content: "string content" as any },
-			} as SDKMessage;
+				message: { content: "string content" as unknown as never },
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
@@ -322,8 +322,8 @@ describe("Event Mapper", () => {
 		test("non-array user content returns empty events", () => {
 			const msg: SDKMessage = {
 				type: "user",
-				message: { content: "string content" as any },
-			} as SDKMessage;
+				message: { content: "string content" as unknown as never },
+			} as unknown as SDKMessage;
 
 			const events = mapSdkMessageToEvents(msg, TEST_AGENT, TEST_SESSION);
 
@@ -455,7 +455,7 @@ describe("Event Mapper", () => {
 	describe("unknown message types", () => {
 		test("unknown message type returns empty array", () => {
 			const msg = {
-				type: "unknown_type" as any,
+				type: "unknown_type" as unknown as never,
 				data: "some data",
 			} as unknown as SDKMessage;
 
