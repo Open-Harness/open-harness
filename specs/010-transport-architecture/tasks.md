@@ -55,12 +55,12 @@
 
 **Purpose**: Project initialization and type definitions
 
-- [ ] T001 Add Transport and Attachment types to packages/sdk/src/core/unified-events/types.ts
-- [ ] T002 [P] Add TransportStatus type to packages/sdk/src/core/unified-events/types.ts
-- [ ] T003 [P] Add UserResponse interface with Zod schema in packages/sdk/src/core/unified-events/types.ts
-- [ ] T004 [P] Add InjectedMessage interface in packages/sdk/src/core/unified-events/types.ts
-- [ ] T005 [P] Add session event types (SessionPromptEvent, SessionReplyEvent, SessionAbortEvent) in packages/sdk/src/harness/event-context.ts
-- [ ] T006 Re-export new types from packages/sdk/src/core/unified-events/index.ts
+- [X] T001 Add Transport and Attachment types to packages/sdk/src/core/unified-events/types.ts
+- [X] T002 [P] Add TransportStatus type to packages/sdk/src/core/unified-events/types.ts
+- [X] T003 [P] Add UserResponse interface with Zod schema in packages/sdk/src/core/unified-events/types.ts
+- [X] T004 [P] Add InjectedMessage interface in packages/sdk/src/core/unified-events/types.ts
+- [X] T005 [P] Add session event types (SessionPromptEvent, SessionReplyEvent, SessionAbortEvent) in packages/sdk/src/harness/event-context.ts
+- [X] T006 Re-export new types from packages/sdk/src/core/unified-events/index.ts
 
 ---
 
@@ -70,12 +70,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Create AsyncQueue<T> class in packages/sdk/src/harness/async-queue.ts
-- [ ] T008 Unit test for AsyncQueue in packages/sdk/tests/unit/async-queue.test.ts
-- [ ] T009 [P] Create SessionContext class in packages/sdk/src/harness/session-context.ts
-- [ ] T010 Unit test for SessionContext in packages/sdk/tests/unit/session-context.test.ts
-- [ ] T011 Extend HarnessInstance interface to implement Transport in packages/sdk/src/harness/harness-instance.ts
-- [ ] T011b Implement subscribe(filter?, listener) method on HarnessInstance in packages/sdk/src/harness/harness-instance.ts
+- [X] T007 Create AsyncQueue<T> class in packages/sdk/src/harness/async-queue.ts
+- [X] T008 Unit test for AsyncQueue in packages/sdk/tests/unit/async-queue.test.ts
+- [X] T009 [P] Create SessionContext class in packages/sdk/src/harness/session-context.ts
+- [X] T010 Unit test for SessionContext in packages/sdk/tests/unit/session-context.test.ts
+- [X] T011 Extend HarnessInstance interface to implement Transport in packages/sdk/src/harness/harness-instance.ts
+- [X] T011b Implement subscribe(filter?, listener) method on HarnessInstance in packages/sdk/src/harness/harness-instance.ts
 
 **Checkpoint**: Foundation ready - Transport types defined, AsyncQueue and SessionContext implemented
 
@@ -89,19 +89,19 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Unit test for attach() chaining in packages/sdk/tests/unit/transport.test.ts
-- [ ] T013 [P] [US1] Unit test for cleanup function invocation in packages/sdk/tests/unit/transport.test.ts
-- [ ] T014 [P] [US1] Unit test for event order consistency in packages/sdk/tests/unit/transport.test.ts
+- [X] T012 [P] [US1] Unit test for attach() chaining in packages/sdk/tests/unit/transport.test.ts
+- [X] T013 [P] [US1] Unit test for cleanup function invocation in packages/sdk/tests/unit/transport.test.ts
+- [X] T014 [P] [US1] Unit test for event order consistency in packages/sdk/tests/unit/transport.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Implement attach(attachment) method returning `this` in packages/sdk/src/harness/harness-instance.ts
-- [ ] T016 [US1] Store attachments array in HarnessInstance with cleanup tracking in packages/sdk/src/harness/harness-instance.ts
-- [ ] T017 [US1] Call attachment(transport) on run() start, store returned cleanup in packages/sdk/src/harness/harness-instance.ts
-- [ ] T018 [US1] Call all cleanup functions (in reverse order) on run() completion in packages/sdk/src/harness/harness-instance.ts
-- [ ] T019 [US1] Throw error if attach() called after run() started in packages/sdk/src/harness/harness-instance.ts
-- [ ] T020 [US1] Implement status property state machine (idle → running → complete) in packages/sdk/src/harness/harness-instance.ts
-- [ ] T021 [US1] Update defineRenderer helper to return Attachment type in packages/sdk/src/harness/define-renderer.ts
+- [X] T015 [US1] Implement attach(attachment) method returning `this` in packages/sdk/src/harness/harness-instance.ts
+- [X] T016 [US1] Store attachments array in HarnessInstance with cleanup tracking in packages/sdk/src/harness/harness-instance.ts
+- [X] T017 [US1] Call attachment(transport) on run() start, store returned cleanup in packages/sdk/src/harness/harness-instance.ts
+- [X] T018 [US1] Call all cleanup functions (in reverse order) on run() completion in packages/sdk/src/harness/harness-instance.ts
+- [X] T019 [US1] Throw error if attach() called after run() started in packages/sdk/src/harness/harness-instance.ts
+- [X] T020 [US1] Implement status property state machine (idle → running → complete) in packages/sdk/src/harness/harness-instance.ts
+- [X] T021 [US1] Update defineRenderer helper to return Attachment type in packages/sdk/src/harness/define-renderer.ts
 
 **Checkpoint**: User Story 1 functional - harness.create(input).attach(renderer).run() works with cleanup
 
@@ -115,22 +115,22 @@
 
 ### Tests for User Story 2
 
-- [ ] T022 [P] [US2] Unit test for startSession().complete() flow in packages/sdk/tests/unit/transport.test.ts
-- [ ] T023 [P] [US2] Unit test for waitForUser() blocking/unblocking in packages/sdk/tests/unit/session-context.test.ts
-- [ ] T024 [P] [US2] Unit test for commands ignored when session not active in packages/sdk/tests/unit/transport.test.ts
-- [ ] T025 [P] [US2] Replay test for interactive session round-trip in packages/sdk/tests/replay/interactive-session.test.ts
+- [X] T022 [P] [US2] Unit test for startSession().complete() flow in packages/sdk/tests/unit/transport.test.ts
+- [X] T023 [P] [US2] Unit test for waitForUser() blocking/unblocking in packages/sdk/tests/unit/session-context.test.ts
+- [X] T024 [P] [US2] Unit test for commands ignored when session not active in packages/sdk/tests/unit/transport.test.ts
+- [X] T025 [P] [US2] Replay test for interactive session round-trip in packages/sdk/tests/replay/interactive-session.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Implement sessionActive property (default false) in packages/sdk/src/harness/harness-instance.ts
-- [ ] T027 [US2] Implement startSession() method to enable session mode in packages/sdk/src/harness/harness-instance.ts
-- [ ] T028 [US2] Implement complete() method for interactive session completion in packages/sdk/src/harness/harness-instance.ts
-- [ ] T029 [US2] Add promptResolvers Map for pending prompt responses in packages/sdk/src/harness/harness-instance.ts
-- [ ] T030 [US2] Implement reply(promptId, response) resolving pending promises in packages/sdk/src/harness/harness-instance.ts
-- [ ] T031 [US2] Connect SessionContext to HarnessInstance message/prompt infrastructure in packages/sdk/src/harness/session-context.ts
-- [ ] T032 [US2] Emit user:prompt event when waitForUser() called in packages/sdk/src/harness/session-context.ts
-- [ ] T033 [US2] Emit user:reply event when reply() resolves waitForUser() in packages/sdk/src/harness/harness-instance.ts
-- [ ] T034 [US2] Add session property to ExecuteContext when sessionActive in packages/sdk/src/factory/define-harness.ts
+- [X] T026 [US2] Implement sessionActive property (default false) in packages/sdk/src/harness/harness-instance.ts
+- [X] T027 [US2] Implement startSession() method to enable session mode in packages/sdk/src/harness/harness-instance.ts
+- [X] T028 [US2] Implement complete() method for interactive session completion in packages/sdk/src/harness/harness-instance.ts
+- [X] T029 [US2] Add promptResolvers Map for pending prompt responses in packages/sdk/src/harness/harness-instance.ts
+- [X] T030 [US2] Implement reply(promptId, response) resolving pending promises in packages/sdk/src/harness/harness-instance.ts
+- [X] T031 [US2] Connect SessionContext to HarnessInstance message/prompt infrastructure in packages/sdk/src/harness/session-context.ts
+- [X] T032 [US2] Emit user:prompt event when waitForUser() called in packages/sdk/src/harness/session-context.ts
+- [X] T033 [US2] Emit user:reply event when reply() resolves waitForUser() in packages/sdk/src/harness/harness-instance.ts
+- [X] T034 [US2] Add session property to ExecuteContext when sessionActive in packages/sdk/src/factory/define-harness.ts
 
 **Checkpoint**: User Story 2 functional - interactive prompts work with waitForUser()/reply() round-trip
 
@@ -144,18 +144,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T035 [P] [US3] Unit test for send(message) queuing in packages/sdk/tests/unit/transport.test.ts
-- [ ] T036 [P] [US3] Unit test for sendTo(agent, message) in packages/sdk/tests/unit/transport.test.ts
-- [ ] T037 [P] [US3] Unit test for async iterator over events in packages/sdk/tests/unit/transport.test.ts
+- [X] T035 [P] [US3] Unit test for send(message) queuing in packages/sdk/tests/unit/transport.test.ts
+- [X] T036 [P] [US3] Unit test for sendTo(agent, message) in packages/sdk/tests/unit/transport.test.ts
+- [X] T037 [P] [US3] Unit test for async iterator over events in packages/sdk/tests/unit/transport.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T038 [US3] Implement send(message) queueing to messageQueue in packages/sdk/src/harness/harness-instance.ts
-- [ ] T039 [US3] Implement sendTo(agent, message) with agent targeting in packages/sdk/src/harness/harness-instance.ts
-- [ ] T040 [US3] Implement hasMessages() checking messageQueue in packages/sdk/src/harness/session-context.ts
-- [ ] T041 [US3] Implement readMessages() draining messageQueue in packages/sdk/src/harness/session-context.ts
-- [ ] T042 [US3] Implement [Symbol.asyncIterator]() for async event iteration in packages/sdk/src/harness/harness-instance.ts
-- [ ] T043 [US3] Guard send/sendTo/reply to no-op when sessionActive=false in packages/sdk/src/harness/harness-instance.ts
+- [X] T038 [US3] Implement send(message) queueing to messageQueue in packages/sdk/src/harness/harness-instance.ts
+- [X] T039 [US3] Implement sendTo(agent, message) with agent targeting in packages/sdk/src/harness/harness-instance.ts
+- [X] T040 [US3] Implement hasMessages() checking messageQueue in packages/sdk/src/harness/session-context.ts
+- [X] T041 [US3] Implement readMessages() draining messageQueue in packages/sdk/src/harness/session-context.ts
+- [X] T042 [US3] Implement [Symbol.asyncIterator]() for async event iteration in packages/sdk/src/harness/harness-instance.ts
+- [X] T043 [US3] Guard send/sendTo/reply to no-op when sessionActive=false in packages/sdk/src/harness/harness-instance.ts
 
 **Checkpoint**: User Story 3 functional - bidirectional message flow works for bridge patterns
 
@@ -169,20 +169,20 @@
 
 ### Tests for User Story 4
 
-- [ ] T044 [P] [US4] Unit test for abort(reason) setting status to aborted in packages/sdk/tests/unit/transport.test.ts
-- [ ] T045 [P] [US4] Unit test for isAborted() returning true after abort in packages/sdk/tests/unit/session-context.test.ts
-- [ ] T046 [P] [US4] Unit test for abort() idempotency (second call no-op) in packages/sdk/tests/unit/transport.test.ts
-- [ ] T047 [P] [US4] Unit test for cleanup functions called on abort in packages/sdk/tests/unit/transport.test.ts
+- [X] T044 [P] [US4] Unit test for abort(reason) setting status to aborted in packages/sdk/tests/unit/transport.test.ts
+- [X] T045 [P] [US4] Unit test for isAborted() returning true after abort in packages/sdk/tests/unit/session-context.test.ts
+- [X] T046 [P] [US4] Unit test for abort() idempotency (second call no-op) in packages/sdk/tests/unit/transport.test.ts
+- [X] T047 [P] [US4] Unit test for cleanup functions called on abort in packages/sdk/tests/unit/transport.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T048 [US4] Add abortController to HarnessInstance in packages/sdk/src/harness/harness-instance.ts
-- [ ] T049 [US4] Implement abort(reason) calling abortController.abort() in packages/sdk/src/harness/harness-instance.ts
-- [ ] T050 [US4] Transition status to 'aborted' on abort() in packages/sdk/src/harness/harness-instance.ts
-- [ ] T051 [US4] Emit session:abort event when abort() called in packages/sdk/src/harness/harness-instance.ts
-- [ ] T052 [US4] Implement isAborted() in SessionContext checking abort signal in packages/sdk/src/harness/session-context.ts
-- [ ] T053 [US4] Ensure cleanup functions called on abort completion in packages/sdk/src/harness/harness-instance.ts
-- [ ] T054 [US4] Add 'aborted' status to HarnessCompleteEvent in packages/sdk/src/harness/event-context.ts
+- [X] T048 [US4] Add abortController to HarnessInstance in packages/sdk/src/harness/harness-instance.ts
+- [X] T049 [US4] Implement abort(reason) calling abortController.abort() in packages/sdk/src/harness/harness-instance.ts
+- [X] T050 [US4] Transition status to 'aborted' on abort() in packages/sdk/src/harness/harness-instance.ts
+- [X] T051 [US4] Emit session:abort event when abort() called in packages/sdk/src/harness/harness-instance.ts
+- [X] T052 [US4] Implement isAborted() in SessionContext checking abort signal in packages/sdk/src/harness/session-context.ts
+- [X] T053 [US4] Ensure cleanup functions called on abort completion in packages/sdk/src/harness/harness-instance.ts
+- [X] T054 [US4] Add 'aborted' status to HarnessCompleteEvent in packages/sdk/src/harness/event-context.ts
 
 **Checkpoint**: User Story 4 functional - abort triggers graceful shutdown with cleanup
 
@@ -196,15 +196,15 @@
 
 ### Tests for User Story 5
 
-- [ ] T055 [P] [US5] Unit test for harness running with no attachments in packages/sdk/tests/unit/transport.test.ts
-- [ ] T056 [P] [US5] Unit test for conditional attach() based on env in packages/sdk/tests/unit/transport.test.ts
-- [ ] T057 [P] [US5] Unit test for pre-registered attachments via options in packages/sdk/tests/unit/transport.test.ts
+- [X] T055 [P] [US5] Unit test for harness running with no attachments in packages/sdk/tests/unit/transport.test.ts
+- [X] T056 [P] [US5] Unit test for conditional attach() based on env in packages/sdk/tests/unit/transport.test.ts
+- [X] T057 [P] [US5] Unit test for pre-registered attachments via options in packages/sdk/tests/unit/transport.test.ts
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] Support attachments array in HarnessOptions in packages/sdk/src/factory/define-harness.ts
-- [ ] T059 [US5] Pre-register options.attachments in create() method in packages/sdk/src/factory/define-harness.ts
-- [ ] T060 [US5] Verify harness runs correctly with zero attachments in packages/sdk/src/harness/harness-instance.ts
+- [X] T058 [US5] Support attachments array in HarnessOptions in packages/sdk/src/factory/define-harness.ts
+- [X] T059 [US5] Pre-register options.attachments in create() method in packages/sdk/src/factory/define-harness.ts
+- [X] T060 [US5] Verify harness runs correctly with zero attachments in packages/sdk/src/harness/harness-instance.ts
 
 **Checkpoint**: User Story 5 functional - conditional and pre-configured attachments work
 
@@ -214,12 +214,12 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T061 Update sessionMode flag in HarnessStartEvent in packages/sdk/src/harness/event-context.ts
-- [ ] T062 [P] Add waitForUser timeout support in packages/sdk/src/harness/session-context.ts
-- [ ] T063 [P] Add first-reply-wins logic for multiple replies in packages/sdk/src/harness/harness-instance.ts
-- [ ] T064 Run quickstart.md validation scenarios manually
-- [ ] T065 Verify all existing tests pass (backward compatibility gate)
-- [ ] T066 Verify 80% line coverage for new code
+- [X] T061 Update sessionMode flag in HarnessStartEvent in packages/sdk/src/harness/event-context.ts
+- [X] T062 [P] Add waitForUser timeout support in packages/sdk/src/harness/session-context.ts
+- [X] T063 [P] Add first-reply-wins logic for multiple replies in packages/sdk/src/harness/harness-instance.ts
+- [X] T064 Run quickstart.md validation scenarios manually
+- [X] T065 Verify all existing tests pass (backward compatibility gate)
+- [X] T066 Verify 80% line coverage for new code
 
 ---
 

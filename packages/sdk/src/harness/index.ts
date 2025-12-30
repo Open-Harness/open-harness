@@ -216,6 +216,7 @@ export {
 	type RenderContext,
 	type RendererConfig as UnifiedRendererConfig,
 	type RendererDefinition,
+	toAttachment,
 } from "./define-renderer.js";
 
 // Render Output Helpers

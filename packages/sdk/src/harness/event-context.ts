@@ -77,6 +77,8 @@ export interface HarnessStartEvent extends BaseEventPayload {
 	sessionId: string;
 	mode: "live" | "replay";
 	taskCount: number;
+	/** T061: Whether interactive session mode is active */
+	sessionMode?: boolean;
 }
 
 export interface HarnessCompleteEvent extends BaseEventPayload {
@@ -163,21 +165,42 @@ export interface NarrativeEvent extends BaseEventPayload {
 	importance: NarrativeImportance;
 }
 
-// --- Session Events ---
+// --- Session Events (Transport Architecture) ---
 
+/**
+ * Emitted when workflow calls waitForUser().
+ * Contains promptId for reply correlation.
+ */
 export interface SessionPromptEvent extends BaseEventPayload {
 	type: "session:prompt";
+	/** Unique prompt identifier for reply correlation */
+	promptId: string;
+	/** Prompt text to display */
 	prompt: string;
+	/** Optional predefined choices */
+	choices?: string[];
 }
 
+/**
+ * Emitted when transport.reply() resolves a pending prompt.
+ */
 export interface SessionReplyEvent extends BaseEventPayload {
 	type: "session:reply";
-	reply: string;
+	/** Prompt identifier this reply is for */
+	promptId: string;
+	/** User's response content */
+	content: string;
+	/** Selected choice (if choices were presented) */
+	choice?: string;
 }
 
+/**
+ * Emitted when transport.abort() is called.
+ */
 export interface SessionAbortEvent extends BaseEventPayload {
 	type: "session:abort";
-	reason: string;
+	/** Optional abort reason */
+	reason?: string;
 }
 
 // --- Extension Pattern ---

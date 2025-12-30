@@ -289,5 +289,6 @@ export {
 	RenderOutput,
 	type RenderOutputConfig,
 	type Spinner,
+	toAttachment,
 	type UnifiedRendererConfig,
 } from "./harness/index.js";
