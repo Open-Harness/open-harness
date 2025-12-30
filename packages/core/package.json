@@ -1,0 +1,35 @@
+{
+	"name": "@openharness/core",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check . --write",
+		"build": "bun build ./src/index.ts --outdir=dist --target=node --format=esm --sourcemap=external && tsc -p tsconfig.build.json",
+		"test": "bun test tests/"
+	},
+	"dependencies": {
+		"@needle-di/core": "^1.1.0",
+		"reflect-metadata": "^0.2.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.10",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
