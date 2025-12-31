@@ -102,4 +102,12 @@ BEHAVIORAL DECORATORS:
     4. present the methodology to the user using the ASK USER TOOL
 
     **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
+
+## PR Workflow Policy (Graphite)
+
+- Use Graphite stacks for all PRs; do not open PRs directly in GitHub.
+- Target all feature stacks to `dev`.
+- Keep the rolling `dev` → `master` PR open as the release train.
+- Review and merge stacks bottom → top.
+- When ready to release, merge the `dev` → `master` PR.
 <!-- MANUAL ADDITIONS END -->
