@@ -3,6 +3,7 @@
 
 import { AgentInboxImpl } from "../engine/inbox.js";
 import type {
+	Edge,
 	FlowYaml,
 	NodeSpec,
 	NodeTypeDefinition,
@@ -20,12 +21,68 @@ export interface FlowExecutionContext {
 	task: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
 }
 
-export interface FlowRunResult {
+interface FlowRunResult {
 	outputs: Record<string, unknown>;
 }
 
+type EdgeStatus = "pending" | "fired" | "skipped";
+
+type EdgeState = {
+	edge: Edge;
+	status: EdgeStatus;
+};
+
+type EdgeIndex = {
+	incoming: Map<string, EdgeState[]>;
+	outgoing: Map<string, EdgeState[]>;
+};
+
 function createRunId(nodeId: string, attempt: number): string {
 	return `run-${nodeId}-${attempt}-${Date.now()}`;
+}
+
+function buildEdgeIndex(edges: Edge[]): EdgeIndex {
+	const incoming = new Map<string, EdgeState[]>();
+	const outgoing = new Map<string, EdgeState[]>();
+
+	for (const edge of edges) {
+		const state: EdgeState = { edge, status: "pending" };
+
+		const incomingList = incoming.get(edge.to);
+		if (incomingList) {
+			incomingList.push(state);
+		} else {
+			incoming.set(edge.to, [state]);
+		}
+
+		const outgoingList = outgoing.get(edge.from);
+		if (outgoingList) {
+			outgoingList.push(state);
+		} else {
+			outgoing.set(edge.from, [state]);
+		}
+	}
+
+	return { incoming, outgoing };
+}
+
+function resolveOutgoingEdges(
+	nodeId: string,
+	index: EdgeIndex,
+	context: BindingContext,
+): void {
+	const edges = index.outgoing.get(nodeId) ?? [];
+	for (const edgeState of edges) {
+		const shouldFire = evaluateWhen(edgeState.edge.when, context);
+		edgeState.status = shouldFire ? "fired" : "skipped";
+	}
+}
+
+function createBindingContext(
+	flowInput: Record<string, unknown>,
+	outputs: Record<string, unknown>,
+): BindingContext {
+	return { flow: { input: flowInput }, ...outputs };
 }
 
 async function runNode(
@@ -70,17 +127,39 @@ export async function executeFlow(
 	const compiled = compileFlow(flow);
 	const outputs: Record<string, unknown> = {};
 	const flowInput = { ...(flow.flow.input ?? {}), ...(inputOverrides ?? {}) };
+	const edgeIndex = buildEdgeIndex(compiled.edges);
 
 	await ctx.phase("Run Flow", async () => {
 		for (const node of compiled.order) {
-			const bindingContext: BindingContext = {
-				flow: { input: flowInput },
-				...outputs,
-			};
+			const bindingContext = createBindingContext(flowInput, outputs);
+			const incoming = edgeIndex.incoming.get(node.id) ?? [];
+
+			if (incoming.length > 0) {
+				const resolved = incoming.every((edge) => edge.status !== "pending");
+				if (!resolved) {
+					throw new Error(`Node "${node.id}" has unresolved incoming edges`);
+				}
+
+				const fired = incoming.some((edge) => edge.status === "fired");
+				if (!fired) {
+					outputs[node.id] = { skipped: true };
+					resolveOutgoingEdges(
+						node.id,
+						edgeIndex,
+						createBindingContext(flowInput, outputs),
+					);
+					continue;
+				}
+			}
 
 			const shouldRun = evaluateWhen(node.when, bindingContext);
 			if (!shouldRun) {
 				outputs[node.id] = { skipped: true };
+				resolveOutgoingEdges(
+					node.id,
+					edgeIndex,
+					createBindingContext(flowInput, outputs),
+				);
 				continue;
 			}
 
@@ -89,6 +168,12 @@ export async function executeFlow(
 				const output = await runNode(node, def, ctx, bindingContext);
 				outputs[node.id] = output;
 			});
+
+			resolveOutgoingEdges(
+				node.id,
+				edgeIndex,
+				createBindingContext(flowInput, outputs),
+			);
 		}
 	});
 

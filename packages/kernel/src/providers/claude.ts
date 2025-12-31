@@ -3,7 +3,6 @@
 
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
 	ModelUsage,
 	NonNullableUsage,
@@ -13,6 +12,7 @@ import type {
 	SDKResultMessage,
 	SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
 	AgentDefinition,
 	AgentExecuteContext,
@@ -173,9 +173,16 @@ export function createClaudeAgent(
 				);
 			}
 
-			const prompt = hasPrompt
-				? input.prompt
-				: messageStream(input.messages ?? [], createSessionId());
+			let prompt: string | AsyncIterable<SDKUserMessage>;
+			if (typeof input.prompt === "string") {
+				prompt = input.prompt;
+			} else if (Array.isArray(input.messages)) {
+				prompt = messageStream(input.messages, createSessionId());
+			} else {
+				throw new Error(
+					"ClaudeAgentInput requires exactly one of prompt or messages",
+				);
+			}
 
 			const mergedOptions = mergeOptions(input.options);
 

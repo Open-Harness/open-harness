@@ -115,6 +115,10 @@ For every phase below, we must include:
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-runtime-live.ts`
   - Tutorial: Lessons 01–05
+- Tutorial Migration Checklist
+  - Update Lessons 01–05 to use FlowRuntime APIs (no legacy runtime)
+  - Run `bun run lesson:01` through `bun run lesson:05`
+  - Confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
@@ -125,9 +129,9 @@ For every phase below, we must include:
   - Context propagation correct
   - Tutorial lessons 01–05 pass
 - Retro (mandatory)
-  - Lessons learned:
-  - Risks discovered:
-  - Follow-ups:
+  - Lessons learned: Tutorial runner needed a FlowRuntime wrapper to replace legacy runtime usage; core lessons 01–05 run clean after swap.
+  - Risks discovered: None observed in lessons 01–05; broader lint/typecheck/test gates still pending.
+  - Follow-ups: Run Phase 1 verification commands (`bun run typecheck`, `bun run lint`, `bun test`, live script).
 
 ---
 
@@ -145,6 +149,9 @@ For every phase below, we must include:
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-edge-routing-live.ts`
   - Tutorial: Lessons 01–05 (edge/when examples)
+- Tutorial Migration Checklist
+  - Re-run Lessons 01–05 after edge changes
+  - Confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
@@ -154,9 +161,9 @@ For every phase below, we must include:
   - Edge gating works; readiness rules enforced
   - Tutorial lessons 01–05 pass
 - Retro (mandatory)
-  - Lessons learned:
-  - Risks discovered:
-  - Follow-ups:
+  - Lessons learned: Edge-level `when` needed runtime edge state tracking; a dedicated unit test prevents regressions.
+  - Risks discovered: None observed in Phase 2 changes; sequential scheduling still assumes all incoming edges resolved.
+  - Follow-ups: Keep edge readiness logic aligned if/when parallel scheduling or control.merge is added.
 
 ---
 
@@ -171,6 +178,9 @@ For every phase below, we must include:
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-policy-live.ts`
   - Tutorial: add policy lesson (or extend existing)
+- Tutorial Migration Checklist
+  - Update policy lesson (or extension) to FlowRuntime APIs
+  - Run required lesson(s) and confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
@@ -199,6 +209,10 @@ For every phase below, we must include:
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-agent-nodes-live.ts`
   - Tutorials: Lesson 06 (PromptFile + Claude) and Lesson 09 (Multi-Turn)
+- Tutorial Migration Checklist
+  - Update Lessons 06 and 09 to FlowRuntime APIs
+  - Run `bun run lesson:06` and `bun run lesson:09`
+  - Confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
@@ -227,6 +241,9 @@ For every phase below, we must include:
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-loader-live.ts`
   - Tutorial: any lesson that uses nodePacks + promptFile
+- Tutorial Migration Checklist
+  - Update nodePacks/promptFile lessons to FlowRuntime APIs
+  - Run required lesson(s) and confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
@@ -252,6 +269,9 @@ For every phase below, we must include:
   - All legacy runtime code/docs/tests/fixtures/scripts removed
   - All references removed from repo
   - Tutorial suite validated
+- Tutorial Migration Checklist
+  - Update Lessons 01–05, 07–08, 10–14 to FlowRuntime APIs
+  - Run full tutorial suite and confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`

@@ -37,7 +37,7 @@ Any `hub.emit(...)` inside a scoped block inherits the context automatically.
 
 ## Required event types (kernel contract)
 
-### Harness lifecycle
+### Runtime lifecycle
 
 - `harness:start` - `{ name: string }`
 - `harness:complete` - `{ success: boolean; durationMs: number }`

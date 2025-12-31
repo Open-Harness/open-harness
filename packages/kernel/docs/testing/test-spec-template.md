@@ -116,7 +116,7 @@ Tests for the Hub protocol interface. Hub is the unified bidirectional bus that 
 **Scenario**:
 1. Create a hub instance
 2. Subscribe to all events (`"*"`)
-3. Emit a `harness:start` event
+3. Emit a runtime lifecycle event (`harness:start`)
 4. Verify subscriber receives the event with correct envelope
 
 **Assertions**:

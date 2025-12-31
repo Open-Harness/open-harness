@@ -110,46 +110,23 @@ interface Hub extends AsyncIterable<EnrichedEvent> {
 }
 ```
 
-## Harness (deprecated)
+## Flow Runtime
 
 ```typescript
 type Cleanup = void | (() => void) | (() => Promise<void>);
 type Attachment = (hub: Hub) => Cleanup;
 
-interface SessionContext {
-  waitForUser(prompt: string, options?: { choices?: string[]; allowText?: boolean }): Promise<UserResponse>;
-  hasMessages(): boolean;
-  readMessages(): Array<{ content: string; agent?: string; timestamp: Date }>;
-  isAborted(): boolean;
-}
-
-interface ExecuteContext<TAgentDefs extends Record<string, AgentDefinition>, TState> {
-  agents: ExecutableAgents<TAgentDefs>;
-  state: TState;
-  hub: Hub;
-  phase: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
-  task: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
-  emit: (event: BaseEvent) => void;
-  session?: SessionContext;
-}
-
-interface HarnessResult<TState, TResult> {
-  result: TResult;
-  state: TState;
+interface FlowRunResult {
+  outputs: Record<string, unknown>;
   events: EnrichedEvent[];
   durationMs: number;
   status: HubStatus;
 }
 
-interface HarnessInstance<TState, TResult> extends Hub {
-  readonly state: TState;
+interface FlowRuntimeInstance extends Hub {
   attach(attachment: Attachment): this;
   startSession(): this;
-  run(): Promise<HarnessResult<TState, TResult>>;
-}
-
-interface HarnessFactory<TInput, TState, TResult> {
-  create(input: TInput): HarnessInstance<TState, TResult>;
+  run(): Promise<FlowRunResult>;
 }
 ```
 
@@ -283,29 +260,5 @@ interface NodeTypeDefinition<TIn, TOut> {
   outputSchema: ZodSchema<TOut>;
   capabilities?: NodeCapabilities;
   run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
-}
-```
-
-## Flow Runtime
-
-```typescript
-interface FlowRunnerOptions {
-  sessionId?: string;
-  input?: Record<string, unknown>;
-  channels?: ChannelDefinition<any>[];
-  policy?: FlowPolicy;
-}
-
-interface FlowRunResult {
-  outputs: Record<string, unknown>;
-  events: EnrichedEvent[];
-  durationMs: number;
-  status: HubStatus;
-}
-
-interface FlowInstance extends Hub {
-  attach(channel: ChannelDefinition<any>): this;
-  startSession(): this;
-  run(): Promise<FlowRunResult>;
 }
 ```

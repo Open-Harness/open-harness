@@ -50,6 +50,7 @@ export interface NodeSpec {
 export interface Edge {
 	from: NodeId;
 	to: NodeId;
+	when?: WhenExpr;
 }
 
 export interface FlowYaml {

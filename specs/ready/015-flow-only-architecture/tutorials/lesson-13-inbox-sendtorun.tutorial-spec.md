@@ -23,7 +23,7 @@ bun run lesson:13
 
 - Process exits with code `0`
 - Console prints `Lesson 13: Inbox + sendToRun`
-- Output includes `Harness result:` with `received === "hello from sendToRun"`
+- Output includes `Runtime result:` with `received === "hello from sendToRun"`
 
 ## Assertions
 

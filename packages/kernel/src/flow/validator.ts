@@ -67,6 +67,7 @@ export const NodeSpecSchema = z.object({
 export const EdgeSchema = z.object({
 	from: NodeIdSchema,
 	to: NodeIdSchema,
+	when: WhenExprSchema.optional(),
 });
 
 export const FlowYamlSchema = z

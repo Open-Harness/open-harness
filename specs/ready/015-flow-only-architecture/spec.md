@@ -217,7 +217,7 @@ edges:
   - Emits `harness:*`, `phase:*`, `task:*` events.
   - Returns `FlowRunResult` with events, duration, status.
 - Export runtime from `packages/kernel/src/flow/index.ts` and `packages/kernel/src/index.ts`.
-- Remove `packages/kernel/src/engine/harness.ts` and related exports/tests/scripts.
+- Remove legacy runtime engine and related exports/tests/scripts.
 
 ### Phase 2: Edge-level `when`
 - Update `packages/kernel/src/protocol/flow.ts`:
@@ -324,7 +324,7 @@ Each phase must pass its **authoritative gate** before proceeding. Gates are a m
 | Phase 3 | 01–05 + policy lesson | Retry/timeout/continueOnError coverage |
 | Phase 4 | 06, 09 | Claude promptFile + multi-turn inbox |
 | Phase 5 | 06 (promptFile) | Loader extensions (nodePacks + promptFile) |
-| Phase 6 | 01–05, 07–08, 10–14 | End-to-end suite, harness-free |
+| Phase 6 | 01–05, 07–08, 10–14 | End-to-end suite, legacy-runtime-free |
 
 ## Tutorial Specifications (Non-Ad Hoc)
 

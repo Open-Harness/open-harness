@@ -1,10 +1,10 @@
 // Flow node packs
 
-import type { NodeRegistry } from "./registry.js";
 import { claudeNode } from "./nodes/claude.agent.js";
 import { conditionEqualsNode } from "./nodes/condition.equals.js";
 import { constantNode } from "./nodes/constant.js";
 import { echoNode } from "./nodes/echo.js";
+import type { NodeRegistry } from "./registry.js";
 
 export interface NodePack {
 	register(registry: NodeRegistry): void;

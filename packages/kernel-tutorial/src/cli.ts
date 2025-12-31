@@ -9,9 +9,10 @@
  */
 
 import { parseArgs } from "node:util";
-import { defineHarness, executeFlow, loadFlowYamlFile } from "@open-harness/kernel";
+import { loadFlowYamlFile } from "@open-harness/kernel";
 import { consoleChannel } from "./channels/console-channel.js";
 import { buildRegistry, loadNodePacks } from "./flow-runner.js";
+import { runFlowRuntime } from "./runtime.js";
 
 function parseInputOverrides(inputArgs: string[]): Record<string, unknown> {
 	const overrides: Record<string, unknown> = {};
@@ -90,37 +91,16 @@ Examples:
 
 		const availablePacks = await loadNodePacks(values.config);
 
-		// Create harness that runs flows
-		const FlowRunner = defineHarness<{}, {}, Record<string, unknown>>({
-			name: "flow-runner",
-			agents: {},
-			state: () => ({}),
-			run: async ({ phase, task, hub }) => {
-				const registry = buildRegistry(requestedPacks, availablePacks);
-
-				// Execute flow
-				const result = await executeFlow(
-					flow,
-					registry,
-					{ hub, phase, task },
-					inputOverrides,
-				);
-
-				return result.outputs;
-			},
+		const registry = buildRegistry(requestedPacks, availablePacks);
+		const result = await runFlowRuntime({
+			flow,
+			registry,
+			inputOverrides,
+			attachments: [consoleChannel],
 		});
 
-		// Create harness instance
-		const harness = FlowRunner.create({});
-
-		// Attach console channel
-		harness.attach(consoleChannel);
-
-		// Run flow
-		const result = await harness.run();
-
 		console.log("\n📊 Flow Results:");
-		console.log(JSON.stringify(result.result, null, 2));
+		console.log(JSON.stringify(result.outputs, null, 2));
 	} catch (error) {
 		console.error("❌ Error:", error);
 		process.exit(1);

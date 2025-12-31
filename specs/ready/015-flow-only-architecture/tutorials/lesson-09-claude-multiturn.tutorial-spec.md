@@ -12,7 +12,7 @@ Demonstrate multi-turn `claude.agent` using async iterable prompts and inbox inj
 
 - `README.md`
 - `run.ts`
-- `flow.yaml` or harness example
+- `flow.yaml` or FlowRuntime example
 
 ## Run
 

@@ -14,21 +14,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineHarness } from "../src/engine/harness.js";
 import { createHub, type HubImpl } from "../src/engine/hub.js";
 import { AgentInboxImpl } from "../src/engine/inbox.js";
 import type { AgentDefinition } from "../src/protocol/agent.js";
 import type { EnrichedEvent } from "../src/protocol/events.js";
-import type {
-	Attachment,
-	HarnessFactory,
-	HarnessInstance,
-} from "../src/protocol/harness.js";
 import { createClaudeAgent } from "../src/providers/claude.js";
 import type {
 	AgentFixture,
 	FlowFixture,
-	HarnessFixture,
 	HubFixture,
 	ProviderFixture,
 } from "../tests/helpers/fixture-loader.js";
@@ -42,21 +35,6 @@ if (!component || !fixtureName) {
 	process.exit(1);
 }
 
-function createHarnessWithSessionId<TInput, TState, TResult>(
-	factory: HarnessFactory<TInput, TState, TResult>,
-	input: TInput,
-	sessionId: string,
-): HarnessInstance<TState, TResult> {
-	return (
-		factory as HarnessFactory<TInput, TState, TResult> & {
-			create(
-				input: TInput,
-				options?: { sessionIdOverride?: string },
-			): HarnessInstance<TState, TResult>;
-		}
-	).create(input, { sessionIdOverride: sessionId });
-}
-
 async function withFrozenTime<T>(fn: () => Promise<T>): Promise<T> {
 	const originalNow = Date.now;
 	const frozen = Date.now();
@@ -66,6 +44,76 @@ async function withFrozenTime<T>(fn: () => Promise<T>): Promise<T> {
 	} finally {
 		Date.now = originalNow;
 	}
+}
+
+type AgentRuntime = {
+	hub: HubImpl;
+	executeAgent: <TIn, TOut>(
+		agent: AgentDefinition<TIn, TOut>,
+		input: TIn,
+	) => Promise<{ runId: string; output: TOut }>;
+	close: () => void;
+};
+
+function createAgentRuntime(sessionId: string): AgentRuntime {
+	const hub = createHub(sessionId) as HubImpl;
+	hub.startSession();
+
+	const inboxes = new Map<string, AgentInboxImpl>();
+	let runCounter = 0;
+
+	const unsubscribe = hub.subscribe("session:message", (event) => {
+		const payload = event.event as { runId?: string; content?: string };
+		if (!payload.runId || payload.content === undefined) return;
+		const inbox = inboxes.get(payload.runId);
+		if (inbox) {
+			inbox.push(payload.content);
+		}
+	});
+
+	const executeAgent = async <TIn, TOut>(
+		agent: AgentDefinition<TIn, TOut>,
+		input: TIn,
+	): Promise<{ runId: string; output: TOut }> => {
+		const runId = `run-${runCounter++}`;
+		const inbox = new AgentInboxImpl();
+		inboxes.set(runId, inbox);
+
+		if (!agent.emitsStartComplete) {
+			hub.emit({ type: "agent:start", agentName: agent.name, runId });
+		}
+
+		try {
+			const output = await agent.execute(input, { hub, inbox, runId });
+			if (!agent.emitsStartComplete) {
+				hub.emit({
+					type: "agent:complete",
+					agentName: agent.name,
+					success: true,
+					runId,
+				});
+			}
+			return { runId, output };
+		} catch (error) {
+			if (!agent.emitsStartComplete) {
+				hub.emit({
+					type: "agent:complete",
+					agentName: agent.name,
+					success: false,
+					runId,
+				});
+			}
+			throw error;
+		}
+	};
+
+	return {
+		hub,
+		executeAgent,
+		close: () => {
+			unsubscribe();
+		},
+	};
 }
 
 // Define Hub scenarios
@@ -376,357 +424,6 @@ const hubScenarios: Record<string, () => Promise<HubFixture>> = {
 	},
 };
 
-// Define Harness scenarios
-const harnessScenarios: Record<string, () => Promise<HarnessFixture>> = {
-	factory: async () => {
-		const sessionId = "record-harness-factory";
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: {},
-			state: (input: { value: number }) => ({ count: input.value }),
-			run: async () => ({ ok: true }),
-		});
-
-		const instance = createHarnessWithSessionId(
-			harnessFactory,
-			{ value: 42 },
-			sessionId,
-		);
-		const received: EnrichedEvent[] = [];
-
-		instance.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		return {
-			sessionId,
-			scenario: "factory",
-			steps: [
-				{
-					type: "create",
-					name: "test-harness",
-					input: { value: 42 },
-				},
-			],
-			expect: {
-				state: { count: 42 },
-				events: received.map((e) => ({
-					event: e.event,
-					context: e.context,
-				})),
-			},
-			metadata: {
-				recordedAt: new Date().toISOString(),
-				component: "harness",
-				description: "Harness factory creates instances with correct state",
-			},
-		};
-	},
-
-	attachment: async () => {
-		const sessionId = "record-harness-attachment";
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: {},
-			state: () => ({}),
-			run: async () => ({ ok: true }),
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
-		const received: EnrichedEvent[] = [];
-
-		const attachment: Attachment = (hub) => {
-			return hub.subscribe("*", (event) => {
-				received.push(event);
-			});
-		};
-
-		instance.attach(attachment);
-		instance.emit({ type: "test:event" });
-
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		return {
-			sessionId,
-			scenario: "attachment",
-			steps: [
-				{
-					type: "create",
-					name: "test-harness",
-					input: {},
-				},
-				{
-					type: "attach",
-				},
-				{
-					type: "emit",
-					event: { type: "test:event" },
-				},
-			],
-			expect: {
-				events: received.map((e) => ({
-					event: e.event,
-					context: e.context,
-				})),
-			},
-			metadata: {
-				recordedAt: new Date().toISOString(),
-				component: "harness",
-				description: "Attachments receive hub and can subscribe",
-			},
-		};
-	},
-
-	session: async () => {
-		const sessionId = "record-harness-session";
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: {},
-			state: () => ({}),
-			run: async ({ session }) => {
-				// Session context should be available
-				return { hasSession: session !== undefined };
-			},
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
-		const received: EnrichedEvent[] = [];
-
-		instance.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		instance.startSession();
-		instance.send("test message");
-
-		await new Promise((resolve) => setTimeout(resolve, 10));
-
-		return {
-			sessionId,
-			scenario: "session",
-			steps: [
-				{
-					type: "create",
-					name: "test-harness",
-					input: {},
-				},
-				{
-					type: "startSession",
-				},
-				{
-					type: "send",
-					message: "test message",
-				},
-			],
-			expect: {
-				sessionActive: true,
-				events: received
-					.filter((e) => e.event.type === "session:message")
-					.map((e) => ({
-						event: e.event,
-						context: e.context,
-					})),
-			},
-			metadata: {
-				recordedAt: new Date().toISOString(),
-				component: "harness",
-				description: "startSession enables command handling",
-			},
-		};
-	},
-
-	"run-lifecycle": async () => {
-		const sessionId = "record-harness-run-lifecycle";
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: {},
-			state: () => ({ initialized: true }),
-			run: async () => ({ result: "success" }),
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
-		const received: EnrichedEvent[] = [];
-
-		instance.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		const result = await instance.run();
-
-		return {
-			sessionId,
-			scenario: "run-lifecycle",
-			steps: [
-				{
-					type: "create",
-					name: "test-harness",
-					input: {},
-				},
-				{
-					type: "run",
-				},
-			],
-			expect: {
-				events: received.map((e) => ({
-					event: e.event,
-					context: e.context,
-				})),
-				result: result.result,
-				state: result.state,
-				status: result.status,
-			},
-			metadata: {
-				recordedAt: new Date().toISOString(),
-				component: "harness",
-				description:
-					"run executes and returns HarnessResult with lifecycle events",
-			},
-		};
-	},
-
-	"phase-task": async () => {
-		const sessionId = "record-harness-phase-task";
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: {},
-			state: () => ({}),
-			run: async ({ phase, task, emit }) => {
-				await phase("Planning", async () => {
-					await task("plan", async () => {
-						emit({ type: "custom:event", data: "test" });
-						return "planned";
-					});
-				});
-				return { ok: true };
-			},
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
-		const received: EnrichedEvent[] = [];
-
-		instance.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		await instance.run();
-
-		return {
-			sessionId,
-			scenario: "phase-task",
-			steps: [
-				{
-					type: "create",
-					name: "test-harness",
-					input: {},
-				},
-				{
-					type: "run",
-				},
-			],
-			expect: {
-				events: received.map((e) => ({
-					event: e.event,
-					context: e.context,
-				})),
-			},
-			metadata: {
-				recordedAt: new Date().toISOString(),
-				component: "harness",
-				description: "phase and task helpers propagate context",
-			},
-		};
-	},
-
-	"inbox-routing": async () => {
-		const sessionId = "record-harness-inbox-routing";
-		const agent: AgentDefinition<{ label: string }, string> = {
-			name: "echo",
-			execute: async (input, ctx) => {
-				const message = await Promise.race([
-					ctx.inbox.pop(),
-					new Promise<{ content: string; timestamp: Date }>((resolve) => {
-						setTimeout(
-							() =>
-								resolve({
-									content: `timeout:${input.label}`,
-									timestamp: new Date(),
-								}),
-							100,
-						);
-					}),
-				]);
-				return `${input.label}:${message.content}`;
-			},
-		};
-
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: { echo: agent },
-			state: () => ({}),
-			run: async ({ agents, hub }) => {
-				const runIds: string[] = [];
-				const unsubscribe = hub.subscribe("agent:start", (event) => {
-					const runId = (event.event as { runId: string }).runId;
-					runIds.push(runId);
-					if (runIds.length === 1) {
-						hub.sendToRun(runId, "first");
-					}
-					if (runIds.length === 2) {
-						hub.sendToRun(runId, "second");
-					}
-				});
-
-				const results = await Promise.all([
-					agents.echo.execute({ label: "one" }),
-					agents.echo.execute({ label: "two" }),
-				]);
-
-				unsubscribe();
-
-				return { runIds, results };
-			},
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
-		const received: EnrichedEvent[] = [];
-
-		instance.subscribe("*", (event) => {
-			received.push(event);
-		});
-
-		const result = await instance.run();
-
-		return {
-			sessionId,
-			scenario: "inbox-routing",
-			steps: [
-				{
-					type: "create",
-					name: "test-harness",
-					input: {},
-				},
-				{
-					type: "run",
-				},
-			],
-			expect: {
-				events: received.map((e) => ({
-					event: e.event,
-					context: e.context,
-				})),
-				result: result.result,
-			},
-			metadata: {
-				recordedAt: new Date().toISOString(),
-				component: "harness",
-				description: "sendToRun routes messages to agent inbox",
-			},
-		};
-	},
-};
-
 // Define Agent scenarios
 const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 	"inbox-basic": async () => {
@@ -780,38 +477,40 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 			},
 		};
 
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: { receiver: agent },
-			state: () => ({}),
-			run: async ({ agents, hub }) => {
-				let runId: string | null = null;
-				const unsubscribe = hub.subscribe("agent:start", (event) => {
-					runId = (event.event as { runId: string }).runId;
-					hub.sendToRun(runId, "first");
-					hub.sendToRun(runId, "second");
-					setTimeout(() => {
-						if (runId) {
-							hub.sendToRun(runId, "third");
-						}
-					}, 10);
-				});
-
-				const result = await agents.receiver.execute({ label: "basic" });
-				unsubscribe();
-
-				return { runId, result };
-			},
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
+		const runtime = createAgentRuntime(sessionId);
 		const received: EnrichedEvent[] = [];
 
-		instance.subscribe("*", (event) => {
+		runtime.hub.subscribe("*", (event) => {
 			received.push(event);
 		});
 
-		const result = await instance.run();
+		runtime.hub.setStatus("running");
+		runtime.hub.emit({ type: "harness:start", name: "test-runtime" });
+
+		let runId: string | null = null;
+		const unsubscribe = runtime.hub.subscribe("agent:start", (event) => {
+			runId = (event.event as { runId: string }).runId;
+			runtime.hub.sendToRun(runId, "first");
+			runtime.hub.sendToRun(runId, "second");
+			setTimeout(() => {
+				if (runId) {
+					runtime.hub.sendToRun(runId, "third");
+				}
+			}, 10);
+		});
+
+		const execution = await runtime.executeAgent(agent, { label: "basic" });
+		unsubscribe();
+
+		runtime.hub.emit({
+			type: "harness:complete",
+			success: true,
+			durationMs: 0,
+		});
+		runtime.hub.setStatus("complete");
+		runtime.close();
+
+		const result = { runId: execution.runId, result: execution.output };
 
 		return {
 			sessionId,
@@ -819,7 +518,7 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 			steps: [
 				{
 					type: "create",
-					name: "test-harness",
+					name: "test-runtime",
 					input: {},
 				},
 				{
@@ -831,7 +530,7 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 					event: e.event,
 					context: e.context,
 				})),
-				result: result.result,
+				result,
 			},
 			metadata: {
 				recordedAt: new Date().toISOString(),
@@ -866,37 +565,42 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 			},
 		};
 
-		const harnessFactory = defineHarness({
-			name: "test-harness",
-			agents: { receiver: agent },
-			state: () => ({}),
-			run: async ({ agents, hub }) => {
-				const runIds: string[] = [];
-				const unsubscribe = hub.subscribe("agent:start", (event) => {
-					const runId = (event.event as { runId: string }).runId;
-					runIds.push(runId);
-					hub.sendToRun(runId, `message:${runId}`);
-				});
-
-				const results = await Promise.all([
-					agents.receiver.execute({ label: "one" }),
-					agents.receiver.execute({ label: "two" }),
-				]);
-
-				unsubscribe();
-
-				return { runIds, results };
-			},
-		});
-
-		const instance = createHarnessWithSessionId(harnessFactory, {}, sessionId);
+		const runtime = createAgentRuntime(sessionId);
 		const received: EnrichedEvent[] = [];
 
-		instance.subscribe("*", (event) => {
+		runtime.hub.subscribe("*", (event) => {
 			received.push(event);
 		});
 
-		const result = await instance.run();
+		runtime.hub.setStatus("running");
+		runtime.hub.emit({ type: "harness:start", name: "test-runtime" });
+
+		const runIds: string[] = [];
+		const unsubscribe = runtime.hub.subscribe("agent:start", (event) => {
+			const runId = (event.event as { runId: string }).runId;
+			runIds.push(runId);
+			runtime.hub.sendToRun(runId, `message:${runId}`);
+		});
+
+		const results = await Promise.all([
+			runtime.executeAgent(agent, { label: "one" }),
+			runtime.executeAgent(agent, { label: "two" }),
+		]);
+
+		unsubscribe();
+
+		runtime.hub.emit({
+			type: "harness:complete",
+			success: true,
+			durationMs: 0,
+		});
+		runtime.hub.setStatus("complete");
+		runtime.close();
+
+		const result = {
+			runIds,
+			results: results.map((entry) => entry.output),
+		};
 
 		return {
 			sessionId,
@@ -904,7 +608,7 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 			steps: [
 				{
 					type: "create",
-					name: "test-harness",
+					name: "test-runtime",
 					input: {},
 				},
 				{
@@ -916,7 +620,7 @@ const agentScenarios: Record<string, () => Promise<AgentFixture>> = {
 					event: e.event,
 					context: e.context,
 				})),
-				result: result.result,
+				result,
 			},
 			metadata: {
 				recordedAt: new Date().toISOString(),
@@ -1287,32 +991,6 @@ async function recordFixture() {
 
 		console.log(`✅ Recorded fixture to: ${fixturePath}`);
 		console.log(`📝 Review and promote to golden/ when ready`);
-	} else if (component === "harness") {
-		const scenarioFn = harnessScenarios[fixtureName];
-		if (!scenarioFn) {
-			console.error(`Unknown Harness fixture: ${fixtureName}`);
-			console.error(
-				`Available fixtures: ${Object.keys(harnessScenarios).join(", ")}`,
-			);
-			process.exit(1);
-		}
-
-		const fixture = await withFrozenTime(scenarioFn);
-
-		// Write to scratch directory
-		const __filename = fileURLToPath(import.meta.url);
-		const __dirname = dirname(__filename);
-		const kernelDir = join(__dirname, "..");
-		const scratchDir = join(kernelDir, "tests/fixtures/scratch", component);
-		await mkdir(scratchDir, { recursive: true });
-
-		const fixturePath = join(scratchDir, `${fixtureName}.jsonl`);
-		const jsonl = `${JSON.stringify(fixture)}\n`;
-
-		await writeFile(fixturePath, jsonl, "utf-8");
-
-		console.log(`✅ Recorded fixture to: ${fixturePath}`);
-		console.log(`📝 Review and promote to golden/ when ready`);
 	} else if (component === "agent") {
 		const scenarioFn = agentScenarios[fixtureName];
 		if (!scenarioFn) {
@@ -1399,9 +1077,7 @@ async function recordFixture() {
 		console.log(`📝 Review and promote to golden/ when ready`);
 	} else {
 		console.error(`Unknown component: ${component}`);
-		console.error(
-			`Supported components: hub, harness, agent, flow, providers/<name>`,
-		);
+		console.error(`Supported components: hub, agent, flow, providers/<name>`);
 		process.exit(1);
 	}
 }

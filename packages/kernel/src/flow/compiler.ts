@@ -1,13 +1,14 @@
 // Flow compiler (DAG validation + topological sort)
 // Implements docs/flow/execution.md (sequential scheduling rules)
 
-import type { FlowYaml, NodeSpec } from "../protocol/flow.js";
+import type { Edge, FlowYaml, NodeSpec } from "../protocol/flow.js";
 import { validateFlowYaml } from "./validator.js";
 
 export interface CompiledFlow {
 	nodes: NodeSpec[];
 	order: NodeSpec[];
 	adjacency: Map<string, string[]>;
+	edges: Edge[];
 }
 
 export function compileFlow(flow: FlowYaml): CompiledFlow {
@@ -62,5 +63,5 @@ export function compileFlow(flow: FlowYaml): CompiledFlow {
 		return node;
 	});
 
-	return { nodes, order, adjacency };
+	return { nodes, order, adjacency, edges: validated.edges };
 }

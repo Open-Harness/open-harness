@@ -45,7 +45,7 @@ bun scripts/record-fixture.ts channel definition
 **Scenario**:
 1. Create channel definition
 2. Convert to attachment via `defineChannel()`
-3. Attach to harness: `harness.attach(attachment)`
+3. Attach to runtime: `runtime.attach(attachment)`
 4. Verify attachment receives hub
 5. Verify cleanup function is called (if returned)
 
@@ -54,7 +54,7 @@ bun scripts/record-fixture.ts channel definition
 - Attachment receives hub instance
 - Attachment can subscribe to hub events
 - Cleanup is `void | (() => void) | (() => Promise<void>)`
-- Cleanup is called when harness completes
+- Cleanup is called when runtime completes
 
 **Fixture Recording**:
 ```bash
@@ -71,7 +71,7 @@ bun scripts/record-fixture.ts channel attachment
 
 **Scenario**:
 1. Create channel with `on: { "agent:*": handler, "phase:start": handler }`
-2. Attach channel to harness
+2. Attach channel to runtime
 3. Emit matching events
 4. Verify handlers are called with correct context
 
@@ -97,7 +97,7 @@ bun scripts/record-fixture.ts channel subscription
 
 **Scenario**:
 1. Create channel with `state: () => ({ count: 0 })`
-2. Attach channel to harness
+2. Attach channel to runtime
 3. Handler increments `state.count` on each event
 4. Verify state persists across events
 5. Verify state is available in `onStart` and `onComplete`
@@ -123,7 +123,7 @@ bun scripts/record-fixture.ts channel state
 
 **Scenario**:
 1. Create channel with handler that calls `hub.send("message")`
-2. Attach channel to harness with session active
+2. Attach channel to runtime with session active
 3. Trigger handler (via event)
 4. Verify `session:message` event is emitted
 5. Test `hub.reply()`, `hub.abort()` commands
@@ -149,9 +149,9 @@ bun scripts/record-fixture.ts channel commands
 
 **Scenario**:
 1. Create channel with `onStart` and `onComplete` handlers
-2. Attach channel to harness
+2. Attach channel to runtime
 3. Verify `onStart` is called during attachment
-4. Run harness
+4. Run runtime
 5. Verify `onComplete` is called during cleanup
 
 **Assertions**:

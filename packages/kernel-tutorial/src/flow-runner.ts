@@ -3,13 +3,12 @@ import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
 	type Attachment,
-	defineHarness,
-	executeFlow,
 	loadFlowYamlFile,
 	NodeRegistry,
 	type NodePack,
 	type FlowYaml,
 } from "@open-harness/kernel";
+import { runFlowRuntime } from "./runtime.js";
 
 export type NodePackMap = Record<string, NodePack>;
 
@@ -95,26 +94,12 @@ export async function runFlow(options: {
 	const availablePacks = await loadNodePacks(options.configPath);
 	const registry = buildRegistry(requestedPacks, availablePacks);
 
-	const FlowRunner = defineHarness<{}, {}, Record<string, unknown>>({
-		name: options.flow.flow.name ?? "flow-runner",
-		agents: {},
-		state: () => ({}),
-		run: async ({ phase, task, hub }) => {
-			const result = await executeFlow(
-				options.flow,
-				registry,
-				{ hub, phase, task },
-				options.inputOverrides,
-			);
-			return result.outputs;
-		},
+	const result = await runFlowRuntime({
+		flow: options.flow,
+		registry,
+		inputOverrides: options.inputOverrides,
+		attachments: options.attachments,
 	});
 
-	const harness = FlowRunner.create({});
-	for (const attachment of options.attachments ?? []) {
-		harness.attach(attachment);
-	}
-
-	const result = await harness.run();
-	return result.result;
+	return result.outputs;
 }

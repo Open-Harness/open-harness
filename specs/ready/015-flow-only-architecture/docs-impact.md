@@ -85,7 +85,7 @@ This document captures the documentation format, the new sections required, and 
 
 ### `docs/README.md`
 - Update **Architecture overview** to show FlowRuntime owning Hub (no legacy runtime).
-- Update **Key invariant**: Flow becomes the runtime (not “runs inside harness”).
+- Update **Key invariant**: Flow becomes the runtime (not “runs inside legacy runtime”).
 - Add link to **Node Catalog** doc.
 
 ### `docs/flow/flow-spec.md`
@@ -98,7 +98,7 @@ This document captures the documentation format, the new sections required, and 
 - Extend to include edge-level `when` evaluation context.
 
 ### `docs/flow/execution.md`
-- Replace “Flow runs inside a harness” with Flow runtime semantics.
+- Replace “Flow runs inside a legacy runtime” with Flow runtime semantics.
 - Add policy enforcement (timeout, retry, continueOnError, failFast).
 - Add edge-level routing rules (edge gating, merge semantics).
 
@@ -143,7 +143,7 @@ This document captures the documentation format, the new sections required, and 
 - `docs/spec/flow-runtime.md`
 
 ### Remove statements (not files)
-- Any reference to “Flow runs inside a harness.”
+- Any reference to “Flow runs inside a legacy runtime.”
 - Any claim that only some nodes have inbox support.
 - Any mention of `unstable_v2_prompt` usage.
 - Any suggestion that async prompt streams are optional for multi-turn agents.

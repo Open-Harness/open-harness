@@ -2,9 +2,9 @@
 
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { parseFlowYaml } from "./parser.js";
 import type { FlowYamlValidated } from "./validator.js";
 import { validateFlowYaml } from "./validator.js";
-import { parseFlowYaml } from "./parser.js";
 
 function resolvePromptFilePath(baseDir: string, promptFile: string): string {
 	return isAbsolute(promptFile) ? promptFile : resolve(baseDir, promptFile);
@@ -22,9 +22,7 @@ export async function resolvePromptFiles(
 
 			const promptFile = (node.input as { promptFile?: unknown }).promptFile;
 			if (typeof promptFile !== "string") {
-				throw new Error(
-					`Node "${node.id}" promptFile must be a string path`,
-				);
+				throw new Error(`Node "${node.id}" promptFile must be a string path`);
 			}
 
 			if ("prompt" in node.input) {

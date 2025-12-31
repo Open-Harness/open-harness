@@ -23,7 +23,7 @@ bun run lesson:12
 
 - Process exits with code `0`
 - Console prints `Lesson 12: Channels`
-- Output includes `Harness result:` with `ok === true`
+- Output includes `Runtime result:` with `ok === true`
 - Output includes `Tasks completed: 2`
 
 ## Assertions
