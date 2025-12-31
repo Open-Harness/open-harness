@@ -59,7 +59,7 @@ nodes:
     # Output: { country: "Benin", capital: "Porto-Novo", officialLanguage: "French" }
 
   - id: sayFrench
-    type: anthropic.text
+    type: claude.agent
     input:
       prompt: "Capital: {{facts.capital}}, Language: {{facts.officialLanguage}}"
     # Resolves to: "Capital: Porto-Novo, Language: French"

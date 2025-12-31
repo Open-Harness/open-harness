@@ -1,6 +1,6 @@
 # FlowSpec Protocol
 
-A FlowSpec is a YAML definition of a DAG that runs inside a harness.
+A FlowSpec is a YAML definition of a DAG that runs inside the **Flow runtime**.
 
 ## Top-level shape
 
@@ -10,6 +10,7 @@ flow:
   version: number                # default: 1
   description: string?           # optional
   input: object?                 # optional default inputs
+  nodePacks: string[]?           # optional list of required packs
   policy:
     failFast: boolean            # default: true
 
@@ -24,6 +25,7 @@ nodes:
 edges:
   - from: string                 # NodeId
     to: string                   # NodeId
+    when: WhenExpr?              # optional edge gating
 ```
 
 ## Naming rules
@@ -32,7 +34,7 @@ edges:
 - `nodes[].id` (NodeId):
   - **MUST** be unique
   - **MUST** match `^[A-Za-z_][A-Za-z0-9_]*$` (so it can be referenced as `{{nodeId.key}}`)
-- `nodes[].type` (NodeTypeId): recommended `namespace.kind` (e.g., `anthropic.text`, `condition.equals`)
+- `nodes[].type` (NodeTypeId): recommended `namespace.kind` (e.g., `claude.agent`, `condition.equals`)
 
 ## Flow metadata
 
@@ -51,6 +53,11 @@ Optional description.
 ### `flow.input`
 
 Optional default inputs. Available in bindings as `flow.input.<key>`.
+
+### `flow.nodePacks`
+
+Optional list of required node packs (e.g., `core`, `claude`). Used by the CLI
+to build the registry from an explicit allowlist.
 
 ### `flow.policy`
 
@@ -74,6 +81,20 @@ Optional workflow-level policy:
 - `when`: boolean expression that gates execution (see [When](when.md))
 - `policy`: retry/timeout/error strategy (see [Execution](execution.md))
 
+### `input.promptFile` (optional)
+
+If `promptFile` is present, the loader reads the file contents and injects
+`prompt` into the node input. This is resolved **relative to the YAML file**
+and is mutually exclusive with an explicit `prompt` field.
+
+```yaml
+nodes:
+  - id: ask
+    type: claude.agent
+    input:
+      promptFile: "./prompts/ask.txt"
+```
+
 ## Edges
 
 `edges` define **execution dependencies**:
@@ -82,6 +103,11 @@ Optional workflow-level policy:
 - **Bindings do not imply dependencies** (i.e., using `{{facts.capital}}` does not automatically create an edge)
 
 **B1 rule**: `edges` is **required** (may be `[]` for single-node flows). The graph is never inferred from ordering or bindings.
+
+### Edge gating (`when`)
+
+Edges may include `when` conditions. The condition is evaluated when the **source node completes**.
+If it resolves to `false`, that edge is skipped. See [Edge Routing](edge-routing.md).
 
 ## Control flow
 
@@ -117,6 +143,10 @@ Semantics:
 
 See [Execution](execution.md) for detailed execution semantics.
 
+## Channels (not in FlowSpec)
+
+Channels are runtime interfaces and do not appear in FlowSpec. They are attached when creating a flow runner.
+
 ## Example
 
 ```yaml
@@ -125,6 +155,7 @@ flow:
   version: 1
   input:
     country: Benin
+  nodePacks: [core, claude]
 
 nodes:
   - id: facts
@@ -139,7 +170,7 @@ nodes:
       right: "French"
 
   - id: sayFrench
-    type: anthropic.text
+    type: claude.agent
     when:
       equals:
         var: "isFrench.value"

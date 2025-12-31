@@ -29,8 +29,14 @@ interface NodeCapabilities {
   supportsInbox?: boolean;
   /** Long-lived session semantics (voice websocket, etc.) */
   isLongLived?: boolean;
+  /** Agent-backed node */
+  isAgent?: boolean;
 }
 ```
+
+Rules:
+- All `agent.*` and `claude.agent` nodes set `isAgent: true`.
+- Agent nodes should set `supportsInbox: true`.
 
 ### Run context
 
@@ -55,15 +61,48 @@ class NodeRegistry {
 
 ```typescript
 registry.register({
-  type: "anthropic.text",
+  type: "claude.agent",
   inputSchema: z.object({ prompt: z.string() }),
   outputSchema: z.string(),
-  capabilities: { isStreaming: true, supportsInbox: true },
+  capabilities: { isStreaming: true, supportsInbox: true, isAgent: true },
   run: async (ctx, input) => {
     // implementation
   },
 });
 ```
+
+## Node Packs (CLI registry UX)
+
+Node packs are named bundles of node definitions used by the CLI to build the
+registry from an explicit allowlist.
+
+```ts
+interface NodePack {
+  register(registry: NodeRegistry): void;
+}
+```
+
+**YAML** declares required packs:
+
+```yaml
+flow:
+  name: my-flow
+  nodePacks: [core, claude]
+```
+
+**oh.config.ts** allowlists implementations:
+
+```ts
+import { corePack, claudePack } from "@open-harness/kernel";
+
+export const nodePacks = {
+  core: corePack,
+  claude: claudePack,
+};
+```
+
+If a flow requests a pack not present in `oh.config.ts`, the CLI fails fast with
+a clear error.
 
 ## Library vs user responsibilities
 
@@ -72,7 +111,7 @@ registry.register({
 - Engine + compiler + binding resolver
 - Registry interfaces + base types
 - Built-in control/utility nodes (e.g., `condition.equals`)
-- Reference provider nodes (e.g., `anthropic.text`, `anthropic.structured`)
+- Reference provider nodes (e.g., `claude.agent`)
 - Transport adapters (console + websocket skeleton)
 
 ### User provides
@@ -87,8 +126,7 @@ registry.register({
 Recommended pattern: `namespace.kind`
 
 Examples:
-- `anthropic.text`
-- `anthropic.structured`
+- `claude.agent`
 - `condition.equals`
 - `mcp.geo.country_info`
 

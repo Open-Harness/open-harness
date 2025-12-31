@@ -103,7 +103,7 @@ grep -E "(mock|Mock|stub|Stub|fake|Fake)" scripts/live/<component>-live.ts
 # Should return nothing (no mocks)
 
 # Check for real SDK usage
-grep -E "(createHub|createHarness|real|Real)" scripts/live/<component>-live.ts
+grep -E "(createHub|createFlowRunner|real|Real)" scripts/live/<component>-live.ts
 
 # Should show real SDK usage
 ```

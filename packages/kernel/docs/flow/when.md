@@ -1,6 +1,6 @@
 # WhenExpr Protocol
 
-`WhenExpr` is a boolean expression that gates node execution.
+`WhenExpr` is a boolean expression that gates node or edge execution.
 
 ## Grammar
 
@@ -48,9 +48,9 @@ This resolves `isFrench.value` from the `isFrench` node's output.
 
 ## Evaluation semantics
 
-- If `when` evaluates to `true`, the node executes
-- If `when` evaluates to `false`, the node is **skipped**
-- If `when` is omitted, the node always executes
+- If `when` evaluates to `true`, the node or edge executes
+- If `when` evaluates to `false`, the node or edge is **skipped**
+- If `when` is omitted, the node or edge always executes
 
 ### Skip behavior
 
@@ -73,7 +73,7 @@ nodes:
     # Output: { value: true }
 
   - id: sayFrench
-    type: anthropic.text
+    type: claude.agent
     when:
       equals:
         var: "isFrench.value"
@@ -119,11 +119,11 @@ when:
 ## Error handling
 
 If a `var` path cannot be resolved:
-- The expression evaluates to `false` (node is skipped)
+- The expression evaluates to `false` (node or edge is skipped)
 - This prevents errors from propagating (safer than failing the flow)
 
 ## Key invariants
 
-1. **WhenExpr is evaluated before node execution** - it gates whether the node runs
+1. **WhenExpr is evaluated before node/edge execution** - it gates whether the node or edge runs
 2. **Skip is not failure** - skipped nodes don't fail the flow
 3. **VarPath uses the same resolution as bindings** - `flow.input.*` and `<nodeId>.*`
