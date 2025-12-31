@@ -5,7 +5,9 @@ Gate node execution with `when` and see how policies are declared.
 
 ## Key Concepts
 - `when` is evaluated before a node runs.
-- `policy` is validated in YAML but not yet enforced by the sequential executor (MVP limitation).
+- `policy.retry` retries a failing node.
+- `policy.timeoutMs` aborts a slow node.
+- `policy.continueOnError` records an error marker and allows the flow to continue.
 
 ## Run
 ```bash

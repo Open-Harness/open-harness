@@ -27,11 +27,15 @@ bun run lesson:05
 - Output includes:
   - `isYes.value === true`
   - `sayYes.text === "Condition matched: yes"`
+  - `flaky.label === "retry-ok"`
+  - `report.text === "timeout failed=true"`
 
 ## Assertions
 
 - `outputs.isYes.value === true`
 - `outputs.sayYes.text === "Condition matched: yes"`
+- `outputs.flaky.label === "retry-ok"`
+- `outputs.report.text === "timeout failed=true"`
 
 ## Gate
 
@@ -40,3 +44,4 @@ Required for Phase 1–2 tutorial gate.
 ## Notes
 
 Retry policy is configured with `maxAttempts: 2`.
+Timeout is demonstrated with `timeoutMs: 5` and `continueOnError: true`.

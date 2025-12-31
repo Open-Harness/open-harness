@@ -190,9 +190,9 @@ For every phase below, we must include:
   - Policy semantics match spec
   - Tutorial lesson covers retry/timeout/continueOnError
 - Retro (mandatory)
-  - Lessons learned:
-  - Risks discovered:
-  - Follow-ups:
+  - Lessons learned: Policy enforcement fits cleanly inside the executor with retry/timeout helpers and explicit error markers.
+  - Risks discovered: Timeouts leave underlying work running (Promise.race). Long-running nodes should be written to tolerate that.
+  - Follow-ups: Keep error marker shape stable and documented; add cancellation support if/when runtime supports it.
 
 ---
 

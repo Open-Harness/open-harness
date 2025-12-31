@@ -1,6 +1,6 @@
 flow:
   name: flow-when-policy
-  nodePacks: [core]
+  nodePacks: [core, tutorial]
 
 nodes:
   - id: facts
@@ -26,8 +26,35 @@ nodes:
     input:
       text: "Condition matched: yes"
 
+  - id: flaky
+    type: tutorial.flaky
+    policy:
+      retry:
+        maxAttempts: 2
+    input:
+      label: "retry-ok"
+
+  - id: slow
+    type: tutorial.delay
+    policy:
+      timeoutMs: 5
+      continueOnError: true
+    input:
+      ms: 30
+
+  - id: report
+    type: echo
+    input:
+      text: "timeout failed={{slow.failed}}"
+
 edges:
   - from: facts
     to: isYes
   - from: isYes
     to: sayYes
+  - from: sayYes
+    to: flaky
+  - from: flaky
+    to: slow
+  - from: slow
+    to: report

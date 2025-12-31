@@ -25,6 +25,12 @@ interface FlowRunResult {
 	outputs: Record<string, unknown>;
 }
 
+type ErrorMarker = {
+	failed: true;
+	error: { message: string; stack?: string };
+	attempts: number;
+};
+
 type EdgeStatus = "pending" | "fired" | "skipped";
 
 type EdgeState = {
@@ -90,6 +96,7 @@ async function runNode(
 	def: NodeTypeDefinition<unknown, unknown>,
 	ctx: FlowExecutionContext,
 	bindingContext: BindingContext,
+	attempt: number,
 ): Promise<unknown> {
 	const resolvedInput = resolveBindings(node.input, bindingContext);
 	const inputSchema = def.inputSchema as
@@ -100,7 +107,7 @@ async function runNode(
 	const parsedInput = inputSchema
 		? inputSchema.parse(resolvedInput)
 		: resolvedInput;
-	const runId = createRunId(node.id, 0);
+	const runId = createRunId(node.id, attempt);
 
 	const runCtx = {
 		hub: ctx.hub,
@@ -116,6 +123,84 @@ async function runNode(
 		| undefined;
 	const parsedOutput = outputSchema ? outputSchema.parse(result) : result;
 	return parsedOutput;
+}
+
+function getErrorMessage(error: unknown): { message: string; stack?: string } {
+	if (error instanceof Error) {
+		return { message: error.message, stack: error.stack };
+	}
+	return { message: String(error) };
+}
+
+function createErrorMarker(error: unknown, attempts: number): ErrorMarker {
+	const { message, stack } = getErrorMessage(error);
+	return { failed: true, error: { message, stack }, attempts };
+}
+
+async function delay(ms: number): Promise<void> {
+	if (ms <= 0) return;
+	await new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+async function withTimeout<T>(
+	run: () => Promise<T>,
+	timeoutMs?: number,
+): Promise<T> {
+	if (!timeoutMs || timeoutMs <= 0) {
+		return await run();
+	}
+
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	const timeoutPromise = new Promise<T>((_, reject) => {
+		timeoutId = setTimeout(() => {
+			reject(new Error(`Node execution timed out after ${timeoutMs}ms`));
+		}, timeoutMs);
+	});
+
+	try {
+		return await Promise.race([run(), timeoutPromise]);
+	} finally {
+		if (timeoutId) clearTimeout(timeoutId);
+	}
+}
+
+async function runNodeWithPolicy(
+	node: NodeSpec,
+	def: NodeTypeDefinition<unknown, unknown>,
+	ctx: FlowExecutionContext,
+	bindingContext: BindingContext,
+): Promise<{ output?: unknown; error?: unknown; attempts: number }> {
+	const maxAttempts = node.policy?.retry?.maxAttempts ?? 1;
+	const backoffMs = node.policy?.retry?.backoffMs ?? 0;
+	const timeoutMs = node.policy?.timeoutMs;
+
+	let attempts = 0;
+	let lastError: unknown = null;
+
+	while (attempts < maxAttempts) {
+		attempts += 1;
+		try {
+			const output = await withTimeout(
+				() => runNode(node, def, ctx, bindingContext, attempts),
+				timeoutMs,
+			);
+			return { output, attempts };
+		} catch (error) {
+			lastError = error;
+			if (attempts >= maxAttempts) {
+				break;
+			}
+			await delay(backoffMs);
+		}
+	}
+
+	return { error: lastError, attempts };
+}
+
+function shouldContinueOnError(node: NodeSpec, flow: FlowYaml): boolean {
+	if (node.policy?.continueOnError) return true;
+	if (flow.flow.policy?.failFast === false) return true;
+	return false;
 }
 
 export async function executeFlow(
@@ -164,10 +249,28 @@ export async function executeFlow(
 			}
 
 			const def = registry.get(node.type);
-			await ctx.task(`node:${node.id}`, async () => {
-				const output = await runNode(node, def, ctx, bindingContext);
-				outputs[node.id] = output;
-			});
+			let attempts = 0;
+			try {
+				await ctx.task(`node:${node.id}`, async () => {
+					const execution = await runNodeWithPolicy(
+						node,
+						def,
+						ctx,
+						bindingContext,
+					);
+					attempts = execution.attempts;
+					if (execution.error) {
+						throw execution.error;
+					}
+					outputs[node.id] = execution.output;
+				});
+			} catch (error) {
+				outputs[node.id] = createErrorMarker(error, attempts);
+
+				if (!shouldContinueOnError(node, flow)) {
+					throw error;
+				}
+			}
 
 			resolveOutgoingEdges(
 				node.id,
