@@ -110,46 +110,23 @@ interface Hub extends AsyncIterable<EnrichedEvent> {
 }
 ```
 
-## Harness
+## Flow Runtime
 
 ```typescript
 type Cleanup = void | (() => void) | (() => Promise<void>);
 type Attachment = (hub: Hub) => Cleanup;
 
-interface SessionContext {
-  waitForUser(prompt: string, options?: { choices?: string[]; allowText?: boolean }): Promise<UserResponse>;
-  hasMessages(): boolean;
-  readMessages(): Array<{ content: string; agent?: string; timestamp: Date }>;
-  isAborted(): boolean;
-}
-
-interface ExecuteContext<TAgentDefs extends Record<string, AgentDefinition>, TState> {
-  agents: ExecutableAgents<TAgentDefs>;
-  state: TState;
-  hub: Hub;
-  phase: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
-  task: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
-  emit: (event: BaseEvent) => void;
-  session?: SessionContext;
-}
-
-interface HarnessResult<TState, TResult> {
-  result: TResult;
-  state: TState;
+interface FlowRunResult {
+  outputs: Record<string, unknown>;
   events: EnrichedEvent[];
   durationMs: number;
   status: HubStatus;
 }
 
-interface HarnessInstance<TState, TResult> extends Hub {
-  readonly state: TState;
+interface FlowRuntimeInstance extends Hub {
   attach(attachment: Attachment): this;
   startSession(): this;
-  run(): Promise<HarnessResult<TState, TResult>>;
-}
-
-interface HarnessFactory<TInput, TState, TResult> {
-  create(input: TInput): HarnessInstance<TState, TResult>;
+  run(): Promise<FlowRunResult>;
 }
 ```
 
@@ -164,6 +141,7 @@ interface InjectedMessage {
 interface AgentInbox extends AsyncIterable<InjectedMessage> {
   pop(): Promise<InjectedMessage>;
   drain(): InjectedMessage[];
+  close(): void;
 }
 
 interface AgentExecuteContext {
@@ -216,6 +194,7 @@ interface FlowSpec {
   version?: number;
   description?: string;
   input?: Record<string, unknown>;
+  nodePacks?: string[];
   policy?: FlowPolicy;
 }
 
@@ -253,6 +232,7 @@ interface NodeSpec {
 interface Edge {
   from: NodeId;
   to: NodeId;
+  when?: WhenExpr;
 }
 
 interface FlowYaml {
@@ -265,6 +245,7 @@ interface NodeCapabilities {
   isStreaming?: boolean;
   supportsInbox?: boolean;
   isLongLived?: boolean;
+  isAgent?: boolean;
 }
 
 interface NodeRunContext {

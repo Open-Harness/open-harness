@@ -42,7 +42,7 @@ Create `tests/specs/<component>.test-spec.md` using the [test spec template](tes
 **Scenario**:
 1. Create a hub instance
 2. Subscribe to all events (`"*"`)
-3. Emit a `harness:start` event
+3. Emit a runtime lifecycle event (`harness:start`)
 4. Verify subscriber receives the event
 
 **Assertions**:
@@ -226,7 +226,7 @@ Use for:
 ### Replay Tests
 
 Use for:
-- Interface contracts (Hub subscription, Harness lifecycle)
+- Interface contracts (Hub subscription, runtime lifecycle)
 - Event sequences (multiple events in order)
 - State transitions (status changes, context propagation)
 - Integration scenarios (multiple components working together)

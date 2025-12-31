@@ -1,6 +1,6 @@
 # Channel Protocol
 
-Channels are bidirectional adapters/attachments that observe events and send commands.
+Channels are bidirectional adapters/attachments that observe events and send commands. They are **interfaces to a running flow** and are **not nodes** in the FlowSpec.
 
 ## Attachment contract
 

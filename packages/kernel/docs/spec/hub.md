@@ -81,7 +81,7 @@ Convenience injection targeting an agent by name. **Only safe if exactly one run
 
 ### `reply(promptId, response)`
 
-Answer a prompt. Used when the harness is in session mode and has emitted `session:prompt`.
+Answer a prompt. Used when the Flow runtime is in session mode and has emitted `session:prompt`.
 
 ### `abort(reason?)`
 
