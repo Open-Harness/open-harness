@@ -1,10 +1,11 @@
 /**
- * Unit Tests for defineRenderer() Declarative Renderer API
+ * Unit Tests for defineChannel() / defineRenderer() Declarative Channel API
  *
- * T032: defineRenderer() creates valid IUnifiedRenderer
+ * T032: defineRenderer() creates valid IUnifiedRenderer (backwards compat)
  * T033: Renderer state factory called fresh on attach()
  * T034: Event handlers receive typed RenderContext
  * T035: onStart/onComplete lifecycle hooks called
+ * T036: defineChannel() returns Attachment directly
  *
  * @module tests/unit/define-renderer
  */
@@ -12,7 +13,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import { UnifiedEventBus } from "../../src/core/unified-event-bus.js";
 import type { BaseEvent, EnrichedEvent } from "../../src/core/unified-events/types.js";
-import { defineRenderer, type IUnifiedRenderer, type RenderContext } from "../../src/harness/define-renderer.js";
+import {
+	defineChannel,
+	defineRenderer,
+	type IChannel,
+	type IUnifiedRenderer,
+	type ChannelContext,
+	type RenderContext,
+} from "../../src/harness/define-channel.js";
 
 // ============================================================================
 // T032: defineRenderer() creates valid IUnifiedRenderer
@@ -641,5 +649,253 @@ describe("Error handling in handlers", () => {
 		renderer.detach();
 
 		expect(count).toBe(3);
+	});
+});
+
+// ============================================================================
+// T036: defineChannel() returns Attachment directly
+// ============================================================================
+
+describe("T036: defineChannel() returns Attachment directly", () => {
+	test("defineChannel returns a function (Attachment type)", () => {
+		const attachment = defineChannel({
+			name: "TestChannel",
+			on: {},
+		});
+
+		expect(typeof attachment).toBe("function");
+	});
+
+	test("attachment function accepts transport and returns cleanup", () => {
+		const attachment = defineChannel({
+			name: "TestChannel",
+			on: {},
+		});
+
+		// Create a minimal mock transport
+		const subscribers: ((event: unknown) => void)[] = [];
+		const mockTransport = {
+			subscribe: (listener: (event: unknown) => void) => {
+				subscribers.push(listener);
+				return () => {
+					const idx = subscribers.indexOf(listener);
+					if (idx >= 0) subscribers.splice(idx, 1);
+				};
+			},
+			send: () => {},
+			abort: () => {},
+		};
+
+		const cleanup = attachment(mockTransport);
+
+		expect(typeof cleanup).toBe("function");
+
+		// Cleanup should work without error
+		cleanup();
+	});
+
+	test("channel receives events via transport.subscribe", () => {
+		const receivedEvents: string[] = [];
+
+		const attachment = defineChannel({
+			name: "TestChannel",
+			on: {
+				"task:start": ({ event }) => {
+					receivedEvents.push(event.event.type);
+				},
+			},
+		});
+
+		// Create mock transport
+		const subscribers: ((event: unknown) => void)[] = [];
+		const mockTransport = {
+			subscribe: (listener: (event: unknown) => void) => {
+				subscribers.push(listener);
+				return () => {
+					const idx = subscribers.indexOf(listener);
+					if (idx >= 0) subscribers.splice(idx, 1);
+				};
+			},
+			send: () => {},
+			abort: () => {},
+		};
+
+		const cleanup = attachment(mockTransport);
+
+		// Emit event through transport
+		for (const subscriber of subscribers) {
+			subscriber({ type: "task:start", taskId: "T001" });
+		}
+
+		expect(receivedEvents).toContain("task:start");
+
+		cleanup();
+	});
+
+	test("channel state is fresh for each attachment", () => {
+		let factoryCalls = 0;
+
+		const attachment = defineChannel({
+			name: "TestChannel",
+			state: () => {
+				factoryCalls++;
+				return { count: 0 };
+			},
+			on: {},
+		});
+
+		// Create mock transport
+		const mockTransport = {
+			subscribe: () => () => {},
+			send: () => {},
+			abort: () => {},
+		};
+
+		// First attach
+		const cleanup1 = attachment(mockTransport);
+		cleanup1();
+
+		// Second attach
+		const cleanup2 = attachment(mockTransport);
+		cleanup2();
+
+		expect(factoryCalls).toBe(2);
+	});
+
+	test("channel can use new ChannelContext type", () => {
+		let receivedContext: ChannelContext<{ count: number }> | null = null;
+
+		const attachment = defineChannel({
+			name: "TestChannel",
+			state: () => ({ count: 42 }),
+			on: {
+				"*": (ctx) => {
+					receivedContext = ctx;
+				},
+			},
+		});
+
+		// Create mock transport
+		const subscribers: ((event: unknown) => void)[] = [];
+		const mockTransport = {
+			subscribe: (listener: (event: unknown) => void) => {
+				subscribers.push(listener);
+				return () => {};
+			},
+			send: () => {},
+			abort: () => {},
+		};
+
+		const cleanup = attachment(mockTransport);
+
+		// Emit an event
+		for (const subscriber of subscribers) {
+			subscriber({ type: "test:event" });
+		}
+
+		expect(receivedContext).not.toBeNull();
+		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
+		expect(receivedContext!.state.count).toBe(42);
+		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
+		expect(receivedContext!.config).toBeDefined();
+		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
+		expect(receivedContext!.output).toBeDefined();
+
+		cleanup();
+	});
+
+	test("cleanup function properly detaches channel", () => {
+		let handlerCallCount = 0;
+
+		const attachment = defineChannel({
+			name: "TestChannel",
+			on: {
+				"*": () => {
+					handlerCallCount++;
+				},
+			},
+		});
+
+		// Create mock transport
+		const subscribers: ((event: unknown) => void)[] = [];
+		const mockTransport = {
+			subscribe: (listener: (event: unknown) => void) => {
+				subscribers.push(listener);
+				return () => {
+					const idx = subscribers.indexOf(listener);
+					if (idx >= 0) subscribers.splice(idx, 1);
+				};
+			},
+			send: () => {},
+			abort: () => {},
+		};
+
+		const cleanup = attachment(mockTransport);
+
+		// Emit before cleanup
+		for (const subscriber of [...subscribers]) {
+			subscriber({ type: "event:before" });
+		}
+
+		expect(handlerCallCount).toBe(1);
+
+		// Cleanup
+		cleanup();
+
+		// Emit after cleanup - should not be received
+		for (const subscriber of [...subscribers]) {
+			subscriber({ type: "event:after" });
+		}
+
+		expect(handlerCallCount).toBe(1); // Still 1, not 2
+	});
+});
+
+// ============================================================================
+// Type Compatibility: IChannel / IUnifiedRenderer
+// ============================================================================
+
+describe("Type compatibility between IChannel and IUnifiedRenderer", () => {
+	test("IChannel and IUnifiedRenderer are interchangeable", () => {
+		const renderer = defineRenderer({
+			name: "TestRenderer",
+			on: {},
+		});
+
+		// Both types should work (compile-time check)
+		const asChannel: IChannel = renderer;
+		const asRenderer: IUnifiedRenderer = renderer;
+
+		expect(asChannel.name).toBe("TestRenderer");
+		expect(asRenderer.name).toBe("TestRenderer");
+	});
+
+	test("RenderContext and ChannelContext are interchangeable", () => {
+		const bus = new UnifiedEventBus();
+		let renderContext: RenderContext<{ value: number }> | null = null;
+		let channelContext: ChannelContext<{ value: number }> | null = null;
+
+		const renderer = defineRenderer({
+			name: "TestRenderer",
+			state: () => ({ value: 123 }),
+			on: {
+				"test:event": (ctx) => {
+					// Both type aliases should work
+					renderContext = ctx;
+					channelContext = ctx;
+				},
+			},
+		});
+
+		renderer.attach(bus);
+		bus.emit({ type: "test:event" });
+		renderer.detach();
+
+		expect(renderContext).not.toBeNull();
+		expect(channelContext).not.toBeNull();
+		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
+		expect(renderContext!.state.value).toBe(123);
+		// biome-ignore lint/style/noNonNullAssertion: Safe after not.toBeNull() assertion
+		expect(channelContext!.state.value).toBe(123);
 	});
 });

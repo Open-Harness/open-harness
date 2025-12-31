@@ -1,56 +1,44 @@
 /**
  * Open Harness SDK - Provider-Agnostic Workflow SDK
  *
- * THREE-LAYER ARCHITECTURE:
+ * ARCHITECTURE:
  *
- * LAYER 1 - HARNESS (Step-Aware Orchestration):
- * - BaseHarness: Abstract class for step-aware execution
- * - Agent: Lightweight wrapper for step-aware agent logic
- * - PersistentState: State management with bounded context
+ * LAYER 1 - HARNESS (Fluent Orchestration):
+ * - defineHarness: Factory for typed workflow harnesses
+ * - wrapAgent: Single agent wrapper for quick tasks
+ * - HarnessInstance: Runtime execution with event streaming
  *
  * LAYER 2 - AGENTS (Provider-Agnostic Agent System):
  * - IAgent<TInput, TOutput>: Core interface for typed agents
  * - IAgentCallbacks: Unified callback interface
  *
- * LAYER 3 - RUNNERS (LLM Execution Infrastructure):
- * - IAgentRunner: Provider-agnostic runner interface
- * - DI Container: Dependency injection for all components
+ * LAYER 3 - CHANNELS (Event Transport):
+ * - defineChannel: Factory for event consumers (renderers, loggers, etc.)
+ * - Transport: Bidirectional event interface
  *
  * For Anthropic/Claude provider, use @openharness/anthropic
  */
 
 // ============================================
-// HARNESS LAYER (Step-Aware Orchestration)
+// HARNESS LAYER (Fluent Orchestration)
 // ============================================
 
+// Core Utilities
 export type {
-	AgentConfig,
-	AgentRunParams,
 	BackoffConfig,
 	BackoffContext,
-	Constraints,
-	HarnessConfig,
-	LoadedContext,
-	PersistentStateConfig,
-	StateDelta,
-	Step,
-	StepYield,
 	TopologicalSortResult,
 } from "./harness/index.js";
 export {
-	Agent,
-	BaseHarness,
 	calculateDelay,
 	createBackoffContext,
 	DEFAULT_BACKOFF_CONFIG,
 	detectCycles,
 	getReadyTasks,
 	isRateLimitError,
-	PersistentState,
 	resolveDependencies,
 	shouldRetry,
 	sleep,
-	TaskHarness,
 	updateBackoffContext,
 	validateDependencies,
 	withBackoff,
@@ -77,17 +65,11 @@ export type {
 export type { IAgent, RunnerOptions } from "@openharness/core";
 
 // ============================================
-// RUNNER LAYER (LLM Execution Infrastructure)
+// FACTORY LAYER
 // ============================================
 
 // Core Factories
 export { createAgent, resetGlobalContainer, setGlobalContainer } from "./factory/agent-factory.js";
-export {
-	type CreateTaskHarnessOptions,
-	createTaskHarness,
-	createTestTaskHarness,
-} from "./factory/harness-factory.js";
-export { createWorkflow } from "./factory/workflow-builder.js";
 
 // Task Management
 export { TaskList } from "./workflow/task-list.js";
@@ -97,20 +79,6 @@ export { TaskList } from "./workflow/task-list.js";
 // ============================================
 
 export type { Task, TaskStatus } from "./workflow/task-list.js";
-
-// Task Harness Types (provider-agnostic)
-export type {
-	ParsedTask,
-	ParserAgentInput,
-	ParserAgentOutput,
-	ParserMetadata,
-	ReviewAgentInput,
-	ReviewAgentOutput,
-	ValidationResult,
-	TaskFlags,
-	PhaseInfo,
-} from "./harness/task-harness-types.js";
-export { ParserAgentOutputSchema, ReviewAgentOutputSchema } from "./harness/task-harness-types.js";
 
 // Runner Callbacks
 export type { RunnerCallbacks } from "./core/tokens.js";
@@ -207,7 +175,6 @@ export type {
 	RetryStartEvent,
 	RetrySuccessEvent,
 	StepEvent,
-	StepYield as FluentStepYield,
 	TaskEvent,
 } from "./harness/event-types.js";
 // Type guard functions for fluent API
@@ -277,16 +244,32 @@ export {
 	isSessionEvent,
 	isWorkflowEvent,
 } from "./core/unified-events/types.js";
-// Renderer API (FR-005)
+
+// ============================================
+// CHANNEL SYSTEM
+// ============================================
+
+// New Channel API
+export {
+	type ChannelConfig,
+	type ChannelContext,
+	type ChannelDefinition,
+	type ChannelEventHandler,
+	createChannel,
+	defineChannel,
+	type IChannel,
+	RenderOutput,
+	type RenderOutputConfig,
+	type Spinner,
+} from "./harness/index.js";
+
+// Backwards compatibility (deprecated)
 export {
 	defineRenderer,
 	type EventHandler as RendererEventHandler,
 	type IUnifiedRenderer,
 	type RenderContext,
 	type RendererDefinition,
-	RenderOutput,
-	type RenderOutputConfig,
-	type Spinner,
 	toAttachment,
 	type UnifiedRendererConfig,
 } from "./harness/index.js";
