@@ -1,40 +1,34 @@
 {
-	"name": "web",
-	"version": "0.1.0",
-	"private": true,
-	"scripts": {
-		"dev": "next dev --port 3001",
-		"build": "next build",
-		"start": "next start"
-	},
-	"dependencies": {
-		"@base-ui/react": "^1.0.0",
-		"@tanstack/react-form": "^1.27.3",
-		"babel-plugin-react-compiler": "^1.0.0",
-		"class-variance-authority": "^0.7.1",
-		"clsx": "^2.1.1",
-		"lucide-react": "^0.546.0",
-		"next": "^16.1.0",
-		"next-themes": "^0.4.6",
-		"react": "^19.2.3",
-		"react-dom": "^19.2.3",
-		"reactflow": "^11.11.4",
-		"shadcn": "^3.6.2",
-		"sonner": "^2.0.5",
-		"tailwind-merge": "^3.3.1",
-		"tw-animate-css": "^1.3.4",
-		"@tanstack/react-query": "^5.90.12",
-		"dotenv": "catalog:",
-		"zod": "catalog:"
-	},
-	"devDependencies": {
-		"@tailwindcss/postcss": "^4.1.10",
-		"@types/node": "^20",
-		"@types/react": "^19.2.7",
-		"@types/react-dom": "^19.2.3",
-		"tailwindcss": "^4.1.10",
-		"typescript": "catalog:",
-		"@tanstack/react-query-devtools": "^5.91.1",
-		"@openharnes/config": "workspace:*"
-	}
+  "name": "docs",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
+    "postinstall": "fumadocs-mdx",
+    "lint": "biome check",
+    "format": "biome format --write"
+  },
+  "dependencies": {
+    "fumadocs-core": "16.4.1",
+    "fumadocs-mdx": "14.2.3",
+    "fumadocs-ui": "16.4.1",
+    "lucide-react": "^0.561.0",
+    "next": "16.0.10",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^24.10.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "@biomejs/biome": "^2.3.10"
+  }
 }
