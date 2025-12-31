@@ -1,0 +1,33 @@
+flow:
+  name: flow-when-policy
+  nodePacks: [core]
+
+nodes:
+  - id: facts
+    type: constant
+    input:
+      value: "yes"
+
+  - id: isYes
+    type: condition.equals
+    input:
+      left: "{{facts.value}}"
+      right: "yes"
+
+  - id: sayYes
+    type: echo
+    when:
+      equals:
+        var: "isYes.value"
+        value: true
+    policy:
+      retry:
+        maxAttempts: 2
+    input:
+      text: "Condition matched: yes"
+
+edges:
+  - from: facts
+    to: isYes
+  - from: isYes
+    to: sayYes

@@ -335,7 +335,7 @@ export async function loadFlowFixture(
 
 /**
  * Load a Provider fixture from golden/ or scratch/ directory.
- * @param path - Path like "providers/anthropic/text" (component/fixture-name)
+ * @param path - Path like "providers/claude/agent" (component/fixture-name)
  * @param fromScratch - If true, load from scratch/ instead of golden/
  */
 export async function loadProviderFixture(

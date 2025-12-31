@@ -1,15 +1,15 @@
-// Replay tests for Anthropic provider adapter
-// Uses fixtures from tests/fixtures/golden/providers/anthropic/
+// Replay tests for Claude provider adapter
+// Uses fixtures from tests/fixtures/golden/providers/claude/
 
 import { describe, expect, test } from "bun:test";
 import { createHub } from "../../../src/engine/hub.js";
 import { AgentInboxImpl } from "../../../src/engine/inbox.js";
-import { createAnthropicTextAgent } from "../../../src/providers/anthropic.js";
+import { createClaudeAgent } from "../../../src/providers/claude.js";
 import { loadProviderFixture } from "../../helpers/fixture-loader.js";
 
-describe("Anthropic Provider (replay)", () => {
-	test("text adapter returns replay output", async () => {
-		const fixture = await loadProviderFixture("providers/anthropic/text");
+describe("Claude Provider (replay)", () => {
+	test("agent adapter returns replay output", async () => {
+		const fixture = await loadProviderFixture("providers/claude/agent");
 
 		for (const entry of fixture.cases) {
 			const input = entry.input as { prompt: string; model?: string };
@@ -18,8 +18,9 @@ describe("Anthropic Provider (replay)", () => {
 			}
 
 			const expected = entry.expected as { text: string };
-			const agent = createAnthropicTextAgent({
-				replay: { [input.prompt]: expected.text },
+			const agent = createClaudeAgent({
+				replay: (candidate) =>
+					candidate.prompt === input.prompt ? expected : undefined,
 			});
 
 			const hub = createHub(fixture.sessionId);

@@ -1,0 +1,13 @@
+flow:
+  name: custom-node
+  nodePacks: [core, tutorial]
+  input:
+    text: "hello from a custom node"
+
+nodes:
+  - id: upper
+    type: tutorial.uppercase
+    input:
+      text: "{{flow.input.text}}"
+
+edges: []

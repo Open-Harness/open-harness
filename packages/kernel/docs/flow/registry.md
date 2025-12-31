@@ -55,7 +55,7 @@ class NodeRegistry {
 
 ```typescript
 registry.register({
-  type: "anthropic.text",
+  type: "claude.agent",
   inputSchema: z.object({ prompt: z.string() }),
   outputSchema: z.string(),
   capabilities: { isStreaming: true, supportsInbox: true },
@@ -63,6 +63,39 @@ registry.register({
     // implementation
   },
 });
+
+## Node Packs (CLI registry UX)
+
+Node packs are named bundles of node definitions used by the CLI to build the
+registry from an explicit allowlist.
+
+```ts
+interface NodePack {
+  register(registry: NodeRegistry): void;
+}
+```
+
+**YAML** declares required packs:
+
+```yaml
+flow:
+  name: my-flow
+  nodePacks: [core, claude]
+```
+
+**oh.config.ts** allowlists implementations:
+
+```ts
+import { corePack, claudePack } from "@open-harness/kernel";
+
+export const nodePacks = {
+  core: corePack,
+  claude: claudePack,
+};
+```
+
+If a flow requests a pack not present in `oh.config.ts`, the CLI fails fast with
+a clear error.
 ```
 
 ## Library vs user responsibilities
@@ -72,7 +105,7 @@ registry.register({
 - Engine + compiler + binding resolver
 - Registry interfaces + base types
 - Built-in control/utility nodes (e.g., `condition.equals`)
-- Reference provider nodes (e.g., `anthropic.text`, `anthropic.structured`)
+- Reference provider nodes (e.g., `claude.agent`, `claude.structured`)
 - Transport adapters (console + websocket skeleton)
 
 ### User provides
@@ -87,8 +120,8 @@ registry.register({
 Recommended pattern: `namespace.kind`
 
 Examples:
-- `anthropic.text`
-- `anthropic.structured`
+- `claude.agent`
+- `claude.structured`
 - `condition.equals`
 - `mcp.geo.country_info`
 

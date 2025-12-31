@@ -10,6 +10,7 @@ flow:
   version: number                # default: 1
   description: string?           # optional
   input: object?                 # optional default inputs
+  nodePacks: string[]?           # optional list of required packs
   policy:
     failFast: boolean            # default: true
 
@@ -32,7 +33,7 @@ edges:
 - `nodes[].id` (NodeId):
   - **MUST** be unique
   - **MUST** match `^[A-Za-z_][A-Za-z0-9_]*$` (so it can be referenced as `{{nodeId.key}}`)
-- `nodes[].type` (NodeTypeId): recommended `namespace.kind` (e.g., `anthropic.text`, `condition.equals`)
+- `nodes[].type` (NodeTypeId): recommended `namespace.kind` (e.g., `claude.agent`, `condition.equals`)
 
 ## Flow metadata
 
@@ -51,6 +52,11 @@ Optional description.
 ### `flow.input`
 
 Optional default inputs. Available in bindings as `flow.input.<key>`.
+
+### `flow.nodePacks`
+
+Optional list of required node packs (e.g., `core`, `claude`). Used by the CLI
+to build the registry from an explicit allowlist.
 
 ### `flow.policy`
 
@@ -73,6 +79,20 @@ Optional workflow-level policy:
 - `config`: node-type-specific config (provider settings, schema ids, etc.)
 - `when`: boolean expression that gates execution (see [When](when.md))
 - `policy`: retry/timeout/error strategy (see [Execution](execution.md))
+
+### `input.promptFile` (optional)
+
+If `promptFile` is present, the loader reads the file contents and injects
+`prompt` into the node input. This is resolved **relative to the YAML file**
+and is mutually exclusive with an explicit `prompt` field.
+
+```yaml
+nodes:
+  - id: ask
+    type: claude.agent
+    input:
+      promptFile: "./prompts/ask.txt"
+```
 
 ## Edges
 
@@ -125,6 +145,7 @@ flow:
   version: 1
   input:
     country: Benin
+  nodePacks: [core, claude]
 
 nodes:
   - id: facts
@@ -139,7 +160,7 @@ nodes:
       right: "French"
 
   - id: sayFrench
-    type: anthropic.text
+    type: claude.agent
     when:
       equals:
         var: "isFrench.value"

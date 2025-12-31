@@ -1,0 +1,11 @@
+flow:
+  name: flow-node-packs
+  nodePacks: [core]
+
+nodes:
+  - id: explain
+    type: echo
+    input:
+      text: "Node packs are allowlisted in oh.config.ts"
+
+edges: []

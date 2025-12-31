@@ -185,19 +185,19 @@ This roadmap defines the **dependency-ordered milestones** for compiling the spe
 
 ## Milestone 6: Provider Adapters (Replay-First)
 
-**Goal**: Add provider adapters (Anthropic, etc.) behind replay-first infrastructure.
+**Goal**: Add provider adapters (Claude, etc.) behind replay-first infrastructure.
 
 **Inputs**:
 - `docs/spec/agent.md` - AgentDefinition contract
 - Provider SDKs (e.g., `@anthropic-ai/claude-agent-sdk`)
 
 **Outputs**:
-- `src/providers/anthropic.ts` - Anthropic adapter
+- `src/providers/claude.ts` - Claude adapter
 - Replay infrastructure: `src/testing/replay-runner.ts`, `src/testing/fixture-loader.ts`
 - Recording infrastructure: `scripts/record-fixture.ts`
-- Replay tests: `tests/replay/providers/anthropic.*.test.ts`
-- Fixtures: `tests/fixtures/golden/providers/anthropic/*.jsonl`
-- Authoritative script: `scripts/live/providers/anthropic-live.ts`
+- Replay tests: `tests/replay/providers/claude.*.test.ts`
+- Fixtures: `tests/fixtures/golden/providers/claude/*.jsonl`
+- Authoritative script: `scripts/live/providers/claude-live.ts`
 
 **Conformance Gates**:
 - [ ] Provider adapter implements AgentDefinition correctly
@@ -207,7 +207,7 @@ This roadmap defines the **dependency-ordered milestones** for compiling the spe
 - [ ] Replay tests pass (fast, deterministic)
 - [ ] Live script proves real SDK works
 
-**Authoritative Script**: `bun scripts/live/providers/anthropic-live.ts`
+**Authoritative Script**: `bun scripts/live/providers/claude-live.ts`
 
 **Done Criteria**: Provider adapter works. Replay tests use fixtures. Recording is explicit. Live script proves real SDK integration.
 

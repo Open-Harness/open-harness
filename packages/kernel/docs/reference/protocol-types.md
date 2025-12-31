@@ -216,6 +216,7 @@ interface FlowSpec {
   version?: number;
   description?: string;
   input?: Record<string, unknown>;
+  nodePacks?: string[];
   policy?: FlowPolicy;
 }
 

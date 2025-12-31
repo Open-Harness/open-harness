@@ -1,1 +1,1 @@
-export * from "./anthropic.js";
+export * from "./claude.js";

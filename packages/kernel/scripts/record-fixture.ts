@@ -24,7 +24,7 @@ import type {
 	HarnessFactory,
 	HarnessInstance,
 } from "../src/protocol/harness.js";
-import { createAnthropicTextAgent } from "../src/providers/anthropic.js";
+import { createClaudeAgent } from "../src/providers/claude.js";
 import type {
 	AgentFixture,
 	FlowFixture,
@@ -1224,12 +1224,13 @@ const providerScenarios: Record<
 	string,
 	Record<string, () => Promise<ProviderFixture>>
 > = {
-	anthropic: {
-		text: async () => {
-			const sessionId = "record-provider-anthropic-text";
+	claude: {
+		agent: async () => {
+			const sessionId = "record-provider-claude-agent";
 			const prompt = "Say hello";
-			const agent = createAnthropicTextAgent({
-				replay: { [prompt]: "Hello!" },
+			const agent = createClaudeAgent({
+				replay: (input) =>
+					input.prompt === prompt ? { text: "Hello!" } : undefined,
 			});
 			const hub = createHub(sessionId);
 			const inbox = new AgentInboxImpl();
@@ -1240,7 +1241,7 @@ const providerScenarios: Record<
 
 			return {
 				sessionId,
-				scenario: "text",
+				scenario: "agent",
 				cases: [
 					{
 						name: "basic",
@@ -1250,8 +1251,8 @@ const providerScenarios: Record<
 				],
 				metadata: {
 					recordedAt: new Date().toISOString(),
-					component: "providers/anthropic",
-					description: "Anthropic text adapter replay output",
+					component: "providers/claude",
+					description: "Claude agent replay output",
 				},
 			};
 		},

@@ -73,7 +73,7 @@ nodes:
     # Output: { value: true }
 
   - id: sayFrench
-    type: anthropic.text
+    type: claude.agent
     when:
       equals:
         var: "isFrench.value"
