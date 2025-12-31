@@ -676,7 +676,8 @@ describe("Transport - User Story 2: Interactive Sessions", () => {
 
 			// Reply to the prompt
 			expect(capturedPromptId).toBeDefined();
-			harness.reply(capturedPromptId!, { content: "yes", timestamp: new Date() });
+			if (!capturedPromptId) throw new Error("Test setup failed: no capturedPromptId");
+			harness.reply(capturedPromptId, { content: "yes", timestamp: new Date() });
 
 			// Now complete should finish
 			await completePromise;
@@ -784,7 +785,8 @@ describe("Transport - User Story 2: Interactive Sessions", () => {
 			// Find and reply to prompt
 			const promptEvent = receivedEvents.find((e) => e.type === "session:prompt" || e.type === "user:prompt");
 			expect(promptEvent?.promptId).toBeDefined();
-			harness.reply(promptEvent!.promptId!, { content: "confirmed", timestamp: new Date() });
+			if (!promptEvent?.promptId) throw new Error("Test setup failed: no promptEvent with promptId");
+			harness.reply(promptEvent.promptId, { content: "confirmed", timestamp: new Date() });
 
 			await completePromise;
 

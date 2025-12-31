@@ -7,7 +7,6 @@
  * @module core/unified-events/types
  */
 
-import { z } from "zod";
 import type {
 	AgentCompleteEvent,
 	AgentStartEvent,
@@ -32,8 +31,10 @@ import type {
 	TaskStartEvent,
 	Unsubscribe,
 } from "@openharness/core";
+import { z } from "zod";
 
 // Re-export all context and event types from core
+// SDK-specific alias
 export type {
 	AgentCompleteEvent,
 	AgentContext,
@@ -47,6 +48,7 @@ export type {
 	EnrichedEvent,
 	EventContext,
 	EventFilter,
+	EventListener as UnifiedEventListener,
 	ExtensionEvent,
 	HarnessCompleteEvent,
 	HarnessStartEvent,
@@ -64,9 +66,6 @@ export type {
 	TaskStartEvent,
 	Unsubscribe,
 } from "@openharness/core";
-
-// SDK-specific alias
-export type { EventListener as UnifiedEventListener } from "@openharness/core";
 
 // ============================================================================
 // TYPE GUARDS (FR-004)

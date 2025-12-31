@@ -8,15 +8,12 @@
  */
 
 // Re-export all event types from core
+// SDK-specific alias for event listener (matches SDK's existing API)
 export type {
-	// Context types
-	AgentContext,
-	EventContext,
-	PhaseContext,
-	TaskContext,
-
 	// Base event types
 	AgentCompleteEvent,
+	// Context types
+	AgentContext,
 	AgentStartEvent,
 	AgentTextEvent,
 	AgentThinkingEvent,
@@ -24,29 +21,28 @@ export type {
 	AgentToolStartEvent,
 	BaseEvent,
 	BaseEventPayload,
+	// Enriched event
+	EnrichedEvent,
+	EventContext,
+	// Event bus types
+	EventFilter,
+	EventListener,
+	EventListener as UnifiedEventListener,
 	ExtensionEvent,
 	HarnessCompleteEvent,
 	HarnessStartEvent,
+	IEventBus,
 	NarrativeEvent,
 	NarrativeImportance,
 	PhaseCompleteEvent,
+	PhaseContext,
 	PhaseStartEvent,
 	SessionAbortEvent,
 	SessionPromptEvent,
 	SessionReplyEvent,
 	TaskCompleteEvent,
+	TaskContext,
 	TaskFailedEvent,
 	TaskStartEvent,
-
-	// Enriched event
-	EnrichedEvent,
-
-	// Event bus types
-	EventFilter,
-	EventListener,
-	IEventBus,
 	Unsubscribe,
 } from "@openharness/core";
-
-// SDK-specific alias for event listener (matches SDK's existing API)
-export type { EventListener as UnifiedEventListener } from "@openharness/core";

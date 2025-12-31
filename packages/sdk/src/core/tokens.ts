@@ -97,7 +97,11 @@ export interface IAgentRunner {
 	 * Run a prompt and return the final result.
 	 * Fires callbacks for each message during execution.
 	 */
-	run(args: { prompt: string; options: GenericRunnerOptions; callbacks?: RunnerCallbacks }): Promise<GenericMessage | undefined>;
+	run(args: {
+		prompt: string;
+		options: GenericRunnerOptions;
+		callbacks?: RunnerCallbacks;
+	}): Promise<GenericMessage | undefined>;
 }
 
 /**
@@ -158,7 +162,11 @@ export interface IRecorder {
 		prompt: string;
 		options: GenericRunnerOptions;
 		callbacks?: RunnerCallbacks;
-		runFn: (args: { prompt: string; options: GenericRunnerOptions; callbacks?: RunnerCallbacks }) => Promise<GenericMessage | undefined>;
+		runFn: (args: {
+			prompt: string;
+			options: GenericRunnerOptions;
+			callbacks?: RunnerCallbacks;
+		}) => Promise<GenericMessage | undefined>;
 	}): Promise<GenericMessage | undefined>;
 }
 

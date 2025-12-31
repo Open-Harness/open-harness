@@ -48,6 +48,8 @@ export {
 // AGENT LAYER (Provider-Agnostic)
 // ============================================
 
+// Core Interface (re-exported from core)
+export type { IAgent, RunnerOptions } from "@openharness/core";
 // Unified Callbacks (IAgentCallbacks is the primary callback interface)
 export type {
 	AgentError,
@@ -60,9 +62,6 @@ export type {
 	ToolCallEvent,
 	ToolResultEvent,
 } from "./callbacks/index.js";
-
-// Core Interface (re-exported from core)
-export type { IAgent, RunnerOptions } from "@openharness/core";
 
 // ============================================
 // FACTORY LAYER
@@ -78,10 +77,9 @@ export { TaskList } from "./workflow/task-list.js";
 // TYPES
 // ============================================
 
-export type { Task, TaskStatus } from "./workflow/task-list.js";
-
 // Runner Callbacks
 export type { RunnerCallbacks } from "./core/tokens.js";
+export type { Task, TaskStatus } from "./workflow/task-list.js";
 
 // ============================================
 // DI CONTAINER
@@ -125,9 +123,16 @@ export type {
 	NarrativeAgentName,
 	NarrativeEntry,
 } from "./monologue/index.js";
-export { DEFAULT_MONOLOGUE_PROMPT, IMonologueLLMToken, TERSE_PROMPT, VERBOSE_PROMPT } from "./monologue/index.js";
 // Monologue System
-export { Monologue, type MonologueOptions, setMonologueContainer } from "./monologue/index.js";
+export {
+	DEFAULT_MONOLOGUE_PROMPT,
+	IMonologueLLMToken,
+	Monologue,
+	type MonologueOptions,
+	setMonologueContainer,
+	TERSE_PROMPT,
+	VERBOSE_PROMPT,
+} from "./monologue/index.js";
 
 // ============================================
 // FLUENT HARNESS API (007-fluent-harness-dx)
@@ -249,7 +254,7 @@ export {
 // CHANNEL SYSTEM
 // ============================================
 
-// New Channel API
+// Channel API
 export {
 	type ChannelConfig,
 	type ChannelContext,
@@ -261,15 +266,4 @@ export {
 	RenderOutput,
 	type RenderOutputConfig,
 	type Spinner,
-} from "./harness/index.js";
-
-// Backwards compatibility (deprecated)
-export {
-	defineRenderer,
-	type EventHandler as RendererEventHandler,
-	type IUnifiedRenderer,
-	type RenderContext,
-	type RendererDefinition,
-	toAttachment,
-	type UnifiedRendererConfig,
 } from "./harness/index.js";

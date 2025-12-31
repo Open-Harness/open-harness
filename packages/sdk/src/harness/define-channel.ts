@@ -219,7 +219,11 @@ class Channel<TState> implements IChannel {
 			this.currentTransport = transport;
 
 			// Wrap transport events as EnrichedEvent
-			const wrapAsEnrichedEvent = (event: { type: string; timestamp?: Date; [key: string]: unknown }): EnrichedEvent => ({
+			const wrapAsEnrichedEvent = (event: {
+				type: string;
+				timestamp?: Date;
+				[key: string]: unknown;
+			}): EnrichedEvent => ({
 				id: crypto.randomUUID(),
 				timestamp: event.timestamp ?? new Date(),
 				context: { sessionId: "" },
@@ -413,47 +417,4 @@ export function createChannel<TState = Record<string, never>>(
 	config?: Partial<ChannelConfig>,
 ): IChannel {
 	return new Channel(definition, config);
-}
-
-// ============================================================================
-// BACKWARDS COMPATIBILITY ALIASES
-// ============================================================================
-
-/** @deprecated Use ChannelConfig instead */
-export type RendererConfig = ChannelConfig;
-
-/** @deprecated Use ChannelContext instead */
-export type RenderContext<TState> = ChannelContext<TState>;
-
-/** @deprecated Use ChannelEventHandler instead */
-export type EventHandler<TState> = ChannelEventHandler<TState>;
-
-/** @deprecated Use ChannelDefinition instead */
-export type RendererDefinition<TState> = ChannelDefinition<TState>;
-
-/** @deprecated Use IChannel instead */
-export type IUnifiedRenderer = IChannel;
-
-/**
- * @deprecated Use defineChannel instead
- *
- * This function maintains backwards compatibility with code using defineRenderer.
- * It returns an IChannel that can be used with both the legacy IUnifiedEventBus.attach()
- * and the new harness.attach(channel.toAttachment()).
- */
-export function defineRenderer<TState = Record<string, never>>(
-	definition: ChannelDefinition<TState>,
-	config?: Partial<ChannelConfig>,
-): IChannel {
-	return new Channel(definition, config);
-}
-
-/**
- * @deprecated Channels now return Attachment directly from defineChannel()
- *
- * For backwards compatibility, this converts an IChannel to an Attachment.
- * New code should use defineChannel() which returns Attachment directly.
- */
-export function toAttachment(channel: IChannel): Attachment {
-	return channel.toAttachment();
 }
