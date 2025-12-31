@@ -90,9 +90,6 @@ async function run(): Promise<void> {
     log("server:connect", baseUrl);
   }
 
-  const health = await client.global.health();
-  log("health", `version=${health.version}`);
-
   const session = await client.session.create({
     body: { title: "opencode-spike" },
   });
