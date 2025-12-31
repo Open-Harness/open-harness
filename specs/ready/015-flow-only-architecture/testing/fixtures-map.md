@@ -5,7 +5,7 @@ This file lists all fixtures referenced by the Flow-only test specifications.
 ## Flow Runtime
 
 - `fixtures/golden/flow/runtime-lifecycle.jsonl`
-  - Scenario: run lifecycle events (`harness:*`, `phase:*`)
+  - Scenario: runtime lifecycle events (`harness:*`, `phase:*`)
 - `fixtures/golden/flow/runtime-task-events.jsonl`
   - Scenario: task events per node
 - `fixtures/golden/flow/runtime-inbox-routing.jsonl`

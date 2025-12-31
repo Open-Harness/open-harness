@@ -8,7 +8,7 @@ This spec defines:
 - **Kernel protocol**: the minimal runtime substrate (Hub, FlowRuntime, Agent, Channel)
 - **Flow protocol**: declarative YAML DAG execution layer built on the kernel
 
-The kernel provides the event bus, lifecycle management, and bidirectional communication primitives. The flow layer provides structured orchestration (DAG scheduling, conditional execution, bindings) that runs *inside the Flow runtime* (no Harness).
+The kernel provides the event bus, lifecycle management, and bidirectional communication primitives. The flow layer provides structured orchestration (DAG scheduling, conditional execution, bindings) that runs *inside the Flow runtime* (no legacy runtime).
 
 ## Canonical naming
 

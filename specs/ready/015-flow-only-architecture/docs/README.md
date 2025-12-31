@@ -5,7 +5,7 @@ This folder contains draft docs aligned to the kernel docs format, updated for F
 ## Canonical naming (Flow-only)
 
 - **Hub**: bidirectional bus (events out, commands in)
-- **FlowRuntime**: orchestration runtime (replaces Harness)
+- **FlowRuntime**: orchestration runtime (only runtime)
 - **Agent**: executable unit that emits `agent:*` events
 - **Channel**: bidirectional interface attached to the runtime
 

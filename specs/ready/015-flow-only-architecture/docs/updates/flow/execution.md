@@ -4,7 +4,7 @@ This document describes how a FlowSpec runs on the Flow runtime.
 
 ## Execution model
 
-**Key invariant**: Flow is the runtime. It is not executed inside a Harness.
+**Key invariant**: Flow is the runtime. It is the only runtime.
 
 ### High-level flow
 

@@ -23,7 +23,7 @@ bun run lesson:11
 
 - Process exits with code `0`
 - Console prints `Lesson 11: Phases + Tasks`
-- Output includes `Harness result:` with:
+- Output includes `Runtime result:` with:
   - `plan === "Define milestones"`
   - `build === "Ship it"`
 
