@@ -113,7 +113,6 @@ Control nodes define routing structure in the graph (n8n-like):
 - `agent.coder`
 - `agent.reviewer`
 - `agent.summarize`
-- `agent.chat` (optional alias for `agent.run` with long-running mode)
 
 All agent nodes:
 - Always receive inbox.
@@ -132,20 +131,7 @@ All agent nodes:
 - `data.template`
 - `data.validate`
 
-### D) Integration Nodes (optional, not channels)
-- `http.request`
-- `webhook.receive`
-- `file.read`
-- `file.write`
-- `fs.list`
-- `git.status`
-- `git.diff`
-- `db.query`
-- `queue.publish`
-- `queue.consume`
-- `schedule.cron`
-
-### E) System / Runtime
+### D) System / Runtime
 - `system.log`
 - `system.metrics`
 - `system.cache.get`
@@ -419,53 +405,7 @@ Output: `{ text: string }`\n
 Input: `{ value: unknown; schema: string }`\n
 Output: `{ valid: boolean; errors?: string[] }`\n
 
-### A4) IO / Connectors
-
-**http.request**\n
-Input: `{ method: string; url: string; headers?: Record<string,string>; body?: unknown }`\n
-Output: `{ status: number; headers: Record<string,string>; body: unknown }`\n
-\n
-**webhook.receive**\n
-Input: `{ path: string }`\n
-Output: `{ payload: unknown }`\n
-\n
-**file.read**\n
-Input: `{ path: string }`\n
-Output: `{ text: string }`\n
-\n
-**file.write**\n
-Input: `{ path: string; text: string }`\n
-Output: `{ ok: true }`\n
-\n
-**fs.list**\n
-Input: `{ path: string }`\n
-Output: `{ entries: string[] }`\n
-\n
-**git.status**\n
-Input: `{ path?: string }`\n
-Output: `{ status: string }`\n
-\n
-**git.diff**\n
-Input: `{ path?: string }`\n
-Output: `{ diff: string }`\n
-\n
-**db.query**\n
-Input: `{ query: string; params?: unknown[] }`\n
-Output: `{ rows: unknown[] }`\n
-\n
-**queue.publish**\n
-Input: `{ topic: string; payload: unknown }`\n
-Output: `{ ok: true }`\n
-\n
-**queue.consume**\n
-Input: `{ topic: string }`\n
-Output: `{ payload: unknown }`\n
-\n
-**schedule.cron**\n
-Input: `{ cron: string }`\n
-Output: `{ firedAt: string }`\n
-
-### A5) System / Runtime
+### A4) System / Runtime
 
 **system.log**\n
 Input: `{ level: \"debug\"|\"info\"|\"warn\"|\"error\"; message: string }`\n
