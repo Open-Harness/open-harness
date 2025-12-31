@@ -10,6 +10,10 @@ Use the **exact structure** from the kernel docs:
 A copy of the template is included here for convenience:
 - `testing/test-spec-template.md`
 
+## Implementation checklist
+
+- `testing/implementation-plan.md` lists required code artifacts and test files.
+
 ## Required test specs (initial list)
 
 - `flow-runtime.test-spec.md` (FlowRuntime lifecycle + inbox routing)

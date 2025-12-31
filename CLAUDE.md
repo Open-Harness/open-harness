@@ -2,17 +2,10 @@
 
 Auto-generated from all feature plans. Last updated: 2025-12-28
 
-## Knowledge Base
+## Documentation
 
-The `.knowledge/` folder is an Obsidian vault containing:
-- **Canonical docs**: `.knowledge/docs/` - Public documentation (tracked)
-- **Product thinking**: `.knowledge/product/` - Vision, roadmap, decisions (tracked)
-- **Private investor materials**: `.knowledge/private/PITCH.md` - Symlinked OUT (gitignored)
-- **Reference**: `.knowledge/CLAUDE.md` explains the full setup
+READ packages/kernel/docs/*
 
-Read `.knowledge/private/PITCH.md` for business context and investor narrative.
-Read `.knowledge/docs/why.md` for developer philosophy.
-Read `.knowledge/docs/how-it-works.md` for architecture and code examples.
 
 ## Active Technologies
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, listr2 (optional peer) (003-harness-renderer)

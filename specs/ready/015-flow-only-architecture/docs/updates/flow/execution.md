@@ -27,6 +27,8 @@ This document describes how a FlowSpec runs on the Flow runtime.
 
 Nodes are executed sequentially in topological order, gated by edge `when`.
 
+**Note**: In sequential mode, `control.merge` with `mode: any` behaves like `mode: all`. The distinction only matters under parallel scheduling.
+
 ### Parallel (later)
 
 Independent nodes (no dependencies between them) can run in parallel.

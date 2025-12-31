@@ -49,6 +49,8 @@ const instance = createFlowRunner(flow, registry, {
 await instance.run();
 ```
 
+**Preferred**: pass channels in `createFlowRunner(...)` options for deterministic startup ordering. Use `attach()` for dynamic additions.
+
 ## Node `config`
 
 `config` is passed through to the NodeType implementation. Agent nodes must forward config to the underlying agent runner.

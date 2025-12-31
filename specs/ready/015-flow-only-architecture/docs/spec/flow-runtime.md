@@ -86,6 +86,8 @@ const instance = createFlowRunner(flow, registry, {
 });
 ```
 
+**Preferred**: pass channels at creation for deterministic startup order. Use `attach()` only for dynamic, mid-run additions.
+
 ## Inbox routing
 
 - Every agent invocation receives an `AgentInbox`.

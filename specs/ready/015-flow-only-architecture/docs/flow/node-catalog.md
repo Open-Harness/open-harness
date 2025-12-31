@@ -7,6 +7,7 @@ This document defines the canonical node set for Flow. It is the source of truth
 - Each node type is registered in the Flow registry.
 - Agent nodes are **stateful**, **injectable**, and may **stream**.
 - Control nodes shape graph execution but do not call external providers.
+- Full input/output schemas live in `../../spec.md#appendix-a-node-schemas-v1`.
 
 ## A) Control Nodes
 
@@ -54,25 +55,7 @@ All agent nodes:
 | `data.template` | `{ template, values? }` | `{ text }` | Render string |
 | `data.validate` | `{ value, schema }` | `{ valid, errors? }` | Validate |
 
-## D) Integration Nodes (optional, not channels)
-
-These nodes connect to external systems. They are **not** channels and should not be treated as workflow interfaces.
-
-| Node | Input | Output | Notes |
-| --- | --- | --- | --- |
-| `http.request` | `{ method, url, headers?, body? }` | `{ status, headers, body }` | HTTP call |
-| `webhook.receive` | `{ path }` | `{ payload }` | Trigger node |
-| `file.read` | `{ path }` | `{ text }` | Read file |
-| `file.write` | `{ path, text }` | `{ ok: true }` | Write file |
-| `fs.list` | `{ path }` | `{ entries }` | List directory |
-| `git.status` | `{ path? }` | `{ status }` | Git status |
-| `git.diff` | `{ path? }` | `{ diff }` | Git diff |
-| `db.query` | `{ query, params? }` | `{ rows }` | DB query |
-| `queue.publish` | `{ topic, payload }` | `{ ok: true }` | Publish message |
-| `queue.consume` | `{ topic }` | `{ payload }` | Consume message |
-| `schedule.cron` | `{ cron }` | `{ firedAt }` | Schedule trigger |
-
-## E) System / Runtime
+## D) System / Runtime
 
 | Node | Input | Output | Notes |
 | --- | --- | --- | --- |

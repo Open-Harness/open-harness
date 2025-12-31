@@ -29,6 +29,16 @@ This folder contains draft docs aligned to the kernel docs format, updated for F
 ### Reference
 - [Protocol Types](updates/reference/protocol-types.md)
 
+### Updates index
+
+These are draft rewrites of canonical kernel docs for Flow-only alignment:
+- [Kernel README (draft)](updates/README.md)
+- [FlowSpec (draft)](updates/flow/flow-spec.md)
+- [Execution (draft)](updates/flow/execution.md)
+- [When (draft)](updates/flow/when.md)
+- [Registry (draft)](updates/flow/registry.md)
+- [Protocol Types (draft)](updates/reference/protocol-types.md)
+
 ### Meta
 - [Docs Impact](../docs-impact.md)
 - [Main Spec](../spec.md)

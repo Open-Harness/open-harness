@@ -33,7 +33,7 @@ edges:
 Edge `when` expressions are evaluated against the binding context:
 
 - `flow.input` (Flow input)
-- Node outputs by id (e.g., `route.route`, `classify.output`)
+- Node outputs by id (e.g., `route.route`, `classify.label`)
 
 ## Node readiness
 
@@ -50,6 +50,8 @@ If a node has **zero incoming edges**, it is eligible at run start.
 
 - `mode: all` → wait for **all** incoming edges to fire.
 - `mode: any` → wait for **any** incoming edge to fire.
+
+**Note**: In sequential scheduling (MVP), `mode: any` is effectively the same as `mode: all` because nodes are evaluated in topological order. `mode: any` becomes observable only when parallel scheduling is enabled.
 
 ## Skip behavior
 
