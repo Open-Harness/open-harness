@@ -303,7 +303,7 @@ Each phase must pass its **authoritative gate** before proceeding. Gates are a m
 ### Phase 4 Gate (Claude + Multi-Turn)
 - Replay fixtures: `flow/agent-inbox`, `flow/agent-tool-events`, `flow/agent-streaming`
 - Live script: `scripts/live/flow-agent-nodes-live.ts`
-- Tutorial gate: restore **lesson 06** (PromptFile + Claude) and **lesson 09** (Claude Multi-Turn)
+- Tutorial gate: restore **lesson 06** (PromptFile + Claude) and **lesson 09** (Claude Multi-Turn) **(Blocked until Claude auth issues are resolved)**
 
 ### Phase 5 Gate (Flow Loader Extensions)
 - Replay fixtures: `flow/loader-nodepacks`, `flow/loader-promptfile`
@@ -322,7 +322,7 @@ Each phase must pass its **authoritative gate** before proceeding. Gates are a m
 | --- | --- | --- |
 | Phase 1–2 | 01–05 | Core flow runtime, bindings, edge/when routing |
 | Phase 3 | 01–05 + policy lesson | Retry/timeout/continueOnError coverage |
-| Phase 4 | 06, 09 | Claude promptFile + multi-turn inbox |
+| Phase 4 | 06, 09 (Blocked - auth issues) | Claude promptFile + multi-turn inbox |
 | Phase 5 | 06 (promptFile) | Loader extensions (nodePacks + promptFile) |
 | Phase 6 | 01–05, 07–08, 10–14 | End-to-end suite, legacy-runtime-free |
 
@@ -356,7 +356,7 @@ Each lesson has:\n
 
 ## Validation Artifacts (Tutorials to Restore)
 
-Re-introduce the following lessons once multi-turn inbox streaming is implemented. These are required evidence that the system works end-to-end:
+Re-introduce the following lessons once multi-turn inbox streaming is implemented **and Claude auth issues are resolved**. These are required evidence that the system works end-to-end:
 
 1. **PromptFile + Claude** (lesson 06)\n
    - YAML uses `promptFile` + `claude.agent` in one-shot mode.\n
