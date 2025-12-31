@@ -1,52 +1,59 @@
 # Flow Execution Protocol
 
-This document describes how a FlowSpec runs on the kernel.
+This document describes how a FlowSpec runs on the Flow runtime.
 
 ## Execution model
 
-**Key invariant**: Flow is not a new runtime. It is a library layer that uses the kernel's `phase/task` helpers and `AgentDefinition` contract.
+**Key invariant**: Flow is the runtime. It is not executed inside a Harness.
 
 ### High-level flow
 
 1. Parse and validate the FlowSpec YAML
 2. Compile the DAG (topological sort, validate edges)
-3. Run inside a harness:
+3. Run inside FlowRuntime:
    - Use `phase("Run Flow", ...)` to wrap the entire flow
-   - For each node (in topological order):
-     - Evaluate `when` (if present)
-     - If skipped, record skip marker and continue
+   - For each node (eligible by readiness rules):
+     - Evaluate node `when`
+     - Resolve edge `when` for upstream edges
      - Use `task("node:<id>", ...)` to wrap the node execution
      - Resolve bindings in `node.input`
      - Look up `NodeType` from registry
      - Execute the node (may call `AgentDefinition.execute(...)`)
-     - Store the output
+     - Store output or error marker
 
 ## Scheduling
 
 ### Sequential (MVP)
 
-Nodes are executed **sequentially** in topological order:
+Nodes are executed sequentially in topological order, gated by edge `when`.
 
-- A node is eligible to run when all upstream dependencies have completed (success or failure)
-- The engine waits for each node to complete before starting the next
+**Note**: In sequential mode, `control.merge` with `mode: any` behaves like `mode: all`. The distinction only matters under parallel scheduling.
 
 ### Parallel (later)
 
 Independent nodes (no dependencies between them) can run in parallel.
 
+## Edge routing
+
+- Edge `when` evaluated on source completion.
+- A node runs when **all incoming edges are resolved** and **at least one fired**.
+- `control.merge` can override readiness (`all` vs `any`).
+
 ## Skip rules
 
-If `when` evaluates to `false`:
-- The node is **skipped** (not executed)
+If a node’s `when` evaluates to `false`:
+- The node is skipped
 - The engine records a skip marker in outputs
-- Downstream nodes can still run if they don't depend on that output
+
+If all incoming edges are skipped:
+- The node is skipped
 
 ## Failure rules
 
-### Workflow-level (`flow.policy.failFast`)
+### Flow-level (`flow.policy.failFast`)
 
 - `failFast: true` (default): first node failure fails the flow run
-- `failFast: false`: flow continues executing other runnable nodes unless a node's own policy says otherwise
+- `failFast: false`: flow continues unless blocked by downstream dependencies
 
 ### Node-level (`node.policy.continueOnError`)
 
@@ -60,14 +67,14 @@ If `when` evaluates to `false`:
 ```yaml
 policy:
   retry:
-    maxAttempts: number    # >= 1 (total attempts including the first)
-    backoffMs: number?     # default: 0 (constant backoff)
+    maxAttempts: number
+    backoffMs: number?
 ```
 
 Semantics:
-- `maxAttempts` is the total number of attempts (including the first)
-- `backoffMs` is the delay between attempts (constant backoff in MVP)
-- Retries only apply to node execution failures (not skip conditions)
+- `maxAttempts` is total attempts (including first)
+- `backoffMs` is delay between attempts (constant in MVP)
+- Retries apply to node execution failures only
 
 ## Timeout
 
@@ -82,23 +89,16 @@ Semantics:
 - Node run is aborted if it exceeds the timeout
 - Aborted nodes are treated as failures
 
-## Deterministic node completion
-
-**Invariant**: "Task-like nodes" must end (even if underlying provider session is open).
-
-- Nodes that call LLM providers should terminate after producing their output
-- Long-lived interactive nodes (voice websocket sessions, etc.) are explicitly opt-in and are not part of MVP
-
 ## Event emission
 
-The flow engine emits events via the hub:
-
-- `phase:start` / `phase:complete` for the flow run
-- `task:start` / `task:complete` / `task:failed` for each node
-- `agent:*` events from nodes that use `AgentDefinition` (if the node type wraps an agent)
+The runtime emits:
+- `harness:start` / `harness:complete`
+- `phase:start` / `phase:complete` / `phase:failed`
+- `task:start` / `task:complete` / `task:failed`
+- `agent:*` events from agent-backed nodes
 
 ## Key invariants
 
-1. **Flow runs inside a harness** - it uses `phase/task` helpers, not a separate runtime
-2. **Nodes are deterministic** - they must complete (even if the underlying provider session stays open)
-3. **Edges define dependencies** - the graph is never inferred from bindings or ordering
+1. Flow runtime owns lifecycle and inbox routing
+2. Edge routing is explicit via `when`
+3. Policies are enforced by runtime, not just schema

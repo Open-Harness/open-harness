@@ -86,5 +86,5 @@ type ExtensionEvent = { type: string; [k: string]: unknown }
 ## Key invariants
 
 1. **Single event envelope** end-to-end
-2. **All events flow through the hub** (agents/harness don't "print directly")
+2. **All events flow through the hub** (agents/runtime don't "print directly")
 3. **Context propagation is automatic** (no manual context threading)

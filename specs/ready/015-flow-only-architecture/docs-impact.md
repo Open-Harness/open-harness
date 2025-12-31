@@ -21,6 +21,8 @@ This document captures the documentation format, the new sections required, and 
 - Inbox routing rules (runId mapping).
 - Session mode semantics (human interaction).
 - Injection rules: `sendToRun` and `sendTo(nodeId)` (if implemented).
+- Async iterable prompt stream contract (initial messages + inbox).
+- Multi-turn termination semantics (maxTurns, explicit close).
 
 **Placement options**:
 - New doc: `docs/spec/flow-runtime.md`, OR
@@ -57,6 +59,8 @@ This document captures the documentation format, the new sections required, and 
 - All agent nodes get inbox (always).
 - `runId` is fresh per agent invocation.
 - Tool/streaming events emitted by agent nodes.
+- Async iterable prompt input for multi-turn agents.
+- Explicit termination rules for session-like nodes.
 
 **Placement**:
 - `docs/spec/agent.md`
@@ -113,6 +117,7 @@ This document captures the documentation format, the new sections required, and 
 - Clarify runId lifecycle (fresh per invocation).
 - Inbox always available for agent nodes.
 - Injection semantics via hub methods.
+- Async iterable prompt contract for multi-turn agents.
 
 ### `docs/spec/channel.md`
 - Clarify channels are interfaces to a running flow (not graph nodes).
@@ -121,6 +126,7 @@ This document captures the documentation format, the new sections required, and 
 - Update `Edge` type to include `when?: WhenExpr`.
 - Add `NodeCapabilities.isAgent?: boolean`.
 - Add Flow runtime types (FlowInstance/FlowRunResult) if introduced.
+ - Document `SDKUserMessage` shape used by prompt streams (reference link or type excerpt).
 
 ### `docs/testing/*`
 - Add Flow runtime fixtures + tests in testing docs.
@@ -141,6 +147,7 @@ This document captures the documentation format, the new sections required, and 
 - Any reference to “Flow runs inside a harness.”
 - Any claim that only some nodes have inbox support.
 - Any mention of `unstable_v2_prompt` usage.
+- Any suggestion that async prompt streams are optional for multi-turn agents.
 
 ---
 
@@ -148,6 +155,7 @@ This document captures the documentation format, the new sections required, and 
 - `docs/spec/flow-runtime.md` — Flow runtime lifecycle + inbox routing.
 - `docs/flow/node-catalog.md` — Canonical node list + minimal schemas.
 - Optional: `docs/flow/edge-routing.md` — dedicated edge `when` semantics.
+- Optional: `docs/spec/async-prompt-stream.md` — detailed streaming contract and termination rules.
 
 ---
 

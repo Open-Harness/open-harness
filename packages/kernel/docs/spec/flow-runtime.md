@@ -123,11 +123,11 @@ type SDKUserMessage = {
 
 ```ts
 async function* promptStream(
-  inputMessages: SDKUserMessage[],
+  initial: SDKUserMessage[],
   inbox: AgentInbox,
   sessionId: string,
 ): AsyncGenerator<SDKUserMessage> {
-  for (const message of inputMessages) yield message;
+  for (const msg of initial) yield msg;
   for await (const injected of inbox) {
     yield toSdkUserMessage(injected, sessionId);
   }
@@ -142,6 +142,12 @@ Session-like agent nodes **must stop** without hanging when no messages arrive. 
 - **explicit close**: the runtime closes the inbox/prompt stream (e.g., `inbox.close()`).
 
 **Invariant**: The Flow runtime must not hang waiting for inbox messages.
+
+## Claude SDK config dir expectations
+
+- Provider must not write to `~/.claude` in locked environments.
+- Agent runtime must support setting `CLAUDE_CONFIG_DIR` to a project-local temp dir (e.g. `.claude-tmp`).
+- Do not rely on `CLAUDE_CODE_DEBUG_LOGS_DIR` unless it is set to a valid file path.
 
 ## RunId boundaries
 

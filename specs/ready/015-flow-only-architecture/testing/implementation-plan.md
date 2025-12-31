@@ -15,6 +15,8 @@ This document enumerates **expected code artifacts** required by the test specs.
 - `packages/kernel/src/protocol/flow.ts`
   - `Edge.when?: WhenExpr`
   - `NodeCapabilities.isAgent?: boolean`
+- `packages/kernel/src/protocol/agent.ts`
+  - `AgentInbox.close(): void`
 
 ## Node Registry / Capabilities
 
@@ -27,6 +29,7 @@ This document enumerates **expected code artifacts** required by the test specs.
 - `packages/kernel/scripts/live/flow-edge-routing-live.ts`
 - `packages/kernel/scripts/live/flow-policy-live.ts`
 - `packages/kernel/scripts/live/flow-agent-nodes-live.ts`
+- `packages/kernel/scripts/live/flow-loader-live.ts`
 
 ## Replay Tests
 
@@ -34,6 +37,7 @@ This document enumerates **expected code artifacts** required by the test specs.
 - `packages/kernel/tests/replay/flow.edge-routing.test.ts`
 - `packages/kernel/tests/replay/flow.policy.test.ts`
 - `packages/kernel/tests/replay/flow.agent-nodes.test.ts`
+- `packages/kernel/tests/replay/flow.loader.test.ts`
 
 ## Unit Tests (Pure Logic)
 
@@ -41,6 +45,7 @@ This document enumerates **expected code artifacts** required by the test specs.
 - `packages/kernel/tests/unit/flow.edge-routing.unit.test.ts`
 - `packages/kernel/tests/unit/flow.policy.unit.test.ts`
 - `packages/kernel/tests/unit/flow.agent-nodes.unit.test.ts`
+- `packages/kernel/tests/unit/flow.loader.unit.test.ts`
 
 ## Fixtures (Golden)
 
@@ -57,6 +62,8 @@ This document enumerates **expected code artifacts** required by the test specs.
 - `packages/kernel/tests/fixtures/golden/flow/agent-inbox.jsonl`
 - `packages/kernel/tests/fixtures/golden/flow/agent-tool-events.jsonl`
 - `packages/kernel/tests/fixtures/golden/flow/agent-streaming.jsonl`
+- `packages/kernel/tests/fixtures/golden/flow/loader-nodepacks.jsonl`
+- `packages/kernel/tests/fixtures/golden/flow/loader-promptfile.jsonl`
 
 ## Notes
 

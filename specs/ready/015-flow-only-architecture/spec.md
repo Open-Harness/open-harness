@@ -146,14 +146,31 @@ Channels are interfaces to a running flow (console, voice, websocket, etc.). The
 
 ## Provider Standardization
 
-### Remove `unstable_v2_prompt`
-- Provider nodes must not call `unstable_v2_prompt`.
-- Use **stateful agent runner** for all agent nodes.
+### Claude node canonicalization
+- `claude.agent` is the canonical Claude node type.
+- Provider adapter must use `query()` from `@anthropic-ai/claude-agent-sdk`.
+- **Prohibited**: any `unstable_v2_*` APIs.
+
+### Async iterable input (agent nodes)
+- Agent nodes must accept async-iterable prompts for multi-turn support.
+- The prompt stream must yield initial messages, then yield new user messages from `AgentInbox`.
+- Streaming must use the SDK `SDKUserMessage` shape (see Flow Runtime doc).
 
 ### Config Pass-through
 - `NodeSpec.config` must be passed to agent runner.
-- Allowlist or schema-validate full Anthropic SDK config.
+- Allowlist or schema-validate full Claude SDK config.
 - Preserve tool configuration, model selection, sampling parameters, and metadata.
+
+### Multi-turn termination rules
+- Session-like agent nodes must stop on any of:
+  - `maxTurns`
+  - explicit close of the prompt stream (e.g., `inbox.close()`)
+- Flow runtime must never hang awaiting inbox input.
+
+### Config dir expectations
+- Provider must not write to `~/.claude` in locked environments.
+- Agent runtime must support setting `CLAUDE_CONFIG_DIR` to a project-local temp dir (e.g. `.claude-tmp`).
+- Do not rely on `CLAUDE_CODE_DEBUG_LOGS_DIR` unless it is set to a valid file path.
 
 ---
 
@@ -174,6 +191,11 @@ edges:
 ### Node Spec
 - Keep existing `NodePolicy`.
 - Add `config` pass-through for agent nodes.
+
+### Flow loader extensions
+- `flow.nodePacks` in YAML declares node packs to load.
+- CLI allowlist enforced via `oh.config.ts`.
+- `promptFile` loader resolves relative to the YAML file and injects the prompt content.
 
 ---
 
@@ -227,12 +249,13 @@ edges:
   - `NodeCapabilities.isAgent?: boolean`
   - When true: runtime always creates inbox and assigns runId.
 - Update existing nodes:
-  - `packages/kernel/src/flow/nodes/anthropic.ts`:
-    - Replace `unstable_v2_prompt` usage.
-    - Call stateful agent runner.
-  - `packages/kernel/src/providers/anthropic.ts`:
+  - `packages/kernel/src/flow/nodes/claude.agent.ts`:
+    - Use `query()` with async prompt stream.
+    - Wire inbox into prompt stream for multi-turn.
+  - `packages/kernel/src/providers/claude.ts`:
     - Use stateful agent execution.
     - Pass full config from `NodeSpec.config`.
+    - Respect config dir expectations.
 - Ensure agent nodes emit `agent:*` and `agent:tool:*` events.
 
 ### Phase 5: Harness Collapse
@@ -267,6 +290,18 @@ edges:
 - Agent tool events are visible in the hub for all agent nodes.
 - Edge-level routing works for multi-branch flows.
 - Harness APIs removed or thinly wrapped by Flow with no loss of behavior.
+
+---
+
+## Validation Artifacts (Tutorials to Restore)
+
+Re-introduce the following lessons once multi-turn inbox streaming is implemented. These are required evidence that the system works end-to-end:
+
+1. **PromptFile + Claude** (lesson 06)\n
+   - YAML uses `promptFile` + `claude.agent` in one-shot mode.\n
+2. **Claude Multi-Turn (Inbox)** (lesson 09)\n
+   - YAML or harness example where `claude.agent` consumes async iterable + inbox messages.\n
+   - Must show `sendToRun` injection and clean termination (maxTurns / inbox.close).\n
 
 ---
 

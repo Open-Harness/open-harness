@@ -18,6 +18,7 @@ nodes:
     type: NodeTypeId
     input: object
     config?: object
+    promptFile?: string
     when?: WhenExpr
     policy?:
       timeoutMs?: number
@@ -54,6 +55,33 @@ await instance.run();
 ## Node `config`
 
 `config` is passed through to the NodeType implementation. Agent nodes must forward config to the underlying agent runner.
+
+## Flow loader extensions
+
+### `flow.nodePacks`
+
+FlowSpec can declare node packs to load:
+
+```yaml
+flow:
+  name: example
+  nodePacks: ["core", "claude"]
+```
+
+The CLI enforces an allowlist via `oh.config.ts`.
+
+### `promptFile`
+
+Nodes may specify `promptFile` to load prompt content relative to the YAML file:
+
+```yaml
+nodes:
+  - id: prompt
+    type: claude.agent
+    promptFile: ./prompts/triage.md
+```
+
+The loader resolves the file path relative to the FlowSpec file and injects the prompt into node input.
 
 ## Channels (not in FlowSpec)
 

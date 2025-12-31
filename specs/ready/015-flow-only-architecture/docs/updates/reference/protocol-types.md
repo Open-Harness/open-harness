@@ -46,3 +46,26 @@ export interface FlowInstance extends Hub {
   run(): Promise<FlowRunResult>;
 }
 ```
+
+## AgentInbox (Flow-only additions)
+
+```ts
+export interface AgentInbox extends AsyncIterable<InjectedMessage> {
+  pop(): Promise<InjectedMessage>;
+  drain(): InjectedMessage[];
+  close(): void;
+}
+```
+
+## SDKUserMessage (Claude SDK reference)
+
+```ts
+type SDKUserMessage = {
+  type: "user";
+  message: { role: "user"; content: string };
+  parent_tool_use_id: string | null;
+  session_id: string;
+  isSynthetic?: boolean;
+  tool_use_result?: unknown;
+};
+```

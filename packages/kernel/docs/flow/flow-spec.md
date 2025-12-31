@@ -1,6 +1,6 @@
 # FlowSpec Protocol
 
-A FlowSpec is a YAML definition of a DAG that runs inside a harness.
+A FlowSpec is a YAML definition of a DAG that runs inside the **Flow runtime**.
 
 ## Top-level shape
 
@@ -25,6 +25,7 @@ nodes:
 edges:
   - from: string                 # NodeId
     to: string                   # NodeId
+    when: WhenExpr?              # optional edge gating
 ```
 
 ## Naming rules
@@ -103,6 +104,11 @@ nodes:
 
 **B1 rule**: `edges` is **required** (may be `[]` for single-node flows). The graph is never inferred from ordering or bindings.
 
+### Edge gating (`when`)
+
+Edges may include `when` conditions. The condition is evaluated when the **source node completes**.
+If it resolves to `false`, that edge is skipped. See [Edge Routing](edge-routing.md).
+
 ## Control flow
 
 ### Conditional gating (`when`)
@@ -136,6 +142,10 @@ Semantics:
   - if `true`, the engine records an error marker for that node output and continues
 
 See [Execution](execution.md) for detailed execution semantics.
+
+## Channels (not in FlowSpec)
+
+Channels are runtime interfaces and do not appear in FlowSpec. They are attached when creating a flow runner.
 
 ## Example
 

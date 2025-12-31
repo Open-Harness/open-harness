@@ -39,3 +39,10 @@ This file lists all fixtures referenced by the Flow-only test specifications.
   - Scenario: tool events emitted
 - `fixtures/golden/flow/agent-streaming.jsonl`
   - Scenario: streaming text events
+
+## Flow Loader
+
+- `fixtures/golden/flow/loader-nodepacks.jsonl`
+  - Scenario: nodePacks allowlist
+- `fixtures/golden/flow/loader-promptfile.jsonl`
+  - Scenario: promptFile resolution

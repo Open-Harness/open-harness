@@ -29,8 +29,14 @@ interface NodeCapabilities {
   supportsInbox?: boolean;
   /** Long-lived session semantics (voice websocket, etc.) */
   isLongLived?: boolean;
+  /** Agent-backed node */
+  isAgent?: boolean;
 }
 ```
+
+Rules:
+- All `agent.*` and `claude.agent` nodes set `isAgent: true`.
+- Agent nodes should set `supportsInbox: true`.
 
 ### Run context
 
@@ -58,11 +64,12 @@ registry.register({
   type: "claude.agent",
   inputSchema: z.object({ prompt: z.string() }),
   outputSchema: z.string(),
-  capabilities: { isStreaming: true, supportsInbox: true },
+  capabilities: { isStreaming: true, supportsInbox: true, isAgent: true },
   run: async (ctx, input) => {
     // implementation
   },
 });
+```
 
 ## Node Packs (CLI registry UX)
 
@@ -96,7 +103,6 @@ export const nodePacks = {
 
 If a flow requests a pack not present in `oh.config.ts`, the CLI fails fast with
 a clear error.
-```
 
 ## Library vs user responsibilities
 
@@ -105,7 +111,7 @@ a clear error.
 - Engine + compiler + binding resolver
 - Registry interfaces + base types
 - Built-in control/utility nodes (e.g., `condition.equals`)
-- Reference provider nodes (e.g., `claude.agent`, `claude.structured`)
+- Reference provider nodes (e.g., `claude.agent`)
 - Transport adapters (console + websocket skeleton)
 
 ### User provides
@@ -121,7 +127,6 @@ Recommended pattern: `namespace.kind`
 
 Examples:
 - `claude.agent`
-- `claude.structured`
 - `condition.equals`
 - `mcp.geo.country_info`
 

@@ -20,6 +20,7 @@ A copy of the template is included here for convenience:
 - `edge-routing.test-spec.md` (edge-level `when` readiness + merge semantics)
 - `policy-enforcement.test-spec.md` (timeout, retry, continueOnError)
 - `agent-nodes.test-spec.md` (agent node inbox + tool events)
+- `flow-loader.test-spec.md` (nodePacks allowlist + promptFile resolution)
 
 ## Fixture conventions
 

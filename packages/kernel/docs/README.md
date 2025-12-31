@@ -5,10 +5,10 @@ This is the **canonical specification** for the unified kernel + flow system.
 ## Purpose
 
 This spec defines:
-- **Kernel protocol**: the minimal runtime substrate (Hub, Harness, Agent, Channel)
+- **Kernel protocol**: the minimal runtime substrate (Hub, FlowRuntime, Agent, Channel)
 - **Flow protocol**: declarative YAML DAG execution layer built on the kernel
 
-The kernel provides the event bus, lifecycle management, and bidirectional communication primitives. The flow layer provides structured orchestration (DAG scheduling, conditional execution, bindings) that runs *inside* a harness.
+The kernel provides the event bus, lifecycle management, and bidirectional communication primitives. The flow layer provides structured orchestration (DAG scheduling, conditional execution, bindings) that runs *inside the Flow runtime*.
 
 ## Canonical naming
 
@@ -20,14 +20,14 @@ Use these terms consistently everywhere:
   - Events out: `subscribe(...)`, async iteration
   - Commands in: `send/sendTo/sendToRun/reply/abort`
   - Context propagation: `scoped(...)`, `current()`
-- **Harness**: orchestrator that owns state, run lifecycle, phase/task helpers, and inbox routing
+- **FlowRuntime**: orchestrator that owns lifecycle, phase/task helpers, and inbox routing
 - **Agent**: executable unit (`AgentDefinition.execute(...)`) that emits `agent:*` events and returns a result
 - **Channel**: bidirectional adapter/attachment (console/websocket/voice/etc.) that observes events and sends commands
 
 ### Flow layer
 
 - **FlowSpec**: YAML definition of a DAG (`flow`, `nodes`, `edges`)
-- **FlowRun**: one execution of a FlowSpec (runs inside a harness run)
+- **FlowRun**: one execution of a FlowSpec
 - **NodeSpec**: one node instance in the graph (`id`, `type`, `input`, `when`, `policy`, `config`)
 - **NodeType**: the TypeScript implementation registered under `node.type`
 
@@ -43,7 +43,7 @@ flowchart TB
 
   subgraph Kernel["Kernel Runtime"]
     HUB["Hub<br/>(events + commands + context)"]
-    HARNESS["Harness<br/>(lifecycle + inbox routing)"]
+    FLOWRT["FlowRuntime<br/>(lifecycle + inbox routing)"]
     CHANNELS["Channels<br/>(console, ws, voice)"]
   end
 
@@ -52,7 +52,7 @@ flowchart TB
     VALID["Validator (Zod)"]
     COMP["Compiler<br/>(DAG + topo)"]
     BIND["BindingResolver<br/>(A3)"]
-    EXEC["Scheduler<br/>(sequential MVP)"]
+    EXEC["Scheduler"]
   end
 
   YAML --> PARSER
@@ -62,13 +62,13 @@ flowchart TB
   REG --> EXEC
   EXEC --> HUB
   HUB --> EXEC
-  HARNESS --> HUB
+  FLOWRT --> HUB
   CHANNELS --> HUB
   HUB --> CHANNELS
   CLI --> CHANNELS
 ```
 
-**Key invariant**: Flow is not a new runtime. It is a library layer that uses the kernel's `phase/task` helpers and `AgentDefinition` contract.
+**Key invariant**: Flow is the only runtime. There is no Harness layer.
 
 ## Spec modules
 
@@ -76,17 +76,20 @@ flowchart TB
 
 - [Events](spec/events.md) - Event envelope, required event types, context rules
 - [Hub](spec/hub.md) - Hub API (events out + commands in) + semantics
-- [Harness](spec/harness.md) - Lifecycle + phases/tasks + session mode semantics
+- [Flow Runtime](spec/flow-runtime.md) - Lifecycle + phases/tasks + session semantics
 - [Agent](spec/agent.md) - AgentDefinition contract, runId/inbox injection semantics
 - [Channel](spec/channel.md) - Channel contract + recommended patterns
+- [Harness (deprecated)](spec/harness.md)
 
 ### Flow protocol
 
 - [FlowSpec](flow/flow-spec.md) - FlowSpec YAML schema + semantics (edges/when/policy)
 - [Bindings](flow/bindings.md) - A3 binding grammar + errors
 - [When](flow/when.md) - WhenExpr grammar + evaluation semantics
-- [Execution](flow/execution.md) - Flow-on-kernel execution semantics (scheduling, skip rules, failure rules, retry/timeout)
+- [Execution](flow/execution.md) - Flow runtime execution semantics
 - [Registry](flow/registry.md) - NodeType contract (schemas/capabilities) + library-vs-user responsibilities
+- [Edge Routing](flow/edge-routing.md) - Edge-level `when` semantics
+- [Node Catalog](flow/node-catalog.md) - Canonical node list
 
 ### Reference
 

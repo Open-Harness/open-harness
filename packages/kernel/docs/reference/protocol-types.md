@@ -110,7 +110,7 @@ interface Hub extends AsyncIterable<EnrichedEvent> {
 }
 ```
 
-## Harness
+## Harness (deprecated)
 
 ```typescript
 type Cleanup = void | (() => void) | (() => Promise<void>);
@@ -164,6 +164,7 @@ interface InjectedMessage {
 interface AgentInbox extends AsyncIterable<InjectedMessage> {
   pop(): Promise<InjectedMessage>;
   drain(): InjectedMessage[];
+  close(): void;
 }
 
 interface AgentExecuteContext {
@@ -254,6 +255,7 @@ interface NodeSpec {
 interface Edge {
   from: NodeId;
   to: NodeId;
+  when?: WhenExpr;
 }
 
 interface FlowYaml {
@@ -266,6 +268,7 @@ interface NodeCapabilities {
   isStreaming?: boolean;
   supportsInbox?: boolean;
   isLongLived?: boolean;
+  isAgent?: boolean;
 }
 
 interface NodeRunContext {
@@ -280,5 +283,29 @@ interface NodeTypeDefinition<TIn, TOut> {
   outputSchema: ZodSchema<TOut>;
   capabilities?: NodeCapabilities;
   run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
+}
+```
+
+## Flow Runtime
+
+```typescript
+interface FlowRunnerOptions {
+  sessionId?: string;
+  input?: Record<string, unknown>;
+  channels?: ChannelDefinition<any>[];
+  policy?: FlowPolicy;
+}
+
+interface FlowRunResult {
+  outputs: Record<string, unknown>;
+  events: EnrichedEvent[];
+  durationMs: number;
+  status: HubStatus;
+}
+
+interface FlowInstance extends Hub {
+  attach(channel: ChannelDefinition<any>): this;
+  startSession(): this;
+  run(): Promise<FlowRunResult>;
 }
 ```

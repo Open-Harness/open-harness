@@ -7,7 +7,7 @@ This document defines the canonical node set for Flow. It is the source of truth
 - Each node type is registered in the Flow registry.
 - Agent nodes are **stateful**, **injectable**, and may **stream**.
 - Control nodes shape graph execution but do not call external providers.
-- Full input/output schemas live in `../../spec.md#appendix-a-node-schemas-v1`.
+- Full input/output schemas live in the registered `NodeTypeDefinition` sources.
 
 ## A) Control Nodes
 
