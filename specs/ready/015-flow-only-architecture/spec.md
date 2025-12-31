@@ -277,6 +277,63 @@ edges:
 
 ---
 
+## Phase Gates (Hard, Non-Gameable)
+
+Each phase must pass its **authoritative gate** before proceeding. Gates are a mix of replay fixtures, live scripts, and tutorial validations.
+
+### Phase 1 Gate (FlowRuntime + Lifecycle)
+- Replay fixtures: `flow/runtime-lifecycle`, `flow/runtime-task-events`, `flow/runtime-inbox-routing`
+- Live script: `scripts/live/flow-runtime-live.ts`
+- Tutorial gate: Lessons **01–05** run successfully
+
+### Phase 2 Gate (Edge Routing)
+- Replay fixtures: `flow/edge-when-basic`, `flow/edge-readiness`, `flow/edge-merge-any`
+- Live script: `scripts/live/flow-edge-routing-live.ts`
+- Tutorial gate: Lessons **01–05** (edge/when examples) still pass
+
+### Phase 3 Gate (Policy Enforcement)
+- Replay fixtures: `flow/policy-timeout`, `flow/policy-retry`, `flow/policy-continue-on-error`, `flow/policy-failfast-false`
+- Live script: `scripts/live/flow-policy-live.ts`
+- Tutorial gate: add or extend a lesson to cover retry/timeout/continueOnError
+
+### Phase 4 Gate (Claude + Multi-Turn)
+- Replay fixtures: `flow/agent-inbox`, `flow/agent-tool-events`, `flow/agent-streaming`
+- Live script: `scripts/live/flow-agent-nodes-live.ts`
+- Tutorial gate: restore **lesson 06** (PromptFile + Claude) and **lesson 09** (Claude Multi-Turn)
+
+### Phase 5 Gate (Flow Loader Extensions)
+- Replay fixtures: `flow/loader-nodepacks`, `flow/loader-promptfile`
+- Live script: `scripts/live/flow-loader-live.ts`
+- Tutorial gate: any lesson that relies on `nodePacks` + `promptFile`
+
+### Phase 6 Gate (Harness Collapse)
+- Full tutorial suite: **01–05, 07–08, 10–14** must pass
+- No Harness required for any tutorial
+
+---
+
+## Tutorial Gate Matrix
+
+| Phase | Required Lessons | Purpose |
+| --- | --- | --- |
+| Phase 1–2 | 01–05 | Core flow runtime, bindings, edge/when routing |
+| Phase 3 | 01–05 + policy lesson | Retry/timeout/continueOnError coverage |
+| Phase 4 | 06, 09 | Claude promptFile + multi-turn inbox |
+| Phase 5 | 06 (promptFile) | Loader extensions (nodePacks + promptFile) |
+| Phase 6 | 01–05, 07–08, 10–14 | End-to-end suite, harness-free |
+
+## Tutorial Specifications (Non-Ad Hoc)
+
+All tutorial gates must use the formal tutorial specs in:\n
+- `specs/ready/015-flow-only-architecture/tutorials/`\n
+\n
+Each lesson has:\n
+- explicit goals\n
+- exact run command\n
+- expected output and assertions\n
+
+---
+
 ## Risks
 - Concurrency and merge semantics may require careful design.
 - Provider migration may affect event output and streaming behavior.
