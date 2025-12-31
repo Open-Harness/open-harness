@@ -1,0 +1,38 @@
+---
+title: Your First Flow
+description: Create and run your first Open Harness flow
+---
+
+This guide will walk you through creating your first flow using Open Harness.
+
+## What is a Flow?
+
+A flow is a declarative YAML definition that describes a graph of nodes. The kernel runtime executes flows by scheduling nodes based on their dependencies.
+
+## Quick Start
+
+Create a simple `flow.yaml` file:
+
+```yaml
+flow:
+  name: hello-world
+  nodes:
+    - id: greet
+      type: echo
+      input:
+        message: "Hello, Open Harness!"
+```
+
+## Running Your Flow
+
+Use the CLI runner to execute your flow:
+
+```bash
+bun run flow-run --file flow.yaml
+```
+
+## Next Steps
+
+- Learn about [Flow Inputs](/docs/learn/flow-inputs) to pass data into your flows
+- Explore the [kernel-tutorial lessons](https://github.com/your-org/kernel-tutorial) for more examples
+- Check the [Flow Spec reference](/docs/reference/kernel-spec/flow/flow-spec) for complete documentation

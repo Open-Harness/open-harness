@@ -1,0 +1,37 @@
+---
+title: When & Policy
+description: Conditional execution and execution policies
+---
+
+Control when nodes execute and how they behave using `when` conditions and execution policies.
+
+## When Conditions
+
+Use `when` to conditionally execute nodes:
+
+```yaml
+nodes:
+  - id: check
+    type: validate
+  - id: process
+    type: transform
+    when: "{{ check.output.valid }}"
+```
+
+## Execution Policies
+
+Policies control how nodes handle errors and retries:
+
+```yaml
+nodes:
+  - id: api-call
+    type: http-request
+    policy:
+      retries: 3
+      timeout: 5000
+```
+
+## Learn More
+
+- See the [When reference](/docs/reference/kernel-spec/flow/when) for condition syntax
+- Check [Edge Routing](/docs/reference/kernel-spec/flow/edge-routing) for edge-level conditions

@@ -1,0 +1,99 @@
+---
+title: "Bindings Protocol (A3)"
+description: "Bindings are **string interpolation only** in MVP."
+---
+
+Bindings are **string interpolation only** in MVP.
+
+## Grammar
+
+Bindings apply to **string values only** inside `node.input`:
+
+- `&#123;&#123;path&#125;&#125;` - **strict**; missing is an error
+- `&#123;&#123;?path&#125;&#125;` - **optional**; missing renders `""`
+- `&#123;&#123;path | default:&#60;json&#62;&#125;&#125;` - fallback when missing (`default:` is JSON literal)
+
+## Path resolution
+
+Paths use dot notation and are resolved against the **binding context**:
+
+- `flow.input.&#60;key...&#62;`
+- `&#60;nodeId&#62;.&#60;key...&#62;` (node outputs are available by node id)
+
+### Examples
+
+```yaml
+input:
+  prompt: "Write about &#123;&#123;flow.input.country&#125;&#125;."
+  # Missing path is an error (strict mode)
+```
+
+```yaml
+input:
+  prompt: "Write about &#123;&#123;?optionalField&#125;&#125;."
+  # Missing path renders as empty string
+```
+
+```yaml
+input:
+  prompt: "Write about &#123;&#123;?optionalField | default:\"Unknown\"&#125;&#125;."
+  # Missing path uses the default value
+```
+
+## Binding context
+
+The binding context is built from:
+
+1. `flow.input` - workflow-level inputs
+2. `outputs[nodeId]` - node outputs (available after the node completes)
+
+### Example
+
+```yaml
+flow:
+  input:
+    country: Benin
+
+nodes:
+  - id: facts
+    type: mcp.geo.country_info
+    input:
+      country: "&#123;&#123;flow.input.country&#125;&#125;"
+    # Output: &#123; country: "Benin", capital: "Porto-Novo", officialLanguage: "French" &#125;
+
+  - id: sayFrench
+    type: claude.agent
+    input:
+      prompt: "Capital: &#123;&#123;facts.capital&#125;&#125;, Language: &#123;&#123;facts.officialLanguage&#125;&#125;"
+    # Resolves to: "Capital: Porto-Novo, Language: French"
+```
+
+## Error handling
+
+### Strict mode (&#123;&#123;path&#125;&#125;)
+
+If a path cannot be resolved (missing, `null`, `undefined`), the node fails with a clear error message indicating which path failed.
+
+### Optional mode (&#123;&#123;?path&#125;&#125;)
+
+If a path cannot be resolved, it renders as an empty string `""`.
+
+### Default mode (&#123;&#123;path | default:&#60;json&#62;&#125;&#125;)
+
+If a path cannot be resolved, it uses the provided default value (parsed as JSON).
+
+## Type coercion
+
+In MVP:
+- Only strings are templated (objects/arrays are passed through unchanged)
+- Missing paths resolve according to the binding mode (strict/optional/default)
+
+Later scope:
+- Structured mapping (JSONPath-like)
+- Type-aware coercion and defaults
+
+## Key invariants
+
+1. **Only strings are templated** - objects/arrays in `node.input` are passed through unchanged
+2. **Strict by default** - `&#123;&#123;path&#125;&#125;` fails if missing (prevents silent correctness bugs)
+3. **Optional is explicit** - `&#123;&#123;?path&#125;&#125;` makes the intent clear

@@ -1,0 +1,32 @@
+---
+title: Bindings (A3)
+description: Connect node outputs to inputs using the A3 binding grammar
+---
+
+Bindings use the A3 (Access, Apply, Aggregate) grammar to connect data between nodes.
+
+## Basic Bindings
+
+Reference node outputs in other nodes:
+
+```yaml
+nodes:
+  - id: node1
+    type: generate
+  - id: node2
+    type: process
+    input:
+      data: "{{ node1.output }}"
+```
+
+## Binding Syntax
+
+- `{{ nodeId.output }}` - Access a node's output
+- `{{ nodeId.output.field }}` - Access a nested field
+- `{{ input.field }}` - Access flow inputs
+- `{{ nodeId.output | transform }}` - Apply transformations
+
+## Learn More
+
+- See the [Bindings reference](/docs/reference/kernel-spec/flow/bindings) for complete syntax
+- Check [Decision 0003](/docs/reference/kernel-spec/decisions/0003-bindings-a3) for design rationale

@@ -1,0 +1,41 @@
+---
+title: "Decision 0003: Bindings A3 (Strict + Optional + Default)"
+description: ""
+---
+
+## Status
+
+Accepted
+
+## Context
+
+We need to decide how to handle missing bindings in template strings:
+- Hard error (strict)
+- Soft resolve (empty string)
+- Typed optional bindings
+
+## Decision
+
+**A3: Typed optional bindings** with three modes:
+
+- `&#123;&#123;path&#125;&#125;` - **strict**; missing is an error
+- `&#123;&#123;?path&#125;&#125;` - **optional**; missing renders `""`
+- `&#123;&#123;path | default:&#60;json&#62;&#125;&#125;` - fallback when missing
+
+## Rationale
+
+- **Strict by default** prevents silent correctness bugs (best for correctness + debugging)
+- **Optional is explicit** (`&#123;&#123;?path&#125;&#125;`) makes the intent clear
+- **Default values** provide flexibility for intentional fallbacks
+- **UI-friendly** - a visual builder can validate immediately and highlight broken refs
+
+## Consequences
+
+- Missing `&#123;&#123;path&#125;&#125;` fails the node (and shows which path)
+- Missing `&#123;&#123;?path&#125;&#125;` renders as empty string
+- Missing `&#123;&#123;path | default:&#60;json&#62;&#125;&#125;` uses the default value
+
+## Alternatives considered
+
+- **A1: Hard error only** - rejected because it's too rigid for prototyping
+- **A2: Soft resolve only** - rejected because it creates silent correctness bugs

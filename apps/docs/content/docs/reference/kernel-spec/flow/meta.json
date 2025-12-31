@@ -1,0 +1,12 @@
+{
+  "title": "Flow Protocol",
+  "pages": [
+    "bindings",
+    "edge-routing",
+    "execution",
+    "flow-spec",
+    "node-catalog",
+    "registry",
+    "when"
+  ]
+}
