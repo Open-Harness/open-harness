@@ -1,0 +1,20 @@
+{
+  "name": "@openharness/example-task-harness",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Example: Task-based harness implementation using SDK primitives",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openharness/sdk": "workspace:*",
+    "@openharness/anthropic": "workspace:*",
+    "@openharness/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
