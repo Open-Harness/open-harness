@@ -1,10 +1,10 @@
-# Spec: Flow-Only Architecture (Collapse Harness + Flow)
+# Spec: Flow-Only Architecture
 
 **Status**: Draft
 **Date**: 2025-12-31
 
 ## Summary
-Unify execution into a single Flow runtime that preserves existing harness semantics (phases, tasks, runId boundaries, event context, inbox routing) while simplifying abstractions. Flow becomes the only orchestration model; harness-specific APIs are removed or wrapped by Flow.
+Unify execution into a single Flow runtime that preserves existing runtime semantics (phases, tasks, runId boundaries, event context, inbox routing) while simplifying abstractions. Flow becomes the only orchestration model; legacy runtime APIs are removed.
 
 This spec is grounded in the existing mental model:
 - **Each agent invocation is a fresh run** (new `runId`).
@@ -15,7 +15,7 @@ This spec is grounded in the existing mental model:
 
 ## Goals
 - Collapse dual execution modes into a single **Flow runtime**.
-- Preserve harness semantics: phases, tasks, run lifecycle, and event context.
+- Preserve runtime semantics: phases, tasks, run lifecycle, and event context.
 - Ensure **every agent run is injectable** (inbox always available for agent nodes).
 - Enable **edge-level dynamic routing** with explicit control nodes.
 - Provide a **complete node catalog** suitable for “n8n for agents.”
@@ -33,7 +33,7 @@ This spec is grounded in the existing mental model:
 - **task**: node execution scope (task id = node id).
 - **runId**: **fresh per agent invocation**, even within the same task.
 
-This preserves the harness behavior: multiple agents can run in the same task scope while still getting distinct runIds.
+This preserves prior runtime behavior: multiple agents can run in the same task scope while still getting distinct runIds.
 
 ---
 
@@ -204,7 +204,7 @@ edges:
 2. Implement `FlowPolicy` + `NodePolicy` in runtime.
 3. Add edge-level `when` in schema + executor.
 4. Standardize agent nodes on stateful runner and inbox.
-5. Remove or wrap harness APIs to Flow runtime.
+5. Remove legacy runtime APIs entirely; FlowRuntime is the only runtime surface.
 6. Update tests/fixtures for run lifecycle and inbox routing.
 
 ---
@@ -217,7 +217,7 @@ edges:
   - Emits `harness:*`, `phase:*`, `task:*` events.
   - Returns `FlowRunResult` with events, duration, status.
 - Export runtime from `packages/kernel/src/flow/index.ts` and `packages/kernel/src/index.ts`.
-- Deprecate `packages/kernel/src/engine/harness.ts` (leave in place temporarily, but FlowRuntime becomes canonical).
+- Remove `packages/kernel/src/engine/harness.ts` and related exports/tests/scripts.
 
 ### Phase 2: Edge-level `when`
 - Update `packages/kernel/src/protocol/flow.ts`:
@@ -258,12 +258,16 @@ edges:
     - Respect config dir expectations.
 - Ensure agent nodes emit `agent:*` and `agent:tool:*` events.
 
-### Phase 5: Harness Collapse
-- Update exports to promote FlowRuntime as primary API.
-- Remove or wrap `HarnessInstance` to call FlowRuntime internally.
-- Remove legacy harness fixtures/tests once parity is verified.
+### Phase 5: Flow Loader Extensions
+- Enforce `flow.nodePacks` allowlist via `oh.config.ts`.
+- Implement `promptFile` loading relative to the Flow YAML file.
+- Add tests/fixtures for loader behavior (`nodePacks`, `promptFile`).
 
-### Phase 6: Tests + Fixtures
+### Phase 6: Legacy Runtime Removal + Final Validation
+- Remove all legacy runtime code, docs, tests, fixtures, and scripts.
+- Replace any legacy runtime references with FlowRuntime equivalents.
+- Run full tutorial suite and confirm runtime-only operation.
+- Add remaining tests/fixtures for runtime scenarios as needed.
 - Add new replay fixtures for Flow runtime:
   - `flow/run-lifecycle`
   - `flow/inbox-routing`
@@ -306,9 +310,9 @@ Each phase must pass its **authoritative gate** before proceeding. Gates are a m
 - Live script: `scripts/live/flow-loader-live.ts`
 - Tutorial gate: any lesson that relies on `nodePacks` + `promptFile`
 
-### Phase 6 Gate (Harness Collapse)
+### Phase 6 Gate (Legacy Runtime Removal)
 - Full tutorial suite: **01–05, 07–08, 10–14** must pass
-- No Harness required for any tutorial
+- No legacy runtime required for any tutorial
 
 ---
 
@@ -346,7 +350,7 @@ Each lesson has:\n
 - Any running agent can receive injected messages by `runId`.
 - Agent tool events are visible in the hub for all agent nodes.
 - Edge-level routing works for multi-branch flows.
-- Harness APIs removed or thinly wrapped by Flow with no loss of behavior.
+- Legacy runtime APIs removed (no compatibility layer).
 
 ---
 
@@ -357,7 +361,7 @@ Re-introduce the following lessons once multi-turn inbox streaming is implemente
 1. **PromptFile + Claude** (lesson 06)\n
    - YAML uses `promptFile` + `claude.agent` in one-shot mode.\n
 2. **Claude Multi-Turn (Inbox)** (lesson 09)\n
-   - YAML or harness example where `claude.agent` consumes async iterable + inbox messages.\n
+   - YAML or FlowRuntime example where `claude.agent` consumes async iterable + inbox messages.\n
    - Must show `sendToRun` injection and clean termination (maxTurns / inbox.close).\n
 
 ---
@@ -619,7 +623,7 @@ async function runFlow(flow, registry, hub, options): FlowRunResult {
 
 These are the immediate documentation-level decisions to lock before implementation:
 
-1. **Adopt FlowRuntime as canonical runtime** (Harness deprecated).\n
+1. **Adopt FlowRuntime as canonical runtime** (legacy runtime removed).\n
 2. **Edge-level routing**: `when` moves to edges, readiness rules defined.\n
 3. **Policy enforcement**: FlowPolicy + NodePolicy are runtime behaviors.\n
 4. **Agent standardization**: all agent nodes are stateful, injectable, and emit tool events.\n

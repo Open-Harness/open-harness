@@ -13,8 +13,8 @@ This document captures the documentation format, the new sections required, and 
 
 ## New docs sections needed
 
-### 1) Flow runtime (new or renamed from Harness)
-**Why**: Flow is now the runtime; harness is collapsed.
+### 1) Flow runtime (canonical runtime doc)
+**Why**: FlowRuntime is the only runtime; legacy runtime is removed.
 
 **Content to add**:
 - Flow runtime lifecycle (`harness:start/complete`, `phase`, `task`).
@@ -24,9 +24,8 @@ This document captures the documentation format, the new sections required, and 
 - Async iterable prompt stream contract (initial messages + inbox).
 - Multi-turn termination semantics (maxTurns, explicit close).
 
-**Placement options**:
-- New doc: `docs/spec/flow-runtime.md`, OR
-- Rename `docs/spec/harness.md` → `flow-runtime.md` and mark harness as deprecated.
+**Placement**:
+- `docs/spec/flow-runtime.md`
 
 ### 2) Edge-level `when` routing
 **Why**: Conditional routing moves to edges in Flow.
@@ -85,7 +84,7 @@ This document captures the documentation format, the new sections required, and 
 ## Docs to update (no edits here yet)
 
 ### `docs/README.md`
-- Update **Architecture overview** to show Flow runtime owning Hub (no Harness).
+- Update **Architecture overview** to show FlowRuntime owning Hub (no legacy runtime).
 - Update **Key invariant**: Flow becomes the runtime (not “runs inside harness”).
 - Add link to **Node Catalog** doc.
 
@@ -109,8 +108,8 @@ This document captures the documentation format, the new sections required, and 
   - `isStreaming: true` where applicable
   - `isAgent: true` (new capability flag)
 
-### `docs/spec/harness.md`
-- Mark as deprecated OR rename to `flow-runtime.md`.
+### `docs/spec/flow-runtime.md`
+- Ensure FlowRuntime is documented as the only runtime.
 - Update examples to show Flow runtime usage.
 
 ### `docs/spec/agent.md`
@@ -141,7 +140,7 @@ This document captures the documentation format, the new sections required, and 
 ## Docs to delete or deprecate (proposal)
 
 ### Deprecate
-- `docs/spec/harness.md` (replaced by Flow runtime doc)
+- `docs/spec/flow-runtime.md`
 
 ### Remove statements (not files)
 - Any reference to “Flow runs inside a harness.”

@@ -16,7 +16,6 @@ This folder contains draft docs aligned to the kernel docs format, updated for F
 - [Agent](updates/spec/agent.md)
 - [Channel](updates/spec/channel.md)
 - [Hub](updates/spec/hub.md)
-- [Harness (deprecated)](updates/spec/harness.md)
 
 ### Flow
 - [FlowSpec](updates/flow/flow-spec.md)

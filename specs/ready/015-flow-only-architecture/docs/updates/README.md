@@ -66,7 +66,7 @@ flowchart TB
   CLI --> CHANNELS
 ```
 
-**Key invariant**: Flow is the only runtime. There is no Harness layer.
+**Key invariant**: Flow is the only runtime. There is no legacy runtime layer.
 
 ## Spec modules (draft)
 

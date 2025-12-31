@@ -6,7 +6,7 @@
 
 ## Overview
 
-Tests for the FlowRuntime lifecycle, event emission, and inbox routing. FlowRuntime replaces Harness as the execution runtime and must preserve phase/task semantics.
+Tests for the FlowRuntime lifecycle, event emission, and inbox routing. FlowRuntime is the execution runtime and must preserve phase/task semantics.
 
 ## Test Requirements
 
@@ -14,7 +14,7 @@ Tests for the FlowRuntime lifecycle, event emission, and inbox routing. FlowRunt
 
 **Fixture**: `fixtures/golden/flow/runtime-lifecycle.jsonl`  
 **Test File**: `tests/replay/flow.runtime.test.ts`  
-**Test Name**: `"emits harness and phase lifecycle events"`
+**Test Name**: `"emits runtime and phase lifecycle events"`
 
 **Scenario**:
 1. Create a FlowRuntime instance with a trivial flow (single node)
@@ -119,5 +119,5 @@ bun scripts/live/flow-runtime-live.ts
 
 ## Notes
 
-- FlowRuntime must emit `harness:*` events even though Harness is deprecated.
+- FlowRuntime must emit `harness:*` events even though legacy runtime APIs are removed.
 - Ensure phase/task scopes are preserved for event context.
