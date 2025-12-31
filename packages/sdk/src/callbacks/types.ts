@@ -7,7 +7,7 @@
  * SDK-specific types (StreamCallbacks) are defined locally.
  */
 
-import type { AgentEvent } from "../providers/anthropic/runner/models.js";
+import type { AgentEvent } from "../core/tokens.js";
 
 // ============================================================================
 // Re-exports from @openharness/core
@@ -30,6 +30,15 @@ export type {
 // ============================================================================
 
 /**
+ * Session result for legacy callbacks.
+ */
+export interface SessionResult {
+	stopReason?: string;
+	summary?: string;
+	[key: string]: unknown;
+}
+
+/**
  * @deprecated Use IAgentCallbacks instead. This alias exists for migration.
  */
 export type StreamCallbacks = {
@@ -41,7 +50,7 @@ export type StreamCallbacks = {
 	onToolProgress?: (toolName: string, elapsedSeconds: number, event: AgentEvent) => void;
 	onCompact?: (data: { trigger: "manual" | "auto"; pre_tokens: number }, event: AgentEvent) => void;
 	onStatus?: (data: { status: "compacting" | null }, event: AgentEvent) => void;
-	onResult?: (result: import("../providers/anthropic/runner/models.js").SessionResult, event: AgentEvent) => void;
+	onResult?: (result: SessionResult, event: AgentEvent) => void;
 	onSessionEnd?: (content: string, isError: boolean, event: AgentEvent) => void;
 	onError?: (error: string, event: AgentEvent) => void;
 };

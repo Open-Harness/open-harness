@@ -1,42 +1,26 @@
 /**
  * Composition Root - Single place where all DI bindings are configured
  *
- * This is the ONLY file that knows about concrete implementations.
- * All other files depend only on tokens (abstractions).
+ * This is a PROVIDER-AGNOSTIC container that only binds infrastructure.
+ * Provider-specific bindings (agents, runners, recording) should be
+ * added via @openharness/anthropic or other provider packages.
+ *
+ * For Anthropic/Claude support, use:
+ *   import { registerAnthropicProvider } from "@openharness/anthropic";
+ *   const container = createContainer();
+ *   registerAnthropicProvider(container);
  */
 
 import { Container } from "@needle-di/core";
-import { AnthropicMonologueLLM } from "../monologue/anthropic-llm.js";
 import { setMonologueContainer } from "../monologue/monologue-decorator.js";
-import { CodingAgent } from "../providers/anthropic/agents/coding-agent.js";
-import { PlannerAgent } from "../providers/anthropic/agents/planner-agent.js";
-import { ReviewAgent } from "../providers/anthropic/agents/review-agent.js";
-import { AnthropicRunner } from "../providers/anthropic/runner/anthropic-runner.js";
-import { Workflow } from "../workflow/orchestrator.js";
-import { setDecoratorContainer } from "./decorators.js";
 import { EventBus } from "./event-bus.js";
-import { RecordingFactory } from "./recording-factory.js";
-import { ReplayRunner } from "./replay-runner.js";
 import {
-	type IAgentRunner,
-	IAgentRunnerToken,
-	IAnthropicRunnerToken,
 	type IConfig,
 	IConfigToken,
 	IEventBusToken,
-	IMonologueLLMToken,
-	type IRecordingFactory,
-	IRecordingFactoryToken,
-	IReplayRunnerToken,
 	IUnifiedEventBusToken,
-	type IVault,
-	IVaultToken,
-	// Task Harness tokens - uncomment when implementations exist:
-	// IParserAgentToken,
-	// ITaskHarnessToken,
 } from "./tokens.js";
 import { UnifiedEventBus } from "./unified-event-bus.js";
-import { Vault } from "./vault.js";
 
 // Re-export for convenience
 export type { IConfig } from "./tokens.js";
@@ -57,18 +41,28 @@ export interface ContainerOptions {
 }
 
 /**
- * Create the application container with all bindings.
+ * Create the application container with provider-agnostic infrastructure.
+ *
+ * This container provides:
+ * - Configuration (IConfigToken)
+ * - Event system (IEventBusToken, IUnifiedEventBusToken)
+ * - Monologue service infrastructure (decorator container setup)
+ *
+ * For LLM provider support, use a provider package:
+ * - @openharness/anthropic: Anthropic/Claude support
  *
  * @param options - Configuration options
  * @returns Configured Container
  *
  * @example
  * ```typescript
- * // Production
- * const container = createContainer({ mode: "live" });
+ * // Provider-agnostic container
+ * const container = createContainer();
  *
- * // Testing with replay
- * const container = createContainer({ mode: "replay" });
+ * // With Anthropic provider
+ * import { registerAnthropicProvider } from "@openharness/anthropic";
+ * const container = createContainer({ mode: "live" });
+ * registerAnthropicProvider(container);
  *
  * // Custom config
  * const container = createContainer({
@@ -88,47 +82,13 @@ export function createContainer(options: ContainerOptions = {}): Container {
 	};
 
 	// =========================================================================
-	// Infrastructure Layer
+	// Infrastructure Layer (Provider-Agnostic)
 	// =========================================================================
 
 	// Config
 	container.bind({
 		provide: IConfigToken,
 		useValue: config,
-	});
-
-	// =========================================================================
-	// Provider-Specific Runner Tokens
-	// =========================================================================
-
-	// Anthropic Runner (production)
-	container.bind({
-		provide: IAnthropicRunnerToken,
-		useClass: AnthropicRunner,
-	});
-
-	// Replay Runner (testing)
-	container.bind({
-		provide: IReplayRunnerToken,
-		useClass: ReplayRunner,
-	});
-
-	// Legacy IAgentRunnerToken (mode-dependent, for backward compatibility)
-	container.bind({
-		provide: IAgentRunnerToken,
-		useClass: mode === "replay" ? ReplayRunner : AnthropicRunner,
-	});
-
-	// Vault
-	container.bind({
-		provide: IVaultToken,
-		useClass: Vault,
-	});
-
-	// Recording Factory
-	container.bind({
-		provide: IRecordingFactoryToken,
-		useClass: RecordingFactory,
 	});
 
 	// Event Bus (Legacy)
@@ -143,30 +103,9 @@ export function createContainer(options: ContainerOptions = {}): Container {
 		useFactory: () => new UnifiedEventBus(),
 	});
 
-	// Monologue LLM (narrative generation)
-	container.bind({
-		provide: IMonologueLLMToken,
-		useClass: AnthropicMonologueLLM,
-	});
-
 	// =========================================================================
-	// Domain Layer (Agents)
+	// Wire up monologue decorator container
 	// =========================================================================
-
-	container.bind(CodingAgent);
-	container.bind(ReviewAgent);
-	container.bind(PlannerAgent);
-
-	// =========================================================================
-	// Application Layer (Workflows)
-	// =========================================================================
-
-	container.bind(Workflow);
-
-	// =========================================================================
-	// Wire up decorator container
-	// =========================================================================
-	setDecoratorContainer(container);
 	setMonologueContainer(container);
 
 	return container;
@@ -182,7 +121,6 @@ export function createContainer(options: ContainerOptions = {}): Container {
  * @example
  * ```typescript
  * const testContainer = createTestContainer(appContainer, {
- *   runner: mockRunner,
  *   config: { isReplayMode: true }
  * });
  * ```
@@ -190,27 +128,10 @@ export function createContainer(options: ContainerOptions = {}): Container {
 export function createTestContainer(
 	parent: Container,
 	overrides: {
-		runner?: IAgentRunner;
-		vault?: IVault;
 		config?: Partial<IConfig>;
-		recordingFactory?: IRecordingFactory;
 	} = {},
 ): Container {
 	const child = parent.createChild();
-
-	if (overrides.runner) {
-		child.bind({
-			provide: IAgentRunnerToken,
-			useValue: overrides.runner,
-		});
-	}
-
-	if (overrides.vault) {
-		child.bind({
-			provide: IVaultToken,
-			useValue: overrides.vault,
-		});
-	}
 
 	if (overrides.config) {
 		const parentConfig = parent.get(IConfigToken);
@@ -220,15 +141,8 @@ export function createTestContainer(
 		});
 	}
 
-	if (overrides.recordingFactory) {
-		child.bind({
-			provide: IRecordingFactoryToken,
-			useValue: overrides.recordingFactory,
-		});
-	}
-
 	// Update decorator container to use child
-	setDecoratorContainer(child);
+	setMonologueContainer(child);
 
 	return child;
 }

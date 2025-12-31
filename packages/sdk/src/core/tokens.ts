@@ -5,21 +5,64 @@
  * Services depend on tokens (abstractions), not concrete classes.
  *
  * PATTERN: Promise + Callbacks (no async generators)
+ *
+ * NOTE: This is a PROVIDER-AGNOSTIC module. Anthropic-specific types
+ * should be imported from @openharness/anthropic.
  */
 
-import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { InjectionToken } from "@needle-di/core";
+
+// ============================================================================
+// Generic Agent Event (Provider-Agnostic)
+// ============================================================================
+
+/**
+ * Generic agent event for the event bus.
+ * Provider packages can extend this or use their own event types.
+ */
+export interface AgentEvent {
+	/** ISO timestamp of the event */
+	timestamp: Date;
+	/** Type of event (e.g., 'tool_call', 'text', 'thinking', 'result') */
+	event_type: string;
+	/** Name of the agent that emitted this event */
+	agent_name: string;
+	/** Optional text content */
+	content?: string | null;
+	/** Session identifier */
+	session_id?: string;
+	/** Tool name for tool events */
+	tool_name?: string;
+	/** Tool input for tool_call events */
+	tool_input?: unknown;
+	/** Tool result for tool_result events */
+	tool_result?: unknown;
+	/** Whether this is an error event */
+	is_error?: boolean;
+	/** Additional metadata */
+	metadata?: Record<string, unknown>;
+}
 
 // ============================================================================
 // Callbacks - The core event mechanism
 // ============================================================================
 
 /**
+ * Generic message type for runner callbacks.
+ * Provider packages define their own specific message types.
+ */
+export interface GenericMessage {
+	type: string;
+	content?: unknown;
+	[key: string]: unknown;
+}
+
+/**
  * Callbacks fired during agent execution.
  * All callbacks are optional - provide only what you need.
  */
 export type RunnerCallbacks = {
-	onMessage?: (message: SDKMessage) => void;
+	onMessage?: (message: GenericMessage) => void;
 };
 
 // ============================================================================
@@ -37,12 +80,24 @@ export const IConfigToken = new InjectionToken<IConfig>("IConfig");
 // Agent Runner - Core abstraction for LLM execution
 // ============================================================================
 
+/**
+ * Generic options for agent runners.
+ * Provider packages define their own specific options.
+ */
+export interface GenericRunnerOptions {
+	model?: string;
+	systemPrompt?: string;
+	maxTokens?: number;
+	temperature?: number;
+	[key: string]: unknown;
+}
+
 export interface IAgentRunner {
 	/**
 	 * Run a prompt and return the final result.
 	 * Fires callbacks for each message during execution.
 	 */
-	run(args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }): Promise<SDKMessage | undefined>;
+	run(args: { prompt: string; options: GenericRunnerOptions; callbacks?: RunnerCallbacks }): Promise<GenericMessage | undefined>;
 }
 
 /**
@@ -80,8 +135,8 @@ export const IReplayRunnerToken = new InjectionToken<IAgentRunner>("IReplayRunne
 
 export interface IVaultSession {
 	exists(): boolean;
-	getMessages(): SDKMessage[];
-	save(messages: SDKMessage[]): Promise<void>;
+	getMessages(): GenericMessage[];
+	save(messages: GenericMessage[]): Promise<void>;
 }
 
 export interface IVault {
@@ -101,10 +156,10 @@ export interface IRecorder {
 	 */
 	run(args: {
 		prompt: string;
-		options: Options;
+		options: GenericRunnerOptions;
 		callbacks?: RunnerCallbacks;
-		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<SDKMessage | undefined>;
-	}): Promise<SDKMessage | undefined>;
+		runFn: (args: { prompt: string; options: GenericRunnerOptions; callbacks?: RunnerCallbacks }) => Promise<GenericMessage | undefined>;
+	}): Promise<GenericMessage | undefined>;
 }
 
 export interface IRecordingFactory {
@@ -116,8 +171,6 @@ export const IRecordingFactoryToken = new InjectionToken<IRecordingFactory>("IRe
 // ============================================================================
 // Event Bus (Cross-cutting Communication)
 // ============================================================================
-
-import type { AgentEvent } from "../providers/anthropic/runner/models.js";
 
 export interface IEventBus {
 	publish(event: AgentEvent): void | Promise<void>;
@@ -156,8 +209,8 @@ export interface IContainer {
 
 export type RecordedSession = {
 	prompt: string;
-	options: Options;
-	messages: SDKMessage[];
+	options: GenericRunnerOptions;
+	messages: GenericMessage[];
 };
 
 // ============================================================================
@@ -252,8 +305,8 @@ export interface IRecordingDecorator {
 		sessionId: string,
 		category?: string,
 	): {
-		beforeRun: (prompt: string, options: Options) => void;
-		afterRun: (result: SDKMessage | undefined) => Promise<void>;
+		beforeRun: (prompt: string, options: GenericRunnerOptions) => void;
+		afterRun: (result: GenericMessage | undefined) => Promise<void>;
 	};
 }
 

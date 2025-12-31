@@ -43,6 +43,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.10",
+		"@openharness/anthropic": "workspace:*",
 		"@types/bun": "latest"
 	},
 	"module": "src/index.ts",
