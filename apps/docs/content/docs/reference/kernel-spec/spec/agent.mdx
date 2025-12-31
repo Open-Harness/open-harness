@@ -1,0 +1,123 @@
+---
+title: "Agent Protocol"
+description: "Agents are executable units that emit events and return results."
+---
+
+Agents are executable units that emit events and return results.
+
+## AgentDefinition contract
+
+```typescript
+interface AgentDefinition&#60;TIn = unknown, TOut = unknown&#62; &#123;
+  name: string;
+  emitsStartComplete?: boolean;
+  execute(input: TIn, ctx: AgentExecuteContext): Promise&#60;TOut&#62;;
+&#125;
+```
+
+### `emitsStartComplete`
+
+If `true`, the agent implementation is responsible for emitting:
+- `agent:start` (with `runId`)
+- `agent:complete` (with `runId`)
+
+This is useful for provider adapters (e.g., streaming SDKs) that want tighter control over run lifecycle events.
+
+If `false` or omitted, the runtime emits these events automatically.
+
+## Execute context
+
+```typescript
+interface AgentExecuteContext &#123;
+  hub: Hub;
+  inbox: AgentInbox;
+  runId: string;
+&#125;
+```
+
+### `hub`
+
+The hub for emitting events. Agents should emit `agent:*` events via `hub.emit(...)`.
+
+### `inbox`
+
+Read-only inbox for messages injected by channels (via `hub.sendToRun(runId, ...)`).
+
+```typescript
+interface AgentInbox extends AsyncIterable&#60;InjectedMessage&#62; &#123;
+  pop(): Promise&#60;InjectedMessage&#62;;
+  drain(): InjectedMessage[];
+  close(): void;
+&#125;
+
+interface InjectedMessage &#123;
+  content: string;
+  timestamp: Date;
+&#125;
+```
+
+A provider wrapper can:
+- Concurrently `for await (const msg of inbox)` and forward messages to the underlying SDK session
+- Or `await inbox.pop()` when it wants to block for the next message
+
+### `runId`
+
+Unique ID for this particular agent execution. This is the routing key for `hub.sendToRun(runId, ...)`.
+
+**Important**: When multiple runs of the same agent can be active concurrently, channels should:
+1. Listen for `agent:start` events to get the `runId`
+2. Call `hub.sendToRun(runId, message)` (not `hub.sendTo(agentName, message)`)
+
+## Async prompt stream (Claude SDK)
+
+Multi-turn agent nodes must provide an **async iterable** prompt stream to the Claude SDK.
+
+Contract:
+- Yield initial messages from node input (prompt or messages array)
+- Then yield new user messages from `AgentInbox`
+- Terminate via explicit inbox close or SDK maxTurns
+
+```ts
+async function* promptStream(
+  initial: SDKUserMessage[],
+  inbox: AgentInbox,
+  sessionId: string,
+): AsyncGenerator&#60;SDKUserMessage&#62; &#123;
+  for (const msg of initial) yield msg;
+  for await (const injected of inbox) &#123;
+    yield toSdkUserMessage(injected, sessionId);
+  &#125;
+&#125;
+```
+
+### SDK user message shape
+
+```ts
+type SDKUserMessage = &#123;
+  type: "user";
+  message: &#123; role: "user"; content: string &#125;;
+  parent_tool_use_id: string | null;
+  session_id: string;
+  isSynthetic?: boolean;
+  tool_use_result?: unknown;
+&#125;;
+```
+
+## ExecutableAgent (runtime view)
+
+At runtime, workflow code sees:
+
+```typescript
+interface ExecutableAgent&#60;TIn = unknown, TOut = unknown&#62; &#123;
+  name: string;
+  execute(input: TIn): Promise&#60;TOut&#62;;
+&#125;
+```
+
+The runtime wraps `AgentDefinition` to provide this simpler interface (no context args).
+
+## Key invariants
+
+1. **Agents emit events via hub** - they don't "print directly"
+2. **Agents can receive injected messages** - via `inbox`
+3. **runId is the routing key** - for run-scoped message injection

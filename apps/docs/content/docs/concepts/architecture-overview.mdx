@@ -1,0 +1,29 @@
+---
+title: Architecture Overview
+description: High-level system architecture of Open Harness
+---
+
+Open Harness consists of two main layers: the **kernel** (runtime substrate) and the **flow** (declarative orchestration layer).
+
+## Kernel Layer
+
+The kernel provides:
+
+- **Hub**: Unified bidirectional event bus
+- **FlowRuntime**: Lifecycle management and inbox routing
+- **Agent**: Executable units that emit events
+- **Channel**: Bidirectional adapters for external interfaces
+
+## Flow Layer
+
+The flow layer provides:
+
+- **FlowSpec**: YAML definition of a DAG
+- **Node Registry**: TypeScript implementations of node types
+- **Execution Engine**: DAG scheduling and conditional execution
+
+## Learn More
+
+- See the [Kernel Spec Overview](/docs/reference/kernel-spec) for complete architecture details
+- Check [Kernel vs Flow](/docs/concepts/kernel-vs-flow) for layer separation
+- Review the [Event Model](/docs/concepts/event-model) for event flow

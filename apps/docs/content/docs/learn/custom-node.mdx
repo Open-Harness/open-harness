@@ -1,0 +1,36 @@
+---
+title: Custom Nodes
+description: Create your own node types
+---
+
+Extend Open Harness by creating custom node types that implement your business logic.
+
+## Node Type Contract
+
+A node type must:
+
+1. Define an input schema (Zod)
+2. Implement an execute function
+3. Register in the node registry
+
+## Example
+
+```typescript
+import { NodeType } from '@openharness/kernel';
+
+export const myNode: NodeType = {
+  name: 'my-node',
+  inputSchema: z.object({
+    message: z.string(),
+  }),
+  async execute({ input, hub }) {
+    // Your logic here
+    return { result: input.message };
+  },
+};
+```
+
+## Learn More
+
+- See the [Registry reference](/docs/reference/kernel-spec/flow/registry) for complete node type contract
+- Check the [Node Catalog](/docs/reference/kernel-spec/flow/node-catalog) for built-in nodes
