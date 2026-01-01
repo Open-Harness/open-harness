@@ -2,9 +2,12 @@
   "title": "Guides",
   "pages": [
     "index",
-    "testing-workflow",
-    "record-and-promote-fixtures",
-    "write-replay-tests",
+    "flows",
+    "nodes",
+    "hub",
+    "channels",
+    "agents",
+    "testing",
     "debugging",
     "faq"
   ]
