@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { AsyncQueue } from "../../src/harness/async-queue.js";
+import { AsyncQueue } from "../../src/utils/async-queue.js";
 
 describe("AsyncQueue", () => {
 	describe("push and pop", () => {

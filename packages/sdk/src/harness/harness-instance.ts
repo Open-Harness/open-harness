@@ -9,7 +9,7 @@
  * @module harness/harness-instance
  */
 
-import { matchesFilter } from "../core/unified-events/filter.js";
+import { matchesFilter } from "../infra/unified-events/filter.js";
 import type {
 	Attachment,
 	EnrichedEvent,
@@ -21,9 +21,9 @@ import type {
 	TransportStatus,
 	Unsubscribe,
 	UserResponse,
-} from "../core/unified-events/types.js";
+} from "../infra/unified-events/types.js";
 import type { AgentConstructor, ExecuteContext, ResolvedAgents } from "../factory/define-harness.js";
-import { AsyncQueue } from "./async-queue.js";
+import { AsyncQueue } from "../utils/async-queue.js";
 import { createParallelHelper, createRetryHelper } from "./control-flow.js";
 import type { FluentEventHandler, FluentHarnessEvent, HarnessEventType, PhaseEvent, TaskEvent } from "./event-types.js";
 import { SessionContext, type SessionContextDeps } from "./session-context.js";

@@ -1,0 +1,45 @@
+{
+	"name": "@openharness/anthropic",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		},
+		"./agents": {
+			"import": "./dist/agents/index.js",
+			"types": "./dist/agents/index.d.ts"
+		},
+		"./runner": {
+			"import": "./dist/runner/index.js",
+			"types": "./dist/runner/index.d.ts"
+		},
+		"./recording": {
+			"import": "./dist/recording/index.js",
+			"types": "./dist/recording/index.d.ts"
+		}
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"build": "tsc -p tsconfig.build.json",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"@openharness/core": "workspace:*",
+		"@openharness/sdk": "workspace:*",
+		"@anthropic-ai/claude-agent-sdk": "^0.1.76",
+		"@anthropic-ai/sdk": "^0.52.0",
+		"@needle-di/core": "^1.1.0",
+		"zod": "^4.2.1"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}

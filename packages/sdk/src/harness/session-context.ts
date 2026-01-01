@@ -7,8 +7,8 @@
  * @module harness/session-context
  */
 
-import type { InjectedMessage, ISessionContext, UserResponse, WaitOptions } from "../core/unified-events/types.js";
-import type { AsyncQueue } from "./async-queue.js";
+import type { InjectedMessage, ISessionContext, UserResponse, WaitOptions } from "../infra/unified-events/types.js";
+import type { AsyncQueue } from "../utils/async-queue.js";
 
 /**
  * Deferred promise with external resolve/reject control.

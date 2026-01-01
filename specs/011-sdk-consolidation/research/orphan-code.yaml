@@ -1,0 +1,531 @@
+timestamp: "2025-12-28T00:00:00Z"
+agent: orphan-finder
+summary:
+  total_orphans: 48
+  unused_exports: 32
+  test_only: 8
+  dead_code: 8
+
+findings:
+  # ============================================================================
+  # UNUSED EXPORTS - Exported from index.ts but never imported externally
+  # ============================================================================
+
+  # Backoff utilities - all exported but none imported
+  - id: ORPHAN-001
+    type: unused_export
+    name: "calculateDelay"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:43"
+    used_in: []
+    recommendation: keep_for_api  # May be useful for SDK users
+
+  - id: ORPHAN-002
+    type: unused_export
+    name: "createBackoffContext"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:44"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-003
+    type: unused_export
+    name: "DEFAULT_BACKOFF_CONFIG"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:45"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-004
+    type: unused_export
+    name: "isRateLimitError"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:48"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-005
+    type: unused_export
+    name: "shouldRetry"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:51"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-006
+    type: unused_export
+    name: "sleep"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:52"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-007
+    type: unused_export
+    name: "updateBackoffContext"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:54"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-008
+    type: unused_export
+    name: "withBackoff"
+    location: "src/harness/backoff.ts"
+    exported_from: "src/index.ts:56"
+    used_in: []
+    recommendation: keep_for_api
+
+  # Dependency resolver functions
+  - id: ORPHAN-009
+    type: unused_export
+    name: "detectCycles"
+    location: "src/harness/dependency-resolver.ts"
+    exported_from: "src/index.ts:46"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-010
+    type: unused_export
+    name: "getReadyTasks"
+    location: "src/harness/dependency-resolver.ts"
+    exported_from: "src/index.ts:47"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-011
+    type: unused_export
+    name: "validateDependencies"
+    location: "src/harness/dependency-resolver.ts"
+    exported_from: "src/index.ts:55"
+    used_in: []
+    recommendation: keep_for_api
+
+  # Task state management functions - used internally but exported publicly
+  - id: ORPHAN-012
+    type: unused_export
+    name: "completeTask"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:51"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete  # Internal only - not useful as public API
+
+  - id: ORPHAN-013
+    type: unused_export
+    name: "createInitialState"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:52"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-014
+    type: unused_export
+    name: "createNarrativeEntry"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:53"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-015
+    type: unused_export
+    name: "failTask"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:54"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-016
+    type: unused_export
+    name: "getNextTask"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:55"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-017
+    type: unused_export
+    name: "getRetryCount"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:56"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-018
+    type: unused_export
+    name: "getTask"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:57"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-019
+    type: unused_export
+    name: "isComplete"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:58"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-020
+    type: unused_export
+    name: "recordRetry"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:59"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-021
+    type: unused_export
+    name: "setTasks"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:60"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-022
+    type: unused_export
+    name: "startTask"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:61"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  - id: ORPHAN-023
+    type: unused_export
+    name: "validateTask"
+    location: "src/harness/task-state.ts"
+    exported_from: "src/harness/index.ts:62"
+    used_in:
+      - "src/harness/task-harness.ts (internal)"
+    recommendation: delete
+
+  # Event type guards - exported but never imported externally
+  - id: ORPHAN-024
+    type: unused_export
+    name: "isErrorEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:217"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-025
+    type: unused_export
+    name: "isNarrativeEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:218"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-026
+    type: unused_export
+    name: "isParallelEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:219"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-027
+    type: unused_export
+    name: "isPhaseEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:220"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-028
+    type: unused_export
+    name: "isRetryEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:221"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-029
+    type: unused_export
+    name: "isStepEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:222"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-030
+    type: unused_export
+    name: "isTaskEvent"
+    location: "src/harness/event-types.ts"
+    exported_from: "src/index.ts:223"
+    used_in: []
+    recommendation: keep_for_api
+
+  # Unified event type guards
+  - id: ORPHAN-031
+    type: unused_export
+    name: "isAgentEvent"
+    location: "src/core/unified-events/types.ts"
+    exported_from: "src/index.ts:277"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-032
+    type: unused_export
+    name: "isSessionEvent"
+    location: "src/core/unified-events/types.ts"
+    exported_from: "src/index.ts:279"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-033
+    type: unused_export
+    name: "isWorkflowEvent"
+    location: "src/core/unified-events/types.ts"
+    exported_from: "src/index.ts:280"
+    used_in: []
+    recommendation: keep_for_api
+
+  # Factory exports not used externally
+  - id: ORPHAN-034
+    type: unused_export
+    name: "setGlobalContainer"
+    location: "src/factory/agent-factory.ts"
+    exported_from: "src/index.ts:99"
+    used_in: []
+    recommendation: investigate  # May be for advanced users
+
+  - id: ORPHAN-035
+    type: unused_export
+    name: "resetGlobalContainer"
+    location: "src/factory/agent-factory.ts"
+    exported_from: "src/index.ts:99"
+    used_in: []
+    recommendation: investigate
+
+  - id: ORPHAN-036
+    type: unused_export
+    name: "createTestTaskHarness"
+    location: "src/factory/harness-factory.ts"
+    exported_from: "src/index.ts:103"
+    used_in: []
+    recommendation: keep_for_api  # Testing helper
+
+  - id: ORPHAN-037
+    type: unused_export
+    name: "toAttachment"
+    location: "src/harness/define-renderer.ts"
+    exported_from: "src/index.ts:292"
+    used_in: []
+    recommendation: keep_for_api
+
+  - id: ORPHAN-038
+    type: unused_export
+    name: "parallel"
+    location: "src/harness/control-flow.ts"
+    exported_from: "src/index.ts:187"
+    used_in: []
+    recommendation: keep_for_api  # Control flow helper
+
+  - id: ORPHAN-039
+    type: unused_export
+    name: "retry"
+    location: "src/harness/control-flow.ts"
+    exported_from: "src/index.ts:187"
+    used_in: []
+    recommendation: keep_for_api
+
+  # ============================================================================
+  # TEST ONLY - Only imported in test files
+  # ============================================================================
+
+  - id: ORPHAN-040
+    type: test_only
+    name: "BaseHarness"
+    location: "src/harness/base-harness.ts"
+    exported_from: "src/index.ts:41"
+    used_in:
+      - "tests/unit/harness.test.ts"
+    recommendation: investigate  # Abstract class - should it be public API?
+
+  - id: ORPHAN-041
+    type: test_only
+    name: "PersistentState"
+    location: "src/harness/state.ts"
+    exported_from: "src/index.ts:49"
+    used_in:
+      - "tests/unit/harness.test.ts"
+      - "src/harness/base-harness.ts (internal)"
+    recommendation: investigate
+
+  - id: ORPHAN-042
+    type: test_only
+    name: "createAgent"
+    location: "src/factory/agent-factory.ts"
+    exported_from: "src/index.ts:99"
+    used_in:
+      - "tests/unit/agent-factory.test.ts"
+      - "README.md (docs)"
+      - "QUICKSTART.md (docs)"
+    recommendation: keep_for_api  # Core API
+
+  - id: ORPHAN-043
+    type: test_only
+    name: "createWorkflow"
+    location: "src/factory/workflow-builder.ts"
+    exported_from: "src/index.ts:105"
+    used_in:
+      - "tests/unit/workflow-builder.test.ts"
+      - "README.md (docs)"
+      - "QUICKSTART.md (docs)"
+    recommendation: keep_for_api
+
+  - id: ORPHAN-044
+    type: test_only
+    name: "createTestContainer"
+    location: "src/core/container.ts"
+    exported_from: "src/index.ts:132"
+    used_in: []
+    recommendation: keep_for_api  # Testing helper
+
+  - id: ORPHAN-045
+    type: test_only
+    name: "defineRenderer"
+    location: "src/harness/define-renderer.ts"
+    exported_from: "src/index.ts:284"
+    used_in:
+      - "tests/unit/define-renderer.test.ts"
+    recommendation: keep_for_api  # Fluent API
+
+  # ============================================================================
+  # DEAD CODE - Defined but never called/imported
+  # ============================================================================
+
+  - id: ORPHAN-046
+    type: dead_code
+    name: "ConsoleRenderer"
+    location: "src/harness/console-renderer.ts"
+    exported_from: "src/harness/index.ts:165"
+    used_in: []
+    recommendation: delete  # Never used, replaced by defineRenderer
+
+  - id: ORPHAN-047
+    type: dead_code
+    name: "ReplayController"
+    location: "src/harness/replay-controller.ts"
+    exported_from: "src/harness/index.ts:205"
+    used_in: []
+    recommendation: delete  # Never imported
+
+  - id: ORPHAN-048
+    type: dead_code
+    name: "canResume"
+    location: "src/harness/harness-recorder.ts"
+    exported_from: "src/harness/index.ts:34"
+    used_in: []
+    recommendation: delete  # Never used
+
+  - id: ORPHAN-049
+    type: dead_code
+    name: "isLifecycleEvent"
+    location: "src/harness/event-protocol.ts"
+    exported_from: "src/harness/index.ts:174"
+    used_in: []
+    recommendation: delete  # Replaced by unified event system
+
+  - id: ORPHAN-050
+    type: dead_code
+    name: "isValidationEvent"
+    location: "src/harness/event-protocol.ts"
+    exported_from: "src/harness/index.ts:177"
+    used_in: []
+    recommendation: delete
+
+  # ============================================================================
+  # INTERNAL MODULES - Not exported in index.ts but might be dead
+  # ============================================================================
+
+  - id: ORPHAN-051
+    type: dead_code
+    name: "Workflow"
+    location: "src/workflow/orchestrator.ts"
+    exported_from: "not exported in index.ts"
+    used_in:
+      - "src/core/container.ts (DI registration only)"
+    recommendation: investigate  # Registered in container but maybe unused
+
+  - id: ORPHAN-052
+    type: dead_code
+    name: "ReplayRunner"
+    location: "src/core/replay-runner.ts"
+    exported_from: "not exported in index.ts"
+    used_in:
+      - "src/core/container.ts (DI registration)"
+      - "tests/helpers/*.ts (test only)"
+    recommendation: investigate  # Internal infrastructure
+
+  - id: ORPHAN-053
+    type: dead_code
+    name: "BaseAgent"
+    location: "src/providers/anthropic/runner/base-agent.ts"
+    exported_from: "not exported in index.ts"
+    used_in:
+      - "tests/unit/container.test.ts (test only)"
+    recommendation: delete  # Replaced by BaseAnthropicAgent
+
+  # ============================================================================
+  # ZOTID SCHEMAS - Many exported but none imported externally
+  # ============================================================================
+
+  - id: ORPHAN-054
+    type: unused_export
+    name: "Multiple Zod Schemas"
+    location: "src/harness/task-harness-types.ts"
+    exported_from: "src/harness/index.ts:119-154"
+    used_in:
+      - "Only ReviewAgentOutputSchema is used internally"
+    recommendation: investigate  # Many schemas never imported
+    details: |
+      AgentAbortSignalSchema, AgentRecordingSchema, CodingActionSchema,
+      CodingAgentInputSchema, CodingAgentOutputSchema, CodingContextSchema,
+      FailureRecordSchema, HarnessRunSchema, HarnessSummarySchema,
+      NarrativeEntrySchema, ParsedTaskSchema, ParserAgentInputSchema,
+      ParserAgentOutputSchema, ParserMetadataSchema, PhaseInfoSchema,
+      RetryRecordSchema, ReviewAgentInputSchema, ReviewContextSchema,
+      TaskFlagsSchema, TaskHarnessConfigSchema, TaskHarnessStateSchema,
+      TaskResultSchema, TokenUsageSchema, ValidationCheckSchema,
+      ValidationResultSchema
+
+# ============================================================================
+# SUMMARY & RECOMMENDATIONS
+# ============================================================================
+
+recommendations:
+  immediate_delete:
+    - "task-state.ts functions (ORPHAN-012 to ORPHAN-023) - internal only"
+    - "ConsoleRenderer (ORPHAN-046) - dead code"
+    - "ReplayController (ORPHAN-047) - dead code"
+    - "canResume (ORPHAN-048) - dead code"
+    - "isLifecycleEvent, isValidationEvent (ORPHAN-049, 050) - dead code"
+    - "BaseAgent (ORPHAN-053) - replaced by BaseAnthropicAgent"
+
+  investigate_before_delete:
+    - "Workflow class (ORPHAN-051) - registered but unused?"
+    - "ReplayRunner (ORPHAN-052) - only in tests"
+    - "BaseHarness, PersistentState (ORPHAN-040, 041) - abstract base classes"
+    - "Global container functions (ORPHAN-034, 035)"
+    - "Many Zod schemas (ORPHAN-054)"
+
+  keep_as_public_api:
+    - "Backoff utilities (ORPHAN-001 to 008) - useful for SDK users"
+    - "Dependency resolver functions (ORPHAN-009 to 011)"
+    - "Event type guards (ORPHAN-024 to 033)"
+    - "Control flow helpers parallel/retry (ORPHAN-038, 039)"
+    - "Factory exports (createAgent, createWorkflow, etc.)"
+    - "Renderer helpers (toAttachment, defineRenderer)"
