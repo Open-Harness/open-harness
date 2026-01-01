@@ -503,3 +503,74 @@ Key changes:
 3. **Less code** than before (inbox deleted)
 4. **Single mental model** - everything is Hub events
 5. **External API unchanged** - sendToRun still works
+
+---
+
+## Lessons Learned (2026-01-01)
+
+Critical findings from V2 SDK integration debugging.
+
+### L1: Do NOT pass custom `env` to the SDK
+
+**Problem**: The Claude SDK `query()` function silently breaks when you pass a custom `env` object with `CLAUDE_CONFIG_DIR`. The async iterator never yields messages - no error, just hangs forever.
+
+**Root Cause**: The SDK is opinionated about its runtime environment and manages its own config internally. Overriding `env` interferes with this.
+
+**Fix**: Remove all `env` overrides from `mergeOptions()`. The minimal options work perfectly:
+```typescript
+// GOOD - works
+{
+  maxTurns: 1,
+  persistSession: false,
+  permissionMode: "bypassPermissions",
+  allowDangerouslySkipPermissions: true
+}
+
+// BAD - hangs forever
+{
+  maxTurns: 1,
+  persistSession: false,
+  permissionMode: "bypassPermissions",
+  allowDangerouslySkipPermissions: true,
+  env: { CLAUDE_CONFIG_DIR: ".claude-tmp" }  // BREAKS THE SDK
+}
+```
+
+**File**: `packages/kernel/src/providers/claude.ts`
+
+### L2: Always set `maxTurns` for single-turn usage
+
+**Problem**: Without `maxTurns: 1`, the SDK waits indefinitely for more user messages, causing flows to hang.
+
+**Fix**: Default `maxTurns: 1` in `mergeOptions()` for single-turn behavior. Multi-turn nodes should explicitly override this.
+
+### L3: Mocks hide real integration issues
+
+**Problem**: Tutorials were using `mockClaudePack` which returns hardcoded fake responses. This masked the fact that the real SDK integration was broken (hanging on env override).
+
+**Lesson**: Tutorial validation must include at least one REAL SDK call to verify end-to-end integration works. Mocks are useful for fast iteration but dangerous for proving DX.
+
+**Evidence**: `real-flow-test.ts` script now validates the full stack:
+```
+FlowYaml -> executor -> claude.agent node -> claude.ts provider -> SDK -> Claude API
+```
+
+### L4: Config dir expectations are documentation, not code
+
+The spec says:
+> Provider must not write to `~/.claude` in locked environments.
+> Agent runtime must support setting `CLAUDE_CONFIG_DIR` to a project-local temp dir.
+
+**Reality**: The SDK handles this internally. Don't try to manage it from our wrapper. Remove the `ensureClaudeTempDirs()` helper - it's not needed.
+
+---
+
+## Test Artifacts
+
+### Verified Working
+- `packages/kernel/scripts/real-flow-test.ts` - Full stack test with real SDK
+- `packages/kernel/scripts/real-claude-test.ts` - Raw SDK isolation test
+
+### Still Using Mocks (TODO)
+- `oh.config.ts` uses `mockClaudePack` - should switch to real `claudePack` for end-to-end validation
+- Tutorial lessons use mock pack - acceptable for fast iteration but need real integration gate

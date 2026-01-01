@@ -1,8 +1,6 @@
 // Provider: Claude (Claude Code SDK)
 // Implements docs/implementation/roadmap.md Milestone 6
 
-import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
 import type {
 	ModelUsage,
 	NonNullableUsage,
@@ -54,32 +52,15 @@ function createSessionId(): string {
 	return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function ensureClaudeTempDirs(): { configDir: string; debugDir: string } {
-	const configDir = resolve(process.cwd(), ".claude-tmp");
-	const debugDir = resolve(configDir, "debug");
-	mkdirSync(debugDir, { recursive: true });
-	if (!process.env.CLAUDE_CONFIG_DIR) {
-		process.env.CLAUDE_CONFIG_DIR = configDir;
-	}
-	if (process.env.CLAUDE_CODE_DEBUG_LOGS_DIR === debugDir) {
-		delete process.env.CLAUDE_CODE_DEBUG_LOGS_DIR;
-	}
-	return { configDir, debugDir };
-}
-
 function mergeOptions(options?: Options): Options | undefined {
-	const { configDir } = ensureClaudeTempDirs();
-	const mergedEnv = {
-		CLAUDE_CONFIG_DIR: configDir,
-		...(options?.env ?? {}),
-	};
-
+	// Note: Do NOT pass custom env to the SDK - it breaks stream iteration
+	// The SDK handles its own config directory automatically
 	return {
+		maxTurns: 1, // Default to single-turn unless specified
 		persistSession: false,
 		permissionMode: "bypassPermissions",
 		allowDangerouslySkipPermissions: true,
 		...options,
-		env: mergedEnv,
 	};
 }
 

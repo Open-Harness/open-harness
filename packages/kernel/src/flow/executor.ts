@@ -122,7 +122,13 @@ async function runNode(
 
 	// Container nodes get executeChild for running child nodes
 	let runCtx: NodeRunContext | ContainerNodeContext = baseContext;
-	if (def.capabilities?.isContainer && registry && flowInput && outputs && allNodes) {
+	if (
+		def.capabilities?.isContainer &&
+		registry &&
+		flowInput &&
+		outputs &&
+		allNodes
+	) {
 		const executeChild = async (
 			childId: string,
 			childInput: Record<string, unknown>,
@@ -144,7 +150,10 @@ async function runNode(
 			};
 
 			// Resolve child node's input bindings
-			const resolvedChildInput = resolveBindings(childNode.input, childBindingContext);
+			const resolvedChildInput = resolveBindings(
+				childNode.input,
+				childBindingContext,
+			);
 			const childInputSchema = childDef.inputSchema as
 				| { parse: (value: unknown) => unknown }
 				| undefined;
@@ -246,7 +255,18 @@ async function runNodeWithPolicy(
 		attempts += 1;
 		try {
 			const output = await withTimeout(
-				() => runNode(node, def, ctx, bindingContext, attempts, registry, flowInput, outputs, allNodes),
+				() =>
+					runNode(
+						node,
+						def,
+						ctx,
+						bindingContext,
+						attempts,
+						registry,
+						flowInput,
+						outputs,
+						allNodes,
+					),
 				timeoutMs,
 			);
 			return { output, attempts };

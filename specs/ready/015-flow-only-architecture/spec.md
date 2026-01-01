@@ -3,6 +3,10 @@
 **Status**: Draft
 **Date**: 2025-12-31
 
+**Related Documents**:
+- [CHANGE-OUTLINE.md](./CHANGE-OUTLINE.md) - V2 SDK migration details and lessons learned
+- [manifest.md](./manifest.md) - Phase deliverables and acceptance criteria
+
 ## Summary
 Unify execution into a single Flow runtime that preserves existing runtime semantics (phases, tasks, runId boundaries, event context, message routing) while simplifying abstractions. Flow becomes the only orchestration model; legacy runtime APIs are removed.
 
@@ -172,7 +176,8 @@ Channels are interfaces to a running flow (console, voice, websocket, etc.). The
 
 ### Config dir expectations
 - Provider must not write to `~/.claude` in locked environments.
-- Agent runtime must support setting `CLAUDE_CONFIG_DIR` to a project-local temp dir (e.g. `.claude-tmp`).
+- **Do NOT pass custom `env` to the SDK** - it breaks the async iterator (see Lessons Learned L1).
+- The SDK manages its own config directory internally. Do not override `CLAUDE_CONFIG_DIR` via the options `env` object.
 - Do not rely on `CLAUDE_CODE_DEBUG_LOGS_DIR` unless it is set to a valid file path.
 
 ---
