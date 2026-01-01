@@ -1,0 +1,168 @@
+---
+title: How to Debug Bindings
+description: Troubleshoot A3 binding resolution issues
+---
+
+# How to Debug Bindings
+
+Diagnose and fix A3 binding problems.
+
+## Binding Resolution Order
+
+Bindings resolve in dependency order:
+
+```
+1. flow.input.*     - Always available
+2. nodeA.output.*   - After nodeA completes
+3. nodeB.output.*   - After nodeB completes
+```
+
+## Common Binding Errors
+
+### Missing Value
+
+```
+Error: Unable to resolve binding: nodeX.output.result
+```
+
+**Debugging steps:**
+
+```typescript
+// 1. Check node exists and runs
+hub.subscribe("task:complete", (e) => {
+  console.log("Completed:", e.event.taskId, e.event.result);
+});
+
+// 2. Check actual output structure
+hub.subscribe("task:complete", (e) => {
+  if (e.event.taskId === "nodeX") {
+    console.log("nodeX output:", JSON.stringify(e.event.result));
+  }
+});
+```
+
+### Wrong Path
+
+```yaml
+# If output is { data: { items: [...] } }
+
+# Bad
+text: "{{nodeX.output.items}}"  # Wrong path
+
+# Good
+text: "{{nodeX.output.data.items}}"  # Correct path
+```
+
+## Debug with Logging
+
+```typescript
+hub.subscribe("binding:resolve", (event) => {
+  console.log("Binding:", event.event.path);
+  console.log("Resolved to:", event.event.value);
+});
+
+hub.subscribe("binding:error", (event) => {
+  console.error("Failed:", event.event.path);
+  console.error("Available:", event.event.availableKeys);
+});
+```
+
+## Type Coercion Issues
+
+```yaml
+# Binding returns number, schema expects string
+input:
+  count: "{{nodeX.output.count}}"  # Returns 42
+
+# Fix: schema should accept number
+inputSchema: z.object({
+  count: z.number()
+})
+```
+
+## Nested Object Access
+
+```yaml
+# Deep nested access
+input:
+  value: "{{nodeX.output.data.items[0].name}}"
+
+# If items is empty, this fails!
+# Use optional binding:
+  value: "{{?nodeX.output.data.items[0].name}}"
+```
+
+## Optional Bindings
+
+Use `{{?...}}` for potentially missing values:
+
+```yaml
+input:
+  # Required - throws if missing
+  required: "{{nodeX.output.value}}"
+
+  # Optional - undefined if missing
+  optional: "{{?nodeX.output.maybeValue}}"
+```
+
+## Debug in Isolation
+
+Test binding resolution separately:
+
+```typescript
+import { resolveBinding } from "@open-harness/kernel";
+
+const context = {
+  "flow.input": { userName: "Alice" },
+  "nodeA.output": { greeting: "Hello" }
+};
+
+const result = resolveBinding("{{nodeA.output.greeting}}", context);
+console.log("Resolved:", result);  // "Hello"
+```
+
+## Common Mistakes
+
+| Mistake | Fix |
+|---------|-----|
+| `{{node.result}}` | `{{node.output.result}}` |
+| `{{flow.userName}}` | `{{flow.input.userName}}` |
+| Missing edge | Add edge to ensure order |
+| Typo in node ID | Check spelling |
+
+## Trace Full Resolution
+
+```typescript
+function traceBindings(hub: Hub) {
+  const resolutions: any[] = [];
+
+  hub.subscribe("binding:*", (e) => {
+    resolutions.push({
+      path: e.event.path,
+      success: !e.event.type.includes("error"),
+      value: e.event.value,
+      error: e.event.reason
+    });
+  });
+
+  return () => {
+    console.log("=== Binding Trace ===");
+    for (const r of resolutions) {
+      const status = r.success ? "✓" : "✗";
+      console.log(`${status} ${r.path}`);
+      if (!r.success) console.log(`  Error: ${r.error}`);
+    }
+  };
+}
+
+const printTrace = traceBindings(hub);
+
+// After execution
+printTrace();
+```
+
+## Related
+
+- [Debug Flows](/guides/debugging/debug-flows) - Full debugging
+- [Common Errors](/guides/debugging/common-errors) - Error reference
+- [Bindings Deep Dive](/learn/advanced/bindings-deep-dive) - A3 syntax

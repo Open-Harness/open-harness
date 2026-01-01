@@ -1,0 +1,146 @@
+---
+title: FlowYaml
+description: Complete flow specification structure for YAML-defined workflows
+---
+
+# FlowYaml
+
+The complete structure for a flow definition, containing metadata, nodes, and edges.
+
+## Definition
+
+```typescript
+interface FlowYaml {
+  flow: FlowSpec;
+  nodes: NodeSpec[];
+  edges: Edge[];
+}
+```
+
+## Properties
+
+### flow
+
+```typescript
+interface FlowSpec {
+  name: string;
+  version?: number;
+  description?: string;
+  input?: Record<string, unknown>;
+  policy?: FlowPolicy;
+}
+
+interface FlowPolicy {
+  failFast?: boolean;
+}
+```
+
+| Property | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `name` | `string` | Yes | - | Flow identifier |
+| `version` | `number` | No | `1` | Schema version |
+| `description` | `string` | No | - | Human-readable description |
+| `input` | `Record<string, unknown>` | No | `{}` | Default input values |
+| `policy.failFast` | `boolean` | No | `true` | Stop on first error |
+
+### nodes
+
+Array of [NodeSpec](/reference/types/node-spec) definitions.
+
+### edges
+
+```typescript
+interface Edge {
+  from: NodeId;
+  to: NodeId;
+}
+
+type NodeId = string;
+```
+
+Edges define execution dependencies. A node executes only after all its incoming edges' source nodes complete.
+
+## Example
+
+```typescript
+const flow: FlowYaml = {
+  flow: {
+    name: "content-pipeline",
+    version: 1,
+    description: "Research and summarize a topic",
+    input: {
+      topic: "AI trends",
+      maxLength: 500,
+    },
+    policy: {
+      failFast: true,
+    },
+  },
+  nodes: [
+    {
+      id: "research",
+      type: "web-search",
+      input: {
+        query: "{{flow.input.topic}}",
+      },
+    },
+    {
+      id: "summarize",
+      type: "llm",
+      input: {
+        content: "{{research.output}}",
+        maxLength: "{{flow.input.maxLength}}",
+      },
+    },
+  ],
+  edges: [
+    { from: "research", to: "summarize" },
+  ],
+};
+```
+
+## YAML Representation
+
+```yaml
+flow:
+  name: content-pipeline
+  version: 1
+  description: Research and summarize a topic
+  input:
+    topic: AI trends
+    maxLength: 500
+  policy:
+    failFast: true
+
+nodes:
+  - id: research
+    type: web-search
+    input:
+      query: "{{flow.input.topic}}"
+
+  - id: summarize
+    type: llm
+    input:
+      content: "{{research.output}}"
+      maxLength: "{{flow.input.maxLength}}"
+
+edges:
+  - from: research
+    to: summarize
+```
+
+## Validation
+
+FlowYaml is validated using [FlowYamlSchema](/reference/schemas/flow-yaml-schema):
+
+- All node IDs must be unique
+- Node IDs must match pattern `^[A-Za-z_][A-Za-z0-9_]*$`
+- Edge references must point to existing nodes
+- DAG must be acyclic (checked during compilation)
+
+## See Also
+
+- [NodeSpec](/reference/types/node-spec) - Node definition
+- [parseFlowYaml](/reference/api/parse-flow) - Parse YAML to FlowYaml
+- [compileFlow](/reference/api/compile-flow) - Compile flow for execution
+- [Flow Spec](/reference/kernel-spec/flow/flow-spec) - Specification

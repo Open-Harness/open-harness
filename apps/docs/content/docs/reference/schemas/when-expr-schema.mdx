@@ -1,0 +1,214 @@
+---
+title: WhenExprSchema
+description: Zod schema for validating conditional WhenExpr expressions
+---
+
+# WhenExprSchema
+
+Zod schema for validating conditional expressions used in node execution.
+
+## Schema Definition
+
+```typescript
+import { z } from "zod";
+
+export const WhenExprSchema: z.ZodType<WhenExpr> = z.lazy(() =>
+  z.union([
+    z.object({
+      equals: z.object({
+        var: z.string(),
+        value: z.unknown(),
+      }),
+    }),
+    z.object({
+      not: WhenExprSchema,
+    }),
+    z.object({
+      and: z.array(WhenExprSchema),
+    }),
+    z.object({
+      or: z.array(WhenExprSchema),
+    }),
+  ])
+);
+```
+
+## Operators
+
+### equals
+
+Compare a binding path to a literal value.
+
+```typescript
+const expr = WhenExprSchema.parse({
+  equals: {
+    var: "flow.input.mode",
+    value: "production",
+  },
+});
+```
+
+Value can be any JSON-serializable type:
+- Strings: `"production"`
+- Numbers: `42`
+- Booleans: `true`
+- Objects: `{ enabled: true }`
+- Arrays: `[1, 2, 3]`
+- null: `null`
+
+### not
+
+Negate another expression.
+
+```typescript
+const expr = WhenExprSchema.parse({
+  not: {
+    equals: {
+      var: "flow.input.disabled",
+      value: true,
+    },
+  },
+});
+```
+
+### and
+
+All sub-expressions must be true.
+
+```typescript
+const expr = WhenExprSchema.parse({
+  and: [
+    { equals: { var: "flow.input.env", value: "production" } },
+    { equals: { var: "flow.input.validated", value: true } },
+  ],
+});
+```
+
+### or
+
+Any sub-expression must be true.
+
+```typescript
+const expr = WhenExprSchema.parse({
+  or: [
+    { equals: { var: "flow.input.env", value: "staging" } },
+    { equals: { var: "flow.input.env", value: "production" } },
+  ],
+});
+```
+
+## Nesting
+
+Operators can be arbitrarily nested:
+
+```typescript
+const complex = WhenExprSchema.parse({
+  and: [
+    {
+      or: [
+        { equals: { var: "flow.input.tier", value: "premium" } },
+        { equals: { var: "flow.input.tier", value: "enterprise" } },
+      ],
+    },
+    {
+      not: {
+        equals: { var: "flow.input.suspended", value: true },
+      },
+    },
+  ],
+});
+```
+
+## Validation Examples
+
+### Valid Expressions
+
+```typescript
+// Simple equals
+WhenExprSchema.parse({
+  equals: { var: "step1.status", value: "success" },
+});
+
+// Nested not
+WhenExprSchema.parse({
+  not: {
+    not: {
+      equals: { var: "x", value: true },
+    },
+  },
+});
+
+// Empty and (always true)
+WhenExprSchema.parse({
+  and: [],
+});
+```
+
+### Invalid Expressions
+
+```typescript
+// Missing var in equals
+try {
+  WhenExprSchema.parse({
+    equals: { value: "test" }, // var is required
+  });
+} catch (e) {
+  // ZodError
+}
+
+// Multiple operators at same level
+try {
+  WhenExprSchema.parse({
+    equals: { var: "x", value: 1 },
+    not: { equals: { var: "y", value: 2 } }, // Invalid: can't have both
+  });
+} catch (e) {
+  // ZodError
+}
+
+// Invalid operator
+try {
+  WhenExprSchema.parse({
+    greaterThan: { var: "x", value: 5 }, // Not a valid operator
+  });
+} catch (e) {
+  // ZodError
+}
+```
+
+## Usage in Flows
+
+```yaml
+nodes:
+  - id: expensive_step
+    type: analyze
+    input: {}
+    when:
+      and:
+        - equals:
+            var: flow.input.mode
+            value: "thorough"
+        - not:
+            equals:
+              var: flow.input.skipAnalysis
+              value: true
+```
+
+## TypeScript Type
+
+```typescript
+interface WhenExpr {
+  equals?: { var: string; value: unknown };
+  not?: WhenExpr;
+  and?: WhenExpr[];
+  or?: WhenExpr[];
+}
+```
+
+Note: Only one operator should be present at a time. The union type ensures mutual exclusivity.
+
+## See Also
+
+- [evaluateWhen](/reference/api/evaluate-when) - Evaluate expressions at runtime
+- [When Syntax](/reference/when/when-syntax) - Complete syntax reference
+- [Operators](/reference/when/operators) - Operator details

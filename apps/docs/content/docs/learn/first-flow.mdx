@@ -1,38 +1,275 @@
 ---
 title: Your First Flow
-description: Create and run your first Open Harness flow
+description: A complete tutorial on understanding flow structure and execution
 ---
 
-This guide will walk you through creating your first flow using Open Harness.
+# Your First Flow
 
-## What is a Flow?
+In this tutorial, we'll build a complete flow step by step, understanding each part along the way. By the end, you'll know how flows work and be ready to build your own.
 
-A flow is a declarative YAML definition that describes a graph of nodes. The kernel runtime executes flows by scheduling nodes based on their dependencies.
+## What You'll Learn
 
-## Quick Start
+- Flow YAML structure
+- Nodes and what they do
+- Edges and execution order
+- Data binding between nodes
+- Executing and observing flows
 
-Create a simple `flow.yaml` file:
+## Setup
+
+Start fresh or continue from the quickstart:
+
+```bash
+mkdir first-flow-tutorial && cd first-flow-tutorial
+bun init -y
+bun add @open-harness/kernel zod
+```
+
+## Understanding Flow Structure
+
+A flow is a directed graph of nodes:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Input     │────▶│   Process   │────▶│   Output    │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+Data flows from left to right. Each node takes input, does work, and produces output.
+
+## Step 1: Define the Flow Header
+
+Create `flow.yaml`:
 
 ```yaml
 flow:
-  name: hello-world
-  nodes:
-    - id: greet
-      type: echo
-      input:
-        message: "Hello, Open Harness!"
+  name: greeting-pipeline
+  version: "1.0"
+  input:
+    userName:
+      type: string
+    formal:
+      type: boolean
 ```
 
-## Running Your Flow
+The header defines:
+- **name**: Human-readable flow name
+- **version**: Version for tracking changes
+- **input**: Expected inputs with types
 
-Use the CLI runner to execute your flow:
+## Step 2: Add Your First Node
+
+Add a constant node that creates a greeting template:
+
+```yaml
+flow:
+  name: greeting-pipeline
+  version: "1.0"
+  input:
+    userName:
+      type: string
+    formal:
+      type: boolean
+
+nodes:
+  - id: template
+    type: constant
+    input:
+      value:
+        casual: "Hey {{flow.input.userName}}! What's up?"
+        formal: "Good day, {{flow.input.userName}}. How may I assist you?"
+```
+
+This node:
+- Has a unique `id`: `template`
+- Uses type `constant` (outputs whatever is in `input.value`)
+- Contains bindings that reference `flow.input.userName`
+
+## Step 3: Add a Second Node
+
+Add a selector node that picks the right greeting:
+
+```yaml
+nodes:
+  - id: template
+    type: constant
+    input:
+      value:
+        casual: "Hey {{flow.input.userName}}! What's up?"
+        formal: "Good day, {{flow.input.userName}}. How may I assist you?"
+
+  - id: select
+    type: selector
+    input:
+      options: "{{template.output.value}}"
+      key: "{{flow.input.formal}}"
+      mapping:
+        true: formal
+        false: casual
+```
+
+This node:
+- Takes output from `template` using `{{template.output.value}}`
+- Picks either `formal` or `casual` based on input
+
+## Step 4: Define Edges
+
+Edges make dependencies explicit:
+
+```yaml
+edges:
+  - from: template
+    to: select
+```
+
+The complete flow now:
+
+```yaml
+flow:
+  name: greeting-pipeline
+  version: "1.0"
+  input:
+    userName:
+      type: string
+    formal:
+      type: boolean
+
+nodes:
+  - id: template
+    type: constant
+    input:
+      value:
+        casual: "Hey {{flow.input.userName}}! What's up?"
+        formal: "Good day, {{flow.input.userName}}. How may I assist you?"
+
+  - id: select
+    type: selector
+    input:
+      options: "{{template.output.value}}"
+      key: "{{flow.input.formal}}"
+      mapping:
+        true: formal
+        false: casual
+
+edges:
+  - from: template
+    to: select
+```
+
+## Step 5: Execute the Flow
+
+Create `run.ts`:
+
+```typescript
+import { parseFlowYaml, executeFlow, NodeRegistry, createHub } from "@open-harness/kernel";
+import { readFileSync } from "fs";
+import { z } from "zod";
+
+// Define our node types
+const constantNode = {
+  type: "constant",
+  inputSchema: z.object({ value: z.unknown() }),
+  outputSchema: z.object({ value: z.unknown() }),
+  async run(ctx, input) {
+    return { value: input.value };
+  }
+};
+
+const selectorNode = {
+  type: "selector",
+  inputSchema: z.object({
+    options: z.record(z.unknown()),
+    key: z.union([z.boolean(), z.string()]),
+    mapping: z.record(z.string())
+  }),
+  outputSchema: z.object({ selected: z.unknown() }),
+  async run(ctx, input) {
+    const mappedKey = input.mapping[String(input.key)];
+    return { selected: input.options[mappedKey] };
+  }
+};
+
+// Set up registry
+const registry = new NodeRegistry();
+registry.register(constantNode);
+registry.register(selectorNode);
+
+// Load flow
+const yaml = readFileSync("flow.yaml", "utf-8");
+const flow = parseFlowYaml(yaml);
+
+// Create hub
+const hub = createHub();
+
+// Subscribe to all events
+hub.subscribe("*", (event) => {
+  console.log(`[${event.event.type}]`, JSON.stringify(event.event, null, 2));
+});
+
+// Execute!
+const result = await executeFlow(flow, {
+  input: { userName: "Alice", formal: false },
+  registry,
+  hub
+});
+
+console.log("\n--- Result ---");
+console.log(result.outputs);
+```
+
+Run it:
 
 ```bash
-bun run flow-run --file flow.yaml
+bun run run.ts
 ```
+
+You should see:
+1. Events for each node execution
+2. The final output with the casual greeting
+
+Try changing `formal: true` to see the formal greeting.
+
+## Step 6: Add an Agent Node
+
+Let's make it more interesting with an LLM:
+
+```yaml
+nodes:
+  # ... previous nodes ...
+
+  - id: enhance
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Take this greeting and make it more engaging: {{select.output.selected}}"
+
+edges:
+  - from: template
+    to: select
+  - from: select
+    to: enhance
+```
+
+## Experimenting
+
+Try these modifications:
+
+1. **Add another input** - Add a `language` field and modify the greeting
+2. **Add parallel nodes** - Create two nodes that don't depend on each other
+3. **Add error handling** - What happens if a node fails?
+
+## Recap
+
+You learned:
+
+- **Flow structure**: header, nodes, edges
+- **Bindings**: `{{path.to.value}}` for data flow
+- **Execution**: parse → register nodes → execute
+- **Events**: observe what's happening via the Hub
 
 ## Next Steps
 
-- Learn about [Flow Inputs](/docs/learn/flow-inputs) to pass data into your flows
-- Explore the [kernel-tutorial lessons](https://github.com/your-org/kernel-tutorial) for more examples
-- Check the [Flow Spec reference](/docs/reference/kernel-spec/flow/flow-spec) for complete documentation
+- **[Custom Nodes](/learn/custom-node)** - Build your own node types
+- **[Hub Events](/learn/hub-events)** - Deep dive into events
+- **[Conditional Flows](/learn/advanced/conditional-flows)** - Add branching logic

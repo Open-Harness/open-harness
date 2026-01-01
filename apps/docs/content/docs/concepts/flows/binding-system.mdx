@@ -1,0 +1,217 @@
+---
+title: Binding System
+description: Understanding how A3 bindings enable data flow between nodes
+---
+
+# Binding System
+
+Data flows between nodes through bindings - expressions that reference flow input and node outputs. This page explains the design and rationale.
+
+## The Problem
+
+How do nodes share data?
+
+Without bindings, you'd need explicit wiring:
+- Pass output objects directly
+- Maintain a global state object
+- Use a context parameter
+
+Each approach has drawbacks:
+- **Direct passing**: Couples nodes together
+- **Global state**: Hard to trace data flow
+- **Context parameter**: Verbose, easy to misuse
+
+## A3 Binding Syntax
+
+Open Harness uses A3 bindings - expressions in double curly braces:
+
+```yaml
+input:
+  message: "{{flow.input.greeting}}, {{step1.output.name}}!"
+```
+
+### Why "A3"?
+
+The name comes from the syntax's distinctive pattern. It's a lightweight expression language, not a full template engine.
+
+### Path Notation
+
+Bindings use dot notation to navigate structures:
+
+```yaml
+# Simple path
+{{flow.input.name}}
+
+# Nested path
+{{flow.input.user.profile.email}}
+
+# Array index
+{{step1.output.items.0.id}}
+```
+
+## Resolution
+
+### When Bindings Resolve
+
+Bindings resolve at execution time, just before each node runs:
+
+1. Node is about to execute
+2. Binding context is built (flow.input + previous outputs)
+3. All bindings in node input are resolved
+4. Resolved input is passed to node
+
+### Order of Resolution
+
+Bindings are resolved recursively through the input structure:
+
+```yaml
+input:
+  config:
+    url: "{{flow.input.baseUrl}}/api"
+    headers:
+      auth: "Bearer {{flow.input.token}}"
+  items:
+    - "{{step1.output.first}}"
+    - "{{step1.output.second}}"
+```
+
+Every string is scanned for `{{...}}` patterns.
+
+### Error Handling
+
+Missing paths throw by default:
+
+```
+Error: Missing binding path: flow.input.missing
+```
+
+Use optional (`?`) or default values to handle missing data:
+
+```yaml
+# Empty string if missing
+name: "{{?flow.input.optionalName}}"
+
+# Default value if missing
+count: "{{flow.input.count | default:0}}"
+```
+
+## Alternatives Considered
+
+### Direct References
+
+```typescript
+// Hypothetical: direct object references
+node2.input.data = node1.output;
+```
+
+Problems:
+- Mixes YAML with runtime concepts
+- Hard to serialize
+- Couples nodes directly
+
+### Global State
+
+```yaml
+# Hypothetical: global state object
+nodes:
+  - id: step1
+    output: state.step1Result
+  - id: step2
+    input:
+      data: state.step1Result
+```
+
+Problems:
+- Implicit data flow
+- Hard to trace dependencies
+- Naming conflicts
+
+### Why A3 Won
+
+A3 bindings are:
+- **Explicit**: Clear what's referenced
+- **Serializable**: Pure YAML
+- **Traceable**: Follow the path to find the source
+- **Familiar**: Template-like syntax
+
+## Trade-offs
+
+### Verbosity vs Clarity
+
+Bindings are more verbose than direct access:
+
+```yaml
+# Binding (verbose but clear)
+data: "{{step1.output.items}}"
+
+# Direct access (shorter but magic)
+data: step1.items
+```
+
+The verbosity is intentional - it makes data flow explicit.
+
+### Runtime vs Compile-time
+
+Bindings resolve at runtime, not compile time:
+
+**Benefits**:
+- Dynamic values work naturally
+- No complex static analysis needed
+
+**Drawbacks**:
+- Errors appear at runtime
+- Path typos aren't caught until execution
+
+Future tooling could add compile-time validation.
+
+### String Coercion
+
+In string interpolation, values are coerced to strings:
+
+```yaml
+# If flow.input.count is 42 (number)
+message: "Count: {{flow.input.count}}"
+# Result: "Count: 42" (string)
+```
+
+For preserving types, use bindings as the entire value:
+
+```yaml
+# Preserves type
+count: "{{flow.input.count}}"
+# Result: 42 (number, if not interpolated)
+```
+
+## Design Decisions
+
+### Double Braces
+
+`{{...}}` was chosen because:
+- Distinct from single braces (JSON)
+- Familiar from template engines
+- Easy to parse
+- Low collision with normal text
+
+### Dot Notation
+
+Dot notation (`a.b.c`) was chosen over:
+- Bracket notation (`a["b"]["c"]`) - verbose
+- XPath (`/a/b/c`) - unfamiliar
+- Custom syntax - learning curve
+
+Dots are universal and intuitive.
+
+### No Expressions
+
+A3 is intentionally not a full expression language. No:
+- Arithmetic: `{{a + b}}`
+- Conditionals: `{{a ? b : c}}`
+- Function calls: `{{format(a)}}`
+
+If you need logic, use a node. This keeps the binding system simple and predictable.
+
+## Next Steps
+
+- [A3 Syntax Reference](/reference/bindings/a3-syntax) - Complete syntax
+- [Binding Errors](/reference/bindings/binding-errors) - Troubleshooting
+- [resolveBindings](/reference/api/resolve-bindings) - API reference

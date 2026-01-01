@@ -1,0 +1,131 @@
+---
+title: How to Use Event Context
+description: Correlate events using EventContext
+---
+
+# How to Use Event Context
+
+EventContext enables correlation of events across workflow execution.
+
+## EventContext Structure
+
+```typescript
+interface EventContext {
+  sessionId: string;     // Unique session identifier
+  phase: string;         // Current execution phase
+  taskContext?: {
+    taskId: string;      // Current node/task ID
+    nodeType: string;    // Node type name
+  };
+  agentContext?: {
+    agentName: string;   // Agent identifier
+    turnId: string;      // Conversation turn
+  };
+}
+```
+
+## Access Context in Handlers
+
+```typescript
+hub.subscribe("task:complete", (enrichedEvent) => {
+  const { sessionId, phase, taskContext } = enrichedEvent.context;
+
+  console.log(`Session ${sessionId}`);
+  console.log(`Phase: ${phase}`);
+  console.log(`Task: ${taskContext?.taskId}`);
+});
+```
+
+## Automatic Context Propagation
+
+The Hub uses AsyncLocalStorage for automatic propagation:
+
+```typescript
+// In node execution, context is automatic
+async run(ctx, input) {
+  // Events emitted here inherit the current context
+  ctx.hub.emit({ type: "narrative", text: "Processing..." });
+  // ^ This event automatically gets taskId, sessionId, etc.
+
+  return result;
+}
+```
+
+## Filter Events by Context
+
+```typescript
+// Only handle events from specific session
+hub.subscribe("agent:text", (event) => {
+  if (event.context.sessionId === targetSessionId) {
+    process.stdout.write(event.event.content);
+  }
+});
+
+// Only handle events from specific task
+hub.subscribe("narrative", (event) => {
+  if (event.context.taskContext?.taskId === "my-node") {
+    console.log("My node:", event.event.text);
+  }
+});
+```
+
+## Scope by Phase
+
+```typescript
+hub.subscribe("*", (event) => {
+  switch (event.context.phase) {
+    case "setup":
+      console.log("[SETUP]", event.event.type);
+      break;
+    case "execution":
+      console.log("[EXEC]", event.event.type);
+      break;
+    case "teardown":
+      console.log("[TEARDOWN]", event.event.type);
+      break;
+  }
+});
+```
+
+## Create Scoped Logger
+
+```typescript
+function createScopedLogger(hub: Hub, sessionId: string) {
+  const logs: string[] = [];
+
+  hub.subscribe("*", (event) => {
+    if (event.context.sessionId === sessionId) {
+      logs.push(`${event.timestamp} [${event.event.type}]`);
+    }
+  });
+
+  return {
+    getLogs: () => logs,
+    clear: () => logs.length = 0
+  };
+}
+```
+
+## Multi-Session Handling
+
+```typescript
+const sessionHandlers = new Map<string, (event: EnrichedEvent) => void>();
+
+hub.subscribe("*", (event) => {
+  const handler = sessionHandlers.get(event.context.sessionId);
+  if (handler) {
+    handler(event);
+  }
+});
+
+// Register per-session handler
+sessionHandlers.set("session-123", (event) => {
+  // Handle events for this session
+});
+```
+
+## Related
+
+- [Subscribe Events](/guides/hub/subscribe-events) - Subscription basics
+- [Scoped Subscriptions](/guides/hub/scoped-subscriptions) - Advanced filtering
+- [Context Propagation](/concepts/hub/context-propagation) - Architecture

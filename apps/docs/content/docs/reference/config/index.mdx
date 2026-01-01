@@ -1,0 +1,62 @@
+---
+title: Configuration Reference
+description: Configuration options for harnesses and flows
+---
+
+# Configuration Reference
+
+Configuration options for harness factories, flow execution, and node policies.
+
+## Pages
+
+| Page | Description |
+|------|-------------|
+| [Harness Config](/reference/config/harness-config) | HarnessFactory configuration |
+| [Flow Config](/reference/config/flow-config) | Flow execution configuration |
+
+## Quick Reference
+
+### Harness Definition
+
+```typescript
+defineHarness({
+  name: "my-harness",           // Required: unique name
+  agents: { ... },               // Required: agent definitions
+  state: (input) => ({ ... }),   // Required: state factory
+  run: async (ctx) => { ... },   // Required: execution function
+});
+```
+
+### Flow Metadata
+
+```yaml
+flow:
+  name: my-flow
+  version: 1
+  description: Optional description
+  input:
+    key: default_value
+  policy:
+    failFast: true
+```
+
+### Node Policy
+
+```yaml
+nodes:
+  - id: step1
+    type: http
+    input: {}
+    policy:
+      timeoutMs: 30000
+      retry:
+        maxAttempts: 3
+        backoffMs: 1000
+      continueOnError: false
+```
+
+## See Also
+
+- [defineHarness](/reference/api/define-harness) - Harness factory API
+- [FlowYaml](/reference/types/flow-yaml) - Flow type
+- [NodeSpec](/reference/types/node-spec) - Node specification

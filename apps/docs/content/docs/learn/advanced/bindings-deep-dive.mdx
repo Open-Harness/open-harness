@@ -1,0 +1,353 @@
+---
+title: Bindings Deep Dive
+description: Master A3 binding syntax for data flow
+---
+
+# Bindings Deep Dive
+
+Bindings are how data flows between nodes. In this tutorial, we'll master the A3 binding syntax.
+
+## Binding Syntax Overview
+
+Bindings use double curly braces with dot notation:
+
+```yaml
+input:
+  name: "{{flow.input.userName}}"
+  result: "{{step1.output.data}}"
+```
+
+The expression inside `{{...}}` is a path to a value.
+
+## Flow Input Bindings
+
+Access flow-level input:
+
+```yaml
+flow:
+  input:
+    userName:
+      type: string
+    config:
+      type: object
+
+nodes:
+  - id: greet
+    type: greeter
+    input:
+      name: "{{flow.input.userName}}"
+      settings: "{{flow.input.config}}"
+```
+
+### Nested Input
+
+Access nested fields with dots:
+
+```yaml
+flow:
+  input:
+    user:
+      type: object
+
+nodes:
+  - id: use_user
+    type: processor
+    input:
+      email: "{{flow.input.user.profile.email}}"
+      name: "{{flow.input.user.profile.firstName}}"
+```
+
+## Node Output Bindings
+
+Reference output from previous nodes:
+
+```yaml
+nodes:
+  - id: fetch
+    type: api-call
+    input:
+      url: "https://api.example.com/data"
+
+  - id: process
+    type: transformer
+    input:
+      data: "{{fetch.output.response}}"
+      status: "{{fetch.output.statusCode}}"
+
+edges:
+  - from: fetch
+    to: process
+```
+
+### Chaining Outputs
+
+Chain multiple nodes together:
+
+```yaml
+nodes:
+  - id: step1
+    type: processor
+    input:
+      data: "{{flow.input.raw}}"
+
+  - id: step2
+    type: transformer
+    input:
+      data: "{{step1.output.result}}"
+
+  - id: step3
+    type: formatter
+    input:
+      data: "{{step2.output.transformed}}"
+
+edges:
+  - from: step1
+    to: step2
+  - from: step2
+    to: step3
+```
+
+## Array Access
+
+Access array elements by index:
+
+```yaml
+# If step1.output.items = ["a", "b", "c"]
+first: "{{step1.output.items.0}}"    # "a"
+second: "{{step1.output.items.1}}"   # "b"
+third: "{{step1.output.items.2}}"    # "c"
+```
+
+### Nested Array Access
+
+```yaml
+# If step1.output.users = [{ name: "Alice" }, { name: "Bob" }]
+firstUser: "{{step1.output.users.0.name}}"   # "Alice"
+```
+
+## String Interpolation
+
+Combine bindings with text:
+
+```yaml
+input:
+  message: "Hello, {{flow.input.name}}! Your ID is {{flow.input.id}}."
+  url: "https://api.example.com/users/{{flow.input.userId}}"
+```
+
+### Multiple Bindings
+
+```yaml
+input:
+  greeting: "{{flow.input.prefix}} {{flow.input.name}} {{flow.input.suffix}}"
+```
+
+## Type Preservation
+
+### Whole Value
+
+When binding is the entire value, type is preserved:
+
+```yaml
+# If flow.input.count is 42 (number)
+count: "{{flow.input.count}}"   # Result: 42 (number)
+
+# If flow.input.config is { key: "value" } (object)
+config: "{{flow.input.config}}"  # Result: { key: "value" } (object)
+```
+
+### Interpolated
+
+In string interpolation, values become strings:
+
+```yaml
+# If flow.input.count is 42 (number)
+message: "Count: {{flow.input.count}}"  # Result: "Count: 42" (string)
+```
+
+## Optional Bindings
+
+Use `?` prefix for optional values:
+
+```yaml
+# Returns empty string if missing
+name: "{{?flow.input.optionalName}}"
+```
+
+Without `?`, missing paths throw an error.
+
+## Default Values
+
+Provide fallbacks with `| default:`:
+
+```yaml
+# Use default if missing
+count: "{{flow.input.count | default:0}}"
+name: "{{flow.input.name | default:Anonymous}}"
+mode: "{{flow.input.mode | default:standard}}"
+```
+
+### Complex Defaults
+
+For objects, you may need a node:
+
+```yaml
+nodes:
+  - id: defaults
+    type: constant
+    input:
+      value:
+        name: "{{flow.input.name | default:Guest}}"
+        count: "{{flow.input.count | default:0}}"
+```
+
+## Debugging Bindings
+
+### Common Errors
+
+**Missing path**:
+```
+Error: Missing binding path: flow.input.missing
+```
+
+Solution: Check path exists or use optional/default.
+
+**Invalid path syntax**:
+```
+Error: Invalid binding: {{flow.input.}}
+```
+
+Solution: Fix the path syntax.
+
+**Undefined intermediate**:
+```
+Error: Cannot read property 'name' of undefined
+```
+
+Solution: The parent object doesn't exist.
+
+### Resolution Order
+
+Bindings resolve in execution order:
+
+1. Flow input is always available
+2. Node outputs are available after that node completes
+3. Bindings resolve just before each node runs
+
+### Logging for Debug
+
+Add a debug node:
+
+```yaml
+nodes:
+  - id: debug
+    type: constant
+    input:
+      value:
+        flowInput: "{{flow.input}}"
+        previousOutput: "{{previous.output}}"
+```
+
+## Practical Examples
+
+### API Request
+
+```yaml
+nodes:
+  - id: build_request
+    type: constant
+    input:
+      value:
+        method: POST
+        url: "https://api.example.com/{{flow.input.endpoint}}"
+        headers:
+          Authorization: "Bearer {{flow.input.token}}"
+        body:
+          userId: "{{flow.input.userId}}"
+
+  - id: call_api
+    type: http
+    input:
+      request: "{{build_request.output.value}}"
+```
+
+### Conditional Data
+
+```yaml
+nodes:
+  - id: get_data
+    type: fetch
+    input:
+      source: "{{flow.input.source}}"
+
+  - id: process
+    type: processor
+    input:
+      data: "{{get_data.output.data}}"
+      # Use fallback for missing optional field
+      metadata: "{{?get_data.output.metadata}}"
+      format: "{{flow.input.format | default:json}}"
+```
+
+### Array Processing
+
+```yaml
+nodes:
+  - id: fetch_items
+    type: api
+    input: {}
+
+  - id: process_first
+    type: processor
+    input:
+      item: "{{fetch_items.output.items.0}}"
+
+  - id: summarize
+    type: summarizer
+    input:
+      total: "{{fetch_items.output.count}}"
+      firstItem: "{{process_first.output.result}}"
+```
+
+## Best Practices
+
+### Clear Paths
+
+```yaml
+# Good: Clear path
+"{{flow.input.user.profile.email}}"
+
+# Avoid: Unclear abbreviations
+"{{flow.input.u.p.e}}"
+```
+
+### Handle Missing Data
+
+```yaml
+# Always handle optional fields
+email: "{{?flow.input.email}}"
+count: "{{flow.input.count | default:0}}"
+```
+
+### Document Complex Bindings
+
+```yaml
+nodes:
+  - id: build_query
+    type: constant
+    input:
+      # Build GraphQL query from parts
+      value: |
+        query {
+          user(id: "{{flow.input.userId}}") {
+            name
+            email
+          }
+        }
+```
+
+## Next Steps
+
+- **[Multi-Agent Flows](/learn/advanced/multi-agent)** - Orchestrate agents
+- **[A3 Syntax Reference](/reference/bindings/a3-syntax)** - Complete reference
+- **[resolveBindings API](/reference/api/resolve-bindings)** - Programmatic usage

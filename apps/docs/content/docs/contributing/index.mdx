@@ -1,0 +1,78 @@
+---
+title: Contributing to Open Harness
+description: Get started contributing to the Open Harness project
+---
+
+# Contributing to Open Harness
+
+Welcome to the Open Harness contributor community. This section covers everything you need to contribute effectively to the project.
+
+## What You Can Contribute
+
+### Bug Fixes
+
+Found something broken? We welcome bug fixes of all sizes. Start with the issue tracker, or submit a fix directly if the problem is clear.
+
+### New Features
+
+Open Harness is designed for extension:
+- **Node Types**: Add new flow nodes for specific operations
+- **Channels**: Build adapters for new I/O boundaries
+- **Providers**: Integrate additional AI providers
+- **Core**: Improve the kernel itself
+
+### Documentation
+
+Documentation is code. Improvements to guides, reference docs, and examples are highly valued.
+
+### Tests
+
+Expanding test coverage helps everyone. See our [testing guide](/contributing/development/testing) for the test strategy.
+
+## Getting Started
+
+1. **[Setup](/contributing/setup)** - Development environment setup
+2. **[Architecture Overview](/contributing/architecture/overview)** - Understand the codebase
+3. **[Development Workflow](/contributing/development/workflow)** - How to make changes
+
+## Quick Links
+
+| Area | Links |
+|------|-------|
+| Architecture | [Overview](/contributing/architecture/overview), [Packages](/contributing/architecture/packages), [Directory Layout](/contributing/architecture/directory-layout) |
+| Development | [Workflow](/contributing/development/workflow), [Testing](/contributing/development/testing), [Fixtures](/contributing/development/fixtures) |
+| Extending | [Custom Nodes](/contributing/extending/custom-nodes), [New Channel](/contributing/extending/new-channel), [New Provider](/contributing/extending/new-provider) |
+| Specifications | [Reading Specs](/contributing/specifications/reading-specs), [Spec to Code](/contributing/specifications/spec-to-code) |
+| Releasing | [Versioning](/contributing/releasing/versioning), [Changelog](/contributing/releasing/changelog) |
+
+## Contribution Guidelines
+
+### Code Quality
+
+- TypeScript strict mode
+- Full type annotations (no implicit `any`)
+- Zod schemas for runtime validation
+- Tests for new functionality
+
+### Commit Messages
+
+Follow conventional commits:
+
+```
+feat: add WebSocket channel support
+fix: resolve binding resolution for nested arrays
+docs: update flow execution guide
+```
+
+### Pull Requests
+
+- One logical change per PR
+- Reference related issues
+- Include tests for new code
+- Update documentation as needed
+
+## Questions?
+
+- Check existing documentation
+- Search closed issues
+- Open a new issue for discussion

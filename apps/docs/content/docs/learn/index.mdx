@@ -1,43 +1,91 @@
 ---
 title: Learn Open Harness
-description: Get started with Open Harness flows, nodes, and channels
+description: Get started with Open Harness through hands-on tutorials
 ---
 
-<Banner type="info">
-  Welcome to Open Harness! This section will guide you through building your first flows.
-</Banner>
+# Learn Open Harness
 
-## Getting Started
+Welcome to the Open Harness learning path. These tutorials take you from zero to building production AI workflows.
 
-<Steps>
-  <Step>
-    <h3>Create Your First Flow</h3>
-    <p>Learn how to write a simple YAML flow definition and run it.</p>
-    <a href="/docs/learn/first-flow">Get started →</a>
-  </Step>
-  <Step>
-    <h3>Understand Flow Inputs</h3>
-    <p>Learn how to pass data into your flows and use inputs in nodes.</p>
-    <a href="/docs/learn/flow-inputs">Learn more →</a>
-  </Step>
-  <Step>
-    <h3>Master Bindings</h3>
-    <p>Use the A3 binding grammar to connect node outputs to inputs.</p>
-    <a href="/docs/learn/bindings-a3">Explore bindings →</a>
-  </Step>
-</Steps>
+## What is Open Harness?
 
-## Core Concepts
+Open Harness is a framework for building declarative AI workflows. You define flows in YAML, connect nodes with data bindings, and execute them with full observability. Build everything from simple chatbots to complex multi-agent systems.
 
-<Cards>
-  <Card title="First Flow" href="/docs/learn/first-flow" description="Create and run your first flow" />
-  <Card title="Flow Inputs" href="/docs/learn/flow-inputs" description="Pass data into flows" />
-  <Card title="Bindings (A3)" href="/docs/learn/bindings-a3" description="Connect node outputs to inputs" />
-  <Card title="When & Policy" href="/docs/learn/when-policy" description="Conditional execution and policies" />
-  <Card title="Custom Nodes" href="/docs/learn/custom-node" description="Create your own node types" />
-  <Card title="Channels" href="/docs/learn/channels" description="Bidirectional communication adapters" />
-</Cards>
+## Learning Path
 
-## Next Steps
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Your Learning Journey                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ┌──────────────┐                                              │
+│   │  Quickstart  │  5 min - Your first working flow             │
+│   └──────┬───────┘                                              │
+│          │                                                       │
+│          ▼                                                       │
+│   ┌──────────────┐                                              │
+│   │  First Flow  │  30 min - Understand flow structure          │
+│   └──────┬───────┘                                              │
+│          │                                                       │
+│          ├──────────────────────┬───────────────────┐           │
+│          ▼                      ▼                   ▼           │
+│   ┌──────────────┐       ┌────────────┐      ┌──────────┐      │
+│   │ Custom Nodes │       │ Hub Events │      │ Channels │      │
+│   └──────────────┘       └────────────┘      └──────────┘      │
+│          │                      │                   │           │
+│          └──────────────────────┴───────────────────┘           │
+│                         │                                        │
+│                         ▼                                        │
+│               ┌──────────────────┐                              │
+│               │     Testing      │                              │
+│               └──────────────────┘                              │
+│                         │                                        │
+│                         ▼                                        │
+│               ┌──────────────────┐                              │
+│               │    Advanced      │                              │
+│               └──────────────────┘                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-Once you've mastered the basics, explore the [Guides](/docs/guides) for advanced workflows and the [Reference](/docs/reference) for complete API documentation.
+## Prerequisites
+
+Before starting, you'll need:
+
+**Required**:
+- [Bun](https://bun.sh) installed: `curl -fsSL https://bun.sh/install | bash`
+- Basic TypeScript knowledge
+
+**Helpful**:
+- Familiarity with AI/LLM concepts
+- YAML syntax understanding
+
+## Tutorials
+
+### Getting Started
+
+| Tutorial | Time | Description |
+|----------|------|-------------|
+| [Quickstart](/learn/quickstart) | 5 min | Your first working flow |
+| [First Flow](/learn/first-flow) | 30 min | Understand flow structure and execution |
+
+### Core Skills
+
+| Tutorial | Time | Description |
+|----------|------|-------------|
+| [Custom Nodes](/learn/custom-node) | 45 min | Build your own node types |
+| [Hub Events](/learn/hub-events) | 30 min | Subscribe to and handle events |
+| [Channels](/learn/channels) | 30 min | Build I/O adapters |
+| [Testing](/learn/testing) | 30 min | Write tests for flows |
+
+### Advanced Topics
+
+| Tutorial | Time | Description |
+|----------|------|-------------|
+| [Conditional Flows](/learn/advanced/conditional-flows) | 30 min | When expressions and branching |
+| [Bindings Deep Dive](/learn/advanced/bindings-deep-dive) | 20 min | Master A3 binding syntax |
+| [Multi-Agent](/learn/advanced/multi-agent) | 45 min | Orchestrate multiple agents |
+
+## Ready to Start?
+
+Begin with the [Quickstart](/learn/quickstart) - you'll have a working AI flow in under 5 minutes.

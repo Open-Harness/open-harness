@@ -1,0 +1,176 @@
+---
+title: NodeSpec
+description: Individual node specification within a flow
+---
+
+# NodeSpec
+
+Specifies an individual node within a flow, including its type, input bindings, and execution policies.
+
+## Definition
+
+```typescript
+interface NodeSpec {
+  id: NodeId;
+  type: NodeTypeId;
+  input: Record<string, unknown>;
+  config?: Record<string, unknown>;
+  when?: WhenExpr;
+  policy?: NodePolicy;
+}
+
+type NodeId = string;
+type NodeTypeId = string;
+```
+
+## Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `id` | `string` | Yes | Unique identifier within the flow |
+| `type` | `string` | Yes | Node type to look up in registry |
+| `input` | `Record<string, unknown>` | Yes | Input values (may contain bindings) |
+| `config` | `Record<string, unknown>` | No | Static configuration |
+| `when` | `WhenExpr` | No | Conditional execution expression |
+| `policy` | `NodePolicy` | No | Execution policy (timeout, retry) |
+
+## NodeId Format
+
+Node IDs must match the pattern `^[A-Za-z_][A-Za-z0-9_]*$`:
+- Start with letter or underscore
+- Contain only letters, digits, and underscores
+
+Valid: `step1`, `fetch_data`, `_internal`, `Step2`
+Invalid: `1step`, `my-node`, `node.name`
+
+## Input Bindings
+
+Input values can reference flow input or other node outputs using A3 binding syntax:
+
+```yaml
+nodes:
+  - id: step1
+    type: fetch
+    input:
+      url: "{{flow.input.apiUrl}}"
+      headers:
+        Authorization: "Bearer {{flow.input.token}}"
+
+  - id: step2
+    type: transform
+    input:
+      data: "{{step1.output}}"
+      format: "json"
+```
+
+## WhenExpr
+
+Conditional expressions control whether a node executes:
+
+```typescript
+interface WhenExpr {
+  equals?: { var: string; value: unknown };
+  not?: WhenExpr;
+  and?: WhenExpr[];
+  or?: WhenExpr[];
+}
+```
+
+Example:
+
+```yaml
+nodes:
+  - id: expensive_operation
+    type: analyze
+    input: {}
+    when:
+      and:
+        - equals:
+            var: flow.input.mode
+            value: "thorough"
+        - not:
+            equals:
+              var: flow.input.skipAnalysis
+              value: true
+```
+
+## NodePolicy
+
+Execution policies for error handling and timeouts:
+
+```typescript
+interface NodePolicy {
+  timeoutMs?: number;
+  retry?: RetryPolicy;
+  continueOnError?: boolean;
+}
+
+interface RetryPolicy {
+  maxAttempts: number;
+  backoffMs?: number;
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `timeoutMs` | `number` | - | Maximum execution time |
+| `retry.maxAttempts` | `number` | `1` | Number of retry attempts |
+| `retry.backoffMs` | `number` | `0` | Delay between retries |
+| `continueOnError` | `boolean` | `false` | Continue flow if node fails |
+
+Example:
+
+```yaml
+nodes:
+  - id: api_call
+    type: http
+    input:
+      url: "{{flow.input.endpoint}}"
+    policy:
+      timeoutMs: 30000
+      retry:
+        maxAttempts: 3
+        backoffMs: 1000
+      continueOnError: false
+```
+
+## Complete Example
+
+```yaml
+nodes:
+  - id: fetch_users
+    type: http
+    input:
+      url: "https://api.example.com/users"
+      method: "GET"
+    config:
+      parseJson: true
+    policy:
+      timeoutMs: 10000
+      retry:
+        maxAttempts: 2
+        backoffMs: 500
+
+  - id: filter_active
+    type: filter
+    input:
+      items: "{{fetch_users.output.users}}"
+      predicate: "item.active === true"
+    when:
+      equals:
+        var: flow.input.activeOnly
+        value: true
+
+  - id: format_output
+    type: template
+    input:
+      users: "{{filter_active.output | default:fetch_users.output.users}}"
+      format: "{{flow.input.outputFormat}}"
+```
+
+## See Also
+
+- [FlowYaml](/reference/types/flow-yaml) - Complete flow structure
+- [NodeTypeDefinition](/reference/types/node-type-definition) - Node implementation
+- [A3 Syntax](/reference/bindings/a3-syntax) - Binding syntax
+- [When Syntax](/reference/when/when-syntax) - Conditional expressions

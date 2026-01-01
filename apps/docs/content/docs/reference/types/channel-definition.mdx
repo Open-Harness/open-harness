@@ -1,0 +1,227 @@
+---
+title: ChannelDefinition
+description: Bidirectional adapter contract for external I/O channels
+---
+
+# ChannelDefinition
+
+Defines a channel adapter that can observe events and inject commands into a harness.
+
+## Definition
+
+```typescript
+interface ChannelDefinition<TState> {
+  name: string;
+  state?: () => TState;
+  onStart?: (ctx: ChannelStartContext<TState>) => void | Promise<void>;
+  onComplete?: (ctx: ChannelStartContext<TState>) => void | Promise<void>;
+  on: Record<string, ChannelHandler<TState>>;
+}
+```
+
+## Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | `string` | Yes | Unique channel identifier |
+| `state` | `() => TState` | No | Factory for channel-local state |
+| `onStart` | `function` | No | Called when harness starts |
+| `onComplete` | `function` | No | Called when harness completes |
+| `on` | `Record<string, ChannelHandler>` | Yes | Event handlers by event type |
+
+## ChannelHandler
+
+```typescript
+type ChannelHandler<TState> = (
+  ctx: ChannelContext<TState>
+) => void | Promise<void>;
+```
+
+## ChannelContext
+
+```typescript
+interface ChannelContext<TState> {
+  hub: Hub;
+  state: TState;
+  event: EnrichedEvent<BaseEvent>;
+  emit: (event: BaseEvent) => void;
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `hub` | `Hub` | Event bus reference |
+| `state` | `TState` | Channel-local state |
+| `event` | `EnrichedEvent` | The event that triggered this handler |
+| `emit` | `function` | Emit events back to the hub |
+
+## Example: Console Channel
+
+```typescript
+import type { ChannelDefinition } from "@open-harness/kernel";
+
+interface ConsoleState {
+  messageCount: number;
+}
+
+const consoleChannel: ChannelDefinition<ConsoleState> = {
+  name: "console",
+
+  state: () => ({ messageCount: 0 }),
+
+  onStart: (ctx) => {
+    console.log("=== Workflow Started ===");
+  },
+
+  onComplete: (ctx) => {
+    console.log(`=== Workflow Complete (${ctx.state.messageCount} messages) ===`);
+  },
+
+  on: {
+    "narrative": (ctx) => {
+      ctx.state.messageCount++;
+      const event = ctx.event.event as { text: string; importance?: string };
+      const prefix = event.importance === "high" ? "!!" : "  ";
+      console.log(`${prefix} ${event.text}`);
+    },
+
+    "agent:text": (ctx) => {
+      const event = ctx.event.event as { content: string };
+      console.log(`[Agent] ${event.content}`);
+    },
+
+    "agent:complete": (ctx) => {
+      const event = ctx.event.event as { agentName: string; success: boolean };
+      console.log(`[${event.agentName}] ${event.success ? "Done" : "Failed"}`);
+    },
+  },
+};
+```
+
+## Example: Logger Channel
+
+```typescript
+import type { ChannelDefinition } from "@open-harness/kernel";
+import { appendFile } from "fs/promises";
+
+interface LoggerState {
+  logPath: string;
+}
+
+const loggerChannel: ChannelDefinition<LoggerState> = {
+  name: "logger",
+
+  state: () => ({ logPath: "./workflow.log" }),
+
+  on: {
+    "*": async (ctx) => {
+      const line = JSON.stringify({
+        timestamp: ctx.event.timestamp.toISOString(),
+        type: ctx.event.event.type,
+        context: ctx.event.context,
+        event: ctx.event.event,
+      });
+      await appendFile(ctx.state.logPath, line + "\n");
+    },
+  },
+};
+```
+
+## Example: WebSocket Channel
+
+```typescript
+import type { ChannelDefinition } from "@open-harness/kernel";
+
+interface WebSocketState {
+  clients: Set<WebSocket>;
+}
+
+const wsChannel: ChannelDefinition<WebSocketState> = {
+  name: "websocket",
+
+  state: () => ({ clients: new Set() }),
+
+  onStart: (ctx) => {
+    // Broadcast start
+    for (const client of ctx.state.clients) {
+      client.send(JSON.stringify({ type: "workflow:started" }));
+    }
+  },
+
+  on: {
+    "narrative": (ctx) => {
+      const msg = JSON.stringify(ctx.event);
+      for (const client of ctx.state.clients) {
+        client.send(msg);
+      }
+    },
+
+    "agent:text": (ctx) => {
+      const msg = JSON.stringify(ctx.event);
+      for (const client of ctx.state.clients) {
+        client.send(msg);
+      }
+    },
+  },
+};
+```
+
+## Attaching Channels
+
+Channels are attached using the `attach` method:
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+
+const harness = defineHarness({ /* ... */ });
+const instance = harness.create(input);
+
+// Attach channels
+instance
+  .attach(createChannelAttachment(consoleChannel))
+  .attach(createChannelAttachment(loggerChannel));
+
+await instance.run();
+```
+
+## Attachment Type
+
+```typescript
+type Cleanup = void | (() => void) | (() => Promise<void>);
+type Attachment = (hub: Hub) => Cleanup;
+```
+
+Channels return a cleanup function that's called when the harness completes.
+
+## Bidirectional Communication
+
+Channels can inject commands:
+
+```typescript
+const interactiveChannel: ChannelDefinition<{}> = {
+  name: "interactive",
+  on: {
+    "session:prompt": (ctx) => {
+      const event = ctx.event.event as {
+        promptId: string;
+        prompt: string;
+      };
+
+      // Get user input (example)
+      const response = getUserInput(event.prompt);
+
+      // Reply via hub
+      ctx.hub.reply(event.promptId, {
+        content: response,
+        timestamp: new Date(),
+      });
+    },
+  },
+};
+```
+
+## See Also
+
+- [Hub](/reference/api/hub) - Event bus API
+- [Attachment](/reference/types/attachment) - Attachment type
+- [Channel Spec](/reference/kernel-spec/spec/channel) - Specification

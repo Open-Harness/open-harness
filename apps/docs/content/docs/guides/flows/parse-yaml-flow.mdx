@@ -1,0 +1,72 @@
+---
+title: How to Parse YAML Flows
+description: Parse and validate YAML flow files
+---
+
+# How to Parse YAML Flows
+
+Parse YAML flow definitions into FlowYaml objects for execution.
+
+## Parse a Flow File
+
+```typescript
+import { parseFlowYaml } from "@open-harness/kernel";
+import { readFileSync } from "fs";
+
+const yaml = readFileSync("flow.yaml", "utf-8");
+const flow = parseFlowYaml(yaml);
+```
+
+## Handle Parse Errors
+
+```typescript
+import { parseFlowYaml, FlowParseError } from "@open-harness/kernel";
+
+try {
+  const flow = parseFlowYaml(yamlContent);
+} catch (error) {
+  if (error instanceof FlowParseError) {
+    console.error("Parse error:", error.message);
+    console.error("Location:", error.location);
+  }
+}
+```
+
+## Validate Before Execution
+
+```typescript
+import { parseFlowYaml, validateFlowYaml } from "@open-harness/kernel";
+
+const flow = parseFlowYaml(yaml);
+const validation = validateFlowYaml(flow);
+
+if (!validation.valid) {
+  console.error("Validation errors:", validation.errors);
+  process.exit(1);
+}
+```
+
+## Access Flow Properties
+
+```typescript
+const flow = parseFlowYaml(yaml);
+
+console.log("Flow name:", flow.flow.name);
+console.log("Version:", flow.flow.version);
+console.log("Nodes:", flow.nodes.length);
+console.log("Edges:", flow.edges.length);
+```
+
+## Common Parse Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| Invalid YAML | Syntax error | Check indentation and colons |
+| Missing flow.name | No name field | Add `name:` under `flow:` |
+| Invalid node type | Unknown type | Register node or fix type |
+| Circular reference | Self-referencing binding | Check binding paths |
+
+## Related
+
+- [Execute Flow](/guides/flows/execute-flow) - Run the parsed flow
+- [FlowYaml Reference](/reference/types/flow-yaml) - Full schema

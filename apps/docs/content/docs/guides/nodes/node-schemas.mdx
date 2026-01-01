@@ -1,0 +1,147 @@
+---
+title: How to Define Node Schemas
+description: Define input and output schemas for nodes with Zod
+---
+
+# How to Define Node Schemas
+
+Use Zod schemas for type-safe node inputs and outputs.
+
+## Basic Schema
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const InputSchema = z.object({
+  text: z.string(),
+  count: z.number()
+});
+
+const OutputSchema = z.object({
+  result: z.string(),
+  metadata: z.object({
+    processedAt: z.string()
+  })
+});
+
+type Input = z.infer<typeof InputSchema>;
+type Output = z.infer<typeof OutputSchema>;
+
+const myNode: NodeTypeDefinition<Input, Output> = {
+  type: "my-node",
+  inputSchema: InputSchema,
+  outputSchema: OutputSchema,
+
+  async run(ctx, input) {
+    // input is typed as Input
+    return {
+      result: input.text.repeat(input.count),
+      metadata: { processedAt: new Date().toISOString() }
+    };
+  }
+};
+```
+
+## Optional Fields
+
+```typescript
+const InputSchema = z.object({
+  required: z.string(),
+  optional: z.string().optional(),
+  withDefault: z.number().default(10)
+});
+```
+
+## Nested Objects
+
+```typescript
+const InputSchema = z.object({
+  user: z.object({
+    name: z.string(),
+    email: z.string().email(),
+    preferences: z.object({
+      theme: z.enum(["light", "dark"]),
+      notifications: z.boolean()
+    })
+  })
+});
+```
+
+## Arrays
+
+```typescript
+const InputSchema = z.object({
+  items: z.array(z.string()),
+  records: z.array(z.object({
+    id: z.string(),
+    value: z.number()
+  }))
+});
+```
+
+## Union Types
+
+```typescript
+const InputSchema = z.object({
+  mode: z.union([
+    z.literal("fast"),
+    z.literal("accurate"),
+    z.literal("balanced")
+  ])
+});
+
+// Or with enum
+const InputSchema = z.object({
+  mode: z.enum(["fast", "accurate", "balanced"])
+});
+```
+
+## Descriptions
+
+Add descriptions for documentation:
+
+```typescript
+const InputSchema = z.object({
+  text: z.string().describe("The text to process"),
+  maxLength: z.number().describe("Maximum output length").optional()
+});
+```
+
+## Validation Messages
+
+```typescript
+const InputSchema = z.object({
+  text: z.string().min(1, "Text cannot be empty"),
+  count: z.number().positive("Count must be positive").max(100, "Count too large")
+});
+```
+
+## Schema Validation Behavior
+
+Schemas are validated at runtime:
+
+```typescript
+// In the kernel, before run() is called:
+const validatedInput = inputSchema.parse(rawInput);
+
+// If validation fails, node execution stops with error
+```
+
+## Custom Validation
+
+```typescript
+const InputSchema = z.object({
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime()
+}).refine(
+  (data) => new Date(data.endDate) > new Date(data.startDate),
+  { message: "End date must be after start date" }
+);
+```
+
+## Related
+
+- [Register Nodes](/guides/nodes/register-nodes) - Use your node
+- [NodeTypeDefinition](/reference/types/node-type-definition) - Reference
+- [Zod Documentation](https://zod.dev) - Full Zod guide

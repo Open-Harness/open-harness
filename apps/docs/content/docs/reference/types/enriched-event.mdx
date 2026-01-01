@@ -1,0 +1,172 @@
+---
+title: EnrichedEvent
+description: Event envelope containing metadata and hierarchical context
+---
+
+# EnrichedEvent
+
+The envelope structure wrapping all events, containing unique ID, timestamp, context, and the event payload.
+
+## Definition
+
+```typescript
+interface EnrichedEvent<T extends BaseEvent = BaseEvent> {
+  id: string;
+  timestamp: Date;
+  context: EventContext;
+  event: T;
+}
+```
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `string` | Unique event identifier (UUID format) |
+| `timestamp` | `Date` | When the event was emitted |
+| `context` | `EventContext` | Hierarchical execution context |
+| `event` | `T` | The actual event payload |
+
+## Generic Type Parameter
+
+The `T` parameter allows type-safe access to specific event types:
+
+```typescript
+// Generic event
+const event: EnrichedEvent = { /* ... */ };
+console.log(event.event.type); // string
+
+// Typed event
+import type { NarrativeEvent } from "@open-harness/kernel";
+
+const narrativeEvent: EnrichedEvent<NarrativeEvent> = { /* ... */ };
+console.log(narrativeEvent.event.text); // string (type-safe)
+console.log(narrativeEvent.event.importance); // "low" | "normal" | "high" | undefined
+```
+
+## Structure Example
+
+```json
+{
+  "id": "evt_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "context": {
+    "sessionId": "workflow-123",
+    "phase": {
+      "name": "Analysis",
+      "number": 1
+    },
+    "task": {
+      "id": "research"
+    },
+    "agent": {
+      "name": "researcher",
+      "type": "anthropic"
+    }
+  },
+  "event": {
+    "type": "agent:text",
+    "content": "Found 5 relevant articles",
+    "runId": "run-0"
+  }
+}
+```
+
+## Subscribing to Enriched Events
+
+All subscription callbacks receive `EnrichedEvent`:
+
+```typescript
+hub.subscribe("*", (event: EnrichedEvent) => {
+  console.log("ID:", event.id);
+  console.log("Time:", event.timestamp.toISOString());
+  console.log("Session:", event.context.sessionId);
+  console.log("Type:", event.event.type);
+});
+```
+
+## Type-Safe Subscriptions
+
+Use type narrowing for specific event types:
+
+```typescript
+hub.subscribe("agent:text", (event: EnrichedEvent) => {
+  // Type narrowing via type guard
+  if (event.event.type === "agent:text") {
+    const agentEvent = event.event;
+    console.log(agentEvent.content); // Type-safe string access
+  }
+});
+```
+
+## Async Iteration
+
+Hub provides enriched events via async iteration:
+
+```typescript
+for await (const event of hub) {
+  console.log(event.id, event.event.type);
+
+  if (event.event.type === "harness:complete") {
+    break;
+  }
+}
+```
+
+## Event Collection
+
+Collect all events during execution:
+
+```typescript
+const events: EnrichedEvent[] = [];
+
+const unsubscribe = hub.subscribe("*", (event) => {
+  events.push(event);
+});
+
+await instance.run();
+unsubscribe();
+
+// Analyze collected events
+const agentEvents = events.filter(e => e.event.type.startsWith("agent:"));
+const duration = events
+  .find(e => e.event.type === "harness:complete")
+  ?.event.durationMs;
+```
+
+## Serialization
+
+Events are JSON-serializable (Date becomes ISO string):
+
+```typescript
+const serialized = JSON.stringify(event);
+const parsed = JSON.parse(serialized);
+parsed.timestamp = new Date(parsed.timestamp); // Restore Date
+```
+
+## Event Recording
+
+Use enriched events for replay testing:
+
+```typescript
+// Record
+const recording: EnrichedEvent[] = [];
+hub.subscribe("*", (e) => recording.push(e));
+await instance.run();
+
+// Save
+await Bun.write("recording.json", JSON.stringify(recording, null, 2));
+
+// Replay later
+const saved = await Bun.file("recording.json").json();
+for (const event of saved) {
+  event.timestamp = new Date(event.timestamp);
+  // Process recorded events
+}
+```
+
+## See Also
+
+- [BaseEvent](/reference/types/base-event) - Event type union
+- [EventContext](/reference/types/event-context) - Context structure
+- [Hub](/reference/api/hub) - Event bus API

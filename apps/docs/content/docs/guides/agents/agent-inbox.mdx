@@ -1,0 +1,160 @@
+---
+title: How to Use Agent Inbox
+description: Enable bidirectional communication with agents
+---
+
+# How to Use Agent Inbox
+
+The inbox pattern enables sending messages to agents during execution.
+
+## What is Agent Inbox
+
+The inbox is a message queue that allows:
+- Sending user input mid-execution
+- Multi-turn conversations
+- Interrupting agent processing
+- Injecting context dynamically
+
+## Enable Inbox
+
+```typescript
+import type { AgentDefinition } from "@open-harness/kernel";
+
+const interactiveAgent: AgentDefinition = {
+  name: "interactive",
+
+  inbox: {
+    enabled: true
+  },
+
+  async run(input, ctx) {
+    // Initial processing
+    ctx.hub.emit({
+      type: "agent:text",
+      content: "How can I help you?\n"
+    });
+
+    // Wait for user input
+    const userMessage = await ctx.inbox.receive();
+
+    // Process and respond
+    const response = await generateResponse(userMessage);
+
+    ctx.hub.emit({
+      type: "agent:text",
+      content: response
+    });
+
+    return { response };
+  }
+};
+```
+
+## Send to Agent
+
+From a channel:
+
+```typescript
+const interactiveChannel: ChannelDefinition = {
+  name: "interactive",
+
+  on: {
+    "session:prompt": (ctx) => {
+      // When agent requests input
+      const userInput = readUserInput();
+      ctx.hub.send(userInput);
+    }
+  }
+};
+```
+
+## Inbox API
+
+```typescript
+async run(input, ctx) {
+  // Receive single message (blocks until message arrives)
+  const message = await ctx.inbox.receive();
+
+  // Receive with timeout
+  const messageOrNull = await ctx.inbox.receive({ timeout: 5000 });
+
+  // Check for pending messages
+  const hasPending = ctx.inbox.hasPending();
+
+  // Receive all pending
+  const allPending = ctx.inbox.receiveAll();
+}
+```
+
+## Multi-Turn Conversation
+
+```typescript
+async run(input, ctx) {
+  const history: string[] = [];
+
+  while (true) {
+    // Prompt user
+    ctx.hub.emit({
+      type: "session:prompt",
+      question: "Your message:",
+      promptId: generateId()
+    });
+
+    // Wait for response
+    const userMessage = await ctx.inbox.receive();
+
+    if (userMessage === "quit") break;
+
+    history.push(`User: ${userMessage}`);
+
+    // Generate response
+    const response = await generateResponse(history);
+    history.push(`Assistant: ${response}`);
+
+    ctx.hub.emit({
+      type: "agent:text",
+      content: response + "\n"
+    });
+  }
+
+  return { history };
+}
+```
+
+## Handle Interrupts
+
+```typescript
+async run(input, ctx) {
+  // Check for abort signal during long operations
+  for await (const chunk of longProcess()) {
+    // Check if user sent interrupt
+    if (ctx.inbox.hasPending()) {
+      const message = await ctx.inbox.receive();
+      if (message === "INTERRUPT") {
+        ctx.hub.emit({
+          type: "narrative",
+          text: "Operation interrupted"
+        });
+        break;
+      }
+    }
+
+    ctx.hub.emit({ type: "agent:text", content: chunk });
+  }
+}
+```
+
+## Inbox vs Direct Input
+
+| Use Case | Approach |
+|----------|----------|
+| Initial prompt | Direct input to `run()` |
+| Mid-execution input | Inbox |
+| Multi-turn chat | Inbox |
+| User interrupts | Inbox |
+
+## Related
+
+- [Define Agent](/guides/agents/define-agent) - Agent basics
+- [Bidirectional I/O](/guides/channels/bidirectional-io) - Channel side
+- [Inbox Pattern](/concepts/agents/inbox-pattern) - Concept

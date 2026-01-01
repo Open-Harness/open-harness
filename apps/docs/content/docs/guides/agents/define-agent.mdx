@@ -1,0 +1,151 @@
+---
+title: How to Define an Agent
+description: Create an AgentDefinition for your harness
+---
+
+# How to Define an Agent
+
+Create agent definitions that execute AI workflows.
+
+## Basic Agent Definition
+
+```typescript
+import type { AgentDefinition } from "@open-harness/kernel";
+
+const myAgent: AgentDefinition = {
+  name: "my-agent",
+
+  async run(input, ctx) {
+    // Process input
+    ctx.hub.emit({ type: "narrative", text: "Starting..." });
+
+    // Do work
+    const result = await processInput(input);
+
+    // Emit output
+    ctx.hub.emit({ type: "agent:text", content: result });
+
+    return { result };
+  }
+};
+```
+
+## Agent Input/Output Types
+
+```typescript
+import { z } from "zod";
+import type { AgentDefinition } from "@open-harness/kernel";
+
+const InputSchema = z.object({
+  prompt: z.string(),
+  maxTokens: z.number().optional()
+});
+
+const OutputSchema = z.object({
+  response: z.string(),
+  tokenCount: z.number()
+});
+
+type Input = z.infer<typeof InputSchema>;
+type Output = z.infer<typeof OutputSchema>;
+
+const typedAgent: AgentDefinition<Input, Output> = {
+  name: "typed-agent",
+  inputSchema: InputSchema,
+  outputSchema: OutputSchema,
+
+  async run(input, ctx) {
+    // input is typed as Input
+    const response = await generateResponse(input.prompt);
+
+    return {
+      response,
+      tokenCount: response.length
+    };
+  }
+};
+```
+
+## Register with Harness
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+
+const harness = defineHarness({
+  agents: [myAgent, typedAgent],
+  channels: [consoleChannel]
+});
+
+const instance = harness.create();
+await instance.run({ prompt: "Hello!" });
+```
+
+## Access Hub in Agent
+
+```typescript
+async run(input, ctx) {
+  // Emit events
+  ctx.hub.emit({ type: "narrative", text: "Processing..." });
+
+  // Emit streaming output
+  for await (const chunk of streamResponse(input)) {
+    ctx.hub.emit({ type: "agent:text", content: chunk });
+  }
+
+  return { done: true };
+}
+```
+
+## Agent with State
+
+```typescript
+interface MyState {
+  conversationHistory: string[];
+}
+
+const statefulAgent: AgentDefinition<Input, Output, MyState> = {
+  name: "stateful-agent",
+
+  state: () => ({
+    conversationHistory: []
+  }),
+
+  async run(input, ctx) {
+    // Access state
+    ctx.state.conversationHistory.push(input.prompt);
+
+    const response = await generate(ctx.state.conversationHistory);
+
+    ctx.state.conversationHistory.push(response);
+
+    return { response };
+  }
+};
+```
+
+## Agent Configuration
+
+```typescript
+const configuredAgent: AgentDefinition = {
+  name: "configured-agent",
+
+  config: {
+    model: "claude-3-5-sonnet",
+    maxRetries: 3,
+    timeout: 30000
+  },
+
+  async run(input, ctx) {
+    // Access config
+    const { model, timeout } = ctx.config;
+
+    return await callModel(model, input, { timeout });
+  }
+};
+```
+
+## Related
+
+- [Anthropic Agent](/guides/agents/anthropic-agent) - Use Anthropic provider
+- [Agent Inbox](/guides/agents/agent-inbox) - Bidirectional agents
+- [AgentDefinition Reference](/reference/types/agent-definition) - Full reference

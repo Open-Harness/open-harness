@@ -1,0 +1,158 @@
+---
+title: How to Run Live Tests
+description: Run integration tests against real services
+---
+
+# How to Run Live Tests
+
+Test against real APIs for full integration validation.
+
+## When to Use Live Tests
+
+- Validate real API behavior
+- Test authentication flows
+- Verify rate limiting handling
+- Smoke tests before release
+
+## Test File Naming
+
+```
+my-feature.test.ts      # Regular test (uses replay)
+my-feature.live.test.ts # Live test (hits real APIs)
+```
+
+## Write a Live Test
+
+```typescript
+// chat.live.test.ts
+import { describe, test, expect } from "bun:test";
+import { createAnthropicTextAgent, defineHarness } from "@open-harness/kernel";
+
+describe("live: chat", () => {
+  test("generates real response", async () => {
+    const agent = createAnthropicTextAgent({
+      model: "claude-sonnet-4-20250514"
+      // No mode specified = live
+    });
+
+    const harness = defineHarness({ agents: [agent] });
+    const instance = harness.create();
+
+    const result = await instance.run({
+      prompt: "Say 'Hello' and nothing else"
+    });
+
+    expect(result.response.toLowerCase()).toContain("hello");
+  });
+});
+```
+
+## Run Live Tests
+
+```bash
+# Run live tests only
+bun run test:live
+
+# Run specific live test
+bun run test:live chat.live.test.ts
+```
+
+## Authentication
+
+Live tests use Claude Code subscription auth:
+
+```typescript
+// No API key needed - uses subscription auth automatically
+const agent = createAnthropicTextAgent({
+  model: "claude-sonnet-4-20250514"
+});
+```
+
+## Rate Limiting
+
+Handle rate limits gracefully:
+
+```typescript
+import { sleep } from "bun";
+
+describe("live: rate limits", () => {
+  test("handles rate limiting", async () => {
+    for (let i = 0; i < 5; i++) {
+      try {
+        await runTest();
+      } catch (error) {
+        if (error.code === "rate_limit") {
+          await sleep(1000);
+          continue;
+        }
+        throw error;
+      }
+    }
+  });
+});
+```
+
+## CI/CD Configuration
+
+```yaml
+# .github/workflows/test.yml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+
+      # Regular tests (no network)
+      - run: bun run test
+
+      # Live tests (requires auth)
+      - run: bun run test:live
+        if: github.event_name == 'push'
+```
+
+## Skip in CI
+
+```typescript
+import { describe, test } from "bun:test";
+
+const isCI = process.env.CI === "true";
+
+describe.skipIf(isCI)("live: expensive tests", () => {
+  test("long running test", async () => {
+    // Only runs locally
+  });
+});
+```
+
+## Test Isolation
+
+```typescript
+describe("live: isolated", () => {
+  let harness: Harness;
+
+  beforeEach(() => {
+    harness = defineHarness({ agents: [agent] });
+  });
+
+  afterEach(async () => {
+    await harness.cleanup();
+  });
+
+  test("test 1", async () => {
+    const instance = harness.create();
+    // ...
+  });
+
+  test("test 2", async () => {
+    const instance = harness.create();
+    // ...
+  });
+});
+```
+
+## Related
+
+- [Unit Tests](/guides/testing/unit-tests) - Fast isolated tests
+- [Replay Tests](/guides/testing/replay-tests) - Deterministic tests
+- [Testing Tutorial](/learn/testing) - Full guide

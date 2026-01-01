@@ -1,0 +1,294 @@
+---
+title: Adding Custom Nodes
+description: Adding built-in node types to the kernel
+---
+
+# Adding Custom Nodes
+
+This guide covers adding built-in node types that ship with the kernel. For user-defined nodes in application code, see the [guides section](/guides/flows/custom-node-types).
+
+## Built-in vs User Nodes
+
+### Built-in Nodes
+
+Ship with `@open-harness/kernel`:
+
+```typescript
+import { NodeRegistry } from "@open-harness/kernel";
+
+const registry = new NodeRegistry();
+registry.register(builtInLlmNode);  // Ships with kernel
+```
+
+Characteristics:
+- Maintained in kernel codebase
+- Available to all users
+- Thoroughly tested
+- Documented
+
+### User Nodes
+
+Defined in application code:
+
+```typescript
+const myNode: NodeTypeDefinition = {
+  type: "my-custom-node",
+  // ...
+};
+registry.register(myNode);
+```
+
+Characteristics:
+- Application-specific
+- User maintains
+- Not part of kernel
+
+## When to Add a Built-in Node
+
+Add to kernel when:
+- Generally useful (not domain-specific)
+- Well-defined, stable interface
+- Broadly applicable
+
+Don't add when:
+- Specific to one use case
+- Requires external dependencies
+- Experimental/unstable
+
+## Adding a Built-in Node
+
+### 1. Create Node File
+
+```
+packages/kernel/src/flow/nodes/
+└── my-node.ts
+```
+
+### 2. Define the Node
+
+```typescript
+// src/flow/nodes/my-node.ts
+import { z } from "zod";
+import type { NodeTypeDefinition } from "../../protocol/flow";
+
+const InputSchema = z.object({
+  text: z.string(),
+  options: z.object({
+    uppercase: z.boolean().optional()
+  }).optional()
+});
+
+const OutputSchema = z.object({
+  result: z.string(),
+  length: z.number()
+});
+
+type Input = z.infer<typeof InputSchema>;
+type Output = z.infer<typeof OutputSchema>;
+
+export const textProcessorNode: NodeTypeDefinition<Input, Output> = {
+  type: "text-processor",
+  inputSchema: InputSchema,
+  outputSchema: OutputSchema,
+
+  async run(ctx, input) {
+    ctx.hub.emit({
+      type: "narrative",
+      text: `Processing text (${input.text.length} chars)`
+    });
+
+    const result = input.options?.uppercase
+      ? input.text.toUpperCase()
+      : input.text;
+
+    return {
+      result,
+      length: result.length
+    };
+  }
+};
+```
+
+### 3. Export from Index
+
+```typescript
+// src/flow/nodes/index.ts
+export { textProcessorNode } from "./text-processor";
+export { llmNode } from "./llm";
+// ... other built-in nodes
+```
+
+### 4. Register in Default Registry
+
+```typescript
+// src/flow/registry.ts
+import { textProcessorNode } from "./nodes";
+
+export function createDefaultRegistry(): NodeRegistry {
+  const registry = new NodeRegistry();
+  registry.register(textProcessorNode);
+  // ... other built-in nodes
+  return registry;
+}
+```
+
+### 5. Add Tests
+
+```typescript
+// tests/unit/nodes/text-processor.test.ts
+import { test, expect, describe } from "bun:test";
+import { textProcessorNode } from "../../../src/flow/nodes/text-processor";
+import { createMockContext } from "../../helpers";
+
+describe("text-processor node", () => {
+  test("processes text", async () => {
+    const ctx = createMockContext();
+    const result = await textProcessorNode.run(ctx, {
+      text: "hello"
+    });
+
+    expect(result.result).toBe("hello");
+    expect(result.length).toBe(5);
+  });
+
+  test("uppercases when option set", async () => {
+    const ctx = createMockContext();
+    const result = await textProcessorNode.run(ctx, {
+      text: "hello",
+      options: { uppercase: true }
+    });
+
+    expect(result.result).toBe("HELLO");
+  });
+
+  test("validates input schema", () => {
+    expect(textProcessorNode.inputSchema.safeParse({ text: "hi" }).success)
+      .toBe(true);
+    expect(textProcessorNode.inputSchema.safeParse({ text: 123 }).success)
+      .toBe(false);
+  });
+});
+```
+
+### 6. Add Documentation
+
+Create reference page:
+
+```markdown
+<!-- apps/docs/content/docs/reference/nodes/text-processor.mdx -->
+---
+title: text-processor Node
+description: Built-in text processing node
+---
+
+# text-processor Node
+
+Processes text with optional transformations.
+
+## Input
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| text | string | Yes | Text to process |
+| options.uppercase | boolean | No | Convert to uppercase |
+
+## Output
+
+| Field | Type | Description |
+|-------|------|-------------|
+| result | string | Processed text |
+| length | number | Result length |
+
+## Example
+
+```yaml
+- id: process
+  type: text-processor
+  input:
+    text: "{{flow.input.message}}"
+    options:
+      uppercase: true
+```
+```
+
+## Requirements Checklist
+
+### Code Quality
+
+- [ ] TypeScript strict mode
+- [ ] Complete Zod schemas
+- [ ] No `any` types
+- [ ] Proper error handling
+
+### Testing
+
+- [ ] Unit tests for run function
+- [ ] Schema validation tests
+- [ ] Edge case coverage
+- [ ] Error path tests
+
+### Documentation
+
+- [ ] Reference page
+- [ ] Input/output documented
+- [ ] Example usage
+- [ ] JSDoc comments
+
+### Review Checklist
+
+Reviewers verify:
+
+- [ ] Node is generally useful
+- [ ] No external dependencies
+- [ ] Follows naming conventions
+- [ ] Tests comprehensive
+- [ ] Documentation complete
+- [ ] No breaking changes
+
+## Implementation Tips
+
+### Event Emission
+
+Emit progress for long operations:
+
+```typescript
+async run(ctx, input) {
+  ctx.hub.emit({ type: "narrative", text: "Starting..." });
+
+  // Long operation
+  await doWork();
+
+  ctx.hub.emit({ type: "narrative", text: "Done" });
+  return result;
+}
+```
+
+### Error Handling
+
+Throw descriptive errors:
+
+```typescript
+async run(ctx, input) {
+  if (!input.required) {
+    throw new Error("text-processor: 'required' field is missing");
+  }
+  // ...
+}
+```
+
+### Schema Design
+
+Make schemas precise:
+
+```typescript
+const InputSchema = z.object({
+  text: z.string().min(1).max(10000),
+  mode: z.enum(["fast", "accurate"]).default("fast")
+});
+```
+
+## Next Steps
+
+- [Node Type Definition](/reference/types/node-type-definition) - Type reference
+- [Node Registry](/reference/api/node-registry) - Registry API
+- [Testing](/contributing/development/testing) - Test strategy

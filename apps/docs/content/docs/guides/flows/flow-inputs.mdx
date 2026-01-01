@@ -1,0 +1,119 @@
+---
+title: How to Pass Flow Inputs
+description: Define and pass inputs to flows
+---
+
+# How to Pass Flow Inputs
+
+Provide runtime inputs to flows via the execution context.
+
+## Define Input Schema
+
+In your flow YAML:
+
+```yaml
+flow:
+  name: greet-user
+  version: "1.0"
+  input:
+    userName:
+      type: string
+    age:
+      type: number
+    options:
+      type: object
+
+nodes:
+  - id: greet
+    type: constant
+    input:
+      value: "Hello, {{flow.input.userName}}!"
+```
+
+## Pass Inputs at Execution
+
+```typescript
+const result = await executeFlow(flow, {
+  input: {
+    userName: "Alice",
+    age: 30,
+    options: { formal: true }
+  },
+  registry,
+  hub
+});
+```
+
+## Access Inputs in Nodes
+
+Use A3 bindings:
+
+```yaml
+nodes:
+  - id: process
+    type: my-node
+    input:
+      name: "{{flow.input.userName}}"
+      fullOptions: "{{flow.input.options}}"
+      nested: "{{flow.input.options.formal}}"
+```
+
+## Handle Optional Inputs
+
+```yaml
+flow:
+  input:
+    required:
+      type: string
+    optional:
+      type: string
+      default: "default value"
+
+nodes:
+  - id: use-optional
+    type: constant
+    input:
+      # Uses default if not provided
+      value: "{{flow.input.optional}}"
+```
+
+## Validate Inputs
+
+```typescript
+import { z } from "zod";
+
+const InputSchema = z.object({
+  userName: z.string().min(1),
+  age: z.number().positive(),
+  options: z.object({
+    formal: z.boolean()
+  }).optional()
+});
+
+// Validate before execution
+const validatedInput = InputSchema.parse(rawInput);
+
+const result = await executeFlow(flow, {
+  input: validatedInput,
+  registry,
+  hub
+});
+```
+
+## Handle Missing Inputs
+
+If a required binding can't be resolved:
+
+```typescript
+try {
+  await executeFlow(flow, { input: {}, registry, hub });
+} catch (error) {
+  // Error: Unable to resolve binding "flow.input.userName"
+}
+```
+
+## Related
+
+- [Execute Flow](/guides/flows/execute-flow) - Full execution guide
+- [Bindings Deep Dive](/learn/advanced/bindings-deep-dive) - A3 syntax
+- [FlowYaml Reference](/reference/types/flow-yaml) - Schema details

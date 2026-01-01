@@ -1,0 +1,120 @@
+---
+title: Architecture Overview
+description: High-level architecture and design philosophy of Open Harness
+---
+
+# Architecture Overview
+
+Open Harness is an AI workflow orchestration framework built for declarative, event-driven workflows. This page explains the big picture and why the architecture exists.
+
+## What is Open Harness?
+
+Open Harness provides a structured way to build AI-powered applications. Rather than writing imperative code that directly calls LLM APIs and manages state, you define workflows declaratively and let the framework handle execution, event routing, and I/O.
+
+The framework is designed for:
+- **AI agents** that reason and act
+- **Multi-step workflows** that chain operations
+- **Interactive sessions** with human-in-the-loop
+- **Multiple I/O channels** (console, web, voice)
+
+## The Big Picture
+
+At the center of everything is the **Hub** - a bidirectional event bus that connects all components:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Hub                                 │
+│         (events out ← → commands in)                        │
+└─────────────────────────────────────────────────────────────┘
+       ↑              ↑              ↑              ↑
+       │              │              │              │
+   ┌───┴───┐    ┌─────┴─────┐   ┌────┴────┐   ┌─────┴─────┐
+   │ Flow  │    │  Agents   │   │ Channels │   │ Observers │
+   │ (DAG) │    │(executors)│   │  (I/O)  │   │(logging)  │
+   └───────┘    └───────────┘   └─────────┘   └───────────┘
+```
+
+**Flow** orchestrates the workflow, defining what happens and in what order. **Agents** do the actual work (calling LLMs, processing data). **Channels** handle external I/O (console, websocket, voice). Everything communicates through the Hub.
+
+## Design Philosophy
+
+### Event-Driven Over Imperative
+
+Rather than direct function calls, components communicate through events. When an agent produces output, it emits an event. When a user sends input, it becomes an event. This creates:
+
+- **Observability**: Every action is visible
+- **Testability**: Events can be recorded and replayed
+- **Extensibility**: New components subscribe without changes
+
+### Declarative Over Procedural
+
+Workflows are defined as YAML DAGs (Directed Acyclic Graphs) rather than imperative code:
+
+```yaml
+flow:
+  name: research-and-summarize
+nodes:
+  - id: research
+    type: web-search
+    input:
+      query: "{{flow.input.topic}}"
+  - id: summarize
+    type: llm
+    input:
+      content: "{{research.output}}"
+edges:
+  - from: research
+    to: summarize
+```
+
+This declarative approach enables:
+- **Visual editing** potential
+- **Easy modification** without code changes
+- **Clear data flow** between nodes
+
+### Composable Primitives
+
+The system is built from four composable primitives:
+- **Hub**: Event routing and context
+- **Agent**: Executable work unit
+- **Channel**: I/O adapter
+- **Flow**: Workflow orchestration
+
+These primitives combine in predictable ways. Understanding them unlocks the full system.
+
+## Why This Architecture?
+
+### Testability
+
+AI responses are non-deterministic and API calls are slow. By routing everything through events:
+- Record event streams during execution
+- Replay recordings for deterministic tests
+- No network calls during test runs
+
+### Observability
+
+With a central event bus:
+- Every action is logged
+- Easy debugging with full event history
+- Metrics and monitoring built-in
+
+### Extensibility
+
+New capabilities plug in cleanly:
+- Custom agents for specific tasks
+- New channels for different I/O
+- Subscribers for logging, analytics, etc.
+
+## Historical Context
+
+Open Harness evolved from earlier harness-based approaches. The original design used imperative code with agents defined in TypeScript. Flow was added for declarative workflows.
+
+Today, **Flow is the primary model**. Harness remains available for complex programmatic logic but most workflows use declarative Flow definitions.
+
+This consolidation simplified the codebase and improved developer experience while maintaining the flexibility to handle edge cases.
+
+## Next Steps
+
+- [Kernel Primitives](/concepts/architecture/kernel-primitives) - Deep dive into Hub, Agent, Channel, Flow
+- [Harness vs Flow](/concepts/architecture/harness-vs-flow) - When to use each model
+- [Event-Driven Design](/concepts/architecture/event-driven) - Why events matter

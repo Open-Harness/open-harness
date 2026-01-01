@@ -1,0 +1,220 @@
+---
+title: DAG Model
+description: Understanding Directed Acyclic Graph execution in flows
+---
+
+# DAG Model
+
+Flows are defined as Directed Acyclic Graphs (DAGs). This page explains what that means and why it matters.
+
+## What is a DAG?
+
+A Directed Acyclic Graph is a graph where:
+- **Directed**: Edges have direction (from → to)
+- **Acyclic**: No cycles (you can't follow edges back to where you started)
+
+```
+    ┌──────────┐
+    │  Start   │
+    └────┬─────┘
+         │
+    ┌────▼─────┐
+    │ Process  │
+    └────┬─────┘
+         │
+    ┌────▼─────┐     ┌──────────┐
+    │ Validate │────▶│  Format  │
+    └──────────┘     └────┬─────┘
+                          │
+                     ┌────▼─────┐
+                     │   End    │
+                     └──────────┘
+```
+
+## Flow as a DAG
+
+In Open Harness flows:
+- **Nodes** are operations (LLM calls, data transformations)
+- **Edges** define data flow and execution order
+
+```yaml
+flow:
+  name: content-pipeline
+
+nodes:
+  - id: research
+    type: web-search
+    input:
+      query: "{{flow.input.topic}}"
+
+  - id: summarize
+    type: llm
+    input:
+      content: "{{research.output}}"
+
+  - id: format
+    type: template
+    input:
+      summary: "{{summarize.output}}"
+
+edges:
+  - from: research
+    to: summarize
+  - from: summarize
+    to: format
+```
+
+## Execution Order
+
+### Topological Sort
+
+The flow compiler computes a topological sort - an ordering where every node comes after its dependencies:
+
+```
+research → summarize → format
+```
+
+This ordering guarantees that when a node executes, all its inputs are available.
+
+### Parallel Execution
+
+Nodes without dependencies between them can run in parallel:
+
+```yaml
+nodes:
+  - id: fetch_users
+    type: api
+    input: {}
+  - id: fetch_products
+    type: api
+    input: {}
+  - id: combine
+    type: merge
+    input:
+      users: "{{fetch_users.output}}"
+      products: "{{fetch_products.output}}"
+
+edges:
+  - from: fetch_users
+    to: combine
+  - from: fetch_products
+    to: combine
+```
+
+Here `fetch_users` and `fetch_products` can run simultaneously because neither depends on the other. `combine` waits for both.
+
+### Why Explicit Edges
+
+Edges make dependencies explicit:
+
+```yaml
+# Clear: summarize depends on research
+edges:
+  - from: research
+    to: summarize
+```
+
+Without explicit edges, the system would need to infer dependencies from bindings. This leads to:
+- Ambiguous execution order
+- Hidden dependencies
+- Harder debugging
+
+Explicit edges trade verbosity for clarity.
+
+## Data Flow
+
+### Bindings Carry Data
+
+Data flows through bindings. Each node's output is available to downstream nodes:
+
+```yaml
+nodes:
+  - id: step1
+    type: fetch
+    input: {}
+
+  - id: step2
+    type: process
+    input:
+      # Reference step1's output
+      data: "{{step1.output}}"
+```
+
+### Output of One → Input of Another
+
+The pattern is consistent:
+1. Node executes, produces output
+2. Output is stored by node ID
+3. Downstream nodes reference it via bindings
+
+```
+step1.output → {{step1.output}} → step2.input
+```
+
+## Conditional Execution
+
+`when` expressions let nodes conditionally execute without breaking the DAG:
+
+```yaml
+nodes:
+  - id: expensive_analysis
+    type: deep-analysis
+    input: {}
+    when:
+      equals:
+        var: flow.input.mode
+        value: "thorough"
+```
+
+When the condition is false:
+- Node is skipped
+- Output is set to `{ skipped: true }`
+- Downstream nodes can handle this
+
+The DAG structure remains intact - conditional execution is about whether to run, not about changing the graph.
+
+## Why Not Other Models?
+
+### State Machines
+
+State machines are great for UI flows but awkward for data processing:
+- Transitions are about state, not data flow
+- No natural parallelism
+- Complex for AI workflows
+
+### Petri Nets
+
+Petri nets handle concurrency well but:
+- More complex than needed
+- Token-based semantics add overhead
+- Overkill for typical AI workflows
+
+### Simple DAG is Enough
+
+Most AI workflows are:
+- Linear with branches
+- Data-centric
+- Naturally parallel when independent
+
+DAGs capture this perfectly without unnecessary complexity.
+
+## Cycle Detection
+
+The compiler rejects flows with cycles:
+
+```yaml
+# Invalid: cycle between a and b
+edges:
+  - from: a
+    to: b
+  - from: b
+    to: a  # Creates a cycle!
+```
+
+Cycles would create infinite loops or undefined execution order. The acyclic requirement ensures workflows always terminate.
+
+## Next Steps
+
+- [Binding System](/concepts/flows/binding-system) - How data moves between nodes
+- [When Expressions](/concepts/flows/when-expressions) - Conditional execution
+- [compileFlow](/reference/api/compile-flow) - Compilation API

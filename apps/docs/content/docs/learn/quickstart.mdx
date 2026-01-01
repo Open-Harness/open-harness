@@ -1,0 +1,143 @@
+---
+title: Quickstart
+description: Get your first Open Harness flow running in 5 minutes
+---
+
+# Quickstart
+
+Let's build your first AI workflow. In five minutes, you'll have a working flow that processes input through an LLM.
+
+## What You'll Build
+
+A simple flow that:
+1. Takes a user's name as input
+2. Generates a personalized greeting using Claude
+3. Returns the formatted response
+
+## Step 1: Create Project
+
+Create a new directory and initialize it:
+
+```bash
+mkdir my-first-flow && cd my-first-flow
+bun init -y
+bun add @open-harness/kernel
+```
+
+## Step 2: Create Your Flow
+
+Create `flow.yaml`:
+
+```yaml
+flow:
+  name: greeting-flow
+  version: "1.0"
+  input:
+    name:
+      type: string
+
+nodes:
+  - id: greet
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Say hello to {{flow.input.name}} in a friendly, creative way. Keep it brief."
+
+edges: []
+```
+
+This flow:
+- Declares an input `name` of type string
+- Has one node that calls an LLM
+- Uses `{{flow.input.name}}` to inject the name into the prompt
+
+## Step 3: Run It
+
+Create `run.ts`:
+
+```typescript
+import { parseFlowYaml, executeFlow, NodeRegistry, createHub } from "@open-harness/kernel";
+import { readFileSync } from "fs";
+
+// Load and parse the flow
+const yaml = readFileSync("flow.yaml", "utf-8");
+const flow = parseFlowYaml(yaml);
+
+// Create hub for events
+const hub = createHub();
+
+// Log events as they happen
+hub.subscribe("*", (event) => {
+  if (event.event.type === "agent:text") {
+    console.log(event.event.content);
+  }
+});
+
+// Create registry with LLM node
+const registry = new NodeRegistry();
+registry.register({
+  type: "llm",
+  async run(ctx, input) {
+    // This is a simplified example - real implementation uses createAnthropicTextAgent
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 256,
+        messages: input.messages
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content[0].text;
+
+    ctx.hub.emit({ type: "agent:text", content: text });
+
+    return { response: text };
+  }
+});
+
+// Execute the flow
+const result = await executeFlow(flow, {
+  input: { name: "World" },
+  registry,
+  hub
+});
+
+console.log("\nFlow complete!");
+```
+
+Run it:
+
+```bash
+bun run run.ts
+```
+
+You should see Claude's creative greeting appear!
+
+## What Just Happened?
+
+In just a few lines of code, you:
+
+1. **Defined a workflow** in YAML with input, nodes, and data flow
+2. **Parsed and executed** the flow using the kernel
+3. **Observed events** through the Hub as the flow ran
+
+The flow automatically:
+- Resolved `{{flow.input.name}}` to the actual input
+- Called the LLM node with the constructed prompt
+- Emitted events you subscribed to
+
+## Next Steps
+
+You've just scratched the surface. Continue learning:
+
+- **[First Flow Tutorial](/learn/first-flow)** - Understand flow structure in depth
+- **[Concepts: Architecture](/concepts/architecture/overview)** - How Open Harness works
+- **[Custom Nodes](/learn/custom-node)** - Build your own node types

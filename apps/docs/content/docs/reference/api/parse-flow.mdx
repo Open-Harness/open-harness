@@ -1,0 +1,134 @@
+---
+title: parseFlowYaml
+description: Parse YAML string into validated FlowYaml structure
+---
+
+# parseFlowYaml
+
+Parses a YAML string into a validated FlowYaml structure. Validates the structure against the FlowYaml schema.
+
+## Signature
+
+```typescript
+function parseFlowYaml(source: string): FlowYamlValidated
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source` | `string` | Yes | YAML string to parse |
+
+## Returns
+
+`FlowYamlValidated` - Parsed and validated flow structure.
+
+## Throws
+
+- `YAMLError` if YAML syntax is invalid
+- `ZodError` if structure fails validation
+
+## Example
+
+```typescript
+import { parseFlowYaml } from "@open-harness/kernel";
+
+const yaml = `
+flow:
+  name: my-workflow
+  version: 1
+  description: A simple workflow
+  input:
+    topic: "default topic"
+
+nodes:
+  - id: step1
+    type: research
+    input:
+      query: "{{flow.input.topic}}"
+
+  - id: step2
+    type: summarize
+    input:
+      content: "{{step1.output}}"
+
+edges:
+  - from: step1
+    to: step2
+`;
+
+const flow = parseFlowYaml(yaml);
+console.log(flow.flow.name);      // "my-workflow"
+console.log(flow.nodes.length);   // 2
+console.log(flow.edges.length);   // 1
+```
+
+## Validation Rules
+
+The parser validates:
+
+### Flow Metadata
+- `flow.name` is required
+- `flow.version` defaults to 1
+- `flow.policy.failFast` defaults to true
+
+### Node Specifications
+- Each node must have unique `id`
+- Node `id` must match pattern `^[A-Za-z_][A-Za-z0-9_]*$`
+- `type` is required
+- `input` is required (can be empty object)
+
+### Edges
+- `from` must reference an existing node id
+- `to` must reference an existing node id
+
+## Error Handling
+
+```typescript
+import { parseFlowYaml } from "@open-harness/kernel";
+
+try {
+  const flow = parseFlowYaml(yamlString);
+} catch (error) {
+  if (error instanceof SyntaxError) {
+    console.error("Invalid YAML syntax:", error.message);
+  } else if (error.name === "ZodError") {
+    console.error("Validation failed:", error.issues);
+  }
+}
+```
+
+## FlowYaml Structure
+
+```typescript
+interface FlowYaml {
+  flow: {
+    name: string;
+    version?: number;
+    description?: string;
+    input?: Record<string, unknown>;
+    policy?: {
+      failFast?: boolean;
+    };
+  };
+  nodes: Array<{
+    id: string;
+    type: string;
+    input: Record<string, unknown>;
+    config?: Record<string, unknown>;
+    when?: WhenExpr;
+    policy?: NodePolicy;
+  }>;
+  edges: Array<{
+    from: string;
+    to: string;
+  }>;
+}
+```
+
+## See Also
+
+- [compileFlow](/reference/api/compile-flow) - Compile parsed flow
+- [executeFlow](/reference/api/execute-flow) - Execute compiled flow
+- [FlowYaml](/reference/types/flow-yaml) - Type definition
+- [Flow Spec](/reference/kernel-spec/flow/flow-spec) - Complete specification

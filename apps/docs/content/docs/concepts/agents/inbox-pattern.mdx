@@ -1,0 +1,269 @@
+---
+title: Inbox Pattern
+description: How agents receive messages during execution
+---
+
+# Inbox Pattern
+
+Agents can receive messages while they're executing. This enables interactive workflows where users can inject feedback, provide guidance, or send additional context mid-execution.
+
+## The Problem
+
+Traditional agent execution is fire-and-forget:
+
+```typescript
+// One-way: no way to inject feedback
+const result = await agent.execute(input);
+```
+
+But interactive AI needs bidirectional communication:
+- User wants to redirect the agent's focus
+- External system needs to inject new data
+- Supervisor wants to provide guidance
+
+## The Solution
+
+Each agent has an inbox:
+
+```typescript
+interface AgentInbox extends AsyncIterable<InjectedMessage> {
+  pop(): Promise<InjectedMessage>;  // Wait for next message
+  drain(): InjectedMessage[];       // Get all pending messages
+}
+```
+
+Messages arrive in the inbox. Agents check it when they want.
+
+## How It Works
+
+### Sending Messages
+
+External code sends to agents via the Hub:
+
+```typescript
+// Send to any listening agent
+hub.send("Please focus on recent data");
+
+// Send to specific agent
+hub.sendTo("researcher", "Include 2024 papers");
+
+// Send to specific run
+hub.sendToRun("run-123", "Update in progress");
+```
+
+### Receiving Messages
+
+Agents access their inbox through context:
+
+```typescript
+const myAgent: AgentDefinition = {
+  name: "researcher",
+  async execute(input, ctx) {
+    // Check for messages without blocking
+    const pending = ctx.inbox.drain();
+    for (const msg of pending) {
+      console.log("Received:", msg.content);
+    }
+
+    // Or wait for a message
+    const next = await ctx.inbox.pop();
+  }
+};
+```
+
+## Usage Patterns
+
+### Polling
+
+Check periodically during long operations:
+
+```typescript
+async execute(input, ctx) {
+  const items = input.items;
+
+  for (const item of items) {
+    // Check for messages between iterations
+    const messages = ctx.inbox.drain();
+    for (const msg of messages) {
+      if (msg.content === "skip remaining") {
+        return { partial: true, processed: results };
+      }
+    }
+
+    results.push(await process(item));
+  }
+
+  return { processed: results };
+}
+```
+
+### Blocking Wait
+
+Wait for required input:
+
+```typescript
+async execute(input, ctx) {
+  ctx.hub.emit({
+    type: "session:prompt",
+    promptId: "confirm",
+    question: "Proceed with deletion?"
+  });
+
+  // Wait for user response
+  const response = await ctx.inbox.pop();
+
+  if (response.content === "yes") {
+    await performDeletion();
+  }
+}
+```
+
+### Background Listening
+
+Process messages as they arrive:
+
+```typescript
+async execute(input, ctx) {
+  // Start background listener
+  const stopListening = startMessageListener(ctx.inbox, (msg) => {
+    adjustBehavior(msg.content);
+  });
+
+  try {
+    // Do main work
+    await longRunningOperation();
+  } finally {
+    stopListening();
+  }
+}
+```
+
+## Message Structure
+
+```typescript
+interface InjectedMessage {
+  content: string;
+  timestamp: Date;
+}
+```
+
+Messages are simple text with timestamps. Keep messages human-readable for debugging.
+
+## Async Iteration
+
+The inbox is async-iterable:
+
+```typescript
+async execute(input, ctx) {
+  // Process messages as they arrive
+  for await (const message of ctx.inbox) {
+    handleMessage(message);
+
+    if (shouldStop(message)) {
+      break;
+    }
+  }
+}
+```
+
+This is useful for message-driven agents that primarily respond to input.
+
+## Practical Example
+
+An interactive research agent:
+
+```typescript
+const researchAgent: AgentDefinition = {
+  name: "researcher",
+  async execute(input, ctx) {
+    let focus = input.topic;
+    let depth = "normal";
+
+    ctx.hub.emit({ type: "narrative", text: `Researching: ${focus}` });
+
+    // Initial search
+    let results = await search(focus);
+
+    // Check for guidance
+    const guidance = ctx.inbox.drain();
+    for (const msg of guidance) {
+      if (msg.content.startsWith("focus:")) {
+        focus = msg.content.slice(6).trim();
+        ctx.hub.emit({ type: "narrative", text: `Refocusing on: ${focus}` });
+        results = await search(focus);
+      }
+      if (msg.content === "go deeper") {
+        depth = "deep";
+      }
+    }
+
+    // Analyze based on current settings
+    const analysis = await analyze(results, { depth });
+
+    return { focus, results, analysis };
+  }
+};
+```
+
+## Design Considerations
+
+### Don't Block Unnecessarily
+
+Blocking on `inbox.pop()` stops execution until a message arrives. Only block when you actually need input.
+
+```typescript
+// Bad: blocks forever if no message
+const msg = await ctx.inbox.pop();
+
+// Better: check without blocking
+const messages = ctx.inbox.drain();
+if (messages.length > 0) {
+  handleMessages(messages);
+}
+```
+
+### Handle Empty Inbox
+
+`drain()` returns an empty array if no messages. Handle gracefully:
+
+```typescript
+const messages = ctx.inbox.drain();
+// messages may be [], that's fine
+```
+
+### Message Order
+
+Messages are delivered in order. First in, first out.
+
+### No Guaranteed Delivery
+
+If no agent is listening, messages may be lost. Design accordingly.
+
+## Integration with Prompts
+
+Combine with prompt events for structured interaction:
+
+```typescript
+async execute(input, ctx) {
+  // Ask question
+  const promptId = `prompt-${Date.now()}`;
+  ctx.hub.emit({
+    type: "session:prompt",
+    promptId,
+    question: "Choose an option:",
+    choices: ["A", "B", "C"]
+  });
+
+  // Wait for response
+  const response = await ctx.inbox.pop();
+
+  // Response content will be the user's choice
+  return await handleChoice(response.content);
+}
+```
+
+## Next Steps
+
+- [Execution Model](/concepts/agents/execution-model) - Agent execution basics
+- [Agent Definition](/reference/types/agent-definition) - Type reference
+- [Commands vs Events](/concepts/hub/commands-vs-events) - Hub messaging

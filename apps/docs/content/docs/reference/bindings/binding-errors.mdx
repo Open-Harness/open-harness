@@ -1,0 +1,271 @@
+---
+title: Binding Errors
+description: Error codes and troubleshooting for binding resolution
+---
+
+# Binding Errors
+
+Common errors encountered during binding resolution and how to fix them.
+
+## Missing Binding Path
+
+```
+Error: Missing binding path: flow.input.missing
+```
+
+### Cause
+
+The referenced path does not exist in the binding context.
+
+### Example
+
+```yaml
+# flow.input.name doesn't exist
+input:
+  message: "Hello, {{flow.input.name}}"
+```
+
+### Fixes
+
+1. **Check the path exists**:
+   ```yaml
+   flow:
+     input:
+       name: "Default Name"  # Add the input
+   ```
+
+2. **Use optional binding**:
+   ```yaml
+   input:
+     message: "Hello, {{?flow.input.name}}"  # Returns ""
+   ```
+
+3. **Use default value**:
+   ```yaml
+   input:
+     message: "Hello, {{flow.input.name | default:\"Guest\"}}"
+   ```
+
+## Invalid Default JSON
+
+```
+Error: Invalid default JSON literal: {invalid}
+```
+
+### Cause
+
+The default value is not valid JSON.
+
+### Examples
+
+```yaml
+# Invalid - unquoted string
+input:
+  name: "{{flow.input.name | default:Guest}}"
+
+# Invalid - single quotes
+input:
+  name: "{{flow.input.name | default:'Guest'}}"
+```
+
+### Fixes
+
+Use valid JSON syntax:
+
+```yaml
+# String - double quotes
+name: "{{flow.input.name | default:\"Guest\"}}"
+
+# Number - no quotes
+count: "{{flow.input.count | default:42}}"
+
+# Boolean - no quotes
+enabled: "{{flow.input.enabled | default:true}}"
+
+# Object
+config: "{{flow.input.config | default:{\"key\":\"value\"}}}"
+
+# Array
+items: "{{flow.input.items | default:[1,2,3]}}"
+
+# null
+value: "{{flow.input.value | default:null}}"
+```
+
+## Node Not Found
+
+```
+Error: Missing binding path: unknown_node.output
+```
+
+### Cause
+
+Referencing a node that:
+- Doesn't exist
+- Hasn't executed yet (ordering issue)
+- Was skipped due to `when` condition
+
+### Example
+
+```yaml
+nodes:
+  - id: step1
+    type: echo
+    input:
+      # step2 doesn't exist!
+      data: "{{step2.output}}"
+```
+
+### Fixes
+
+1. **Check node ID spelling**:
+   ```yaml
+   nodes:
+     - id: stepTwo  # Note: stepTwo not step2
+       type: echo
+       input: {}
+     - id: step1
+       input:
+         data: "{{stepTwo.output}}"  # Correct reference
+   ```
+
+2. **Add edge dependency**:
+   ```yaml
+   edges:
+     - from: step2
+       to: step1  # Ensures step2 runs first
+   ```
+
+3. **Handle skipped nodes**:
+   ```yaml
+   input:
+     data: "{{?step2.output | default:{}}}"
+   ```
+
+## Execution Order Issues
+
+### Cause
+
+Referencing a node that runs after the current node.
+
+### Example
+
+```yaml
+nodes:
+  - id: step1
+    type: echo
+    input:
+      # step2 hasn't run yet!
+      data: "{{step2.output}}"
+
+  - id: step2
+    type: fetch
+    input: {}
+
+edges: []  # No edges - order is undefined!
+```
+
+### Fix
+
+Add proper edges:
+
+```yaml
+edges:
+  - from: step2
+    to: step1  # step2 runs before step1
+```
+
+## Null or Undefined Values
+
+### Cause
+
+Path exists but value is null or undefined.
+
+### Example
+
+```yaml
+# API returns { user: null }
+input:
+  name: "{{fetch.output.user.name}}"  # Error: can't read .name of null
+```
+
+### Fixes
+
+1. **Use optional**:
+   ```yaml
+   input:
+     name: "{{?fetch.output.user.name}}"
+   ```
+
+2. **Use default**:
+   ```yaml
+   input:
+     name: "{{fetch.output.user.name | default:\"Unknown\"}}"
+   ```
+
+3. **Validate in previous node**:
+   ```yaml
+   nodes:
+     - id: fetch
+       type: http
+       input: {}
+
+     - id: validate
+       type: assert
+       input:
+         value: "{{fetch.output.user}}"
+         notNull: true
+   ```
+
+## Type Coercion
+
+### Issue
+
+Bindings are converted to strings in interpolation.
+
+### Example
+
+```yaml
+# flow.input.count = 42 (number)
+input:
+  message: "Count: {{flow.input.count}}"  # "Count: 42" (string)
+  doubled: "{{flow.input.count}}{{flow.input.count}}"  # "4242" not 84
+```
+
+### Fix
+
+For numeric operations, use the value directly (not interpolated):
+
+```yaml
+# Pass the number directly
+input:
+  count: "{{flow.input.count}}"  # Preserves type if only binding
+```
+
+## Debugging Tips
+
+1. **Check context at runtime**:
+   ```typescript
+   hub.subscribe("task:start", (event) => {
+     console.log("Context:", JSON.stringify(bindingContext, null, 2));
+   });
+   ```
+
+2. **Log node outputs**:
+   ```typescript
+   hub.subscribe("task:complete", (event) => {
+     console.log(`${event.event.taskId} output:`, event.event.result);
+   });
+   ```
+
+3. **Validate flow before execution**:
+   ```typescript
+   const flow = parseFlowYaml(yaml);
+   const compiled = compileFlow(flow);  // Catches structural issues
+   ```
+
+## See Also
+
+- [A3 Syntax](/reference/bindings/a3-syntax) - Binding syntax reference
+- [resolveBindings](/reference/api/resolve-bindings) - Resolution API
+- [Bindings Spec](/reference/kernel-spec/flow/bindings) - Specification

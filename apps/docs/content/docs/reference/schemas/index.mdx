@@ -1,0 +1,103 @@
+---
+title: Schemas Reference
+description: Zod validation schemas for Open Harness data structures
+---
+
+# Schemas Reference
+
+Zod schemas used for runtime validation of flow definitions and node specifications.
+
+## Available Schemas
+
+| Schema | Purpose |
+|--------|---------|
+| [FlowYamlSchema](/reference/schemas/flow-yaml-schema) | Validate complete flow definitions |
+| [NodeSpecSchema](/reference/schemas/node-spec-schema) | Validate individual node specifications |
+| [WhenExprSchema](/reference/schemas/when-expr-schema) | Validate conditional expressions |
+
+## Import
+
+```typescript
+import {
+  FlowYamlSchema,
+  FlowSpecSchema,
+  NodeSpecSchema,
+  EdgeSchema,
+  WhenExprSchema,
+  NodePolicySchema,
+  RetryPolicySchema,
+  validateFlowYaml,
+  validateFlowSpec,
+} from "@open-harness/kernel";
+```
+
+## Usage
+
+### Direct Validation
+
+```typescript
+import { FlowYamlSchema } from "@open-harness/kernel";
+
+const input = {
+  flow: { name: "test" },
+  nodes: [{ id: "step1", type: "echo", input: {} }],
+  edges: [],
+};
+
+// Parse and validate
+const validated = FlowYamlSchema.parse(input);
+
+// Safe parse (no throw)
+const result = FlowYamlSchema.safeParse(input);
+if (result.success) {
+  console.log(result.data);
+} else {
+  console.error(result.error.issues);
+}
+```
+
+### Validation Functions
+
+Convenience functions wrapping schemas:
+
+```typescript
+import { validateFlowYaml } from "@open-harness/kernel";
+
+try {
+  const flow = validateFlowYaml(parsed);
+} catch (error) {
+  if (error.name === "ZodError") {
+    for (const issue of error.issues) {
+      console.error(`${issue.path.join(".")}: ${issue.message}`);
+    }
+  }
+}
+```
+
+## Schema Hierarchy
+
+```
+FlowYamlSchema
+├── FlowSpecSchema (flow)
+│   ├── name: string
+│   ├── version?: number
+│   ├── description?: string
+│   ├── input?: Record<string, unknown>
+│   └── FlowPolicySchema (policy)
+├── NodeSpecSchema[] (nodes)
+│   ├── NodeIdSchema (id)
+│   ├── NodeTypeIdSchema (type)
+│   ├── input: Record<string, unknown>
+│   ├── config?: Record<string, unknown>
+│   ├── WhenExprSchema (when)
+│   └── NodePolicySchema (policy)
+└── EdgeSchema[] (edges)
+    ├── from: NodeId
+    └── to: NodeId
+```
+
+## Related
+
+- [FlowYaml](/reference/types/flow-yaml) - Type definition
+- [NodeSpec](/reference/types/node-spec) - Node specification type
+- [parseFlowYaml](/reference/api/parse-flow) - YAML parsing with validation

@@ -1,0 +1,91 @@
+---
+title: Types Reference
+description: TypeScript interface definitions for Open Harness
+---
+
+# Types Reference
+
+Complete TypeScript type definitions for the Open Harness kernel.
+
+## Core Types
+
+| Type | Purpose |
+|------|---------|
+| [HarnessFactory](/reference/types/harness-factory) | Factory for creating harness instances |
+| [ExecuteContext](/reference/types/execute-context) | Context provided to harness run function |
+| [HarnessResult](/reference/types/harness-result) | Result from harness execution |
+
+## Flow Types
+
+| Type | Purpose |
+|------|---------|
+| [FlowYaml](/reference/types/flow-yaml) | Complete flow specification structure |
+| [NodeSpec](/reference/types/node-spec) | Individual node specification |
+| [NodeTypeDefinition](/reference/types/node-type-definition) | Custom node type contract |
+
+## Agent Types
+
+| Type | Purpose |
+|------|---------|
+| [AgentDefinition](/reference/types/agent-definition) | Agent implementation contract |
+| [ExecutableAgent](/reference/types/executable-agent) | Simplified execution interface |
+
+## Channel Types
+
+| Type | Purpose |
+|------|---------|
+| [ChannelDefinition](/reference/types/channel-definition) | Channel adapter contract |
+
+## Event Types
+
+| Type | Purpose |
+|------|---------|
+| [EventContext](/reference/types/event-context) | Hierarchical event context |
+| [BaseEvent](/reference/types/base-event) | Union of all event types |
+| [EnrichedEvent](/reference/types/enriched-event) | Event envelope with metadata |
+
+## Import
+
+```typescript
+import type {
+  // Core
+  HarnessFactory,
+  HarnessInstance,
+  HarnessResult,
+  ExecuteContext,
+  SessionContext,
+
+  // Flow
+  FlowYaml,
+  NodeSpec,
+  NodeTypeDefinition,
+  NodeCapabilities,
+  WhenExpr,
+
+  // Agent
+  AgentDefinition,
+  ExecutableAgent,
+  AgentExecuteContext,
+
+  // Channel
+  ChannelDefinition,
+  ChannelContext,
+
+  // Events
+  EventContext,
+  BaseEvent,
+  EnrichedEvent,
+  EventFilter,
+  EventListener,
+
+  // Hub
+  Hub,
+  HubStatus,
+} from "@open-harness/kernel";
+```
+
+## Related
+
+- [API Reference](/reference/api) - Function documentation
+- [Schemas Reference](/reference/schemas) - Zod validation schemas
+- [Events Reference](/reference/events) - Event type documentation

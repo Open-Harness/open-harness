@@ -1,0 +1,137 @@
+---
+title: compileFlow
+description: Validate DAG structure and compute topological execution order
+---
+
+# compileFlow
+
+Validates a FlowYaml DAG structure and computes the topological execution order. Detects cycles and ensures valid graph structure.
+
+## Signature
+
+```typescript
+function compileFlow(flow: FlowYaml): CompiledFlow
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `flow` | `FlowYaml` | Yes | Parsed flow definition |
+
+## Returns
+
+```typescript
+interface CompiledFlow {
+  nodes: NodeSpec[];              // Original node specifications
+  order: NodeSpec[];              // Topologically sorted execution order
+  adjacency: Map<string, string[]>; // Adjacency list representation
+}
+```
+
+## Throws
+
+- `Error("Flow contains a cycle")` if the graph has circular dependencies
+- `ZodError` if flow validation fails
+
+## Example
+
+```typescript
+import { parseFlowYaml, compileFlow } from "@open-harness/kernel";
+
+const yaml = `
+flow:
+  name: pipeline
+nodes:
+  - id: fetch
+    type: http
+    input:
+      url: "https://api.example.com/data"
+  - id: parse
+    type: json
+    input:
+      data: "{{fetch.output}}"
+  - id: transform
+    type: map
+    input:
+      items: "{{parse.output}}"
+edges:
+  - from: fetch
+    to: parse
+  - from: parse
+    to: transform
+`;
+
+const flow = parseFlowYaml(yaml);
+const compiled = compileFlow(flow);
+
+// Execution order is topologically sorted
+console.log(compiled.order.map(n => n.id));
+// ["fetch", "parse", "transform"]
+
+// Adjacency map for graph traversal
+console.log(compiled.adjacency.get("fetch")); // ["parse"]
+console.log(compiled.adjacency.get("parse")); // ["transform"]
+```
+
+## Cycle Detection
+
+```typescript
+const cyclicYaml = `
+flow:
+  name: cyclic
+nodes:
+  - id: a
+    type: echo
+    input: {}
+  - id: b
+    type: echo
+    input: {}
+edges:
+  - from: a
+    to: b
+  - from: b
+    to: a
+`;
+
+const flow = parseFlowYaml(cyclicYaml);
+
+try {
+  compileFlow(flow);
+} catch (error) {
+  console.error(error.message); // "Flow contains a cycle"
+}
+```
+
+## Parallel Execution
+
+Nodes without dependencies can be identified for parallel execution:
+
+```typescript
+const compiled = compileFlow(flow);
+
+// Find nodes with no incoming edges (entry points)
+const entryNodes = compiled.nodes.filter(node => {
+  const hasIncoming = compiled.adjacency.values()
+    .flat()
+    .includes(node.id);
+  return !hasIncoming;
+});
+
+console.log("Can start in parallel:", entryNodes.map(n => n.id));
+```
+
+## Algorithm
+
+The compiler uses Kahn's algorithm for topological sorting:
+
+1. Build adjacency list and in-degree map from edges
+2. Initialize queue with nodes having zero in-degree
+3. Process queue, decrementing in-degrees of successors
+4. If processed count !== node count, cycle exists
+
+## See Also
+
+- [parseFlowYaml](/reference/api/parse-flow) - Parse YAML to FlowYaml
+- [executeFlow](/reference/api/execute-flow) - Execute compiled flow
+- [FlowYaml](/reference/types/flow-yaml) - Flow type definition

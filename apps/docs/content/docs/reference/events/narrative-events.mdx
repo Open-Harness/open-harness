@@ -1,0 +1,201 @@
+---
+title: Narrative Events
+description: Events for logging and progress updates
+---
+
+# Narrative Events
+
+General-purpose events for logging, progress reporting, and narrative output.
+
+## narrative
+
+Log or progress message with importance level.
+
+```typescript
+type NarrativeEvent = {
+  type: "narrative";
+  text: string;
+  importance?: "low" | "normal" | "high";
+};
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `text` | `string` | - | Message content |
+| `importance` | `string` | `"normal"` | Display priority |
+
+## Importance Levels
+
+| Level | Use Case |
+|-------|----------|
+| `"low"` | Debug info, verbose progress |
+| `"normal"` | Standard log messages |
+| `"high"` | Important updates, warnings |
+
+## Emitting Narrative Events
+
+### From Run Function
+
+```typescript
+run: async (ctx) => {
+  ctx.emit({
+    type: "narrative",
+    text: "Starting data processing...",
+    importance: "normal",
+  });
+
+  // Do work...
+
+  ctx.emit({
+    type: "narrative",
+    text: "Processed 1000 records",
+    importance: "low",
+  });
+
+  ctx.emit({
+    type: "narrative",
+    text: "Processing complete!",
+    importance: "high",
+  });
+}
+```
+
+### From Node Execution
+
+```typescript
+const processingNode: NodeTypeDefinition<Input, Output> = {
+  type: "processor",
+  // ...
+  run: async (ctx, input) => {
+    ctx.hub.emit({
+      type: "narrative",
+      text: `Processing ${input.items.length} items`,
+    });
+
+    for (let i = 0; i < input.items.length; i++) {
+      if (i % 100 === 0) {
+        ctx.hub.emit({
+          type: "narrative",
+          text: `Progress: ${i}/${input.items.length}`,
+          importance: "low",
+        });
+      }
+      await processItem(input.items[i]);
+    }
+
+    return { processed: input.items.length };
+  },
+};
+```
+
+## Subscribing to Narrative Events
+
+### Basic Logging
+
+```typescript
+hub.subscribe("narrative", (event) => {
+  console.log(event.event.text);
+});
+```
+
+### Filtered by Importance
+
+```typescript
+hub.subscribe("narrative", (event) => {
+  const { text, importance } = event.event;
+
+  if (importance === "high") {
+    console.log(`⚠️  ${text}`);
+  } else if (importance === "normal") {
+    console.log(`   ${text}`);
+  }
+  // Skip "low" importance in production
+});
+```
+
+### With Context
+
+```typescript
+hub.subscribe("narrative", (event) => {
+  const { phase, task } = event.context;
+  const prefix = [phase?.name, task?.id].filter(Boolean).join("/");
+  console.log(`[${prefix}] ${event.event.text}`);
+});
+```
+
+## Console Channel Example
+
+```typescript
+const consoleChannel: ChannelDefinition<{}> = {
+  name: "console",
+  on: {
+    "narrative": (ctx) => {
+      const { text, importance } = ctx.event.event as NarrativeEvent;
+
+      const prefix = {
+        low: "  ",
+        normal: "• ",
+        high: "★ ",
+      }[importance || "normal"];
+
+      console.log(`${prefix}${text}`);
+    },
+  },
+};
+```
+
+## Progress Tracking
+
+Build a progress display:
+
+```typescript
+interface ProgressState {
+  total: number;
+  current: number;
+}
+
+const progressChannel: ChannelDefinition<ProgressState> = {
+  name: "progress",
+  state: () => ({ total: 0, current: 0 }),
+
+  on: {
+    "narrative": (ctx) => {
+      const text = (ctx.event.event as NarrativeEvent).text;
+
+      // Parse progress messages
+      const match = text.match(/Progress: (\d+)\/(\d+)/);
+      if (match) {
+        ctx.state.current = parseInt(match[1]);
+        ctx.state.total = parseInt(match[2]);
+        updateProgressBar(ctx.state.current / ctx.state.total);
+      }
+    },
+  },
+};
+```
+
+## Extension Events
+
+For custom structured logging, use extension events:
+
+```typescript
+// Emit structured metric
+hub.emit({
+  type: "metric:timing",
+  operation: "database_query",
+  durationMs: 145,
+  success: true,
+});
+
+// Subscribe
+hub.subscribe("metric:timing", (event) => {
+  const { operation, durationMs, success } = event.event;
+  metrics.record(operation, durationMs, success);
+});
+```
+
+## See Also
+
+- [Hub](/reference/api/hub) - Event emission
+- [BaseEvent](/reference/types/base-event) - Event union type
+- [Workflow Events](/reference/events/workflow-events) - Lifecycle events

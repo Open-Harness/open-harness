@@ -1,0 +1,223 @@
+---
+title: Event-Driven Design
+description: Why Open Harness uses an event-driven architecture
+---
+
+# Event-Driven Design
+
+Open Harness is built around events. Every action, every piece of output, every interaction flows through the event bus. This page explains why.
+
+## Why Event-Driven?
+
+### Decoupling
+
+With direct function calls, components know about each other:
+
+```typescript
+// Tight coupling (bad)
+const result = await agent.execute(input);
+console.log(result);  // Logger knows about agent
+metrics.record(result);  // Metrics knows about agent
+socket.send(result);  // Socket knows about agent
+```
+
+With events, components are independent:
+
+```typescript
+// Loose coupling (good)
+hub.emit({ type: "agent:text", content: result });
+
+// Elsewhere - logger doesn't know about agent
+hub.subscribe("agent:text", (e) => console.log(e.event.content));
+
+// Elsewhere - metrics doesn't know about agent
+hub.subscribe("agent:text", (e) => metrics.record(e));
+```
+
+### Observability
+
+When everything is an event, you can observe everything:
+
+```typescript
+// See all events
+hub.subscribe("*", (event) => {
+  console.log(`[${event.timestamp}] ${event.event.type}`, event.context);
+});
+```
+
+This gives you:
+- Complete execution history
+- Debugging with full context
+- Performance metrics automatically
+- Audit logs for free
+
+### Testability
+
+Events enable fixture-based testing:
+
+```typescript
+// Record events during real execution
+const events = [];
+hub.subscribe("*", (e) => events.push(e));
+await instance.run();
+saveFixture(events);
+
+// Replay in tests
+const fixture = loadFixture();
+for (const event of fixture) {
+  // Verify behavior
+}
+```
+
+This solves the AI testing problem:
+- LLM responses are non-deterministic
+- API calls are slow and expensive
+- Events provide reproducible testing
+
+## Events vs Commands
+
+Open Harness distinguishes between events and commands:
+
+### Events: Facts About What Happened
+
+Events are notifications that something occurred:
+- `agent:text` - Agent produced text
+- `task:complete` - Task finished
+- `phase:start` - Phase began
+
+Events flow **outward** from the workflow to observers.
+
+### Commands: Requests for Action
+
+Commands are requests to do something:
+- `send` - Send a message
+- `reply` - Reply to a prompt
+- `abort` - Cancel execution
+
+Commands flow **inward** from channels to the workflow.
+
+### The Hub Handles Both
+
+```typescript
+// Events out
+hub.emit({ type: "narrative", text: "Processing..." });
+
+// Commands in
+hub.send("User feedback here");
+hub.reply(promptId, { content: "Yes, continue" });
+hub.abort("User cancelled");
+```
+
+This bidirectional design enables interactive workflows.
+
+## Event Sourcing Lite
+
+Open Harness uses event-sourcing principles without full event sourcing:
+
+### What We Take
+
+- **Event log**: Complete history of what happened
+- **Replay**: Reconstruct state from events
+- **Audit trail**: Full record for debugging
+
+### What We Skip
+
+- **Event store**: Events aren't persisted by default
+- **Projections**: No derived read models
+- **CQRS**: No command/query separation
+
+This is enough for AI workflow testing without the complexity of full event sourcing.
+
+## Trade-offs
+
+### Indirection Complexity
+
+Events add a layer of indirection:
+
+```typescript
+// Direct call: obvious what happens
+const result = await process(input);
+
+// Event-based: must trace the flow
+hub.emit({ type: "process:start", input });
+// ... somewhere else, subscriber handles it
+```
+
+This indirection is worth it for decoupling and testability, but can make debugging harder initially.
+
+### Debugging Challenges
+
+When things go wrong, you must trace event flows:
+
+```typescript
+// Helpful: subscribe to see what's happening
+hub.subscribe("*", (e) => console.log(e.event.type, e.context));
+```
+
+Good tooling (event viewers, trace logs) mitigates this.
+
+### Benefits Outweigh Costs
+
+For AI workflows specifically:
+- Non-determinism requires fixture testing (events enable this)
+- Multi-channel I/O requires decoupling (events provide this)
+- Observability is critical (events give this for free)
+
+The event-driven overhead pays for itself.
+
+## Comparison to Alternatives
+
+### Direct Function Calls
+
+```typescript
+const result = await agent.call(input);
+console.log(result);
+```
+
+- Simpler to understand
+- Tight coupling
+- Hard to test with mocks
+- No observability
+
+### Message Queues (RabbitMQ, Kafka)
+
+- Overkill for in-process communication
+- Adds operational complexity
+- Designed for distributed systems
+
+### Actor Model (Akka, Orleans)
+
+- More structure than needed
+- Complex concurrency model
+- Good for different use cases
+
+### EventEmitter (Node.js)
+
+```typescript
+emitter.on("event", handler);
+emitter.emit("event", data);
+```
+
+- Simpler, but no context propagation
+- No structured event types
+- Hub adds what's missing
+
+## The Hub Design
+
+The Hub is a purpose-built event bus for AI workflows:
+
+| Feature | Purpose |
+|---------|---------|
+| Typed events | Structured data, not strings |
+| Context propagation | Automatic correlation |
+| Filtering | Subscribe to specific types |
+| Async iteration | Stream events |
+| Bidirectional | Events out, commands in |
+
+It's not a general-purpose message broker. It's optimized for AI workflow patterns.
+
+## Next Steps
+
+- [Hub Concept](/concepts/hub/event-bus) - The Hub in depth
+- [Context Propagation](/concepts/hub/context-propagation) - How context flows
+- [Hub API](/reference/api/hub) - Complete reference

@@ -1,0 +1,279 @@
+---
+title: Why Edges Are Required
+description: The decision to require explicit edges in flows
+---
+
+# Why Edges Are Required
+
+Open Harness flows require explicit edges between nodes. This page explains why, and the alternatives we considered.
+
+## The Design
+
+Edges are explicitly declared:
+
+```yaml
+nodes:
+  - id: research
+    type: search
+    input: { query: "{{flow.input.topic}}" }
+
+  - id: analyze
+    type: llm
+    input: { data: "{{research.output}}" }
+
+edges:
+  - from: research
+    to: analyze
+```
+
+Both the data dependency (`{{research.output}}`) AND the edge are required.
+
+## Why Not Infer Edges?
+
+### The Temptation
+
+It seems redundant. The binding already shows the dependency:
+
+```yaml
+input: { data: "{{research.output}}" }
+#               ^ clearly depends on research
+```
+
+Why not infer the edge from this?
+
+### The Problems
+
+#### Ambiguous Intent
+
+Consider:
+
+```yaml
+input:
+  primary: "{{step1.output}}"
+  fallback: "{{step2.output}}"
+```
+
+Should this node wait for both? Run in parallel? The binding doesn't tell us.
+
+#### Hidden Dependencies
+
+Dynamic bindings obscure dependencies:
+
+```yaml
+input:
+  source: "{{flow.input.sourceNode}}.output"
+```
+
+What does this depend on? Impossible to know statically.
+
+#### Execution Order
+
+Without edges, order depends entirely on parsing:
+
+```yaml
+# Does step2 run before or after step1?
+nodes:
+  - id: step2
+    input: {}
+  - id: step1
+    input: {}
+```
+
+With edges, order is explicit:
+
+```yaml
+edges:
+  - from: step1
+    to: step2
+```
+
+#### Parallel vs Sequential
+
+Edges make parallelization clear:
+
+```yaml
+# Parallel: no edge between a and b
+edges:
+  - from: a
+    to: c
+  - from: b
+    to: c
+
+# Sequential: edge from a to b
+edges:
+  - from: a
+    to: b
+  - from: b
+    to: c
+```
+
+### Alternative: Inferred with Overrides
+
+We considered inferring edges by default with explicit overrides:
+
+```yaml
+nodes:
+  - id: step2
+    dependsOn: [step1]  # Override inference
+```
+
+Problems:
+- Two ways to express the same thing
+- Confusion about which takes precedence
+- Harder to understand the full graph
+
+## Benefits of Explicit Edges
+
+### Visual Graph
+
+Edges define the visual structure:
+
+```
+research → analyze → format
+              ↓
+          summarize
+```
+
+Reading the edges section gives you the graph immediately.
+
+### Tooling
+
+Tools can analyze the graph without parsing bindings:
+
+```typescript
+// Simple graph analysis
+const edges = flow.edges;
+const roots = findRoots(edges);
+const leaves = findLeaves(edges);
+const hasCycle = detectCycle(edges);
+```
+
+### Conditional Edges
+
+Edges can have conditions:
+
+```yaml
+edges:
+  - from: router
+    to: path_a
+    when:
+      equals:
+        var: router.output.route
+        value: "A"
+  - from: router
+    to: path_b
+    when:
+      equals:
+        var: router.output.route
+        value: "B"
+```
+
+This would be impossible with inferred edges.
+
+### Compile-Time Validation
+
+We can validate the graph before execution:
+
+```typescript
+const compiled = compileFlow(yaml);
+// Errors caught now:
+// - "Unknown node in edge: missing"
+// - "Cycle detected: a → b → a"
+// - "No path to node: orphan"
+```
+
+## The Trade-off
+
+### Cost: Verbosity
+
+You write more YAML:
+
+```yaml
+# 3 nodes = 2 edges
+edges:
+  - from: a
+    to: b
+  - from: b
+    to: c
+```
+
+### Benefit: Clarity
+
+The graph structure is always clear:
+
+```yaml
+# At a glance: a → b → c
+edges:
+  - from: a
+    to: b
+  - from: b
+    to: c
+```
+
+For AI workflows with complex branching, clarity wins.
+
+## Comparison
+
+### Airflow (Implicit)
+
+```python
+task1 >> task2 >> task3
+```
+
+Concise, but:
+- Order matters (implicit dependency)
+- Hard to visualize complex graphs
+- Mixing data and control flow
+
+### Prefect (Inferred)
+
+```python
+@flow
+def pipeline():
+    a = task_a()
+    b = task_b(a)  # Inferred dependency
+```
+
+Clean, but:
+- Requires analyzing function calls
+- Dynamic dependencies harder to track
+
+### Open Harness (Explicit)
+
+```yaml
+edges:
+  - from: a
+    to: b
+```
+
+Verbose, but:
+- Graph is immediately visible
+- No inference surprises
+- Tools work reliably
+
+## When Inference Would Help
+
+For simple linear flows, inference would reduce boilerplate:
+
+```yaml
+# Linear: could be inferred
+nodes:
+  - id: step1
+    input: {}
+  - id: step2
+    input: { data: "{{step1.output}}" }
+  - id: step3
+    input: { data: "{{step2.output}}" }
+```
+
+Future versions might add a `linear: true` shorthand. But explicit edges remain the default for clarity.
+
+## Conclusion
+
+Explicit edges trade verbosity for clarity. For AI workflows where understanding the graph matters, this trade-off is worthwhile.
+
+## Next Steps
+
+- [DAG Model](/concepts/flows/dag-model) - DAG execution
+- [Binding System](/concepts/flows/binding-system) - Data flow
+- [Flow YAML Schema](/reference/schemas/flow-yaml-schema) - Full schema

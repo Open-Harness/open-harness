@@ -1,0 +1,268 @@
+---
+title: When Syntax
+description: Complete reference for WhenExpr conditional syntax
+---
+
+# When Syntax
+
+WhenExpr is the conditional expression syntax used to control node execution in flows.
+
+## Structure
+
+```typescript
+interface WhenExpr {
+  equals?: { var: string; value: unknown };
+  not?: WhenExpr;
+  and?: WhenExpr[];
+  or?: WhenExpr[];
+}
+```
+
+Only one operator should be present at the top level.
+
+## Basic Usage
+
+### No Condition (Always Run)
+
+```yaml
+nodes:
+  - id: always_runs
+    type: echo
+    input: {}
+    # No 'when' - always executes
+```
+
+### Simple Condition
+
+```yaml
+nodes:
+  - id: conditional
+    type: echo
+    input: {}
+    when:
+      equals:
+        var: flow.input.enabled
+        value: true
+```
+
+## Variable References
+
+The `var` field uses the same path syntax as bindings:
+
+```yaml
+# Flow input
+var: flow.input.mode
+
+# Node output
+var: step1.output.status
+
+# Nested path
+var: flow.input.config.feature.enabled
+
+# Array index
+var: step1.output.items.0.valid
+```
+
+## Value Types
+
+The `value` field accepts any JSON-serializable value:
+
+```yaml
+# String
+equals:
+  var: flow.input.mode
+  value: "production"
+
+# Number
+equals:
+  var: flow.input.count
+  value: 42
+
+# Boolean
+equals:
+  var: flow.input.enabled
+  value: true
+
+# null
+equals:
+  var: flow.input.optionalField
+  value: null
+
+# Object (deep equality)
+equals:
+  var: flow.input.config
+  value:
+    debug: true
+    level: "verbose"
+
+# Array (deep equality)
+equals:
+  var: flow.input.tags
+  value: ["a", "b", "c"]
+```
+
+## Combining Conditions
+
+### AND - All Must Be True
+
+```yaml
+when:
+  and:
+    - equals:
+        var: flow.input.enabled
+        value: true
+    - equals:
+        var: flow.input.mode
+        value: "production"
+    - equals:
+        var: step1.output.valid
+        value: true
+```
+
+### OR - Any Must Be True
+
+```yaml
+when:
+  or:
+    - equals:
+        var: flow.input.env
+        value: "staging"
+    - equals:
+        var: flow.input.env
+        value: "production"
+```
+
+### NOT - Negate Condition
+
+```yaml
+when:
+  not:
+    equals:
+      var: flow.input.disabled
+      value: true
+```
+
+## Complex Expressions
+
+Operators can be nested arbitrarily:
+
+```yaml
+when:
+  and:
+    - or:
+        - equals:
+            var: flow.input.tier
+            value: "premium"
+        - equals:
+            var: flow.input.tier
+            value: "enterprise"
+    - not:
+        equals:
+          var: flow.input.suspended
+          value: true
+    - equals:
+        var: step1.output.valid
+        value: true
+```
+
+This evaluates as:
+```
+(tier == "premium" OR tier == "enterprise")
+AND NOT(suspended == true)
+AND valid == true
+```
+
+## Evaluation Rules
+
+1. **Missing variable**: Returns `false`
+2. **Empty `and`**: Returns `true` (vacuous truth)
+3. **Empty `or`**: Returns `false`
+4. **Deep equality**: Objects and arrays compared by value
+
+## Skipped Nodes
+
+When a condition evaluates to `false`:
+
+- Node is not executed
+- Output is set to `{ skipped: true }`
+- Downstream nodes can check for this
+
+```yaml
+nodes:
+  - id: expensive
+    type: analyze
+    input: {}
+    when:
+      equals:
+        var: flow.input.thorough
+        value: true
+
+  - id: next
+    type: process
+    input:
+      data: "{{expensive.output | default:{}}}"
+```
+
+## Examples
+
+### Environment-Based Logic
+
+```yaml
+nodes:
+  - id: dev_setup
+    type: mock
+    input: {}
+    when:
+      equals:
+        var: flow.input.env
+        value: "development"
+
+  - id: prod_setup
+    type: real
+    input: {}
+    when:
+      equals:
+        var: flow.input.env
+        value: "production"
+```
+
+### Feature Flags
+
+```yaml
+nodes:
+  - id: new_feature
+    type: beta
+    input: {}
+    when:
+      and:
+        - equals:
+            var: flow.input.features.newFeature
+            value: true
+        - equals:
+            var: flow.input.rolloutPercentage
+            value: 100
+```
+
+### Error Handling
+
+```yaml
+nodes:
+  - id: retry
+    type: fetch
+    input: {}
+    when:
+      and:
+        - equals:
+            var: attempt.output.failed
+            value: true
+        - not:
+            equals:
+              var: flow.input.maxRetries
+              value: 0
+```
+
+## See Also
+
+- [Operators](/reference/when/operators) - Operator details
+- [evaluateWhen](/reference/api/evaluate-when) - Evaluation API
+- [WhenExprSchema](/reference/schemas/when-expr-schema) - Validation

@@ -1,0 +1,275 @@
+---
+title: When Expressions
+description: Understanding conditional node execution
+---
+
+# When Expressions
+
+Not all nodes should always run. `when` expressions provide conditional execution - the ability to skip nodes based on runtime conditions.
+
+## Why Conditions?
+
+### Dynamic Workflows
+
+Different inputs require different processing:
+
+```yaml
+nodes:
+  - id: premium_analysis
+    type: deep-analysis
+    input: {}
+    when:
+      equals:
+        var: flow.input.tier
+        value: "premium"
+```
+
+Premium users get deep analysis; others skip it.
+
+### Error Handling
+
+Skip downstream nodes when upstream fails:
+
+```yaml
+nodes:
+  - id: validate
+    type: validator
+    input: {}
+
+  - id: process
+    type: processor
+    input:
+      data: "{{validate.output}}"
+    when:
+      equals:
+        var: validate.output.valid
+        value: true
+```
+
+If validation fails, processing is skipped.
+
+### Feature Flags
+
+Enable/disable nodes without removing them:
+
+```yaml
+nodes:
+  - id: beta_feature
+    type: new-algorithm
+    input: {}
+    when:
+      equals:
+        var: flow.input.features.betaEnabled
+        value: true
+```
+
+## When Expressions
+
+### Operators
+
+Four operators are available:
+
+| Operator | Purpose |
+|----------|---------|
+| `equals` | Check equality |
+| `not` | Negate condition |
+| `and` | All must be true |
+| `or` | Any must be true |
+
+### equals
+
+Compare a value to a literal:
+
+```yaml
+when:
+  equals:
+    var: flow.input.mode
+    value: "production"
+```
+
+The `var` uses binding path syntax. The `value` can be any JSON type.
+
+### not
+
+Negate another expression:
+
+```yaml
+when:
+  not:
+    equals:
+      var: flow.input.disabled
+      value: true
+```
+
+### and
+
+All conditions must be true:
+
+```yaml
+when:
+  and:
+    - equals:
+        var: flow.input.enabled
+        value: true
+    - equals:
+        var: step1.output.ready
+        value: true
+```
+
+### or
+
+Any condition must be true:
+
+```yaml
+when:
+  or:
+    - equals:
+        var: flow.input.env
+        value: "staging"
+    - equals:
+        var: flow.input.env
+        value: "production"
+```
+
+## Node-level vs Edge-level
+
+### Node-level When
+
+Applied to the node itself - skip the entire node:
+
+```yaml
+nodes:
+  - id: expensive
+    type: analysis
+    input: {}
+    when:
+      equals:
+        var: flow.input.thorough
+        value: true
+```
+
+### Edge-level When
+
+Applied to edges - skip just that connection (for multi-output nodes):
+
+```yaml
+edges:
+  - from: router
+    to: path_a
+    when:
+      equals:
+        var: router.output.route
+        value: "A"
+  - from: router
+    to: path_b
+    when:
+      equals:
+        var: router.output.route
+        value: "B"
+```
+
+### When to Use Each
+
+| Scenario | Use |
+|----------|-----|
+| Skip node entirely | Node-level |
+| Route to different paths | Edge-level |
+| Simple feature flag | Node-level |
+| Complex branching | Edge-level |
+
+## Design Rationale
+
+### Simple Expression Language
+
+When expressions are intentionally limited:
+- No arithmetic
+- No string operations
+- No function calls
+
+This keeps them predictable and easy to reason about.
+
+### Not Turing-Complete
+
+By design, when expressions cannot:
+- Loop infinitely
+- Perform complex computation
+- Have side effects
+
+If you need complex logic, use a node. When expressions are for simple routing decisions.
+
+### Predictable Evaluation
+
+Evaluation rules are simple:
+- Missing variable → `false`
+- Deep equality for objects
+- Short-circuit for `and`/`or`
+
+No surprises.
+
+## Skipped Nodes
+
+When a condition evaluates to `false`:
+
+1. Node is not executed
+2. Output is set to `{ skipped: true }`
+3. Downstream nodes can check for this
+
+Handle skipped nodes in bindings:
+
+```yaml
+input:
+  # Use default if skipped
+  data: "{{optional_step.output | default:{}}}"
+```
+
+Or in downstream conditions:
+
+```yaml
+when:
+  not:
+    equals:
+      var: optional_step.output.skipped
+      value: true
+```
+
+## Complex Examples
+
+### Premium Feature Gate
+
+```yaml
+when:
+  and:
+    - equals:
+        var: flow.input.tier
+        value: "premium"
+    - equals:
+        var: flow.input.features.advancedAnalysis
+        value: true
+    - not:
+        equals:
+          var: flow.input.suspended
+          value: true
+```
+
+### Multi-Environment Routing
+
+```yaml
+when:
+  or:
+    - equals:
+        var: flow.input.env
+        value: "staging"
+    - and:
+        - equals:
+            var: flow.input.env
+            value: "production"
+        - equals:
+            var: flow.input.region
+            value: "us-west"
+```
+
+## Next Steps
+
+- [When Syntax Reference](/reference/when/when-syntax) - Complete syntax
+- [Operators Reference](/reference/when/operators) - Operator details
+- [evaluateWhen](/reference/api/evaluate-when) - API reference

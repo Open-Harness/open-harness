@@ -1,0 +1,196 @@
+---
+title: resolveBindings
+description: Resolve A3 binding expressions in templates against a context
+---
+
+# resolveBindings
+
+Resolves A3 binding expressions in input objects. Replaces `{{path.to.value}}` expressions with values from the binding context.
+
+## Signature
+
+```typescript
+function resolveBindings<T extends Record<string, unknown>>(
+  input: T,
+  context: BindingContext
+): T
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `input` | `Record<string, unknown>` | Yes | Object containing binding expressions |
+| `context` | `BindingContext` | Yes | Context with values to resolve against |
+
+## Returns
+
+`T` - Input object with all bindings resolved.
+
+## Throws
+
+`Error("Missing binding path: {path}")` if a required binding path is not found.
+
+## BindingContext
+
+```typescript
+type BindingContext = {
+  flow: { input?: Record<string, unknown> };
+  [nodeId: string]: unknown; // Node outputs keyed by node ID
+};
+```
+
+## Example
+
+```typescript
+import { resolveBindings } from "@open-harness/kernel";
+
+const input = {
+  message: "Hello, {{flow.input.name}}!",
+  data: {
+    source: "{{step1.output}}",
+    count: "{{step1.count}}",
+  },
+};
+
+const context = {
+  flow: { input: { name: "Alice" } },
+  step1: { output: "processed data", count: 42 },
+};
+
+const resolved = resolveBindings(input, context);
+console.log(resolved);
+// {
+//   message: "Hello, Alice!",
+//   data: {
+//     source: "processed data",
+//     count: "42",
+//   },
+// }
+```
+
+## Binding Syntax
+
+### Basic Path
+
+```
+{{flow.input.propertyName}}
+{{nodeId.output.propertyName}}
+```
+
+### Nested Paths
+
+```
+{{flow.input.user.profile.name}}
+{{step1.output.items.0.id}}
+```
+
+### Optional Bindings
+
+Prefix with `?` to return empty string if path not found:
+
+```
+{{?flow.input.optionalField}}
+```
+
+### Default Values
+
+Use `| default:` to specify fallback:
+
+```
+{{flow.input.name | default:"Anonymous"}}
+{{flow.input.count | default:0}}
+```
+
+Default values must be valid JSON literals.
+
+## String Interpolation
+
+Multiple bindings in a single string:
+
+```typescript
+const input = {
+  fullName: "{{flow.input.firstName}} {{flow.input.lastName}}",
+  url: "https://api.example.com/{{flow.input.version}}/users/{{step1.userId}}",
+};
+```
+
+## Nested Objects
+
+Bindings are resolved recursively in nested structures:
+
+```typescript
+const input = {
+  config: {
+    nested: {
+      deeply: {
+        value: "{{flow.input.setting}}",
+      },
+    },
+  },
+  items: [
+    "{{step1.item1}}",
+    "{{step1.item2}}",
+  ],
+};
+```
+
+## Error Handling
+
+```typescript
+import { resolveBindings } from "@open-harness/kernel";
+
+const input = { value: "{{missing.path}}" };
+const context = { flow: { input: {} } };
+
+try {
+  resolveBindings(input, context);
+} catch (error) {
+  console.error(error.message); // "Missing binding path: missing.path"
+}
+
+// Use optional binding to avoid error
+const safeInput = { value: "{{?missing.path}}" };
+const result = resolveBindings(safeInput, context);
+console.log(result); // { value: "" }
+```
+
+## Related Functions
+
+### resolveBindingPath
+
+Resolve a single path against context:
+
+```typescript
+import { resolveBindingPath } from "@open-harness/kernel";
+
+const context = {
+  flow: { input: { name: "test" } },
+};
+
+const result = resolveBindingPath(context, "flow.input.name");
+console.log(result); // { found: true, value: "test" }
+
+const missing = resolveBindingPath(context, "flow.input.missing");
+console.log(missing); // { found: false }
+```
+
+### resolveBindingString
+
+Resolve bindings in a single string:
+
+```typescript
+import { resolveBindingString } from "@open-harness/kernel";
+
+const template = "Hello, {{flow.input.name}}!";
+const context = { flow: { input: { name: "World" } } };
+
+const result = resolveBindingString(template, context);
+console.log(result); // "Hello, World!"
+```
+
+## See Also
+
+- [A3 Syntax](/reference/bindings/a3-syntax) - Complete binding syntax reference
+- [Binding Errors](/reference/bindings/binding-errors) - Error codes and fixes
+- [Bindings Spec](/reference/kernel-spec/flow/bindings) - Specification

@@ -1,0 +1,379 @@
+---
+title: Building a New Channel
+description: Creating a new channel package for Open Harness
+---
+
+# Building a New Channel
+
+Channels bridge Open Harness with external I/O systems. This guide covers creating a new channel package from scratch.
+
+## When to Create a Channel Package
+
+Create a channel package when:
+- Adding a new I/O boundary (WebSocket, SMS, Slack, etc.)
+- The channel is reusable across projects
+- It requires significant code
+
+Don't create a package for:
+- Simple, one-off adapters
+- Application-specific channels
+
+## Package Setup
+
+### 1. Create Directory Structure
+
+```bash
+mkdir -p packages/websocket-channel/src
+cd packages/websocket-channel
+```
+
+### 2. Initialize package.json
+
+```json
+{
+  "name": "@open-harness/websocket-channel",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@open-harness/kernel": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/ws": "^8.0.0"
+  },
+  "peerDependencies": {
+    "ws": "^8.0.0"
+  }
+}
+```
+
+### 3. Create tsconfig.json
+
+```json
+{
+  "extends": "../config/tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"]
+}
+```
+
+### 4. Install Dependencies
+
+```bash
+cd ../..
+bun install
+```
+
+## Implement ChannelDefinition
+
+### Basic Structure
+
+```typescript
+// src/index.ts
+import type {
+  ChannelDefinition,
+  ChannelContext,
+  BaseEvent
+} from "@open-harness/kernel";
+import WebSocket, { WebSocketServer } from "ws";
+
+interface WebSocketState {
+  server: WebSocketServer;
+  clients: Set<WebSocket>;
+}
+
+export const websocketChannel: ChannelDefinition<WebSocketState> = {
+  name: "websocket",
+
+  state: () => ({
+    server: null!,
+    clients: new Set()
+  }),
+
+  onStart: (ctx) => {
+    // Initialize server
+    ctx.state.server = new WebSocketServer({ port: 8080 });
+
+    ctx.state.server.on("connection", (ws) => {
+      ctx.state.clients.add(ws);
+
+      ws.on("message", (data) => {
+        const message = data.toString();
+        ctx.hub.send(message);
+      });
+
+      ws.on("close", () => {
+        ctx.state.clients.delete(ws);
+      });
+    });
+  },
+
+  onComplete: (ctx) => {
+    // Cleanup
+    for (const client of ctx.state.clients) {
+      client.close();
+    }
+    ctx.state.server.close();
+  },
+
+  on: {
+    "agent:text": (ctx) => {
+      broadcast(ctx.state.clients, {
+        type: "text",
+        content: ctx.event.event.content
+      });
+    },
+
+    "session:prompt": (ctx) => {
+      broadcast(ctx.state.clients, {
+        type: "prompt",
+        promptId: ctx.event.event.promptId,
+        question: ctx.event.event.question
+      });
+    },
+
+    "session:complete": (ctx) => {
+      broadcast(ctx.state.clients, {
+        type: "complete"
+      });
+    }
+  }
+};
+
+function broadcast(clients: Set<WebSocket>, data: unknown) {
+  const json = JSON.stringify(data);
+  for (const client of clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(json);
+    }
+  }
+}
+
+export default websocketChannel;
+```
+
+### Configuration Options
+
+Make channels configurable:
+
+```typescript
+interface WebSocketConfig {
+  port?: number;
+  path?: string;
+}
+
+export function createWebSocketChannel(
+  config: WebSocketConfig = {}
+): ChannelDefinition<WebSocketState> {
+  const port = config.port ?? 8080;
+  const path = config.path ?? "/";
+
+  return {
+    name: "websocket",
+    state: () => ({ ... }),
+    onStart: (ctx) => {
+      ctx.state.server = new WebSocketServer({ port, path });
+      // ...
+    },
+    // ...
+  };
+}
+```
+
+## Event Handling Patterns
+
+### Selective Handling
+
+Handle only relevant events:
+
+```typescript
+on: {
+  "agent:text": handleText,
+  "agent:tool_use": handleToolUse,
+  // Ignore other events
+}
+```
+
+### Wildcard Handling
+
+Handle all events:
+
+```typescript
+on: {
+  "*": (ctx) => {
+    // Forward all events
+    broadcast(ctx.state.clients, ctx.event);
+  }
+}
+```
+
+### Pattern Matching
+
+Handle event families:
+
+```typescript
+on: {
+  "agent:*": handleAgentEvent,
+  "session:*": handleSessionEvent
+}
+```
+
+## Testing
+
+### Unit Tests
+
+```typescript
+// tests/websocket.test.ts
+import { test, expect, describe, beforeEach, afterEach } from "bun:test";
+import { websocketChannel } from "../src";
+import { createMockHub } from "./helpers";
+
+describe("websocket channel", () => {
+  let mockCtx;
+
+  beforeEach(() => {
+    mockCtx = createMockContext();
+  });
+
+  test("initializes server on start", async () => {
+    await websocketChannel.onStart?.(mockCtx);
+    expect(mockCtx.state.server).toBeDefined();
+  });
+
+  test("handles agent:text events", () => {
+    const handler = websocketChannel.on["agent:text"];
+    // Test handler
+  });
+});
+```
+
+### Integration Tests
+
+```typescript
+// tests/integration.test.ts
+import { test, expect } from "bun:test";
+import WebSocket from "ws";
+import { websocketChannel } from "../src";
+import { defineHarness } from "@open-harness/kernel";
+
+test("full channel integration", async () => {
+  const harness = defineHarness({
+    channels: [websocketChannel],
+    agents: [testAgent]
+  });
+
+  const instance = harness.create();
+
+  // Connect client
+  const ws = new WebSocket("ws://localhost:8080");
+
+  await new Promise((resolve) => ws.on("open", resolve));
+
+  // Run harness
+  await instance.run({ prompt: "test" });
+
+  // Verify messages received
+  // ...
+
+  ws.close();
+});
+```
+
+## Documentation
+
+### README.md
+
+```markdown
+# @open-harness/websocket-channel
+
+WebSocket channel for Open Harness.
+
+## Installation
+
+```bash
+bun add @open-harness/websocket-channel ws
+```
+
+## Usage
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+import { createWebSocketChannel } from "@open-harness/websocket-channel";
+
+const harness = defineHarness({
+  channels: [
+    createWebSocketChannel({ port: 8080 })
+  ],
+  agents: [myAgent]
+});
+```
+
+## Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| port | number | 8080 | WebSocket server port |
+| path | string | "/" | WebSocket path |
+
+## Events
+
+### Outgoing (Server → Client)
+
+- `text`: Agent text output
+- `prompt`: Prompt for user input
+- `complete`: Session complete
+
+### Incoming (Client → Server)
+
+- Messages sent to server are forwarded to agent inbox
+```
+
+## Publishing
+
+### Prepare for Release
+
+1. Update version in package.json
+2. Update CHANGELOG.md
+3. Ensure tests pass
+4. Build (if needed)
+
+### Publish
+
+```bash
+bun publish --access public
+```
+
+## Checklist
+
+### Before Merge
+
+- [ ] Implements ChannelDefinition correctly
+- [ ] Has complete TypeScript types
+- [ ] Includes unit tests
+- [ ] Includes integration tests
+- [ ] Has README documentation
+- [ ] Has example usage
+- [ ] No breaking changes to existing code
+
+### Code Quality
+
+- [ ] TypeScript strict mode
+- [ ] No `any` types
+- [ ] Proper error handling
+- [ ] Clean event handling
+- [ ] Resource cleanup in onComplete
+
+## Next Steps
+
+- [Channel Definition](/reference/types/channel-definition) - Type reference
+- [Adapter Pattern](/concepts/channels/adapter-pattern) - Channel concepts
+- [Bidirectional Channels](/concepts/channels/bidirectional) - Input/output

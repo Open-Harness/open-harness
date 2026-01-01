@@ -1,0 +1,213 @@
+---
+title: The Hub as Event Bus
+description: Understanding the Hub's role as the central event bus
+---
+
+# The Hub as Event Bus
+
+The Hub is the communication backbone of Open Harness. Every event flows through it - from agent output to workflow transitions to user messages.
+
+## Why a Central Hub?
+
+### The Coordination Problem
+
+AI workflows involve many moving parts:
+- Agents producing output
+- Channels handling I/O
+- Flows orchestrating execution
+- External systems observing
+
+Without central coordination:
+- Components call each other directly
+- Dependencies become tangled
+- Testing requires mocking everything
+- Observation requires instrumentation
+
+### The Hub Solution
+
+With a central event bus:
+- All communication is explicit
+- Components are decoupled
+- Testing uses event fixtures
+- Observation is automatic
+
+```typescript
+// Everything flows through the hub
+hub.emit({ type: "agent:text", content: "Hello" });
+hub.emit({ type: "task:complete", result: data });
+hub.emit({ type: "narrative", text: "Processing..." });
+```
+
+## Hub Mechanics
+
+### Publishing Events
+
+Events are published with `emit`:
+
+```typescript
+hub.emit({
+  type: "agent:text",
+  content: "Processing your request..."
+});
+```
+
+The hub:
+1. Captures current context
+2. Creates an enriched event envelope
+3. Notifies all matching subscribers
+
+### Subscribing to Events
+
+Subscribe with optional filters:
+
+```typescript
+// All events
+hub.subscribe((event) => {
+  console.log(event.event.type);
+});
+
+// Specific type
+hub.subscribe("agent:text", (event) => {
+  console.log(event.event.content);
+});
+
+// Type pattern
+hub.subscribe("task:*", (event) => {
+  // Matches task:start, task:complete, task:failed
+});
+```
+
+### Async Iteration
+
+The hub is async-iterable for streaming:
+
+```typescript
+for await (const event of hub) {
+  if (event.event.type === "session:complete") {
+    break;
+  }
+  render(event);
+}
+```
+
+## Event Enrichment
+
+Raw events become enriched events:
+
+```typescript
+// You emit:
+hub.emit({ type: "agent:text", content: "Hello" });
+
+// Subscribers receive:
+{
+  event: { type: "agent:text", content: "Hello" },
+  context: {
+    sessionId: "sess-123",
+    runId: "run-456",
+    agentName: "assistant"
+  },
+  timestamp: 1704067200000
+}
+```
+
+Enrichment adds:
+- **Context**: sessionId, runId, agentName from current scope
+- **Timestamp**: When the event occurred
+- **Correlation**: Ability to trace related events
+
+## Subscription Patterns
+
+### Wildcard Subscription
+
+Observe all events:
+
+```typescript
+hub.subscribe("*", (event) => {
+  log(event);
+});
+```
+
+Useful for logging, metrics, debugging.
+
+### Type-Specific
+
+Handle one event type:
+
+```typescript
+hub.subscribe("agent:text", (event) => {
+  display(event.event.content);
+});
+```
+
+### Prefix Pattern
+
+Match event families:
+
+```typescript
+hub.subscribe("task:*", handler);
+hub.subscribe("agent:*", handler);
+hub.subscribe("session:*", handler);
+```
+
+### Unsubscription
+
+Subscriptions return cleanup functions:
+
+```typescript
+const unsubscribe = hub.subscribe("agent:text", handler);
+
+// Later
+unsubscribe();
+```
+
+## Error Handling
+
+Listener errors don't break the hub:
+
+```typescript
+hub.subscribe("*", (event) => {
+  throw new Error("Oops");
+  // Error is logged, other listeners still notified
+});
+```
+
+The hub isolates listener failures to maintain system stability.
+
+## Hub vs Message Queue
+
+The Hub is not a distributed message queue:
+
+| Feature | Hub | Message Queue |
+|---------|-----|---------------|
+| Scope | In-process | Distributed |
+| Persistence | No | Yes |
+| Ordering | Guaranteed | May vary |
+| Context | Automatic | Manual |
+| Use case | Workflow events | System integration |
+
+The Hub is optimized for AI workflow patterns, not distributed systems.
+
+## Design Rationale
+
+### Why Not Event Emitter?
+
+Node's EventEmitter lacks:
+- Typed events
+- Context propagation
+- Filtering patterns
+- Async iteration
+
+### Why Not Pub/Sub Library?
+
+Libraries like RxJS are powerful but:
+- Add complexity
+- Have learning curves
+- Aren't workflow-focused
+
+The Hub is purpose-built for AI workflows.
+
+## Next Steps
+
+- [Context Propagation](/concepts/hub/context-propagation) - How context flows
+- [Commands vs Events](/concepts/hub/commands-vs-events) - Bidirectional design
+- [Hub API](/reference/api/hub) - Complete reference

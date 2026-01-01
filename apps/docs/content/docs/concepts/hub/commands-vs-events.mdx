@@ -1,0 +1,258 @@
+---
+title: Commands vs Events
+description: Understanding bidirectional communication through the Hub
+---
+
+# Commands vs Events
+
+The Hub handles two types of messages: events flow out, commands flow in. This bidirectional design enables interactive AI workflows.
+
+## The Distinction
+
+### Events: What Happened
+
+Events are facts about things that occurred:
+
+```typescript
+// Events describe what happened
+hub.emit({ type: "agent:text", content: "Here's my analysis..." });
+hub.emit({ type: "task:complete", result: { success: true } });
+hub.emit({ type: "narrative", text: "Processing document..." });
+```
+
+Events are:
+- **Past tense**: Something happened
+- **Informational**: No action required
+- **Many listeners**: Anyone can observe
+- **Decoupled**: Producer doesn't know consumers
+
+### Commands: What to Do
+
+Commands are requests for action:
+
+```typescript
+// Commands request action
+hub.send("Please continue with the analysis");
+hub.reply(promptId, { content: "Yes, proceed" });
+hub.abort("User cancelled");
+```
+
+Commands are:
+- **Imperative**: Do this thing
+- **Targeted**: Directed at something specific
+- **Single handler**: One thing responds
+- **Coupled**: Sender expects a response
+
+## Flow Direction
+
+```
+                    ┌─────────────┐
+     Commands →     │             │     → Events
+    (from users)    │     Hub     │    (to observers)
+                    │             │
+                    └─────────────┘
+                          ↑
+                    Workflow Engine
+```
+
+Events flow from the workflow to observers (channels, logs, UI).
+Commands flow from users/channels to the workflow.
+
+## Command Types
+
+### Send
+
+Inject a message into the workflow:
+
+```typescript
+// User sends feedback
+hub.send("I'd like more detail on point 3");
+```
+
+The message reaches agents with inboxes.
+
+### SendTo
+
+Target a specific agent:
+
+```typescript
+// Direct message to an agent
+hub.sendTo("researcher", "Focus on recent papers");
+```
+
+### Reply
+
+Respond to a prompt:
+
+```typescript
+// Answer a question from the agent
+hub.reply("prompt-123", {
+  content: "Use the detailed format",
+  choice: "detailed"
+});
+```
+
+### Abort
+
+Cancel execution:
+
+```typescript
+// Stop everything
+hub.abort("User requested cancellation");
+```
+
+## Event Types
+
+### Agent Events
+
+Output from agents:
+
+```typescript
+{ type: "agent:text", content: "..." }
+{ type: "agent:tool_use", name: "search", input: {...} }
+{ type: "agent:tool_result", result: {...} }
+```
+
+### Task Events
+
+Workflow lifecycle:
+
+```typescript
+{ type: "task:start", taskId: "task-1" }
+{ type: "task:complete", taskId: "task-1", result: {...} }
+{ type: "task:failed", taskId: "task-1", error: {...} }
+```
+
+### Session Events
+
+Interactive prompts and control:
+
+```typescript
+{ type: "session:prompt", promptId: "p1", question: "Continue?" }
+{ type: "session:complete", result: {...} }
+```
+
+### Narrative Events
+
+Progress updates:
+
+```typescript
+{ type: "narrative", text: "Searching documents..." }
+{ type: "phase:start", name: "Research" }
+```
+
+## Why This Design?
+
+### Interactive Workflows
+
+AI workflows aren't just fire-and-forget:
+
+```
+User: "Analyze this document"
+Agent: "I found three topics. Which should I focus on?"
+User: "Topic 2"  ← Command
+Agent: "Analyzing topic 2..."  ← Event
+```
+
+Commands enable this interaction.
+
+### Clean Separation
+
+Without the distinction, you'd have:
+- Events that sometimes need responses
+- Handlers that sometimes produce events
+- Unclear flow direction
+
+With the distinction:
+- Events are always informational
+- Commands are always actionable
+- Flow direction is clear
+
+### Testability
+
+Commands and events can be tested separately:
+
+```typescript
+// Test command handling
+hub.send("feedback");
+expect(inbox.pop()).toContain("feedback");
+
+// Test event emission
+agent.execute(input);
+expect(events).toContainType("agent:text");
+```
+
+## Implementation
+
+The Hub implements both directions:
+
+```typescript
+interface Hub {
+  // Events out
+  emit(event: BaseEvent): void;
+  subscribe(filter: EventFilter, listener: EventListener): () => void;
+
+  // Commands in
+  send(message: string): void;
+  sendTo(agent: string, message: string): void;
+  reply(promptId: string, response: UserResponse): void;
+  abort(reason?: string): void;
+}
+```
+
+Commands internally emit events that the workflow engine handles.
+
+## Practical Patterns
+
+### User Feedback Loop
+
+```typescript
+// Channel sends user input as command
+channel.on.userInput = (ctx) => {
+  ctx.hub.send(ctx.event.event.text);
+};
+
+// Agent receives via inbox
+const agent = {
+  async execute(input, ctx) {
+    const feedback = await ctx.inbox.pop();
+    // Incorporate feedback
+  }
+};
+```
+
+### Prompt and Reply
+
+```typescript
+// Agent asks a question
+hub.emit({
+  type: "session:prompt",
+  promptId: "confirm-1",
+  question: "Proceed with deletion?",
+  choices: ["yes", "no"]
+});
+
+// UI displays, user responds
+hub.reply("confirm-1", { choice: "yes" });
+
+// Agent continues based on reply
+```
+
+### Graceful Cancellation
+
+```typescript
+// User cancels
+hub.abort("Changed my mind");
+
+// Workflow receives abort event, cleans up
+hub.subscribe("session:abort", (e) => {
+  cleanup();
+  terminate();
+});
+```
+
+## Next Steps
+
+- [Hub API](/reference/api/hub) - Complete reference
+- [Workflow Events](/reference/events/workflow-events) - Event catalog
+- [Session Events](/reference/events/session-events) - Interactive events

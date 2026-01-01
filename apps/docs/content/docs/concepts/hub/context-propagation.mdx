@@ -1,0 +1,229 @@
+---
+title: Context Propagation
+description: How context flows through the event system
+---
+
+# Context Propagation
+
+Every event carries context. When you emit an event, the Hub automatically captures and attaches the current execution context. This page explains how.
+
+## The Problem
+
+Without context, you'd manually pass correlation data:
+
+```typescript
+// Without context propagation (tedious)
+agent.execute(input, { sessionId, runId, agentName });
+hub.emit({ type: "agent:text", content, sessionId, runId, agentName });
+log({ type: "agent:text", content, sessionId, runId, agentName });
+```
+
+Every function needs the same parameters. Miss one, and tracing breaks.
+
+## The Solution
+
+With context propagation, it's automatic:
+
+```typescript
+// Establish context once
+hub.scoped({ agentName: "assistant" }, async () => {
+  // All emits within this scope inherit the context
+  hub.emit({ type: "agent:text", content: "Hello" });
+  // Event automatically includes agentName: "assistant"
+});
+```
+
+## How It Works
+
+### AsyncLocalStorage
+
+The Hub uses Node's AsyncLocalStorage to propagate context:
+
+```typescript
+class HubImpl {
+  private readonly _context = new AsyncLocalStorage<EventContext>();
+
+  scoped<T>(context: Partial<EventContext>, fn: () => T): T {
+    const current = this.current();
+    const merged = { ...current, ...context };
+    return this._context.run(merged, fn);
+  }
+
+  current(): EventContext {
+    return this._context.getStore() ?? { sessionId: this.sessionId };
+  }
+}
+```
+
+This enables:
+- Automatic context inheritance
+- Zero explicit passing
+- Async-safe propagation
+
+### Context Merging
+
+Scopes can be nested - inner scopes merge with outer:
+
+```typescript
+hub.scoped({ sessionId: "sess-1" }, () => {
+  // Context: { sessionId: "sess-1" }
+
+  hub.scoped({ runId: "run-1" }, () => {
+    // Context: { sessionId: "sess-1", runId: "run-1" }
+
+    hub.scoped({ agentName: "assistant" }, () => {
+      // Context: { sessionId: "sess-1", runId: "run-1", agentName: "assistant" }
+    });
+  });
+});
+```
+
+Inner values override outer values with the same key.
+
+## Context Fields
+
+Standard context fields:
+
+| Field | Purpose |
+|-------|---------|
+| `sessionId` | Identifies the overall session |
+| `runId` | Identifies a specific execution run |
+| `agentName` | Current executing agent |
+| `taskId` | Current flow task |
+| `nodeId` | Current flow node |
+
+### Session ID
+
+Set at hub creation, identifies the entire session:
+
+```typescript
+const hub = createHub("session-123");
+// All events include sessionId: "session-123"
+```
+
+### Run ID
+
+Set when starting an execution:
+
+```typescript
+hub.scoped({ runId: "run-456" }, async () => {
+  await agent.execute(input);
+});
+```
+
+### Agent Name
+
+Set when an agent executes:
+
+```typescript
+hub.scoped({ agentName: "researcher" }, async () => {
+  // All events from this agent are tagged
+});
+```
+
+## Practical Usage
+
+### Harness Sets Up Context
+
+The harness establishes session context:
+
+```typescript
+// Inside harness implementation
+hub.scoped({ sessionId: instance.id }, async () => {
+  for (const agent of agents) {
+    hub.scoped({ agentName: agent.name }, async () => {
+      await agent.execute(input);
+    });
+  }
+});
+```
+
+### Agents Inherit Context
+
+Agents don't need to manage context:
+
+```typescript
+const myAgent: AgentDefinition = {
+  name: "assistant",
+  async execute(input, ctx) {
+    // Emit events - context is automatic
+    ctx.hub.emit({ type: "agent:text", content: "Working..." });
+    // This event has sessionId, runId, agentName already attached
+  }
+};
+```
+
+### Channels Observe Context
+
+Channels see full context in events:
+
+```typescript
+const logChannel: ChannelDefinition = {
+  name: "logger",
+  on: {
+    "*": (ctx) => {
+      console.log(
+        `[${ctx.event.context.agentName}] ${ctx.event.event.type}`
+      );
+    }
+  }
+};
+```
+
+## Tracing and Debugging
+
+Context enables powerful debugging:
+
+```typescript
+// Find all events from a specific run
+const runEvents = events.filter(e => e.context.runId === "run-456");
+
+// Group events by agent
+const byAgent = groupBy(events, e => e.context.agentName);
+
+// Build execution timeline
+const timeline = events
+  .filter(e => e.context.sessionId === "sess-123")
+  .sort((a, b) => a.timestamp - b.timestamp);
+```
+
+## Trade-offs
+
+### Benefits
+
+- **Zero boilerplate**: No manual context passing
+- **Always consistent**: Can't forget to pass context
+- **Composable**: Scopes nest naturally
+- **Trace-ready**: Every event is correlated
+
+### Considerations
+
+- **Implicit**: Context isn't visible in function signatures
+- **Async-dependent**: Only works with proper async chains
+- **Memory**: Each async scope has overhead
+
+For AI workflows, the benefits far outweigh the costs.
+
+## Design Rationale
+
+### Why AsyncLocalStorage?
+
+Alternatives:
+- **Explicit parameters**: Verbose, error-prone
+- **Global state**: Not async-safe
+- **Thread-local**: Doesn't exist in JavaScript
+
+AsyncLocalStorage provides async-safe implicit context.
+
+### Why Merge Semantics?
+
+Merging (vs replacing) allows:
+- Incremental context building
+- Natural nesting
+- Partial overrides
+
+## Next Steps
+
+- [Commands vs Events](/concepts/hub/commands-vs-events) - Bidirectional design
+- [Hub API](/reference/api/hub) - Complete reference
+- [Event Context](/reference/types/event-context) - Type reference

@@ -1,0 +1,231 @@
+---
+title: Versioning
+description: Open Harness versioning strategy
+---
+
+# Versioning
+
+Open Harness follows Semantic Versioning (SemVer). This page explains the versioning strategy.
+
+## Semantic Versioning
+
+Format: **MAJOR.MINOR.PATCH**
+
+```
+1.2.3
+│ │ └── Patch: bug fixes
+│ └──── Minor: new features (backward compatible)
+└────── Major: breaking changes
+```
+
+### Version Meanings
+
+| Version | Meaning |
+|---------|---------|
+| 0.x.x | Initial development (anything may change) |
+| 1.0.0 | First stable release |
+| 1.1.0 | New features, backward compatible |
+| 1.1.1 | Bug fixes only |
+| 2.0.0 | Breaking changes |
+
+## Breaking Changes
+
+### What Constitutes Breaking
+
+Changes that break existing code:
+
+**Protocol Changes**
+- Removing interface methods
+- Changing method signatures
+- Renaming types
+
+```typescript
+// Breaking: removed method
+interface Hub {
+  emit(event: BaseEvent): void;
+  // subscribe() removed!
+}
+
+// Breaking: changed signature
+interface Hub {
+  emit(event: BaseEvent, options?: Options): void;  // Added param
+}
+```
+
+**Behavior Changes**
+- Different return values
+- Different error handling
+- Changed defaults
+
+```typescript
+// Breaking: different default
+// Was: maxTokens defaults to 4096
+// Now: maxTokens defaults to 1024
+```
+
+**Removal**
+- Removing exports
+- Removing options
+- Deprecating without alternative
+
+### What's Not Breaking
+
+Backward-compatible additions:
+
+**New Methods**
+```typescript
+interface Hub {
+  emit(event: BaseEvent): void;
+  broadcast(event: BaseEvent): void;  // New method OK
+}
+```
+
+**New Optional Parameters**
+```typescript
+// Old
+function create(name: string): Thing;
+
+// New (compatible)
+function create(name: string, options?: CreateOptions): Thing;
+```
+
+**New Types**
+```typescript
+// Adding new types is always OK
+export type NewThing = { ... };
+```
+
+## Pre-release Versions
+
+### Alpha
+
+Early testing, unstable:
+
+```
+1.0.0-alpha.1
+1.0.0-alpha.2
+```
+
+May change significantly.
+
+### Beta
+
+Feature complete, stabilizing:
+
+```
+1.0.0-beta.1
+1.0.0-beta.2
+```
+
+API mostly stable, testing for bugs.
+
+### Release Candidate
+
+Final testing:
+
+```
+1.0.0-rc.1
+```
+
+Should be release-ready.
+
+## Version Synchronization
+
+All packages share the same version:
+
+```json
+// packages/kernel/package.json
+{ "version": "1.2.0" }
+
+// packages/rtv-channel/package.json
+{ "version": "1.2.0" }
+```
+
+When any package needs a version bump, all bump together.
+
+## Upgrading Users
+
+### Minor Updates
+
+Users can update freely:
+
+```bash
+bun update @open-harness/kernel
+```
+
+### Major Updates
+
+Users should read changelog and update code:
+
+```bash
+# Check changelog first
+cat CHANGELOG.md
+
+# Update
+bun update @open-harness/kernel@2
+```
+
+### Migration Guides
+
+Major versions include migration guides:
+
+```markdown
+# Migrating to v2.0.0
+
+## Breaking Changes
+
+### Hub.emit signature changed
+
+Before:
+```typescript
+hub.emit(event);
+```
+
+After:
+```typescript
+hub.emit(event, { immediate: true });
+```
+
+### Removed deprecated methods
+
+- `hub.notify()` removed, use `hub.emit()`
+```
+
+## Version in Code
+
+### Checking Version
+
+```typescript
+import { version } from "@open-harness/kernel";
+
+console.log(`Open Harness v${version}`);
+```
+
+### Version Compatibility
+
+```typescript
+import { version } from "@open-harness/kernel";
+import semver from "semver";
+
+if (semver.lt(version, "2.0.0")) {
+  // Use v1 API
+} else {
+  // Use v2 API
+}
+```
+
+## Release Process
+
+1. Update version in all package.json files
+2. Update CHANGELOG.md
+3. Create git tag
+4. Push tag
+5. CI publishes to npm
+
+See [Changelog](/contributing/releasing/changelog) for details.
+
+## Next Steps
+
+- [Changelog](/contributing/releasing/changelog) - Release notes
+- [Development Workflow](/contributing/development/workflow) - Making changes
+- [Publishing](/contributing/extending/new-channel) - Package publishing

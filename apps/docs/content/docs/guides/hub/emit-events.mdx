@@ -1,0 +1,147 @@
+---
+title: How to Emit Events
+description: Emit custom events to the Hub
+---
+
+# How to Emit Events
+
+Send custom events through the Hub for observability.
+
+## Emit from Node Context
+
+```typescript
+const myNode: NodeTypeDefinition = {
+  type: "my-node",
+  inputSchema,
+  outputSchema,
+
+  async run(ctx, input) {
+    // Emit narrative event
+    ctx.hub.emit({
+      type: "narrative",
+      text: "Processing started"
+    });
+
+    const result = await process(input);
+
+    ctx.hub.emit({
+      type: "narrative",
+      text: "Processing complete"
+    });
+
+    return result;
+  }
+};
+```
+
+## Event Structure
+
+```typescript
+interface Event {
+  type: string;        // Event type identifier
+  [key: string]: any;  // Event-specific payload
+}
+
+ctx.hub.emit({
+  type: "my-custom-event",
+  data: someValue,
+  metadata: { version: "1.0" }
+});
+```
+
+## Common Event Types
+
+### narrative
+
+Progress and status messages:
+
+```typescript
+ctx.hub.emit({
+  type: "narrative",
+  text: "Fetching data from API..."
+});
+```
+
+### agent:text
+
+Streaming text output:
+
+```typescript
+ctx.hub.emit({
+  type: "agent:text",
+  content: "Here is some generated text..."
+});
+```
+
+## Custom Event Types
+
+```typescript
+// Define custom events for your domain
+ctx.hub.emit({
+  type: "metrics:collected",
+  data: {
+    processingTime: 150,
+    itemsProcessed: 42
+  }
+});
+
+// Subscribe to custom events
+hub.subscribe("metrics:collected", (event) => {
+  console.log("Metrics:", event.event.data);
+});
+```
+
+## Emit from Channel
+
+```typescript
+const myChannel: ChannelDefinition = {
+  name: "my-channel",
+
+  on: {
+    "session:prompt": (ctx) => {
+      // User provides input
+      const userInput = readInput();
+
+      // Inject back into workflow
+      ctx.hub.emit({
+        type: "user:input",
+        content: userInput
+      });
+    }
+  }
+};
+```
+
+## Event Metadata
+
+The Hub automatically enriches events with context:
+
+```typescript
+ctx.hub.emit({ type: "narrative", text: "Hello" });
+
+// Subscriber receives enriched event:
+hub.subscribe("narrative", (enrichedEvent) => {
+  console.log(enrichedEvent);
+  // {
+  //   event: { type: "narrative", text: "Hello" },
+  //   context: { sessionId: "...", phase: "...", taskContext: {...} },
+  //   timestamp: 1234567890
+  // }
+});
+```
+
+## When to Emit Events
+
+| Scenario | Event Type |
+|----------|------------|
+| Progress updates | `narrative` |
+| Streaming output | `agent:text` |
+| Metrics/telemetry | Custom type |
+| Error details | `narrative` or custom |
+| Debug info | `debug:*` |
+
+## Related
+
+- [Subscribe Events](/guides/hub/subscribe-events) - Listen for events
+- [Event Context](/guides/hub/event-context) - Context correlation
+- [Hub Concepts](/concepts/hub/event-bus) - Architecture

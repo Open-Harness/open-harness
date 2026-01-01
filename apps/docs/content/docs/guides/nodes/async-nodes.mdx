@@ -1,0 +1,163 @@
+---
+title: How to Build Async Nodes
+description: Create nodes that perform asynchronous operations
+---
+
+# How to Build Async Nodes
+
+Build nodes that make network requests, read files, or perform other async operations.
+
+## Basic Async Node
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const fetchNode: NodeTypeDefinition = {
+  type: "fetch",
+  inputSchema: z.object({
+    url: z.string().url()
+  }),
+  outputSchema: z.object({
+    data: z.unknown(),
+    status: z.number()
+  }),
+
+  async run(ctx, input) {
+    const response = await fetch(input.url);
+    const data = await response.json();
+
+    return {
+      data,
+      status: response.status
+    };
+  }
+};
+```
+
+## Report Progress
+
+```typescript
+async run(ctx, input) {
+  ctx.hub.emit({ type: "narrative", text: "Starting fetch..." });
+
+  const response = await fetch(input.url);
+
+  ctx.hub.emit({ type: "narrative", text: "Parsing response..." });
+
+  const data = await response.json();
+
+  ctx.hub.emit({ type: "narrative", text: "Complete" });
+
+  return { data, status: response.status };
+}
+```
+
+## Handle Timeouts
+
+```typescript
+async run(ctx, input) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), input.timeout || 30000);
+
+  try {
+    const response = await fetch(input.url, {
+      signal: controller.signal
+    });
+    return { data: await response.json(), status: response.status };
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(`Request timed out after ${input.timeout}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+```
+
+## Multiple Parallel Operations
+
+```typescript
+async run(ctx, input) {
+  const urls = input.urls;
+
+  ctx.hub.emit({
+    type: "narrative",
+    text: `Fetching ${urls.length} URLs in parallel`
+  });
+
+  const results = await Promise.all(
+    urls.map(async (url) => {
+      const response = await fetch(url);
+      return { url, data: await response.json() };
+    })
+  );
+
+  return { results };
+}
+```
+
+## Error Propagation
+
+```typescript
+async run(ctx, input) {
+  try {
+    const response = await fetch(input.url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return { data: await response.json() };
+  } catch (error) {
+    // Emit error event for observability
+    ctx.hub.emit({
+      type: "narrative",
+      text: `Fetch failed: ${error.message}`
+    });
+
+    // Re-throw to fail the node
+    throw error;
+  }
+}
+```
+
+## Retry Logic
+
+```typescript
+async run(ctx, input) {
+  const maxRetries = input.retries || 3;
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      ctx.hub.emit({
+        type: "narrative",
+        text: `Attempt ${attempt}/${maxRetries}`
+      });
+
+      const response = await fetch(input.url);
+      return { data: await response.json(), attempts: attempt };
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < maxRetries) {
+        await sleep(1000 * attempt); // Exponential backoff
+      }
+    }
+  }
+
+  throw new Error(`Failed after ${maxRetries} attempts: ${lastError.message}`);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+```
+
+## Related
+
+- [Node Schemas](/guides/nodes/node-schemas) - Define schemas
+- [Subscribe Events](/guides/hub/subscribe-events) - Event handling
+- [Error Handling](/guides/flows/error-handling) - Flow-level errors

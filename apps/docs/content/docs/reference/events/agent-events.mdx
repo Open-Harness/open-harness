@@ -1,0 +1,245 @@
+---
+title: Agent Events
+description: Events for agent execution and output streaming
+---
+
+# Agent Events
+
+Events emitted during agent execution, including output streaming and tool calls.
+
+## agent:start
+
+Emitted when an agent begins execution.
+
+```typescript
+type AgentStartEvent = {
+  type: "agent:start";
+  agentName: string;
+  runId: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `agentName` | `string` | Name from agent definition |
+| `runId` | `string` | Unique identifier for this run |
+
+### Example
+
+```typescript
+hub.subscribe("agent:start", (event) => {
+  console.log(`[${event.event.agentName}] Starting (run: ${event.event.runId})`);
+});
+```
+
+## agent:thinking
+
+Emitted for intermediate reasoning (e.g., chain-of-thought).
+
+```typescript
+type AgentThinkingEvent = {
+  type: "agent:thinking";
+  content: string;
+  runId?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `content` | `string` | Thinking/reasoning content |
+| `runId` | `string?` | Associated run identifier |
+
+### Example
+
+```typescript
+hub.subscribe("agent:thinking", (event) => {
+  console.log(`[Thinking] ${event.event.content}`);
+});
+```
+
+## agent:text
+
+Emitted for text output from an agent.
+
+```typescript
+type AgentTextEvent = {
+  type: "agent:text";
+  content: string;
+  runId?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `content` | `string` | Text output content |
+| `runId` | `string?` | Associated run identifier |
+
+### Example
+
+```typescript
+hub.subscribe("agent:text", (event) => {
+  process.stdout.write(event.event.content);
+});
+```
+
+## agent:tool:start
+
+Emitted when an agent invokes a tool.
+
+```typescript
+type AgentToolStartEvent = {
+  type: "agent:tool:start";
+  toolName: string;
+  input?: unknown;
+  runId?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `toolName` | `string` | Tool being invoked |
+| `input` | `unknown?` | Tool input parameters |
+| `runId` | `string?` | Associated run identifier |
+
+### Example
+
+```typescript
+hub.subscribe("agent:tool:start", (event) => {
+  console.log(`[Tool] ${event.event.toolName} called`);
+  if (event.event.input) {
+    console.log("  Input:", JSON.stringify(event.event.input));
+  }
+});
+```
+
+## agent:tool:complete
+
+Emitted when a tool invocation completes.
+
+```typescript
+type AgentToolCompleteEvent = {
+  type: "agent:tool:complete";
+  toolName: string;
+  result?: unknown;
+  isError?: boolean;
+  runId?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `toolName` | `string` | Tool that completed |
+| `result` | `unknown?` | Tool result |
+| `isError` | `boolean?` | Whether tool errored |
+| `runId` | `string?` | Associated run identifier |
+
+### Example
+
+```typescript
+hub.subscribe("agent:tool:complete", (event) => {
+  const status = event.event.isError ? "failed" : "succeeded";
+  console.log(`[Tool] ${event.event.toolName} ${status}`);
+});
+```
+
+## agent:complete
+
+Emitted when an agent finishes execution.
+
+```typescript
+type AgentCompleteEvent = {
+  type: "agent:complete";
+  agentName: string;
+  success: boolean;
+  runId: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `agentName` | `string` | Name from agent definition |
+| `success` | `boolean` | Whether execution succeeded |
+| `runId` | `string` | Run identifier |
+
+### Example
+
+```typescript
+hub.subscribe("agent:complete", (event) => {
+  const { agentName, success, runId } = event.event;
+  console.log(`[${agentName}] ${success ? "Completed" : "Failed"} (${runId})`);
+});
+```
+
+## agent:failed
+
+Emitted when an agent encounters an error (in addition to `agent:complete` with `success: false`).
+
+```typescript
+type AgentFailedEvent = {
+  type: "agent:failed";
+  agentName: string;
+  runId: string;
+  error: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `agentName` | `string` | Agent name |
+| `runId` | `string` | Run identifier |
+| `error` | `string` | Error message |
+
+## Event Sequence
+
+Typical agent execution produces:
+
+```
+agent:start (agentName: "researcher", runId: "run-0")
+  agent:thinking (content: "I need to search for...")
+  agent:tool:start (toolName: "web_search", input: {...})
+  agent:tool:complete (toolName: "web_search", result: {...})
+  agent:text (content: "Based on my research...")
+agent:complete (agentName: "researcher", success: true, runId: "run-0")
+```
+
+## Streaming Output
+
+Build streaming display with agent events:
+
+```typescript
+const output: string[] = [];
+
+hub.subscribe("agent:text", (event) => {
+  output.push(event.event.content);
+  // Update UI incrementally
+});
+
+hub.subscribe("agent:complete", (event) => {
+  console.log("Final output:", output.join(""));
+});
+```
+
+## Tracking Tool Usage
+
+```typescript
+const toolCalls = new Map<string, { start: Date; end?: Date }>();
+
+hub.subscribe("agent:tool:start", (event) => {
+  toolCalls.set(event.event.toolName, { start: new Date() });
+});
+
+hub.subscribe("agent:tool:complete", (event) => {
+  const call = toolCalls.get(event.event.toolName);
+  if (call) {
+    call.end = new Date();
+    const duration = call.end.getTime() - call.start.getTime();
+    console.log(`Tool ${event.event.toolName} took ${duration}ms`);
+  }
+});
+```
+
+## See Also
+
+- [Workflow Events](/reference/events/workflow-events) - Workflow lifecycle
+- [Session Events](/reference/events/session-events) - Interactive sessions
+- [AgentDefinition](/reference/types/agent-definition) - Agent interface

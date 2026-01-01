@@ -1,0 +1,168 @@
+---
+title: createAnthropicTextAgent
+description: Create an Anthropic Claude text agent for harness execution
+---
+
+# createAnthropicTextAgent
+
+Creates an Anthropic Claude text agent using the Claude Agent SDK. Uses Claude Code subscription authentication (no API key required).
+
+## Signature
+
+```typescript
+function createAnthropicTextAgent(
+  options?: AnthropicTextAdapterOptions
+): AgentDefinition<AnthropicTextInput, AnthropicTextOutput>
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `options` | `AnthropicTextAdapterOptions` | No | Configuration options |
+
+### AnthropicTextAdapterOptions
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `model` | `string` | `"sonnet"` | Claude model to use |
+| `replay` | `Record<string, string>` | `undefined` | Replay map for testing |
+
+## Returns
+
+`AgentDefinition<AnthropicTextInput, AnthropicTextOutput>` - Agent definition for use with `defineHarness`.
+
+## Types
+
+```typescript
+interface AnthropicTextInput {
+  prompt: string;
+  model?: string;  // Override options.model
+}
+
+interface AnthropicTextOutput {
+  text: string;
+}
+```
+
+## Example
+
+```typescript
+import { defineHarness, createAnthropicTextAgent } from "@open-harness/kernel";
+
+const harness = defineHarness({
+  name: "content-generator",
+  agents: {
+    writer: createAnthropicTextAgent({ model: "sonnet" }),
+  },
+  state: (input: { topic: string }) => ({
+    topic: input.topic,
+    content: "",
+  }),
+  run: async (ctx) => {
+    const result = await ctx.agents.writer.execute({
+      prompt: `Write a paragraph about: ${ctx.state.topic}`,
+    });
+    ctx.state.content = result.text;
+    return { content: result.text };
+  },
+});
+
+const instance = harness.create({ topic: "AI workflows" });
+const result = await instance.run();
+console.log(result.result.content);
+```
+
+## Model Selection
+
+Available model identifiers:
+
+| Model | Description |
+|-------|-------------|
+| `"haiku"` | Fast, cost-effective |
+| `"sonnet"` | Balanced performance (default) |
+| `"opus"` | Most capable |
+
+Override per-request:
+
+```typescript
+const result = await ctx.agents.writer.execute({
+  prompt: "Complex analysis task",
+  model: "opus",  // Override for this request
+});
+```
+
+## Testing with Replay
+
+Use the `replay` option to return fixed responses for specific prompts:
+
+```typescript
+const testAgent = createAnthropicTextAgent({
+  model: "sonnet",
+  replay: {
+    "What is 2+2?": "4",
+    "Summarize this:": "Test summary",
+  },
+});
+
+// In tests, no API call is made
+const result = await testAgent.execute(
+  { prompt: "What is 2+2?" },
+  mockContext
+);
+console.log(result.text); // "4"
+```
+
+This enables deterministic testing without network calls.
+
+## Authentication
+
+This agent uses Claude Code subscription authentication. No API key or environment variable is required. Authentication is handled automatically by the Claude Agent SDK.
+
+```typescript
+// No ANTHROPIC_API_KEY needed
+// Just run your harness and it works
+const result = await instance.run();
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await ctx.agents.writer.execute({
+    prompt: "Generate content",
+  });
+} catch (error) {
+  if (error.message.includes("rate limit")) {
+    // Handle rate limiting
+  } else if (error.message.includes("failed")) {
+    // Handle API failure
+  }
+}
+```
+
+## Agent Events
+
+The agent emits standard lifecycle events:
+
+- `agent:start` - Before execution begins
+- `agent:complete` - After successful completion
+- `agent:failed` - On error
+
+Subscribe via Hub:
+
+```typescript
+instance.subscribe("agent:start", (event) => {
+  console.log("Starting:", event.event.agentName);
+});
+
+instance.subscribe("agent:complete", (event) => {
+  console.log("Completed:", event.event.success);
+});
+```
+
+## See Also
+
+- [defineHarness](/reference/api/define-harness) - Create harness with agents
+- [AgentDefinition](/reference/types/agent-definition) - Agent interface
+- [Agent Spec](/reference/kernel-spec/spec/agent) - Agent specification

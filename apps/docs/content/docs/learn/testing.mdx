@@ -1,0 +1,324 @@
+---
+title: Testing Flows
+description: Write reliable tests for your AI workflows
+---
+
+# Testing Flows
+
+AI workflows are notoriously hard to test - responses vary, API calls are slow, and costs add up. In this tutorial, we'll learn strategies that make testing practical.
+
+## Why Test Flows?
+
+- **Catch regressions** before they reach production
+- **Deterministic verification** despite LLM randomness
+- **Document behavior** through test cases
+- **Fast feedback** during development
+
+## Testing Strategy
+
+We use three tiers:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       Testing Pyramid                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│                         ▲                                        │
+│                        /│\    Live Tests (sparingly)            │
+│                       / │ \   - Real API calls                  │
+│                      /  │  \  - Slow, costs money               │
+│                     /   │   \                                   │
+│                    /────┼────\                                  │
+│                   /     │     \  Replay Tests                   │
+│                  /      │      \ - Recorded fixtures            │
+│                 /       │       \- Deterministic                │
+│                /────────┼────────\                              │
+│               /         │         \ Unit Tests                  │
+│              /          │          \- Individual nodes          │
+│             /           │           \- Fast, isolated           │
+│            └────────────┴────────────┘                          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Step 1: Unit Test a Node
+
+Test your custom nodes directly:
+
+```typescript
+// nodes/uppercase.test.ts
+import { test, expect, describe } from "bun:test";
+import { uppercaseNode } from "./uppercase";
+
+describe("uppercase node", () => {
+  // Mock context
+  const mockCtx = {
+    hub: {
+      emit: () => {},
+      subscribe: () => () => {},
+      current: () => ({ sessionId: "test" })
+    },
+    runId: "test-run"
+  };
+
+  test("uppercases text", async () => {
+    const result = await uppercaseNode.run(mockCtx, { text: "hello" });
+    expect(result.result).toBe("HELLO");
+  });
+
+  test("preserves original length", async () => {
+    const result = await uppercaseNode.run(mockCtx, { text: "hello" });
+    expect(result.originalLength).toBe(5);
+  });
+
+  test("handles empty string", async () => {
+    const result = await uppercaseNode.run(mockCtx, { text: "" });
+    expect(result.result).toBe("");
+    expect(result.originalLength).toBe(0);
+  });
+
+  // Schema validation
+  test("validates input schema", () => {
+    expect(uppercaseNode.inputSchema.safeParse({ text: "hi" }).success).toBe(true);
+    expect(uppercaseNode.inputSchema.safeParse({ text: 123 }).success).toBe(false);
+    expect(uppercaseNode.inputSchema.safeParse({}).success).toBe(false);
+  });
+
+  test("output matches schema", async () => {
+    const result = await uppercaseNode.run(mockCtx, { text: "test" });
+    expect(uppercaseNode.outputSchema.safeParse(result).success).toBe(true);
+  });
+});
+```
+
+Run:
+
+```bash
+bun test nodes/uppercase.test.ts
+```
+
+## Step 2: Record a Fixture
+
+Fixtures capture real API responses for replay:
+
+```typescript
+// scripts/record-fixture.ts
+import { parseFlowYaml, executeFlow, createHub, NodeRegistry } from "@open-harness/kernel";
+import { writeFileSync } from "fs";
+
+const hub = createHub();
+const events: any[] = [];
+
+// Capture all events
+hub.subscribe("*", (event) => events.push(event));
+
+// Execute with real API
+await executeFlow(flow, {
+  input: { name: "Alice" },
+  registry,
+  hub
+});
+
+// Save fixture
+const fixture = {
+  metadata: {
+    recordedAt: new Date().toISOString(),
+    scenario: "greeting-happy-path"
+  },
+  input: { name: "Alice" },
+  events
+};
+
+writeFileSync(
+  "tests/fixtures/greeting-happy-path.json",
+  JSON.stringify(fixture, null, 2)
+);
+
+console.log(`Recorded ${events.length} events`);
+```
+
+## Step 3: Replay Test
+
+Replay fixtures for deterministic tests:
+
+```typescript
+// tests/flows/greeting.test.ts
+import { test, expect, describe } from "bun:test";
+import { readFileSync } from "fs";
+
+describe("greeting flow", () => {
+  test("produces expected output on happy path", async () => {
+    // Load fixture
+    const fixture = JSON.parse(
+      readFileSync("tests/fixtures/greeting-happy-path.json", "utf-8")
+    );
+
+    // Verify event sequence
+    const types = fixture.events.map(e => e.event.type);
+
+    expect(types).toContain("task:start");
+    expect(types).toContain("agent:text");
+    expect(types).toContain("task:complete");
+
+    // Verify no errors
+    expect(types).not.toContain("task:failed");
+
+    // Verify output content
+    const textEvents = fixture.events.filter(e => e.event.type === "agent:text");
+    expect(textEvents.length).toBeGreaterThan(0);
+
+    // Check the greeting contains the name
+    const text = textEvents[0].event.content;
+    expect(text.toLowerCase()).toContain("alice");
+  });
+});
+```
+
+## Step 4: Test Error Cases
+
+Test how your flow handles failures:
+
+```typescript
+describe("error handling", () => {
+  test("handles missing input gracefully", async () => {
+    const hub = createHub();
+    const errors: any[] = [];
+
+    hub.subscribe("task:failed", (e) => errors.push(e));
+
+    try {
+      await executeFlow(flow, {
+        input: {},  // Missing required field
+        registry,
+        hub
+      });
+    } catch (e) {
+      // Expected
+    }
+
+    // Verify error was emitted
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test("recovers from node failure", async () => {
+    // Use a fixture that includes error recovery
+    const fixture = loadFixture("error-recovery.json");
+
+    const failedEvents = fixture.events.filter(
+      e => e.event.type === "task:failed"
+    );
+    const completeEvents = fixture.events.filter(
+      e => e.event.type === "session:complete"
+    );
+
+    // Should have failed, but also completed
+    expect(failedEvents.length).toBeGreaterThan(0);
+    expect(completeEvents.length).toBe(1);
+  });
+});
+```
+
+## Step 5: Integration Tests
+
+Test flow execution end-to-end:
+
+```typescript
+describe("flow integration", () => {
+  test("executes multi-node flow correctly", async () => {
+    const hub = createHub();
+    const outputs = new Map();
+
+    hub.subscribe("task:complete", (e) => {
+      outputs.set(e.event.taskId, e.event.result);
+    });
+
+    const result = await executeFlow(multiNodeFlow, {
+      input: { data: "test" },
+      registry,
+      hub
+    });
+
+    // Verify each node produced output
+    expect(outputs.has("step1")).toBe(true);
+    expect(outputs.has("step2")).toBe(true);
+    expect(outputs.has("step3")).toBe(true);
+  });
+});
+```
+
+## Best Practices
+
+### Keep Fixtures Small
+
+Only capture what you need:
+
+```typescript
+// Filter to relevant events before saving
+const relevantEvents = events.filter(e =>
+  ["agent:text", "task:complete", "task:failed"].includes(e.event.type)
+);
+```
+
+### Test Edge Cases
+
+```typescript
+const edgeCases = [
+  { input: { text: "" }, expected: "empty" },
+  { input: { text: " " }, expected: "whitespace" },
+  { input: { text: "a".repeat(10000) }, expected: "long" },
+];
+
+edgeCases.forEach(({ input, expected }) => {
+  test(`handles ${expected} input`, async () => {
+    // ...
+  });
+});
+```
+
+### Don't Over-Mock
+
+```typescript
+// Good: Test actual behavior
+const result = await uppercaseNode.run(ctx, { text: "hello" });
+
+// Avoid: Mock everything away
+const mockRun = jest.fn().mockReturnValue({ result: "HELLO" });
+```
+
+### Organize by Feature
+
+```
+tests/
+├── unit/
+│   ├── nodes/
+│   │   ├── uppercase.test.ts
+│   │   └── fetch.test.ts
+│   └── bindings.test.ts
+├── integration/
+│   └── greeting-flow.test.ts
+└── fixtures/
+    ├── greeting-happy-path.json
+    └── greeting-error.json
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+bun test
+
+# Run specific file
+bun test tests/unit/nodes/uppercase.test.ts
+
+# Watch mode
+bun test --watch
+
+# Coverage
+bun test --coverage
+```
+
+## Next Steps
+
+- **[Replay Testing Concept](/concepts/testing/replay-model)** - Deeper understanding
+- **[Conformance Testing](/concepts/testing/conformance)** - Testing node types
+- **[Contributing: Testing](/contributing/development/testing)** - Full strategy
