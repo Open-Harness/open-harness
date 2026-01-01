@@ -1,0 +1,282 @@
+---
+title: Testing Strategy
+description: How to write and run tests for Open Harness
+---
+
+# Testing Strategy
+
+Open Harness uses a tiered testing approach optimized for AI workflow development.
+
+## Test Tiers
+
+### Tier 1: Unit Tests
+
+Direct function tests with no external dependencies:
+
+```typescript
+import { test, expect } from "bun:test";
+import { resolveBindings } from "../../src/flow/bindings";
+
+test("resolves simple binding", () => {
+  const context = { flow: { input: { name: "Alice" } } };
+  const result = resolveBindings("{{flow.input.name}}", context);
+  expect(result).toBe("Alice");
+});
+```
+
+**Characteristics**:
+- Fast (milliseconds)
+- No network
+- No mocks needed
+- Run on every commit
+
+### Tier 2: Replay Tests
+
+Fixture-based tests that replay recorded events:
+
+```typescript
+import { test, expect } from "bun:test";
+import { loadFixture, replay } from "../helpers";
+
+test("flow execution with recorded responses", async () => {
+  const fixture = loadFixture("happy-path.json");
+  const events = await replay(fixture);
+
+  expect(events).toContainType("task:complete");
+  expect(events.filter(e => e.type === "agent:text")).toHaveLength(1);
+});
+```
+
+**Characteristics**:
+- No API calls
+- Deterministic
+- Tests integration paths
+- Uses golden fixtures
+
+### Tier 3: Live Tests
+
+Real API calls for end-to-end validation:
+
+```typescript
+import { test, expect } from "bun:test";
+import { executeFlow } from "../../src/flow/executor";
+
+test.skipIf(!process.env.LIVE)("live API call", async () => {
+  const result = await executeFlow(realFlow, realInput);
+  expect(result).toBeDefined();
+});
+```
+
+**Characteristics**:
+- Actual API calls
+- Slow (seconds)
+- Costs money
+- Run manually or in CI
+
+## Running Tests
+
+### Standard Test Run
+
+```bash
+# Run unit + replay tests (safe, fast)
+bun run test
+```
+
+### Live Tests
+
+```bash
+# Run live integration tests
+bun run test:live
+```
+
+### Specific Tests
+
+```bash
+# Single file
+bun test tests/unit/bindings.test.ts
+
+# Pattern match
+bun test -t "resolves"
+
+# Watch mode
+bun test --watch
+```
+
+## Writing Tests
+
+### File Naming
+
+```
+tests/
+├── unit/
+│   └── {module}.test.ts       # Unit tests
+├── integration/
+│   └── {feature}.test.ts      # Integration tests
+└── fixtures/
+    └── golden/
+        └── {scenario}.json    # Golden fixtures
+```
+
+### Test Structure
+
+```typescript
+import { test, expect, describe, beforeEach } from "bun:test";
+
+describe("resolveBindings", () => {
+  let context: BindingContext;
+
+  beforeEach(() => {
+    context = createTestContext();
+  });
+
+  test("resolves flow input", () => {
+    expect(resolveBindings("{{flow.input.x}}", context)).toBe("value");
+  });
+
+  test("throws on missing path", () => {
+    expect(() => resolveBindings("{{flow.missing}}", context)).toThrow();
+  });
+
+  describe("nested paths", () => {
+    test("resolves deep nesting", () => {
+      expect(resolveBindings("{{flow.input.a.b.c}}", context)).toBe("deep");
+    });
+  });
+});
+```
+
+### Assertion Patterns
+
+```typescript
+// Equality
+expect(result).toBe("exact");
+expect(result).toEqual({ key: "value" });
+
+// Truthiness
+expect(result).toBeDefined();
+expect(result).toBeTruthy();
+
+// Errors
+expect(() => fn()).toThrow();
+expect(() => fn()).toThrow("message");
+
+// Arrays
+expect(array).toContain(item);
+expect(array).toHaveLength(3);
+
+// Async
+await expect(promise).resolves.toBe("value");
+await expect(promise).rejects.toThrow();
+```
+
+## When to Use Each Tier
+
+### Use Unit Tests
+
+- Testing pure functions
+- Schema validation
+- Binding resolution
+- When expressions
+- Isolated logic
+
+### Use Replay Tests
+
+- Flow execution paths
+- Event sequences
+- Multi-step workflows
+- Integration between components
+
+### Use Live Tests
+
+- New provider integration
+- API contract verification
+- End-to-end validation
+- Before release
+
+### Decision Tree
+
+```
+Is it a pure function?
+├─ Yes → Unit test
+└─ No
+   Does it need API responses?
+   ├─ No → Unit test
+   └─ Yes
+      Can we record a fixture?
+      ├─ Yes → Replay test
+      └─ No → Live test (sparingly)
+```
+
+## Coverage Expectations
+
+### What to Cover
+
+- All public API functions
+- All error paths
+- Edge cases
+- Schema validation
+
+### What Not to Cover
+
+- Internal implementation details
+- Framework behavior
+- Third-party libraries
+
+### Coverage Metrics
+
+```bash
+# Generate coverage report
+bun test --coverage
+```
+
+Aim for:
+- 80%+ line coverage for src/
+- 100% coverage for public API
+
+## Test Helpers
+
+### Common Helpers
+
+```typescript
+// Create test context
+function createTestContext(overrides = {}): BindingContext {
+  return {
+    flow: { input: {} },
+    outputs: {},
+    ...overrides
+  };
+}
+
+// Mock hub
+function createMockHub(): Hub {
+  const events: BaseEvent[] = [];
+  return {
+    emit: (e) => events.push(e),
+    subscribe: () => () => {},
+    // ...
+    getEmitted: () => events
+  };
+}
+```
+
+### Fixture Helpers
+
+```typescript
+// Load fixture
+function loadFixture(name: string): Fixture {
+  const path = `tests/fixtures/golden/${name}`;
+  return JSON.parse(fs.readFileSync(path, "utf-8"));
+}
+
+// Replay fixture
+async function replay(fixture: Fixture): Promise<EnrichedEvent[]> {
+  // Set up mock hub with fixture events
+  // Return collected events
+}
+```
+
+## Next Steps
+
+- [Fixtures](/docs/contributing/development/fixtures) - Recording fixtures
+- [Conformance](/docs/contributing/development/conformance) - Conformance testing
+- [Workflow](/docs/contributing/development/workflow) - Development workflow

@@ -1,0 +1,190 @@
+---
+title: BaseEvent
+description: Union type of all supported event types in Open Harness
+---
+
+# BaseEvent
+
+A discriminated union of all event types supported by the kernel. Events are identified by their `type` field.
+
+## Definition
+
+```typescript
+type BaseEvent =
+  | WorkflowEvents
+  | AgentEvents
+  | SessionMessageEvent
+  | SessionPromptEvent
+  | SessionReplyEvent
+  | SessionAbortEvent
+  | NarrativeEvent
+  | ExtensionEvent;
+```
+
+## Workflow Events
+
+Lifecycle events for harness, phase, and task execution.
+
+```typescript
+type WorkflowEvents =
+  | { type: "harness:start"; name: string }
+  | { type: "harness:complete"; success: boolean; durationMs: number }
+  | { type: "phase:start"; name: string; phaseNumber?: number }
+  | { type: "phase:complete"; name: string; phaseNumber?: number }
+  | { type: "phase:failed"; name: string; error: string; stack?: string; phaseNumber?: number }
+  | { type: "task:start"; taskId: string }
+  | { type: "task:complete"; taskId: string; result?: unknown }
+  | { type: "task:failed"; taskId: string; error: string; stack?: string };
+```
+
+| Type | Description |
+|------|-------------|
+| `harness:start` | Harness execution begins |
+| `harness:complete` | Harness execution ends |
+| `phase:start` | Named phase begins |
+| `phase:complete` | Named phase ends |
+| `phase:failed` | Phase encountered error |
+| `task:start` | Task execution begins |
+| `task:complete` | Task execution ends |
+| `task:failed` | Task encountered error |
+
+## Agent Events
+
+Events from agent execution.
+
+```typescript
+type AgentEvents =
+  | { type: "agent:start"; agentName: string; runId: string }
+  | { type: "agent:thinking"; content: string; runId?: string }
+  | { type: "agent:text"; content: string; runId?: string }
+  | { type: "agent:tool:start"; toolName: string; input?: unknown; runId?: string }
+  | { type: "agent:tool:complete"; toolName: string; result?: unknown; isError?: boolean; runId?: string }
+  | { type: "agent:complete"; agentName: string; success: boolean; runId: string };
+```
+
+| Type | Description |
+|------|-------------|
+| `agent:start` | Agent execution begins |
+| `agent:thinking` | Agent internal reasoning (for streaming) |
+| `agent:text` | Agent text output |
+| `agent:tool:start` | Agent invokes a tool |
+| `agent:tool:complete` | Tool execution completes |
+| `agent:complete` | Agent execution ends |
+
+## Session Events
+
+Interactive session communication.
+
+```typescript
+type SessionMessageEvent = {
+  type: "session:message";
+  content: string;
+  agentName?: string;
+  runId?: string;
+};
+
+type SessionPromptEvent = {
+  type: "session:prompt";
+  promptId: string;
+  prompt: string;
+  choices?: string[];
+  allowText?: boolean;
+};
+
+type SessionReplyEvent = {
+  type: "session:reply";
+  promptId: string;
+  content: string;
+  choice?: string;
+};
+
+type SessionAbortEvent = {
+  type: "session:abort";
+  reason?: string;
+};
+```
+
+| Type | Description |
+|------|-------------|
+| `session:message` | Message in session |
+| `session:prompt` | Request for user input |
+| `session:reply` | User response to prompt |
+| `session:abort` | Session aborted |
+
+## Narrative Events
+
+Logging and progress updates.
+
+```typescript
+type NarrativeEvent = {
+  type: "narrative";
+  text: string;
+  importance?: "low" | "normal" | "high";
+};
+```
+
+| Property | Description |
+|----------|-------------|
+| `text` | Log message |
+| `importance` | Display priority |
+
+## Extension Events
+
+Custom events from extensions.
+
+```typescript
+type ExtensionEvent = {
+  type: string;
+  [k: string]: unknown;
+};
+```
+
+Any event with a custom `type` that doesn't match built-in types.
+
+## Type Narrowing
+
+Use discriminated union pattern:
+
+```typescript
+hub.subscribe("*", (event) => {
+  const e = event.event;
+
+  switch (e.type) {
+    case "harness:start":
+      console.log("Started:", e.name);
+      break;
+
+    case "agent:text":
+      console.log("Agent output:", e.content);
+      break;
+
+    case "narrative":
+      if (e.importance === "high") {
+        console.log("IMPORTANT:", e.text);
+      }
+      break;
+  }
+});
+```
+
+## Emitting Events
+
+```typescript
+// Workflow events
+hub.emit({ type: "narrative", text: "Processing...", importance: "normal" });
+
+// Custom extension event
+hub.emit({
+  type: "custom:metric",
+  name: "processing_time",
+  value: 1234,
+  unit: "ms",
+});
+```
+
+## See Also
+
+- [EnrichedEvent](/docs/reference/types/enriched-event) - Event envelope
+- [EventContext](/docs/reference/types/event-context) - Context structure
+- [Workflow Events](/docs/reference/events/workflow-events) - Workflow event details
+- [Agent Events](/docs/reference/events/agent-events) - Agent event details

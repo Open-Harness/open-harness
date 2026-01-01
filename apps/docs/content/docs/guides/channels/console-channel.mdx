@@ -1,0 +1,149 @@
+---
+title: How to Build a Console Channel
+description: Build a channel for terminal input and output
+---
+
+# How to Build a Console Channel
+
+Create an interactive terminal channel for CLI applications.
+
+## Basic Output Channel
+
+```typescript
+import type { ChannelDefinition } from "@open-harness/kernel";
+
+export const consoleChannel: ChannelDefinition = {
+  name: "console",
+
+  on: {
+    "agent:text": (ctx) => {
+      process.stdout.write(ctx.event.event.content);
+    },
+
+    "narrative": (ctx) => {
+      console.log(`\n[${ctx.event.event.text}]\n`);
+    },
+
+    "session:complete": () => {
+      console.log("\n--- Session Complete ---\n");
+    }
+  }
+};
+```
+
+## With User Input
+
+```typescript
+import * as readline from "readline";
+
+interface ConsoleState {
+  rl: readline.Interface;
+}
+
+export const interactiveChannel: ChannelDefinition<ConsoleState> = {
+  name: "interactive-console",
+
+  state: () => ({
+    rl: null!
+  }),
+
+  onStart: (ctx) => {
+    ctx.state.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    ctx.state.rl.on("line", (input) => {
+      ctx.hub.send(input);
+    });
+
+    console.log("Type messages to interact with the agent.\n");
+  },
+
+  onComplete: (ctx) => {
+    ctx.state.rl.close();
+  },
+
+  on: {
+    "agent:text": (ctx) => {
+      process.stdout.write(ctx.event.event.content);
+    }
+  }
+};
+```
+
+## Handle Prompts
+
+```typescript
+on: {
+  "session:prompt": (ctx) => {
+    const { question, choices } = ctx.event.event;
+
+    console.log(`\n? ${question}`);
+    if (choices) {
+      choices.forEach((c, i) => console.log(`  ${i + 1}. ${c}`));
+    }
+    process.stdout.write("> ");
+  }
+}
+```
+
+## Pretty Output
+
+```typescript
+on: {
+  "task:start": (ctx) => {
+    console.log(`\n▶ ${ctx.event.event.taskId}`);
+  },
+
+  "task:complete": (ctx) => {
+    console.log(`✓ ${ctx.event.event.taskId}`);
+  },
+
+  "task:failed": (ctx) => {
+    console.log(`✗ ${ctx.event.event.taskId}: ${ctx.event.event.error}`);
+  },
+
+  "agent:text": (ctx) => {
+    process.stdout.write(ctx.event.event.content);
+  }
+}
+```
+
+## Handle Ctrl+C
+
+```typescript
+onStart: (ctx) => {
+  ctx.state.rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  ctx.state.rl.on("SIGINT", () => {
+    ctx.hub.abort("User interrupted");
+    ctx.state.rl.close();
+    process.exit(0);
+  });
+}
+```
+
+## Use the Channel
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+import { interactiveChannel } from "./channels/console";
+
+const harness = defineHarness({
+  channels: [interactiveChannel],
+  agents: [myAgent]
+});
+
+const instance = harness.create();
+await instance.run({ prompt: "Hello!" });
+```
+
+## Related
+
+- [Attach Channel](/docs/guides/channels/attach-channel) - Attachment basics
+- [Bidirectional I/O](/docs/guides/channels/bidirectional-io) - Two-way patterns
+- [Channels Tutorial](/docs/learn/channels) - Full tutorial

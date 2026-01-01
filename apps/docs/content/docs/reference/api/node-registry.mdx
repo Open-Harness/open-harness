@@ -1,0 +1,204 @@
+---
+title: NodeRegistry
+description: Registry for custom node type definitions used in flow execution
+---
+
+# NodeRegistry
+
+A registry for storing and retrieving node type definitions. Used by `executeFlow` to look up node implementations.
+
+## Constructor
+
+```typescript
+const registry = new NodeRegistry();
+```
+
+## Methods
+
+### register
+
+Register a node type definition.
+
+```typescript
+register<TIn, TOut>(def: NodeTypeDefinition<TIn, TOut>): void
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `def` | `NodeTypeDefinition<TIn, TOut>` | Node type definition to register |
+
+#### Example
+
+```typescript
+import { NodeRegistry } from "@open-harness/kernel";
+import { z } from "zod";
+
+const registry = new NodeRegistry();
+
+registry.register({
+  type: "echo",
+  inputSchema: z.object({ message: z.string() }),
+  outputSchema: z.object({ echoed: z.string() }),
+  run: async (ctx, input) => ({ echoed: input.message }),
+});
+```
+
+### get
+
+Retrieve a registered node type definition.
+
+```typescript
+get(type: string): NodeTypeDefinition<unknown, unknown>
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `string` | Node type identifier |
+
+#### Returns
+
+`NodeTypeDefinition<unknown, unknown>` - The registered node definition.
+
+#### Throws
+
+`Error` if node type is not registered.
+
+#### Example
+
+```typescript
+const echoNode = registry.get("echo");
+console.log(echoNode.type); // "echo"
+```
+
+### has
+
+Check if a node type is registered.
+
+```typescript
+has(type: string): boolean
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `string` | Node type identifier |
+
+#### Returns
+
+`boolean` - `true` if registered, `false` otherwise.
+
+#### Example
+
+```typescript
+if (registry.has("custom-node")) {
+  const node = registry.get("custom-node");
+}
+```
+
+### list
+
+List all registered node type identifiers.
+
+```typescript
+list(): string[]
+```
+
+#### Returns
+
+`string[]` - Array of registered node type names.
+
+#### Example
+
+```typescript
+const types = registry.list();
+console.log(types); // ["echo", "constant", "transform"]
+```
+
+## Complete Example
+
+```typescript
+import { NodeRegistry, executeFlow, parseFlowYaml, createHub } from "@open-harness/kernel";
+import { z } from "zod";
+
+// Create registry
+const registry = new NodeRegistry();
+
+// Register multiple node types
+registry.register({
+  type: "constant",
+  inputSchema: z.object({ value: z.unknown() }),
+  outputSchema: z.object({ output: z.unknown() }),
+  run: async (ctx, input) => ({ output: input.value }),
+});
+
+registry.register({
+  type: "uppercase",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({ result: z.string() }),
+  run: async (ctx, input) => ({ result: input.text.toUpperCase() }),
+});
+
+// Use with flow execution
+const flow = parseFlowYaml(`
+flow:
+  name: text-processing
+nodes:
+  - id: source
+    type: constant
+    input:
+      value: "hello world"
+  - id: transform
+    type: uppercase
+    input:
+      text: "{{source.output}}"
+edges:
+  - from: source
+    to: transform
+`);
+
+const hub = createHub();
+const result = await executeFlow(flow, registry, {
+  hub,
+  phase: async (name, fn) => fn(),
+  task: async (id, fn) => fn(),
+});
+
+console.log(result.outputs.transform); // { result: "HELLO WORLD" }
+```
+
+## NodeTypeDefinition
+
+The definition structure for registering nodes:
+
+```typescript
+interface NodeTypeDefinition<TIn, TOut> {
+  type: string;                      // Unique type identifier
+  inputSchema: ZodSchema<TIn>;       // Zod schema for input validation
+  outputSchema: ZodSchema<TOut>;     // Zod schema for output validation
+  capabilities?: NodeCapabilities;   // Optional capability flags
+  run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
+}
+
+interface NodeCapabilities {
+  isStreaming?: boolean;     // Emits incremental output
+  supportsInbox?: boolean;   // Can receive messages during execution
+  isLongLived?: boolean;     // May run indefinitely
+}
+
+interface NodeRunContext {
+  hub: Hub;                  // Event bus
+  runId: string;             // Unique run identifier
+  inbox?: AgentInbox;        // Message inbox (if supportsInbox)
+}
+```
+
+## See Also
+
+- [executeFlow](/docs/reference/api/execute-flow) - Execute flows with registry
+- [NodeTypeDefinition](/docs/reference/types/node-type-definition) - Definition interface
+- [NodeSpec](/docs/reference/types/node-spec) - Node specification in flows

@@ -1,31 +1,60 @@
 ---
 title: API Reference
-description: TypeScript API reference for Open Harness
+description: Complete API reference for the Open Harness kernel
 ---
 
-Welcome to the Open Harness API reference. This section provides complete TypeScript type definitions and API documentation.
+# API Reference
 
-<GithubInfo owner="your-org" repo="openharness" />
+The Open Harness kernel exports functions and classes for building AI-powered workflows.
 
-## Documentation Sections
+## Core Functions
 
-<Cards>
-  <Card title="API Reference" href="/docs/reference/api" description="TypeScript API types and interfaces" />
-  <Card title="Kernel Spec" href="/docs/reference/kernel-spec" description="Canonical protocol specification" />
-</Cards>
+| Function | Purpose |
+|----------|---------|
+| [defineHarness](/docs/reference/api/define-harness) | Create a harness factory for workflow execution |
+| [createHub](/docs/reference/api/hub) | Create a standalone event bus |
+| [executeFlow](/docs/reference/api/execute-flow) | Execute a YAML-defined flow DAG |
 
-## Core APIs
+## Flow Functions
 
-<Cards>
-  <Card title="Events" href="/docs/reference/api/events" description="Event types and interfaces" />
-  <Card title="Hub" href="/docs/reference/api/hub" description="Event bus API" />
-  <Card title="Agent" href="/docs/reference/api/agent" description="Agent definition and execution" />
-  <Card title="Channel" href="/docs/reference/api/channel" description="Channel adapter interface" />
-  <Card title="Flow Runtime" href="/docs/reference/api/flow-runtime" description="Flow runtime API" />
-</Cards>
+| Function | Purpose |
+|----------|---------|
+| [parseFlowYaml](/docs/reference/api/parse-flow) | Parse YAML string into FlowYaml structure |
+| [compileFlow](/docs/reference/api/compile-flow) | Validate and compile flow for execution |
+| [resolveBindings](/docs/reference/api/resolve-bindings) | Resolve A3 bindings in templates |
+| [evaluateWhen](/docs/reference/api/evaluate-when) | Evaluate conditional expressions |
 
-## Related Documentation
+## Classes
 
+| Class | Purpose |
+|-------|---------|
+| [NodeRegistry](/docs/reference/api/node-registry) | Registry for custom node type definitions |
+
+## Agent Providers
+
+| Function | Purpose |
+|----------|---------|
+| [createAnthropicTextAgent](/docs/reference/api/anthropic-agent) | Create Anthropic Claude text agent |
+
+## Import
+
+```typescript
+import {
+  defineHarness,
+  createHub,
+  executeFlow,
+  parseFlowYaml,
+  compileFlow,
+  NodeRegistry,
+  resolveBindings,
+  evaluateWhen,
+  createAnthropicTextAgent,
+} from "@open-harness/kernel";
+```
+
+## Related
+
+- [Types Reference](/docs/reference/types) - Interface definitions
+- [Schemas Reference](/docs/reference/schemas) - Zod validation schemas
+- [Events Reference](/docs/reference/events) - Event type definitions
 - [Kernel Spec](/docs/reference/kernel-spec) - Complete protocol specification
-- [Concepts](/docs/concepts) - Architecture and design concepts
-- [Guides](/docs/guides) - Step-by-step guides

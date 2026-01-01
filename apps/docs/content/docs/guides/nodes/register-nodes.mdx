@@ -1,0 +1,105 @@
+---
+title: How to Register Custom Nodes
+description: Register custom node types with NodeRegistry
+---
+
+# How to Register Custom Nodes
+
+Add custom node types to the registry for use in flows.
+
+## Create the Registry
+
+```typescript
+import { NodeRegistry } from "@open-harness/kernel";
+
+const registry = new NodeRegistry();
+```
+
+## Define a Node Type
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const myNode: NodeTypeDefinition = {
+  type: "my-custom-node",
+  inputSchema: z.object({
+    text: z.string()
+  }),
+  outputSchema: z.object({
+    result: z.string()
+  }),
+
+  async run(ctx, input) {
+    return {
+      result: input.text.toUpperCase()
+    };
+  }
+};
+```
+
+## Register the Node
+
+```typescript
+registry.register(myNode);
+```
+
+## Register Multiple Nodes
+
+```typescript
+const nodes = [uppercaseNode, fetchNode, transformNode];
+
+for (const node of nodes) {
+  registry.register(node);
+}
+```
+
+## Verify Registration
+
+```typescript
+// Check if registered
+const hasNode = registry.has("my-custom-node");
+
+// Get registered node
+const node = registry.get("my-custom-node");
+
+// List all registered types
+const types = registry.listTypes();
+```
+
+## Handle Duplicate Names
+
+```typescript
+try {
+  registry.register(myNode);
+  registry.register(anotherNodeWithSameName);
+} catch (error) {
+  // Error: Node type "my-custom-node" already registered
+  console.error(error.message);
+}
+```
+
+## Override Existing Node
+
+```typescript
+// Force registration (replaces existing)
+registry.register(updatedNode, { override: true });
+```
+
+## Use in Execution
+
+```typescript
+import { executeFlow } from "@open-harness/kernel";
+
+const result = await executeFlow(flow, {
+  input,
+  registry, // Pass your registry
+  hub
+});
+```
+
+## Related
+
+- [Custom Nodes Tutorial](/docs/learn/custom-node) - Build nodes
+- [Node Schemas](/docs/guides/nodes/node-schemas) - Define schemas
+- [NodeTypeDefinition](/docs/reference/types/node-type-definition) - Reference
