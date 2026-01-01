@@ -26,6 +26,7 @@ import { randomUUID } from "node:crypto";
 import type { Container } from "@needle-di/core";
 import type { IAgentRunner, IUnifiedEventBus } from "@openharness/sdk";
 import { createContainer, IAgentRunnerToken, IUnifiedEventBusToken, setMonologueContainer } from "@openharness/sdk";
+import { AnthropicRunner } from "../infra/runner/anthropic-runner.js";
 import { setDecoratorContainer } from "../infra/recording/decorators.js";
 import { zodToSdkSchema } from "../infra/runner/models.js";
 import { InternalAnthropicAgent } from "./internal-agent.js";
@@ -55,8 +56,24 @@ function getGlobalContainer(): Container {
 		// Set decorator containers for @Record and @Monologue compatibility
 		setDecoratorContainer(_globalContainer);
 		setMonologueContainer(_globalContainer);
+		// Register Anthropic provider
+		registerAnthropicProvider(_globalContainer);
 	}
 	return _globalContainer;
+}
+
+/**
+ * Register Anthropic provider in a container.
+ *
+ * Binds the AnthropicRunner to IAgentRunnerToken.
+ *
+ * @param container - Container to register provider in
+ */
+export function registerAnthropicProvider(container: Container): void {
+	container.bind({
+		provide: IAgentRunnerToken,
+		useClass: AnthropicRunner,
+	});
 }
 
 /**
