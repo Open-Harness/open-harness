@@ -70,17 +70,42 @@ export function parseSlashCommand(
 }
 
 export type ParsedReaction =
-	| { type: "confirm" } // ✅
-	| { type: "pause" } // ⏸️
-	| { type: "resume" } // ▶️
-	| { type: "abort" } // 🛑
-	| { type: "retry" } // 🔁
+	| { type: "confirm" } // ✅ or +1
+	| { type: "pause" } // ⏸️ or +1 (context-dependent)
+	| { type: "resume" } // ▶️ or rocket
+	| { type: "abort" } // 🛑 or -1
+	| { type: "retry" } // 🔁 or heart
+	| { type: "status" } // eyes (view status)
 	| { type: "thumbsUp" } // 👍
 	| { type: "thumbsDown" } // 👎
 	| { type: "unknown" };
 
 export function parseReaction(emoji: string): ParsedReaction {
 	const normalized = emoji.trim();
+
+	// GitHub Reactions API names (primary)
+	switch (normalized) {
+		case "+1":
+		case "thumbs_up":
+			// +1 can be confirm (if prompt open) or pause
+			// Context will be determined by dispatcher
+			return { type: "confirm" };
+		case "rocket":
+			return { type: "resume" };
+		case "-1":
+		case "thumbs_down":
+			return { type: "abort" };
+		case "eyes":
+			return { type: "status" };
+		case "heart":
+			return { type: "retry" };
+		case "👍":
+			return { type: "thumbsUp" };
+		case "👎":
+			return { type: "thumbsDown" };
+	}
+
+	// Emoji character fallback (for backwards compatibility in tests)
 	switch (normalized) {
 		case "✅":
 		case "✓":
@@ -97,10 +122,6 @@ export function parseReaction(emoji: string): ParsedReaction {
 			return { type: "abort" };
 		case "🔁":
 			return { type: "retry" };
-		case "👍":
-			return { type: "thumbsUp" };
-		case "👎":
-			return { type: "thumbsDown" };
 		default:
 			return { type: "unknown" };
 	}

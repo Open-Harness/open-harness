@@ -105,9 +105,12 @@ export class GithubWriter {
 			currentBody.includes(sentinelStart) &&
 			currentBody.includes(sentinelEnd)
 		) {
-			// Replace sentinel block
-			const before = currentBody.split(sentinelStart)[0];
-			const after = currentBody.split(sentinelEnd).slice(1).join(sentinelEnd);
+			// Replace the entire sentinel region (robust to duplicated markers)
+			const startIdx = currentBody.indexOf(sentinelStart);
+			const endIdx = currentBody.lastIndexOf(sentinelEnd);
+			const before = startIdx >= 0 ? currentBody.slice(0, startIdx) : "";
+			const after =
+				endIdx >= 0 ? currentBody.slice(endIdx + sentinelEnd.length) : "";
 			newBody = `${before}${sentinelStart}\n${rendered}\n${sentinelEnd}${after}`;
 		} else {
 			// No sentinel found, replace entire body

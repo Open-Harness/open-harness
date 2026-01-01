@@ -3,11 +3,11 @@ import type { GithubChannelState } from "./types.js";
 export function render(state: GithubChannelState): string {
 	const lines: string[] = [];
 
-	lines.push("<!-- DASHBOARD:START -->");
-	lines.push("## Workflow Dashboard");
+	// Header with decorative styling
+	lines.push("## 🎯 Workflow Dashboard");
 	lines.push("");
 
-	// Header
+	// Status table for better layout
 	const statusEmoji =
 		state.run.status === "running"
 			? "🟢"
@@ -16,8 +16,13 @@ export function render(state: GithubChannelState): string {
 				: state.run.status === "aborted"
 					? "🛑"
 					: "⚪";
+	const phaseName = state.phase.name || "N/A";
+	const phaseBadge = phaseName !== "N/A" ? `\`${phaseName}\`` : "N/A";
+
+	lines.push("| Status | Phase | Last Updated |");
+	lines.push("|--------|-------|--------------|");
 	lines.push(
-		`**Status**: ${statusEmoji} ${state.run.status} | **Phase**: ${state.phase.name || "N/A"} | **Updated**: ${state.updatedAt}`,
+		`| ${statusEmoji} **${state.run.status}** | ${phaseBadge} | ${state.updatedAt} |`,
 	);
 	lines.push("");
 
@@ -63,47 +68,53 @@ export function render(state: GithubChannelState): string {
 		lines.push("");
 	}
 
-	// Prompts (open only)
+	// Prompts (open only) - using blockquotes for better visual hierarchy
 	const openPrompts = state.prompts.filter((p) => p.status === "open");
 	if (openPrompts.length > 0) {
-		lines.push("### Prompts (Needs Attention)");
+		lines.push("### ⚠️ Prompts (Needs Attention)");
 		for (const prompt of openPrompts) {
 			const choicesText = prompt.choices
-				? ` [${prompt.choices.join(", ")}]`
+				? `\n\n**Choices**: ${prompt.choices.map((c) => `\`${c}\``).join(", ")}`
 				: "";
-			const fromText = prompt.from ? ` @${prompt.from}` : "";
-			lines.push(
-				`- **${prompt.promptId}**: "${truncate(prompt.prompt, 80)}"${choicesText}${fromText}`,
-			);
+			const fromText = prompt.from ? `\n\n*From*: @${prompt.from}` : "";
+			lines.push("");
+			lines.push(`> **${prompt.promptId}**`);
+			lines.push(`> ${truncate(prompt.prompt, 100)}${choicesText}${fromText}`);
 		}
 		lines.push("");
 	}
 
-	// Recent Activity
+	// Recent Activity - collapsible section
 	if (state.recent.length > 0) {
-		lines.push("### Recent Activity");
+		lines.push("<details>");
+		lines.push(
+			"<summary><strong>📋 Recent Activity</strong> (click to expand)</summary>",
+		);
+		lines.push("");
 		const recentToShow = state.recent.slice(-10); // Last 10
 		for (const entry of recentToShow) {
 			const time = new Date(entry.ts).toLocaleTimeString();
 			const text = entry.text ? `: ${truncate(entry.text, 60)}` : "";
-			lines.push(`- ${time} ${entry.type}${text}`);
+			lines.push(`- \`${time}\` **${entry.type}**${text}`);
 		}
 		if (state.recent.length > 10) {
-			lines.push(`- ... (${state.recent.length - 10} more entries)`);
+			lines.push(`- *... (${state.recent.length - 10} more entries)*`);
 		}
+		lines.push("");
+		lines.push("</details>");
 		lines.push("");
 	}
 
-	// Errors
+	// Errors - using warning styling
 	if (state.errors.length > 0) {
-		lines.push("### Errors");
+		lines.push("### ❌ Errors");
 		const recentErrors = state.errors.slice(-5); // Last 5
 		for (const error of recentErrors) {
 			const time = new Date(error.ts).toLocaleTimeString();
-			lines.push(`- ${time}: ${truncate(error.message, 100)}`);
+			lines.push(`- \`${time}\`: ${truncate(error.message, 100)}`);
 		}
 		if (state.errors.length > 5) {
-			lines.push(`- ... (${state.errors.length - 5} more errors)`);
+			lines.push(`- *... (${state.errors.length - 5} more errors)*`);
 		}
 		lines.push("");
 	}
@@ -117,15 +128,26 @@ export function render(state: GithubChannelState): string {
 		lines.push("");
 	}
 
-	// Control hints
+	// Control hints - polished footer
 	lines.push("---");
-	lines.push(
-		"**Commands**: `/pause` `/resume` `/abort <reason>` `/reply <id> <text>` `/choose <id> <choice>` `/status` `/help`",
-	);
-	lines.push(
-		"**Reactions**: ✅ confirm | ⏸️ pause | ▶️ resume | 🛑 abort | 🔁 retry",
-	);
-	lines.push("<!-- DASHBOARD:END -->");
+	lines.push("");
+	lines.push("### 🎮 Controls");
+	lines.push("");
+	lines.push("**Slash Commands** (post as comments):");
+	lines.push("- `/pause` - Pause the workflow");
+	lines.push("- `/resume` - Resume the workflow");
+	lines.push("- `/abort <reason>` - Abort the workflow with optional reason");
+	lines.push("- `/status` - Show current status (no-op, already visible)");
+	lines.push("- `/reply <id> <text>` - Reply to a prompt");
+	lines.push("- `/choose <id> <choice>` - Choose an option for a prompt");
+	lines.push("- `/help` - Show this help message");
+	lines.push("");
+	lines.push("**Reactions** (on this comment):");
+	lines.push("- 👍 (`+1`) - Confirm/pause");
+	lines.push("- 🚀 (`rocket`) - Resume");
+	lines.push("- 👎 (`-1`) - Abort");
+	lines.push("- 👀 (`eyes`) - Status");
+	lines.push("- ❤️ (`heart`) - Retry");
 
 	return lines.join("\n");
 }

@@ -135,4 +135,33 @@ describe("parseReaction", () => {
 	it("should handle trimmed input", () => {
 		expect(parseReaction("  ✅  ")).toEqual({ type: "confirm" });
 	});
+
+	// GitHub Reactions API names
+	it("should parse +1 as confirm", () => {
+		expect(parseReaction("+1")).toEqual({ type: "confirm" });
+	});
+
+	it("should parse rocket as resume", () => {
+		expect(parseReaction("rocket")).toEqual({ type: "resume" });
+	});
+
+	it("should parse -1 as abort", () => {
+		expect(parseReaction("-1")).toEqual({ type: "abort" });
+	});
+
+	it("should parse eyes as status", () => {
+		expect(parseReaction("eyes")).toEqual({ type: "status" });
+	});
+
+	it("should parse heart as retry", () => {
+		expect(parseReaction("heart")).toEqual({ type: "retry" });
+	});
+
+	it("should parse thumbs_up as confirm", () => {
+		expect(parseReaction("thumbs_up")).toEqual({ type: "confirm" });
+	});
+
+	it("should parse thumbs_down as abort", () => {
+		expect(parseReaction("thumbs_down")).toEqual({ type: "abort" });
+	});
 });

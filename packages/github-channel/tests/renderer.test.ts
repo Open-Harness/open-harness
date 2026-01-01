@@ -23,8 +23,6 @@ describe("renderer", () => {
 		const state = createState();
 		const rendered = render(state);
 
-		expect(rendered).toContain("<!-- DASHBOARD:START -->");
-		expect(rendered).toContain("<!-- DASHBOARD:END -->");
 		expect(rendered).toContain("Workflow Dashboard");
 		expect(rendered).toContain("Planning");
 	});
@@ -68,10 +66,11 @@ describe("renderer", () => {
 		});
 		const rendered = render(state);
 
-		expect(rendered).toContain("### Prompts (Needs Attention)");
+		expect(rendered).toContain("### ⚠️ Prompts (Needs Attention)");
 		expect(rendered).toContain("prompt-1");
 		expect(rendered).toContain("Which approach?");
-		expect(rendered).toContain("[A, B]");
+		expect(rendered).toContain("`A`");
+		expect(rendered).toContain("`B`");
 	});
 
 	it("should render errors", () => {
@@ -80,7 +79,7 @@ describe("renderer", () => {
 		});
 		const rendered = render(state);
 
-		expect(rendered).toContain("### Errors");
+		expect(rendered).toContain("### ❌ Errors");
 		expect(rendered).toContain("Task failed");
 	});
 
@@ -93,7 +92,8 @@ describe("renderer", () => {
 		});
 		const rendered = render(state);
 
-		expect(rendered).toContain("### Recent Activity");
+		expect(rendered).toContain("Recent Activity");
+		expect(rendered).toContain("<details>");
 		expect(rendered).toContain("phase:start");
 		expect(rendered).toContain("task:start");
 	});
@@ -114,7 +114,8 @@ describe("renderer", () => {
 
 		expect(rendered).toContain("/pause");
 		expect(rendered).toContain("/resume");
-		expect(rendered).toContain("✅ confirm");
+		expect(rendered).toContain("+1");
+		expect(rendered).toContain("rocket");
 	});
 
 	it("should produce stable hash for same state", () => {

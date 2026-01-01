@@ -63,6 +63,7 @@ export type GithubChannelConfig = {
 	debounceMs?: number; // default 3000
 	maxRecent?: number; // default 50
 	allowCommands?: string[];
+	pollIntervalMs?: number; // default 5000, set 0 to disable polling
 	logLevel?: string; // pino log level
 };
 
