@@ -1,0 +1,230 @@
+---
+title: Session Events
+description: Events for interactive session communication
+---
+
+# Session Events
+
+Events for bidirectional communication in interactive sessions.
+
+## session:message
+
+General message in a session.
+
+```typescript
+type SessionMessageEvent = {
+  type: "session:message";
+  content: string;
+  agentName?: string;
+  runId?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `content` | `string` | Message content |
+| `agentName` | `string?` | Source agent (if from agent) |
+| `runId` | `string?` | Associated run identifier |
+
+### Example
+
+```typescript
+hub.subscribe("session:message", (event) => {
+  const source = event.event.agentName || "System";
+  console.log(`[${source}] ${event.event.content}`);
+});
+```
+
+## session:prompt
+
+Request for user input.
+
+```typescript
+type SessionPromptEvent = {
+  type: "session:prompt";
+  promptId: string;
+  prompt: string;
+  choices?: string[];
+  allowText?: boolean;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `promptId` | `string` | Unique prompt identifier |
+| `prompt` | `string` | Question or prompt text |
+| `choices` | `string[]?` | Available choices |
+| `allowText` | `boolean?` | Whether free text is allowed |
+
+### Example
+
+```typescript
+hub.subscribe("session:prompt", (event) => {
+  const { promptId, prompt, choices, allowText } = event.event;
+
+  console.log(prompt);
+  if (choices) {
+    choices.forEach((choice, i) => console.log(`  ${i + 1}. ${choice}`));
+  }
+
+  // Get user input and reply
+  const response = await getUserInput();
+  hub.reply(promptId, {
+    content: response,
+    timestamp: new Date(),
+  });
+});
+```
+
+## session:reply
+
+User response to a prompt.
+
+```typescript
+type SessionReplyEvent = {
+  type: "session:reply";
+  promptId: string;
+  content: string;
+  choice?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `promptId` | `string` | Prompt being replied to |
+| `content` | `string` | User's response content |
+| `choice` | `string?` | Selected choice (if from choices) |
+
+### Example
+
+```typescript
+hub.subscribe("session:reply", (event) => {
+  console.log(`User replied: ${event.event.content}`);
+  if (event.event.choice) {
+    console.log(`Selected: ${event.event.choice}`);
+  }
+});
+```
+
+## session:abort
+
+Session was aborted.
+
+```typescript
+type SessionAbortEvent = {
+  type: "session:abort";
+  reason?: string;
+};
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `reason` | `string?` | Abort reason |
+
+### Example
+
+```typescript
+hub.subscribe("session:abort", (event) => {
+  console.log(`Session aborted: ${event.event.reason || "No reason given"}`);
+});
+```
+
+## Using Sessions
+
+### Starting a Session
+
+```typescript
+const instance = harness.create(input).startSession();
+await instance.run();
+```
+
+### In Run Function
+
+```typescript
+run: async (ctx) => {
+  if (ctx.session) {
+    const response = await ctx.session.waitForUser(
+      "How should we proceed?",
+      { choices: ["Option A", "Option B"], allowText: true }
+    );
+
+    if (response.choice === "Option A") {
+      // Handle option A
+    } else {
+      // Use response.content for text input
+    }
+  }
+}
+```
+
+### SessionContext API
+
+```typescript
+interface SessionContext {
+  waitForUser(
+    prompt: string,
+    options?: { choices?: string[]; allowText?: boolean }
+  ): Promise<UserResponse>;
+
+  hasMessages(): boolean;
+  readMessages(): Array<{
+    content: string;
+    agent?: string;
+    timestamp: Date;
+  }>;
+
+  isAborted(): boolean;
+}
+```
+
+## Message Flow
+
+```
+[User opens session]
+  session:started
+
+[Harness prompts user]
+  session:prompt (promptId: "p1", prompt: "Choose mode:", choices: ["Fast", "Thorough"])
+
+[User selects]
+  session:reply (promptId: "p1", content: "Fast", choice: "Fast")
+
+[Agent sends message]
+  session:message (content: "Processing...", agentName: "processor")
+
+[User aborts]
+  session:abort (reason: "User cancelled")
+```
+
+## Building a Chat Channel
+
+```typescript
+const chatChannel: ChannelDefinition<{ history: string[] }> = {
+  name: "chat",
+  state: () => ({ history: [] }),
+
+  on: {
+    "session:message": (ctx) => {
+      const msg = ctx.event.event as SessionMessageEvent;
+      ctx.state.history.push(`[${msg.agentName || "System"}] ${msg.content}`);
+      displayMessage(msg);
+    },
+
+    "session:prompt": (ctx) => {
+      const prompt = ctx.event.event as SessionPromptEvent;
+      displayPrompt(prompt);
+      // UI handles reply via hub.reply()
+    },
+
+    "session:abort": (ctx) => {
+      displayAbort(ctx.event.event.reason);
+    },
+  },
+};
+```
+
+## See Also
+
+- [Hub](/docs/reference/api/hub) - reply() and abort() methods
+- [SessionContext](/docs/reference/types/session-context) - Session interface
+- [Agent Events](/docs/reference/events/agent-events) - Agent output

@@ -1,0 +1,345 @@
+---
+title: Bidirectional Channels
+description: Channels that handle both input and output
+---
+
+# Bidirectional Channels
+
+Most channels aren't just outputs. They handle events going out and messages coming in - a full-duplex connection between the workflow and external systems.
+
+## Why Bidirectional?
+
+AI workflows are interactive:
+
+```
+Workflow → "What format do you prefer?"    → Channel → User
+Workflow ← User's choice                   ← Channel ← User
+Workflow → "Here's your formatted result"  → Channel → User
+```
+
+One-way channels can't support this. Bidirectional channels enable interactive AI experiences.
+
+## Anatomy
+
+A bidirectional channel has:
+1. **Event handlers** - Process outgoing events
+2. **Input mechanism** - Capture external input
+3. **Hub integration** - Send commands back
+
+```typescript
+const interactiveChannel: ChannelDefinition = {
+  name: "interactive",
+
+  // Lifecycle: set up input listener
+  onStart: (ctx) => {
+    stdin.on("data", (data) => {
+      ctx.hub.send(data.toString().trim());
+    });
+  },
+
+  // Event handlers: process output
+  on: {
+    "agent:text": (ctx) => {
+      stdout.write(ctx.event.event.content);
+    },
+    "session:prompt": (ctx) => {
+      stdout.write(`\n? ${ctx.event.event.question}\n`);
+    }
+  }
+};
+```
+
+## Input Patterns
+
+### Hub Commands
+
+Use `hub.send()` for simple messages:
+
+```typescript
+onStart: (ctx) => {
+  inputSource.on("message", (msg) => {
+    ctx.hub.send(msg);
+  });
+}
+```
+
+### Prompt Replies
+
+Use `hub.reply()` for structured responses:
+
+```typescript
+on: {
+  "session:prompt": (ctx) => {
+    const { promptId, choices } = ctx.event.event;
+
+    // Display prompt to user
+    showPrompt(ctx.event.event.question, choices);
+
+    // Handle user selection
+    onUserChoice((choice) => {
+      ctx.hub.reply(promptId, { choice });
+    });
+  }
+}
+```
+
+### Abort Signals
+
+Use `hub.abort()` for cancellation:
+
+```typescript
+onStart: (ctx) => {
+  process.on("SIGINT", () => {
+    ctx.hub.abort("User interrupted");
+  });
+}
+```
+
+## Output Patterns
+
+### Streaming Text
+
+Handle text as it arrives:
+
+```typescript
+on: {
+  "agent:text": (ctx) => {
+    // Stream character by character
+    process.stdout.write(ctx.event.event.content);
+  }
+}
+```
+
+### Structured Output
+
+Send structured data:
+
+```typescript
+on: {
+  "agent:text": (ctx) => {
+    socket.send(JSON.stringify({
+      type: "text",
+      content: ctx.event.event.content,
+      timestamp: ctx.event.timestamp
+    }));
+  }
+}
+```
+
+### Buffered Output
+
+Batch for efficiency:
+
+```typescript
+const bufferedChannel: ChannelDefinition<{ buffer: string[] }> = {
+  name: "buffered",
+  state: () => ({ buffer: [] }),
+
+  on: {
+    "agent:text": (ctx) => {
+      ctx.state.buffer.push(ctx.event.event.content);
+
+      if (ctx.state.buffer.length >= 10) {
+        flush(ctx.state.buffer);
+        ctx.state.buffer = [];
+      }
+    }
+  },
+
+  onComplete: (ctx) => {
+    if (ctx.state.buffer.length > 0) {
+      flush(ctx.state.buffer);
+    }
+  }
+};
+```
+
+## WebSocket Example
+
+A complete bidirectional WebSocket channel:
+
+```typescript
+interface WsState {
+  clients: Set<WebSocket>;
+  pendingPrompts: Map<string, (response: any) => void>;
+}
+
+const wsChannel: ChannelDefinition<WsState> = {
+  name: "websocket",
+
+  state: () => ({
+    clients: new Set(),
+    pendingPrompts: new Map()
+  }),
+
+  onStart: (ctx) => {
+    wss.on("connection", (ws) => {
+      ctx.state.clients.add(ws);
+
+      ws.on("message", (raw) => {
+        const msg = JSON.parse(raw.toString());
+
+        if (msg.type === "reply") {
+          // Handle prompt reply
+          const resolve = ctx.state.pendingPrompts.get(msg.promptId);
+          if (resolve) {
+            ctx.hub.reply(msg.promptId, msg.response);
+            ctx.state.pendingPrompts.delete(msg.promptId);
+          }
+        } else if (msg.type === "message") {
+          // Handle user message
+          ctx.hub.send(msg.content);
+        } else if (msg.type === "abort") {
+          ctx.hub.abort(msg.reason);
+        }
+      });
+
+      ws.on("close", () => {
+        ctx.state.clients.delete(ws);
+      });
+    });
+  },
+
+  on: {
+    "agent:text": (ctx) => {
+      broadcast(ctx.state.clients, {
+        type: "text",
+        content: ctx.event.event.content
+      });
+    },
+
+    "session:prompt": (ctx) => {
+      broadcast(ctx.state.clients, {
+        type: "prompt",
+        promptId: ctx.event.event.promptId,
+        question: ctx.event.event.question,
+        choices: ctx.event.event.choices
+      });
+    },
+
+    "session:complete": (ctx) => {
+      broadcast(ctx.state.clients, {
+        type: "complete",
+        result: ctx.event.event.result
+      });
+    }
+  },
+
+  onComplete: (ctx) => {
+    for (const client of ctx.state.clients) {
+      client.close();
+    }
+  }
+};
+
+function broadcast(clients: Set<WebSocket>, data: any) {
+  const json = JSON.stringify(data);
+  for (const client of clients) {
+    client.send(json);
+  }
+}
+```
+
+## Terminal Example
+
+Interactive terminal with prompts:
+
+```typescript
+const terminalChannel: ChannelDefinition = {
+  name: "terminal",
+
+  onStart: (ctx) => {
+    // Handle raw input
+    process.stdin.on("data", (data) => {
+      ctx.hub.send(data.toString().trim());
+    });
+
+    // Handle interrupt
+    process.on("SIGINT", () => {
+      ctx.hub.abort("Interrupted");
+    });
+  },
+
+  on: {
+    "agent:text": (ctx) => {
+      process.stdout.write(ctx.event.event.content);
+    },
+
+    "narrative": (ctx) => {
+      console.log(`\n[${ctx.event.event.text}]`);
+    },
+
+    "session:prompt": async (ctx) => {
+      const { promptId, question, choices } = ctx.event.event;
+
+      console.log(`\n${question}`);
+      if (choices) {
+        choices.forEach((c, i) => console.log(`  ${i + 1}. ${c}`));
+      }
+
+      // Read user input
+      const answer = await readline.question("> ");
+      ctx.hub.reply(promptId, { content: answer });
+    },
+
+    "session:complete": () => {
+      console.log("\n[Complete]");
+    }
+  }
+};
+```
+
+## Design Considerations
+
+### Prompt Tracking
+
+Track pending prompts to match replies:
+
+```typescript
+state: () => ({ pendingPrompts: new Map() }),
+
+on: {
+  "session:prompt": (ctx) => {
+    ctx.state.pendingPrompts.set(
+      ctx.event.event.promptId,
+      ctx.event.event
+    );
+  }
+}
+```
+
+### Connection Management
+
+Handle disconnections gracefully:
+
+```typescript
+ws.on("close", () => {
+  ctx.state.clients.delete(ws);
+  if (ctx.state.clients.size === 0) {
+    ctx.hub.abort("All clients disconnected");
+  }
+});
+```
+
+### Error Handling
+
+Don't let I/O errors crash the workflow:
+
+```typescript
+on: {
+  "agent:text": (ctx) => {
+    try {
+      socket.send(ctx.event.event.content);
+    } catch (err) {
+      console.error("Send failed:", err);
+      // Don't rethrow - workflow continues
+    }
+  }
+}
+```
+
+## Next Steps
+
+- [Adapter Pattern](/docs/concepts/channels/adapter-pattern) - Channel fundamentals
+- [Channel Definition](/docs/reference/types/channel-definition) - Type reference
+- [Building Channels](/docs/guides/channels/building-channels) - Practical guide

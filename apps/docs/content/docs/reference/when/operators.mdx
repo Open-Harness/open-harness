@@ -1,0 +1,282 @@
+---
+title: When Operators
+description: Reference for WhenExpr operators (equals, and, or, not)
+---
+
+# When Operators
+
+Four operators are available for building conditional expressions.
+
+## equals
+
+Test if a variable equals a specific value.
+
+### Signature
+
+```typescript
+{
+  equals: {
+    var: string;   // Path to variable
+    value: unknown; // Value to compare
+  }
+}
+```
+
+### Semantics
+
+- Uses deep equality (JSON.stringify comparison)
+- Returns `false` if variable path not found
+- Supports any JSON-serializable value
+
+### Examples
+
+```yaml
+# String equality
+equals:
+  var: flow.input.mode
+  value: "production"
+
+# Number equality
+equals:
+  var: step1.output.count
+  value: 42
+
+# Boolean equality
+equals:
+  var: flow.input.enabled
+  value: true
+
+# null check
+equals:
+  var: flow.input.optional
+  value: null
+
+# Object equality (deep)
+equals:
+  var: step1.output.config
+  value:
+    debug: true
+    level: 5
+
+# Array equality (deep)
+equals:
+  var: flow.input.tags
+  value: ["a", "b"]
+```
+
+## not
+
+Negate a condition.
+
+### Signature
+
+```typescript
+{
+  not: WhenExpr
+}
+```
+
+### Semantics
+
+- Returns the logical inverse of the inner expression
+- Converts `true` to `false` and `false` to `true`
+
+### Examples
+
+```yaml
+# Not equal
+not:
+  equals:
+    var: flow.input.disabled
+    value: true
+
+# Double negation (equivalent to original)
+not:
+  not:
+    equals:
+      var: flow.input.x
+      value: 1
+
+# Negate complex expression
+not:
+  and:
+    - equals:
+        var: a
+        value: 1
+    - equals:
+        var: b
+        value: 2
+```
+
+## and
+
+Logical AND - all conditions must be true.
+
+### Signature
+
+```typescript
+{
+  and: WhenExpr[]
+}
+```
+
+### Semantics
+
+- Returns `true` if ALL sub-expressions are true
+- Returns `true` if array is empty (vacuous truth)
+- Short-circuits on first `false`
+
+### Examples
+
+```yaml
+# All conditions required
+and:
+  - equals:
+      var: flow.input.enabled
+      value: true
+  - equals:
+      var: flow.input.validated
+      value: true
+  - equals:
+      var: step1.output.ready
+      value: true
+
+# Empty and (always true)
+and: []
+
+# Single condition (equivalent to just the condition)
+and:
+  - equals:
+      var: flow.input.x
+      value: 1
+```
+
+## or
+
+Logical OR - any condition must be true.
+
+### Signature
+
+```typescript
+{
+  or: WhenExpr[]
+}
+```
+
+### Semantics
+
+- Returns `true` if ANY sub-expression is true
+- Returns `false` if array is empty
+- Short-circuits on first `true`
+
+### Examples
+
+```yaml
+# Any condition sufficient
+or:
+  - equals:
+      var: flow.input.env
+      value: "staging"
+  - equals:
+      var: flow.input.env
+      value: "production"
+  - equals:
+      var: flow.input.env
+      value: "demo"
+
+# Empty or (always false)
+or: []
+```
+
+## Operator Precedence
+
+Operators are evaluated from inner to outer. Use nesting to control precedence:
+
+```yaml
+# (A AND B) OR C
+or:
+  - and:
+      - equals: { var: a, value: 1 }
+      - equals: { var: b, value: 2 }
+  - equals: { var: c, value: 3 }
+
+# A AND (B OR C)
+and:
+  - equals: { var: a, value: 1 }
+  - or:
+      - equals: { var: b, value: 2 }
+      - equals: { var: c, value: 3 }
+```
+
+## Common Patterns
+
+### Check Not Equal
+
+```yaml
+not:
+  equals:
+    var: flow.input.status
+    value: "error"
+```
+
+### Check One of Many Values
+
+```yaml
+or:
+  - equals: { var: flow.input.type, value: "A" }
+  - equals: { var: flow.input.type, value: "B" }
+  - equals: { var: flow.input.type, value: "C" }
+```
+
+### Check All Flags Enabled
+
+```yaml
+and:
+  - equals: { var: flow.input.flag1, value: true }
+  - equals: { var: flow.input.flag2, value: true }
+  - equals: { var: flow.input.flag3, value: true }
+```
+
+### Exclusive OR (XOR)
+
+```yaml
+# Exactly one of A or B (not both, not neither)
+or:
+  - and:
+      - equals: { var: a, value: true }
+      - not:
+          equals: { var: b, value: true }
+  - and:
+      - not:
+          equals: { var: a, value: true }
+      - equals: { var: b, value: true }
+```
+
+### Fallback Chain
+
+Check conditions in priority order:
+
+```yaml
+# If premium, use that path
+# Else if standard, use that path
+# Else skip (both fail)
+nodes:
+  - id: premium_path
+    when:
+      equals: { var: flow.input.tier, value: "premium" }
+    # ...
+
+  - id: standard_path
+    when:
+      and:
+        - not:
+            equals: { var: flow.input.tier, value: "premium" }
+        - equals: { var: flow.input.tier, value: "standard" }
+    # ...
+```
+
+## See Also
+
+- [When Syntax](/docs/reference/when/when-syntax) - Full syntax reference
+- [evaluateWhen](/docs/reference/api/evaluate-when) - Evaluation API
+- [WhenExprSchema](/docs/reference/schemas/when-expr-schema) - Validation
