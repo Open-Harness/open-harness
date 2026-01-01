@@ -1,10 +1,4 @@
 # ============================================
-# bmad
-# ============================================
-_bmad/
-_bmad-output/
-_bmad/bmm/data/
-# ============================================
 # Core Bun/Vite/Node
 # ============================================
 node_modules
@@ -101,12 +95,6 @@ claude-quickstarts/
 # Inbox/Exports (personal workspaces)
 .claude/inbox/
 .claude/exports/
-
-# ============================================
-# _bmad - Personal Tooling (exclude generated)
-# ============================================
-_bmad/_memory/
-_bmad/bmm/data/
 
 # ============================================
 # Knowledge Base (Obsidian vault)
