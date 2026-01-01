@@ -78,18 +78,18 @@ export { TaskList } from "./workflow/task-list.js";
 // ============================================
 
 // Runner Callbacks
-export type { RunnerCallbacks } from "./core/tokens.js";
+export type { RunnerCallbacks } from "./infra/tokens.js";
 export type { Task, TaskStatus } from "./workflow/task-list.js";
 
 // ============================================
 // DI CONTAINER
 // ============================================
 
-export type { ContainerOptions } from "./core/container.js";
-export { createContainer, createTestContainer } from "./core/container.js";
+export type { ContainerOptions } from "./infra/container.js";
+export { createContainer, createTestContainer } from "./infra/container.js";
 
 // EventBus
-export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./core/event-bus.js";
+export { EventBus, type EventFilter, type EventListener, type SubscribeOptions } from "./infra/event-bus.js";
 // Token Interfaces
 export type {
 	IAgentRunner,
@@ -101,7 +101,7 @@ export type {
 	IPromptRegistry,
 	IRecordingDecorator,
 	IVault,
-} from "./core/tokens.js";
+} from "./infra/tokens.js";
 // DI Tokens
 export {
 	IAgentRunnerToken,
@@ -114,7 +114,7 @@ export {
 	IRecordingDecoratorToken,
 	IReplayRunnerToken,
 	IVaultToken,
-} from "./core/tokens.js";
+} from "./infra/tokens.js";
 // Monologue System Types
 export type {
 	AgentEvent as MonologueAgentEvent,
@@ -201,10 +201,10 @@ export { HarnessInstance } from "./harness/harness-instance.js";
 // ============================================
 
 // DI Token
-export { IUnifiedEventBusToken } from "./core/tokens.js";
+export { IUnifiedEventBusToken } from "./infra/tokens.js";
 // Core class and utilities
-export { UnifiedEventBus } from "./core/unified-event-bus.js";
-export { matchesFilter } from "./core/unified-events/filter.js";
+export { UnifiedEventBus } from "./infra/unified-event-bus.js";
+export { matchesFilter } from "./infra/unified-events/filter.js";
 // Types
 export type {
 	// Base event types (FR-004)
@@ -241,14 +241,14 @@ export type {
 	TaskStartEvent,
 	UnifiedEventListener,
 	Unsubscribe,
-} from "./core/unified-events/index.js";
+} from "./infra/unified-events/index.js";
 // Type guards
 export {
 	isAgentEvent,
 	isNarrativeEvent as isUnifiedNarrativeEvent,
 	isSessionEvent,
 	isWorkflowEvent,
-} from "./core/unified-events/types.js";
+} from "./infra/unified-events/types.js";
 
 // ============================================
 // CHANNEL SYSTEM

@@ -7,7 +7,7 @@
  * SDK-specific types (StreamCallbacks) are defined locally.
  */
 
-import type { AgentEvent } from "../core/tokens.js";
+import type { AgentEvent } from "../infra/tokens.js";
 
 // ============================================================================
 // Re-exports from @openharness/core

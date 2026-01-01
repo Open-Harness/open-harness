@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { injectable } from "@needle-di/core";
-import type { Attachment } from "../../src/core/unified-events/types.js";
+import type { Attachment } from "../../src/infra/unified-events/types.js";
 import { defineHarness } from "../../src/factory/define-harness.js";
 
 // Simple mock agent for testing

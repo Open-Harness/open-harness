@@ -15,7 +15,7 @@
  * @module harness/define-channel
  */
 
-import { matchesFilter } from "../core/unified-events/filter.js";
+import { matchesFilter } from "../infra/unified-events/filter.js";
 import type {
 	Attachment,
 	BaseEvent,
@@ -23,7 +23,7 @@ import type {
 	IUnifiedEventBus,
 	Transport,
 	Unsubscribe,
-} from "../core/unified-events/types.js";
+} from "../infra/unified-events/types.js";
 import { RenderOutput } from "./render-output.js";
 
 // ============================================================================

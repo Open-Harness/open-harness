@@ -7,7 +7,7 @@
  * @module factory/wrap-agent
  */
 
-import { createContainer } from "../core/container.js";
+import { createContainer } from "../infra/container.js";
 import type {
 	FluentEventHandler,
 	FluentHarnessEvent,
