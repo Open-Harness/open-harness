@@ -3,19 +3,18 @@
 
 import type { Hub } from "./hub.js";
 
-export interface InjectedMessage {
-	content: string;
-	timestamp: Date;
-}
-
-export interface AgentInbox extends AsyncIterable<InjectedMessage> {
-	pop(): Promise<InjectedMessage>;
-	drain(): InjectedMessage[];
-}
-
+/**
+ * Context provided to agent execution.
+ *
+ * Agents use V2 SDK session pattern:
+ * - hub: for emitting events and subscribing to session:message
+ * - runId: routing key for targeted message injection
+ *
+ * Multi-turn pattern: subscribe to hub "session:message" events
+ * filtered by runId, then call session.send() for each.
+ */
 export interface AgentExecuteContext {
 	hub: Hub;
-	inbox: AgentInbox;
 	runId: string;
 }
 

@@ -1,7 +1,6 @@
 // Flow executor (sequential MVP)
 // Implements docs/flow/execution.md
 
-import { AgentInboxImpl } from "../engine/inbox.js";
 import type {
 	Edge,
 	FlowYaml,
@@ -109,10 +108,10 @@ async function runNode(
 		: resolvedInput;
 	const runId = createRunId(node.id, attempt);
 
+	// Agent nodes receive hub and runId; they subscribe to session:message events
 	const runCtx = {
 		hub: ctx.hub,
 		runId,
-		inbox: def.capabilities?.supportsInbox ? new AgentInboxImpl() : undefined,
 	};
 
 	const result = await def.run(runCtx, parsedInput);

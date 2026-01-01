@@ -2,7 +2,6 @@
 // Executes fixture steps against a minimal FlowRuntime-like runner for agent scenarios
 
 import { createHub, type HubImpl } from "../../src/engine/hub.js";
-import { AgentInboxImpl } from "../../src/engine/inbox.js";
 import type { AgentDefinition } from "../../src/protocol/agent.js";
 import type { EnrichedEvent, EventContext } from "../../src/protocol/events.js";
 import type { HubStatus } from "../../src/protocol/hub.js";
@@ -21,32 +20,21 @@ function createRuntime(sessionId: string): AgentRuntime {
 	const hub = createHub(sessionId) as HubImpl;
 	hub.startSession();
 
-	const inboxes = new Map<string, AgentInboxImpl>();
 	let runCounter = 0;
-
-	const unsubscribe = hub.subscribe("session:message", (event) => {
-		const payload = event.event as { runId?: string; content?: string };
-		if (!payload.runId || payload.content === undefined) return;
-		const inbox = inboxes.get(payload.runId);
-		if (inbox) {
-			inbox.push(payload.content);
-		}
-	});
 
 	const executeAgent = async <TIn, TOut>(
 		agent: AgentDefinition<TIn, TOut>,
 		input: TIn,
 	): Promise<{ runId: string; output: TOut }> => {
 		const runId = `run-${runCounter++}`;
-		const inbox = new AgentInboxImpl();
-		inboxes.set(runId, inbox);
 
 		if (!agent.emitsStartComplete) {
 			hub.emit({ type: "agent:start", agentName: agent.name, runId });
 		}
 
 		try {
-			const output = await agent.execute(input, { hub, inbox, runId });
+			// Agents now subscribe to session:message events via hub
+			const output = await agent.execute(input, { hub, runId });
 			if (!agent.emitsStartComplete) {
 				hub.emit({
 					type: "agent:complete",
@@ -73,7 +61,7 @@ function createRuntime(sessionId: string): AgentRuntime {
 		hub,
 		executeAgent,
 		close: () => {
-			unsubscribe();
+			// No cleanup needed - agents unsubscribe themselves
 		},
 	};
 }
@@ -81,108 +69,51 @@ function createRuntime(sessionId: string): AgentRuntime {
 /**
  * Recreate agent scenario based on fixture name.
  * This matches the factories used in scripts/record-fixture.ts
+ *
+ * V2 SDK Migration: Agents now subscribe to session:message events via hub
+ * instead of receiving an inbox. The runid-uniqueness scenario demonstrates
+ * this pattern.
  */
 function createAgentScenario(
 	scenario: string,
 	runtime: AgentRuntime,
 ): () => Promise<unknown> {
 	switch (scenario) {
-		case "inbox-basic": {
-			const receiver: AgentDefinition<
-				{ label: string },
-				{
-					first: string;
-					drained: string[];
-					iter: string;
-				}
-			> = {
-				name: "receiver",
-				execute: async (input, ctx) => {
-					const first = await Promise.race([
-						ctx.inbox.pop(),
-						new Promise<{ content: string; timestamp: Date }>((resolve) => {
-							setTimeout(
-								() =>
-									resolve({
-										content: `timeout:${input.label}:pop`,
-										timestamp: new Date(),
-									}),
-								100,
-							);
-						}),
-					]);
-
-					const drained = ctx.inbox.drain();
-					const iterator = ctx.inbox[Symbol.asyncIterator]();
-					const iterResult = await Promise.race([
-						iterator.next(),
-						new Promise<IteratorResult<{ content: string; timestamp: Date }>>(
-							(resolve) => {
-								setTimeout(
-									() =>
-										resolve({
-											value: {
-												content: `timeout:${input.label}:iter`,
-												timestamp: new Date(),
-											},
-											done: false,
-										}),
-									100,
-								);
-							},
-						),
-					]);
-
-					return {
-						first: first.content,
-						drained: drained.map((message) => message.content),
-						iter: iterResult.value.content,
-					};
-				},
-			};
-
-			return async () => {
-				let runId: string | null = null;
-				const unsubscribe = runtime.hub.subscribe("agent:start", (event) => {
-					runId = (event.event as { runId: string }).runId;
-					runtime.hub.sendToRun(runId, "first");
-					runtime.hub.sendToRun(runId, "second");
-					setTimeout(() => {
-						if (runId) {
-							runtime.hub.sendToRun(runId, "third");
-						}
-					}, 10);
-				});
-
-				const execution = await runtime.executeAgent(receiver, {
-					label: "basic",
-				});
-				unsubscribe();
-
-				return { runId: execution.runId, result: execution.output };
-			};
-		}
 		case "runid-uniqueness": {
+			// Agent that receives messages via hub subscription
 			const receiver: AgentDefinition<
 				{ label: string },
 				{ runId: string; message: string }
 			> = {
 				name: "receiver",
 				execute: async (input, ctx) => {
-					const message = await Promise.race([
-						ctx.inbox.pop(),
-						new Promise<{ content: string; timestamp: Date }>((resolve) => {
-							setTimeout(
-								() =>
+					// Subscribe to session:message events filtered by runId
+					return new Promise((resolve) => {
+						const timeout = setTimeout(() => {
+							resolve({
+								runId: ctx.runId,
+								message: `timeout:${input.label}`,
+							});
+						}, 100);
+
+						const unsubscribe = ctx.hub.subscribe(
+							"session:message",
+							(event) => {
+								const payload = event.event as {
+									runId?: string;
+									content?: string;
+								};
+								if (payload.runId === ctx.runId && payload.content) {
+									clearTimeout(timeout);
+									unsubscribe();
 									resolve({
-										content: `timeout:${input.label}`,
-										timestamp: new Date(),
-									}),
-								100,
-							);
-						}),
-					]);
-					return { runId: ctx.runId, message: message.content };
+										runId: ctx.runId,
+										message: payload.content,
+									});
+								}
+							},
+						);
+					});
 				},
 			};
 
@@ -191,7 +122,11 @@ function createAgentScenario(
 				const unsubscribe = runtime.hub.subscribe("agent:start", (event) => {
 					const runId = (event.event as { runId: string }).runId;
 					runIds.push(runId);
-					runtime.hub.sendToRun(runId, `message:${runId}`);
+					// Defer message send to next microtask to allow agent's
+					// execute() to start and set up its subscription first
+					queueMicrotask(() => {
+						runtime.hub.sendToRun(runId, `message:${runId}`);
+					});
 				});
 
 				const results = await Promise.all([

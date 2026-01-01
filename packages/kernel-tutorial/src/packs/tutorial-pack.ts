@@ -1,6 +1,74 @@
 import { z } from "zod";
 import type { NodePack, NodeTypeDefinition } from "@open-harness/kernel";
 
+/**
+ * Mock Claude node for tutorials.
+ * Simulates claude.agent behavior without requiring live API access.
+ * For live Claude functionality, use the real claude.agent from claudePack.
+ */
+export const mockClaudeNode: NodeTypeDefinition<
+	{ prompt: string },
+	{ text: string; usage?: { inputTokens: number; outputTokens: number } }
+> = {
+	type: "claude.agent",
+	inputSchema: z.object({ prompt: z.string() }),
+	outputSchema: z.object({
+		text: z.string(),
+		usage: z
+			.object({
+				inputTokens: z.number(),
+				outputTokens: z.number(),
+			})
+			.optional(),
+	}),
+	capabilities: {
+		supportsMultiTurn: true,
+	},
+	run: async (_ctx, input) => {
+		// Simulate processing time
+		await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
+		// Generate mock response based on prompt content
+		let text: string;
+		if (input.prompt.includes("API documentation")) {
+			text = `# UserService API Documentation
+
+## Methods
+
+### createUser(email: string, password: string): Promise<User>
+Creates a new user account.
+- **Parameters:**
+  - \`email\`: User's email address (must be valid format)
+  - \`password\`: User's password
+- **Returns:** Promise resolving to the created User object
+- **Throws:** \`ValidationError\` if email format is invalid
+
+### getUser(id: string): Promise<User | null>
+Retrieves a user by their unique identifier.
+- **Parameters:**
+  - \`id\`: Unique user identifier
+- **Returns:** Promise resolving to User object or null if not found
+
+### deleteUser(id: string): Promise<void>
+Permanently deletes a user from the system.
+- **Parameters:**
+  - \`id\`: Unique user identifier
+- **Returns:** Promise resolving when deletion is complete
+- **Warning:** This action cannot be undone`;
+		} else {
+			text = `Response to: ${input.prompt.slice(0, 100)}...`;
+		}
+
+		return {
+			text,
+			usage: {
+				inputTokens: Math.floor(input.prompt.length / 4),
+				outputTokens: Math.floor(text.length / 4),
+			},
+		};
+	},
+};
+
 export const uppercaseNode: NodeTypeDefinition<
 	{ text: string },
 	{ text: string }
@@ -64,5 +132,17 @@ export const tutorialPack: NodePack = {
 		registry.register(flakyNode);
 		registry.register(delayNode);
 		registry.register(failNode);
+	},
+};
+
+/**
+ * Mock Claude pack for tutorials.
+ * Provides claude.agent node with simulated responses.
+ * Use this in tutorials that need to demonstrate Claude integration
+ * without requiring live API access.
+ */
+export const mockClaudePack: NodePack = {
+	register: (registry) => {
+		registry.register(mockClaudeNode);
 	},
 };

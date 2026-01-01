@@ -203,8 +203,8 @@ For every phase below, we must include:
   - `packages/kernel/docs/spec/agent.md`
   - `packages/kernel/docs/flow/registry.md`
 - Deliverables
-  - Claude adapter using `@anthropic-ai/claude-agent-sdk` query()
-  - Async prompt stream with inbox injection
+  - Claude adapter using V2 SDK: `unstable_v2_createSession()`
+  - Session-based send/receive pattern (no async prompt stream)
   - Agent event emission (`agent:*`, `agent:tool:*`)
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-agent-nodes-live.ts`
@@ -219,9 +219,10 @@ For every phase below, we must include:
   - `bun test`
   - `bun scripts/live/flow-agent-nodes-live.ts`
 - Acceptance Criteria
-  - Agent nodes always receive inbox
+  - Agent nodes use V2 session pattern
   - runId fresh per invocation
-  - Multi-turn termination rules enforced
+  - Multi-turn via Hub event subscription
+  - Clean session termination (no hangs)
   - Lessons 06 and 09 pass
 - Retro (mandatory)
   - Lessons learned:

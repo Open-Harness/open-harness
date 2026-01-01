@@ -2,7 +2,6 @@
 // Wraps AgentDefinition (from providers) into NodeTypeDefinition (for flows)
 
 import { z } from "zod";
-import { AgentInboxImpl } from "../../engine/inbox.js";
 import type { NodeTypeDefinition } from "../../protocol/flow.js";
 import {
 	type ClaudeAgentAdapterOptions,
@@ -66,13 +65,12 @@ export function createClaudeNode(
 		outputSchema: ClaudeAgentOutputSchema,
 		capabilities: {
 			isStreaming: false,
-			supportsInbox: false,
+			supportsMultiTurn: true,
 		},
 		run: async (ctx, input) => {
 			const agent = createClaudeAgent(options);
 			const result = await agent.execute(input, {
 				hub: ctx.hub,
-				inbox: ctx.inbox ?? new AgentInboxImpl(),
 				runId: ctx.runId,
 			});
 			return result;

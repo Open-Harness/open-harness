@@ -5,7 +5,6 @@
  */
 
 import { createHub } from "../../../src/engine/hub.js";
-import { AgentInboxImpl } from "../../../src/engine/inbox.js";
 import { createClaudeAgent } from "../../../src/providers/claude.js";
 
 async function runLiveTest() {
@@ -13,11 +12,10 @@ async function runLiveTest() {
 
 	const agent = createClaudeAgent();
 	const hub = createHub("live-claude");
-	const inbox = new AgentInboxImpl();
 
 	const output = await agent.execute(
 		{ prompt: "Reply with a single word: hello" },
-		{ hub, inbox, runId: "run-live-0" },
+		{ hub, runId: "run-live-0" },
 	);
 
 	if (!output.text || output.text.trim().length === 0) {

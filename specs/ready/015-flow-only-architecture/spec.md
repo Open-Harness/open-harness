@@ -4,7 +4,7 @@
 **Date**: 2025-12-31
 
 ## Summary
-Unify execution into a single Flow runtime that preserves existing runtime semantics (phases, tasks, runId boundaries, event context, inbox routing) while simplifying abstractions. Flow becomes the only orchestration model; legacy runtime APIs are removed.
+Unify execution into a single Flow runtime that preserves existing runtime semantics (phases, tasks, runId boundaries, event context, message routing) while simplifying abstractions. Flow becomes the only orchestration model; legacy runtime APIs are removed.
 
 This spec is grounded in the existing mental model:
 - **Each agent invocation is a fresh run** (new `runId`).
@@ -16,7 +16,7 @@ This spec is grounded in the existing mental model:
 ## Goals
 - Collapse dual execution modes into a single **Flow runtime**.
 - Preserve runtime semantics: phases, tasks, run lifecycle, and event context.
-- Ensure **every agent run is injectable** (inbox always available for agent nodes).
+- Ensure **every agent run is injectable** (Hub subscription always available for agent nodes).
 - Enable **edge-level dynamic routing** with explicit control nodes.
 - Provide a **complete node catalog** suitable for “n8n for agents.”
 
@@ -46,10 +46,11 @@ This preserves prior runtime behavior: multiple agents can run in the same task 
 - `agent:start/complete` emitted per agent invocation.
 - `harness:complete` emitted on completion (success/failure).
 
-### Injection & Inbox
-- **All agent nodes receive an inbox**, always.
-- `sendToRun(runId, message)` injects into a specific agent run.
+### Message Injection
+- **All agent nodes can subscribe to Hub events** via `session:message`.
+- `sendToRun(runId, message)` emits a `session:message` event for a specific agent run.
 - `sendTo(nodeId, message)` routes to the latest active run for that node (convenience).
+- Agents filter messages by `runId` to receive only their own messages.
 
 ### Context Passing
 - Inputs are explicit via bindings.
@@ -115,7 +116,7 @@ Control nodes define routing structure in the graph (n8n-like):
 - `agent.summarize`
 
 All agent nodes:
-- Always receive inbox.
+- Subscribe to Hub `session:message` events for message injection.
 - Emit `agent:*` and `agent:tool:*` events.
 - Support streaming (`agent:text`).
 
@@ -148,13 +149,14 @@ Channels are interfaces to a running flow (console, voice, websocket, etc.). The
 
 ### Claude node canonicalization
 - `claude.agent` is the canonical Claude node type.
-- Provider adapter must use `query()` from `@anthropic-ai/claude-agent-sdk`.
-- **Prohibited**: any `unstable_v2_*` APIs.
+- Provider adapter must use V2 SDK: `unstable_v2_createSession()`, `session.send()`, `session.receive()`.
+- **Required**: Use V2 SDK session-based send/receive pattern for multi-turn support.
 
-### Async iterable input (agent nodes)
-- Agent nodes must accept async-iterable prompts for multi-turn support.
-- The prompt stream must yield initial messages, then yield new user messages from `AgentInbox`.
-- Streaming must use the SDK `SDKUserMessage` shape (see Flow Runtime doc).
+### Session-based multi-turn (agent nodes)
+- Agent nodes use V2 SDK session pattern.
+- Each turn is a `session.send()` followed by consuming `session.receive()`.
+- Multi-turn: agent subscribes to Hub events for `session:message` with matching `runId`.
+- No async iterable input required - the session handles message threading internally.
 
 ### Config Pass-through
 - `NodeSpec.config` must be passed to agent runner.
@@ -162,10 +164,11 @@ Channels are interfaces to a running flow (console, voice, websocket, etc.). The
 - Preserve tool configuration, model selection, sampling parameters, and metadata.
 
 ### Multi-turn termination rules
-- Session-like agent nodes must stop on any of:
-  - `maxTurns`
-  - explicit close of the prompt stream (e.g., `inbox.close()`)
-- Flow runtime must never hang awaiting inbox input.
+- Session-like agent nodes terminate when:
+  - No more `session:message` events arrive within timeout
+  - `session.close()` is called explicitly
+  - SDK `maxTurns` limit is reached
+- Agent unsubscribes from Hub on completion (no hanging).
 
 ### Config dir expectations
 - Provider must not write to `~/.claude` in locked environments.
@@ -200,12 +203,12 @@ edges:
 ---
 
 ## Implementation Plan (High Level)
-1. Introduce `FlowRuntime` that owns Hub + lifecycle + inbox routing.
+1. Introduce `FlowRuntime` that owns Hub + lifecycle + message routing.
 2. Implement `FlowPolicy` + `NodePolicy` in runtime.
 3. Add edge-level `when` in schema + executor.
-4. Standardize agent nodes on stateful runner and inbox.
+4. Standardize agent nodes on V2 SDK session pattern.
 5. Remove legacy runtime APIs entirely; FlowRuntime is the only runtime surface.
-6. Update tests/fixtures for run lifecycle and inbox routing.
+6. Update tests/fixtures for run lifecycle and message routing.
 
 ---
 
@@ -213,7 +216,7 @@ edges:
 
 ### Phase 1: FlowRuntime + Lifecycle
 - Add `packages/kernel/src/flow/runtime.ts`:
-  - Owns `HubImpl`, session context, inbox map, and run lifecycle.
+  - Owns `HubImpl`, session context, and run lifecycle.
   - Emits `harness:*`, `phase:*`, `task:*` events.
   - Returns `FlowRunResult` with events, duration, status.
 - Export runtime from `packages/kernel/src/flow/index.ts` and `packages/kernel/src/index.ts`.
@@ -247,13 +250,13 @@ edges:
 ### Phase 4: Agent Node Standardization
 - Define agent capability flag:
   - `NodeCapabilities.isAgent?: boolean`
-  - When true: runtime always creates inbox and assigns runId.
+  - When true: runtime assigns runId and agent subscribes to Hub events.
 - Update existing nodes:
   - `packages/kernel/src/flow/nodes/claude.agent.ts`:
-    - Use `query()` with async prompt stream.
-    - Wire inbox into prompt stream for multi-turn.
+    - Use V2 SDK session pattern.
+    - Subscribe to Hub `session:message` for multi-turn.
   - `packages/kernel/src/providers/claude.ts`:
-    - Use stateful agent execution.
+    - Use V2 SDK session-based execution.
     - Pass full config from `NodeSpec.config`.
     - Respect config dir expectations.
 - Ensure agent nodes emit `agent:*` and `agent:tool:*` events.
@@ -270,14 +273,14 @@ edges:
 - Add remaining tests/fixtures for runtime scenarios as needed.
 - Add new replay fixtures for Flow runtime:
   - `flow/run-lifecycle`
-  - `flow/inbox-routing`
+  - `flow/message-routing`
   - `flow/policy-timeout`
   - `flow/policy-retry`
   - `flow/edge-when`
 - Add unit tests for:
   - Edge-level `when` evaluation.
   - Retry/backoff behavior.
-  - Inbox injection targeting runId and nodeId.
+  - Message injection targeting runId and nodeId.
 
 ---
 
@@ -286,7 +289,7 @@ edges:
 Each phase must pass its **authoritative gate** before proceeding. Gates are a mix of replay fixtures, live scripts, and tutorial validations.
 
 ### Phase 1 Gate (FlowRuntime + Lifecycle)
-- Replay fixtures: `flow/runtime-lifecycle`, `flow/runtime-task-events`, `flow/runtime-inbox-routing`
+- Replay fixtures: `flow/runtime-lifecycle`, `flow/runtime-task-events`, `flow/runtime-message-routing`
 - Live script: `scripts/live/flow-runtime-live.ts`
 - Tutorial gate: Lessons **01–05** run successfully
 
@@ -301,7 +304,7 @@ Each phase must pass its **authoritative gate** before proceeding. Gates are a m
 - Tutorial gate: add or extend a lesson to cover retry/timeout/continueOnError
 
 ### Phase 4 Gate (Claude + Multi-Turn)
-- Replay fixtures: `flow/agent-inbox`, `flow/agent-tool-events`, `flow/agent-streaming`
+- Replay fixtures: `flow/agent-session`, `flow/agent-tool-events`, `flow/agent-streaming`
 - Live script: `scripts/live/flow-agent-nodes-live.ts`
 - Tutorial gate: restore **lesson 06** (PromptFile + Claude) and **lesson 09** (Claude Multi-Turn)
 
@@ -322,7 +325,7 @@ Each phase must pass its **authoritative gate** before proceeding. Gates are a m
 | --- | --- | --- |
 | Phase 1–2 | 01–05 | Core flow runtime, bindings, edge/when routing |
 | Phase 3 | 01–05 + policy lesson | Retry/timeout/continueOnError coverage |
-| Phase 4 | 06, 09 | Claude promptFile + multi-turn inbox |
+| Phase 4 | 06, 09 | Claude promptFile + multi-turn session |
 | Phase 5 | 06 (promptFile) | Loader extensions (nodePacks + promptFile) |
 | Phase 6 | 01–05, 07–08, 10–14 | End-to-end suite, legacy-runtime-free |
 
@@ -356,13 +359,13 @@ Each lesson has:\n
 
 ## Validation Artifacts (Tutorials to Restore)
 
-Re-introduce the following lessons once multi-turn inbox streaming is implemented. These are required evidence that the system works end-to-end:
+Re-introduce the following lessons once V2 SDK multi-turn is implemented. These are required evidence that the system works end-to-end:
 
 1. **PromptFile + Claude** (lesson 06)\n
    - YAML uses `promptFile` + `claude.agent` in one-shot mode.\n
-2. **Claude Multi-Turn (Inbox)** (lesson 09)\n
-   - YAML or FlowRuntime example where `claude.agent` consumes async iterable + inbox messages.\n
-   - Must show `sendToRun` injection and clean termination (maxTurns / inbox.close).\n
+2. **Claude Multi-Turn** (lesson 09)\n
+   - YAML or FlowRuntime example where `claude.agent` uses V2 SDK session pattern.\n
+   - Must show `sendToRun` injection via Hub events and clean termination (maxTurns / session.close).\n
 
 ---
 
@@ -440,7 +443,7 @@ Output:\n
 ### A2) Agent Nodes
 
 All agent nodes:\n
-- Capabilities: `{ isAgent: true, supportsInbox: true, isStreaming: true }`\n
+- Capabilities: `{ isAgent: true, supportsMultiTurn: true, isStreaming: true }`\n
 - Input/output schemas are agent-specific but follow the pattern below.\n
 \n
 **agent.run** (generic)\n
@@ -574,7 +577,6 @@ async function runFlow(flow, registry, hub, options): FlowRunResult {
   const start = Date.now();
   const events: EnrichedEvent[] = [];
   const outputs: Record<string, unknown> = {};
-  const runInboxes = new Map<string, AgentInbox>();
   const nodeRunIndex = new Map<string, string>(); // nodeId -> latest runId
 
   const unsubscribe = hub.subscribe(\"*\", (event) => events.push(event));
@@ -598,10 +600,8 @@ async function runFlow(flow, registry, hub, options): FlowRunResult {
         const runId = createRunId(node.id);
         nodeRunIndex.set(node.id, runId);
 
-        const inbox = def.capabilities?.isAgent ? new AgentInboxImpl() : undefined;
-        if (inbox) runInboxes.set(runId, inbox);
-
-        const execute = () => def.run({ hub, runId, inbox }, input);
+        // Agent nodes receive hub and runId; they subscribe to session:message events
+        const execute = () => def.run({ hub, runId }, input);
         const result = await withPolicy(execute, node.policy, flow.flow.policy);
 
         outputs[node.id] = result;
@@ -643,7 +643,7 @@ Use small, focused libraries for runtime mechanics (not workflow semantics):
 **Short answer**: We have **draft specs** for the overall architecture, routing, runtime, and node catalog in this spec folder, but we **do not yet have fully detailed, test-ready specs** for several critical behaviors.
 
 ### What is already specified (draft-level)
-- FlowRuntime lifecycle + inbox routing\n
+- FlowRuntime lifecycle + message routing\n
 - Edge-level `when` routing semantics\n
 - Policy types (FlowPolicy / NodePolicy)\n
 - Node catalog + baseline schemas\n

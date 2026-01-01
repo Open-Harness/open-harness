@@ -1,0 +1,21 @@
+flow:
+  name: channels-demo
+  description: Demonstrates multiple channels observing events
+  nodePacks: [core]
+
+nodes:
+  - id: first
+    type: constant
+    input:
+      value:
+        text: "First task output"
+
+  - id: second
+    type: constant
+    input:
+      value:
+        text: "Second task output"
+
+edges:
+  - from: first
+    to: second

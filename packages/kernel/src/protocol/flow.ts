@@ -1,7 +1,6 @@
 // Protocol: Flow
 // See docs/reference/protocol-types.md for authoritative definitions
 
-import type { AgentInbox } from "./agent.js";
 import type { Hub } from "./hub.js";
 
 export type NodeId = string;
@@ -61,14 +60,63 @@ export interface FlowYaml {
 
 export interface NodeCapabilities {
 	isStreaming?: boolean;
-	supportsInbox?: boolean;
+	supportsMultiTurn?: boolean;
 	isLongLived?: boolean;
+	/** Container nodes can execute child nodes (e.g., foreach loops) */
+	isContainer?: boolean;
+	/** Creates a fresh session scope for each iteration/invocation */
+	createsSession?: boolean;
 }
 
+/**
+ * Context provided to node execution.
+ *
+ * Agent nodes use V2 SDK session pattern:
+ * - hub: for emitting events and subscribing to session:message
+ * - runId: routing key for targeted message injection
+ */
 export interface NodeRunContext {
 	hub: Hub;
 	runId: string;
-	inbox?: AgentInbox;
+}
+
+/**
+ * Extended context for container nodes that can execute children.
+ * Provides the ability to run child nodes within a loop or scope.
+ */
+export interface ContainerNodeContext extends NodeRunContext {
+	/**
+	 * Execute a child node by ID with the given input.
+	 * The sessionId is passed through to maintain session scope.
+	 */
+	executeChild: (
+		nodeId: NodeId,
+		input: Record<string, unknown>,
+	) => Promise<Record<string, unknown>>;
+}
+
+/**
+ * Input type for control.foreach node.
+ */
+export interface ForeachInput {
+	/** Array of items to iterate over */
+	items: unknown[];
+	/** Variable name to bind each item to (e.g., "task") */
+	as: string;
+	/** Child node IDs to execute per iteration */
+	body: NodeId[];
+}
+
+/**
+ * Output type for control.foreach node.
+ */
+export interface ForeachOutput {
+	/** Results from each iteration */
+	iterations: Array<{
+		item: unknown;
+		sessionId: string;
+		outputs: Record<string, unknown>;
+	}>;
 }
 
 // Note: ZodSchema is a type placeholder - actual implementation will use zod
