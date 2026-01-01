@@ -13,14 +13,14 @@ This folder defines **non-ad-hoc tutorial specifications**. Each lesson has a de
 - `lesson-03-flow-inputs.tutorial-spec.md`
 - `lesson-04-flow-bindings.tutorial-spec.md`
 - `lesson-05-flow-when-policy.tutorial-spec.md`
-- `lesson-06-promptfile-claude.tutorial-spec.md` (Blocked - auth issues)
+- `lesson-06-promptfile-claude.tutorial-spec.md` (Blocked)
 - `lesson-07-flow-node-packs.tutorial-spec.md`
 - `lesson-08-custom-node.tutorial-spec.md`
-- `lesson-09-claude-multiturn.tutorial-spec.md` (Blocked - auth issues)
+- `lesson-09-claude-multiturn.tutorial-spec.md` (V2 SDK session pattern)
 - `lesson-10-runtime-hello.tutorial-spec.md`
 - `lesson-11-phases-tasks.tutorial-spec.md`
 - `lesson-12-channels.tutorial-spec.md`
-- `lesson-13-inbox-sendtorun.tutorial-spec.md`
+- `lesson-13-inbox-sendtorun.tutorial-spec.md` (Hub message routing pattern)
 - `lesson-14-flow-runtime-runner.tutorial-spec.md`
 
 ## Gate usage

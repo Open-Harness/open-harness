@@ -1,5 +1,5 @@
 {
-	"name": "spike-kernel-v2",
+	"name": "@open-harness/kernel",
 	"module": "src/index.ts",
 	"type": "module",
 	"private": true,

@@ -65,12 +65,12 @@ bun scripts/record-fixture.ts events context-structure
 **Test Name**: `"all event types have correct structure"`
 
 **Scenario**:
-1. Create events of each type (WorkflowEvents, AgentEvents, SessionEvents)
+1. Create events of each type (Runtime events, AgentEvents, SessionEvents)
 2. Verify each event has `type` field
 3. Verify type-specific fields are present
 
 **Assertions**:
-- WorkflowEvents: `harness:start`, `harness:complete`, `phase:*`, `task:*`
+- Runtime events: `harness:start`, `harness:complete`, `phase:*`, `task:*`
 - AgentEvents: `agent:start`, `agent:complete`, `agent:text`, `agent:tool:*`
 - SessionEvents: `session:prompt`, `session:reply`, `session:abort`, `session:message`
 - All events have `type` field matching their union type

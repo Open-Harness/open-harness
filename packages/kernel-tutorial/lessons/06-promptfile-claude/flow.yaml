@@ -1,0 +1,27 @@
+flow:
+  name: doc-generator-flow
+  description: Generate API documentation from code using Claude
+  nodePacks: [core, claude]
+  input:
+    code: ""
+    language: "TypeScript"
+
+nodes:
+  - id: doc_generator
+    type: claude.agent
+    input:
+      prompt: |
+        Generate concise API documentation for this {{ flow.input.language }} interface.
+
+        For each method, list:
+        - Brief description
+        - Parameters
+        - Return type
+        - Any error conditions
+
+        Code:
+        {{ flow.input.code }}
+
+        Output as markdown.
+
+edges: []

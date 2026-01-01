@@ -1,0 +1,20 @@
+flow:
+  name: flow-bindings
+  nodePacks: [core]
+
+nodes:
+  - id: facts
+    type: constant
+    input:
+      value:
+        city: "Lisbon"
+        country: "Portugal"
+
+  - id: say
+    type: echo
+    input:
+      text: "City: {{facts.value.city}}, Country: {{facts.value.country}}"
+
+edges:
+  - from: facts
+    to: say
