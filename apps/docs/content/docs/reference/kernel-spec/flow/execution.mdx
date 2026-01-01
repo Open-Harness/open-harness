@@ -7,7 +7,7 @@ This document describes how a FlowSpec runs on the Flow runtime.
 
 ## Execution model
 
-**Key invariant**: Flow is the runtime. It is not executed inside a Harness.
+**Key invariant**: Flow is the runtime. It is the only runtime.
 
 ### High-level flow
 
@@ -62,6 +62,16 @@ If all incoming edges are skipped:
 
 - `continueOnError: false` (default): node failure is a flow failure when `failFast: true`
 - `continueOnError: true`: the engine records an error marker for that node output and continues
+
+Error marker shape (recorded in `outputs[nodeId]`):
+
+```json
+&#123;
+  "failed": true,
+  "error": &#123; "message": "string", "stack": "string?" &#125;,
+  "attempts": 1
+&#125;
+```
 
 ## Retry
 
