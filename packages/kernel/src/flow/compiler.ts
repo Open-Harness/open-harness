@@ -11,19 +11,52 @@ export interface CompiledFlow {
 	edges: Edge[];
 }
 
+/**
+ * Identify child nodes that are referenced in container node body arrays.
+ * These nodes should be excluded from the main execution order.
+ */
+function findChildNodeIds(nodes: NodeSpec[]): Set<string> {
+	const childIds = new Set<string>();
+
+	for (const node of nodes) {
+		// Check if node has a body property (container nodes like control.foreach)
+		const input = node.input as Record<string, unknown> | undefined;
+		if (input?.body && Array.isArray(input.body)) {
+			for (const childId of input.body) {
+				if (typeof childId === "string") {
+					childIds.add(childId);
+				}
+			}
+		}
+	}
+
+	return childIds;
+}
+
 export function compileFlow(flow: FlowYaml): CompiledFlow {
 	const validated = validateFlowYaml(flow);
 	const nodes = validated.nodes;
 
+	// Identify child nodes to exclude from main order
+	const childNodeIds = findChildNodeIds(nodes);
+
+	// Filter to nodes that should be in the main execution order
+	const mainNodes = nodes.filter((node) => !childNodeIds.has(node.id));
+
 	const adjacency = new Map<string, string[]>();
 	const inDegree = new Map<string, number>();
 
-	for (const node of nodes) {
+	for (const node of mainNodes) {
 		adjacency.set(node.id, []);
 		inDegree.set(node.id, 0);
 	}
 
-	for (const edge of validated.edges) {
+	// Only process edges between main nodes
+	const mainEdges = validated.edges.filter(
+		(edge) => !childNodeIds.has(edge.from) && !childNodeIds.has(edge.to),
+	);
+
+	for (const edge of mainEdges) {
 		const list = adjacency.get(edge.from);
 		if (list) {
 			list.push(edge.to);
@@ -50,7 +83,7 @@ export function compileFlow(flow: FlowYaml): CompiledFlow {
 		}
 	}
 
-	if (orderedIds.length !== nodes.length) {
+	if (orderedIds.length !== mainNodes.length) {
 		throw new Error("Flow contains a cycle");
 	}
 
@@ -63,5 +96,6 @@ export function compileFlow(flow: FlowYaml): CompiledFlow {
 		return node;
 	});
 
+	// Return all nodes (for child lookup) but only main nodes in order
 	return { nodes, order, adjacency, edges: validated.edges };
 }

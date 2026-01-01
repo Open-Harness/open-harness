@@ -133,20 +133,14 @@ interface FlowRuntimeInstance extends Hub {
 ## Agent
 
 ```typescript
-interface InjectedMessage {
-  content: string;
-  timestamp: Date;
-}
-
-interface AgentInbox extends AsyncIterable<InjectedMessage> {
-  pop(): Promise<InjectedMessage>;
-  drain(): InjectedMessage[];
-  close(): void;
-}
-
+/**
+ * Context provided to agent execution.
+ *
+ * V2 SDK pattern: Agents subscribe to hub "session:message" events
+ * filtered by runId for multi-turn conversations.
+ */
 interface AgentExecuteContext {
   hub: Hub;
-  inbox: AgentInbox;
   runId: string;
 }
 
@@ -243,15 +237,16 @@ interface FlowYaml {
 
 interface NodeCapabilities {
   isStreaming?: boolean;
-  supportsInbox?: boolean;
+  supportsMultiTurn?: boolean;  // V2: uses session:message subscription
   isLongLived?: boolean;
   isAgent?: boolean;
+  isContainer?: boolean;        // Container nodes (control.foreach)
+  createsSession?: boolean;     // Creates fresh session per iteration
 }
 
 interface NodeRunContext {
   hub: Hub;
   runId: string;
-  inbox?: AgentInbox;
 }
 
 interface NodeTypeDefinition<TIn, TOut> {

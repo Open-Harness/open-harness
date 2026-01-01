@@ -3,6 +3,7 @@
 import { claudeNode } from "./nodes/claude.agent.js";
 import { conditionEqualsNode } from "./nodes/condition.equals.js";
 import { constantNode } from "./nodes/constant.js";
+import { controlForeachNode } from "./nodes/control.foreach.js";
 import { echoNode } from "./nodes/echo.js";
 import type { NodeRegistry } from "./registry.js";
 
@@ -15,6 +16,7 @@ export const corePack: NodePack = {
 		registry.register(echoNode);
 		registry.register(constantNode);
 		registry.register(conditionEqualsNode);
+		registry.register(controlForeachNode);
 	},
 };
 

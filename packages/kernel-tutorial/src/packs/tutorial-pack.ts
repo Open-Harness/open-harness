@@ -126,12 +126,65 @@ export const failNode: NodeTypeDefinition<{ reason: string }, never> = {
 	},
 };
 
+/**
+ * Security scanner node for tutorial demonstrations.
+ * Checks code for common security issues.
+ */
+export const securityScanNode: NodeTypeDefinition<
+	{ path: string; content: string },
+	{ path: string; issues: string[]; severity: string }
+> = {
+	type: "tutorial.security_scan",
+	inputSchema: z.object({
+		path: z.string(),
+		content: z.string(),
+	}),
+	outputSchema: z.object({
+		path: z.string(),
+		issues: z.array(z.string()),
+		severity: z.enum(["none", "low", "medium", "high", "critical"]),
+	}),
+	run: async (_ctx, input) => {
+		const issues: string[] = [];
+
+		// Check for SQL injection
+		if (input.content.includes("+ userId") || input.content.includes("+ id")) {
+			issues.push("SQL injection vulnerability: string concatenation in query");
+		}
+
+		// Check for plaintext password comparison
+		if (input.content.includes("=== storedPassword") || input.content.includes("== password")) {
+			issues.push("Insecure password handling: plaintext comparison");
+		}
+
+		// Check for hardcoded secrets (but allow env vars)
+		if (input.content.includes("API_KEY =") && !input.content.includes("process.env")) {
+			issues.push("Hardcoded secret detected");
+		}
+
+		// Determine severity
+		let severity: "none" | "low" | "medium" | "high" | "critical" = "none";
+		if (issues.length > 0) {
+			if (issues.some((i) => i.includes("SQL injection"))) {
+				severity = "critical";
+			} else if (issues.some((i) => i.includes("password"))) {
+				severity = "high";
+			} else {
+				severity = "medium";
+			}
+		}
+
+		return { path: input.path, issues, severity };
+	},
+};
+
 export const tutorialPack: NodePack = {
 	register: (registry) => {
 		registry.register(uppercaseNode);
 		registry.register(flakyNode);
 		registry.register(delayNode);
 		registry.register(failNode);
+		registry.register(securityScanNode);
 	},
 };
 

@@ -16,7 +16,7 @@ This document defines the canonical node set for Flow. It is the source of truth
 | `control.switch` | `{ value, cases: [{ when, route }] }` | `{ route, value }` | Routes by first matching case |
 | `control.if` | `{ condition: WhenExpr }` | `{ condition: boolean }` | Binary branch |
 | `control.merge` | `{ mode: \"all\" \\| \"any\" }` | `{ merged: true }` | Overrides readiness rules |
-| `control.foreach` | `{ list: unknown[], as?: string }` | `{ item, index, count }` | Emits per item |
+| `control.foreach` | `{ items: unknown[], as?: string, body: NodeId[] }` | `{ iterations: [...] }` | Session per iteration |
 | `control.loop` | `{ while: WhenExpr, maxIterations?: number }` | `{ iteration }` | Stops when condition false |
 | `control.wait` | `{ ms?: number, until?: string }` | `{ waitedMs }` | Delay or event wait |
 | `control.gate` | `{ prompt, choices?, allowText? }` | `{ response }` | Uses session prompt |
@@ -37,9 +37,10 @@ This document defines the canonical node set for Flow. It is the source of truth
 | `claude.agent` | `{ prompt \\| messages, options? }` | `{ text, structuredOutput?, usage? }` | Canonical Claude node |
 
 All agent nodes:
-- Always have inbox support.
+- Use V2 SDK session pattern (subscribe to `session:message` events).
 - Emit `agent:*` and `agent:tool:*` events.
 - Support streaming (`agent:text`).
+- Multi-turn via `hub.sendToRun(runId, message)`.
 
 ## C) Data / Transform
 
@@ -84,19 +85,49 @@ The registry should expose capabilities so the runtime can enforce invariants:
 ```typescript
 interface NodeCapabilities {
   isStreaming?: boolean;
-  supportsInbox?: boolean;
+  supportsMultiTurn?: boolean;  // V2: uses session:message subscription
   isLongLived?: boolean;
   isAgent?: boolean;
+  isContainer?: boolean;        // Container nodes like control.foreach
+  createsSession?: boolean;     // Creates fresh session per iteration
 }
 ```
 
 Rules:
-- All `agent.*` nodes set `isAgent: true` and `supportsInbox: true`.
-- Control and data nodes do not set `supportsInbox`.
+- All `agent.*` nodes set `isAgent: true` and `supportsMultiTurn: true`.
+- Container nodes (`control.foreach`) set `isContainer: true` and `createsSession: true`.
 - Long-lived nodes must be explicit (not part of MVP).
 
 ## Key invariants
 
 1. Channel interfaces are **not** nodes.
-2. Agent nodes are stateful and injectable.
+2. Agent nodes use V2 SDK session pattern for multi-turn.
 3. Control nodes define routing and structure only.
+4. Container nodes (`control.foreach`) create fresh sessions per iteration.
+
+## control.foreach Details
+
+The `control.foreach` node iterates over an array, executing child nodes for each item with session isolation:
+
+```yaml
+nodes:
+  - id: process_tasks
+    type: control.foreach
+    input:
+      items: "{{ taskCreator.tasks }}"
+      as: "task"
+    body:
+      - validate_task
+      - execute_task
+      - report_result
+```
+
+**Session Isolation**: Each iteration gets a fresh `sessionId` via `createSessionId()`. This ensures:
+- No state leakage between iterations
+- Clean context for each batch item
+- Proper lifecycle events (`session:start`, `session:end`)
+
+**Events Emitted**:
+- `session:start` at iteration begin (with new sessionId)
+- `session:end` at iteration end
+- Child node events inherit the iteration's sessionId

@@ -2,8 +2,10 @@
 // Implements docs/flow/execution.md
 
 import type {
+	ContainerNodeContext,
 	Edge,
 	FlowYaml,
+	NodeRunContext,
 	NodeSpec,
 	NodeTypeDefinition,
 } from "../protocol/flow.js";
@@ -96,6 +98,10 @@ async function runNode(
 	ctx: FlowExecutionContext,
 	bindingContext: BindingContext,
 	attempt: number,
+	registry?: NodeRegistry,
+	flowInput?: Record<string, unknown>,
+	outputs?: Record<string, unknown>,
+	allNodes?: NodeSpec[],
 ): Promise<unknown> {
 	const resolvedInput = resolveBindings(node.input, bindingContext);
 	const inputSchema = def.inputSchema as
@@ -108,11 +114,67 @@ async function runNode(
 		: resolvedInput;
 	const runId = createRunId(node.id, attempt);
 
-	// Agent nodes receive hub and runId; they subscribe to session:message events
-	const runCtx = {
+	// Base context for all nodes
+	const baseContext: NodeRunContext = {
 		hub: ctx.hub,
 		runId,
 	};
+
+	// Container nodes get executeChild for running child nodes
+	let runCtx: NodeRunContext | ContainerNodeContext = baseContext;
+	if (def.capabilities?.isContainer && registry && flowInput && outputs && allNodes) {
+		const executeChild = async (
+			childId: string,
+			childInput: Record<string, unknown>,
+		): Promise<Record<string, unknown>> => {
+			// Find child node spec in the flow
+			const childNode = allNodes.find((n) => n.id === childId);
+			if (!childNode) {
+				throw new Error(`Child node "${childId}" not found in flow`);
+			}
+
+			// Get node type definition from registry
+			const childDef = registry.get(childNode.type);
+
+			// Merge child input with existing bindings
+			const childBindingContext = {
+				flow: { input: flowInput },
+				...outputs,
+				...childInput, // Loop variable bindings
+			};
+
+			// Resolve child node's input bindings
+			const resolvedChildInput = resolveBindings(childNode.input, childBindingContext);
+			const childInputSchema = childDef.inputSchema as
+				| { parse: (value: unknown) => unknown }
+				| undefined;
+			const parsedChildInput = childInputSchema
+				? childInputSchema.parse(resolvedChildInput)
+				: resolvedChildInput;
+
+			// Execute the child node
+			const childRunId = createRunId(childId, 1);
+			const childResult = await childDef.run(
+				{ hub: ctx.hub, runId: childRunId },
+				parsedChildInput,
+			);
+
+			// Validate output if schema exists
+			const childOutputSchema = childDef.outputSchema as
+				| { parse: (value: unknown) => unknown }
+				| undefined;
+			const validatedOutput = childOutputSchema
+				? childOutputSchema.parse(childResult)
+				: childResult;
+			return validatedOutput as Record<string, unknown>;
+		};
+
+		// Create container context with executeChild
+		runCtx = {
+			...baseContext,
+			executeChild,
+		};
+	}
 
 	const result = await def.run(runCtx, parsedInput);
 	const outputSchema = def.outputSchema as
@@ -168,6 +230,10 @@ async function runNodeWithPolicy(
 	def: NodeTypeDefinition<unknown, unknown>,
 	ctx: FlowExecutionContext,
 	bindingContext: BindingContext,
+	registry?: NodeRegistry,
+	flowInput?: Record<string, unknown>,
+	outputs?: Record<string, unknown>,
+	allNodes?: NodeSpec[],
 ): Promise<{ output?: unknown; error?: unknown; attempts: number }> {
 	const maxAttempts = node.policy?.retry?.maxAttempts ?? 1;
 	const backoffMs = node.policy?.retry?.backoffMs ?? 0;
@@ -180,7 +246,7 @@ async function runNodeWithPolicy(
 		attempts += 1;
 		try {
 			const output = await withTimeout(
-				() => runNode(node, def, ctx, bindingContext, attempts),
+				() => runNode(node, def, ctx, bindingContext, attempts, registry, flowInput, outputs, allNodes),
 				timeoutMs,
 			);
 			return { output, attempts };
@@ -256,6 +322,10 @@ export async function executeFlow(
 						def,
 						ctx,
 						bindingContext,
+						registry,
+						flowInput,
+						outputs,
+						compiled.nodes, // All nodes for child lookup
 					);
 					attempts = execution.attempts;
 					if (execution.error) {
