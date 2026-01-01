@@ -102,7 +102,7 @@ jobs:
                   ---
 
                   This PR will be automatically updated as the pipeline progresses." \
-                    --base main \
+                    --base dev \
                     --head "${BRANCH_NAME}" \
                     --json number --jq '.[0].number' || echo "")
 
