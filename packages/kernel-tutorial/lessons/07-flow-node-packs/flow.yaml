@@ -1,11 +1,55 @@
 flow:
-  name: flow-node-packs
-  nodePacks: [core]
+  name: multi-pack-pipeline
+  description: Demonstrates using multiple node packs together
+  nodePacks: [core, tutorial]
+  input:
+    message: "hello from node packs"
+    shouldTransform: true
 
 nodes:
-  - id: explain
+  # Core pack: constant node
+  - id: config
+    type: constant
+    input:
+      value:
+        prefix: "[PROCESSED]"
+        timestamp: "2024-01-15T10:30:00Z"
+
+  # Core pack: condition node
+  - id: check_transform
+    type: condition.equals
+    input:
+      left: "{{ flow.input.shouldTransform }}"
+      right: true
+
+  # Tutorial pack: uppercase transform
+  - id: transform
+    type: tutorial.uppercase
+    when:
+      equals:
+        var: "check_transform.value"
+        value: true
+    input:
+      text: "{{ flow.input.message }}"
+
+  # Tutorial pack: simulate processing delay
+  - id: simulate_processing
+    type: tutorial.delay
+    input:
+      ms: 50
+
+  # Core pack: echo to combine results
+  - id: final_output
     type: echo
     input:
-      text: "Node packs are allowlisted in oh.config.ts"
+      text: "{{ config.value.prefix }} {{ transform.text }} (processed at {{ config.value.timestamp }})"
 
-edges: []
+edges:
+  - from: config
+    to: check_transform
+  - from: check_transform
+    to: transform
+  - from: transform
+    to: simulate_processing
+  - from: simulate_processing
+    to: final_output

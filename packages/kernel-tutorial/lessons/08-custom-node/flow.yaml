@@ -1,13 +1,27 @@
 flow:
-  name: custom-node
-  nodePacks: [core, tutorial]
+  name: text-analysis-pipeline
+  description: Demonstrates custom node usage for text analysis
+  # Note: nodePacks not needed when building registry manually
   input:
-    text: "hello from a custom node"
+    document: |
+      The quick brown fox jumps over the lazy dog.
+      This sentence contains every letter of the alphabet.
+      Custom nodes extend FlowRuntime with domain-specific capabilities.
 
 nodes:
-  - id: upper
-    type: tutorial.uppercase
+  # Use our custom text analyzer node
+  - id: analyze
+    type: text.word_analyzer
     input:
-      text: "{{flow.input.text}}"
+      text: "{{ flow.input.document }}"
+      countWhitespace: false
 
-edges: []
+  # Report the analysis results
+  - id: report
+    type: echo
+    input:
+      text: "Analysis complete: {{ analyze.words }} words, {{ analyze.characters }} chars, longest word: {{ analyze.longestWord }}"
+
+edges:
+  - from: analyze
+    to: report
