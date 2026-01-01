@@ -104,16 +104,6 @@ export interface IAgentRunner {
 	}): Promise<GenericMessage | undefined>;
 }
 
-/**
- * @deprecated Use provider-specific tokens instead (IAnthropicRunnerToken, etc.)
- *
- * Migration guide:
- * - Replace `inject(IAgentRunnerToken)` with `inject(IAnthropicRunnerToken)`
- * - See docs/deprecation-schedule.md for full migration path
- * Removal target: v1.0.0
- */
-export const IAgentRunnerToken = new InjectionToken<IAgentRunner>("IAgentRunner");
-
 // ============================================================================
 // Provider-Specific Runner Tokens
 // ============================================================================
@@ -175,43 +165,6 @@ export interface IRecordingFactory {
 }
 
 export const IRecordingFactoryToken = new InjectionToken<IRecordingFactory>("IRecordingFactory");
-
-// ============================================================================
-// Event Bus (Cross-cutting Communication)
-// ============================================================================
-
-/**
- * Legacy event bus interface for agent events.
- *
- * @deprecated Use `IUnifiedEventBus` instead. This interface will be removed in v2.0.0.
- *
- * Migration guide:
- * 1. Replace `IEventBusToken` with `IUnifiedEventBusToken` in DI
- * 2. Replace `eventBus.publish(event)` with `unifiedBus.emit(event)`
- * 3. Replace `eventBus.subscribe(fn)` with `unifiedBus.on('*', fn)`
- *
- * @see IUnifiedEventBus for the new unified event system
- */
-export interface IEventBus {
-	publish(event: AgentEvent): void | Promise<void>;
-	subscribe(listener: (event: AgentEvent) => void | Promise<void>): () => void;
-}
-
-/**
- * DI token for the legacy event bus.
- *
- * @deprecated Use `IUnifiedEventBusToken` instead. This token will be removed in v2.0.0.
- *
- * @example
- * ```typescript
- * // Before (deprecated)
- * const eventBus = inject(IEventBusToken);
- *
- * // After (recommended)
- * const unifiedBus = inject(IUnifiedEventBusToken);
- * ```
- */
-export const IEventBusToken = new InjectionToken<IEventBus>("IEventBus");
 
 // ============================================================================
 // Unified Event Bus (008-unified-event-system)
