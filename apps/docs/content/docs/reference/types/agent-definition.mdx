@@ -1,0 +1,224 @@
+---
+title: AgentDefinition
+description: Contract for implementing executable agents in harnesses
+---
+
+# AgentDefinition
+
+Defines an agent that can be registered with a harness and executed within workflows.
+
+## Definition
+
+```typescript
+interface AgentDefinition<TIn = unknown, TOut = unknown> {
+  name: string;
+  emitsStartComplete?: boolean;
+  execute(input: TIn, ctx: AgentExecuteContext): Promise<TOut>;
+}
+```
+
+## Properties
+
+| Property | Type | Required | Default | Description |
+|----------|------|----------|---------|-------------|
+| `name` | `string` | Yes | - | Unique agent identifier |
+| `emitsStartComplete` | `boolean` | No | `false` | Agent handles its own lifecycle events |
+| `execute` | `function` | Yes | - | Execution function |
+
+## AgentExecuteContext
+
+```typescript
+interface AgentExecuteContext {
+  hub: Hub;
+  inbox: AgentInbox;
+  runId: string;
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `hub` | `Hub` | Event bus for emitting events |
+| `inbox` | `AgentInbox` | Message inbox for receiving input during execution |
+| `runId` | `string` | Unique identifier for this execution run |
+
+## AgentInbox
+
+```typescript
+interface AgentInbox extends AsyncIterable<InjectedMessage> {
+  pop(): Promise<InjectedMessage>;
+  drain(): InjectedMessage[];
+}
+
+interface InjectedMessage {
+  content: string;
+  timestamp: Date;
+}
+```
+
+## Example: Simple Agent
+
+```typescript
+import type { AgentDefinition } from "@open-harness/kernel";
+
+const greeterAgent: AgentDefinition<
+  { name: string },
+  { greeting: string }
+> = {
+  name: "greeter",
+  execute: async (input, ctx) => {
+    return { greeting: `Hello, ${input.name}!` };
+  },
+};
+```
+
+## Example: Agent with Events
+
+```typescript
+import type { AgentDefinition } from "@open-harness/kernel";
+
+const processorAgent: AgentDefinition<
+  { data: string[] },
+  { processed: number }
+> = {
+  name: "processor",
+  execute: async (input, ctx) => {
+    let processed = 0;
+
+    for (const item of input.data) {
+      // Emit progress
+      ctx.hub.emit({
+        type: "narrative",
+        text: `Processing: ${item}`,
+        importance: "low",
+      });
+
+      processed++;
+    }
+
+    return { processed };
+  },
+};
+```
+
+## Example: Interactive Agent
+
+```typescript
+import type { AgentDefinition } from "@open-harness/kernel";
+
+const chatAgent: AgentDefinition<
+  { systemPrompt: string },
+  { messages: string[] }
+> = {
+  name: "chat",
+  execute: async (input, ctx) => {
+    const messages: string[] = [];
+
+    // Process incoming messages
+    for await (const msg of ctx.inbox) {
+      messages.push(msg.content);
+
+      // Echo back
+      ctx.hub.emit({
+        type: "agent:text",
+        content: `Received: ${msg.content}`,
+        runId: ctx.runId,
+      });
+
+      if (msg.content === "exit") break;
+    }
+
+    return { messages };
+  },
+};
+```
+
+## Example: Custom Lifecycle Events
+
+When `emitsStartComplete: true`, the agent handles its own lifecycle:
+
+```typescript
+const customAgent: AgentDefinition<
+  { task: string },
+  { result: string }
+> = {
+  name: "custom",
+  emitsStartComplete: true, // Handle own events
+  execute: async (input, ctx) => {
+    // Emit custom start
+    ctx.hub.emit({
+      type: "agent:start",
+      agentName: "custom",
+      runId: ctx.runId,
+    });
+
+    try {
+      const result = await doWork(input.task);
+
+      // Emit custom complete
+      ctx.hub.emit({
+        type: "agent:complete",
+        agentName: "custom",
+        success: true,
+        runId: ctx.runId,
+      });
+
+      return { result };
+    } catch (error) {
+      ctx.hub.emit({
+        type: "agent:complete",
+        agentName: "custom",
+        success: false,
+        runId: ctx.runId,
+      });
+      throw error;
+    }
+  },
+};
+```
+
+## Usage in Harness
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+
+const harness = defineHarness({
+  name: "my-workflow",
+  agents: {
+    greeter: greeterAgent,
+    processor: processorAgent,
+  },
+  state: (input: { names: string[] }) => ({
+    names: input.names,
+    greetings: [] as string[],
+  }),
+  run: async (ctx) => {
+    for (const name of ctx.state.names) {
+      const result = await ctx.agents.greeter.execute({ name });
+      ctx.state.greetings.push(result.greeting);
+    }
+    return { greetings: ctx.state.greetings };
+  },
+});
+```
+
+## ExecutableAgent
+
+Within `ExecuteContext`, agents are wrapped as `ExecutableAgent`:
+
+```typescript
+interface ExecutableAgent<TIn = unknown, TOut = unknown> {
+  name: string;
+  execute(input: TIn): Promise<TOut>;
+}
+```
+
+The wrapper handles:
+- Lifecycle events (`agent:start`, `agent:complete`, `agent:failed`)
+- Run ID generation
+- Inbox creation
+
+## See Also
+
+- [defineHarness](/docs/reference/api/define-harness) - Create harness with agents
+- [createAnthropicTextAgent](/docs/reference/api/anthropic-agent) - Anthropic agent
+- [Agent Spec](/docs/reference/kernel-spec/spec/agent) - Specification

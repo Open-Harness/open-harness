@@ -1,0 +1,150 @@
+---
+title: How to Write Unit Tests
+description: Test individual nodes in isolation
+---
+
+# How to Write Unit Tests
+
+Test node types directly without flow execution.
+
+## Test File Structure
+
+```typescript
+// nodes/uppercase.test.ts
+import { describe, test, expect } from "bun:test";
+import { uppercaseNode } from "./uppercase";
+
+describe("uppercase node", () => {
+  test("uppercases input text", async () => {
+    const result = await runNode(uppercaseNode, { text: "hello" });
+    expect(result.result).toBe("HELLO");
+  });
+});
+```
+
+## Create Mock Context
+
+```typescript
+import { createHub } from "@open-harness/kernel";
+
+function createMockContext() {
+  const hub = createHub();
+  const events: any[] = [];
+
+  hub.subscribe("*", (e) => events.push(e));
+
+  return {
+    hub,
+    events,
+    // Add other context properties as needed
+  };
+}
+```
+
+## Test Node Run Function
+
+```typescript
+import { describe, test, expect } from "bun:test";
+import { fetchNode } from "./fetch";
+
+describe("fetch node", () => {
+  test("fetches data from URL", async () => {
+    const ctx = createMockContext();
+    const input = { url: "https://api.example.com/data" };
+
+    const result = await fetchNode.run(ctx, input);
+
+    expect(result.status).toBe(200);
+    expect(result.data).toBeDefined();
+  });
+});
+```
+
+## Test Schema Validation
+
+```typescript
+test("validates input schema", () => {
+  const result = uppercaseNode.inputSchema.safeParse({
+    text: "valid"
+  });
+  expect(result.success).toBe(true);
+});
+
+test("rejects invalid input", () => {
+  const result = uppercaseNode.inputSchema.safeParse({
+    text: 123 // Should be string
+  });
+  expect(result.success).toBe(false);
+});
+```
+
+## Test Error Cases
+
+```typescript
+test("throws on empty text", async () => {
+  const ctx = createMockContext();
+
+  await expect(
+    uppercaseNode.run(ctx, { text: "" })
+  ).rejects.toThrow("Text cannot be empty");
+});
+
+test("handles network errors", async () => {
+  const ctx = createMockContext();
+
+  await expect(
+    fetchNode.run(ctx, { url: "https://invalid.example.com" })
+  ).rejects.toThrow();
+});
+```
+
+## Mock External Dependencies
+
+```typescript
+import { mock } from "bun:test";
+
+test("uses mocked fetch", async () => {
+  const mockFetch = mock(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ data: "mocked" })
+    })
+  );
+
+  globalThis.fetch = mockFetch;
+
+  const ctx = createMockContext();
+  const result = await fetchNode.run(ctx, { url: "https://api.example.com" });
+
+  expect(result.data).toEqual({ data: "mocked" });
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+});
+```
+
+## Test Events Emitted
+
+```typescript
+test("emits narrative events", async () => {
+  const ctx = createMockContext();
+
+  await uppercaseNode.run(ctx, { text: "hello" });
+
+  const narratives = ctx.events.filter((e) => e.event.type === "narrative");
+  expect(narratives).toHaveLength(1);
+  expect(narratives[0].event.text).toContain("characters");
+});
+```
+
+## Run Tests
+
+```bash
+bun run test              # All tests
+bun run test uppercase    # Specific file
+bun run test --watch      # Watch mode
+```
+
+## Related
+
+- [Replay Tests](/docs/guides/testing/replay-tests) - Test with fixtures
+- [Live Tests](/docs/guides/testing/live-tests) - Integration tests
+- [Testing Tutorial](/docs/learn/testing) - Full guide

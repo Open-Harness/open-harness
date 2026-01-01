@@ -1,0 +1,97 @@
+---
+title: How to Execute Flows
+description: Execute a compiled flow with the kernel
+---
+
+# How to Execute Flows
+
+Run a parsed flow using the kernel's executeFlow function.
+
+## Basic Execution
+
+```typescript
+import { parseFlowYaml, executeFlow, NodeRegistry, createHub } from "@open-harness/kernel";
+import { readFileSync } from "fs";
+
+// Parse flow
+const yaml = readFileSync("flow.yaml", "utf-8");
+const flow = parseFlowYaml(yaml);
+
+// Set up registry with node types
+const registry = new NodeRegistry();
+registry.register(myNodeType);
+
+// Create hub
+const hub = createHub();
+
+// Execute
+const result = await executeFlow(flow, {
+  input: { message: "Hello" },
+  registry,
+  hub
+});
+
+console.log("Outputs:", result.outputs);
+```
+
+## Access Node Outputs
+
+```typescript
+const result = await executeFlow(flow, { input, registry, hub });
+
+// All node outputs keyed by node ID
+const allOutputs = result.outputs;
+
+// Specific node output
+const nodeOutput = result.outputs["my-node-id"];
+```
+
+## Observe Execution
+
+```typescript
+const hub = createHub();
+
+// Log all events
+hub.subscribe("*", (event) => {
+  console.log(`[${event.event.type}]`, event.event);
+});
+
+// Or specific events
+hub.subscribe("task:complete", (event) => {
+  console.log("Node complete:", event.event.taskId);
+});
+
+const result = await executeFlow(flow, { input, registry, hub });
+```
+
+## Handle Execution Errors
+
+```typescript
+try {
+  const result = await executeFlow(flow, { input, registry, hub });
+} catch (error) {
+  console.error("Execution failed:", error.message);
+
+  // Check for specific error types
+  if (error.cause?.nodeId) {
+    console.error("Failed node:", error.cause.nodeId);
+  }
+}
+```
+
+## With Timeout
+
+```typescript
+const result = await executeFlow(flow, {
+  input,
+  registry,
+  hub,
+  timeout: 30000 // 30 seconds
+});
+```
+
+## Related
+
+- [Parse YAML Flow](/docs/guides/flows/parse-yaml-flow) - Parse before executing
+- [Flow Inputs](/docs/guides/flows/flow-inputs) - Pass inputs correctly
+- [Error Handling](/docs/guides/flows/error-handling) - Handle failures

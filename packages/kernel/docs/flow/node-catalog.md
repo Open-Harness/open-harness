@@ -15,7 +15,7 @@ This document defines the canonical node set for Flow. It is the source of truth
 | --- | --- | --- | --- |
 | `control.switch` | `{ value, cases: [{ when, route }] }` | `{ route, value }` | Routes by first matching case |
 | `control.if` | `{ condition: WhenExpr }` | `{ condition: boolean }` | Binary branch |
-| `control.merge` | `{ mode: \"all\" \\| \"any\" }` | `{ merged: true }` | Overrides readiness rules |
+| `control.merge` | `{ mode: "all" \| "any" }` | `{ merged: true }` | Overrides readiness rules |
 | `control.foreach` | `{ items: unknown[], as?: string, body: NodeId[] }` | `{ iterations: [...] }` | Session per iteration |
 | `control.loop` | `{ while: WhenExpr, maxIterations?: number }` | `{ iteration }` | Stops when condition false |
 | `control.wait` | `{ ms?: number, until?: string }` | `{ waitedMs }` | Delay or event wait |
@@ -34,7 +34,7 @@ This document defines the canonical node set for Flow. It is the source of truth
 | `agent.coder` | `{ input }` | `{ result }` | Preset agent (tools) |
 | `agent.reviewer` | `{ input }` | `{ result }` | Preset agent |
 | `agent.summarize` | `{ input }` | `{ result }` | Preset agent |
-| `claude.agent` | `{ prompt \\| messages, options? }` | `{ text, structuredOutput?, usage? }` | Canonical Claude node |
+| `claude.agent` | `{ prompt \| messages, options? }` | `{ text, structuredOutput?, usage? }` | Canonical Claude node |
 
 All agent nodes:
 - Use V2 SDK session pattern (subscribe to `session:message` events).

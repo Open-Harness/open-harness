@@ -1,0 +1,35 @@
+---
+title: Debugging
+description: Debug flows and diagnose issues
+---
+
+Tips and techniques for debugging Open Harness flows.
+
+## Enable Debug Logging
+
+Set the log level to see detailed execution information:
+
+```bash
+LOG_LEVEL=debug bun run flow-run --file flow.yaml
+```
+
+## Inspect Events
+
+The kernel emits events for all operations. Subscribe to events to inspect execution:
+
+```typescript
+hub.subscribe('*', (event) => {
+  console.log('Event:', event);
+});
+```
+
+## Common Issues
+
+- **Node not executing**: Check `when` conditions and dependencies
+- **Binding errors**: Verify node outputs match input schemas
+- **Timeout errors**: Check execution policies and retry settings
+
+## Learn More
+
+- [Event Model](/docs/concepts/event-model) - Understand the event system
+- [Flow Execution](/docs/reference/kernel-spec/flow/execution) - Execution semantics

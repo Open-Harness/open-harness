@@ -1,0 +1,6 @@
+{
+  "setup-worktree": [
+    "bun install",
+    "bash .cursor/copy-env-files.sh"
+  ]
+}

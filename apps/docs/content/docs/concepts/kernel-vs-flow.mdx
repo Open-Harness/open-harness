@@ -1,0 +1,35 @@
+---
+title: Kernel vs Flow
+description: Understanding the kernel and flow layers
+---
+
+Open Harness separates concerns into two distinct layers.
+
+## Kernel Layer
+
+The **kernel** is the minimal runtime substrate that provides:
+
+- Event bus (Hub)
+- Lifecycle management (FlowRuntime)
+- Execution primitives (Agent, Channel)
+
+The kernel is protocol-focused and implementation-agnostic.
+
+## Flow Layer
+
+The **flow** layer is the declarative orchestration built on top of the kernel:
+
+- YAML flow definitions (FlowSpec)
+- Node type registry
+- DAG scheduling and bindings
+
+The flow layer provides the developer experience and structured execution.
+
+## Key Invariant
+
+**Flow is the only runtime.** There is no separate Harness layer. All execution happens through the FlowRuntime.
+
+## Learn More
+
+- [Architecture Overview](/docs/concepts/architecture-overview) - System architecture
+- [Kernel Spec](/docs/reference/kernel-spec) - Complete protocol documentation

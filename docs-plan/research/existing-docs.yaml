@@ -1,0 +1,873 @@
+# Documentation Inventory for Open Harness
+# Generated: 2026-01-01
+# Total markdown files: 320
+
+doc_inventory:
+  # === KERNEL SPECIFICATION (Canonical) ===
+  - path: "packages/kernel/docs/README.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Canonical specification entry point for kernel + flow protocol"
+    
+  - path: "packages/kernel/docs/spec/hub.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Hub protocol - bidirectional event bus with context propagation"
+    
+  - path: "packages/kernel/docs/spec/flow-runtime.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "FlowRuntime lifecycle, phases/tasks, session semantics"
+    
+  - path: "packages/kernel/docs/spec/agent.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Agent execution contract, runId/inbox injection"
+    
+  - path: "packages/kernel/docs/spec/channel.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Channel contract and adapter patterns"
+    
+  - path: "packages/kernel/docs/spec/events.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Event envelope, required event types, context rules"
+    
+  - path: "packages/kernel/docs/spec/harness.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Test harness specification"
+    
+  # === FLOW PROTOCOL ===
+  - path: "packages/kernel/docs/flow/flow-spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "FlowSpec YAML schema, edges/when/policy semantics"
+    
+  - path: "packages/kernel/docs/flow/bindings.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "A3 binding grammar and error handling"
+    
+  - path: "packages/kernel/docs/flow/when.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "WhenExpr grammar and evaluation semantics"
+    
+  - path: "packages/kernel/docs/flow/execution.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Flow runtime execution semantics"
+    
+  - path: "packages/kernel/docs/flow/registry.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "NodeType contract, schemas/capabilities, library-vs-user split"
+    
+  - path: "packages/kernel/docs/flow/edge-routing.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Edge-level when semantics"
+    
+  - path: "packages/kernel/docs/flow/node-catalog.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Canonical node type list"
+    
+  # === TESTING PROTOCOL ===
+  - path: "packages/kernel/docs/testing/README.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Testing infrastructure overview and navigation"
+    
+  - path: "packages/kernel/docs/testing/testing-protocol.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Testing infrastructure protocol specification"
+    
+  - path: "packages/kernel/docs/testing/test-spec-template.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Template for .test-spec.md files"
+    
+  - path: "packages/kernel/docs/testing/validation.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Multi-layer validation strategy and checklists"
+    
+  - path: "packages/kernel/docs/testing/workflow.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Step-by-step testing workflow"
+    
+  # === IMPLEMENTATION GUIDES ===
+  - path: "packages/kernel/docs/implementation/README.md"
+    type: "guide"
+    audience: "contributor"
+    quality: "complete"
+    summary: "How to compile spec into code"
+    
+  - path: "packages/kernel/docs/implementation/roadmap.md"
+    type: "guide"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Milestone ordering, done criteria, authoritative scripts"
+    
+  - path: "packages/kernel/docs/implementation/conformance.md"
+    type: "guide"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Test tiers, fixture policy, behavioral gates"
+    
+  - path: "packages/kernel/docs/implementation/traceability.md"
+    type: "guide"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Spec → test-spec → tests → live scripts mapping"
+    
+  - path: "packages/kernel/docs/implementation/patterns/tap.md"
+    type: "guide"
+    audience: "contributor"
+    quality: "complete"
+    summary: "TAP (Test Anything Protocol) pattern"
+    
+  # === ARCHITECTURAL DECISIONS ===
+  - path: "packages/kernel/docs/decisions/0001-naming-flow-vs-workflow.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "ADR: Why 'flow' not 'workflow'"
+    
+  - path: "packages/kernel/docs/decisions/0002-edges-required.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "ADR: Explicit edges required in flow DAG"
+    
+  - path: "packages/kernel/docs/decisions/0003-bindings-a3.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "ADR: A3 binding syntax choice"
+    
+  # === REFERENCE TYPES ===
+  - path: "packages/kernel/docs/reference/protocol-types.md"
+    type: "reference"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Authoritative TypeScript protocol interfaces"
+    
+  # === USER-FACING DOCS (Fumadocs Site) ===
+  - path: "apps/docs/content/docs/index.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Landing page for user documentation"
+    
+  - path: "apps/docs/content/docs/concepts/index.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "partial"
+    summary: "Concepts overview section"
+    
+  - path: "apps/docs/content/docs/concepts/architecture-overview.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "partial"
+    summary: "High-level architecture overview for users"
+    
+  - path: "apps/docs/content/docs/concepts/conformance-model.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "partial"
+    summary: "Conformance testing model explanation"
+    
+  - path: "apps/docs/content/docs/concepts/event-model.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "partial"
+    summary: "Event system conceptual model"
+    
+  - path: "apps/docs/content/docs/concepts/graph.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "partial"
+    summary: "DAG/graph execution model"
+    
+  - path: "apps/docs/content/docs/concepts/kernel-vs-flow.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "partial"
+    summary: "Kernel vs Flow layer distinction"
+    
+  - path: "apps/docs/content/docs/guides/testing-workflow.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Testing workflow guide (minimal, links to spec)"
+    
+  - path: "apps/docs/content/docs/guides/debugging.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Debugging guide placeholder"
+    
+  - path: "apps/docs/content/docs/guides/faq.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "FAQ placeholder"
+    
+  - path: "apps/docs/content/docs/guides/record-and-promote-fixtures.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Fixture recording guide"
+    
+  - path: "apps/docs/content/docs/guides/write-replay-tests.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Replay test writing guide"
+    
+  - path: "apps/docs/content/docs/learn/first-flow.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "First flow tutorial"
+    
+  - path: "apps/docs/content/docs/learn/flow-inputs.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Flow input handling tutorial"
+    
+  - path: "apps/docs/content/docs/learn/custom-node.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Custom node creation tutorial"
+    
+  - path: "apps/docs/content/docs/learn/bindings-a3.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "A3 bindings tutorial"
+    
+  - path: "apps/docs/content/docs/learn/channels.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "Channel integration tutorial"
+    
+  - path: "apps/docs/content/docs/learn/when-policy.mdx"
+    type: "guide"
+    audience: "user"
+    quality: "stub"
+    summary: "When/policy tutorial"
+    
+  # === API REFERENCE (User-facing) ===
+  - path: "apps/docs/content/docs/reference/api/hub.mdx"
+    type: "reference"
+    audience: "user"
+    quality: "partial"
+    summary: "Hub API reference (sync with kernel spec)"
+    
+  - path: "apps/docs/content/docs/reference/api/flow-runtime.mdx"
+    type: "reference"
+    audience: "user"
+    quality: "partial"
+    summary: "FlowRuntime API reference"
+    
+  - path: "apps/docs/content/docs/reference/api/agent.mdx"
+    type: "reference"
+    audience: "user"
+    quality: "partial"
+    summary: "Agent API reference"
+    
+  - path: "apps/docs/content/docs/reference/api/channel.mdx"
+    type: "reference"
+    audience: "user"
+    quality: "partial"
+    summary: "Channel API reference"
+    
+  - path: "apps/docs/content/docs/reference/api/events.mdx"
+    type: "reference"
+    audience: "user"
+    quality: "partial"
+    summary: "Events API reference"
+    
+  # === KERNEL SPEC (Mirrored in User Docs) ===
+  - path: "apps/docs/content/docs/reference/kernel-spec/index.mdx"
+    type: "reference"
+    audience: "user"
+    quality: "complete"
+    summary: "Entry point to embedded kernel spec"
+    
+  # Note: 50+ kernel spec files mirrored in apps/docs/content/docs/reference/kernel-spec/
+  # These are synced from packages/kernel/docs/ via sync script
+    
+  # === OHARNES INTERNAL DOCS ===
+  - path: ".claude/CLAUDE.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Oharnes development guidelines and patterns"
+    
+  - path: ".claude/patterns/README.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Anti-patterns registry documentation"
+    
+  # === OHARNES COMMANDS (10 commands) ===
+  - path: ".claude/commands/oharnes.specify.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Feature specification command"
+    
+  - path: ".claude/commands/oharnes.plan.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Implementation planning command"
+    
+  - path: ".claude/commands/oharnes.tasks.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Task generation command"
+    
+  - path: ".claude/commands/oharnes.implement.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Implementation execution command with context isolation"
+    
+  - path: ".claude/commands/oharnes.verify.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Post-implementation verification command"
+    
+  - path: ".claude/commands/oharnes.retro.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Retrospective investigation command"
+    
+  - path: ".claude/commands/oharnes.close.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Retrospective closure and decision crystallization"
+    
+  - path: ".claude/commands/oharnes.analyze.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Spec/plan/tasks consistency validation"
+    
+  - path: ".claude/commands/oharnes.checklist.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Custom checklist generation"
+    
+  - path: ".claude/commands/code-review.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "PR code review command"
+    
+  # === OHARNES AGENTS (27 agents) ===
+  # Scout/Verifier/Fixer pattern for implement
+  - path: ".claude/agents/oharnes.implement-scout.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Context gathering agent for implementation"
+    
+  - path: ".claude/agents/oharnes.implement-verifier.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Task verification agent"
+    
+  - path: ".claude/agents/oharnes.implement-fixer.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Issue fixing agent"
+    
+  - path: ".claude/agents/oharnes.implement-verification-designer.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Verification gate designer"
+    
+  # Retro investigation agents (5 parallel agents)
+  - path: ".claude/agents/oharnes.retro-timeline-investigator.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Git timeline investigation"
+    
+  - path: ".claude/agents/oharnes.retro-file-auditor.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "File audit against spec"
+    
+  - path: ".claude/agents/oharnes.retro-spec-drift.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Spec drift detection"
+    
+  - path: ".claude/agents/oharnes.retro-test-validator.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Test coverage validation"
+    
+  - path: ".claude/agents/oharnes.retro-synthesizer.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Retrospective synthesis"
+    
+  # Verify agents (6 parallel verifiers)
+  - path: ".claude/agents/oharnes.verify-spec-checker.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Spec compliance verification"
+    
+  - path: ".claude/agents/oharnes.verify-task-checker.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Task completion verification"
+    
+  - path: ".claude/agents/oharnes.verify-acceptance-checker.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Acceptance criteria verification"
+    
+  - path: ".claude/agents/oharnes.verify-path-auditor.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "File path audit"
+    
+  - path: ".claude/agents/oharnes.verify-gate-runner.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Verification gate execution"
+    
+  - path: ".claude/agents/oharnes.verify-synthesizer.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Verification synthesis"
+    
+  # Analyze agents (5 parallel analyzers)
+  - path: ".claude/agents/oharnes.analyze-duplicate-checker.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Duplicate detection"
+    
+  - path: ".claude/agents/oharnes.analyze-ambiguity-checker.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Ambiguity detection"
+    
+  - path: ".claude/agents/oharnes.analyze-coverage-mapper.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Coverage mapping"
+    
+  - path: ".claude/agents/oharnes.analyze-constitution-checker.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Constitution compliance check"
+    
+  - path: ".claude/agents/oharnes.analyze-synthesizer.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Analysis synthesis"
+    
+  # Plan/tasks validation
+  - path: ".claude/agents/oharnes.plan-researcher.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Research agent for planning"
+    
+  - path: ".claude/agents/oharnes.plan-validator.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Plan validation"
+    
+  - path: ".claude/agents/oharnes.tasks-validator.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Tasks validation"
+    
+  # Close investigation agents
+  - path: ".claude/agents/oharnes.close-research-agent.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Research for retrospective closure"
+    
+  - path: ".claude/agents/oharnes.close-code-investigator.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Code investigation for anti-patterns"
+    
+  # === SPECKIT COMMANDS (Legacy/Cursor) ===
+  - path: ".claude/commands/speckit.clarify.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Spec clarification command"
+    
+  - path: ".claude/commands/speckit.constitution.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Constitution management"
+    
+  - path: ".claude/commands/speckit.taskstoissues.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Convert tasks to GitHub issues"
+    
+  # === SKILLS (Claude Code Skills) ===
+  - path: ".claude/skills/needle-di/SKILL.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Needle DI framework skill"
+    
+  - path: ".claude/skills/prompting/SKILL.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Prompt engineering skill"
+    
+  - path: ".claude/skills/subagent-factory/SKILL.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Subagent creation skill"
+    
+  - path: ".claude/skills/elevenlabs-agents-sdk/SKILL.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "ElevenLabs SDK integration skill"
+    
+  # === FEATURE SPECS (Ready) ===
+  - path: "specs/ready/015-flow-only-architecture/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Flow-only architecture unification spec (CURRENT)"
+    
+  - path: "specs/ready/015-flow-only-architecture/plan.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Implementation plan for flow-only architecture"
+    
+  - path: "specs/ready/015-flow-only-architecture/tasks.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Task breakdown for flow-only architecture"
+    
+  - path: "specs/ready/014-elevenlabs-channel/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "ElevenLabs voice channel specification"
+    
+  # === FEATURE SPECS (Archive - 13 completed features) ===
+  # Note: Each archived feature has spec.md, plan.md, tasks.md, retro/, analysis/
+  - path: "specs/archive/001-sdk-core/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Initial SDK core implementation"
+    
+  - path: "specs/archive/002-sdk-validation/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Validation layer implementation"
+    
+  - path: "specs/archive/003-harness-renderer/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Harness rendering system"
+    
+  - path: "specs/archive/003-harness-renderer/RETROSPECTIVE.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Critical retrospective identifying root causes RC001-RC005"
+    
+  - path: "specs/archive/004-test-infra-audit/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Test infrastructure audit"
+    
+  - path: "specs/archive/005-monologue-system/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Monologue system implementation"
+    
+  - path: "specs/archive/007-fluent-harness-dx/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Fluent harness DX improvements"
+    
+  - path: "specs/archive/008-unified-event-system/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Unified event system"
+    
+  - path: "specs/archive/009-tech-debt-cleanup/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Technical debt cleanup"
+    
+  - path: "specs/archive/010-transport-architecture/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Transport architecture refactor"
+    
+  - path: "specs/archive/011-sdk-consolidation/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "SDK consolidation"
+    
+  - path: "specs/archive/013-anthropic-refactor/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Anthropic SDK refactor"
+    
+  - path: "specs/archive/014-clean-di-architecture/spec.md"
+    type: "spec"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Clean DI architecture"
+    
+  # === PACKAGE READMEs ===
+  - path: "packages/kernel/README.md"
+    type: "readme"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Kernel package overview"
+    
+  - path: "packages/github-channel/README.md"
+    type: "readme"
+    audience: "contributor"
+    quality: "complete"
+    summary: "GitHub channel package"
+    
+  - path: "packages/rtv-channel/README.md"
+    type: "readme"
+    audience: "contributor"
+    quality: "complete"
+    summary: "RTV channel package"
+    
+  # === TEMPLATES ===
+  - path: ".specify/templates/spec-template.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Feature specification template"
+    
+  - path: ".specify/templates/plan-template.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Implementation plan template"
+    
+  - path: ".specify/templates/tasks-template.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Tasks file template"
+    
+  - path: ".specify/templates/checklist-template.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Checklist template"
+    
+  - path: ".specify/templates/agent-file-template.md"
+    type: "internal"
+    audience: "internal"
+    quality: "complete"
+    summary: "Agent definition template"
+    
+  # === PROJECT ROOT DOCS ===
+  - path: "CLAUDE.md"
+    type: "readme"
+    audience: "contributor"
+    quality: "complete"
+    summary: "Root development guidelines (auto-generated)"
+
+directories:
+  - path: "packages/kernel/docs/"
+    purpose: "Canonical kernel + flow protocol specification"
+    file_count: 30
+    quality: "complete - source of truth"
+    
+  - path: "apps/docs/content/docs/"
+    purpose: "User-facing documentation site (Fumadocs)"
+    file_count: 56
+    quality: "partial - many stubs, needs content migration from kernel docs"
+    
+  - path: ".claude/commands/"
+    purpose: "Oharnes workflow commands"
+    file_count: 10
+    quality: "complete - production workflows"
+    
+  - path: ".claude/agents/"
+    purpose: "Oharnes sub-agents (scout/verify/retro/analyze patterns)"
+    file_count: 27
+    quality: "complete - production agents"
+    
+  - path: ".claude/skills/"
+    purpose: "Claude Code skills library"
+    file_count: 4
+    quality: "complete - reusable skills"
+    
+  - path: "specs/archive/"
+    purpose: "Completed feature specifications with retrospectives"
+    file_count: 168
+    quality: "complete - historical record"
+    
+  - path: "specs/ready/"
+    purpose: "Ready-to-implement feature specifications"
+    file_count: 3
+    quality: "complete - current work"
+    
+  - path: ".specify/templates/"
+    purpose: "Workflow templates for oharnes commands"
+    file_count: 5
+    quality: "complete"
+
+breakdown:
+  by_type:
+    spec: 195
+    guide: 25
+    reference: 15
+    internal: 73
+    readme: 12
+    
+  by_audience:
+    contributor: 210
+    user: 40
+    internal: 70
+    
+  by_quality:
+    complete: 250
+    partial: 40
+    stub: 30
+    stale: 0
+
+gaps:
+  - "User documentation severely lacking - only stubs in apps/docs"
+  - "No getting started guide for end users"
+  - "No migration guide from kernel spec to user-friendly docs"
+  - "API reference partially duplicates kernel spec without sync mechanism"
+  - "Missing: how to create custom nodes (tutorial exists as stub)"
+  - "Missing: how to debug flows (stub only)"
+  - "Missing: deployment/production guides"
+  - "Missing: performance tuning documentation"
+  - "Missing: security best practices"
+  - "Missing: channel integration cookbook"
+  - "Kernel spec is excellent but not accessible to non-technical users"
+  - "No visual examples or diagrams in user docs"
+  - "FAQ is empty stub"
+  - "Test specs exist but no user guide on writing tests"
+
+strengths:
+  - "Kernel specification is comprehensive and canonical"
+  - "Testing protocol is well-documented"
+  - "Oharnes internal docs are complete and production-ready"
+  - "ADRs capture key architectural decisions"
+  - "Feature specs have excellent retro/analysis artifacts"
+  - "Clear separation between spec (contributor) and user docs"
+  - "Sync script exists to mirror kernel docs to user site"
+
+recommendations:
+  - "PRIMARY: Populate user guides by translating kernel spec concepts"
+  - "Create visual architecture diagrams for user docs"
+  - "Write 3-5 complete tutorials (first flow, custom node, testing, channels)"
+  - "Fill FAQ from common retro findings"
+  - "Add cookbook/recipes section with real examples"
+  - "Sync API reference with kernel spec (automate if possible)"
+  - "Create contributor onboarding guide separate from user docs"
+  - "Add troubleshooting section with common errors"
+  - "Document anti-patterns from .claude/patterns/anti-patterns.yaml for users"
+  - "Create deployment guide with production checklist"
+
+current_vs_stale:
+  current: 290
+  stale: 0
+  partially_outdated: 30
+  notes: "Kernel spec is actively maintained. User docs are mostly stubs awaiting content. Archive specs are historical but accurate for their features."
+
+sync_status:
+  kernel_to_user_docs: "Sync script exists (apps/docs/scripts/sync-kernel-docs.ts) but user docs need manual content creation"
+  api_reference: "Partial duplication - needs alignment strategy"
+  spec_to_code: "Strong traceability via test-spec files"

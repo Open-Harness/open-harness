@@ -1,0 +1,220 @@
+---
+title: Directory Layout
+description: Detailed source directory structure
+---
+
+# Directory Layout
+
+A complete annotated view of the kernel source structure.
+
+## Full Source Tree
+
+```
+packages/kernel/src/
+├── index.ts                    # Public API exports
+│
+├── protocol/                   # Interfaces and types
+│   ├── agent.ts               # AgentDefinition, AgentExecuteContext
+│   ├── channel.ts             # ChannelDefinition, ChannelContext
+│   ├── events.ts              # BaseEvent, EnrichedEvent, EventContext
+│   ├── flow.ts                # FlowYaml, NodeSpec, WhenExpr
+│   ├── harness.ts             # HarnessFactory, ExecuteContext
+│   └── hub.ts                 # Hub, HubStatus
+│
+├── engine/                     # Implementations
+│   ├── events.ts              # createEnrichedEvent, matchesFilter
+│   ├── harness.ts             # defineHarness, HarnessInstanceImpl
+│   └── hub.ts                 # HubImpl, createHub
+│
+├── flow/                       # Flow runtime
+│   ├── bindings.ts            # resolveBindings, resolveBindingPath
+│   ├── compiler.ts            # compileFlow, CompiledFlow
+│   ├── executor.ts            # executeFlow, FlowExecutionContext
+│   ├── parser.ts              # parseFlowYaml
+│   ├── registry.ts            # NodeRegistry
+│   ├── validator.ts           # Zod schemas
+│   └── when.ts                # evaluateWhen
+│
+└── providers/                  # AI provider integrations
+    └── anthropic.ts           # createAnthropicTextAgent
+```
+
+## Key Files
+
+### index.ts
+
+The public API surface:
+
+```typescript
+// Types
+export type {
+  Hub,
+  BaseEvent,
+  EnrichedEvent,
+  EventContext,
+  AgentDefinition,
+  ChannelDefinition,
+  FlowYaml,
+  NodeSpec,
+  // ...
+} from "./protocol";
+
+// Functions
+export { createHub } from "./engine/hub";
+export { defineHarness } from "./engine/harness";
+export { executeFlow } from "./flow/executor";
+export { parseFlowYaml } from "./flow/parser";
+export { compileFlow } from "./flow/compiler";
+export { NodeRegistry } from "./flow/registry";
+export { resolveBindings } from "./flow/bindings";
+export { evaluateWhen } from "./flow/when";
+export { createAnthropicTextAgent } from "./providers/anthropic";
+```
+
+Only export what users need.
+
+### protocol/*.ts
+
+Interface files define contracts:
+
+| File | Exports |
+|------|---------|
+| `agent.ts` | `AgentDefinition`, `AgentExecuteContext`, `AgentInbox` |
+| `channel.ts` | `ChannelDefinition`, `ChannelContext`, `ChannelHandler` |
+| `events.ts` | `BaseEvent`, `EnrichedEvent`, `EventContext`, `EventFilter` |
+| `flow.ts` | `FlowYaml`, `NodeSpec`, `WhenExpr`, `CompiledFlow` |
+| `harness.ts` | `HarnessFactory`, `ExecuteContext`, `HarnessResult` |
+| `hub.ts` | `Hub`, `HubStatus`, `UserResponse` |
+
+### engine/*.ts
+
+Implementation files:
+
+| File | Exports |
+|------|---------|
+| `events.ts` | `createEnrichedEvent`, `matchesFilter` |
+| `harness.ts` | `defineHarness` (factory function) |
+| `hub.ts` | `HubImpl`, `createHub` |
+
+### flow/*.ts
+
+Flow runtime files:
+
+| File | Purpose | Exports |
+|------|---------|---------|
+| `parser.ts` | YAML parsing | `parseFlowYaml` |
+| `compiler.ts` | DAG compilation | `compileFlow` |
+| `executor.ts` | Flow execution | `executeFlow` |
+| `registry.ts` | Node type registry | `NodeRegistry` |
+| `bindings.ts` | Binding resolution | `resolveBindings`, `resolveBindingPath` |
+| `when.ts` | Condition evaluation | `evaluateWhen` |
+| `validator.ts` | Schema validation | `FlowYamlSchema`, `NodeSpecSchema` |
+
+## Naming Conventions
+
+### Files
+
+- **Lowercase with hyphens**: `flow-executor.ts` (if multi-word)
+- **Single concept per file**: `hub.ts` not `hub-and-events.ts`
+- **Match export**: `hub.ts` exports `Hub`
+
+### Interfaces and Types
+
+- **PascalCase**: `Hub`, `BaseEvent`, `FlowYaml`
+- **Suffix meanings**:
+  - `Definition` - Configuration object
+  - `Context` - Runtime context
+  - `Schema` - Zod schema
+  - `Spec` - Specification structure
+
+### Classes
+
+- **PascalCase with Impl suffix**: `HubImpl`
+- Implementation of interface: `HubImpl implements Hub`
+
+### Functions
+
+- **camelCase with verb prefix**: `createHub`, `parseFlowYaml`
+- **Verb meanings**:
+  - `create` - Factory, instantiation
+  - `define` - Create definition/template
+  - `parse` - String to object
+  - `compile` - Transform for execution
+  - `execute` - Run something
+  - `resolve` - Look up references
+  - `evaluate` - Compute result
+
+## Where to Add Code
+
+### Adding a Type
+
+```
+Is it a contract/interface?
+├─ Yes → protocol/relevant-file.ts
+│        (e.g., new event type → protocol/events.ts)
+└─ No → Where it's used
+```
+
+### Adding a Function
+
+```
+What does it do?
+├─ Creates/instantiates → engine/*.ts
+├─ Parses/validates → flow/parser.ts or flow/validator.ts
+├─ Compiles → flow/compiler.ts
+├─ Executes → flow/executor.ts
+├─ AI provider → providers/*.ts
+└─ General utility → Consider if kernel-appropriate
+```
+
+### Adding a Node Type
+
+```
+Is it built-in or user-defined?
+├─ Built-in → flow/nodes/*.ts (new directory)
+└─ User-defined → User code, not kernel
+```
+
+### Adding a Provider
+
+```
+providers/
+├─ anthropic.ts   # Existing
+└─ openai.ts      # New provider here
+```
+
+## Test Structure
+
+Tests mirror source:
+
+```
+tests/
+├── unit/
+│   ├── bindings.test.ts      # Tests flow/bindings.ts
+│   ├── hub.test.ts           # Tests engine/hub.ts
+│   ├── registry.test.ts      # Tests flow/registry.ts
+│   └── when.test.ts          # Tests flow/when.ts
+├── integration/
+│   └── flow-execution.test.ts
+└── fixtures/
+    └── golden/
+        └── *.json
+```
+
+## Internal Specs
+
+```
+packages/kernel/docs/
+├── spec/                     # Specifications
+│   ├── hub.md               # Hub specification
+│   ├── harness.md           # Harness specification
+│   └── flow.md              # Flow specification
+└── adr/                      # Architecture decisions
+    └── *.md
+```
+
+## Next Steps
+
+- [Protocol vs Engine](/docs/contributing/architecture/protocol-vs-engine) - The split
+- [Development Workflow](/docs/contributing/development/workflow) - Making changes
+- [Reading Specs](/docs/contributing/specifications/reading-specs) - Internal docs

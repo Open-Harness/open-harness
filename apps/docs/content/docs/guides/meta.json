@@ -1,0 +1,11 @@
+{
+  "title": "Guides",
+  "pages": [
+    "index",
+    "testing-workflow",
+    "record-and-promote-fixtures",
+    "write-replay-tests",
+    "debugging",
+    "faq"
+  ]
+}

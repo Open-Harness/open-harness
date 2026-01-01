@@ -1,0 +1,180 @@
+---
+title: Development Setup
+description: Set up your development environment for Open Harness
+---
+
+# Development Setup
+
+This guide walks through setting up a complete development environment for Open Harness.
+
+## Prerequisites
+
+### Required
+
+**Bun** (v1.0 or later)
+
+```bash
+# macOS/Linux
+curl -fsSL https://bun.sh/install | bash
+
+# Verify
+bun --version
+```
+
+**Git**
+
+```bash
+git --version  # Any recent version
+```
+
+### Recommended
+
+**VS Code** with extensions:
+- ESLint
+- TypeScript and JavaScript Language Features
+- Prettier (optional)
+
+## Clone and Install
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/open-harness.git
+cd open-harness
+
+# Install dependencies
+bun install
+```
+
+## Verify Setup
+
+Run checks to ensure everything is working:
+
+```bash
+# Type checking
+bun run typecheck
+
+# Unit tests (no network)
+bun run test
+
+# All checks pass? You're ready.
+```
+
+## IDE Configuration
+
+### VS Code Settings
+
+Recommended `.vscode/settings.json`:
+
+```json
+{
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.autoImports": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  }
+}
+```
+
+### TypeScript Config
+
+The project uses strict TypeScript. Ensure your editor respects `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  }
+}
+```
+
+## Project Structure Preview
+
+```
+open-harness/
+├── packages/
+│   ├── kernel/           # Core runtime
+│   │   ├── src/
+│   │   │   ├── protocol/ # Interfaces
+│   │   │   ├── engine/   # Implementations
+│   │   │   └── flow/     # Flow runtime
+│   │   └── docs/         # Internal specs
+│   └── rtv-channel/      # Voice channel
+├── apps/
+│   └── docs/             # Documentation site
+└── bun.lockb
+```
+
+See [Architecture Overview](/docs/contributing/architecture/overview) for detailed structure.
+
+## Running Examples
+
+### Demo Scripts
+
+```bash
+# Run example harness
+bun run packages/kernel/examples/basic.ts
+
+# Run with verbose output
+DEBUG=* bun run packages/kernel/examples/basic.ts
+```
+
+### Interactive Development
+
+```bash
+# Start in watch mode
+bun --watch packages/kernel/examples/basic.ts
+```
+
+## Environment Variables
+
+Open Harness uses Claude Code subscription authentication. No API keys needed for development:
+
+```bash
+# DO NOT set ANTHROPIC_API_KEY
+# Authentication is handled automatically
+```
+
+For live tests (actual API calls):
+
+```bash
+bun run test:live
+```
+
+## Common Issues
+
+### Bun Version
+
+Ensure Bun is up to date:
+
+```bash
+bun upgrade
+```
+
+### Type Errors
+
+If you see type errors after pulling:
+
+```bash
+# Reinstall dependencies
+rm -rf node_modules
+bun install
+```
+
+### Test Failures
+
+If tests fail unexpectedly:
+
+```bash
+# Clear test cache
+bun run test --clear-cache
+```
+
+## Next Steps
+
+- [Architecture Overview](/docs/contributing/architecture/overview) - Understand the codebase
+- [Development Workflow](/docs/contributing/development/workflow) - How to make changes
+- [Testing](/docs/contributing/development/testing) - Write and run tests

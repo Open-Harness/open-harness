@@ -52,41 +52,49 @@ Unique ID for this particular agent execution. Used for:
 Multi-turn agents use the V2 SDK session-based send/receive pattern:
 
 ```typescript
-import { unstable_v2_createSession } from "@anthropic-ai/claude-agent-sdk";
+import { Claude } from "@anthropic-ai/claude-agent-sdk";
 
 async function execute(input: AgentInput, ctx: AgentExecuteContext): Promise<AgentOutput> {
-  const session = unstable_v2_createSession({ model: input.model });
+  const client = new Claude({ model: input.model });
+
+  // Create session with maxTurns: 1 for single turn
+  const session = client.session({ maxTurns: 1 });
 
   try {
-    // Initial turn
-    await session.send(input.prompt);
-    await emitResponses(session, ctx.hub);
+    // Send initial prompt
+    for await (const event of session.send(input.prompt)) {
+      if (event.type === "text") {
+        ctx.hub.emit({ type: "agent:text", content: event.text, runId: ctx.runId });
+      }
+    }
 
-    // Listen for injected messages
-    const unsub = ctx.hub.subscribe("session:message", async (event) => {
-      if (event.runId === ctx.runId) {
-        await session.send(event.content);
-        await emitResponses(session, ctx.hub);
+    // For multi-turn, subscribe to injected messages
+    const unsub = ctx.hub.subscribe("session:message", async (hubEvent) => {
+      if (hubEvent.event.runId === ctx.runId) {
+        for await (const event of session.send(hubEvent.event.content)) {
+          if (event.type === "text") {
+            ctx.hub.emit({ type: "agent:text", content: event.text, runId: ctx.runId });
+          }
+        }
       }
     });
 
-    // Wait for completion
+    // Wait for completion signal
     await waitForDone();
     unsub();
 
     return result;
   } finally {
-    session.close();
+    // Session cleanup handled by SDK
   }
 }
 ```
 
 ### Key patterns
 
-- **session.send()**: Send a user message to the session
-- **session.receive()**: Async iterable of response messages
+- **session.send()**: Send a user message, returns async iterable of responses
 - **hub.subscribe()**: Listen for injected messages by runId
-- **session.close()**: Clean termination
+- **maxTurns: 1**: For single-turn interactions (most common)
 
 ## Message injection
 

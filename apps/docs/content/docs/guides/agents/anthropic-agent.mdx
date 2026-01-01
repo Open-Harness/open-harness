@@ -1,0 +1,141 @@
+---
+title: How to Use the Anthropic Provider
+description: Create agents using Anthropic's Claude models
+---
+
+# How to Use the Anthropic Provider
+
+Use the built-in Anthropic provider for Claude-powered agents.
+
+## Create Anthropic Agent
+
+```typescript
+import { createAnthropicTextAgent } from "@open-harness/kernel";
+
+const agent = createAnthropicTextAgent({
+  model: "claude-sonnet-4-20250514",
+  systemPrompt: "You are a helpful assistant."
+});
+```
+
+## Use in Harness
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+
+const harness = defineHarness({
+  agents: [agent],
+  channels: [consoleChannel]
+});
+
+const instance = harness.create();
+await instance.run({ prompt: "Hello!" });
+```
+
+## Configuration Options
+
+```typescript
+const agent = createAnthropicTextAgent({
+  // Model selection
+  model: "claude-sonnet-4-20250514",
+
+  // System prompt
+  systemPrompt: "You are a coding assistant.",
+
+  // Max tokens in response
+  maxTokens: 4096,
+
+  // Temperature (0-1)
+  temperature: 0.7,
+
+  // Stop sequences
+  stopSequences: ["END"],
+
+  // Streaming (default: true)
+  streaming: true
+});
+```
+
+## Models Available
+
+| Model | ID |
+|-------|------|
+| Claude Opus 4.5 | `claude-opus-4-5-20251101` |
+| Claude Sonnet 4 | `claude-sonnet-4-20250514` |
+| Claude Haiku 3.5 | `claude-3-5-haiku-20241022` |
+
+## Streaming vs Blocking
+
+```typescript
+// Streaming (default) - emits chunks as they arrive
+const streamingAgent = createAnthropicTextAgent({
+  model: "claude-sonnet-4-20250514",
+  streaming: true
+});
+
+// Blocking - waits for complete response
+const blockingAgent = createAnthropicTextAgent({
+  model: "claude-sonnet-4-20250514",
+  streaming: false
+});
+```
+
+## Handle Streaming Output
+
+```typescript
+hub.subscribe("agent:text", (event) => {
+  // Each chunk as it arrives
+  process.stdout.write(event.event.content);
+});
+
+hub.subscribe("agent:complete", (event) => {
+  // Full response when done
+  console.log("\nFull response:", event.event.response);
+});
+```
+
+## Replay Mode for Testing
+
+```typescript
+import { createAnthropicTextAgent } from "@open-harness/kernel";
+
+// In test mode, agent replays recorded responses
+const agent = createAnthropicTextAgent({
+  model: "claude-sonnet-4-20250514",
+  mode: "replay",
+  fixtureDir: "./fixtures/anthropic"
+});
+```
+
+## Authentication
+
+Open Harness uses Claude Code subscription authentication:
+
+```typescript
+// No API key needed - uses subscription auth
+const agent = createAnthropicTextAgent({
+  model: "claude-sonnet-4-20250514"
+});
+
+// Auth handled automatically via @anthropic-ai/claude-agent-sdk
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await instance.run({ prompt: "Hello" });
+} catch (error) {
+  if (error.code === "rate_limit") {
+    console.log("Rate limited, retry later");
+  } else if (error.code === "context_length") {
+    console.log("Input too long");
+  }
+}
+```
+
+## Related
+
+- [Define Agent](/docs/guides/agents/define-agent) - Agent basics
+- [Agent Inbox](/docs/guides/agents/agent-inbox) - Bidirectional agents
+- [Replay Tests](/docs/guides/testing/replay-tests) - Test with fixtures

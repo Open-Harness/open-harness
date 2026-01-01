@@ -1,0 +1,166 @@
+---
+title: "Flow Runtime Protocol"
+description: "The Flow runtime is the canonical orchestration layer. It owns lifecycle events, session mode, and inbox routing, and executes a FlowSpec against a Node registry."
+---
+
+The Flow runtime is the canonical orchestration layer. It owns lifecycle events, session mode, and inbox routing, and executes a FlowSpec against a Node registry.
+
+## Overview
+
+- **FlowRuntime** is the runtime entry point.
+- A Flow run is a **Hub**: it emits events and accepts commands.
+- Each **node execution** is wrapped in task scope.
+- Each **agent invocation** gets a fresh `runId`.
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant FlowRuntime
+  participant Hub
+  participant Channel
+  participant Agent
+
+  User->>FlowRuntime: createFlowRunner(flow, registry)
+  FlowRuntime->>Hub: harness:start
+  FlowRuntime->>Hub: phase:start (Run Flow)
+  FlowRuntime->>Hub: task:start (node:A)
+  FlowRuntime->>Agent: execute(input, runId)
+  Agent->>Hub: agent:start / agent:tool:* / agent:complete
+  FlowRuntime->>Hub: task:complete
+  FlowRuntime->>Hub: phase:complete
+  FlowRuntime->>Hub: harness:complete
+  Hub-->>Channel: stream events
+```
+
+## Factory
+
+```typescript
+const flow = parseFlowYaml(source);
+const registry = createRegistryWithNodes();
+const instance = createFlowRunner(flow, registry, &#123; sessionId: "flow-001" &#125;);
+```
+
+## Instance methods
+
+### `attach(channel)`
+Attach a channel/adapter. The channel receives the hub and can subscribe/send commands.
+
+### `startSession()`
+Enable interactive command handling (send/reply/abort). Returns `this` for chaining.
+
+### `run()`
+Execute the flow and return:
+
+```typescript
+interface FlowRunResult &#123;
+  outputs: Record&#60;string, unknown&#62;;
+  events: EnrichedEvent[];
+  durationMs: number;
+  status: HubStatus;
+&#125;
+```
+
+## Lifecycle events
+
+The runtime emits the following events:
+
+- `harness:start` / `harness:complete` for the overall run
+- `phase:start` / `phase:complete` for the flow phase (default: `Run Flow`)
+- `task:start` / `task:complete` / `task:failed` for each node
+- `agent:*` events emitted by agent-backed nodes
+
+## Session mode
+
+Session mode enables bidirectional interaction with a running flow:
+
+- `hub.send(...)` emits `session:message`
+- `hub.reply(...)` emits `session:reply`
+- `hub.abort(...)` emits `session:abort`
+
+Session is **flow-scoped** and not tied to a specific agent run.
+
+## Channels (interfaces)
+
+Channels are **interfaces** to a flow (console, websocket, voice, etc.). They are not nodes and do not appear in the FlowSpec. They are attached at runtime:
+
+```typescript
+const instance = createFlowRunner(flow, registry, &#123;
+  channels: [ConsoleChannel(), VoiceChannel()],
+&#125;);
+```
+
+**Preferred**: pass channels at creation for deterministic startup order. Use `attach()` only for dynamic, mid-run additions.
+
+## Inbox routing
+
+- Every agent invocation receives an `AgentInbox`.
+- The runtime maps `runId → inbox` for the duration of that agent run.
+- `hub.sendToRun(runId, message)` injects into that inbox.
+- Optional convenience: `hub.sendTo(nodeId, message)` routes to the latest runId for that node.
+
+## Async prompt stream (agent nodes)
+
+Agent-backed nodes that use the Claude SDK must build an **async iterable** prompt stream:
+
+1. **Yield initial messages** from node input (prompt or messages array).
+2. **Then yield new user messages** from the agent inbox as they arrive.
+
+This enables true multi-turn behavior and allows `sendToRun(...)` to inject new messages.
+
+### SDK user message shape
+
+The prompt stream yields `SDKUserMessage` objects from `@anthropic-ai/claude-agent-sdk`:
+
+```ts
+type SDKUserMessage = &#123;
+  type: "user";
+  message: &#123; role: "user"; content: string &#125;;
+  parent_tool_use_id: string | null;
+  session_id: string;
+  isSynthetic?: boolean;
+  tool_use_result?: unknown;
+&#125;;
+```
+
+### Prompt stream contract (pseudo-code)
+
+```ts
+async function* promptStream(
+  initial: SDKUserMessage[],
+  inbox: AgentInbox,
+  sessionId: string,
+): AsyncGenerator&#60;SDKUserMessage&#62; &#123;
+  for (const msg of initial) yield msg;
+  for await (const injected of inbox) &#123;
+    yield toSdkUserMessage(injected, sessionId);
+  &#125;
+&#125;
+```
+
+## Multi-turn termination rules
+
+Session-like agent nodes **must stop** without hanging when no messages arrive. Termination can occur by any of the following:
+
+- **maxTurns**: stop after N turns (user messages).
+- **explicit close**: the runtime closes the inbox/prompt stream (e.g., `inbox.close()`).
+
+**Invariant**: The Flow runtime must not hang waiting for inbox messages.
+
+## Claude SDK config dir expectations
+
+- Provider must not write to `~/.claude` in locked environments.
+- Agent runtime must support setting `CLAUDE_CONFIG_DIR` to a project-local temp dir (e.g. `.claude-tmp`).
+- Do not rely on `CLAUDE_CODE_DEBUG_LOGS_DIR` unless it is set to a valid file path.
+
+## RunId boundaries
+
+- **Fresh runId per agent invocation**.
+- Multiple agent runs can occur inside the same task scope.
+- Context passing between agents is explicit (inputs/outputs).
+
+## Key invariants
+
+1. **Flow runtime owns lifecycle** — emits `harness:*`, `phase:*`, `task:*`.
+2. **Every agent run is injectable** — inbox exists for all agent nodes.
+3. **RunId is per invocation** — no implicit agent memory between runs.
+4. **Flow run is a Hub** — all hub commands/events apply to the run.

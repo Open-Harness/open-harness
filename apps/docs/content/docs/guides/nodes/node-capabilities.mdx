@@ -1,0 +1,115 @@
+---
+title: How to Declare Node Capabilities
+description: Declare what a node can do for flow validation
+---
+
+# How to Declare Node Capabilities
+
+Capabilities describe what a node can do, enabling flow validation.
+
+## What Are Capabilities
+
+Capabilities are declarative metadata that describe a node's:
+- Side effects (network, filesystem, etc.)
+- Resource requirements
+- Security profile
+
+## Declare Capabilities
+
+```typescript
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const fetchNode: NodeTypeDefinition = {
+  type: "fetch",
+  inputSchema,
+  outputSchema,
+
+  capabilities: {
+    network: true,
+    sideEffects: true
+  },
+
+  async run(ctx, input) {
+    // ...
+  }
+};
+```
+
+## Built-in Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| `network` | Makes HTTP/network requests |
+| `filesystem` | Reads/writes files |
+| `sideEffects` | Has observable effects |
+| `deterministic` | Same input = same output |
+| `streaming` | Produces streaming output |
+
+## Check Capabilities at Runtime
+
+```typescript
+const node = registry.get("fetch");
+
+if (node.capabilities?.network) {
+  console.log("This node requires network access");
+}
+```
+
+## Custom Capabilities
+
+```typescript
+const myNode: NodeTypeDefinition = {
+  type: "my-node",
+  capabilities: {
+    network: false,
+    deterministic: true,
+    // Custom capability
+    requiresAuth: true,
+    rateLimit: 100
+  },
+  // ...
+};
+```
+
+## Flow-Level Capability Check
+
+```typescript
+function checkFlowCapabilities(flow: FlowYaml, registry: NodeRegistry) {
+  const capabilities = new Set<string>();
+
+  for (const node of flow.nodes) {
+    const nodeDef = registry.get(node.type);
+    if (nodeDef.capabilities) {
+      for (const [cap, enabled] of Object.entries(nodeDef.capabilities)) {
+        if (enabled) capabilities.add(cap);
+      }
+    }
+  }
+
+  return capabilities;
+}
+
+const caps = checkFlowCapabilities(flow, registry);
+if (caps.has("network")) {
+  console.log("Flow requires network access");
+}
+```
+
+## Security Policies
+
+Use capabilities for security decisions:
+
+```typescript
+const restrictedRegistry = new NodeRegistry({
+  allowCapabilities: ["deterministic"],
+  denyCapabilities: ["network", "filesystem"]
+});
+
+// Nodes with network capability won't register
+```
+
+## Related
+
+- [Register Nodes](/docs/guides/nodes/register-nodes) - Registration basics
+- [Node Schemas](/docs/guides/nodes/node-schemas) - Input/output types
+- [NodeTypeDefinition](/docs/reference/types/node-type-definition) - Full reference

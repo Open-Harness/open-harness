@@ -1,0 +1,31 @@
+---
+title: Testing Workflow
+description: Complete workflow for testing Open Harness flows
+---
+
+This guide covers the end-to-end workflow for testing flows in Open Harness.
+
+## Overview
+
+Open Harness uses a multi-layered testing approach:
+
+1. **Unit tests** - Test individual node types
+2. **Replay tests** - Test flows using recorded fixtures
+3. **Live tests** - Integration tests with real services
+
+## Quick Start
+
+1. Write your flow in `flow.yaml`
+2. Record a fixture using the test recorder
+3. Write a replay test that uses the fixture
+4. Run tests with `bun run test`
+
+## Detailed Workflow
+
+See the [Testing Protocol](/docs/reference/kernel-spec/testing/testing-protocol) for complete testing infrastructure details.
+
+## Learn More
+
+- [Record & Promote Fixtures](/docs/guides/record-and-promote-fixtures) - Create test fixtures
+- [Write Replay Tests](/docs/guides/write-replay-tests) - Write tests using fixtures
+- [Testing Overview](/docs/reference/kernel-spec/testing) - Complete testing documentation

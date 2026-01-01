@@ -1,0 +1,213 @@
+---
+title: Harness vs Flow
+description: When to use imperative Harness versus declarative Flow
+---
+
+# Harness vs Flow
+
+Open Harness provides two execution models: **Harness** (imperative, code-first) and **Flow** (declarative, YAML-first). Understanding when to use each helps you make the right choice.
+
+## Two Runtime Models
+
+### Harness: Code-First
+
+Define workflows in TypeScript with full programmatic control:
+
+```typescript
+const harness = defineHarness({
+  name: "content-generator",
+  agents: { writer, researcher },
+  state: (input) => ({ topic: input.topic, drafts: [] }),
+  run: async (ctx) => {
+    // Full programmatic control
+    const research = await ctx.agents.researcher.execute({
+      query: ctx.state.topic
+    });
+
+    if (research.sources.length === 0) {
+      // Dynamic branching
+      return { content: "No sources found" };
+    }
+
+    const draft = await ctx.agents.writer.execute({
+      context: research.text
+    });
+
+    return { content: draft.text };
+  }
+});
+```
+
+### Flow: YAML-First
+
+Define workflows as declarative DAGs:
+
+```yaml
+flow:
+  name: content-generator
+  input:
+    topic: ""
+
+nodes:
+  - id: research
+    type: web-search
+    input:
+      query: "{{flow.input.topic}}"
+
+  - id: write
+    type: llm
+    input:
+      context: "{{research.output.text}}"
+    when:
+      not:
+        equals:
+          var: research.output.sources
+          value: []
+
+edges:
+  - from: research
+    to: write
+```
+
+## Historical Context
+
+Open Harness started with Harness - an imperative model for complex programmatic workflows. As patterns emerged, Flow was added for declarative definition.
+
+Today, **Flow is the primary model**. Most workflows are expressed as YAML flows. Harness remains for cases requiring programmatic flexibility.
+
+## When to Use Flow (Recommended)
+
+Flow is the right choice for:
+
+### Standard AI Workflows
+
+Linear or branching workflows with clear steps:
+- Research → Summarize → Format
+- Validate → Process → Store
+- Analyze → Report → Notify
+
+### Visual Editing Potential
+
+Flow's declarative format enables:
+- Visual workflow editors
+- Drag-and-drop node arrangement
+- Non-programmer access
+
+### Easy Testing and Modification
+
+YAML flows are easy to:
+- Read and understand
+- Modify without code changes
+- Version control meaningfully
+- Review in pull requests
+
+### Team Collaboration
+
+When non-developers need to:
+- Understand the workflow
+- Suggest modifications
+- Create variations
+
+## When to Use Harness
+
+Harness is appropriate when:
+
+### Complex Programmatic Logic
+
+When you need:
+- Loops with dynamic iteration counts
+- Complex conditionals beyond `when` expressions
+- Stateful logic that evolves during execution
+
+```typescript
+run: async (ctx) => {
+  let attempts = 0;
+  while (attempts < ctx.state.maxAttempts) {
+    const result = await ctx.agents.validator.execute(ctx.state.draft);
+    if (result.valid) break;
+    ctx.state.draft = await revise(ctx.state.draft, result.feedback);
+    attempts++;
+  }
+  return { draft: ctx.state.draft, attempts };
+}
+```
+
+### Dynamic Workflow Construction
+
+When the workflow structure isn't known ahead of time:
+- Building workflows from user input
+- Generating workflows from templates
+- Runtime workflow modification
+
+### Legacy Compatibility
+
+Existing harness-based code that works and doesn't need migration.
+
+## Making the Choice
+
+```
+                    ┌─────────────────────────┐
+                    │ Is the workflow static? │
+                    └────────────┬────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                yes │                         │ no
+                    ▼                         ▼
+            ┌───────────────┐         ┌───────────────┐
+            │  Can it be    │         │  Use Harness  │
+            │expressed as a │         │               │
+            │    DAG?       │         └───────────────┘
+            └───────┬───────┘
+                    │
+        ┌───────────▼───────────┐
+    yes │                       │ no
+        ▼                       ▼
+  ┌───────────┐         ┌───────────────┐
+  │ Use Flow  │         │  Use Harness  │
+  └───────────┘         └───────────────┘
+```
+
+### Questions to Ask
+
+1. **Is the workflow structure known at design time?**
+   - Yes → Consider Flow
+   - No → Use Harness
+
+2. **Can conditionals be expressed with `when`?**
+   - Yes → Flow works
+   - No → Harness may be needed
+
+3. **Will non-developers need to understand/modify it?**
+   - Yes → Flow is better
+   - No → Either works
+
+4. **Is there complex stateful logic?**
+   - Yes → Harness
+   - No → Flow
+
+## Migration Considerations
+
+### Flow to Harness
+
+Flow is a subset of what Harness can do. Any Flow can be rewritten as Harness code, but you lose the declarative benefits.
+
+### Harness to Flow
+
+Not all Harness code can be expressed as Flow. Complex loops and dynamic logic may not translate directly. Consider:
+- Breaking complex logic into custom node types
+- Keeping complex parts in Harness, calling from Flow
+
+## The Future
+
+The direction is **Flow-first**:
+- New features prioritize Flow support
+- Tooling focuses on YAML editing
+- Visual editors are Flow-based
+
+Harness remains the **escape hatch** for complex cases that don't fit the declarative model.
+
+## Next Steps
+
+- [DAG Model](/docs/concepts/flows/dag-model) - Understanding Flow structure
+- [defineHarness](/docs/reference/api/define-harness) - Harness API
+- [executeFlow](/docs/reference/api/execute-flow) - Flow API

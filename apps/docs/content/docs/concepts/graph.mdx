@@ -1,0 +1,26 @@
+---
+title: Graph
+description: Flow graph structure and execution
+---
+
+Flows are represented as directed acyclic graphs (DAGs) of nodes.
+
+## Graph Structure
+
+- **Nodes**: Executable units with inputs, outputs, and configuration
+- **Edges**: Dependencies between nodes (required)
+- **When conditions**: Optional conditional execution
+- **Policies**: Execution policies (retries, timeouts)
+
+## Execution Semantics
+
+1. Nodes are scheduled based on dependencies (topological sort)
+2. Nodes execute when all dependencies are satisfied
+3. `when` conditions are evaluated before execution
+4. Results flow to dependent nodes via bindings
+
+## Learn More
+
+- [Flow Spec](/docs/reference/kernel-spec/flow/flow-spec) - Complete flow schema
+- [Execution Semantics](/docs/reference/kernel-spec/flow/execution) - Execution details
+- [Edge Routing](/docs/reference/kernel-spec/flow/edge-routing) - Edge-level conditions
