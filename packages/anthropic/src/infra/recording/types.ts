@@ -1,11 +1,11 @@
 /**
  * Recording Types - Type definitions for the recording system
  *
- * These types are Anthropic-specific as they use SDKMessage.
+ * Uses GenericMessage for provider-agnostic recording.
  */
 
-import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { RunnerCallbacks } from "@openharness/sdk";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import type { GenericMessage, RunnerCallbacks } from "@openharness/sdk";
 
 /**
  * A recorded session containing prompt, options, and messages.
@@ -13,7 +13,7 @@ import type { RunnerCallbacks } from "@openharness/sdk";
 export type RecordedSession = {
 	prompt: string;
 	options: Options;
-	messages: SDKMessage[];
+	messages: GenericMessage[];
 };
 
 /**
@@ -21,8 +21,8 @@ export type RecordedSession = {
  */
 export interface IVaultSession {
 	exists(): boolean;
-	getMessages(): SDKMessage[];
-	save(messages: SDKMessage[]): Promise<void>;
+	getMessages(): GenericMessage[];
+	save(messages: GenericMessage[]): Promise<void>;
 }
 
 /**
@@ -40,8 +40,8 @@ export interface IRecorder {
 		prompt: string;
 		options: Options;
 		callbacks?: RunnerCallbacks;
-		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<SDKMessage | undefined>;
-	}): Promise<SDKMessage | undefined>;
+		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<GenericMessage | undefined>;
+	}): Promise<GenericMessage | undefined>;
 }
 
 /**

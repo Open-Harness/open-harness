@@ -24,6 +24,3 @@ export {
 	type StatusData,
 	zodToSdkSchema,
 } from "./models.js";
-
-// Prompts
-export { PromptRegistry } from "./prompts.js";

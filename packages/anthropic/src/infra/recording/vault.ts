@@ -3,14 +3,28 @@
  *
  * Handles persisting and replaying LLM sessions for testing.
  * Pure Promise-based, no async generators.
+ *
+ * Node.js compatible - uses fs/promises instead of Bun APIs.
  */
 
-import { join } from "node:path";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { inject, injectable } from "@needle-di/core";
-import type { IConfig } from "@openharness/sdk";
+import type { GenericMessage, IConfig } from "@openharness/sdk";
 import { IConfigToken } from "@openharness/sdk";
 import type { IVault, IVaultSession, RecordedSession } from "./types.js";
+
+/**
+ * Check if a file exists using Node.js fs.
+ */
+async function fileExists(path: string): Promise<boolean> {
+	try {
+		await readFile(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * VaultSession handles a single recording session.
@@ -18,13 +32,13 @@ import type { IVault, IVaultSession, RecordedSession } from "./types.js";
  */
 class VaultSession implements IVaultSession {
 	private fileExists: boolean;
-	private messages: SDKMessage[];
+	private messages: GenericMessage[];
 	private filePath: string;
 
 	constructor(
 		filePath: string,
 		fileExists: boolean,
-		messages: SDKMessage[],
+		messages: GenericMessage[],
 		private config: IConfig,
 	) {
 		this.filePath = filePath;
@@ -36,11 +50,11 @@ class VaultSession implements IVaultSession {
 		return this.fileExists;
 	}
 
-	getMessages(): SDKMessage[] {
+	getMessages(): GenericMessage[] {
 		return this.messages;
 	}
 
-	async save(messages: SDKMessage[]): Promise<void> {
+	async save(messages: GenericMessage[]): Promise<void> {
 		if (this.config.isReplayMode) return;
 
 		const session: RecordedSession = {
@@ -51,13 +65,12 @@ class VaultSession implements IVaultSession {
 		const line = `${JSON.stringify(session)}\n`;
 
 		// Ensure directory exists
-		const dir = join(this.filePath, "..");
-		await Bun.write(join(dir, ".keep"), "");
+		const dir = dirname(this.filePath);
+		await mkdir(dir, { recursive: true });
 
 		// Append to file
-		const file = Bun.file(this.filePath);
-		const existing = this.fileExists ? await file.text() : "";
-		await Bun.write(this.filePath, existing + line);
+		const existing = this.fileExists ? await readFile(this.filePath, "utf-8") : "";
+		await writeFile(this.filePath, existing + line);
 	}
 }
 
@@ -71,13 +84,12 @@ export class Vault implements IVault {
 
 	async startSession(category: string, id: string): Promise<IVaultSession> {
 		const filePath = join(this.config.recordingsDir, category, `${id}.jsonl`);
-		const file = Bun.file(filePath);
 
-		const fileExists = await file.exists();
-		let messages: SDKMessage[] = [];
+		const exists = await fileExists(filePath);
+		let messages: GenericMessage[] = [];
 
-		if (fileExists && this.config.isReplayMode) {
-			const content = await file.text();
+		if (exists && this.config.isReplayMode) {
+			const content = await readFile(filePath, "utf-8");
 			const lines = content.trim().split("\n").filter(Boolean);
 			if (lines.length > 0 && lines[0]) {
 				// Get messages from the first session (or could match by prompt)
@@ -86,6 +98,6 @@ export class Vault implements IVault {
 			}
 		}
 
-		return new VaultSession(filePath, fileExists, messages, this.config);
+		return new VaultSession(filePath, exists, messages, this.config);
 	}
 }

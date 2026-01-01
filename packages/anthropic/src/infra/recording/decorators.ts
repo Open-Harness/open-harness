@@ -7,9 +7,9 @@
  * Pure Promise-based, no async generators.
  */
 
-import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
 import type { InjectionToken } from "@needle-di/core";
-import type { RunnerCallbacks } from "@openharness/sdk";
+import type { GenericMessage, RunnerCallbacks } from "@openharness/sdk";
 import type { IRecordingFactory } from "./types.js";
 
 /**
@@ -62,7 +62,7 @@ function getContainer(): IContainer {
  * - Recorder handles actual record/replay logic
  *
  * The decorated method must have this signature:
- * (prompt: string, options: Options, callbacks?: RunnerCallbacks) => Promise<SDKMessage | undefined>
+ * (prompt: string, options: Options, callbacks?: RunnerCallbacks) => Promise<GenericMessage | undefined>
  *
  * @param category - Recording category (e.g., "golden", "agents")
  * @param idProvider - Function to extract recording ID from method args
@@ -77,7 +77,7 @@ function getContainer(): IContainer {
  *     scenarioId: string,
  *     options: Options,
  *     callbacks?: RunnerCallbacks
- *   ): Promise<SDKMessage | undefined> {
+ *   ): Promise<GenericMessage | undefined> {
  *     return this.runner.run({ prompt, options, callbacks });
  *   }
  * }
@@ -87,7 +87,7 @@ export function Record(category: string, idProvider: (args: unknown[]) => string
 	return (_target: object, _propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
 		const original = descriptor.value;
 
-		descriptor.value = async function (...args: unknown[]): Promise<SDKMessage | undefined> {
+		descriptor.value = async function (...args: unknown[]): Promise<GenericMessage | undefined> {
 			const id = idProvider(args);
 
 			// Get factory from container (injectable!)

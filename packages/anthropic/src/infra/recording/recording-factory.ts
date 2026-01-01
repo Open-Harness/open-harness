@@ -5,14 +5,29 @@
  * The factory is fully injectable, making the @Record decorator testable.
  *
  * Pure Promise-based, no async generators.
+ *
+ * Node.js compatible - uses fs/promises instead of Bun APIs.
  */
 
-import { join } from "node:path";
-import type { Options, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
-import type { IConfig, RunnerCallbacks } from "@openharness/sdk";
+import type { GenericMessage, IConfig, RunnerCallbacks } from "@openharness/sdk";
 import { IConfigToken } from "@openharness/sdk";
 import type { IRecorder, IRecordingFactory, RecordedSession } from "./types.js";
+
+/**
+ * Check if a file exists using Node.js fs.
+ */
+async function fileExists(path: string): Promise<boolean> {
+	try {
+		await readFile(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Recorder handles the actual record/replay logic for a single session.
@@ -29,16 +44,15 @@ export class Recorder implements IRecorder {
 		prompt: string;
 		options: Options;
 		callbacks?: RunnerCallbacks;
-		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<SDKMessage | undefined>;
-	}): Promise<SDKMessage | undefined> {
+		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<GenericMessage | undefined>;
+	}): Promise<GenericMessage | undefined> {
 		const { prompt, options, callbacks, runFn } = args;
 		const filePath = join(this.config.recordingsDir, this.category, `${this.id}.jsonl`);
 
 		// Replay mode: read from file and fire callbacks
 		if (this.config.isReplayMode) {
-			const file = Bun.file(filePath);
-			if (await file.exists()) {
-				const content = await file.text();
+			if (await fileExists(filePath)) {
+				const content = await readFile(filePath, "utf-8");
 				const lines = content.trim().split("\n").filter(Boolean);
 
 				// Find matching session or use first
@@ -55,7 +69,7 @@ export class Recorder implements IRecorder {
 				}
 
 				if (session) {
-					let lastMessage: SDKMessage | undefined;
+					let lastMessage: GenericMessage | undefined;
 					for (const message of session.messages) {
 						lastMessage = message;
 						if (callbacks?.onMessage) {
@@ -69,7 +83,7 @@ export class Recorder implements IRecorder {
 		}
 
 		// Record mode: capture messages via callback interception
-		const capturedMessages: SDKMessage[] = [];
+		const capturedMessages: GenericMessage[] = [];
 
 		const wrappedCallbacks: RunnerCallbacks = {
 			onMessage: (message) => {
@@ -96,13 +110,12 @@ export class Recorder implements IRecorder {
 		};
 
 		// Ensure directory exists
-		const dir = join(filePath, "..");
-		await Bun.write(join(dir, ".keep"), "");
+		const dir = dirname(filePath);
+		await mkdir(dir, { recursive: true });
 
 		// Append to file
-		const file = Bun.file(filePath);
-		const existing = (await file.exists()) ? await file.text() : "";
-		await Bun.write(filePath, `${existing + JSON.stringify(session)}\n`);
+		const existing = (await fileExists(filePath)) ? await readFile(filePath, "utf-8") : "";
+		await writeFile(filePath, `${existing + JSON.stringify(session)}\n`);
 
 		return result;
 	}
