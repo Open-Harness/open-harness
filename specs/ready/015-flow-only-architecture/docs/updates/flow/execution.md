@@ -60,16 +60,6 @@ If all incoming edges are skipped:
 - `continueOnError: false` (default): node failure is a flow failure when `failFast: true`
 - `continueOnError: true`: the engine records an error marker for that node output and continues
 
-Error marker shape (recorded in `outputs[nodeId]`):
-
-```json
-{
-  "failed": true,
-  "error": { "message": "string", "stack": "string?" },
-  "attempts": 1
-}
-```
-
 ## Retry
 
 ### NodePolicy.retry

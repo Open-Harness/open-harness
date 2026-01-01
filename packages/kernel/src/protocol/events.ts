@@ -72,6 +72,19 @@ export type SessionReplyEvent = {
 	choice?: string;
 };
 export type SessionAbortEvent = { type: "session:abort"; reason?: string };
+
+export type SessionStartEvent = {
+	type: "session:start";
+	sessionId: string;
+	parentSessionId?: string;
+	nodeId: string;
+};
+
+export type SessionEndEvent = {
+	type: "session:end";
+	sessionId: string;
+	nodeId: string;
+};
 export type NarrativeEvent = {
 	type: "narrative";
 	text: string;
@@ -86,6 +99,8 @@ export type BaseEvent =
 	| SessionPromptEvent
 	| SessionReplyEvent
 	| SessionAbortEvent
+	| SessionStartEvent
+	| SessionEndEvent
 	| NarrativeEvent
 	| ExtensionEvent;
 

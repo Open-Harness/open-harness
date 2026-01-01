@@ -27,78 +27,84 @@ If `false` or omitted, the runtime emits these events automatically.
 ```typescript
 interface AgentExecuteContext {
   hub: Hub;
-  inbox: AgentInbox;
   runId: string;
 }
 ```
 
 ### `hub`
 
-The hub for emitting events. Agents should emit `agent:*` events via `hub.emit(...)`.
-
-### `inbox`
-
-Read-only inbox for messages injected by channels (via `hub.sendToRun(runId, ...)`).
-
-```typescript
-interface AgentInbox extends AsyncIterable<InjectedMessage> {
-  pop(): Promise<InjectedMessage>;
-  drain(): InjectedMessage[];
-  close(): void;
-}
-
-interface InjectedMessage {
-  content: string;
-  timestamp: Date;
-}
-```
-
-A provider wrapper can:
-- Concurrently `for await (const msg of inbox)` and forward messages to the underlying SDK session
-- Or `await inbox.pop()` when it wants to block for the next message
+The hub for emitting events and subscribing to messages. Agents should:
+- Emit `agent:*` events via `hub.emit(...)`
+- Subscribe to `session:message` events for multi-turn
 
 ### `runId`
 
-Unique ID for this particular agent execution. This is the routing key for `hub.sendToRun(runId, ...)`.
+Unique ID for this particular agent execution. Used for:
+- Emitting agent events with proper context
+- Subscribing to `session:message` events targeted at this run
 
 **Important**: When multiple runs of the same agent can be active concurrently, channels should:
 1. Listen for `agent:start` events to get the `runId`
 2. Call `hub.sendToRun(runId, message)` (not `hub.sendTo(agentName, message)`)
 
-## Async prompt stream (Claude SDK)
+## Multi-turn pattern (V2 SDK)
 
-Multi-turn agent nodes must provide an **async iterable** prompt stream to the Claude SDK.
+Multi-turn agents use the V2 SDK session-based send/receive pattern:
 
-Contract:
-- Yield initial messages from node input (prompt or messages array)
-- Then yield new user messages from `AgentInbox`
-- Terminate via explicit inbox close or SDK maxTurns
+```typescript
+import { Claude } from "@anthropic-ai/claude-agent-sdk";
 
-```ts
-async function* promptStream(
-  initial: SDKUserMessage[],
-  inbox: AgentInbox,
-  sessionId: string,
-): AsyncGenerator<SDKUserMessage> {
-  for (const msg of initial) yield msg;
-  for await (const injected of inbox) {
-    yield toSdkUserMessage(injected, sessionId);
+async function execute(input: AgentInput, ctx: AgentExecuteContext): Promise<AgentOutput> {
+  const client = new Claude({ model: input.model });
+
+  // Create session with maxTurns: 1 for single turn
+  const session = client.session({ maxTurns: 1 });
+
+  try {
+    // Send initial prompt
+    for await (const event of session.send(input.prompt)) {
+      if (event.type === "text") {
+        ctx.hub.emit({ type: "agent:text", content: event.text, runId: ctx.runId });
+      }
+    }
+
+    // For multi-turn, subscribe to injected messages
+    const unsub = ctx.hub.subscribe("session:message", async (hubEvent) => {
+      if (hubEvent.event.runId === ctx.runId) {
+        for await (const event of session.send(hubEvent.event.content)) {
+          if (event.type === "text") {
+            ctx.hub.emit({ type: "agent:text", content: event.text, runId: ctx.runId });
+          }
+        }
+      }
+    });
+
+    // Wait for completion signal
+    await waitForDone();
+    unsub();
+
+    return result;
+  } finally {
+    // Session cleanup handled by SDK
   }
 }
 ```
 
-### SDK user message shape
+### Key patterns
 
-```ts
-type SDKUserMessage = {
-  type: "user";
-  message: { role: "user"; content: string };
-  parent_tool_use_id: string | null;
-  session_id: string;
-  isSynthetic?: boolean;
-  tool_use_result?: unknown;
-};
+- **session.send()**: Send a user message, returns async iterable of responses
+- **hub.subscribe()**: Listen for injected messages by runId
+- **maxTurns: 1**: For single-turn interactions (most common)
+
+## Message injection
+
+External code (channels, tests) injects messages via Hub:
+
+```typescript
+hub.sendToRun(runId, "user message");
 ```
+
+This emits a `session:message` event. The agent's subscription receives it.
 
 ## ExecutableAgent (runtime view)
 
@@ -116,5 +122,6 @@ The runtime wraps `AgentDefinition` to provide this simpler interface (no contex
 ## Key invariants
 
 1. **Agents emit events via hub** - they don't "print directly"
-2. **Agents can receive injected messages** - via `inbox`
+2. **Messages arrive via hub events** - agents subscribe to `session:message` filtered by `runId`
 3. **runId is the routing key** - for run-scoped message injection
+4. **Sessions are V2 SDK sessions** - with send/receive pattern

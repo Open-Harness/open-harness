@@ -203,27 +203,27 @@ For every phase below, we must include:
   - `packages/kernel/docs/spec/agent.md`
   - `packages/kernel/docs/flow/registry.md`
 - Deliverables
-  - Claude adapter using `@anthropic-ai/claude-agent-sdk` query()
-  - Async prompt stream with inbox injection
+  - Claude adapter using V2 SDK: `unstable_v2_createSession()`
+  - Session-based send/receive pattern (no async prompt stream)
   - Agent event emission (`agent:*`, `agent:tool:*`)
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-agent-nodes-live.ts`
-- Tutorials: Lesson 06 (PromptFile + Claude) and Lesson 09 (Multi-Turn) (Blocked - auth issues)
+  - Tutorials: Lesson 06 (PromptFile + Claude) and Lesson 09 (Multi-Turn)
 - Tutorial Migration Checklist
-- Update Lessons 06 and 09 to FlowRuntime APIs
-- Run `bun run lesson:06` and `bun run lesson:09`
-- Confirm outputs match tutorial specs
-- Keep lessons **Blocked** until Claude auth issues are resolved
+  - Update Lessons 06 and 09 to FlowRuntime APIs
+  - Run `bun run lesson:06` and `bun run lesson:09`
+  - Confirm outputs match tutorial specs
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
   - `bun test`
   - `bun scripts/live/flow-agent-nodes-live.ts`
 - Acceptance Criteria
-  - Agent nodes always receive inbox
+  - Agent nodes use V2 session pattern
   - runId fresh per invocation
-  - Multi-turn termination rules enforced
-- Lessons 06 and 09 pass (once Claude auth issues are resolved)
+  - Multi-turn via Hub event subscription
+  - Clean session termination (no hangs)
+  - Lessons 06 and 09 pass
 - Retro (mandatory)
   - Lessons learned:
   - Risks discovered:

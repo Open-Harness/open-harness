@@ -98,16 +98,16 @@ bun scripts/record-fixture.ts agent inbox
 **Scenario**:
 1. Create agent with `emitsStartComplete: false` (default)
 2. Execute agent
-3. Verify harness emits `agent:start` and `agent:complete`
+3. Verify runtime emits `agent:start` and `agent:complete`
 4. Create agent with `emitsStartComplete: true`
 5. Execute agent
 6. Verify agent emits its own lifecycle events
 
 **Assertions**:
-- Default (`false`): harness emits lifecycle events
+- Default (`false`): runtime emits lifecycle events
 - When `true`: agent must emit `agent:start` and `agent:complete`
 - Agent-provided events include `runId`
-- Harness does not emit duplicate events when `emitsStartComplete: true`
+- Runtime does not emit duplicate events when `emitsStartComplete: true`
 
 **Fixture Recording**:
 ```bash
@@ -123,14 +123,14 @@ bun scripts/record-fixture.ts agent emits-start-complete
 **Test Name**: `"ExecutableAgent provides simplified interface"`
 
 **Scenario**:
-1. Create harness with agent definition
+1. Create runtime with agent definition
 2. Access agent via `agents.foo` (ExecutableAgent)
 3. Call `agents.foo.execute(input)` (no context args)
 4. Verify execution works correctly
 
 **Assertions**:
 - `ExecutableAgent.execute(input)` signature (no context)
-- Harness injects context internally
+- Runtime injects context internally
 - Result is returned correctly
 - Events are emitted via hub
 

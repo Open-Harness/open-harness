@@ -94,8 +94,74 @@ export function resolveBindingString(
 	return result;
 }
 
+/**
+ * Check if a string is a pure binding expression (e.g., "{{ path }}")
+ * vs a template with embedded bindings (e.g., "Hello {{ name }}!")
+ */
+function isPureBinding(template: string): boolean {
+	const trimmed = template.trim();
+	if (!trimmed.startsWith("{{") || !trimmed.endsWith("}}")) {
+		return false;
+	}
+	// Check there's only one binding in the string
+	const matches = trimmed.match(/{{[^}]+}}/g);
+	return matches?.length === 1 && matches[0] === trimmed;
+}
+
+/**
+ * Resolve a pure binding expression and return the raw value (not stringified)
+ */
+function resolvePureBinding(
+	template: string,
+	context: BindingContext,
+): unknown {
+	const match = template.match(/^{{\s*([^}]+?)\s*}}$/);
+	if (!match) {
+		throw new Error(`Invalid pure binding: ${template}`);
+	}
+
+	const raw = match[1]?.trim() ?? "";
+	const parts = raw.split("|").map((part) => part.trim());
+	let path = parts[0] ?? "";
+	let optional = false;
+
+	if (path.startsWith("?")) {
+		optional = true;
+		path = path.slice(1).trim();
+	}
+
+	let defaultValue: unknown;
+	const defaultPart = parts.find((part) => part.startsWith("default:"));
+	if (defaultPart) {
+		const rawDefault = defaultPart.slice("default:".length).trim();
+		try {
+			defaultValue = JSON.parse(rawDefault);
+		} catch {
+			throw new Error(`Invalid default JSON literal: ${rawDefault}`);
+		}
+	}
+
+	const resolved = resolveBindingPath(context, path);
+	if (!resolved.found) {
+		if (defaultPart) {
+			return defaultValue;
+		}
+		if (optional) {
+			return undefined;
+		}
+		throw new Error(`Missing binding path: ${path}`);
+	}
+
+	return resolved.value;
+}
+
 function resolveValue(value: unknown, context: BindingContext): unknown {
 	if (typeof value === "string") {
+		// If it's a pure binding like "{{ foo }}", return the raw value (could be array, object, etc.)
+		if (isPureBinding(value)) {
+			return resolvePureBinding(value, context);
+		}
+		// Otherwise, treat as a template string
 		return resolveBindingString(value, context);
 	}
 	if (Array.isArray(value)) {

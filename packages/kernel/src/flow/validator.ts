@@ -23,6 +23,7 @@ export const FlowSpecSchema = z.object({
 	version: z.number().optional().default(1),
 	description: z.string().optional(),
 	input: z.record(z.string(), z.unknown()).optional(),
+	nodePacks: z.array(z.string()).optional(),
 	policy: FlowPolicySchema.optional().default({ failFast: true }),
 });
 
@@ -66,6 +67,7 @@ export const NodeSpecSchema = z.object({
 export const EdgeSchema = z.object({
 	from: NodeIdSchema,
 	to: NodeIdSchema,
+	when: WhenExprSchema.optional(),
 });
 
 export const FlowYamlSchema = z

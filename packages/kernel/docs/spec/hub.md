@@ -77,7 +77,17 @@ Convenience injection targeting an agent by name. **Only safe if exactly one run
 
 ### `sendToRun(runId, message)`
 
-**Correct** run-scoped injection when multiple agent runs may be active. The `runId` is provided by `agent:start` / `agent:complete` events. Emits `session:message` with `runId`.
+Run-scoped message injection. Emits a `session:message` event with the `runId`.
+Agents subscribe to this event type to receive injected messages.
+
+**Correct** way to inject when multiple agent runs may be active. The `runId` is provided by `agent:start` / `agent:complete` events.
+
+```typescript
+// Implementation
+sendToRun(runId: string, message: string): void {
+  this.emit({ type: "session:message", content: message, runId });
+}
+```
 
 ### `reply(promptId, response)`
 

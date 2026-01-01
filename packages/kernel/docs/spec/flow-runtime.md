@@ -88,48 +88,50 @@ const instance = createFlowRunner(flow, registry, {
 
 **Preferred**: pass channels at creation for deterministic startup order. Use `attach()` only for dynamic, mid-run additions.
 
-## Inbox routing
+## Message routing
 
-- Every agent invocation receives an `AgentInbox`.
-- The runtime maps `runId → inbox` for the duration of that agent run.
-- `hub.sendToRun(runId, message)` injects into that inbox.
+- Every agent invocation receives a fresh `runId` for Hub event subscription.
+- `hub.sendToRun(runId, message)` emits a `session:message` event with that `runId`.
+- Agents subscribe to `session:message` events filtered by their `runId`.
 - Optional convenience: `hub.sendTo(nodeId, message)` routes to the latest runId for that node.
 
-## Async prompt stream (agent nodes)
+## V2 SDK session pattern (agent nodes)
 
-Agent-backed nodes that use the Claude SDK must build an **async iterable** prompt stream:
+Agent-backed nodes that use the Claude SDK use the **V2 session-based send/receive pattern**:
 
-1. **Yield initial messages** from node input (prompt or messages array).
-2. **Then yield new user messages** from the agent inbox as they arrive.
+1. **Create session**: `unstable_v2_createSession({ model })`
+2. **Send message**: `await session.send(prompt)`
+3. **Receive responses**: `for await (const msg of session.receive()) { ... }`
+4. **Multi-turn**: Subscribe to Hub `session:message` events and call `session.send()` for each
 
-This enables true multi-turn behavior and allows `sendToRun(...)` to inject new messages.
+This enables true multi-turn behavior and allows `sendToRun(...)` to inject new messages via Hub events.
 
-### SDK user message shape
-
-The prompt stream yields `SDKUserMessage` objects from `@anthropic-ai/claude-agent-sdk`:
-
-```ts
-type SDKUserMessage = {
-  type: "user";
-  message: { role: "user"; content: string };
-  parent_tool_use_id: string | null;
-  session_id: string;
-  isSynthetic?: boolean;
-  tool_use_result?: unknown;
-};
-```
-
-### Prompt stream contract (pseudo-code)
+### Multi-turn pattern (pseudo-code)
 
 ```ts
-async function* promptStream(
-  initial: SDKUserMessage[],
-  inbox: AgentInbox,
-  sessionId: string,
-): AsyncGenerator<SDKUserMessage> {
-  for (const msg of initial) yield msg;
-  for await (const injected of inbox) {
-    yield toSdkUserMessage(injected, sessionId);
+import { unstable_v2_createSession } from "@anthropic-ai/claude-agent-sdk";
+
+async function execute(input: AgentInput, ctx: { hub: Hub; runId: string }): Promise<AgentOutput> {
+  const session = unstable_v2_createSession({ model: input.model });
+
+  try {
+    // Initial turn
+    await session.send(input.prompt);
+    await emitResponses(session, ctx.hub);
+
+    // Listen for injected messages
+    const unsub = ctx.hub.subscribe("session:message", async (event) => {
+      if (event.runId === ctx.runId) {
+        await session.send(event.content);
+        await emitResponses(session, ctx.hub);
+      }
+    });
+
+    await waitForDone();
+    unsub();
+    return result;
+  } finally {
+    session.close();
   }
 }
 ```
@@ -138,10 +140,11 @@ async function* promptStream(
 
 Session-like agent nodes **must stop** without hanging when no messages arrive. Termination can occur by any of the following:
 
-- **maxTurns**: stop after N turns (user messages).
-- **explicit close**: the runtime closes the inbox/prompt stream (e.g., `inbox.close()`).
+- **maxTurns**: stop after N turns (SDK-level config).
+- **explicit close**: the agent calls `session.close()`.
+- **timeout**: no `session:message` events arrive within timeout.
 
-**Invariant**: The Flow runtime must not hang waiting for inbox messages.
+**Invariant**: The Flow runtime must not hang waiting for messages. Agents unsubscribe from Hub on completion.
 
 ## Claude SDK config dir expectations
 
@@ -158,6 +161,7 @@ Session-like agent nodes **must stop** without hanging when no messages arrive. 
 ## Key invariants
 
 1. **Flow runtime owns lifecycle** — emits `harness:*`, `phase:*`, `task:*`.
-2. **Every agent run is injectable** — inbox exists for all agent nodes.
+2. **Every agent run is injectable** — agents subscribe to Hub `session:message` events by `runId`.
 3. **RunId is per invocation** — no implicit agent memory between runs.
 4. **Flow run is a Hub** — all hub commands/events apply to the run.
+5. **V2 SDK sessions** — agent nodes use `session.send()`/`session.receive()` pattern.
