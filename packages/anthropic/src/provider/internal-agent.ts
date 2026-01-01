@@ -13,6 +13,7 @@
  * @module provider/internal-agent
  */
 
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { inject, injectable } from "@needle-di/core";
 import type {
 	AgentError,
@@ -26,7 +27,7 @@ import type {
 	TokenUsage,
 } from "@openharness/sdk";
 import { IAgentRunnerToken, IUnifiedEventBusToken } from "@openharness/sdk";
-import { mapSdkMessageToUnifiedEvents } from "../infra/runner/event-mapper.js";
+import { AnthropicEventMapper } from "./anthropic-event-mapper.js";
 
 /**
  * Options for internal agent execution.
@@ -119,6 +120,14 @@ export class InternalAnthropicAgent {
 	}
 
 	/**
+	 * Type guard to validate message structure.
+	 * Ensures we're working with an SDKMessage from Anthropic's Claude Agent SDK.
+	 */
+	private isSDKMessage(msg: GenericMessage): msg is SDKMessage {
+		return msg && typeof msg === "object" && "type" in msg;
+	}
+
+	/**
 	 * Handle a message from the runner.
 	 *
 	 * Unlike BaseAnthropicAgent, this ONLY uses IUnifiedEventBus.
@@ -127,12 +136,14 @@ export class InternalAnthropicAgent {
 	private handleMessage<TOutput>(msg: GenericMessage, callbacks?: IAgentCallbacks<TOutput>): void {
 		// Emit to unified bus if available
 		if (this.unifiedBus) {
-			// SAFETY: IAgentRunner returns GenericMessage for SDK-agnostic interface,
-			// but at runtime this is AnthropicRunner which produces SDKMessage.
-			// The GenericMessage we receive IS an SDKMessage with all required fields.
-			// We use 'unknown' intermediate cast to preserve type safety while acknowledging
-			// this runtime guarantee that the type system cannot express.
-			const unifiedEvents = mapSdkMessageToUnifiedEvents(msg as unknown as SDKMessage, this.name);
+			// Validate message structure with type guard
+			if (!this.isSDKMessage(msg)) {
+				console.warn("Received non-SDK message in Anthropic agent", msg);
+				return;
+			}
+
+			// TypeScript now knows msg is SDKMessage - no cast needed
+			const unifiedEvents = AnthropicEventMapper.toUnifiedEvents(msg, this.name);
 			for (const event of unifiedEvents) {
 				try {
 					this.unifiedBus.emit(event, { agent: { name: this.name } });

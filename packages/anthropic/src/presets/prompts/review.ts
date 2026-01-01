@@ -106,10 +106,7 @@ Provide your decision with:
  * Guides the agent to review code based on task and implementation summary.
  * Uses {{task}} and {{implementationSummary}} variables for interpolation.
  */
-export const ReviewPromptTemplate = createPromptTemplate<
-	typeof REVIEW_TEMPLATE,
-	ReviewInput
->(
+export const ReviewPromptTemplate = createPromptTemplate<typeof REVIEW_TEMPLATE, ReviewInput>(
 	REVIEW_TEMPLATE,
 	ReviewInputSchema,
 );

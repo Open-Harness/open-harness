@@ -7,21 +7,13 @@
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import { Container } from "@needle-di/core";
-import type { GenericMessage, IAgentRunner, RunnerCallbacks } from "@openharness/sdk";
-import {
-	EventBus,
-	IAgentRunnerToken,
-	IConfigToken,
-	IEventBusToken,
-	IUnifiedEventBusToken,
-	setMonologueContainer,
-	UnifiedEventBus,
-} from "@openharness/sdk";
+import type { GenericMessage } from "@openharness/sdk";
+
 import { z } from "zod";
-import { setDecoratorContainer } from "../../src/infra/recording/decorators.js";
+
 import { defineAnthropicAgent, resetFactoryContainer, setFactoryContainer } from "../../src/provider/factory.js";
 import { createPromptTemplate, createStaticPrompt } from "../../src/provider/prompt-template.js";
+import { createTestContainer } from "../helpers/test-container.js";
 
 // Mock input/output schemas for testing
 const TestInputSchema = z.object({
@@ -35,72 +27,6 @@ const TestOutputSchema = z.object({
 type TestInput = z.infer<typeof TestInputSchema>;
 // type TestOutput = z.infer<typeof TestOutputSchema>;
 
-/**
- * Mock runner that returns a predefined result.
- */
-class MockAgentRunner implements IAgentRunner {
-	lastPrompt?: string;
-	lastOptions?: unknown;
-	mockResult: GenericMessage = {
-		type: "result",
-		subtype: "success",
-		structured_output: { result: "mock result" },
-	} as unknown as GenericMessage;
-
-	async run(args: {
-		prompt: string;
-		options: unknown;
-		callbacks?: RunnerCallbacks;
-	}): Promise<GenericMessage | undefined> {
-		this.lastPrompt = args.prompt;
-		this.lastOptions = args.options;
-
-		// Fire onMessage callback if provided
-		if (args.callbacks?.onMessage) {
-			args.callbacks.onMessage(this.mockResult);
-		}
-
-		return this.mockResult;
-	}
-}
-
-/**
- * Create a test container with mock runner for unit tests.
- */
-function createMockContainer(): { container: Container; mockRunner: MockAgentRunner } {
-	const container = new Container();
-	const mockRunner = new MockAgentRunner();
-
-	// Bind config
-	container.bind({
-		provide: IConfigToken,
-		useValue: { isReplayMode: false, recordingsDir: "./test-recordings" },
-	});
-
-	// Bind mock runner
-	container.bind({
-		provide: IAgentRunnerToken,
-		useValue: mockRunner,
-	});
-
-	// Bind event buses
-	container.bind({
-		provide: IEventBusToken,
-		useFactory: () => new EventBus(),
-	});
-
-	container.bind({
-		provide: IUnifiedEventBusToken,
-		useFactory: () => new UnifiedEventBus(),
-	});
-
-	// Wire up decorator containers
-	setDecoratorContainer(container);
-	setMonologueContainer(container);
-
-	return { container, mockRunner };
-}
-
 describe("defineAnthropicAgent", () => {
 	beforeEach(() => {
 		// Reset container state between tests
@@ -109,7 +35,7 @@ describe("defineAnthropicAgent", () => {
 
 	describe("agent creation", () => {
 		test("returns an agent object with name, execute, and stream", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -126,7 +52,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("accepts static string as prompt", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -141,7 +67,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("accepts PromptTemplate as prompt", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const template = createPromptTemplate("Task: {{task}}", TestInputSchema);
@@ -158,7 +84,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("accepts createStaticPrompt as prompt", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			// Static prompts don't use variables, so use empty input schema
@@ -177,7 +103,7 @@ describe("defineAnthropicAgent", () => {
 
 	describe("execute method", () => {
 		test("validates input against schema and throws on invalid input", async () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -195,7 +121,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("passes rendered prompt to runner", async () => {
-			const { container, mockRunner } = createMockContainer();
+			const { container, mockRunner } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -211,7 +137,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("returns structured output from runner", async () => {
-			const { container, mockRunner } = createMockContainer();
+			const { container, mockRunner } = createTestContainer();
 			setFactoryContainer(container);
 
 			mockRunner.mockResult = {
@@ -235,7 +161,7 @@ describe("defineAnthropicAgent", () => {
 
 	describe("stream method", () => {
 		test("returns an AgentHandle with interrupt, streamInput, setModel, and result", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -256,7 +182,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("interrupt can be called without error", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -273,7 +199,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("result promise resolves to output", async () => {
-			const { container, mockRunner } = createMockContainer();
+			const { container, mockRunner } = createTestContainer();
 			setFactoryContainer(container);
 
 			mockRunner.mockResult = {
@@ -298,7 +224,7 @@ describe("defineAnthropicAgent", () => {
 
 	describe("agent options", () => {
 		test("accepts optional SDK options", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -316,7 +242,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("accepts recording options", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -334,7 +260,7 @@ describe("defineAnthropicAgent", () => {
 		});
 
 		test("accepts monologue options", () => {
-			const { container } = createMockContainer();
+			const { container } = createTestContainer();
 			setFactoryContainer(container);
 
 			const agent = defineAnthropicAgent({
@@ -354,7 +280,7 @@ describe("defineAnthropicAgent", () => {
 
 	describe("container management", () => {
 		test("resetFactoryContainer clears the container", () => {
-			const { container: container1 } = createMockContainer();
+			const { container: container1 } = createTestContainer();
 			setFactoryContainer(container1);
 
 			// Create an agent
@@ -369,7 +295,7 @@ describe("defineAnthropicAgent", () => {
 			resetFactoryContainer();
 
 			// Set a new container
-			const { container: container2 } = createMockContainer();
+			const { container: container2 } = createTestContainer();
 			setFactoryContainer(container2);
 
 			// Creating another agent should work
@@ -392,7 +318,7 @@ describe("prompt override", () => {
 	});
 
 	test("execute uses override prompt when provided", async () => {
-		const { container, mockRunner } = createMockContainer();
+		const { container, mockRunner } = createTestContainer();
 		setFactoryContainer(container);
 
 		const defaultPrompt = createPromptTemplate("Default: {{task}}");
@@ -413,7 +339,7 @@ describe("prompt override", () => {
 	});
 
 	test("execute uses default prompt when no override provided", async () => {
-		const { container, mockRunner } = createMockContainer();
+		const { container, mockRunner } = createTestContainer();
 		setFactoryContainer(container);
 
 		const agent = defineAnthropicAgent({
@@ -431,7 +357,7 @@ describe("prompt override", () => {
 	});
 
 	test("override prompt with different template structure", async () => {
-		const { container, mockRunner } = createMockContainer();
+		const { container, mockRunner } = createTestContainer();
 		setFactoryContainer(container);
 
 		const agent = defineAnthropicAgent({
@@ -450,7 +376,7 @@ describe("prompt override", () => {
 	});
 
 	test("stream uses override prompt when provided", async () => {
-		const { container, mockRunner } = createMockContainer();
+		const { container, mockRunner } = createTestContainer();
 		setFactoryContainer(container);
 
 		const agent = defineAnthropicAgent({
@@ -478,7 +404,7 @@ describe("type safety", () => {
 	// They should compile without errors
 
 	test("input schema type is enforced at compile time", () => {
-		const { container } = createMockContainer();
+		const { container } = createTestContainer();
 		setFactoryContainer(container);
 
 		const StringInputSchema = z.object({
@@ -501,7 +427,7 @@ describe("type safety", () => {
 	});
 
 	test("output schema type is available", () => {
-		const { container } = createMockContainer();
+		const { container } = createTestContainer();
 		setFactoryContainer(container);
 
 		const OutputSchema = z.object({

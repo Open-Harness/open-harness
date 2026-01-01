@@ -104,6 +104,12 @@ export interface IAgentRunner {
 	}): Promise<GenericMessage | undefined>;
 }
 
+/**
+ * Generic token for IAgentRunner.
+ * Provider packages bind their specific runner to this token.
+ */
+export const IAgentRunnerToken = new InjectionToken<IAgentRunner>("IAgentRunner");
+
 // ============================================================================
 // Provider-Specific Runner Tokens
 // ============================================================================

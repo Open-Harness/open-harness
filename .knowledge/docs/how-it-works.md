@@ -47,6 +47,77 @@ The `@openharness/anthropic` package provides a factory-based API for creating L
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Event Mapper Pattern
+
+Each provider package implements its own event mapper to convert provider-specific messages to the unified `BaseEvent` format.
+
+### Why Provider-Specific?
+
+- Different providers have different message structures (Anthropic's SDKMessage vs Gemini's GenerateContentResponse)
+- Event mappers live in the **provider layer**, not infrastructure
+- Type guards validate message structure without unsafe casting
+
+### Pattern
+
+```typescript
+// In @openharness/anthropic
+export class AnthropicEventMapper {
+  static toUnifiedEvents(msg: SDKMessage, agentName: string): BaseEvent[] {
+    // Convert Anthropic-specific SDKMessage → standard BaseEvent[]
+  }
+}
+
+// In @openharness/gemini (Google Generative AI)
+export class GeminiEventMapper {
+  static toUnifiedEvents(msg: GeminiMessage, agentName: string): BaseEvent[] {
+    // Convert Gemini-specific message → standard BaseEvent[]
+  }
+}
+
+// In @openharness/codex (their agent provider)
+export class CodexEventMapper {
+  static toUnifiedEvents(msg: CodexMessage, agentName: string): BaseEvent[] {
+    // Convert Codex-specific message → standard BaseEvent[]
+  }
+}
+
+// In @openharness/opencode (another provider)
+export class OpenCodeEventMapper {
+  static toUnifiedEvents(msg: OpenCodeMessage, agentName: string): BaseEvent[] {
+    // Convert OpenCode-specific message → standard BaseEvent[]
+  }
+}
+```
+
+### Integration
+
+Internal agents use the event mapper when handling messages:
+
+```typescript
+// packages/anthropic/src/provider/internal-agent.ts
+import { AnthropicEventMapper } from "./anthropic-event-mapper.js";
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+
+// Type guard validates message structure
+private isSDKMessage(msg: GenericMessage): msg is SDKMessage {
+  return msg && typeof msg === 'object' && 'type' in msg;
+}
+
+private handleMessage(msg: GenericMessage) {
+  if (!this.isSDKMessage(msg)) {
+    console.warn('Received non-SDK message in Anthropic agent', msg);
+    return;
+  }
+
+  // TypeScript now knows msg is SDKMessage - no cast needed
+  const events = AnthropicEventMapper.toUnifiedEvents(msg, this.name);
+
+  for (const event of events) {
+    this.unifiedBus.emit(event, { agent: { name: this.name } });
+  }
+}
+```
+
 ## Request Flow
 
 When you execute an agent, here's what happens:
@@ -197,7 +268,8 @@ packages/anthropic/src/
 │   ├── factory.ts        # Agent factory
 │   ├── types.ts          # Type definitions
 │   ├── prompt-template.ts # Template system
-│   └── internal-agent.ts # Execution engine
+│   ├── internal-agent.ts # Execution engine
+│   └── anthropic-event-mapper.ts # Event conversion ← NEW
 ├── presets/              # Pre-built agents
 │   ├── coding-agent.ts
 │   ├── review-agent.ts
@@ -205,8 +277,9 @@ packages/anthropic/src/
 │   └── prompts/          # TypeScript templates
 └── infra/                # Runtime services
     ├── runner/           # SDK wrapper
-    ├── recording/        # Record/replay
-    └── tokens.ts         # DI tokens
+    │   ├── anthropic-runner.ts  # IAgentRunner implementation
+    │   └── models.ts     # Type definitions
+    └── recording/        # Record/replay
 ```
 
 ## See Also

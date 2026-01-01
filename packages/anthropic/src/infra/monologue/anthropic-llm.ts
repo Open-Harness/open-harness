@@ -9,11 +9,7 @@
 
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { injectable } from "@needle-di/core";
-import type {
-	IMonologueLLM,
-	MonologueAgentEvent,
-	MonologueConfig,
-} from "@openharness/sdk";
+import type { IMonologueLLM, MonologueAgentEvent, MonologueConfig } from "@openharness/sdk";
 import { DEFAULT_MONOLOGUE_PROMPT } from "@openharness/sdk";
 
 /**
@@ -99,7 +95,12 @@ export class AnthropicMonologueLLM implements IMonologueLLM {
 	/**
 	 * Format the user message with events and context.
 	 */
-	private formatUserMessage(events: MonologueAgentEvent[], history: string[], isFirst: boolean, isFinal: boolean): string {
+	private formatUserMessage(
+		events: MonologueAgentEvent[],
+		history: string[],
+		isFirst: boolean,
+		isFinal: boolean,
+	): string {
 		const parts: string[] = [];
 
 		// Add context flags

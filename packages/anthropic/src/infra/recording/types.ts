@@ -40,7 +40,11 @@ export interface IRecorder {
 		prompt: string;
 		options: Options;
 		callbacks?: RunnerCallbacks;
-		runFn: (args: { prompt: string; options: Options; callbacks?: RunnerCallbacks }) => Promise<GenericMessage | undefined>;
+		runFn: (args: {
+			prompt: string;
+			options: Options;
+			callbacks?: RunnerCallbacks;
+		}) => Promise<GenericMessage | undefined>;
 	}): Promise<GenericMessage | undefined>;
 }
 

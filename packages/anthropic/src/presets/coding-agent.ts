@@ -19,11 +19,7 @@
  */
 
 import { defineAnthropicAgent } from "../provider/factory.js";
-import {
-	CodingInputSchema,
-	CodingOutputSchema,
-	CodingPromptTemplate,
-} from "./prompts/coding.js";
+import { CodingInputSchema, CodingOutputSchema, CodingPromptTemplate } from "./prompts/coding.js";
 
 /**
  * Pre-configured coding agent.

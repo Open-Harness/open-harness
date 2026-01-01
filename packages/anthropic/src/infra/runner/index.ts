@@ -8,9 +8,6 @@
 // Runners
 export { AnthropicRunner } from "./anthropic-runner.js";
 
-// Event Mapping (shared between agents)
-export { mapSdkMessageToEvents } from "./event-mapper.js";
-
 // Models and Types
 export {
 	type AgentEvent,

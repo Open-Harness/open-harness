@@ -21,11 +21,7 @@
  */
 
 import { defineAnthropicAgent } from "../provider/factory.js";
-import {
-	PlannerInputSchema,
-	PlannerOutputSchema,
-	PlannerPromptTemplate,
-} from "./prompts/planner.js";
+import { PlannerInputSchema, PlannerOutputSchema, PlannerPromptTemplate } from "./prompts/planner.js";
 
 /**
  * Pre-configured planner agent.
