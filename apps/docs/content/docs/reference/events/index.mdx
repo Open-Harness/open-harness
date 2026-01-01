@@ -11,14 +11,14 @@ Open Harness uses a typed event system for communication between components. All
 
 | Category | Purpose |
 |----------|---------|
-| [Workflow Events](/reference/events/workflow-events) | Harness, phase, and task lifecycle |
-| [Agent Events](/reference/events/agent-events) | Agent execution and output |
-| [Session Events](/reference/events/session-events) | Interactive session communication |
-| [Narrative Events](/reference/events/narrative-events) | Logging and progress updates |
+| [Workflow Events](/docs/reference/events/workflow-events) | Harness, phase, and task lifecycle |
+| [Agent Events](/docs/reference/events/agent-events) | Agent execution and output |
+| [Session Events](/docs/reference/events/session-events) | Interactive session communication |
+| [Narrative Events](/docs/reference/events/narrative-events) | Logging and progress updates |
 
 ## Event Structure
 
-All events are wrapped in an [EnrichedEvent](/reference/types/enriched-event) envelope:
+All events are wrapped in an [EnrichedEvent](/docs/reference/types/enriched-event) envelope:
 
 ```typescript
 interface EnrichedEvent<T extends BaseEvent = BaseEvent> {
@@ -113,6 +113,6 @@ hub.emit({
 
 ## See Also
 
-- [Hub](/reference/api/hub) - Event bus API
-- [BaseEvent](/reference/types/base-event) - Event union type
-- [EnrichedEvent](/reference/types/enriched-event) - Event envelope
+- [Hub](/docs/reference/api/hub) - Event bus API
+- [BaseEvent](/docs/reference/types/base-event) - Event union type
+- [EnrichedEvent](/docs/reference/types/enriched-event) - Event envelope
