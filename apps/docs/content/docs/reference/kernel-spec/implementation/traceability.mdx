@@ -49,21 +49,18 @@ This matrix maps **spec → test-spec → tests → live scripts** to prevent ga
 
 ---
 
-### Harness
+### FlowRuntime
 
 | Spec Module | Test Spec | Requirements | Unit Tests | Replay Tests | Live Script | Status |
 |------------|-----------|--------------|------------|--------------|-------------|--------|
-| `docs/spec/harness.md` | `tests/specs/harness.test-spec.md` | R1-R6 | `tests/unit/harness.*.test.ts` | `tests/replay/harness.*.test.ts` | `scripts/live/harness-live.ts` | 🟡 |
+| `docs/spec/flow-runtime.md` | `tests/specs/flow-runtime.test-spec.md` | R1-R3 | `tests/unit/flow.runtime.*.test.ts` | `tests/replay/flow.runtime.test.ts` | `scripts/live/flow-runtime-live.ts` | 🟡 |
 
 **Requirements**:
-- R1: Harness Factory
-- R2: Attachment System
-- R3: Session Mode
-- R4: Run Lifecycle
-- R5: Phase/Task Helpers
-- R6: Inbox Routing
+- R1: Run Lifecycle Events
+- R2: Task Events Per Node
+- R3: Inbox Routing
 
-**Note**: Harness extends Hub. Tests focus on harness-specific behavior.
+**Note**: FlowRuntime is the canonical runtime. Tests validate lifecycle, context, and inbox routing.
 
 ---
 

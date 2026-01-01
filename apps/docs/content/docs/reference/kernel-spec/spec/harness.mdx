@@ -1,11 +1,14 @@
 ---
-title: "Harness Protocol (Deprecated)"
-description: "**Deprecated**: Harness is replaced by FlowRuntime in the Flow-only architecture."
+title: "Harness Protocol (Legacy)"
+description: "The Harness runtime is deprecated in the Flow-only architecture. **FlowRuntime is the sole orchestration runtime**."
 ---
 
-**Deprecated**: Harness is replaced by FlowRuntime in the Flow-only architecture.
+The Harness runtime is deprecated in the Flow-only architecture. **FlowRuntime is the
+sole orchestration runtime**.
 
-- FlowRuntime owns lifecycle (`harness:*` events), phase/task helpers, and inbox routing.
-- Existing Harness APIs should be removed or thinly wrapped by FlowRuntime.
+Canonical references:
+- `spec/flow-runtime.md` (lifecycle, inbox routing, session semantics)
+- `flow/execution.md` (FlowSpec execution rules)
 
-See [Flow Runtime](flow-runtime.mdx) for the canonical runtime protocol.
+This document is retained for historical context only. Do not implement new
+functionality against the Harness API.

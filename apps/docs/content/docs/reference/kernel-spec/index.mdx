@@ -73,7 +73,7 @@ flowchart TB
   CLI --> CHANNELS
 ```
 
-**Key invariant**: Flow is the only runtime. There is no Harness layer.
+**Key invariant**: Flow is the only runtime. There is no legacy runtime layer.
 
 ## Spec modules
 
@@ -84,7 +84,6 @@ flowchart TB
 - [Flow Runtime](spec/flow-runtime.mdx) - Lifecycle + phases/tasks + session semantics
 - [Agent](spec/agent.mdx) - AgentDefinition contract, runId/inbox injection semantics
 - [Channel](spec/channel.mdx) - Channel contract + recommended patterns
-- [Harness (deprecated)](spec/harness.mdx)
 
 ### Flow protocol
 
@@ -114,7 +113,6 @@ flowchart TB
 - [Roadmap](implementation/roadmap.mdx) - Milestone ordering + done criteria + authoritative scripts
 - [Conformance](implementation/conformance.mdx) - Test tiers, fixture policy, behavioral gates
 - [Traceability](implementation/traceability.mdx) - Spec → test-spec → tests → live scripts mapping
-- [TAP Pattern](implementation/patterns/tap.mdx) - Temporal Accumulation Pattern (implementation pattern)
 
 **Workflow**: Spec → Conformance → Code
 
