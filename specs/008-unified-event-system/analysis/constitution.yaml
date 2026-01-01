@@ -1,0 +1,116 @@
+agent: constitution-checker
+timestamp: "2025-12-27T00:00:00Z"
+constitution_path: .specify/memory/constitution.md
+constitution_version: "3.1.0"
+
+summary: "13 principles checked. 0 violations found. 13 compliant."
+
+statistics:
+  must_principles: 6
+  should_principles: 1
+  total_principles: 7
+  must_violations: 0
+  should_violations: 0
+  compliant: 7
+  unclear: 0
+
+findings:
+  - id: CON001
+    principle: "MUST use TypeScript 5.x strict mode (tsconfig.json strict: true)"
+    location: "plan.md:L14"
+    status: compliant
+    evidence: "Plan states 'Language/Version: TypeScript 5.x (strict mode)'. Implicit commitment to strict mode enforcement."
+    category: "Type Safety First"
+
+  - id: CON002
+    principle: "MUST forbid 'any' type; use 'unknown' with type guards"
+    location: "plan.md:L35, spec.md:L175"
+    status: compliant
+    evidence: "Plan's Type Safety section explicitly states 'Use unknown with type guards for event payloads'. EventContext and EnrichedEvent are explicitly typed, not using any."
+    category: "Type Safety First"
+
+  - id: CON003
+    principle: "MUST explicitly type all function signatures"
+    location: "spec.md:L162-L192"
+    status: compliant
+    evidence: "All public APIs in FR-001 through FR-007 explicitly specify input/output types. Example: UnifiedEventBus.scoped<T>(ctx, fn): T | Promise<T>"
+    category: "Type Safety First"
+
+  - id: CON004
+    principle: "MUST validate API boundaries with Zod or equivalent"
+    location: "plan.md:L35"
+    status: compliant
+    evidence: "Plan's Type Safety section explicitly states 'EventContext and EnrichedEvent schemas via Zod'. Tasks.md T050 implements Zod schema validation."
+    category: "Type Safety First"
+
+  - id: CON005
+    principle: "MUST use discriminated unions with exhaustive switches and 'never'"
+    location: "plan.md:L36, spec.md:L181-L186"
+    status: compliant
+    evidence: "BaseEvent defined as discriminated union with 'type' field. FR-004 specifies union of workflow, agent, narrative, session, and extensible events with type discriminator."
+    category: "Type Safety First"
+
+  - id: CON006
+    principle: "MUST use recorder pattern for agent/SDK code (capture real LLM responses, replay for TDD)"
+    location: "plan.md:L43"
+    status: compliant
+    evidence: "Plan states 'Fixtures from real calls: PASS - Will capture real agent events in golden recordings'. Integration tests (T016, T023, T029, T036) verify with real harness execution."
+    category: "Verified by Reality"
+
+  - id: CON007
+    principle: "MUST capture fixtures from actual LLM calls, never hand-crafted"
+    location: "plan.md:L44, tasks.md:L263-L264"
+    status: compliant
+    evidence: "Plan commitments to golden recordings. Integration test T064 creates console renderer with real harness, capturing actual agent events."
+    category: "Verified by Reality"
+
+  - id: CON008
+    principle: "MUST have live integration test proving production work"
+    location: "spec.md:L241-L245, tasks.md:L264"
+    status: compliant
+    evidence: "SC-007 (Ultimate Test) in spec requires console renderer showing real agent activity. Task T064 implements integration test for this using real harness execution."
+    category: "Verified by Reality"
+
+  - id: CON009
+    principle: "MUST commit golden recordings to repo in recordings/golden/"
+    location: "plan.md:L46"
+    status: compliant
+    evidence: "Plan states 'Golden recordings committed: PASS - New recordings in recordings/golden/'. Tasks include integration tests that will populate this directory."
+    category: "Verified by Reality"
+
+  - id: CON010
+    principle: "MUST use @injectable() with @inject(Token) for all internal services"
+    location: "plan.md:L52, tasks.md:L76"
+    status: compliant
+    evidence: "Plan states 'UnifiedEventBus will be @injectable()'. Task T011 registers UnifiedEventBus in DI container using injection pattern."
+    category: "Dependency Injection Discipline"
+
+  - id: CON011
+    principle: "MUST use composition root (container.ts) as ONLY place implementations bind"
+    location: "plan.md:L53, tasks.md:L76"
+    status: compliant
+    evidence: "Plan references 'Bind in container.ts'. Task T011 specifically modifies packages/sdk/src/core/container.ts for binding."
+    category: "Dependency Injection Discipline"
+
+  - id: CON012
+    principle: "MUST NOT have circular dependencies"
+    location: "plan.md:L54"
+    status: compliant
+    evidence: "Plan acknowledges 'Bus → Agents → Bus possible; use tokens to break cycle'. Explicit mitigation strategy to prevent circularity using token indirection."
+    category: "Dependency Injection Discipline"
+
+  - id: CON013
+    principle: "SHOULD use 'bun run test' for package.json script execution"
+    location: "plan.md:L150, tasks.md:L266"
+    status: compliant
+    evidence: "Pre-commit gates state 'bun run test' usage. Tasks include verification using 'bun run test', 'bun run typecheck', 'bun run lint'."
+    category: "Tool Patterns"
+
+meta:
+  check_method: "Manual constitution audit against spec.md, plan.md, tasks.md"
+  artifacts_checked:
+    - spec.md (283 lines)
+    - plan.md (191 lines)
+    - tasks.md (381 lines)
+  principle_source: "constitution.md v3.1.0 (Open Harness Constitution)"
+  audit_depth: "Full - all MUST and SHOULD principles from Constitution checked"

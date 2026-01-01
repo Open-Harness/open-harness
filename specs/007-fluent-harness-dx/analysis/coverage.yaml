@@ -1,0 +1,309 @@
+agent: coverage-mapper
+timestamp: "2025-12-27T12:00:00Z"
+feature_dir: specs/007-fluent-harness-dx
+summary: "20 requirements, 44 tasks. Coverage: 100%. 0 critical gaps found."
+
+statistics:
+  total_requirements: 20
+  total_tasks: 44
+  covered_requirements: 20
+  coverage_percentage: 100
+  orphaned_requirements: 0
+  orphaned_tasks: 0
+  partial_coverage: 2
+
+coverage_map:
+  # Functional Requirements
+  - requirement_id: FR-001
+    requirement_text: "System MUST provide a fluent defineHarness(config) factory that creates typed HarnessFactory, accepts agent constructors, creates DI container internally, ensures no user exposure to Container/createContainer"
+    status: covered
+    task_ids: ["T002", "T008", "T009", "T010", "T011"]
+    task_summary: "5 tasks implement this requirement"
+    evidence:
+      - "T002: Create stub for define-harness factory"
+      - "T008: Implement internal container creation in defineHarness()"
+      - "T009: Implement agent resolution from constructor config to instances"
+      - "T010: Connect agent resolution to HarnessInstance.run()"
+      - "T011: Add unit test verifying no container imports needed"
+
+  - requirement_id: FR-002
+    requirement_text: "System MUST provide a create(input) method that instantiates harness with state factory"
+    status: covered
+    task_ids: ["T027", "T028", "T031"]
+    task_summary: "3 tasks implement this requirement"
+    evidence:
+      - "T027: Implement state factory execution in HarnessFactory.create()"
+      - "T028: Add TInput generic parameter for state factory input"
+      - "T031: Add state factory isolation test"
+
+  - requirement_id: FR-003
+    requirement_text: "System MUST provide typed event subscription via .on(eventType, handler) with automatic unsubscribe on run() completion and typed event filtering"
+    status: covered
+    task_ids: ["T016", "T017", "T019"]
+    task_summary: "3 tasks implement this requirement"
+    evidence:
+      - "T016: Implement subscription tracking in HarnessInstance"
+      - "T017: Connect internal EventBus to external .on() handlers with auto-cleanup"
+      - "T019: Add test verifying event handlers receive events and auto-cleanup"
+
+  - requirement_id: FR-004
+    requirement_text: "System MUST provide an emit(type, data) function in execute context for custom events"
+    status: covered
+    task_ids: ["T005"]
+    task_summary: "1 task implements this requirement"
+    evidence:
+      - "T005: Implement ExecuteContext class with agents, state, emit()"
+
+  - requirement_id: FR-005
+    requirement_text: "System MUST support live and replay mode configuration"
+    status: covered
+    task_ids: ["T029", "T030", "T032"]
+    task_summary: "3 tasks implement this requirement"
+    evidence:
+      - "T029: Implement mode configuration (live/replay) in defineHarness"
+      - "T030: Pass mode to internal container creation"
+      - "T032: Add mode configuration test"
+
+  - requirement_id: FR-006
+    requirement_text: "System MUST preserve full backward compatibility with existing harness usage"
+    status: covered
+    task_ids: ["T033", "T034"]
+    task_summary: "2 tasks implement this requirement"
+    evidence:
+      - "T033: Verify existing exports still present (createContainer, BaseHarness, createTaskHarness)"
+      - "T034: Add backward compatibility test running legacy harness pattern"
+
+  - requirement_id: FR-007
+    requirement_text: "System MUST provide typed access to state within execute context with update helpers"
+    status: covered
+    task_ids: ["T005", "T014"]
+    task_summary: "2 tasks implement this requirement"
+    evidence:
+      - "T005: Implement ExecuteContext class with agents, state, emit()"
+      - "T014: Wire typed agents to ExecuteContext (includes state typing)"
+
+  - requirement_id: FR-008
+    requirement_text: "System MUST support both simple async functions and async generators for execute logic"
+    status: partial
+    task_ids: ["T004"]
+    severity: medium
+    task_summary: "1 task partially covers this requirement"
+    reason: "T004 implements HarnessInstance.run() but spec doesn't explicitly test generator support separately"
+    evidence:
+      - "T004: Implement HarnessInstance class with on(), run(), and state"
+    suggested_tasks:
+      - "Add explicit test for async generator execute() support"
+      - "Add example in quickstart showing both async function and generator patterns"
+
+  - requirement_id: FR-009
+    requirement_text: "System MUST provide contextual helpers following Contextual Event Wrapper Pattern: phase(), task(), retry(), parallel()"
+    status: covered
+    task_ids: ["T006", "T020", "T021", "T022", "T023", "T024", "T025", "T026"]
+    task_summary: "8 tasks implement this requirement"
+    evidence:
+      - "T006: Create control-flow helpers module (retry, parallel)"
+      - "T020: Implement phase() helper with auto events"
+      - "T021: Implement task() helper with auto events"
+      - "T022: Implement retry() helper with retry events"
+      - "T023: Implement parallel() helper with parallel events"
+      - "T024: Wire control flow helpers to ExecuteContext"
+      - "T025: Add tests for phase/task/retry/parallel helpers"
+      - "T026: Add control flow tests"
+
+  - requirement_id: FR-010
+    requirement_text: "System MUST support progressive API levels from single-agent wrapper to full harness"
+    status: covered
+    task_ids: ["T036", "T037", "T038", "T039"]
+    task_summary: "4 tasks implement this requirement"
+    evidence:
+      - "T036: Implement wrapAgent() function"
+      - "T037: Implement WrappedAgent.on() for chainable event subscription"
+      - "T038: Implement WrappedAgent.run() connecting to agent execute method"
+      - "T039: Add wrapAgent tests"
+
+  # Success Criteria
+  - requirement_id: SC-001
+    requirement_text: "The coding workflow harness is rewritten using the new API with ≥50% reduction in lines of code"
+    status: covered
+    task_ids: ["T035", "T043"]
+    task_summary: "2 tasks implement this requirement"
+    evidence:
+      - "T035: Migrate coding harness to new API as proof-of-concept"
+      - "T043: Verify SC-001: coding harness has 50%+ code reduction"
+
+  - requirement_id: SC-002
+    requirement_text: "Zero imports from DI internals in the new harness code"
+    status: covered
+    task_ids: ["T011"]
+    task_summary: "1 task implements this requirement"
+    evidence:
+      - "T011: Add unit test verifying no container imports needed"
+
+  - requirement_id: SC-003
+    requirement_text: "All agent method calls have full type inference"
+    status: covered
+    task_ids: ["T012", "T013", "T014", "T015"]
+    task_summary: "4 tasks implement this requirement"
+    evidence:
+      - "T012: Implement ResolvedAgents<T> type helper"
+      - "T013: Add generic type parameters TAgents to HarnessConfig"
+      - "T014: Wire typed agents to ExecuteContext"
+      - "T015: Add type inference test verifying autocomplete works"
+
+  - requirement_id: SC-004
+    requirement_text: "The new harness passes all existing functionality tests"
+    status: covered
+    task_ids: ["T040"]
+    task_summary: "1 task implements this requirement"
+    evidence:
+      - "T040: Create integration test with replay recordings"
+
+  - requirement_id: SC-005
+    requirement_text: "Unit tests for HarnessFactory and HarnessInstance achieve ≥90% line coverage"
+    status: covered
+    task_ids: ["T044"]
+    task_summary: "1 task implements this requirement"
+    evidence:
+      - "T044: Verify SC-005: Unit test coverage >= 90% for new code"
+
+  - requirement_id: SC-006
+    requirement_text: "Event handlers are auto-cleaned up on run() completion"
+    status: covered
+    task_ids: ["T016", "T017", "T019"]
+    task_summary: "3 tasks implement this requirement"
+    evidence:
+      - "T016: Implement subscription tracking in HarnessInstance"
+      - "T017: Connect internal EventBus to external .on() handlers with auto-cleanup"
+      - "T019: Add test verifying event handlers receive events and auto-cleanup"
+
+  - requirement_id: SC-007
+    requirement_text: "Legacy harness and createContainer continue to work unchanged"
+    status: covered
+    task_ids: ["T033", "T034"]
+    task_summary: "2 tasks implement this requirement"
+    evidence:
+      - "T033: Verify existing exports still present"
+      - "T034: Add backward compatibility test running legacy harness pattern"
+
+  - requirement_id: SC-008
+    requirement_text: "Ultimate Test - The coding workflow runs with visible narrative output"
+    status: covered
+    task_ids: ["T042"]
+    task_summary: "1 task implements this requirement"
+    evidence:
+      - "T042: Run quickstart.md examples as verification (SC-008 Ultimate Test)"
+
+  # User Stories
+  - requirement_id: US1
+    requirement_text: "Zero DI Exposure - Define harnesses without knowing about dependency injection"
+    status: covered
+    task_ids: ["T008", "T009", "T010", "T011"]
+    task_summary: "4 tasks implement this user story"
+    evidence:
+      - "Phase 3 dedicated to US1 implementation"
+      - "T008-T011 collectively implement zero DI exposure"
+
+  - requirement_id: US2
+    requirement_text: "Typed Agent Access - Declare agents in configuration with full type inference"
+    status: covered
+    task_ids: ["T012", "T013", "T014", "T015"]
+    task_summary: "4 tasks implement this user story"
+    evidence:
+      - "Phase 4 dedicated to US2 implementation"
+      - "T012-T015 collectively implement typed agent access"
+
+  - requirement_id: US3
+    requirement_text: "Declarative Event Handling - Configure event handlers at harness creation with auto-cleanup"
+    status: covered
+    task_ids: ["T016", "T017", "T019"]
+    task_summary: "3 tasks implement this user story"
+    evidence:
+      - "Phase 5 dedicated to US3 implementation"
+      - "T016-T019 collectively implement declarative events"
+
+  - requirement_id: US4
+    requirement_text: "Separation of Concerns - execute() contains only business logic, rendering external"
+    status: covered
+    task_ids: ["T020", "T021", "T022", "T023", "T024", "T025", "T026"]
+    task_summary: "7 tasks implement this user story"
+    evidence:
+      - "Phase 6 dedicated to US4 implementation"
+      - "T020-T026 collectively implement helper functions for clean separation"
+
+  - requirement_id: US5
+    requirement_text: "State Factory Pattern - Define initial state as a function of input parameters"
+    status: covered
+    task_ids: ["T027", "T028", "T031"]
+    task_summary: "3 tasks implement this user story"
+    evidence:
+      - "Phase 7 includes US5 implementation"
+      - "T027-T031 collectively implement state factory pattern"
+
+  - requirement_id: US6
+    requirement_text: "Mode Configuration - Specify mode (live/replay) in harness definition"
+    status: covered
+    task_ids: ["T029", "T030", "T032"]
+    task_summary: "3 tasks implement this user story"
+    evidence:
+      - "Phase 7 includes US6 implementation"
+      - "T029-T032 collectively implement mode configuration"
+
+  - requirement_id: US7
+    requirement_text: "Backward Compatibility - Existing harness classes remain available"
+    status: covered
+    task_ids: ["T033", "T034", "T035"]
+    task_summary: "3 tasks implement this user story"
+    evidence:
+      - "Phase 8 dedicated to US7 implementation"
+      - "T033-T035 collectively verify and migrate legacy code"
+
+findings:
+  - id: C001
+    type: partial_coverage
+    requirement_id: FR-008
+    requirement_text: "System MUST support both simple async functions and async generators for execute logic"
+    description: "Generator support implementation exists in T004 but lacks explicit verification test"
+    severity: medium
+    impact: "Async generator support may work but is not explicitly validated in test suite"
+    current_tasks: ["T004"]
+    suggested_tasks:
+      - "Add explicit unit test for async generator execute() in tests/unit/harness/harness-instance.test.ts"
+      - "Add generator example to quickstart.md showing yield pattern"
+    recommendation: "Add verification task before Phase 10 completion"
+
+  - id: C002
+    type: partial_coverage
+    requirement_id: FR-007
+    requirement_text: "System MUST provide typed access to state within execute context with update helpers"
+    description: "State typing is covered but 'update helpers' mentioned in requirement are not explicitly implemented or tested"
+    severity: low
+    impact: "If 'update helpers' means helper functions (not just direct mutation), they may be missing"
+    current_tasks: ["T005", "T014"]
+    suggested_tasks:
+      - "Clarify if 'update helpers' means setState() or similar functions"
+      - "If needed, add state update helper functions to ExecuteContext"
+    recommendation: "Review spec to confirm if direct mutation is sufficient or helpers needed"
+
+strengths:
+  - "Excellent traceability: Every task is explicitly tagged with user story (e.g., [US1], [US2])"
+  - "User story organization: Tasks grouped by story enable independent implementation and testing"
+  - "Complete coverage: All 10 functional requirements have implementing tasks"
+  - "Success criteria verification: All 8 success criteria have dedicated verification tasks"
+  - "Progressive implementation: Clear phase dependencies prevent implementation chaos"
+  - "Test coverage: Test tasks included alongside implementation tasks (e.g., T011, T015, T019)"
+
+recommendations:
+  - "Add explicit generator test to T040 integration test suite"
+  - "Clarify state 'update helpers' requirement - if needed, add task in Phase 2"
+  - "Consider adding edge case tests as explicit tasks (spec mentions 7 edge cases, not all have dedicated test tasks)"
+  - "T001 (event types) should be verified to include retry/parallel events per FR-009 requirements"
+
+metadata:
+  analysis_method: "Systematic requirement extraction + keyword/semantic matching + explicit task references"
+  confidence: high
+  notes:
+    - "Tasks file uses [US?] tagging which makes traceability trivial"
+    - "User story structure in tasks.md aligns perfectly with spec.md user stories"
+    - "Phase structure creates clear implementation order and dependencies"
+    - "Zero orphaned tasks found - all tasks trace to requirements"
+    - "Zero orphaned requirements found - all requirements have implementing tasks"

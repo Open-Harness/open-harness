@@ -1,0 +1,235 @@
+agent: file-auditor
+timestamp: "2025-12-27T18:03:31Z"
+spec_directory: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system
+tasks_file: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/tasks.md
+summary: "23 paths checked. 21 exist at correct locations. 2 missing (both optional/incomplete tasks). 0 wrong locations. 1 unexpected file (types.ts - created but not in tasks.md)."
+
+statistics:
+  total_paths_expected: 23
+  exists_correct: 21
+  missing: 2
+  wrong_location: 0
+  unexpected: 1
+
+findings:
+  # CORRECT PATHS (21 files)
+  - id: FA001
+    task_id: T001
+    expected_path: packages/sdk/src/harness/event-context.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/harness/event-context.ts
+    severity: null
+
+  - id: FA002
+    task_id: T002
+    expected_path: packages/sdk/src/core/tokens.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/core/tokens.ts
+    severity: null
+
+  - id: FA003
+    task_id: T003
+    expected_path: packages/sdk/src/core/unified-events/index.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/core/unified-events/index.ts
+    severity: null
+
+  - id: FA004
+    task_id: T004
+    expected_path: packages/sdk/src/core/unified-events/filter.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/core/unified-events/filter.ts
+    severity: null
+
+  - id: FA005
+    task_id: T005
+    expected_path: packages/sdk/src/core/unified-event-bus.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/core/unified-event-bus.ts
+    severity: null
+
+  - id: FA006
+    task_id: T011
+    expected_path: packages/sdk/src/core/container.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/core/container.ts
+    severity: null
+
+  - id: FA007
+    task_id: T012
+    expected_path: packages/sdk/src/index.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/index.ts
+    severity: null
+
+  - id: FA008
+    task_id: T019
+    expected_path: packages/sdk/src/providers/anthropic/agents/base-anthropic-agent.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/providers/anthropic/agents/base-anthropic-agent.ts
+    severity: null
+
+  - id: FA009
+    task_id: T021
+    expected_path: packages/sdk/src/providers/anthropic/runner/event-mapper.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/providers/anthropic/runner/event-mapper.ts
+    severity: null
+
+  - id: FA010
+    task_id: T013-T015
+    expected_path: packages/sdk/tests/unit/unified-event-bus.test.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/unit/unified-event-bus.test.ts
+    severity: null
+
+  - id: FA011
+    task_id: T016,T023,T025,T042
+    expected_path: packages/sdk/tests/integration/unified-events.test.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/integration/unified-events.test.ts
+    severity: null
+
+  - id: FA012
+    task_id: T032-T035
+    expected_path: packages/sdk/tests/unit/define-renderer.test.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/unit/define-renderer.test.ts
+    severity: null
+
+  - id: FA013
+    task_id: T038-T039
+    expected_path: packages/sdk/src/harness/define-renderer.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/harness/define-renderer.ts
+    severity: null
+
+  - id: FA014
+    task_id: T037
+    expected_path: packages/sdk/src/harness/render-output.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/harness/render-output.ts
+    severity: null
+
+  - id: FA015
+    task_id: T041
+    expected_path: packages/sdk/tests/integration/fluent-harness.test.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/tests/integration/fluent-harness.test.ts
+    severity: null
+
+  - id: FA016
+    task_id: Prerequisites
+    expected_path: specs/008-unified-event-system/spec.md
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/spec.md
+    severity: null
+
+  - id: FA017
+    task_id: Prerequisites
+    expected_path: specs/008-unified-event-system/plan.md
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/plan.md
+    severity: null
+
+  - id: FA018
+    task_id: Prerequisites
+    expected_path: specs/008-unified-event-system/data-model.md
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/data-model.md
+    severity: null
+
+  - id: FA019
+    task_id: Prerequisites
+    expected_path: specs/008-unified-event-system/contracts/unified-event-bus.ts
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/contracts/unified-event-bus.ts
+    severity: null
+
+  - id: FA020
+    task_id: Prerequisites
+    expected_path: specs/008-unified-event-system/quickstart.md
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/quickstart.md
+    severity: null
+
+  - id: FA021
+    task_id: Prerequisites
+    expected_path: specs/008-unified-event-system/research.md
+    status: exists_correct
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/research.md
+    severity: null
+
+  # MISSING PATHS (2 files - both incomplete/optional tasks)
+  - id: FA022
+    task_id: T031
+    expected_path: packages/sdk/src/core/unified-events/type-guards.ts
+    status: missing
+    actual_path: null
+    severity: low
+    note: "Task T031 is marked as incomplete ([ ] not [X]). This is an optional task for User Story 3 (add type guard utilities). Not blocking."
+
+  - id: FA023
+    task_id: T050
+    expected_path: packages/sdk/src/core/unified-events/schemas.ts
+    status: missing
+    actual_path: null
+    severity: low
+    note: "Task T050 is marked as incomplete ([ ] not [X]). This is an optional task for User Story 6 (Zod schema validation). Comment in spec says '(optional runtime check)'. Not blocking."
+
+  # UNEXPECTED FILES (1 file - created but not in tasks.md spec)
+  - id: FA024
+    task_id: null
+    expected_path: null
+    status: unexpected
+    actual_path: /Users/abuusama/projects/dao/dao-spec-kit/packages/sdk/src/core/unified-events/types.ts
+    severity: low
+    note: "File exists but was not explicitly mentioned in tasks.md. However, it appears to be a legitimate types file for the unified-events module and is properly exported from index.ts. Likely created as supporting infrastructure during implementation."
+
+unexpected_directories:
+  - path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/analysis
+    status: unexpected
+    severity: low
+    note: "Analysis directory with YAML files created during spec development. Not part of task deliverables but contains useful analysis artifacts."
+
+  - path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/ANALYSIS.md
+    status: unexpected
+    severity: low
+    note: "Analysis document created during spec development. Not part of task deliverables."
+
+  - path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/Untitled
+    status: unexpected
+    severity: low
+    note: "Untitled file in spec directory. May be work-in-progress notes."
+
+  - path: /Users/abuusama/projects/dao/dao-spec-kit/specs/008-unified-event-system/retro
+    status: expected
+    severity: null
+    note: "Output directory for retrospective artifacts. Expected to exist."
+
+summary_details: |
+  AUDIT SUMMARY:
+
+  Total Paths Checked: 23 (extracted from tasks.md task descriptions)
+  Correct Location: 21/21 (100% of required files)
+  Missing: 2 (both incomplete tasks marked with [ ])
+  Wrong Location: 0
+  Unexpected: 1 (types.ts - legitimate supporting file)
+
+  MISSING FILES ANALYSIS:
+  - T031: packages/sdk/src/core/unified-events/type-guards.ts
+    Status: Incomplete task (not yet implemented)
+    Severity: LOW - Optional feature, task marked as [ ]
+
+  - T050: packages/sdk/src/core/unified-events/schemas.ts
+    Status: Incomplete task (not yet implemented)
+    Severity: LOW - Optional feature, explicitly marked as "(optional runtime check)"
+
+  UNEXPECTED FILE ANALYSIS:
+  - unified-events/types.ts exists but not explicitly in tasks.md
+    Analysis: This is a legitimate TypeScript types module that appears to have been created during implementation. It is properly integrated (exported from unified-events/index.ts). This is typical infrastructure created during development that wasn't explicitly called out as a separate task item.
+
+  CONCLUSION:
+  All critical and in-progress task files are present and at correct locations. The two missing files correspond to incomplete tasks (T031, T050) that are intentionally not yet implemented. The one unexpected file (types.ts) is a legitimate implementation detail that supports the core functionality.
+
+  STATUS: AUDIT PASSED - All required/completed task deliverables are at specified paths.

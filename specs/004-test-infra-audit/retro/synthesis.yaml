@@ -1,0 +1,360 @@
+agent: synthesizer
+timestamp: "2025-12-26T21:30:00Z"
+spec_directory: specs/004-test-infra-audit
+overall_severity: high
+summary: |
+  oharnes.implement verification agents exhibited critical false positives by validating
+  static structure while missing behavioral correctness. Implementation succeeded (159 tests
+  pass, 17/19 requirements met) but process gaps allowed misclassified tests to bypass gates.
+
+root_causes:
+  - id: RC001
+    title: "Verifier checked existence, not behavior"
+    description: |
+      oharnes.implement:verifier validated that files existed at specified paths and
+      contained expected structure, but did not verify runtime behavior matched intent.
+      Parser-agent test was placed in tests/unit/ directory but made live API calls,
+      violating unit test semantics. Verifier passed this as compliant.
+    evidence:
+      - timeline.yaml A001: "Verifier said structure matched plan.md ✓ BUT running `bun test` still executed integration tests"
+      - timeline.yaml A001: "Verifier checked file existence, not behavioral correctness"
+      - spec-drift.yaml FM001: "Spec did require behavioral verification (SC-004) but implementation only provided static artifacts"
+      - file-audit.yaml FA040: "File successfully moved from tests/unit/ to tests/integration/ as documented in context"
+    severity: critical
+    causal_chain:
+      - "Scout listed parser-agent.test.ts as unit test (correct by location)"
+      - "Implementer placed test in tests/unit/ directory"
+      - "Verifier checked file exists at expected path → PASS"
+      - "Verifier did NOT check file contents for API call patterns"
+      - "Test executed during validation, made live API calls, created recordings"
+      - "Only discovered when human ran `bun test` and noticed long execution time"
+    impact: |
+      Safe-by-default guarantee violated. Unit tests should run offline in <1s but
+      parser-agent test made API calls. This required manual intervention and file move.
+
+  - id: RC002
+    title: "Scout validated location, not categorization correctness"
+    description: |
+      oharnes.implement:scout built file manifest based on directory structure but
+      did not analyze file contents to verify categorization matched directory semantics.
+      A test importing createRecordingContainer (integration-level API) was accepted
+      as a unit test because it was in tests/unit/ directory.
+    evidence:
+      - timeline.yaml A002: "Scout listed files to read but didn't validate file contents matched directory semantics"
+      - timeline.yaml A002: "Located in tests/unit/ BUT imported createRecordingContainer (makes API calls)"
+      - spec-drift.yaml FM002: "Scout incomplete context - implementation process issue"
+    severity: critical
+    causal_chain:
+      - "Scout agent identified tests/unit/ directory"
+      - "Scout listed parser-agent.test.ts as file to read"
+      - "Scout did NOT grep for API call patterns in unit tests"
+      - "Scout did NOT flag import of createRecordingContainer in unit test"
+      - "Manifest passed to implementer without categorization warnings"
+    impact: |
+      Incorrect categorization allowed live API test to masquerade as unit test,
+      breaking test isolation guarantees.
+
+  - id: RC003
+    title: "No behavioral verification gate before completion"
+    description: |
+      oharnes.implement workflow marked implementation complete after static validation
+      but before executing test commands to verify actual behavior. Test execution with
+      timeout guards would have immediately revealed the misclassified test.
+    evidence:
+      - timeline.yaml A003: "No gate validated that test commands produce expected behavior (no network, fast execution, no file writes)"
+      - timeline.yaml A003: "I ran `bun test` expecting <30s safe execution, got: tests/integration/live-sdk.test.ts running"
+      - spec-drift.yaml FM003: "Missing behavioral verification gate"
+      - spec-drift.yaml BV002: "No verification that default tests actually avoid network calls"
+    severity: high
+    causal_chain:
+      - "Tasks completed with all files at specified locations"
+      - "Verifier validated static structure → recommendation: proceed"
+      - "Implementation marked complete"
+      - "No gate ran `bun run test` with 30s timeout to verify behavior"
+      - "Discovery delayed until human testing phase"
+    impact: |
+      Critical issues discoverable in seconds (via test execution) were not caught
+      until after implementation marked complete, requiring retrospective fixes.
+
+  - id: RC004
+    title: "Bun CLI dual-mode confusion undocumented"
+    description: |
+      Bun CLI has two distinct modes: `bun test` (built-in runner) and `bun run test`
+      (npm script runner). This distinction was not documented in constitution or
+      research artifacts, causing confusion about which command respects package.json
+      scripts. Implementation correctly configured scripts but agents/users didn't
+      know when to use `bun run`.
+    evidence:
+      - timeline.yaml A004: "Command `bun test` ignores package.json scripts entirely"
+      - timeline.yaml A004: "Must use `bun run test` to invoke npm script configuration"
+      - timeline.yaml A004: "This wasn't documented anywhere - caused false confidence"
+      - test-results.yaml line 19: "Test execution used correct command: bun run test"
+      - spec-drift.yaml FM004: "Spec uses 'bun test' syntax but both are valid"
+    severity: medium
+    causal_chain:
+      - "package.json configured with isolated test paths"
+      - "Spec documentation used `bun test` syntax"
+      - "Developers/agents ran `bun test` expecting script behavior"
+      - "`bun test` invoked built-in runner, ignored package.json configuration"
+      - "Confusion about whether scripts were working correctly"
+    impact: |
+      Delayed discovery of issues, wasted time debugging. Eventually resolved by
+      using `bun run test` but caused uncertainty during implementation.
+
+  - id: RC005
+    title: "Recording directory state not protected"
+    description: |
+      Misclassified test ran during validation and modified 4 golden recording files.
+      No pre-implementation snapshot or post-execution verification caught these
+      unexpected file modifications. Changes only noticed via git status after completion.
+    evidence:
+      - timeline.yaml A006: "git status shows 4 modified recording JSON files"
+      - timeline.yaml A006: "Modified because misclassified test ran and re-captured recordings"
+      - spec-drift.yaml FM006: "Recording files modified unexpectedly"
+      - spec-drift.yaml EC002: "No atomic write protection implemented"
+    severity: medium
+    causal_chain:
+      - "Parser-agent test executed during validation phase"
+      - "Test made live API calls (wrong categorization)"
+      - "Test captured new recordings, overwrote existing files"
+      - "No snapshot of recordings/ directory before implementation"
+      - "No verification that recordings/ unchanged after safe test run"
+      - "File modifications discovered later via git status"
+    impact: |
+      Golden fixtures potentially corrupted. Required manual review to determine
+      if changes were acceptable or needed reversal.
+
+  - id: RC006
+    title: "Timeout discipline not specified for test execution"
+    description: |
+      When agents executed tests during verification, no guidance existed for
+      appropriate timeout values based on test category. Safe tests (unit + replay)
+      should timeout at 30s max, but multiple runs used 60-120s timeouts, wasting
+      time and delaying issue discovery.
+    evidence:
+      - timeline.yaml A005: "Multiple times ran tests with 60-120s timeouts when expecting <1s execution"
+      - timeline.yaml A005: "No guidance in oharnes.implement for setting appropriate timeouts"
+      - spec-drift.yaml FM005: "Timeout discipline missing"
+    severity: low
+    causal_chain:
+      - "Verification phase requires test execution"
+      - "No documented timeout standards for different test categories"
+      - "Agents/users set conservative timeouts (60-120s)"
+      - "Safe tests hung or ran long due to misclassification"
+      - "Wasted time waiting for timeout instead of failing fast"
+    impact: |
+      Inefficient feedback loops. Issue discoverable in <30s took 60-120s to surface,
+      adding unnecessary wait time during verification iterations.
+
+responsibility_attribution:
+  - component: "oharnes.implement:verifier"
+    responsibility: "Static validation only - no behavioral verification"
+    evidence:
+      - "A001: Checked file existence, not behavioral correctness"
+      - "Reported 'all checks passed' despite critical categorization error"
+    failure_mode: "False positive - passed when should have blocked"
+
+  - component: "oharnes.implement:scout"
+    responsibility: "Did not validate file categorization against content"
+    evidence:
+      - "A002: Built manifest but didn't validate categorization"
+      - "Didn't grep for API patterns in unit test directory"
+    failure_mode: "Incomplete context - missed content-based analysis"
+
+  - component: "oharnes.implement workflow"
+    responsibility: "No behavioral verification gate before completion"
+    evidence:
+      - "A003: No gate validated test command behavior"
+      - "Marked complete without executing tests with timeout guards"
+    failure_mode: "Missing gate - skipped critical verification step"
+
+  - component: "Constitution/Research Artifacts"
+    responsibility: "Bun CLI patterns undocumented"
+    evidence:
+      - "A004: `bun test` vs `bun run test` distinction not documented"
+    failure_mode: "Knowledge gap - critical tool behavior not captured"
+
+  - component: "oharnes.implement workflow"
+    responsibility: "No recording directory state protection"
+    evidence:
+      - "A006: No snapshot/verification of recordings/ directory"
+    failure_mode: "Missing safeguard - allowed unexpected file modifications"
+
+  - component: "oharnes.implement command"
+    responsibility: "No timeout discipline guidelines"
+    evidence:
+      - "A005: No guidance for appropriate timeouts by test category"
+    failure_mode: "Process gap - missing operational guidance"
+
+remediation:
+  immediate:
+    - description: "Add behavioral verification to oharnes.implement:verifier"
+      actions:
+        - "Execute test commands with timeout guards (30s for safe tests)"
+        - "Verify no network access during unit/replay test execution"
+        - "Check no file writes in recordings/ during safe tests"
+        - "Grep unit tests for API call patterns (createRecordingContainer, fetch, etc.)"
+      priority: P0
+
+    - description: "Enhance oharnes.implement:scout with content analysis"
+      actions:
+        - "Analyze file contents for categorization correctness"
+        - "Flag tests importing live API patterns in unit/ directory"
+        - "Validate directory semantics match actual code behavior"
+        - "Use grep to find API patterns: createRecordingContainer, ANTHROPIC_API_KEY, etc."
+      priority: P0
+
+    - description: "Add recording directory snapshot verification"
+      actions:
+        - "Hash recordings/ directory before implementation"
+        - "Verify no changes after safe test execution"
+        - "Flag unexpected modifications immediately"
+        - "Document which files should/shouldn't change"
+      priority: P1
+
+  process:
+    - description: "Document Bun CLI dual-mode behavior"
+      actions:
+        - "Add to constitution.md: `bun test` vs `bun run test` distinction"
+        - "Clarify when each mode is appropriate"
+        - "Update research templates to capture tool-specific patterns"
+      priority: P1
+
+    - description: "Establish timeout discipline guidelines"
+      actions:
+        - "Document in oharnes.implement command: safe tests = 30s max timeout"
+        - "Live tests can use longer timeouts (60-120s)"
+        - "Guide implementers to use appropriate timeouts by category"
+      priority: P2
+
+    - description: "Implement atomic write protection for recordings"
+      actions:
+        - "Write to temp file first, atomic rename on success"
+        - "Prevents fixture corruption on interrupted captures"
+        - "Addresses spec-drift.yaml EC002 and research.md specification"
+      priority: high
+      context: "Feature implementation gap, not oharnes process issue"
+
+pattern_detected: "static-validation-insufficient"
+description: |
+  Pattern: Verification agents validated static properties (files exist, names match,
+  structure correct) but did not execute artifacts to verify dynamic behavior matches
+  specifications. This is the same class of failure as 003-harness-renderer where
+  structure looked correct but behavior diverged from spec.
+
+  Core issue: For test infrastructure work, behavioral verification is not optional.
+  Test commands MUST be executed with appropriate guards before marking complete.
+
+cross_references:
+  - feature: "003-harness-renderer"
+    pattern: "Static validation missed behavioral divergence"
+    lesson: "Architectural structure correct, but runtime behavior diverged from spec"
+    relation: "Same root cause - validators check appearance, not execution"
+
+  - document: "specs/backlog/003-next-cycle-inputs.md"
+    insight: "Proactive context loading prevents problems before they arise"
+    application: "Scout should load file contents, not just paths, to validate categorization"
+
+cycle_count: 2
+recurring: true
+severity_trend: "Improving but still critical"
+notes: |
+  This is the second cycle where static validation passed but behavioral verification
+  would have caught issues immediately. The 003 retrospective identified this gap,
+  and 004 demonstrates it still exists in verification workflows.
+
+  Positive: Implementation quality is high (159 tests pass, 17/19 requirements met).
+  Negative: Process allowed categorization error through multiple gates.
+
+  Key learning: Test infrastructure requires runtime verification, not just static checks.
+
+verification_gates_status:
+  implementation_verification: PARTIAL_FAILURE
+  reasoning: |
+    Static structure validation passed correctly (all files at specified paths).
+    Behavioral validation failed (test categorization incorrect, discovered via execution).
+    Final implementation is sound after manual fix (parser-agent test moved to integration/).
+
+recommendations_for_next_cycle:
+  - priority: P0
+    description: "Mandate behavioral verification gate in oharnes.implement"
+    rationale: "Recurring pattern across 003 and 004 - static checks insufficient"
+    implementation: |
+      Add Phase N-1 to oharnes.implement workflow (before final validation):
+
+      ### Phase N-1: Behavioral Verification
+
+      Execute test commands with timeout guards:
+
+      ```bash
+      timeout 30s bun run test  # Safe tests must complete in <30s
+      ```
+
+      Verify:
+      - Exit code 0 (all tests pass)
+      - No network access during execution
+      - No file modifications in recordings/ directory
+      - Execution time under threshold for category
+
+      If any check fails → block completion, report findings to user.
+
+  - priority: P0
+    description: "Add content-based validation to scout agent"
+    rationale: "Directory location doesn't guarantee correct categorization"
+    implementation: |
+      Scout should grep file contents for categorization signals:
+
+      ```bash
+      # Flag unit tests that import integration patterns
+      grep -r "createRecordingContainer\|ANTHROPIC_API_KEY\|fetch(" tests/unit/
+
+      # Flag replay tests missing fixture references
+      grep -r "loadRecording\|golden/" tests/replay/
+      ```
+
+      Include findings in context report for implementer.
+
+  - priority: P1
+    description: "Document tool-specific behavior patterns"
+    rationale: "Bun CLI confusion delayed issue discovery"
+    implementation: |
+      Add section to constitution.md:
+
+      ## Tool Patterns
+
+      ### Bun CLI Dual Modes
+      - `bun test`: Built-in test runner, ignores package.json scripts
+      - `bun run test`: Executes npm script from package.json
+      - Use `bun run` when package.json scripts configure behavior
+
+  - priority: P2
+    description: "Add recording state protection"
+    rationale: "Unexpected file modifications should trigger immediate alerts"
+    implementation: |
+      Before test execution in verification phase:
+      ```bash
+      find recordings/ -type f -exec sha256sum {} \; > /tmp/recordings.snapshot
+      ```
+
+      After test execution:
+      ```bash
+      find recordings/ -type f -exec sha256sum {} \; | diff - /tmp/recordings.snapshot
+      ```
+
+      If diff non-empty → report modified files, block if unexpected.
+
+success_metrics:
+  - metric: "Time to discovery"
+    value: "Immediate (would have caught during Phase N-1 execution)"
+    current: "Post-implementation (discovered during manual testing)"
+    improvement: "100% faster feedback loop"
+
+  - metric: "False positive rate"
+    value: "0% (behavioral gate catches what static checks miss)"
+    current: "100% (verifier passed incorrect categorization)"
+    improvement: "Eliminates false positives for behavioral issues"
+
+  - metric: "Implementation quality"
+    value: "High (159/159 tests pass, 17/19 requirements met)"
+    current: "High (same - implementation itself was sound)"
+    improvement: "Maintains quality while improving process reliability"
