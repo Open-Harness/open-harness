@@ -135,12 +135,6 @@
       },
     },
   },
-  "catalog": {
-    "@types/bun": "^1.3.4",
-    "dotenv": "^17.2.2",
-    "typescript": "^5",
-    "zod": "^4.1.13",
-  },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
