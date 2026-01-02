@@ -15,7 +15,7 @@ The framework is designed for:
 - **AI agents** that reason and act
 - **Multi-step workflows** that chain operations
 - **Interactive sessions** with human-in-the-loop
-- **Multiple I/O channels** (console, web, voice)
+- **Multiple I/O channels** (console, GitHub, voice)
 
 ## The Big Picture
 
@@ -34,7 +34,7 @@ At the center of everything is the **Hub** - a bidirectional event bus that conn
    └───────┘    └───────────┘   └─────────┘   └───────────┘
 ```
 
-**Flow** orchestrates the workflow, defining what happens and in what order. **Agents** do the actual work (calling LLMs, processing data). **Channels** handle external I/O (console, websocket, voice). Everything communicates through the Hub.
+**FlowRuntime** orchestrates the workflow, owning lifecycle events and session management. **Agents** do the actual work (calling LLMs, processing data). **Channels** handle external I/O (console, GitHub, voice). Everything communicates through the Hub.
 
 ## Design Philosophy
 
@@ -48,37 +48,37 @@ Rather than direct function calls, components communicate through events. When a
 
 ### Declarative Over Procedural
 
-Workflows are defined as YAML DAGs (Directed Acyclic Graphs) rather than imperative code:
+Workflows are defined as YAML DAGs (Directed Acyclic Graphs):
 
 ```yaml
 flow:
   name: research-and-summarize
 nodes:
   - id: research
-    type: web-search
+    type: agent.claude
     input:
-      query: "{{flow.input.topic}}"
+      prompt: "Research: {{flow.input.topic}}"
   - id: summarize
-    type: llm
+    type: agent.claude
     input:
-      content: "{{research.output}}"
+      prompt: "Summarize: {{research.output}}"
 edges:
   - from: research
     to: summarize
 ```
 
 This declarative approach enables:
-- **Visual editing** potential
+- **Visual editing** via n8n-style interfaces
 - **Easy modification** without code changes
 - **Clear data flow** between nodes
 
 ### Composable Primitives
 
 The system is built from four composable primitives:
-- **Hub**: Event routing and context
-- **Agent**: Executable work unit
-- **Channel**: I/O adapter
-- **Flow**: Workflow orchestration
+- **Hub**: Event routing and context propagation
+- **Agent**: Executable work unit (LLM or custom)
+- **Channel**: Bidirectional I/O adapter
+- **Flow**: DAG-based workflow orchestration
 
 These primitives combine in predictable ways. Understanding them unlocks the full system.
 
@@ -101,20 +101,31 @@ With a central event bus:
 ### Extensibility
 
 New capabilities plug in cleanly:
-- Custom agents for specific tasks
+- Custom nodes for specific tasks
 - New channels for different I/O
-- Subscribers for logging, analytics, etc.
+- Subscribers for logging, analytics, dashboards
 
-## Historical Context
+## The Runtime
 
-Open Harness evolved from earlier harness-based approaches. The original design used imperative code with agents defined in TypeScript. Flow was added for declarative workflows.
+**FlowRuntime** is the orchestration layer that:
 
-Today, **Flow is the primary model**. Harness remains available for complex programmatic logic but most workflows use declarative Flow definitions.
+- Executes FlowSpec DAGs in topological order
+- Manages lifecycle events (`harness:start/complete`, `phase:*`, `task:*`)
+- Routes session messages to running agents
+- Coordinates channel attachments
 
-This consolidation simplified the codebase and improved developer experience while maintaining the flexibility to handle edge cases.
+```typescript
+import { executeFlow, createHub, createChannelAttachment } from "@open-harness/kernel";
+
+const hub = createHub();
+hub.attach(createChannelAttachment(consoleChannel));
+
+const ctx = { hub, phase: async (n, fn) => fn(), task: async (id, fn) => fn() };
+await executeFlow(flow, registry, ctx, input);
+```
 
 ## Next Steps
 
 - [Kernel Primitives](/docs/concepts/architecture/kernel-primitives) - Deep dive into Hub, Agent, Channel, Flow
-- [Harness vs Flow](/docs/concepts/architecture/harness-vs-flow) - When to use each model
+- [Execution Models](/docs/concepts/execution) - Sequential and parallel execution
 - [Event-Driven Design](/docs/concepts/architecture/event-driven) - Why events matter

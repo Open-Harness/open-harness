@@ -26,20 +26,22 @@ my-feature.live.test.ts # Live test (hits real APIs)
 ```typescript
 // chat.live.test.ts
 import { describe, test, expect } from "bun:test";
-import { createAnthropicTextAgent, defineHarness } from "@open-harness/kernel";
+import { createClaudeAgent, createHub, executeFlow, parseFlowYaml } from "@open-harness/kernel";
+import { readFileSync } from "fs";
 
 describe("live: chat", () => {
   test("generates real response", async () => {
-    const agent = createAnthropicTextAgent({
+    const agent = createClaudeAgent({
       model: "claude-sonnet-4-20250514"
       // No mode specified = live
     });
 
-    const harness = defineHarness({ agents: [agent] });
-    const instance = harness.create();
+    const flow = parseFlowYaml(readFileSync("./flow.yaml", "utf-8"));
+    const hub = createHub();
 
-    const result = await instance.run({
-      prompt: "Say 'Hello' and nothing else"
+    const result = await executeFlow(flow, {
+      hub,
+      input: { prompt: "Say 'Hello' and nothing else" }
     });
 
     expect(result.response.toLowerCase()).toContain("hello");
@@ -63,7 +65,7 @@ Live tests use Claude Code subscription auth:
 
 ```typescript
 // No API key needed - uses subscription auth automatically
-const agent = createAnthropicTextAgent({
+const agent = createClaudeAgent({
   model: "claude-sonnet-4-20250514"
 });
 ```
@@ -128,24 +130,22 @@ describe.skipIf(isCI)("live: expensive tests", () => {
 ## Test Isolation
 
 ```typescript
+import { createHub } from "@open-harness/kernel";
+
 describe("live: isolated", () => {
-  let harness: Harness;
+  let hub: Hub;
 
   beforeEach(() => {
-    harness = defineHarness({ agents: [agent] });
-  });
-
-  afterEach(async () => {
-    await harness.cleanup();
+    hub = createHub();
   });
 
   test("test 1", async () => {
-    const instance = harness.create();
+    const result = await executeFlow(flow, { hub, input: {} });
     // ...
   });
 
   test("test 2", async () => {
-    const instance = harness.create();
+    const result = await executeFlow(flow, { hub, input: {} });
     // ...
   });
 });

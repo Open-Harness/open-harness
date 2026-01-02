@@ -74,41 +74,29 @@ hub.subscribe("*", (event) => {
   }
 });
 
-// Create registry with LLM node
+// Create registry with LLM node using createClaudeAgent
+import { createClaudeAgent } from "@open-harness/kernel";
+
+const claudeAgent = createClaudeAgent();
+
 const registry = new NodeRegistry();
 registry.register({
   type: "llm",
   async run(ctx, input) {
-    // This is a simplified example - real implementation uses createAnthropicTextAgent
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 256,
-        messages: input.messages
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content[0].text;
-
-    ctx.hub.emit({ type: "agent:text", content: text });
-
-    return { response: text };
+    const result = await claudeAgent.execute(input, { hub: ctx.hub, runId: ctx.runId });
+    return { response: result.text };
   }
 });
 
+// Create execution context
+const ctx: FlowExecutionContext = {
+  hub,
+  phase: async (name, fn) => fn(),
+  task: async (id, fn) => fn()
+};
+
 // Execute the flow
-const result = await executeFlow(flow, {
-  input: { name: "World" },
-  registry,
-  hub
-});
+const result = await executeFlow(flow, registry, ctx, { name: "World" });
 
 console.log("\nFlow complete!");
 ```

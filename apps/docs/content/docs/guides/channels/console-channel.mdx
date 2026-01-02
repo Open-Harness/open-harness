@@ -130,16 +130,17 @@ onStart: (ctx) => {
 ## Use the Channel
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { createHub, createChannelAttachment, executeFlow, parseFlowYaml } from "@open-harness/kernel";
 import { interactiveChannel } from "./channels/console";
+import { readFileSync } from "fs";
 
-const harness = defineHarness({
-  channels: [interactiveChannel],
-  agents: [myAgent]
-});
+// Create hub and attach channel
+const hub = createHub();
+hub.attach(createChannelAttachment(interactiveChannel));
 
-const instance = harness.create();
-await instance.run({ prompt: "Hello!" });
+// Execute flow with the hub
+const flow = parseFlowYaml(readFileSync("./flow.yaml", "utf-8"));
+await executeFlow(flow, { hub, input: { prompt: "Hello!" } });
 ```
 
 ## Related

@@ -18,12 +18,10 @@ packages/kernel/src/
 │   ├── channel.ts             # ChannelDefinition, ChannelContext
 │   ├── events.ts              # BaseEvent, EnrichedEvent, EventContext
 │   ├── flow.ts                # FlowYaml, NodeSpec, WhenExpr
-│   ├── harness.ts             # HarnessFactory, ExecuteContext
 │   └── hub.ts                 # Hub, HubStatus
 │
 ├── engine/                     # Implementations
 │   ├── events.ts              # createEnrichedEvent, matchesFilter
-│   ├── harness.ts             # defineHarness, HarnessInstanceImpl
 │   └── hub.ts                 # HubImpl, createHub
 │
 ├── flow/                       # Flow runtime
@@ -36,7 +34,7 @@ packages/kernel/src/
 │   └── when.ts                # evaluateWhen
 │
 └── providers/                  # AI provider integrations
-    └── anthropic.ts           # createAnthropicTextAgent
+    └── claude.ts              # createClaudeAgent
 ```
 
 ## Key Files
@@ -61,14 +59,13 @@ export type {
 
 // Functions
 export { createHub } from "./engine/hub";
-export { defineHarness } from "./engine/harness";
 export { executeFlow } from "./flow/executor";
 export { parseFlowYaml } from "./flow/parser";
 export { compileFlow } from "./flow/compiler";
 export { NodeRegistry } from "./flow/registry";
 export { resolveBindings } from "./flow/bindings";
 export { evaluateWhen } from "./flow/when";
-export { createAnthropicTextAgent } from "./providers/anthropic";
+export { createClaudeAgent } from "./providers/claude";
 ```
 
 Only export what users need.
@@ -79,11 +76,10 @@ Interface files define contracts:
 
 | File | Exports |
 |------|---------|
-| `agent.ts` | `AgentDefinition`, `AgentExecuteContext`, `AgentInbox` |
+| `agent.ts` | `AgentDefinition`, `AgentExecuteContext` |
 | `channel.ts` | `ChannelDefinition`, `ChannelContext`, `ChannelHandler` |
 | `events.ts` | `BaseEvent`, `EnrichedEvent`, `EventContext`, `EventFilter` |
 | `flow.ts` | `FlowYaml`, `NodeSpec`, `WhenExpr`, `CompiledFlow` |
-| `harness.ts` | `HarnessFactory`, `ExecuteContext`, `HarnessResult` |
 | `hub.ts` | `Hub`, `HubStatus`, `UserResponse` |
 
 ### engine/*.ts
@@ -93,7 +89,6 @@ Implementation files:
 | File | Exports |
 |------|---------|
 | `events.ts` | `createEnrichedEvent`, `matchesFilter` |
-| `harness.ts` | `defineHarness` (factory function) |
 | `hub.ts` | `HubImpl`, `createHub` |
 
 ### flow/*.ts

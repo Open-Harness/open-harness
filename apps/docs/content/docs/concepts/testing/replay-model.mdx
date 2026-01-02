@@ -105,12 +105,10 @@ const fixture = loadFixture("tests/fixtures/scenario.json");
 const mockHub = createReplayHub(fixture.events);
 
 // Run with mock - no API calls
-const harness = defineHarness({
+await executeFlow(flow, {
   hub: mockHub,
-  agents: [agentUnderTest]
+  input: fixture.input
 });
-
-await harness.run(fixture.input);
 
 // Assert on behavior
 expect(mockHub.emitted("agent:text")).toHaveLength(3);

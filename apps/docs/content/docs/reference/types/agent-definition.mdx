@@ -1,11 +1,11 @@
 ---
 title: AgentDefinition
-description: Contract for implementing executable agents in harnesses
+description: Contract for implementing executable agents in flows
 ---
 
 # AgentDefinition
 
-Defines an agent that can be registered with a harness and executed within workflows.
+Defines an agent that can be registered as a node type and executed within flows.
 
 ## Definition
 
@@ -30,30 +30,16 @@ interface AgentDefinition<TIn = unknown, TOut = unknown> {
 ```typescript
 interface AgentExecuteContext {
   hub: Hub;
-  inbox: AgentInbox;
   runId: string;
 }
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `hub` | `Hub` | Event bus for emitting events |
-| `inbox` | `AgentInbox` | Message inbox for receiving input during execution |
+| `hub` | `Hub` | Event hub for emitting events and subscribing to messages |
 | `runId` | `string` | Unique identifier for this execution run |
 
-## AgentInbox
-
-```typescript
-interface AgentInbox extends AsyncIterable<InjectedMessage> {
-  pop(): Promise<InjectedMessage>;
-  drain(): InjectedMessage[];
-}
-
-interface InjectedMessage {
-  content: string;
-  timestamp: Date;
-}
-```
+Multi-turn agents use the V2 SDK session pattern: subscribe to `session:message` events filtered by `runId`, then use `hub.send()` for each turn.
 
 ## Example: Simple Agent
 
@@ -100,7 +86,9 @@ const processorAgent: AgentDefinition<
 };
 ```
 
-## Example: Interactive Agent
+## Example: Multi-Turn Agent
+
+Multi-turn interaction uses the Hub session pattern:
 
 ```typescript
 import type { AgentDefinition } from "@open-harness/kernel";
@@ -113,19 +101,22 @@ const chatAgent: AgentDefinition<
   execute: async (input, ctx) => {
     const messages: string[] = [];
 
-    // Process incoming messages
-    for await (const msg of ctx.inbox) {
-      messages.push(msg.content);
+    // Subscribe to incoming session messages for this run
+    const unsubscribe = ctx.hub.subscribe("session:message", (event) => {
+      if (event.context.runId === ctx.runId) {
+        messages.push(event.event.content);
 
-      // Echo back
-      ctx.hub.emit({
-        type: "agent:text",
-        content: `Received: ${msg.content}`,
-        runId: ctx.runId,
-      });
+        // Respond to the message
+        ctx.hub.emit({
+          type: "agent:text",
+          content: `Received: ${event.event.content}`,
+        });
+      }
+    });
 
-      if (msg.content === "exit") break;
-    }
+    // Wait for conversation to end (hub status changes)
+    await waitForHubComplete(ctx.hub);
+    unsubscribe();
 
     return { messages };
   },
@@ -148,7 +139,6 @@ const customAgent: AgentDefinition<
     ctx.hub.emit({
       type: "agent:start",
       agentName: "custom",
-      runId: ctx.runId,
     });
 
     try {
@@ -159,7 +149,6 @@ const customAgent: AgentDefinition<
         type: "agent:complete",
         agentName: "custom",
         success: true,
-        runId: ctx.runId,
       });
 
       return { result };
@@ -168,7 +157,6 @@ const customAgent: AgentDefinition<
         type: "agent:complete",
         agentName: "custom",
         success: false,
-        runId: ctx.runId,
       });
       throw error;
     }
@@ -176,34 +164,41 @@ const customAgent: AgentDefinition<
 };
 ```
 
-## Usage in Harness
+## Usage as Flow Node
+
+Register agent as a node type for use in flows:
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { NodeRegistry, executeFlow, parseFlowYaml, createHub } from "@open-harness/kernel";
 
-const harness = defineHarness({
-  name: "my-workflow",
-  agents: {
-    greeter: greeterAgent,
-    processor: processorAgent,
-  },
-  state: (input: { names: string[] }) => ({
-    names: input.names,
-    greetings: [] as string[],
-  }),
-  run: async (ctx) => {
-    for (const name of ctx.state.names) {
-      const result = await ctx.agents.greeter.execute({ name });
-      ctx.state.greetings.push(result.greeting);
-    }
-    return { greetings: ctx.state.greetings };
-  },
+const registry = new NodeRegistry();
+
+// Register agent as node type
+registry.register({
+  type: "greeter",
+  ...greeterAgent,
+  inputSchema: z.object({ name: z.string() }),
+  outputSchema: z.object({ greeting: z.string() }),
 });
+
+// Use in flow
+const flow = parseFlowYaml(`
+name: greeting-flow
+nodes:
+  - id: greet
+    type: greeter
+    input:
+      name: "{{flow.input.userName}}"
+`);
+
+const hub = createHub();
+const result = await executeFlow(flow, registry, { hub }, { userName: "Alice" });
+console.log(result.outputs.greet.greeting); // "Hello, Alice!"
 ```
 
 ## ExecutableAgent
 
-Within `ExecuteContext`, agents are wrapped as `ExecutableAgent`:
+Within execution context, agents are wrapped as `ExecutableAgent`:
 
 ```typescript
 interface ExecutableAgent<TIn = unknown, TOut = unknown> {
@@ -215,10 +210,10 @@ interface ExecutableAgent<TIn = unknown, TOut = unknown> {
 The wrapper handles:
 - Lifecycle events (`agent:start`, `agent:complete`, `agent:failed`)
 - Run ID generation
-- Inbox creation
+- Context injection
 
 ## See Also
 
-- [defineHarness](/docs/reference/api/define-harness) - Create harness with agents
-- [createAnthropicTextAgent](/docs/reference/api/anthropic-agent) - Anthropic agent
+- [createClaudeAgent](/docs/reference/api/anthropic-agent) - Claude agent provider
+- [NodeTypeDefinition](/docs/reference/types/node-type-definition) - Node type contract
 - [Agent Spec](/docs/reference/kernel-spec/spec/agent) - Specification

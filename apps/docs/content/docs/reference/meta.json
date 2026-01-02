@@ -2,7 +2,10 @@
   "title": "Reference",
   "pages": [
     "index",
-    "api/...",
-    "kernel-spec/..."
+    "nodes",
+    "channels",
+    "providers",
+    "api",
+    "kernel-spec"
   ]
 }

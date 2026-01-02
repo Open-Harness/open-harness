@@ -10,10 +10,10 @@ Record API responses as fixtures and replay them in tests.
 ## Recording Mode
 
 ```typescript
-import { createAnthropicTextAgent } from "@open-harness/kernel";
+import { createClaudeAgent } from "@open-harness/kernel";
 
 // Create agent in record mode
-const agent = createAnthropicTextAgent({
+const agent = createClaudeAgent({
   model: "claude-sonnet-4-20250514",
   mode: "record",
   fixtureDir: "./fixtures/anthropic"
@@ -54,7 +54,7 @@ Fixtures are saved as JSON:
 
 ```typescript
 // Create agent in replay mode (default for tests)
-const agent = createAnthropicTextAgent({
+const agent = createClaudeAgent({
   model: "claude-sonnet-4-20250514",
   mode: "replay",
   fixtureDir: "./fixtures/anthropic"
@@ -65,21 +65,24 @@ const agent = createAnthropicTextAgent({
 
 ```typescript
 import { describe, test, expect } from "bun:test";
-import { defineHarness } from "@open-harness/kernel";
-import { createAnthropicTextAgent } from "@open-harness/kernel";
+import { createClaudeAgent, createHub, executeFlow, parseFlowYaml } from "@open-harness/kernel";
+import { readFileSync } from "fs";
 
 describe("chat flow", () => {
   test("responds to greeting", async () => {
-    const agent = createAnthropicTextAgent({
+    const agent = createClaudeAgent({
       model: "claude-sonnet-4-20250514",
       mode: "replay",
       fixtureDir: "./fixtures"
     });
 
-    const harness = defineHarness({ agents: [agent] });
-    const instance = harness.create();
+    const flow = parseFlowYaml(readFileSync("./flow.yaml", "utf-8"));
+    const hub = createHub();
 
-    const result = await instance.run({ prompt: "Hello" });
+    const result = await executeFlow(flow, {
+      hub,
+      input: { prompt: "Hello" }
+    });
 
     expect(result.response).toContain("Hello");
   });
@@ -123,7 +126,7 @@ fixtures/
 ## Match Strategy
 
 ```typescript
-const agent = createAnthropicTextAgent({
+const agent = createClaudeAgent({
   mode: "replay",
   fixtureDir: "./fixtures",
   matchStrategy: "exact"  // or "fuzzy" for partial matching
@@ -133,7 +136,7 @@ const agent = createAnthropicTextAgent({
 ## Handle Missing Fixtures
 
 ```typescript
-const agent = createAnthropicTextAgent({
+const agent = createClaudeAgent({
   mode: "replay",
   fixtureDir: "./fixtures",
   onMissingFixture: "error"  // or "record" to auto-record

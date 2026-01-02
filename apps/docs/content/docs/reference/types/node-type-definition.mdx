@@ -34,16 +34,20 @@ interface NodeTypeDefinition<TIn, TOut> {
 ```typescript
 interface NodeCapabilities {
   isStreaming?: boolean;
-  supportsInbox?: boolean;
+  supportsMultiTurn?: boolean;
   isLongLived?: boolean;
+  isContainer?: boolean;
+  createsSession?: boolean;
 }
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `isStreaming` | `boolean` | `false` | Emits incremental output events |
-| `supportsInbox` | `boolean` | `false` | Can receive messages during execution |
+| `supportsMultiTurn` | `boolean` | `false` | Can receive messages via Hub session pattern |
 | `isLongLived` | `boolean` | `false` | May run indefinitely |
+| `isContainer` | `boolean` | `false` | Can execute child nodes (e.g., foreach loops) |
+| `createsSession` | `boolean` | `false` | Creates a fresh session scope for each iteration |
 
 ## NodeRunContext
 
@@ -51,15 +55,28 @@ interface NodeCapabilities {
 interface NodeRunContext {
   hub: Hub;
   runId: string;
-  inbox?: AgentInbox;
 }
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `hub` | `Hub` | Event bus for emitting events |
+| `hub` | `Hub` | Event hub for emitting events and subscribing |
 | `runId` | `string` | Unique identifier for this execution |
-| `inbox` | `AgentInbox` | Message inbox (if `supportsInbox: true`) |
+
+For multi-turn nodes, subscribe to `session:message` events filtered by `runId`.
+
+## ContainerNodeContext
+
+Extended context for container nodes that can execute children:
+
+```typescript
+interface ContainerNodeContext extends NodeRunContext {
+  executeChild: (
+    nodeId: NodeId,
+    input: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>;
+}
+```
 
 ## Example: Simple Node
 
@@ -115,7 +132,7 @@ const streamingNode: NodeTypeDefinition<
 };
 ```
 
-## Example: Interactive Node
+## Example: Multi-Turn Node
 
 ```typescript
 import { z } from "zod";
@@ -129,11 +146,11 @@ const interactiveNode: NodeTypeDefinition<
   inputSchema: z.object({ prompt: z.string() }),
   outputSchema: z.object({ response: z.string() }),
   capabilities: {
-    supportsInbox: true,
+    supportsMultiTurn: true,
     isLongLived: true,
   },
   run: async (ctx, input) => {
-    // Emit prompt
+    // Emit prompt request
     ctx.hub.emit({
       type: "session:prompt",
       promptId: ctx.runId,
@@ -141,13 +158,60 @@ const interactiveNode: NodeTypeDefinition<
       allowText: true,
     });
 
-    // Wait for response via inbox
-    if (ctx.inbox) {
-      const message = await ctx.inbox.pop();
-      return { response: message.content };
+    // Wait for response via Hub subscription
+    return new Promise((resolve) => {
+      const unsubscribe = ctx.hub.subscribe("session:reply", (event) => {
+        if (event.event.promptId === ctx.runId) {
+          unsubscribe();
+          resolve({ response: event.event.content });
+        }
+      });
+    });
+  },
+};
+```
+
+## Example: Container Node
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition, ContainerNodeContext } from "@open-harness/kernel";
+
+const foreachNode: NodeTypeDefinition<
+  { items: unknown[]; as: string; body: string[] },
+  { iterations: Array<{ item: unknown; outputs: Record<string, unknown> }> }
+> = {
+  type: "control.foreach",
+  inputSchema: z.object({
+    items: z.array(z.unknown()),
+    as: z.string(),
+    body: z.array(z.string()),
+  }),
+  outputSchema: z.object({
+    iterations: z.array(z.object({
+      item: z.unknown(),
+      outputs: z.record(z.unknown()),
+    })),
+  }),
+  capabilities: {
+    isContainer: true,
+    createsSession: true,
+  },
+  run: async (ctx: ContainerNodeContext, input) => {
+    const iterations = [];
+
+    for (const item of input.items) {
+      const outputs: Record<string, unknown> = {};
+
+      for (const nodeId of input.body) {
+        const result = await ctx.executeChild(nodeId, { [input.as]: item });
+        outputs[nodeId] = result;
+      }
+
+      iterations.push({ item, outputs });
     }
 
-    return { response: "" };
+    return { iterations };
   },
 };
 ```
