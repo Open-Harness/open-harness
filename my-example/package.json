@@ -1,0 +1,10 @@
+{
+  "name": "my-open-harness-example",
+  "type": "module",
+  "dependencies": {
+    "@open-harness/kernel": "workspace:*"
+  },
+  "scripts": {
+    "run": "bun run.ts"
+  }
+}

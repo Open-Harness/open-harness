@@ -1,0 +1,21 @@
+flow:
+  name: multi-agent-workflow
+  nodePacks: [claude]
+
+nodes:
+  - id: researcher
+    type: claude.agent
+    input:
+      prompt: |
+        Research and list 3 key innovations in renewable energy from 2023-2024.
+        Keep it brief: just the innovation name and a 1-sentence description.
+
+  - id: summarizer
+    type: claude.agent
+    input:
+      prompt: |
+        Take this research and create a summary paragraph: {{ researcher.text }}
+
+edges:
+  - from: researcher
+    to: summarizer

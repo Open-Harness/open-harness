@@ -1,0 +1,11 @@
+flow:
+  name: my-first-flow
+  nodePacks: [core]
+
+nodes:
+  - id: hello
+    type: echo
+    input:
+      text: "Hello, Open Harness!"
+
+edges: []

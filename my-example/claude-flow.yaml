@@ -1,0 +1,11 @@
+flow:
+  name: claude-chat
+  nodePacks: [claude]
+
+nodes:
+  - id: thinker
+    type: claude.agent
+    input:
+      prompt: "Explain quantum computing to a 10-year-old"
+
+edges: []
