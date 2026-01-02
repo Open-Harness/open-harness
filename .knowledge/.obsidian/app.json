@@ -1,10 +1,10 @@
 {
-	"alwaysUpdateLinks": true,
-	"newFileLocation": "current",
-	"attachmentFolderPath": "./assets",
-	"showLineNumber": true,
-	"spellcheck": true,
-	"strictLineBreaks": false,
-	"useTab": false,
-	"tabSize": 2
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "current",
+  "attachmentFolderPath": "./assets",
+  "showLineNumber": true,
+  "spellcheck": true,
+  "strictLineBreaks": false,
+  "useTab": false,
+  "tabSize": 2
 }
