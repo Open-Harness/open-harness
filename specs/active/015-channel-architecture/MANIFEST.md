@@ -154,19 +154,29 @@ At the end of this work:
 - ✅ Validator schema updated with `NodePositionSchema`
 - ✅ All 83 kernel tests pass
 
-### Phase 3: Execution Events
+### Phase 3: Execution Events [COMPLETE ✅]
 
 **Goal**: Executor emits node-level events for visualization.
 
 **Deliverables**:
-- [ ] `node:start { nodeId, type }` event
-- [ ] `node:complete { nodeId, output, durationMs }` event
-- [ ] `node:error { nodeId, error }` event
-- [ ] `node:skipped { nodeId, reason }` event
+- [x] `node:start { nodeId, nodeType }` event
+- [x] `node:complete { nodeId, output, durationMs }` event
+- [x] `node:error { nodeId, error, stack? }` event
+- [x] `node:skipped { nodeId, reason: 'when' | 'edge' }` event
 
 **Files**:
-- `packages/kernel/src/flow/executor.ts`
-- `packages/kernel/src/protocol/events.ts` - event types
+- `packages/kernel/src/flow/executor.ts` - emit events during execution
+- `packages/kernel/src/protocol/events.ts` - NodeEvents type
+
+**Implementation Results** (2026-01-02):
+- ✅ **10 unit tests passing** - `tests/unit/executor.events.test.ts`
+- ✅ `node:start` emitted before node execution with nodeId and nodeType
+- ✅ `node:complete` emitted after success with output and durationMs
+- ✅ `node:error` emitted on failure with error message and stack trace
+- ✅ `node:skipped` emitted with reason ("when" for condition, "edge" for edge filter)
+- ✅ Events emitted in correct order (start before complete/error)
+- ✅ Multi-node flows emit events in execution order
+- ✅ All 93 kernel tests pass
 
 ### Phase 4: WebSocket Channel
 
