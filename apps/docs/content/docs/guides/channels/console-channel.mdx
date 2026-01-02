@@ -120,7 +120,7 @@ onStart: (ctx) => {
   });
 
   ctx.state.rl.on("SIGINT", () => {
-    ctx.hub.abort("User interrupted");
+    ctx.hub.abort({ reason: "User interrupted" });
     ctx.state.rl.close();
     process.exit(0);
   });

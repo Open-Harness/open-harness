@@ -252,7 +252,8 @@ export class HubImpl implements Hub {
 		});
 
 		// Note: Actual resumption of executor happens externally via T030
-		// The executor will coordinate with Hub to restore state
+		// The executor will coordinate with Hub to restore state via getResumptionState()
+		// Session cleanup happens in executor after resumption completes (success or failure)
 	}
 
 	// T041: Get paused session state for inspection

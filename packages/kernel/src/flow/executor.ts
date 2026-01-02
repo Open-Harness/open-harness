@@ -463,9 +463,10 @@ export async function executeFlow(
 			);
 		}
 
-		// T031: Clean up paused session if flow completed successfully (not aborted)
-		if (!ctx.hub.getAbortSignal().aborted) {
-			// Flow completed all nodes - clear any resumption state
+		// T031/T042: Clean up paused session after flow execution completes (unless paused)
+		// If hub is "paused", keep the session state for later resumption
+		// Otherwise (completed, aborted, failed), the old resumption state is consumed
+		if (ctx.hub.status !== "paused") {
 			ctx.hub.clearPausedSession(ctx.hub.current().sessionId ?? "");
 		}
 	});

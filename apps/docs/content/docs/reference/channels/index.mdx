@@ -65,7 +65,7 @@ const MyChannel = defineChannel({
     // React to user input (input)
     "session:message": ({ event, hub }) => {
       if (event.text === "abort") {
-        hub.abort("User requested abort");
+        hub.abort({ reason: "User requested abort" });
       }
     }
   }

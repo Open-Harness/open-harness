@@ -133,7 +133,7 @@ ctx.hub.send("User's message");
 ctx.hub.reply(promptId, { content: "User's response" });
 
 // Abort workflow
-ctx.hub.abort("User cancelled");
+ctx.hub.abort({ reason: "User cancelled" });
 ```
 
 ## Streaming with Interrupts
@@ -143,7 +143,7 @@ on: {
   "agent:text": (ctx) => {
     // Check for interrupt flag
     if (ctx.state.interrupted) {
-      ctx.hub.abort("User interrupted");
+      ctx.hub.abort({ reason: "User interrupted" });
       return;
     }
 
