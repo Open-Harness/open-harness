@@ -128,20 +128,31 @@ At the end of this work:
 - ✅ State isolation per channel
 - ✅ Existing E2E tests still pass (67 total tests)
 
-### Phase 2: Type Fixes
+### Phase 2: Type Fixes [COMPLETE ✅]
 
 **Goal**: FlowYaml and NodeRegistry have all data needed for visualization.
 
 **Deliverables**:
-- [ ] Add `position?: { x: number; y: number }` to `NodeSpec`
-- [ ] Add `metadata?: NodeMetadata` to `NodeTypeDefinition`
-- [ ] `NodeMetadata` includes: displayName, description, category, icon, ports
-- [ ] `registry.listWithMetadata()` returns full metadata
+- [x] Add `position?: { x: number; y: number }` to `NodeSpec`
+- [x] Add `metadata?: NodeMetadata` to `NodeTypeDefinition`
+- [x] `NodeMetadata` includes: displayName, description, category, icon, ports
+- [x] `registry.listWithMetadata()` returns full metadata
 
 **Files**:
-- `packages/kernel/src/protocol/flow.ts` - NodeSpec
-- `packages/kernel/src/protocol/flow.ts` - NodeTypeDefinition
-- `packages/kernel/src/flow/registry.ts` - implementation
+- `packages/kernel/src/protocol/flow.ts` - NodeSpec, NodePosition, NodeMetadata, PortDefinition
+- `packages/kernel/src/flow/registry.ts` - listWithMetadata(), NodeTypeInfo
+- `packages/kernel/src/flow/validator.ts` - NodePositionSchema
+
+**Implementation Results** (2026-01-02):
+- ✅ **16 unit tests passing** - `tests/unit/registry.metadata.test.ts`
+- ✅ `NodePosition` interface with x/y coordinates
+- ✅ `NodeMetadata` with displayName, description, category, icon, color, ports
+- ✅ `PortDefinition` with name, type (input/output), dataType, description
+- ✅ `NodeSpec.position` optional field for ReactFlow visualization
+- ✅ `NodeTypeDefinition.metadata` optional field
+- ✅ `registry.listWithMetadata()` returns type, metadata, and capabilities
+- ✅ Validator schema updated with `NodePositionSchema`
+- ✅ All 83 kernel tests pass
 
 ### Phase 3: Execution Events
 

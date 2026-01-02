@@ -1,7 +1,18 @@
 // Flow node registry
 // Implements docs/flow/registry.md
 
-import type { NodeTypeDefinition } from "../protocol/flow.js";
+import type {
+	NodeCapabilities,
+	NodeMetadata,
+	NodeTypeDefinition,
+} from "../protocol/flow.js";
+
+/** Node type info returned by listWithMetadata() */
+export interface NodeTypeInfo {
+	type: string;
+	metadata?: NodeMetadata;
+	capabilities?: NodeCapabilities;
+}
 
 export class NodeRegistry {
 	private readonly registry = new Map<
@@ -27,5 +38,14 @@ export class NodeRegistry {
 
 	list(): string[] {
 		return [...this.registry.keys()];
+	}
+
+	/** List all registered node types with their metadata and capabilities */
+	listWithMetadata(): NodeTypeInfo[] {
+		return [...this.registry.entries()].map(([type, def]) => ({
+			type,
+			metadata: def.metadata,
+			capabilities: def.capabilities,
+		}));
 	}
 }

@@ -37,6 +37,11 @@ export interface NodePolicy {
 	continueOnError?: boolean;
 }
 
+export interface NodePosition {
+	x: number;
+	y: number;
+}
+
 export interface NodeSpec {
 	id: NodeId;
 	type: NodeTypeId;
@@ -44,6 +49,8 @@ export interface NodeSpec {
 	config?: Record<string, unknown>;
 	when?: WhenExpr;
 	policy?: NodePolicy;
+	/** Position for visual editor (ReactFlow) */
+	position?: NodePosition;
 }
 
 export interface Edge {
@@ -122,10 +129,30 @@ export interface ForeachOutput {
 // Note: ZodSchema is a type placeholder - actual implementation will use zod
 export type ZodSchema<_T> = unknown;
 
+/** Port definition for visual editor */
+export interface PortDefinition {
+	name: string;
+	type: "input" | "output";
+	dataType?: string;
+	description?: string;
+}
+
+/** Metadata for visual editor (ReactFlow node palette) */
+export interface NodeMetadata {
+	displayName: string;
+	description?: string;
+	category?: string;
+	icon?: string;
+	color?: string;
+	ports?: PortDefinition[];
+}
+
 export interface NodeTypeDefinition<TIn, TOut> {
 	type: string;
 	inputSchema: ZodSchema<TIn>;
 	outputSchema: ZodSchema<TOut>;
 	capabilities?: NodeCapabilities;
+	/** Metadata for visual editor */
+	metadata?: NodeMetadata;
 	run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
 }
