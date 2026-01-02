@@ -68,7 +68,7 @@ class TestChannel {
 	 */
 	abort(reason?: string): void {
 		if (!this.hub) throw new Error("Channel not attached");
-		this.hub.abort(reason);
+		this.hub.abort({ reason });
 	}
 
 	/**

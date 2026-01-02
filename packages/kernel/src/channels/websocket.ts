@@ -245,7 +245,7 @@ function handleClientMessage(
 				break;
 
 			case "abort":
-				hub.abort(command.reason);
+				hub.abort({ reason: command.reason });
 				sendAck(ws, "abort", "Abort requested");
 				break;
 
