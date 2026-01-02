@@ -1,0 +1,4 @@
+{
+  "title": "Channels",
+  "pages": ["attach-channel", "bidirectional-io", "console-channel", "voice-channel"]
+}

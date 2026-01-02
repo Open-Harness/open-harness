@@ -3,6 +3,14 @@
   "pages": [
     "index",
     "api/...",
-    "kernel-spec/..."
+    "flow-ui/...",
+    "kernel-spec/...",
+    "...bindings",
+    "...config",
+    "...events",
+    "...flows",
+    "...schemas",
+    "...types",
+    "...when"
   ]
 }

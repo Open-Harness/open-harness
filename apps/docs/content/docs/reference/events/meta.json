@@ -1,0 +1,4 @@
+{
+  "title": "Events",
+  "pages": ["agent-events", "index", "narrative-events", "session-events", "workflow-events"]
+}

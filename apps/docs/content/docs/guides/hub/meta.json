@@ -1,0 +1,4 @@
+{
+  "title": "Hub",
+  "pages": ["emit-events", "event-context", "scoped-subscriptions", "subscribe-events"]
+}

@@ -9,7 +9,35 @@ Welcome to the Open Harness learning path. These tutorials take you from zero to
 
 ## What is Open Harness?
 
-Open Harness is a framework for building declarative AI workflows. You define flows in YAML, connect nodes with data bindings, and execute them with full observability. Build everything from simple chatbots to complex multi-agent systems.
+**Open Harness is n8n for AI agents** — a flow-based system where agents are the primitives. Instead of building complex chains, tools, or RAG pipelines from scratch, you orchestrate pre-built agent SDK wrappers. As models improve, your flows improve automatically.
+
+### The Core Mental Model
+
+```
+Hub → Flow → Agents → Channels
+```
+
+| Concept | Role | Think of it as... |
+|---------|------|-------------------|
+| **Hub** | Runtime engine | The event bus that runs everything |
+| **Flow** | Declarative spec | The YAML that defines your workflow |
+| **Agents** | Execution units | LLM wrappers (Claude, GPT, etc.) |
+| **Channels** | I/O adapters | How flows talk to the outside world |
+
+### Three Ways to Build Flows
+
+1. **Manual YAML** — Write FlowSpecs directly for full control
+2. **Visual Editor** — Drag-and-drop nodes in the ReactFlow UI
+3. **AI Generation** — Describe what you want, AI generates the flow
+
+### Why Open Harness?
+
+Unlike LangChain (chains of prompts) or LangGraph (complex state machines), Open Harness treats agents as already-capable primitives. You don't reinvent the wheel — you orchestrate it.
+
+- **Provider-agnostic**: Swap Claude for GPT without rewriting flows
+- **Declarative**: One YAML file captures your entire workflow
+- **Observable**: Every event flows through the Hub for debugging
+- **Extensible**: Build custom nodes, channels, and agents
 
 ## Learning Path
 

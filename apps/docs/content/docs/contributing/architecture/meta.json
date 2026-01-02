@@ -1,0 +1,4 @@
+{
+  "title": "Architecture",
+  "pages": ["directory-layout", "overview", "packages", "protocol-vs-engine"]
+}
