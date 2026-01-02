@@ -1,7 +1,10 @@
 // Protocol: Flow
 // See docs/reference/protocol-types.md for authoritative definitions
 
+import type { BindingContext } from "../flow/bindings.js";
 import type { Hub } from "./hub.js";
+
+export type { BindingContext };
 
 export type NodeId = string;
 export type NodeTypeId = string;
@@ -73,6 +76,8 @@ export interface NodeCapabilities {
 	isContainer?: boolean;
 	/** Creates a fresh session scope for each iteration/invocation */
 	createsSession?: boolean;
+	/** Control nodes that evaluate WhenExpr need binding context */
+	needsBindingContext?: boolean;
 }
 
 /**
@@ -85,6 +90,18 @@ export interface NodeCapabilities {
 export interface NodeRunContext {
 	hub: Hub;
 	runId: string;
+}
+
+/**
+ * Extended context for control nodes that need to evaluate WhenExpr.
+ * Provides access to the binding context for variable resolution.
+ */
+export interface ControlNodeContext extends NodeRunContext {
+	/**
+	 * Binding context for evaluating WhenExpr conditions.
+	 * Contains flow.input and all upstream node outputs.
+	 */
+	bindingContext: BindingContext;
 }
 
 /**
