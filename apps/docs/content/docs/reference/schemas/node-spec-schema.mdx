@@ -1,0 +1,205 @@
+---
+title: NodeSpecSchema
+description: Zod schema for validating individual node specifications
+---
+
+# NodeSpecSchema
+
+Zod schema for validating individual node specifications within a flow.
+
+## Schema Definition
+
+```typescript
+import { z } from "zod";
+
+export const NodeIdSchema = z
+  .string()
+  .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, "NodeId must match ^[A-Za-z_][A-Za-z0-9_]*$");
+
+export const NodeTypeIdSchema = z.string();
+
+export const NodeSpecSchema = z.object({
+  id: NodeIdSchema,
+  type: NodeTypeIdSchema,
+  input: z.record(z.string(), z.unknown()),
+  config: z.record(z.string(), z.unknown()).optional(),
+  when: WhenExprSchema.optional(),
+  policy: NodePolicySchema.optional(),
+});
+```
+
+## Nested Schemas
+
+### NodePolicySchema
+
+```typescript
+export const NodePolicySchema = z.object({
+  timeoutMs: z.number().int().nonnegative().optional(),
+  retry: RetryPolicySchema.optional(),
+  continueOnError: z.boolean().optional(),
+});
+
+export const RetryPolicySchema = z.object({
+  maxAttempts: z.number().int().min(1),
+  backoffMs: z.number().int().nonnegative().optional().default(0),
+});
+```
+
+## Properties
+
+| Property | Type | Required | Validation |
+|----------|------|----------|------------|
+| `id` | `string` | Yes | Must match `^[A-Za-z_][A-Za-z0-9_]*$` |
+| `type` | `string` | Yes | Any non-empty string |
+| `input` | `Record<string, unknown>` | Yes | Object with string keys |
+| `config` | `Record<string, unknown>` | No | Object with string keys |
+| `when` | `WhenExpr` | No | Valid WhenExpr structure |
+| `policy` | `NodePolicy` | No | Valid policy structure |
+
+## Usage
+
+### Basic Validation
+
+```typescript
+import { NodeSpecSchema } from "@open-harness/kernel";
+
+const node = NodeSpecSchema.parse({
+  id: "fetch_data",
+  type: "http",
+  input: {
+    url: "https://api.example.com/data",
+    method: "GET",
+  },
+});
+```
+
+### With All Fields
+
+```typescript
+const node = NodeSpecSchema.parse({
+  id: "process_results",
+  type: "transform",
+  input: {
+    data: "{{fetch_data.output}}",
+    format: "json",
+  },
+  config: {
+    validateOutput: true,
+    logLevel: "debug",
+  },
+  when: {
+    equals: {
+      var: "flow.input.enabled",
+      value: true,
+    },
+  },
+  policy: {
+    timeoutMs: 30000,
+    retry: {
+      maxAttempts: 3,
+      backoffMs: 1000,
+    },
+    continueOnError: false,
+  },
+});
+```
+
+### Validation Errors
+
+```typescript
+// Invalid ID format
+try {
+  NodeSpecSchema.parse({
+    id: "123-invalid",
+    type: "test",
+    input: {},
+  });
+} catch (error) {
+  console.log(error.issues[0].message);
+  // "NodeId must match ^[A-Za-z_][A-Za-z0-9_]*$"
+}
+
+// Missing required fields
+try {
+  NodeSpecSchema.parse({
+    id: "test",
+    // missing type and input
+  });
+} catch (error) {
+  // ZodError with issues for missing fields
+}
+
+// Invalid policy values
+try {
+  NodeSpecSchema.parse({
+    id: "test",
+    type: "test",
+    input: {},
+    policy: {
+      timeoutMs: -1000, // Negative not allowed
+      retry: {
+        maxAttempts: 0, // Must be >= 1
+      },
+    },
+  });
+} catch (error) {
+  // ZodError with policy validation issues
+}
+```
+
+## NodeId Validation
+
+Valid IDs:
+- `step1`
+- `fetch_data`
+- `_internal`
+- `Step2`
+- `UPPERCASE`
+
+Invalid IDs:
+- `1step` (starts with number)
+- `my-node` (contains hyphen)
+- `node.name` (contains dot)
+- `step 1` (contains space)
+
+## Policy Validation
+
+### timeoutMs
+
+- Must be non-negative integer
+- Optional (no timeout if not specified)
+
+### retry
+
+| Field | Validation |
+|-------|------------|
+| `maxAttempts` | Integer >= 1 |
+| `backoffMs` | Non-negative integer, defaults to 0 |
+
+### continueOnError
+
+- Boolean
+- Optional (defaults to false behavior)
+
+## Inference Types
+
+```typescript
+import { z } from "zod";
+import { NodeSpecSchema } from "@open-harness/kernel";
+
+type NodeSpec = z.infer<typeof NodeSpecSchema>;
+// {
+//   id: string;
+//   type: string;
+//   input: Record<string, unknown>;
+//   config?: Record<string, unknown>;
+//   when?: WhenExpr;
+//   policy?: NodePolicy;
+// }
+```
+
+## See Also
+
+- [FlowYamlSchema](/docs/reference/schemas/flow-yaml-schema) - Complete flow validation
+- [WhenExprSchema](/docs/reference/schemas/when-expr-schema) - Condition validation
+- [NodeSpec](/docs/reference/types/node-spec) - Type definition

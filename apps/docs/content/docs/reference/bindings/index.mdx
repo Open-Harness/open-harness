@@ -1,0 +1,67 @@
+---
+title: Bindings Reference
+description: A3 binding syntax for flow data references
+---
+
+# Bindings Reference
+
+The A3 binding syntax allows nodes to reference flow inputs and other node outputs.
+
+## Pages
+
+| Page | Description |
+|------|-------------|
+| [A3 Syntax](/docs/reference/bindings/a3-syntax) | Complete binding syntax reference |
+| [Binding Errors](/docs/reference/bindings/binding-errors) | Error codes and troubleshooting |
+
+## Quick Reference
+
+### Basic Syntax
+
+```
+{{path.to.value}}
+```
+
+### Flow Input Reference
+
+```yaml
+input:
+  message: "{{flow.input.greeting}}"
+```
+
+### Node Output Reference
+
+```yaml
+input:
+  data: "{{step1.output}}"
+```
+
+### Nested Paths
+
+```yaml
+input:
+  name: "{{flow.input.user.profile.name}}"
+  item: "{{step1.output.items.0.id}}"
+```
+
+### Optional Bindings
+
+```yaml
+input:
+  # Empty string if not found
+  optional: "{{?flow.input.maybeValue}}"
+```
+
+### Default Values
+
+```yaml
+input:
+  # Use default if not found
+  name: "{{flow.input.name | default:\"Anonymous\"}}"
+  count: "{{flow.input.count | default:0}}"
+```
+
+## See Also
+
+- [resolveBindings](/docs/reference/api/resolve-bindings) - Binding resolution API
+- [Bindings Spec](/docs/reference/kernel-spec/flow/bindings) - Specification

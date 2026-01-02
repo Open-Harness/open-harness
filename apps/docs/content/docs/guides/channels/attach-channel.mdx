@@ -1,0 +1,125 @@
+---
+title: How to Attach a Channel
+description: Attach channels to the Hub for I/O
+---
+
+# How to Attach a Channel
+
+Connect channels to the Hub to handle input and output.
+
+## Channel Definition
+
+```typescript
+import type { ChannelDefinition } from "@open-harness/kernel";
+
+const myChannel: ChannelDefinition = {
+  name: "my-channel",
+
+  on: {
+    "agent:text": (ctx) => {
+      console.log(ctx.event.event.content);
+    }
+  }
+};
+```
+
+## Attach to Hub
+
+```typescript
+import { createHub, createChannelAttachment } from "@open-harness/kernel";
+
+const hub = createHub();
+hub.attach(createChannelAttachment(myChannel));
+```
+
+## Attach to Hub Directly
+
+```typescript
+import { createHub, attachChannel } from "@open-harness/kernel";
+
+const hub = createHub();
+const cleanup = attachChannel(hub, myChannel);
+
+// Later: detach
+cleanup();
+```
+
+## With Lifecycle Hooks
+
+```typescript
+const myChannel: ChannelDefinition = {
+  name: "my-channel",
+
+  onStart: (ctx) => {
+    console.log("Channel started");
+    // Initialize resources
+  },
+
+  onComplete: (ctx) => {
+    console.log("Channel stopped");
+    // Cleanup resources
+  },
+
+  on: {
+    "agent:text": (ctx) => {
+      console.log(ctx.event.event.content);
+    }
+  }
+};
+```
+
+## With State
+
+```typescript
+interface MyState {
+  buffer: string[];
+}
+
+const myChannel: ChannelDefinition<MyState> = {
+  name: "my-channel",
+
+  state: () => ({
+    buffer: []
+  }),
+
+  on: {
+    "agent:text": (ctx) => {
+      ctx.state.buffer.push(ctx.event.event.content);
+    },
+
+    "session:complete": (ctx) => {
+      console.log("Collected:", ctx.state.buffer.join(""));
+    }
+  }
+};
+```
+
+## Multiple Channels
+
+```typescript
+const hub = createHub();
+
+// Attach multiple channels
+hub.attach(createChannelAttachment(consoleChannel));
+hub.attach(createChannelAttachment(loggingChannel));
+hub.attach(createChannelAttachment(metricsChannel));
+```
+
+## Detachment Cleanup
+
+```typescript
+const cleanup1 = attachChannel(hub, channel1);
+const cleanup2 = attachChannel(hub, channel2);
+
+// Cleanup all on shutdown
+function shutdown() {
+  cleanup1();
+  cleanup2();
+}
+```
+
+## Related
+
+- [Console Channel](/docs/guides/channels/console-channel) - Terminal I/O
+- [Bidirectional I/O](/docs/guides/channels/bidirectional-io) - Two-way channels
+- [Channels Tutorial](/docs/learn/channels) - Full tutorial

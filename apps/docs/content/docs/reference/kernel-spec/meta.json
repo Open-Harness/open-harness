@@ -1,0 +1,12 @@
+{
+  "title": "Kernel Spec",
+  "pages": [
+    "index",
+    "decisions/...",
+    "flow/...",
+    "implementation/...",
+    "reference/...",
+    "spec/...",
+    "testing/..."
+  ]
+}

@@ -1,0 +1,41 @@
+---
+title: "Decision 0002: Edges Required (B1)"
+description: ""
+---
+
+## Status
+
+Accepted
+
+## Context
+
+We need to decide whether `edges` in a FlowSpec should be:
+- Required (explicit DAG)
+- Optional with implicit linear order fallback
+- Optional with inference from bindings
+
+## Decision
+
+**B1: Edges are required** (may be `[]` for single-node flows).
+
+The graph is never inferred from:
+- Node ordering in the YAML
+- Binding references (using `&#123;&#123;nodeId.*&#125;&#125;`)
+
+## Rationale
+
+- **Unambiguous execution order** - no surprises when reordering nodes
+- **UI-friendly** - React Flow naturally edits edges
+- **Encourages correct modeling** - dependencies are first-class
+- **Prevents foot-guns** - reordering nodes doesn't change semantics
+
+## Consequences
+
+- YAML authors must explicitly list all edges
+- The engine validates that edges reference valid node IDs
+- Cycles are detected and rejected (unless explicitly supported later)
+
+## Alternatives considered
+
+- **B2: Optional with implicit linear order** - rejected because reordering nodes changes semantics
+- **B3: Optional with inference from bindings** - rejected because it's complex and makes graph structure implicit

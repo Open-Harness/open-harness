@@ -1,0 +1,47 @@
+flow:
+  name: batch-security-scanner
+  description: Scan multiple files for security issues with session isolation
+  nodePacks: [core, tutorial]
+  input:
+    files:
+      - path: "src/api/users.ts"
+        content: "db.query('SELECT * FROM users WHERE id = ' + userId)"
+      - path: "src/api/auth.ts"
+        content: "if (password === storedPassword) return true"
+      - path: "src/utils/config.ts"
+        content: "export const API_KEY = process.env.API_KEY"
+
+nodes:
+  # Generate summary of files to process
+  - id: summarize_input
+    type: echo
+    input:
+      text: "Starting security scan of {{ flow.input.files.length }} files"
+
+  # Process each file with session isolation
+  - id: scan_files
+    type: control.foreach
+    input:
+      items: "{{ flow.input.files }}"
+      as: "file"
+      body:
+        - scan_single_file
+
+  # Child node executed for each file
+  - id: scan_single_file
+    type: tutorial.security_scan
+    input:
+      path: "{{ file.path }}"
+      content: "{{ file.content }}"
+
+  # Aggregate results
+  - id: generate_report
+    type: echo
+    input:
+      text: "Security scan complete"
+
+edges:
+  - from: summarize_input
+    to: scan_files
+  - from: scan_files
+    to: generate_report

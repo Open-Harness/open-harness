@@ -1,0 +1,13 @@
+{
+  "title": "Learn",
+  "pages": [
+    "index",
+    "quickstart",
+    "first-flow",
+    "custom-node",
+    "hub-events",
+    "channels",
+    "testing",
+    "...advanced"
+  ]
+}

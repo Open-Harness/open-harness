@@ -1,0 +1,262 @@
+---
+title: Architecture Overview
+description: Understanding the Open Harness codebase architecture
+---
+
+# Architecture Overview
+
+This page provides a contributor-focused view of the Open Harness architecture. Understanding this structure is essential for making effective contributions.
+
+## Monorepo Structure
+
+Open Harness uses a monorepo with multiple packages:
+
+```
+open-harness/
+├── packages/
+│   ├── kernel/           # Core runtime (main package)
+│   ├── rtv-channel/      # Real-time voice channel
+│   └── config/           # Shared configuration
+├── apps/
+│   └── docs/             # Documentation site
+├── bun.lockb
+└── package.json
+```
+
+### Package Diagram
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Applications                      │
+│                                                      │
+│   ┌──────────────┐                                  │
+│   │    docs      │                                  │
+│   └──────────────┘                                  │
+└─────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│                     Channels                         │
+│                                                      │
+│   ┌──────────────┐   ┌──────────────┐              │
+│   │ rtv-channel  │   │ (future)     │              │
+│   └──────────────┘   └──────────────┘              │
+└─────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│                      Kernel                          │
+│                                                      │
+│   ┌──────────────────────────────────────────────┐  │
+│   │               @open-harness/kernel            │  │
+│   │                                               │  │
+│   │  protocol/ → engine/ → flow/ → providers/    │  │
+│   └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+```
+
+## Kernel Package Deep Dive
+
+The kernel is the heart of Open Harness:
+
+```
+packages/kernel/
+├── src/
+│   ├── index.ts          # Public exports
+│   ├── protocol/         # Interfaces (contracts)
+│   │   ├── agent.ts
+│   │   ├── channel.ts
+│   │   ├── events.ts
+│   │   ├── flow.ts
+│   │   ├── harness.ts
+│   │   └── hub.ts
+│   ├── engine/           # Implementations
+│   │   ├── events.ts
+│   │   ├── harness.ts
+│   │   └── hub.ts
+│   ├── flow/             # Flow runtime
+│   │   ├── bindings.ts
+│   │   ├── compiler.ts
+│   │   ├── executor.ts
+│   │   ├── parser.ts
+│   │   ├── registry.ts
+│   │   ├── validator.ts
+│   │   └── when.ts
+│   └── providers/        # AI provider integrations
+│       └── anthropic.ts
+├── docs/                 # Internal specifications
+├── tests/                # Test files
+└── package.json
+```
+
+### protocol/
+
+Type definitions and interfaces. These are the **contracts** that implementations must fulfill.
+
+```typescript
+// protocol/hub.ts - the contract
+export interface Hub {
+  emit(event: BaseEvent): void;
+  subscribe(filter: EventFilter, listener: EventListener): () => void;
+  // ...
+}
+```
+
+### engine/
+
+Concrete implementations of protocol interfaces.
+
+```typescript
+// engine/hub.ts - the implementation
+export class HubImpl implements Hub {
+  emit(event: BaseEvent): void {
+    // actual implementation
+  }
+}
+```
+
+### flow/
+
+The flow runtime - parsing, compilation, execution:
+
+| File | Purpose |
+|------|---------|
+| `parser.ts` | Parse YAML to FlowYaml |
+| `compiler.ts` | Compile to executable form |
+| `executor.ts` | Execute flows |
+| `registry.ts` | Node type registry |
+| `bindings.ts` | Binding resolution |
+| `when.ts` | Condition evaluation |
+| `validator.ts` | Schema validation |
+
+### providers/
+
+AI provider integrations:
+
+```typescript
+// providers/claude.ts
+export function createClaudeAgent(config): AgentDefinition {
+  // Claude agent factory (uses Claude Code subscription auth)
+}
+```
+
+## Build and Test
+
+### Build
+
+```bash
+# Type check (no build step - Bun runs TypeScript directly)
+bun run typecheck
+```
+
+### Test
+
+```bash
+# Safe tests (unit + replay, no network)
+bun run test
+
+# Live tests (actual API calls)
+bun run test:live
+```
+
+### Test Organization
+
+```
+tests/
+├── unit/              # Direct unit tests
+│   ├── bindings.test.ts
+│   └── registry.test.ts
+├── integration/       # Integration tests
+│   └── flow-execution.test.ts
+└── fixtures/          # Test fixtures
+    └── golden/        # Golden recordings
+```
+
+## Key Patterns
+
+### Dependency Injection (Needle DI)
+
+Services are injected via decorators:
+
+```typescript
+import { injectable, inject } from "@needle-di/core";
+
+@injectable()
+class FlowExecutor {
+  constructor(
+    @inject(NodeRegistry) private registry: NodeRegistry
+  ) {}
+}
+```
+
+### Protocol/Implementation Split
+
+Always separate interface from implementation:
+
+```typescript
+// Protocol (contract)
+export interface Hub { ... }
+
+// Implementation (details)
+export class HubImpl implements Hub { ... }
+
+// Factory (creation)
+export function createHub(): Hub { ... }
+```
+
+This enables:
+- Testability (mock implementations)
+- Flexibility (swap implementations)
+- Clear contracts
+
+### Event-Driven Architecture
+
+Everything flows through the Hub:
+
+```typescript
+// Emit events
+hub.emit({ type: "agent:text", content: "..." });
+
+// Subscribe to events
+hub.subscribe("agent:*", (event) => { ... });
+```
+
+Benefits:
+- Decoupled components
+- Automatic observability
+- Fixture-based testing
+
+## Navigation Tips
+
+### Finding Interfaces
+
+Protocol interfaces are in `src/protocol/`:
+
+```typescript
+// Want to know what Hub does?
+import type { Hub } from "./protocol/hub";
+```
+
+### Finding Implementations
+
+Implementations are in `src/engine/` or `src/flow/`:
+
+```typescript
+// Want to see how Hub works?
+import { HubImpl } from "./engine/hub";
+```
+
+### Finding Tests
+
+Tests mirror source structure:
+
+```
+src/flow/bindings.ts    →    tests/unit/bindings.test.ts
+src/engine/hub.ts       →    tests/unit/hub.test.ts
+```
+
+## Next Steps
+
+- [Packages](/docs/contributing/architecture/packages) - Package structure
+- [Protocol vs Engine](/docs/contributing/architecture/protocol-vs-engine) - The split
+- [Directory Layout](/docs/contributing/architecture/directory-layout) - Detailed structure

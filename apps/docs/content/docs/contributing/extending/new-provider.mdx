@@ -1,0 +1,311 @@
+---
+title: Adding a New Provider
+description: Integrating a new AI provider with Open Harness
+---
+
+# Adding a New Provider
+
+Providers integrate AI services with Open Harness. This guide covers adding a new provider like OpenAI or Google.
+
+## Provider Pattern
+
+Providers create agents that wrap AI API calls:
+
+```typescript
+// Current: Claude provider
+import { createClaudeAgent } from "@open-harness/kernel";
+
+const agent = createClaudeAgent({
+  model: "claude-sonnet-4-20250514",
+  systemPrompt: "You are helpful."
+});
+```
+
+## Current Provider: Claude
+
+The Claude provider is the reference implementation:
+
+```typescript
+// src/providers/claude.ts
+import { Client } from "@anthropic-ai/claude-agent-sdk";
+import type { AgentDefinition } from "../protocol/agent";
+
+interface ClaudeConfig {
+  model?: string;
+  systemPrompt?: string;
+  maxTokens?: number;
+}
+
+export function createClaudeAgent(
+  config: ClaudeConfig = {}
+): AgentDefinition<ClaudeAgentInput, ClaudeAgentOutput> {
+  const client = new Client();  // Uses Claude Code subscription auth
+
+  return {
+    name: "claude",
+    async execute(input, ctx) {
+      ctx.hub.emit({ type: "narrative", text: "Thinking..." });
+
+      const response = await client.messages.create({
+        model: config.model ?? "claude-sonnet-4-20250514",
+        max_tokens: config.maxTokens ?? 4096,
+        system: config.systemPrompt,
+        messages: input.messages
+      });
+
+      const content = response.content[0];
+      if (content.type === "text") {
+        ctx.hub.emit({
+          type: "agent:text",
+          content: content.text
+        });
+        return { content: content.text };
+      }
+
+      throw new Error("Unexpected response type");
+    }
+  };
+}
+```
+
+## Adding a Provider
+
+### 1. Create Provider File
+
+```typescript
+// src/providers/openai.ts
+import OpenAI from "openai";
+import type { AgentDefinition } from "../protocol/agent";
+
+interface OpenAIConfig {
+  model: string;
+  systemPrompt?: string;
+  maxTokens?: number;
+  temperature?: number;
+}
+
+interface ChatInput {
+  messages: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }>;
+}
+
+interface ChatOutput {
+  response: string;
+}
+
+export function createOpenAITextAgent(
+  config: OpenAIConfig
+): AgentDefinition<ChatInput, ChatOutput> {
+  const client = new OpenAI();
+
+  return {
+    name: "openai-text",
+
+    async execute(input, ctx) {
+      ctx.hub.emit({
+        type: "narrative",
+        text: `Calling ${config.model}...`
+      });
+
+      const systemMessage = config.systemPrompt
+        ? [{ role: "system" as const, content: config.systemPrompt }]
+        : [];
+
+      const response = await client.chat.completions.create({
+        model: config.model,
+        max_tokens: config.maxTokens ?? 4096,
+        temperature: config.temperature ?? 1,
+        messages: [
+          ...systemMessage,
+          ...input.messages
+        ]
+      });
+
+      const content = response.choices[0]?.message?.content;
+
+      if (content) {
+        ctx.hub.emit({
+          type: "agent:text",
+          content
+        });
+        return { response: content };
+      }
+
+      throw new Error("No response content");
+    }
+  };
+}
+```
+
+### 2. Export from Providers
+
+```typescript
+// src/providers/index.ts
+export { createClaudeAgent } from "./claude";
+export { createOpenAITextAgent } from "./openai";
+```
+
+### 3. Export from Package
+
+```typescript
+// src/index.ts
+export { createClaudeAgent } from "./providers/claude";
+export { createOpenAITextAgent } from "./providers/openai";
+```
+
+## Requirements
+
+### Match API Surface
+
+New providers should match the Claude API surface:
+
+```typescript
+// All providers should accept similar config
+interface ProviderConfig {
+  model: string;
+  systemPrompt?: string;
+  maxTokens?: number;
+}
+
+// All providers should return AgentDefinition
+function createXxxAgent(config: ProviderConfig): AgentDefinition
+```
+
+### Support Replay Mode
+
+Providers must work with fixture-based testing:
+
+```typescript
+// Agent should work when hub emits recorded events
+// and should not make actual API calls during replay
+```
+
+### Emit Standard Events
+
+Use standard event types:
+
+```typescript
+// Narrative for progress
+ctx.hub.emit({ type: "narrative", text: "..." });
+
+// Agent text for output
+ctx.hub.emit({ type: "agent:text", content: "..." });
+
+// Tool use if applicable
+ctx.hub.emit({ type: "agent:tool_use", name: "...", input: {...} });
+```
+
+## Testing
+
+### Unit Tests
+
+```typescript
+// tests/unit/providers/openai.test.ts
+import { test, expect, describe, mock } from "bun:test";
+import { createOpenAITextAgent } from "../../../src/providers/openai";
+import { createMockContext } from "../../helpers";
+
+// Mock OpenAI client
+mock.module("openai", () => ({
+  default: class MockOpenAI {
+    chat = {
+      completions: {
+        create: async () => ({
+          choices: [{ message: { content: "Hello!" } }]
+        })
+      }
+    };
+  }
+}));
+
+describe("OpenAI provider", () => {
+  test("creates agent with config", () => {
+    const agent = createOpenAITextAgent({
+      model: "gpt-4"
+    });
+
+    expect(agent.name).toBe("openai-text");
+    expect(typeof agent.execute).toBe("function");
+  });
+
+  test("emits text event", async () => {
+    const agent = createOpenAITextAgent({ model: "gpt-4" });
+    const ctx = createMockContext();
+
+    await agent.execute({ messages: [] }, ctx);
+
+    expect(ctx.emitted).toContainEqual({
+      type: "agent:text",
+      content: "Hello!"
+    });
+  });
+});
+```
+
+### Integration Tests
+
+```typescript
+// tests/integration/openai.test.ts
+import { test, expect } from "bun:test";
+
+test.skipIf(!process.env.OPENAI_API_KEY)("live OpenAI call", async () => {
+  const agent = createOpenAITextAgent({ model: "gpt-4" });
+  const ctx = createLiveContext();
+
+  const result = await agent.execute({
+    messages: [{ role: "user", content: "Say hello" }]
+  }, ctx);
+
+  expect(result.response).toBeDefined();
+});
+```
+
+## Planned Providers
+
+### OpenAI
+
+- GPT-4, GPT-3.5
+- Function calling
+- Streaming support
+
+### Google
+
+- Gemini models
+- Multi-modal support
+
+### Custom
+
+- Local models
+- Custom endpoints
+
+## Provider Checklist
+
+### Required
+
+- [ ] Implements AgentDefinition
+- [ ] Matches Claude API surface
+- [ ] Emits standard events
+- [ ] Has unit tests
+- [ ] Has integration tests
+- [ ] Handles errors gracefully
+
+### Code Quality
+
+- [ ] TypeScript strict mode
+- [ ] Complete types
+- [ ] JSDoc comments
+- [ ] Error messages helpful
+
+### Documentation
+
+- [ ] API reference
+- [ ] Example usage
+- [ ] Configuration options
+
+## Next Steps
+
+- [Agent Definition](/docs/reference/types/agent-definition) - Type reference
+- [Claude Agent](/docs/reference/api/anthropic-agent) - Reference implementation
+- [Testing](/docs/contributing/development/testing) - Test strategy

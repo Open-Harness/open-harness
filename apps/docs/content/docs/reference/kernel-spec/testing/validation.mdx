@@ -1,0 +1,273 @@
+---
+title: "Validation Guide"
+description: "This guide defines the validation strategy to ensure testing work is complete, correct, and free of gaps or mistakes."
+---
+
+This guide defines the validation strategy to ensure testing work is complete, correct, and free of gaps or mistakes.
+
+## Multi-Layer Validation Strategy
+
+Validation happens at three layers:
+
+```
+Layer 1: Static Validation (Structure)
+  ✓ All test specs exist
+  ✓ All fixtures referenced exist
+  ✓ All test files referenced exist
+  ✓ Specs match template format
+
+Layer 2: Behavioral Validation (Execution)
+  ✓ Replay tests run without network
+  ✓ Replay tests complete in &#60;1s
+  ✓ No file writes during replay tests
+  ✓ Live tests actually use real SDK
+
+Layer 3: Completeness Validation (Coverage)
+  ✓ Every spec requirement has a test
+  ✓ Every component has a live test script
+  ✓ Fixtures match recorded scenarios
+```
+
+## Per-Component Validation Checklist
+
+Use this checklist for each component you're testing:
+
+```markdown
+## Validation Checklist: [Component Name]
+
+### Static Structure
+- [ ] Test spec file exists: `tests/specs/&lt;component>.test-spec.md`
+- [ ] Spec follows template format (see test-spec-template.md)
+- [ ] All fixtures referenced exist in `fixtures/golden/`
+- [ ] All test files referenced exist
+- [ ] Live test script exists: `scripts/live/&lt;component>-live.ts`
+
+### Behavioral Verification
+- [ ] Run: `bun test tests/replay/&lt;component>*.test.ts`
+  - [ ] Completes in &#60;1s
+  - [ ] No network calls (verify with network monitor or timeout)
+  - [ ] No file writes (verify fixtures unchanged via git status)
+  - [ ] All tests pass
+
+- [ ] Run: `bun scripts/live/&lt;component>-live.ts`
+  - [ ] Uses real SDK (verify in code - no mocks)
+  - [ ] Completes successfully
+  - [ ] Results match replay test expectations
+
+### Completeness
+- [ ] Every R[N] requirement has corresponding replay test
+- [ ] Every replay test has corresponding fixture
+- [ ] Live test covers all replay scenarios
+- [ ] Unit tests exist for pure logic (if applicable)
+
+### Documentation
+- [ ] Test spec is up-to-date
+- [ ] Fixture recording commands are correct
+- [ ] All assertions are documented
+- [ ] Coverage checklist is accurate
+```
+
+## Behavioral Verification Steps
+
+### Step 1: Run Replay Tests with Guards
+
+```bash
+# Set timeout guard (30s max for safe tests)
+timeout 30 bun test tests/replay/&#60;component&#62;*.test.ts
+
+# Verify:
+# - Exit code is 0 (all tests pass)
+# - Execution time &#60;1s
+# - No network activity (use network monitor or check for API calls)
+```
+
+### Step 2: Verify No File Writes
+
+```bash
+# Before running tests
+git status --porcelain &#62; /tmp/before.txt
+
+# Run tests
+bun test tests/replay/&#60;component&#62;*.test.ts
+
+# After running tests
+git status --porcelain &#62; /tmp/after.txt
+diff /tmp/before.txt /tmp/after.txt
+
+# Should show no changes (or only expected temp files)
+```
+
+### Step 3: Verify Live Test Uses Real SDK
+
+```bash
+# Check live test script imports
+grep -E "(mock|Mock|stub|Stub|fake|Fake)" scripts/live/&#60;component&#62;-live.ts
+
+# Should return nothing (no mocks)
+
+# Check for real SDK usage
+grep -E "(createHub|createFlowRunner|real|Real)" scripts/live/&#60;component&#62;-live.ts
+
+# Should show real SDK usage
+```
+
+## Common Mistakes and How to Avoid Them
+
+### Mistake 1: Static Validation Only
+
+**Problem**: Previous audit found tests in wrong directories that passed static checks but failed at runtime.
+
+**Solution**:
+- **Always run behavioral verification** - Execute tests with timeout guards
+- **Verify actual behavior** - Check test output, not just exit code
+- **Check git status** - No unexpected file changes after test runs
+
+**Validation**:
+```bash
+# Must pass before marking complete
+bun test tests/replay/&#60;component&#62;*.test.ts  # &#60;1s, no network, no file writes
+git status  # No unexpected changes
+```
+
+### Mistake 2: Accidental Recording
+
+**Problem**: Fixtures got overwritten unintentionally during test runs.
+
+**Solution**:
+- **Recording is explicit** - Only via `bun scripts/record-fixture.ts`
+- **Write to scratch first** - Never write directly to golden
+- **Manual promotion** - Review before promoting to golden
+- **Validation checks** - Scripts verify golden fixtures unchanged
+
+**Validation**:
+```bash
+# Check golden fixtures are unchanged
+git diff fixtures/golden/
+
+# Should show no changes after replay tests
+```
+
+### Mistake 3: Missing Behavioral Verification
+
+**Problem**: Tests passed static checks but failed at runtime (wrong directory, wrong behavior).
+
+**Solution**:
+- **Validation workflow MUST include test execution**
+- **Use timeout guards** (30s for safe tests)
+- **Verify actual behavior matches spec**
+- **Check test output**, not just exit code
+
+**Validation**:
+```bash
+# Must execute tests, not just check structure
+timeout 30 bun test tests/replay/&#60;component&#62;*.test.ts
+# Verify: exit code 0, &#60;1s execution, no network, no file writes
+```
+
+### Mistake 4: Incomplete Coverage
+
+**Problem**: Not all requirements had corresponding tests.
+
+**Solution**:
+- **Spec-driven** - Every R[N] maps to a test
+- **Validation script** - Checks requirement → test mapping
+- **Coverage checklist** - In each spec, track completion
+- **Review process** - Validate completeness before completion
+
+**Validation**:
+```bash
+# Check every R[N] has a test
+grep -E "^### R[0-9]+:" tests/specs/&#60;component&#62;.test-spec.md | wc -l
+grep -E "test\(.*R[0-9]" tests/replay/&#60;component&#62;*.test.ts | wc -l
+# Should match (or tests &#62; requirements if multiple tests per requirement)
+```
+
+### Mistake 5: Live Test Missing or Incorrect
+
+**Problem**: No authoritative verification that implementation works with real SDK.
+
+**Solution**:
+- **Every component must have live test script**
+- **Live test must use real SDK** (no mocks)
+- **Live test must pass before marking complete**
+- **Validation checks** - Script exists, uses real SDK, passes
+
+**Validation**:
+```bash
+# Check live test exists and uses real SDK
+test -f scripts/live/&#60;component&#62;-live.ts
+grep -v "mock\|Mock\|stub\|Stub" scripts/live/&#60;component&#62;-live.ts | grep -E "create|real|Real"
+bun scripts/live/&#60;component&#62;-live.ts  # Must pass
+```
+
+## Automated Validation Scripts (Future)
+
+These scripts should be created to automate validation:
+
+### `scripts/validate-test-specs.ts`
+
+Validates static structure:
+- All specs exist and follow template
+- All fixtures referenced exist
+- All test files referenced exist
+- Spec format is valid
+
+### `scripts/validate-replay-tests.ts`
+
+Validates behavioral correctness:
+- Runs replay tests with timeout (30s)
+- Checks for network calls
+- Verifies no file writes
+- Validates fixture integrity
+
+### `scripts/validate-completeness.ts`
+
+Validates coverage:
+- Maps spec requirements → tests
+- Checks coverage gaps
+- Validates live test scripts exist
+- Reports missing coverage
+
+## Validation Workflow (Per Feature)
+
+When implementing/testing a component:
+
+```
+1. Write test spec first
+   → Validate: spec follows template
+   → Validate: all requirements documented
+
+2. Record fixtures
+   → Validate: fixtures saved to scratch/
+   → Validate: fixtures match scenarios
+   → Review: manually inspect fixtures
+   → Promote: move to golden/ after review
+
+3. Write replay tests
+   → Validate: tests reference fixtures correctly
+   → Validate: tests match spec requirements
+   → Run: bun test tests/replay/&#60;component&#62;*.test.ts
+   → Validate: completes in &#60;1s, no network, no file writes
+
+4. Write live test script
+   → Validate: script exists
+   → Validate: uses real SDK
+   → Run: bun scripts/live/&#60;component&#62;-live.ts
+   → Validate: passes successfully
+
+5. Final validation
+   → Run: bun scripts/validate-test-specs.ts (when available)
+   → Run: bun scripts/validate-replay-tests.ts (when available)
+   → Run: bun scripts/validate-completeness.ts (when available)
+   → Check: git status (no unexpected changes)
+   → Review: coverage checklist in spec
+```
+
+## Key Principles
+
+1. **Always run behavioral verification** - Don't just check structure
+2. **Use timeout guards** - 30s for safe tests, prevents hanging
+3. **Verify no network/file writes** - Replay tests must be pure
+4. **Check git status** - No unexpected changes after test runs
+5. **Spec-driven coverage** - Every requirement maps to a test
+6. **Live test is mandatory** - Proves completion with real SDK

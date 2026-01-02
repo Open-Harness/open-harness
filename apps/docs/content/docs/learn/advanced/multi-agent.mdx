@@ -1,0 +1,436 @@
+---
+title: Multi-Agent Flows
+description: Orchestrate multiple AI agents in a single workflow
+---
+
+# Multi-Agent Flows
+
+Complex AI applications often need multiple specialized agents working together. In this tutorial, we'll build multi-agent workflows.
+
+## Multi-Agent Patterns
+
+Three common patterns:
+
+```
+Sequential:     A ───▶ B ───▶ C
+
+Parallel:       ┌──▶ B ──┐
+                A       ├──▶ D
+                └──▶ C ──┘
+
+Handoff:        A ──(condition)──▶ B
+                    └────────────▶ C
+```
+
+## Step 1: Sequential Agents
+
+The simplest pattern - one agent's output feeds the next:
+
+```yaml
+flow:
+  name: research-pipeline
+  version: "1.0"
+  input:
+    topic:
+      type: string
+
+nodes:
+  - id: researcher
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Research the following topic and provide key facts: {{flow.input.topic}}"
+
+  - id: analyst
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Analyze these research findings and identify trends: {{researcher.output.response}}"
+
+  - id: writer
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Write a concise summary based on this analysis: {{analyst.output.response}}"
+
+edges:
+  - from: researcher
+    to: analyst
+  - from: analyst
+    to: writer
+```
+
+Each agent specializes:
+- **Researcher**: Gathers raw information
+- **Analyst**: Identifies patterns
+- **Writer**: Creates final output
+
+## Step 2: Parallel Agents
+
+When work is independent, run agents concurrently:
+
+```yaml
+flow:
+  name: parallel-analysis
+  version: "1.0"
+  input:
+    document:
+      type: string
+
+nodes:
+  # These three run in parallel (no dependencies between them)
+  - id: sentiment
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Analyze the sentiment of this document: {{flow.input.document}}"
+
+  - id: summary
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Summarize this document in 3 bullet points: {{flow.input.document}}"
+
+  - id: keywords
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Extract 5 key topics from this document: {{flow.input.document}}"
+
+  # This waits for all three to complete
+  - id: combine
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: |
+            Combine these analyses into a report:
+            Sentiment: {{sentiment.output.response}}
+            Summary: {{summary.output.response}}
+            Keywords: {{keywords.output.response}}
+
+edges:
+  - from: sentiment
+    to: combine
+  - from: summary
+    to: combine
+  - from: keywords
+    to: combine
+```
+
+Since `sentiment`, `summary`, and `keywords` only depend on `flow.input`, they run in parallel. `combine` waits for all three.
+
+## Step 3: Agent Handoff
+
+Route to different agents based on conditions:
+
+```yaml
+flow:
+  name: smart-router
+  version: "1.0"
+  input:
+    query:
+      type: string
+    category:
+      type: string
+
+nodes:
+  - id: router
+    type: classifier
+    input:
+      query: "{{flow.input.query}}"
+
+  - id: tech_agent
+    type: llm
+    input:
+      messages:
+        - role: system
+          content: "You are a technical support specialist."
+        - role: user
+          content: "{{flow.input.query}}"
+    when:
+      equals:
+        var: router.output.category
+        value: "technical"
+
+  - id: sales_agent
+    type: llm
+    input:
+      messages:
+        - role: system
+          content: "You are a helpful sales representative."
+        - role: user
+          content: "{{flow.input.query}}"
+    when:
+      equals:
+        var: router.output.category
+        value: "sales"
+
+  - id: general_agent
+    type: llm
+    input:
+      messages:
+        - role: system
+          content: "You are a general assistant."
+        - role: user
+          content: "{{flow.input.query}}"
+    when:
+      and:
+        - not:
+            equals:
+              var: router.output.category
+              value: "technical"
+        - not:
+            equals:
+              var: router.output.category
+              value: "sales"
+
+edges:
+  - from: router
+    to: tech_agent
+  - from: router
+    to: sales_agent
+  - from: router
+    to: general_agent
+```
+
+Only one agent runs based on the router's classification.
+
+## Step 4: Agent Coordination via Hub
+
+For more complex coordination, use Hub events:
+
+```typescript
+import { createHub } from "@open-harness/kernel";
+
+const hub = createHub();
+
+// Track agent states
+const agentStates = new Map<string, string>();
+
+hub.subscribe("task:start", (event) => {
+  const { taskId } = event.event;
+  agentStates.set(taskId, "running");
+});
+
+hub.subscribe("task:complete", (event) => {
+  const { taskId, result } = event.event;
+  agentStates.set(taskId, "complete");
+
+  // Log coordination info
+  console.log(`Agent ${taskId} complete:`, result);
+});
+
+// Example: wait for specific agent
+async function waitForAgent(agentId: string): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (agentStates.get(agentId) === "complete") {
+        resolve();
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+}
+```
+
+## Step 5: Shared Context
+
+Agents can share context through flow structure:
+
+```yaml
+nodes:
+  # Build shared context
+  - id: context
+    type: constant
+    input:
+      value:
+        guidelines: "Be concise and professional"
+        format: "markdown"
+        maxLength: 500
+
+  - id: agent_a
+    type: llm
+    input:
+      messages:
+        - role: system
+          content: "Guidelines: {{context.output.value.guidelines}}"
+        - role: user
+          content: "{{flow.input.queryA}}"
+
+  - id: agent_b
+    type: llm
+    input:
+      messages:
+        - role: system
+          content: "Guidelines: {{context.output.value.guidelines}}"
+        - role: user
+          content: "{{flow.input.queryB}}"
+
+edges:
+  - from: context
+    to: agent_a
+  - from: context
+    to: agent_b
+```
+
+## Best Practices
+
+### Keep Agent Roles Clear
+
+Each agent should have one job:
+
+```yaml
+# Good: Specialized agents
+- id: researcher    # Finds information
+- id: analyzer      # Analyzes findings
+- id: writer        # Creates output
+
+# Avoid: Vague roles
+- id: agent1        # Does... something?
+- id: agent2        # Also does something?
+```
+
+### Handle Failures Gracefully
+
+Use conditions to handle agent failures:
+
+```yaml
+nodes:
+  - id: primary_agent
+    type: llm
+    input: {}
+    policy:
+      continueOnError: true
+
+  - id: fallback_agent
+    type: simpler-llm
+    input:
+      previous: "{{?primary_agent.output}}"
+    when:
+      equals:
+        var: primary_agent.output.skipped
+        value: true
+```
+
+### Monitor with Hub Events
+
+```typescript
+hub.subscribe("agent:text", (event) => {
+  const { agentName } = event.context;
+  console.log(`[${agentName}]: ${event.event.content.substring(0, 50)}...`);
+});
+
+hub.subscribe("task:failed", (event) => {
+  console.error(`Agent failed: ${event.context.agentName}`, event.event.error);
+});
+```
+
+### Use Appropriate Parallelism
+
+```yaml
+# Parallel: Independent work
+- id: analyze_a
+- id: analyze_b
+- id: analyze_c
+
+# Sequential: Dependent work
+edges:
+  - from: analyze_a
+    to: synthesize  # Must wait for all
+  - from: analyze_b
+    to: synthesize
+  - from: analyze_c
+    to: synthesize
+```
+
+## Complete Example
+
+A multi-agent content creation pipeline:
+
+```yaml
+flow:
+  name: content-creator
+  version: "1.0"
+  input:
+    topic:
+      type: string
+    style:
+      type: string
+
+nodes:
+  # Phase 1: Research (parallel)
+  - id: web_research
+    type: search-agent
+    input:
+      query: "{{flow.input.topic}} latest news"
+
+  - id: academic_research
+    type: search-agent
+    input:
+      query: "{{flow.input.topic}} research papers"
+
+  # Phase 2: Analysis
+  - id: synthesizer
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: |
+            Synthesize these sources:
+            Web: {{web_research.output.results}}
+            Academic: {{academic_research.output.results}}
+
+  # Phase 3: Creation (parallel)
+  - id: outline_writer
+    type: llm
+    input:
+      messages:
+        - role: user
+          content: "Create an outline from: {{synthesizer.output.response}}"
+
+  - id: style_guide
+    type: constant
+    input:
+      value:
+        style: "{{flow.input.style}}"
+        tone: "professional but engaging"
+
+  # Phase 4: Final writing
+  - id: content_writer
+    type: llm
+    input:
+      messages:
+        - role: system
+          content: "Style: {{style_guide.output.value.style}}, Tone: {{style_guide.output.value.tone}}"
+        - role: user
+          content: "Write content following this outline: {{outline_writer.output.response}}"
+
+edges:
+  - from: web_research
+    to: synthesizer
+  - from: academic_research
+    to: synthesizer
+  - from: synthesizer
+    to: outline_writer
+  - from: synthesizer
+    to: style_guide
+  - from: outline_writer
+    to: content_writer
+  - from: style_guide
+    to: content_writer
+```
+
+## Next Steps
+
+- **[Conditional Flows](/docs/learn/advanced/conditional-flows)** - Add branching
+- **[Hub Events](/docs/learn/hub-events)** - Monitor execution
+- **[Architecture Concepts](/docs/concepts/architecture/overview)** - System design

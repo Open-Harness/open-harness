@@ -1,0 +1,67 @@
+---
+title: API Reference
+description: Complete API reference for the Open Harness kernel
+---
+
+# API Reference
+
+The Open Harness kernel exports functions and classes for building AI-powered flows.
+
+## Core Functions
+
+| Function | Purpose |
+|----------|---------|
+| [createHub](/docs/reference/api/hub) | Create an event hub for pub/sub messaging |
+| [executeFlow](/docs/reference/api/execute-flow) | Execute a compiled flow DAG |
+
+## Flow Functions
+
+| Function | Purpose |
+|----------|---------|
+| [parseFlowYaml](/docs/reference/api/parse-flow) | Parse YAML string into FlowYaml structure |
+| [compileFlow](/docs/reference/api/compile-flow) | Validate and compile flow for execution |
+| [resolveBindings](/docs/reference/api/resolve-bindings) | Resolve A3 bindings in templates |
+| [evaluateWhen](/docs/reference/api/evaluate-when) | Evaluate conditional expressions |
+
+## Classes
+
+| Class | Purpose |
+|-------|---------|
+| [NodeRegistry](/docs/reference/api/node-registry) | Registry for custom node type definitions |
+
+## Agent Providers
+
+| Function | Purpose |
+|----------|---------|
+| [createClaudeAgent](/docs/reference/api/anthropic-agent) | Create Claude agent using Claude Agent SDK |
+
+## Import
+
+```typescript
+import {
+  // Core
+  createHub,
+  executeFlow,
+
+  // Flow
+  parseFlowYaml,
+  compileFlow,
+  NodeRegistry,
+  resolveBindings,
+  evaluateWhen,
+
+  // Providers
+  createClaudeAgent,
+
+  // Node packs
+  registerNodePacks,
+  corePack,
+  claudePack,
+} from "@open-harness/kernel";
+```
+
+## Related
+
+- [Types Reference](/docs/reference/types) - Interface definitions
+- [Events Reference](/docs/reference/events) - Event type definitions
+- [Kernel Spec](/docs/reference/kernel-spec) - Complete protocol specification

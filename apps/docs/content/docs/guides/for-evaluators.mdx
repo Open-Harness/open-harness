@@ -1,0 +1,192 @@
+---
+title: For Evaluators
+description: How Open Harness compares to n8n, Make, LangChain, and LangGraph
+---
+
+# For Evaluators
+
+Deciding if Open Harness is right for your project? This guide compares it to similar tools.
+
+## TL;DR
+
+| Tool | Best For | Trade-off |
+|------|----------|-----------|
+| **Open Harness** | AI agent workflows | Pre-alpha, evolving APIs |
+| n8n | General automation | Limited AI-native features |
+| Make | No-code integrations | Less control, closed source |
+| LangChain | Prompt chains | Complexity, framework lock-in |
+| LangGraph | State machines | Learning curve, verbose |
+
+## Open Harness vs n8n
+
+**Open Harness is "n8n for AI agents"** — the mental model is similar, but optimized for LLM workflows.
+
+| Feature | Open Harness | n8n |
+|---------|--------------|-----|
+| **Primary focus** | AI agent orchestration | General automation |
+| **Node types** | LLM agents, prompts, conditions | HTTP, databases, SaaS |
+| **Visual editor** | ReactFlow-based | Custom Vue-based |
+| **Spec format** | YAML FlowSpec | JSON workflow |
+| **Execution** | Hub + events | Direct execution |
+| **Provider-agnostic** | Yes (Claude, GPT, etc.) | Limited AI support |
+| **Open source** | Yes (MIT) | Yes (Fair-code) |
+
+### When to choose Open Harness
+
+- Building AI-native applications
+- Need provider-agnostic agent orchestration
+- Want declarative YAML specs
+- Care about observability via events
+
+### When to choose n8n
+
+- General SaaS automation
+- Need 400+ pre-built integrations
+- Less focus on AI/LLM workflows
+- Need production-ready today
+
+## Open Harness vs Make (Integromat)
+
+| Feature | Open Harness | Make |
+|---------|--------------|------|
+| **Self-hosted** | Yes | Cloud-only |
+| **Open source** | Yes | No |
+| **AI focus** | Primary | Secondary |
+| **Custom nodes** | TypeScript | Visual only |
+| **Pricing** | Free | Usage-based |
+
+### When to choose Make
+
+- Non-technical users
+- Simple automations
+- No self-hosting requirement
+
+## Open Harness vs LangChain
+
+| Feature | Open Harness | LangChain |
+|---------|--------------|-----------|
+| **Mental model** | Flows & nodes | Chains & agents |
+| **Definition** | Declarative YAML | Imperative Python/JS |
+| **Visual editing** | Built-in | Third-party |
+| **Abstraction** | Flow-level | Prompt-level |
+| **Vendor lock-in** | Minimal | Ecosystem lock-in |
+
+### When to choose LangChain
+
+- Python-first team
+- Need RAG out of the box
+- Complex prompt engineering
+- Extensive ecosystem integrations
+
+### When to choose Open Harness
+
+- TypeScript-first team
+- Prefer declarative over imperative
+- Need visual flow editing
+- Want cleaner abstraction boundaries
+
+## Open Harness vs LangGraph
+
+| Feature | Open Harness | LangGraph |
+|---------|--------------|-----------|
+| **Graph model** | DAG with edges | State machines |
+| **Cycles** | Planned (loop node) | Native |
+| **Learning curve** | Lower | Higher |
+| **Verbosity** | Concise YAML | Verbose Python |
+| **Streaming** | Hub events | Callbacks |
+
+### When to choose LangGraph
+
+- Need complex state machines
+- Heavily cyclical flows
+- Already in LangChain ecosystem
+
+### When to choose Open Harness
+
+- Simpler DAG workflows
+- Visual-first development
+- Want TypeScript + Bun stack
+
+## Key Differentiators
+
+### 1. Flow-First Architecture
+
+Open Harness starts with the flow, not the prompt:
+
+```yaml
+# One YAML file = complete workflow
+flow:
+  name: customer-support
+nodes:
+  - id: classify
+    type: agent
+    input:
+      prompt: "Classify this ticket: {{flow.input.message}}"
+  - id: route
+    type: condition
+    when: "classify.category == 'billing'"
+edges:
+  - from: classify
+    to: route
+```
+
+### 2. Agents as Primitives
+
+Instead of building agents from scratch, you orchestrate pre-built SDK wrappers:
+
+```typescript
+// Provider-agnostic: swap Claude for GPT without changing flows
+const claudeAgent = createClaudeAgent();
+const gptAgent = createOpenAIAgent();
+```
+
+### 3. Observable by Default
+
+Every event flows through the Hub:
+
+```typescript
+hub.subscribe("agent:*", (event) => {
+  console.log(`[${event.event.type}]`, event.event.content);
+});
+```
+
+### 4. Visual + Code Parity
+
+The same flow runs in the visual editor and via YAML:
+
+```
+Visual Editor ←→ FlowSpec YAML ←→ Code Execution
+```
+
+## Maturity Comparison
+
+| Tool | Maturity | Production Ready |
+|------|----------|------------------|
+| n8n | Stable | Yes |
+| Make | Stable | Yes |
+| LangChain | Stable | Yes |
+| LangGraph | Beta | Mostly |
+| **Open Harness** | **Pre-alpha** | **Not yet** |
+
+Open Harness is pre-alpha. Expect:
+- Breaking API changes
+- Missing features
+- Limited community support
+
+Choose it if you want to shape the direction of a new tool.
+
+## Try It
+
+```bash
+# Quick start
+mkdir my-flow && cd my-flow
+bun init -y
+bun add @open-harness/kernel
+
+# See the quickstart for a working example
+```
+
+## Questions?
+
+- [GitHub Issues](https://github.com/your-org/open-harness/issues)
+- [Discord Community](#) (coming soon)

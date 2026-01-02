@@ -1,0 +1,93 @@
+---
+title: "Events Protocol"
+description: ""
+---
+
+## Canonical envelope
+
+All events are emitted via the hub and delivered in a single envelope:
+
+```typescript
+interface EnrichedEvent&#60;T extends BaseEvent = BaseEvent&#62; &#123;
+  id: string;
+  timestamp: Date;
+  context: EventContext;
+  event: T;
+&#125;
+```
+
+**Invariant**: No adapter shims. No "sometimes it's `&#123; type &#125;` and sometimes it's `&#123; event: &#123; type &#125; &#125;`". Everything uses this envelope.
+
+## Context (hierarchical)
+
+Context is automatically propagated using `hub.scoped(...)` (AsyncLocalStorage):
+
+```typescript
+interface EventContext &#123;
+  sessionId: string;  // always present
+  phase?: &#123; name: string; number?: number &#125;;
+  task?: &#123; id: string &#125;;
+  agent?: &#123; name: string; type?: string &#125;;
+&#125;
+```
+
+- `context.sessionId` - always present
+- `context.phase` - present inside `phase(...)`
+- `context.task` - present inside `task(...)`
+- `context.agent` - present inside `agents.foo.execute(...)`
+
+Any `hub.emit(...)` inside a scoped block inherits the context automatically.
+
+## Required event types (kernel contract)
+
+### Runtime lifecycle
+
+- `harness:start` - `&#123; name: string &#125;`
+- `harness:complete` - `&#123; success: boolean; durationMs: number &#125;`
+
+### Phase lifecycle
+
+- `phase:start` - `&#123; name: string; phaseNumber?: number &#125;`
+- `phase:complete` - `&#123; name: string; phaseNumber?: number &#125;`
+- `phase:failed` - `&#123; name: string; error: string; stack?: string; phaseNumber?: number &#125;`
+
+### Task lifecycle
+
+- `task:start` - `&#123; taskId: string &#125;`
+- `task:complete` - `&#123; taskId: string; result?: unknown &#125;`
+- `task:failed` - `&#123; taskId: string; error: string; stack?: string &#125;`
+
+### Agent lifecycle
+
+- `agent:start` - `&#123; agentName: string; runId: string &#125;`
+- `agent:complete` - `&#123; agentName: string; success: boolean; runId: string &#125;`
+
+**Optional but common** (providers/middleware may emit):
+
+- `agent:thinking` - `&#123; content: string; runId?: string &#125;`
+- `agent:text` - `&#123; content: string; runId?: string &#125;`
+- `agent:tool:start` - `&#123; toolName: string; input?: unknown; runId?: string &#125;`
+- `agent:tool:complete` - `&#123; toolName: string; result?: unknown; isError?: boolean; runId?: string &#125;`
+
+### Interactive/session (optional)
+
+- `session:prompt` - `&#123; promptId: string; prompt: string; choices?: string[]; allowText?: boolean &#125;`
+- `session:reply` - `&#123; promptId: string; content: string; choice?: string &#125;`
+- `session:abort` - `&#123; reason?: string &#125;`
+- `session:message` - `&#123; content: string; agentName?: string; runId?: string &#125;` (emitted when channels call `hub.send()` / `hub.sendTo()`)
+
+## Extension events
+
+Any other `type: string` is allowed and forwarded unchanged:
+
+```typescript
+type ExtensionEvent = &#123; type: string; [k: string]: unknown &#125;
+```
+
+**Rule**: Extension events must still be enveloped + contextualized like every other event.
+
+## Key invariants
+
+1. **Single event envelope** end-to-end
+2. **All events flow through the hub** (agents/runtime don't "print directly")
+3. **Context propagation is automatic** (no manual context threading)

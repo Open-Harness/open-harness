@@ -1,0 +1,67 @@
+---
+title: WebSocket Channel
+description: Real-time web client communication
+---
+
+# WebSocket Channel
+
+> **Status**: Planned - Part of [n8n UI integration](https://github.com/Open-Harness/open-harness/issues/34)
+
+The WebSocket channel enables real-time communication with web clients for visual flow editing and monitoring.
+
+## Planned Features
+
+- **Real-time events**: Stream flow events to connected clients
+- **Execution state**: Node status, progress, outputs
+- **Bidirectional**: Clients can send commands (pause, abort, inject input)
+- **Multi-client**: Fan-out to multiple connected clients
+
+## Planned Usage
+
+```typescript
+import { WebSocketChannel } from "@open-harness/kernel";
+
+const runner = createFlowRunner(flow, registry);
+runner.attach(WebSocketChannel({
+  port: 8080,
+  path: "/ws",
+}));
+
+await runner.run();
+```
+
+## Protocol (Planned)
+
+### Server → Client
+
+```json
+{
+  "type": "event",
+  "event": {
+    "type": "task:complete",
+    "taskId": "analyze",
+    "result": { ... }
+  }
+}
+```
+
+### Client → Server
+
+```json
+{
+  "type": "command",
+  "command": "abort",
+  "reason": "User cancelled"
+}
+```
+
+## Use Cases
+
+- **Visual editors**: n8n-style flow editing
+- **Dashboards**: Real-time execution monitoring
+- **Web apps**: Flow-powered web applications
+
+## Related
+
+- [Visual Editing](/docs/concepts/visual-editing) - n8n integration concepts
+- [GitHub Issue #34](https://github.com/Open-Harness/open-harness/issues/34) - Implementation tracking

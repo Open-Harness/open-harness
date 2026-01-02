@@ -2,17 +2,10 @@
 
 Auto-generated from all feature plans. Last updated: 2025-12-28
 
-## Knowledge Base
+## Documentation
 
-The `.knowledge/` folder is an Obsidian vault containing:
-- **Canonical docs**: `.knowledge/docs/` - Public documentation (tracked)
-- **Product thinking**: `.knowledge/product/` - Vision, roadmap, decisions (tracked)
-- **Private investor materials**: `.knowledge/private/PITCH.md` - Symlinked OUT (gitignored)
-- **Reference**: `.knowledge/CLAUDE.md` explains the full setup
+READ packages/kernel/docs/*
 
-Read `.knowledge/private/PITCH.md` for business context and investor narrative.
-Read `.knowledge/docs/why.md` for developer philosophy.
-Read `.knowledge/docs/how-it-works.md` for architecture and code examples.
 
 ## Active Technologies
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, listr2 (optional peer) (003-harness-renderer)
@@ -109,4 +102,12 @@ BEHAVIORAL DECORATORS:
     4. present the methodology to the user using the ASK USER TOOL
 
     **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
+
+## PR Workflow Policy (Graphite)
+
+- Use Graphite stacks for all PRs; do not open PRs directly in GitHub.
+- Target all feature stacks to `dev`.
+- Keep the rolling `dev` → `master` PR open as the release train.
+- Review and merge stacks bottom → top.
+- When ready to release, merge the `dev` → `master` PR.
 <!-- MANUAL ADDITIONS END -->

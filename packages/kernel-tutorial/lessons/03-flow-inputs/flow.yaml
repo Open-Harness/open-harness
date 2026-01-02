@@ -1,0 +1,13 @@
+flow:
+  name: flow-inputs
+  nodePacks: [core]
+  input:
+    name: "World"
+
+nodes:
+  - id: greet
+    type: echo
+    input:
+      text: "Hello, {{flow.input.name}}!"
+
+edges: []

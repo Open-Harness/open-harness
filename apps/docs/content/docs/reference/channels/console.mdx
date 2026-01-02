@@ -1,0 +1,63 @@
+---
+title: Console Channel
+description: Terminal output for flow execution
+---
+
+# Console Channel
+
+The Console channel renders flow events to the terminal with formatted output.
+
+## Usage
+
+```typescript
+import { ConsoleChannel } from "@open-harness/kernel";
+
+const runner = createFlowRunner(flow, registry);
+runner.attach(ConsoleChannel());
+await runner.run();
+```
+
+## Output
+
+The console channel displays:
+
+- Phase start/complete with names
+- Task progress with status indicators
+- Agent narrative text (streaming)
+- Errors and warnings
+- Final summary with metrics
+
+## Configuration
+
+```typescript
+ConsoleChannel({
+  // Verbosity level
+  verbosity: "normal", // "silent" | "normal" | "verbose"
+
+  // Color output
+  colors: true,
+
+  // Show timestamps
+  timestamps: false,
+
+  // Show token usage
+  showTokens: true,
+});
+```
+
+## Events Handled
+
+| Event | Output |
+|-------|--------|
+| `phase:start` | `▶ Phase: {name}` |
+| `phase:complete` | `✓ Phase complete` |
+| `task:start` | `  → Task: {id}` |
+| `task:complete` | `  ✓ Task done ({duration}ms)` |
+| `task:failed` | `  ✗ Task failed: {error}` |
+| `agent:text` | Streaming text output |
+| `narrative` | Indented narrative text |
+
+## Related
+
+- [GitHub Channel](/docs/reference/channels/github) - Issue-based output
+- [Debugging](/docs/guides/debugging) - Debug output strategies

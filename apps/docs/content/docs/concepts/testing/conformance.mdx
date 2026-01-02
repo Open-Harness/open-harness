@@ -1,0 +1,296 @@
+---
+title: Conformance Testing
+description: Verifying node types meet their contracts
+---
+
+# Conformance Testing
+
+Node types in Open Harness have contracts - input schemas, output schemas, expected behaviors. Conformance testing verifies implementations meet these contracts.
+
+## Why Conformance?
+
+### Contract Enforcement
+
+Node types promise specific behavior:
+
+```typescript
+const myNode: NodeTypeDefinition = {
+  type: "formatter",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({ formatted: z.string() }),
+  async run(ctx, input) {
+    return { formatted: input.text.toUpperCase() };
+  }
+};
+```
+
+Conformance testing verifies:
+- Input schema accepts valid input
+- Output schema validates actual output
+- Run function behaves correctly
+
+### Regression Prevention
+
+When you change a node type, conformance tests catch breakage:
+
+```typescript
+// Before: returned { formatted: string }
+// After: accidentally returns { result: string }
+// Conformance test: FAILS - output schema violation
+```
+
+## Testing Approach
+
+### Schema Validation
+
+Test that schemas accept/reject correctly:
+
+```typescript
+import { describe, test, expect } from "bun:test";
+
+describe("formatter node", () => {
+  test("accepts valid input", () => {
+    const result = myNode.inputSchema.safeParse({ text: "hello" });
+    expect(result.success).toBe(true);
+  });
+
+  test("rejects invalid input", () => {
+    const result = myNode.inputSchema.safeParse({ text: 123 });
+    expect(result.success).toBe(false);
+  });
+
+  test("output matches schema", async () => {
+    const output = await myNode.run(mockContext, { text: "hello" });
+    const result = myNode.outputSchema.safeParse(output);
+    expect(result.success).toBe(true);
+  });
+});
+```
+
+### Behavioral Testing
+
+Test that execution produces expected results:
+
+```typescript
+describe("formatter behavior", () => {
+  test("uppercases text", async () => {
+    const output = await myNode.run(mockContext, { text: "hello" });
+    expect(output.formatted).toBe("HELLO");
+  });
+
+  test("handles empty string", async () => {
+    const output = await myNode.run(mockContext, { text: "" });
+    expect(output.formatted).toBe("");
+  });
+});
+```
+
+### Event Emission
+
+Test that nodes emit expected events:
+
+```typescript
+describe("formatter events", () => {
+  test("emits narrative event", async () => {
+    const events: BaseEvent[] = [];
+    const ctx = createMockContext({
+      onEmit: (e) => events.push(e)
+    });
+
+    await myNode.run(ctx, { text: "hello" });
+
+    expect(events).toContainEqual({
+      type: "narrative",
+      text: expect.stringContaining("Formatting")
+    });
+  });
+});
+```
+
+## Test Fixtures
+
+### Input Fixtures
+
+Create fixtures for common inputs:
+
+```typescript
+const fixtures = {
+  valid: [
+    { text: "hello world" },
+    { text: "ALREADY CAPS" },
+    { text: "123 numbers" }
+  ],
+  invalid: [
+    { text: 123 },
+    { notText: "wrong field" },
+    null
+  ]
+};
+
+describe("input validation", () => {
+  fixtures.valid.forEach((input, i) => {
+    test(`accepts valid input ${i}`, () => {
+      expect(myNode.inputSchema.safeParse(input).success).toBe(true);
+    });
+  });
+
+  fixtures.invalid.forEach((input, i) => {
+    test(`rejects invalid input ${i}`, () => {
+      expect(myNode.inputSchema.safeParse(input).success).toBe(false);
+    });
+  });
+});
+```
+
+### Output Fixtures
+
+Verify outputs against expected results:
+
+```typescript
+const testCases = [
+  { input: { text: "hello" }, expected: { formatted: "HELLO" } },
+  { input: { text: "World" }, expected: { formatted: "WORLD" } }
+];
+
+describe("output conformance", () => {
+  testCases.forEach(({ input, expected }) => {
+    test(`${input.text} → ${expected.formatted}`, async () => {
+      const output = await myNode.run(mockContext, input);
+      expect(output).toEqual(expected);
+    });
+  });
+});
+```
+
+## Mock Context
+
+Create minimal mock contexts for testing:
+
+```typescript
+function createMockContext(overrides = {}): NodeRunContext {
+  const events: BaseEvent[] = [];
+
+  return {
+    hub: {
+      emit: (e) => events.push(e),
+      subscribe: () => () => {},
+      current: () => ({ sessionId: "test" }),
+      ...overrides.hub
+    },
+    runId: "test-run",
+    inbox: {
+      pop: () => Promise.resolve({ content: "", timestamp: new Date() }),
+      drain: () => [],
+      [Symbol.asyncIterator]: async function* () {}
+    },
+    ...overrides
+  };
+}
+```
+
+## Error Conformance
+
+Test error handling:
+
+```typescript
+describe("error handling", () => {
+  test("throws on null input", async () => {
+    await expect(
+      myNode.run(mockContext, null as any)
+    ).rejects.toThrow();
+  });
+
+  test("throws descriptive error", async () => {
+    try {
+      await myNode.run(mockContext, { text: null });
+    } catch (e) {
+      expect(e.message).toContain("text");
+    }
+  });
+});
+```
+
+## Registry Conformance
+
+Test node registration:
+
+```typescript
+describe("registry integration", () => {
+  test("can be registered", () => {
+    const registry = new NodeRegistry();
+    registry.register(myNode);
+    expect(registry.has("formatter")).toBe(true);
+  });
+
+  test("can be retrieved", () => {
+    const registry = new NodeRegistry();
+    registry.register(myNode);
+    const retrieved = registry.get("formatter");
+    expect(retrieved).toBe(myNode);
+  });
+});
+```
+
+## Best Practices
+
+### Test Boundaries
+
+Focus on:
+- Input validation (schema)
+- Output validation (schema)
+- Core behavior (run function)
+- Error cases
+
+Don't test:
+- Internal implementation details
+- Framework behavior
+
+### Isolation
+
+Each test should be independent:
+
+```typescript
+// Good: creates fresh context each test
+test("test 1", async () => {
+  const ctx = createMockContext();
+  await myNode.run(ctx, input);
+});
+
+// Bad: shares state between tests
+let sharedCtx;
+beforeAll(() => { sharedCtx = createMockContext(); });
+```
+
+### Descriptive Names
+
+Name tests by behavior:
+
+```typescript
+// Good
+test("uppercases lowercase text");
+test("preserves already uppercase text");
+test("handles empty string");
+
+// Bad
+test("test 1");
+test("works");
+```
+
+## Conformance Checklist
+
+For each node type:
+
+- [ ] Input schema accepts valid inputs
+- [ ] Input schema rejects invalid inputs
+- [ ] Output matches output schema
+- [ ] Core behavior is correct
+- [ ] Edge cases handled
+- [ ] Errors are descriptive
+- [ ] Events emitted correctly
+- [ ] Can be registered in registry
+
+## Next Steps
+
+- [Replay Model](/docs/concepts/testing/replay-model) - Fixture-based testing
+- [Test Setup Guide](/docs/guides/testing/test-setup) - Practical setup
+- [Node Type Definition](/docs/reference/types/node-type-definition) - Type reference

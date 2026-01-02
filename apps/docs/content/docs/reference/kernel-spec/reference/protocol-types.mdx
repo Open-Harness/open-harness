@@ -1,0 +1,262 @@
+---
+title: "Protocol Types (Authoritative)"
+description: "This document contains the authoritative TypeScript interfaces for the kernel + flow protocol."
+---
+
+This document contains the authoritative TypeScript interfaces for the kernel + flow protocol.
+
+These types should match `src/protocol/*.ts` exactly.
+
+## Events
+
+```typescript
+// Context (hierarchical)
+interface EventContext &#123;
+  sessionId: string;
+  phase?: &#123; name: string; number?: number &#125;;
+  task?: &#123; id: string &#125;;
+  agent?: &#123; name: string; type?: string &#125;;
+&#125;
+
+// Base event payloads
+type WorkflowEvents =
+  | &#123; type: "harness:start"; name: string &#125;
+  | &#123; type: "harness:complete"; success: boolean; durationMs: number &#125;
+  | &#123; type: "phase:start"; name: string; phaseNumber?: number &#125;
+  | &#123; type: "phase:complete"; name: string; phaseNumber?: number &#125;
+  | &#123; type: "phase:failed"; name: string; error: string; stack?: string; phaseNumber?: number &#125;
+  | &#123; type: "task:start"; taskId: string &#125;
+  | &#123; type: "task:complete"; taskId: string; result?: unknown &#125;
+  | &#123; type: "task:failed"; taskId: string; error: string; stack?: string &#125;;
+
+type AgentEvents =
+  | &#123; type: "agent:start"; agentName: string; runId: string &#125;
+  | &#123; type: "agent:thinking"; content: string; runId?: string &#125;
+  | &#123; type: "agent:text"; content: string; runId?: string &#125;
+  | &#123; type: "agent:tool:start"; toolName: string; input?: unknown; runId?: string &#125;
+  | &#123; type: "agent:tool:complete"; toolName: string; result?: unknown; isError?: boolean; runId?: string &#125;
+  | &#123; type: "agent:complete"; agentName: string; success: boolean; runId: string &#125;;
+
+type SessionMessageEvent = &#123;
+  type: "session:message";
+  content: string;
+  agentName?: string;
+  runId?: string;
+&#125;;
+
+type SessionPromptEvent = &#123;
+  type: "session:prompt";
+  promptId: string;
+  prompt: string;
+  choices?: string[];
+  allowText?: boolean;
+&#125;;
+
+type SessionReplyEvent = &#123; type: "session:reply"; promptId: string; content: string; choice?: string &#125;;
+type SessionAbortEvent = &#123; type: "session:abort"; reason?: string &#125;;
+type NarrativeEvent = &#123; type: "narrative"; text: string; importance?: "low" | "normal" | "high" &#125;;
+type ExtensionEvent = &#123; type: string; [k: string]: unknown &#125;;
+
+type BaseEvent =
+  | WorkflowEvents
+  | AgentEvents
+  | SessionMessageEvent
+  | SessionPromptEvent
+  | SessionReplyEvent
+  | SessionAbortEvent
+  | NarrativeEvent
+  | ExtensionEvent;
+
+// Enriched envelope
+interface EnrichedEvent&#60;T extends BaseEvent = BaseEvent&#62; &#123;
+  id: string;
+  timestamp: Date;
+  context: EventContext;
+  event: T;
+&#125;
+
+// Filtering
+type EventFilter = "*" | string | string[];
+type EventListener&#60;T extends BaseEvent = BaseEvent&#62; = (event: EnrichedEvent&#60;T&#62;) =&#62; void | Promise&#60;void&#62;;
+type Unsubscribe = () =&#62; void;
+```
+
+## Hub
+
+```typescript
+type HubStatus = "idle" | "running" | "complete" | "aborted";
+
+interface UserResponse &#123;
+  content: string;
+  choice?: string;
+  timestamp: Date;
+&#125;
+
+interface Hub extends AsyncIterable&#60;EnrichedEvent&#62; &#123;
+  // Events out
+  subscribe(listener: EventListener): Unsubscribe;
+  subscribe(filter: EventFilter, listener: EventListener): Unsubscribe;
+  emit(event: BaseEvent, override?: Partial&#60;EventContext&#62;): void;
+  scoped&#60;T&#62;(context: Partial&#60;EventContext&#62;, fn: () =&#62; T | Promise&#60;T&#62;): T | Promise&#60;T&#62;;
+  current(): EventContext;
+
+  // Commands in (bidirectional)
+  send(message: string): void;
+  sendTo(agent: string, message: string): void;
+  sendToRun(runId: string, message: string): void;
+  reply(promptId: string, response: UserResponse): void;
+  abort(reason?: string): void;
+
+  // Status
+  readonly status: HubStatus;
+  readonly sessionActive: boolean;
+&#125;
+```
+
+## Flow Runtime
+
+```typescript
+type Cleanup = void | (() =&#62; void) | (() =&#62; Promise&#60;void&#62;);
+type Attachment = (hub: Hub) =&#62; Cleanup;
+
+interface FlowRunResult &#123;
+  outputs: Record&#60;string, unknown&#62;;
+  events: EnrichedEvent[];
+  durationMs: number;
+  status: HubStatus;
+&#125;
+
+interface FlowRuntimeInstance extends Hub &#123;
+  attach(attachment: Attachment): this;
+  startSession(): this;
+  run(): Promise&#60;FlowRunResult&#62;;
+&#125;
+```
+
+## Agent
+
+```typescript
+/**
+ * Context provided to agent execution.
+ *
+ * V2 SDK pattern: Agents subscribe to hub "session:message" events
+ * filtered by runId for multi-turn conversations.
+ */
+interface AgentExecuteContext &#123;
+  hub: Hub;
+  runId: string;
+&#125;
+
+interface AgentDefinition&#60;TIn = unknown, TOut = unknown&#62; &#123;
+  name: string;
+  emitsStartComplete?: boolean;
+  execute(input: TIn, ctx: AgentExecuteContext): Promise&#60;TOut&#62;;
+&#125;
+
+interface ExecutableAgent&#60;TIn = unknown, TOut = unknown&#62; &#123;
+  name: string;
+  execute(input: TIn): Promise&#60;TOut&#62;;
+&#125;
+```
+
+## Channel
+
+```typescript
+interface ChannelContext&#60;TState&#62; &#123;
+  hub: Hub;
+  state: TState;
+  event: EnrichedEvent&#60;BaseEvent&#62;;
+  emit: (event: BaseEvent) =&#62; void;
+&#125;
+
+type ChannelHandler&#60;TState&#62; = (ctx: ChannelContext&#60;TState&#62;) =&#62; void | Promise&#60;void&#62;;
+
+interface ChannelDefinition&#60;TState&#62; &#123;
+  name: string;
+  state?: () =&#62; TState;
+  onStart?: (ctx: &#123; hub: Hub; state: TState; emit: (event: BaseEvent) =&#62; void &#125;) =&#62; void | Promise&#60;void&#62;;
+  onComplete?: (ctx: &#123; hub: Hub; state: TState; emit: (event: BaseEvent) =&#62; void &#125;) =&#62; void | Promise&#60;void&#62;;
+  on: Record&#60;string, ChannelHandler&#60;TState&#62;&#62;;
+&#125;
+```
+
+## Flow
+
+```typescript
+type NodeId = string;
+type NodeTypeId = string;
+
+interface FlowSpec &#123;
+  name: string;
+  version?: number;
+  description?: string;
+  input?: Record&#60;string, unknown&#62;;
+  nodePacks?: string[];
+  policy?: FlowPolicy;
+&#125;
+
+interface FlowPolicy &#123;
+  failFast?: boolean;
+&#125;
+
+interface WhenExpr &#123;
+  equals?: &#123; var: string; value: unknown &#125;;
+  not?: WhenExpr;
+  and?: WhenExpr[];
+  or?: WhenExpr[];
+&#125;
+
+interface RetryPolicy &#123;
+  maxAttempts: number;
+  backoffMs?: number;
+&#125;
+
+interface NodePolicy &#123;
+  timeoutMs?: number;
+  retry?: RetryPolicy;
+  continueOnError?: boolean;
+&#125;
+
+interface NodeSpec &#123;
+  id: NodeId;
+  type: NodeTypeId;
+  input: Record&#60;string, unknown&#62;;
+  config?: Record&#60;string, unknown&#62;;
+  when?: WhenExpr;
+  policy?: NodePolicy;
+&#125;
+
+interface Edge &#123;
+  from: NodeId;
+  to: NodeId;
+  when?: WhenExpr;
+&#125;
+
+interface FlowYaml &#123;
+  flow: FlowSpec;
+  nodes: NodeSpec[];
+  edges: Edge[];
+&#125;
+
+interface NodeCapabilities &#123;
+  isStreaming?: boolean;
+  supportsMultiTurn?: boolean;  // V2: uses session:message subscription
+  isLongLived?: boolean;
+  isAgent?: boolean;
+  isContainer?: boolean;        // Container nodes (control.foreach)
+  createsSession?: boolean;     // Creates fresh session per iteration
+&#125;
+
+interface NodeRunContext &#123;
+  hub: Hub;
+  runId: string;
+&#125;
+
+interface NodeTypeDefinition&#60;TIn, TOut&#62; &#123;
+  type: string;
+  inputSchema: ZodSchema&#60;TIn&#62;;
+  outputSchema: ZodSchema&#60;TOut&#62;;
+  capabilities?: NodeCapabilities;
+  run(ctx: NodeRunContext, input: TIn): Promise&#60;TOut&#62;;
+&#125;
+```

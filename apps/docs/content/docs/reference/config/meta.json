@@ -1,0 +1,4 @@
+{
+  "title": "Config",
+  "pages": ["flow-config", "harness-config", "index"]
+}

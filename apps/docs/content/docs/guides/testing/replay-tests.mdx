@@ -1,0 +1,150 @@
+---
+title: How to Record and Replay Tests
+description: Record API fixtures for deterministic testing
+---
+
+# How to Record and Replay Tests
+
+Record API responses as fixtures and replay them in tests.
+
+## Recording Mode
+
+```typescript
+import { createClaudeAgent } from "@open-harness/kernel";
+
+// Create agent in record mode
+const agent = createClaudeAgent({
+  model: "claude-sonnet-4-20250514",
+  mode: "record",
+  fixtureDir: "./fixtures/anthropic"
+});
+```
+
+## Run Recording
+
+```bash
+# Record a test run
+bun run test:record
+
+# Or run specific test in record mode
+RECORD_MODE=true bun run test my-test.test.ts
+```
+
+## Fixture Format
+
+Fixtures are saved as JSON:
+
+```json
+{
+  "request": {
+    "model": "claude-sonnet-4-20250514",
+    "messages": [
+      { "role": "user", "content": "Hello" }
+    ]
+  },
+  "response": {
+    "content": "Hello! How can I help you today?",
+    "stop_reason": "end_turn"
+  },
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+## Replay Mode
+
+```typescript
+// Create agent in replay mode (default for tests)
+const agent = createClaudeAgent({
+  model: "claude-sonnet-4-20250514",
+  mode: "replay",
+  fixtureDir: "./fixtures/anthropic"
+});
+```
+
+## Write Replay Test
+
+```typescript
+import { describe, test, expect } from "bun:test";
+import { createClaudeAgent, createHub, executeFlow, parseFlowYaml } from "@open-harness/kernel";
+import { readFileSync } from "fs";
+
+describe("chat flow", () => {
+  test("responds to greeting", async () => {
+    const agent = createClaudeAgent({
+      model: "claude-sonnet-4-20250514",
+      mode: "replay",
+      fixtureDir: "./fixtures"
+    });
+
+    const flow = parseFlowYaml(readFileSync("./flow.yaml", "utf-8"));
+    const hub = createHub();
+
+    const result = await executeFlow(flow, {
+      hub,
+      input: { prompt: "Hello" }
+    });
+
+    expect(result.response).toContain("Hello");
+  });
+});
+```
+
+## Update Fixtures
+
+When API changes, re-record:
+
+```bash
+# Re-record specific fixture
+RECORD_MODE=true bun run test chat-flow.test.ts
+
+# Re-record all
+bun run test:record
+```
+
+## Golden Fixture Management
+
+```bash
+# Promote recordings to golden fixtures
+bun run fixtures:promote
+
+# Diff against golden
+bun run fixtures:diff
+```
+
+## Fixture Directory Structure
+
+```
+fixtures/
+├── anthropic/
+│   ├── greeting-001.json
+│   ├── greeting-002.json
+│   └── complex-flow-001.json
+└── openai/
+    └── completion-001.json
+```
+
+## Match Strategy
+
+```typescript
+const agent = createClaudeAgent({
+  mode: "replay",
+  fixtureDir: "./fixtures",
+  matchStrategy: "exact"  // or "fuzzy" for partial matching
+});
+```
+
+## Handle Missing Fixtures
+
+```typescript
+const agent = createClaudeAgent({
+  mode: "replay",
+  fixtureDir: "./fixtures",
+  onMissingFixture: "error"  // or "record" to auto-record
+});
+```
+
+## Related
+
+- [Unit Tests](/docs/guides/testing/unit-tests) - Test nodes
+- [Live Tests](/docs/guides/testing/live-tests) - Integration tests
+- [Testing Tutorial](/docs/learn/testing) - Full guide

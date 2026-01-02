@@ -1,0 +1,253 @@
+---
+title: Node Lifecycle
+description: Understanding the phases of node execution
+---
+
+# Node Lifecycle
+
+When a node executes, it goes through several phases. Understanding this lifecycle helps with debugging and building custom nodes.
+
+## Lifecycle Phases
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Node Execution                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Registration     Node type looked up in registry            │
+│         ↓                                                       │
+│  2. Condition Check  'when' expression evaluated                │
+│         ↓                                                       │
+│  3. Input Resolution Bindings resolved against context          │
+│         ↓                                                       │
+│  4. Input Validation Zod schema validates input                 │
+│         ↓                                                       │
+│  5. Execution        Node's run() function called               │
+│         ↓                                                       │
+│  6. Output Validation Zod schema validates output               │
+│         ↓                                                       │
+│  7. Output Capture   Result stored by node ID                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Phase 1: Registration
+
+The node's `type` is looked up in the NodeRegistry:
+
+```typescript
+const def = registry.get(node.type);
+// Throws if not found: "Unknown node type: missing-type"
+```
+
+**Errors**: Unknown node type halts flow execution.
+
+## Phase 2: Condition Check
+
+The `when` expression (if present) is evaluated:
+
+```typescript
+const shouldRun = evaluateWhen(node.when, bindingContext);
+if (!shouldRun) {
+  outputs[node.id] = { skipped: true };
+  return; // Skip remaining phases
+}
+```
+
+**Skipped nodes**: Output set to `{ skipped: true }`, no execution.
+
+## Phase 3: Input Resolution
+
+Bindings in the node's input are resolved:
+
+```yaml
+input:
+  message: "Hello, {{flow.input.name}}"
+```
+
+Becomes:
+
+```javascript
+{ message: "Hello, Alice" }
+```
+
+**Errors**: Missing required binding path throws.
+
+## Phase 4: Input Validation
+
+If the node type has an `inputSchema`, input is validated:
+
+```typescript
+const parsedInput = def.inputSchema.parse(resolvedInput);
+```
+
+**Errors**: Invalid input throws with Zod error details.
+
+## Phase 5: Execution
+
+The node's `run` function is called:
+
+```typescript
+const result = await def.run(runContext, parsedInput);
+```
+
+The run context provides:
+- `hub`: Event bus for emitting events
+- `runId`: Unique run identifier
+- `inbox`: Message inbox (if `supportsInbox`)
+
+**Events**: Node may emit events during execution.
+
+## Phase 6: Output Validation
+
+If the node type has an `outputSchema`, output is validated:
+
+```typescript
+const parsedOutput = def.outputSchema.parse(result);
+```
+
+**Errors**: Invalid output throws.
+
+## Phase 7: Output Capture
+
+The validated output is stored:
+
+```typescript
+outputs[node.id] = parsedOutput;
+```
+
+This makes the output available for downstream bindings.
+
+## Schema Validation
+
+### When Validation Happens
+
+Input validation happens **after** binding resolution:
+- Bindings resolve first
+- Then schema validates the resolved values
+
+Output validation happens **before** storage:
+- Node returns result
+- Schema validates
+- Valid result stored
+
+### Error Propagation
+
+Validation errors halt execution (by default):
+
+```
+ZodError: [
+  {
+    "path": ["email"],
+    "message": "Invalid email format"
+  }
+]
+```
+
+With `continueOnError: true`, errors are captured but don't halt:
+
+```yaml
+policy:
+  continueOnError: true
+```
+
+## Error Handling
+
+### Node Failures
+
+When a node throws:
+
+1. `task:failed` event is emitted
+2. Flow checks `failFast` policy
+3. If `failFast: true` (default), flow stops
+4. If `failFast: false`, flow continues with next nodes
+
+### Retry Policies
+
+Nodes can define retry behavior:
+
+```yaml
+policy:
+  retry:
+    maxAttempts: 3
+    backoffMs: 1000
+```
+
+On failure:
+1. Wait `backoffMs`
+2. Retry execution
+3. Repeat up to `maxAttempts`
+4. If still failing, propagate error
+
+### Graceful Degradation
+
+Use `continueOnError` for non-critical nodes:
+
+```yaml
+nodes:
+  - id: optional_enhancement
+    type: ai-enhance
+    input: {}
+    policy:
+      continueOnError: true
+```
+
+If it fails, downstream nodes see error in output but flow continues.
+
+## Events During Lifecycle
+
+Each phase can emit events:
+
+| Phase | Events |
+|-------|--------|
+| Start | `task:start` |
+| Execution | Node-specific (e.g., `agent:text`) |
+| Success | `task:complete` |
+| Failure | `task:failed` |
+
+### Observing Execution
+
+```typescript
+hub.subscribe("task:start", (e) => {
+  console.log(`Starting: ${e.event.taskId}`);
+});
+
+hub.subscribe("task:complete", (e) => {
+  console.log(`Completed: ${e.event.taskId}`, e.event.result);
+});
+
+hub.subscribe("task:failed", (e) => {
+  console.error(`Failed: ${e.event.taskId}`, e.event.error);
+});
+```
+
+## Custom Node Lifecycle
+
+When building custom nodes, you control phases 5-6:
+
+```typescript
+const customNode: NodeTypeDefinition<Input, Output> = {
+  type: "custom-processor",
+  inputSchema: InputSchema,
+  outputSchema: OutputSchema,
+  run: async (ctx, input) => {
+    // Emit progress
+    ctx.hub.emit({
+      type: "narrative",
+      text: `Processing ${input.items.length} items`
+    });
+
+    // Do work
+    const result = await process(input);
+
+    // Return validated output
+    return { processed: result };
+  }
+};
+```
+
+## Next Steps
+
+- [NodeTypeDefinition](/docs/reference/types/node-type-definition) - Node interface
+- [executeFlow](/docs/reference/api/execute-flow) - Flow execution
+- [Workflow Events](/docs/reference/events/workflow-events) - Event reference
