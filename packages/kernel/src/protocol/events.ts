@@ -90,6 +90,14 @@ export type NarrativeEvent = {
 	text: string;
 	importance?: "low" | "normal" | "high";
 };
+
+export type ChannelEvents =
+	| { type: "channel:registered"; name: string }
+	| { type: "channel:started"; name: string }
+	| { type: "channel:stopped"; name: string }
+	| { type: "channel:unregistered"; name: string }
+	| { type: "channel:error"; name: string; error: string };
+
 export type ExtensionEvent = { type: string; [k: string]: unknown };
 
 export type BaseEvent =
@@ -102,6 +110,7 @@ export type BaseEvent =
 	| SessionStartEvent
 	| SessionEndEvent
 	| NarrativeEvent
+	| ChannelEvents
 	| ExtensionEvent;
 
 // Enriched envelope

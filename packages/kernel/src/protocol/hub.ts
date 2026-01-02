@@ -1,6 +1,7 @@
 // Protocol: Hub
 // See docs/reference/protocol-types.md for authoritative definitions
 
+import type { ChannelDefinition } from "./channel.js";
 import type {
 	BaseEvent,
 	EnrichedEvent,
@@ -36,7 +37,16 @@ export interface Hub extends AsyncIterable<EnrichedEvent> {
 	reply(promptId: string, response: UserResponse): void;
 	abort(reason?: string): void;
 
+	// Channel management
+	registerChannel<TState>(channel: ChannelDefinition<TState>): this;
+	unregisterChannel(name: string): boolean;
+
+	// Lifecycle
+	start(): Promise<void>;
+	stop(): Promise<void>;
+
 	// Status
 	readonly status: HubStatus;
 	readonly sessionActive: boolean;
+	readonly channels: ReadonlyArray<string>;
 }
