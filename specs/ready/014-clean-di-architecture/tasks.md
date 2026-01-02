@@ -86,14 +86,12 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 - [ ] T004 Create packages/anthropic/src/provider/types.ts with AnthropicAgentDefinition and ExecutableAgent interfaces
 - [ ] T005 Create packages/anthropic/src/provider/builder.ts with @injectable() AgentBuilder class
 - [ ] T006 [P] Implement AgentBuilder.build() method that constructs ExecutableAgent with execute/stream methods
-- [ ] T007 Refactor packages/anthropic/src/provider/factory.ts to return plain AnthropicAgentDefinition objects
-- [ ] T008 Remove getGlobalContainer() function from packages/anthropic/src/provider/factory.ts
-- [ ] T009 Remove _globalContainer module-level variable from packages/anthropic/src/provider/factory.ts
-- [ ] T010 [P] Create packages/anthropic/src/provider/helpers.ts with executeAgent() function
-- [ ] T011 [P] Create streamAgent() function in packages/anthropic/src/provider/helpers.ts
-- [ ] T012 [P] Implement createTemporaryContainer() helper in packages/anthropic/src/provider/helpers.ts
-- [ ] T013 Update packages/anthropic/src/provider/index.ts to export new helpers and types
-- [ ] T014 Verify no global containers remain using grep for "let.*Container.*=" and "getGlobalContainer"
+- [ ] T007 Refactor packages/anthropic/src/provider/factory.ts to return plain AnthropicAgentDefinition objects and eliminate all global container state (remove getGlobalContainer() function and _globalContainer module-level variable)
+- [ ] T008 [P] Create packages/anthropic/src/provider/helpers.ts with executeAgent() function (Note: Extract shared container resolution logic with T009 into private helper to avoid duplication)
+- [ ] T009 [P] Create streamAgent() function in packages/anthropic/src/provider/helpers.ts (Note: Share container resolution logic with T008 via private helper function)
+- [ ] T010 [P] Implement createTemporaryContainer() helper in packages/anthropic/src/provider/helpers.ts
+- [ ] T011 Update packages/anthropic/src/provider/index.ts to export new helpers and types
+- [ ] T012 Verify no global containers remain using grep for "let.*Container.*=" and "getGlobalContainer"
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -107,13 +105,13 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 ### Implementation for User Story 1
 
-- [ ] T015 [P] [US1] Refactor packages/anthropic/src/presets/planner-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T016 [P] [US1] Refactor packages/anthropic/src/presets/coding-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T017 [P] [US1] Refactor packages/anthropic/src/presets/review-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T018 [US1] Update packages/anthropic/src/presets/index.ts to export preset agent definitions
-- [ ] T019 [US1] Verify executeAgent() works with PlannerAgent definition in manual test
-- [ ] T020 [US1] Verify streamAgent() works with preset agents in manual test
-- [ ] T021 [US1] Run preset integration tests and verify all pass (packages/anthropic/tests/presets.test.ts)
+- [ ] T013 [P] [US1] Refactor packages/anthropic/src/presets/planner-agent.ts to return config object from defineAnthropicAgent()
+- [ ] T014 [P] [US1] Refactor packages/anthropic/src/presets/coding-agent.ts to return config object from defineAnthropicAgent()
+- [ ] T015 [P] [US1] Refactor packages/anthropic/src/presets/review-agent.ts to return config object from defineAnthropicAgent()
+- [ ] T016 [US1] Update packages/anthropic/src/presets/index.ts to export preset agent definitions
+- [ ] T017 [US1] Verify executeAgent() works with PlannerAgent definition in manual test
+- [ ] T018 [US1] Verify streamAgent() works with preset agents in manual test
+- [ ] T019 [US1] Run preset integration tests and verify all pass (packages/anthropic/tests/presets.test.ts)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - standalone execution works
 
@@ -127,12 +125,12 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Modify packages/sdk/src/factory/define-harness.ts to detect agent definitions (check for name + prompt fields)
-- [ ] T023 [US2] Update harness to bind AgentBuilder to container after creation in packages/sdk/src/factory/define-harness.ts
-- [ ] T024 [US2] Implement agent resolution using builder.build(agentDefinition) in packages/sdk/src/factory/define-harness.ts
-- [ ] T025 [US2] Update registerAnthropicProvider() to bind AgentBuilder in packages/anthropic/src/provider/register.ts
-- [ ] T026 [US2] Verify harness creates isolated container per instance (no shared state)
-- [ ] T027 [US2] Run harness control-flow tests and verify all 17 tests pass (packages/sdk/tests/harness/control-flow.test.ts)
+- [ ] T020 [US2] Modify packages/sdk/src/factory/define-harness.ts to detect agent definitions (check for name + prompt fields)
+- [ ] T021 [US2] Update harness to bind AgentBuilder to container after creation in packages/sdk/src/factory/define-harness.ts
+- [ ] T022 [US2] Implement agent resolution using builder.build(agentDefinition) in packages/sdk/src/factory/define-harness.ts
+- [ ] T023 [US2] Update registerAnthropicProvider() to bind AgentBuilder in packages/anthropic/src/provider/register.ts
+- [ ] T024 [US2] Verify harness creates isolated container per instance (no shared state)
+- [ ] T025 [US2] Run harness control-flow tests and verify all 17 tests pass (packages/sdk/tests/harness/control-flow.test.ts)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - standalone execution AND harness workflows
 
@@ -146,12 +144,12 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 ### Implementation for User Story 3
 
-- [ ] T028 [P] [US3] Update examples/coding/src/validation-coding-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T029 [P] [US3] Update examples/coding/src/validation-agent.ts to return config object from defineAnthropicAgent()
-- [ ] T030 [US3] Verify examples/coding/src/validate-harness.ts works without changes (should use new architecture transparently)
-- [ ] T031 [US3] Verify examples/coding/src/harness.ts works without changes
-- [ ] T032 [US3] Run validation workflow end-to-end: bun examples/coding/src/validate.ts
-- [ ] T033 [US3] Run coding workflow end-to-end: bun examples/coding/src/index.ts
+- [ ] T026 [P] [US3] Update examples/coding/src/validation-coding-agent.ts to return config object from defineAnthropicAgent()
+- [ ] T027 [P] [US3] Update examples/coding/src/validation-agent.ts to return config object from defineAnthropicAgent()
+- [ ] T028 [US3] Verify examples/coding/src/validate-harness.ts works without changes (should use new architecture transparently)
+- [ ] T029 [US3] Verify examples/coding/src/harness.ts works without changes
+- [ ] T030 [US3] Run validation workflow end-to-end: bun examples/coding/src/validate.ts
+- [ ] T031 [US3] Run coding workflow end-to-end: bun examples/coding/src/index.ts
 
 **Checkpoint**: All user stories 1-3 should now be independently functional - custom agents work like presets
 
@@ -165,15 +163,19 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 ### Implementation for User Story 4
 
-- [ ] T034 [P] [US4] Add unit test for AgentBuilder.build() with mock IAgentRunner in packages/anthropic/tests/unit/builder.test.ts
-- [ ] T035 [P] [US4] Add unit test for AgentBuilder.build() with mock IUnifiedEventBus in packages/anthropic/tests/unit/builder.test.ts
-- [ ] T036 [P] [US4] Add unit test for executeAgent() with custom container option in packages/anthropic/tests/unit/helpers.test.ts
-- [ ] T037 [P] [US4] Add unit test for executeAgent() with default temporary container in packages/anthropic/tests/unit/helpers.test.ts
-- [ ] T038 [P] [US4] Add unit test for streamAgent() with channel attachment in packages/anthropic/tests/unit/helpers.test.ts
-- [ ] T039 [US4] Add DI compliance test verifying agent definition serialization in packages/anthropic/tests/unit/compliance.test.ts
-- [ ] T040 [US4] Add DI compliance test verifying no global state between tests in packages/anthropic/tests/unit/compliance.test.ts
-- [ ] T041 [US4] Add DI compliance test verifying container isolation in harness in packages/sdk/tests/harness/di-compliance.test.ts
-- [ ] T042 [US4] Run all unit tests and verify 80%+ coverage for new code (builder.ts, helpers.ts)
+- [ ] T032 [P] [US4] Add unit test for AgentBuilder.build() with mock IAgentRunner in packages/anthropic/tests/unit/builder.test.ts
+- [ ] T033 [P] [US4] Add unit test for AgentBuilder.build() with mock IUnifiedEventBus in packages/anthropic/tests/unit/builder.test.ts
+- [ ] T033b [P] [US4] (Optional) Add integration test for AgentBuilder with BOTH mock runner and event bus to verify they integrate correctly
+- [ ] T034 [P] [US4] Add unit test for executeAgent() with custom container option in packages/anthropic/tests/unit/helpers.test.ts
+- [ ] T035 [P] [US4] Add unit test for executeAgent() with default temporary container in packages/anthropic/tests/unit/helpers.test.ts
+- [ ] T036 [P] [US4] Add unit test for streamAgent() with channel attachment in packages/anthropic/tests/unit/helpers.test.ts
+- [ ] T037 [US4] Add DI compliance test verifying agent definition serialization in packages/anthropic/tests/unit/compliance.test.ts
+- [ ] T038 [US4] Add DI compliance test verifying no global state between tests in packages/anthropic/tests/unit/compliance.test.ts (run with --random-seed, verify each test creates isolated container, tests pass regardless of order)
+- [ ] T039 [US4] Add DI compliance test verifying container isolation in harness in packages/sdk/tests/harness/di-compliance.test.ts
+- [ ] T040 [US4] Run all unit tests and verify 80%+ line coverage for new code using bun test --coverage (builder.ts, helpers.ts, factory.ts)
+- [ ] T041 [P] [US4] Add explicit input validation test in packages/anthropic/tests/unit/validation.test.ts verifying executeAgent() rejects invalid input with clear Zod errors (FR-010 verification)
+- [ ] T042 [P] [US4] Add explicit template rendering test in packages/anthropic/tests/unit/template.test.ts verifying prompt variable substitution works correctly (FR-011 verification)
+- [ ] T043 [P] [US4] Add explicit event emission integration test in packages/anthropic/tests/integration/events.test.ts verifying IUnifiedEventBus receives events during agent execution (FR-018 verification)
 
 **Checkpoint**: All user stories should now be independently functional AND testable with mocks
 
@@ -183,14 +185,15 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 **Purpose**: Documentation, final validation, and cleanup
 
-- [ ] T043 [P] Update architecture documentation in .knowledge/docs/how-it-works.md with builder pattern
-- [ ] T044 [P] Run DI audit using NeedleDI rubric from .claude/skills/needle-di/references/rubrics.md
-- [ ] T045 Verify DI audit score >= 95% (no service locator, no global state, pure constructor injection)
-- [ ] T046 Run all tests across SDK and Anthropic packages: bun test
-- [ ] T047 Run type checking across all packages: bun run typecheck
-- [ ] T048 Run linting across all packages: bun run lint
-- [ ] T049 Verify no console.log statements in production code
-- [ ] T050 Final grep verification: no getGlobalContainer() calls remain in codebase
+- [ ] T044 [P] Update architecture documentation in .knowledge/docs/how-it-works.md with builder pattern
+- [ ] T045 [P] Run DI audit using NeedleDI rubric from .claude/skills/needle-di/references/rubrics.md
+- [ ] T046 Verify DI audit score >= 95% (no service locator, no global state, pure constructor injection)
+- [ ] T047 Run all tests across SDK and Anthropic packages: bun test
+- [ ] T048 Run type checking across all packages: bun run typecheck
+- [ ] T049 Run linting across all packages: bun run lint
+- [ ] T050 Verify no console.log statements in production code
+- [ ] T051 [P] Verify API surface encapsulation: Run tsc --declaration on packages/anthropic/src/index.ts and grep output for Container|injectable|Token (expect zero matches)
+- [ ] T052 [P] Add type safety negative test: Create test file with mismatched template/schema, verify tsc --noEmit fails with type error
 
 ---
 
@@ -217,39 +220,46 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 
 - **Phase 2 (Foundational)**:
   - T004 (types) before T005-T006 (builder implementation)
-  - T007-T009 (factory refactor) can run parallel with T010-T012 (helpers)
-  - T013 (exports) depends on all previous tasks
-  - T014 (verification) must be last
+  - T007 (factory refactor) can run parallel with T008-T010 (helpers)
+  - T011 (exports) depends on all previous tasks
+  - T012 (verification) must be last
 
 - **Phase 3 (User Story 1)**:
-  - T015-T017 (preset refactors) can run in parallel
-  - T018 (exports) depends on T015-T017
-  - T019-T021 (verification) must be sequential after T018
+  - T013-T015 (preset refactors) can run in parallel
+  - T016 (exports) depends on T013-T015
+  - T017-T019 (verification) must be sequential after T016
 
 - **Phase 4 (User Story 2)**:
-  - T022-T024 (harness changes) must be sequential
-  - T025 (provider registration) can run parallel with T022-T024
-  - T026-T027 (verification) must be after all implementation
+  - T020-T022 (harness changes) must be sequential
+  - T023 (provider registration) can run parallel with T020-T022
+  - T024-T025 (verification) must be after all implementation
 
 - **Phase 5 (User Story 3)**:
-  - T028-T029 (example agents) can run in parallel
-  - T030-T031 (verify no changes needed) can run parallel
-  - T032-T033 (end-to-end) must be sequential
+  - T026-T027 (example agents) can run in parallel
+  - T028-T029 (verify no changes needed) can run parallel
+  - T030-T031 (end-to-end) must be sequential
 
 - **Phase 6 (User Story 4)**:
-  - T034-T038 (unit tests) can all run in parallel
-  - T039-T041 (compliance tests) can run in parallel
-  - T042 (coverage verification) must be last
+  - T032-T036 (unit tests) can all run in parallel
+  - T037-T039 (compliance tests) can run in parallel
+  - T040 (coverage verification) depends on tests
+  - T041-T043 (explicit verification tests) can run in parallel
+
+- **Phase 7 (Polish & Cross-Cutting)**:
+  - T044-T045 (documentation and DI audit) can run in parallel
+  - T046 (audit score verification) depends on T045
+  - T047-T050 (quality gates) can run in parallel
+  - T051-T052 (API surface and type safety) can run in parallel
 
 ### Parallel Opportunities
 
 - **Phase 1**: All tasks (T001-T003) can run in parallel
-- **Phase 2**: T007-T009 parallel with T010-T012 after T004-T006 complete
-- **Phase 3**: T015-T017 can run in parallel
-- **Phase 4**: T025 can run parallel with T022-T024
-- **Phase 5**: T028-T029 parallel, T030-T031 parallel
-- **Phase 6**: T034-T038 parallel, T039-T041 parallel
-- **Phase 7**: T043-T044 can run in parallel
+- **Phase 2**: T007 parallel with T008-T010 after T004-T006 complete
+- **Phase 3**: T013-T015 can run in parallel
+- **Phase 4**: T023 can run parallel with T020-T022
+- **Phase 5**: T026-T027 parallel, T028-T029 parallel
+- **Phase 6**: T032-T036 parallel, T037-T039 parallel, T041-T043 parallel
+- **Phase 7**: T044-T045 parallel, T051-T052 parallel
 
 ---
 
