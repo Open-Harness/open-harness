@@ -2,10 +2,16 @@
   "title": "Reference",
   "pages": [
     "index",
-    "nodes",
-    "channels",
-    "providers",
-    "api",
-    "kernel-spec"
+    "...nodes",
+    "...channels",
+    "...providers",
+    "...api",
+    "...kernel-spec",
+    "...bindings",
+    "...config",
+    "...events",
+    "...schemas",
+    "...types",
+    "...when"
   ]
 }

@@ -2,13 +2,14 @@
   "title": "Guides",
   "pages": [
     "index",
-    "flows",
-    "nodes",
-    "hub",
-    "channels",
-    "agents",
-    "testing",
-    "debugging",
+    "for-evaluators",
+    "...flows",
+    "...nodes",
+    "...hub",
+    "...channels",
+    "...agents",
+    "...testing",
+    "...debugging",
     "faq"
   ]
 }

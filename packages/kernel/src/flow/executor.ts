@@ -313,6 +313,11 @@ export async function executeFlow(
 				const fired = incoming.some((edge) => edge.status === "fired");
 				if (!fired) {
 					outputs[node.id] = { skipped: true };
+					ctx.hub.emit({
+						type: "node:skipped",
+						nodeId: node.id,
+						reason: "edge",
+					});
 					resolveOutgoingEdges(
 						node.id,
 						edgeIndex,
@@ -325,6 +330,11 @@ export async function executeFlow(
 			const shouldRun = evaluateWhen(node.when, bindingContext);
 			if (!shouldRun) {
 				outputs[node.id] = { skipped: true };
+				ctx.hub.emit({
+					type: "node:skipped",
+					nodeId: node.id,
+					reason: "when",
+				});
 				resolveOutgoingEdges(
 					node.id,
 					edgeIndex,
@@ -335,6 +345,15 @@ export async function executeFlow(
 
 			const def = registry.get(node.type);
 			let attempts = 0;
+			const startTime = Date.now();
+
+			// Emit node:start before execution
+			ctx.hub.emit({
+				type: "node:start",
+				nodeId: node.id,
+				nodeType: node.type,
+			});
+
 			try {
 				await ctx.task(`node:${node.id}`, async () => {
 					const execution = await runNodeWithPolicy(
@@ -353,8 +372,25 @@ export async function executeFlow(
 					}
 					outputs[node.id] = execution.output;
 				});
+
+				// Emit node:complete on success
+				ctx.hub.emit({
+					type: "node:complete",
+					nodeId: node.id,
+					output: outputs[node.id],
+					durationMs: Date.now() - startTime,
+				});
 			} catch (error) {
 				outputs[node.id] = createErrorMarker(error, attempts);
+				const { message, stack } = getErrorMessage(error);
+
+				// Emit node:error on failure
+				ctx.hub.emit({
+					type: "node:error",
+					nodeId: node.id,
+					error: message,
+					stack,
+				});
 
 				if (!shouldContinueOnError(node, flow)) {
 					throw error;

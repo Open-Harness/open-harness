@@ -1,0 +1,871 @@
+# Docs Audit Manifest
+# Persistent state for multi-wave docs audit
+# Created: 2026-01-02
+
+meta:
+  created: "2026-01-02T12:00:00Z"
+  last_updated: "2026-01-02T12:00:00Z"
+  last_wave: 0
+  status: in_progress
+  context: "015-critical-path branch - Channel Architecture & ReactFlow UI"
+
+# Wave execution tracking
+waves:
+  wave_1:
+    name: "Discovery"
+    status: complete
+    agents:
+      - docs-inventory
+      - diataxis-classifier
+      - codebase-scanner
+      - github-issues
+      - kernel-docs-diff
+    started: "2026-01-02T13:15:00Z"
+    completed: "2026-01-02T13:20:00Z"
+    findings:
+      inventory:
+        total_pages: 160
+        by_section:
+          learn: 13
+          guides: 33
+          concepts: 26
+          reference: 68
+          contributing: 18
+        pages_with_examples: 144  # 90%
+        average_word_count: 530
+
+      diataxis:
+        overall_alignment: "72%"
+        misclassified:
+          - path: "learn/flow-inputs.mdx"
+            actual_type: "reference"
+            issue: "Only 37 lines, pure syntax reference"
+          - path: "learn/when-policy.mdx"
+            actual_type: "reference"
+            issue: "38 lines, reference-style in tutorial section"
+          - path: "learn/bindings-a3.mdx"
+            actual_type: "reference"
+            issue: "33 lines, missing hands-on examples"
+        underdeveloped:
+          - "guides/debugging.mdx (36 lines)"
+          - "guides/testing-workflow.mdx (32 lines)"
+          - "guides/write-replay-tests.mdx (35 lines)"
+
+      feature_coverage:
+        total_exports: 113
+        by_package:
+          kernel: 76
+          flow_ui: 37
+        documented: 13
+        undocumented: 52
+        critical_gaps:
+          - area: "Flow-UI (015)"
+            count: 18
+            priority: "critical"
+            reason: "Zero documentation for visual editor"
+          - area: "Flow Implementation APIs"
+            count: 15
+            priority: "high"
+          - area: "Hub Implementation"
+            count: 4
+            priority: "high"
+          - area: "Node Library"
+            count: 8
+            priority: "high"
+          - area: "Claude Provider"
+            count: 4
+            priority: "high"
+          - area: "WebSocket Channel"
+            count: 3
+            priority: "medium"
+
+      github_roadmap:
+        open_issues: 4
+        immediate:
+          - "PR #38: Channel Architecture & ReactFlow UI (shipping soon)"
+        upcoming:
+          - "#33: 9 control nodes (if, switch, merge, loop, wait, gate, subflow, fail, noop)"
+        deferred:
+          - "#35: Parallel execution (super-steps, state reducers)"
+
+      kernel_docs_sync:
+        kernel_files: 26
+        apps_files: 26
+        sync_status: "complete"
+        recommendation: "SAFE_TO_DELETE packages/kernel/docs"
+        reason: "All content synced, apps/docs is source of truth"
+
+  wave_2:
+    name: "Analysis"
+    status: complete
+    started: "2026-01-02T13:25:00Z"
+    completed: "2026-01-02T13:35:00Z"
+    findings:
+      coverage_matrix:
+        total_features_needing_docs: 45
+        effort_estimate: "90-110 person-hours"
+        critical:
+          - "executeFlow() function"
+          - "FlowExecutionContext interface"
+          - "Node compilation & DAG validation"
+          - "Event system (HubImpl)"
+          - "WebSocket channel"
+          - "Claude provider integration"
+          - "ALL Flow-UI components (18 items)"
+        implementation_order:
+          batch_1: "Execution foundations"
+          batch_2: "Bindings and evaluation"
+          batch_3: "Registry and basic nodes"
+          batch_4: "Advanced nodes and providers"
+          batch_5: "Channels and sessions"
+          batch_6: "Protocols and events"
+          batch_7: "Flow-UI fundamentals"
+          batch_8: "Flow-UI components"
+          batch_9: "Flow-UI integration"
+          batch_10: "Utilities and schemas"
+
+      quality_review:
+        overall_score: "3.4/5"
+        pages_reviewed: 10
+        critical_issues:
+          - "guides/debugging.mdx: 36 lines, severely underdeveloped"
+          - "concepts/architecture-overview.mdx: 30 lines, stub"
+          - "learn/quickstart.mdx: Uses raw API calls instead of SDK wrapper"
+        best_pages:
+          - "reference/api/hub.mdx (4.8/5)"
+          - "concepts/architecture/kernel-primitives.mdx (4.6/5)"
+          - "learn/first-flow.mdx (4.4/5)"
+        broken_links: 3
+        misclassified_pages: 3 (reference in learn section)
+
+      navigation_audit:
+        meta_files_found: 13
+        orphan_directories: 27  # Directories with content but no meta.json
+        broken_cross_refs: 3  # All reference non-existent building-channels guide
+        orphan_pages: 1  # test.mdx
+        critical_issue: "27 nested directories lack meta.json navigation"
+
+      onboarding_flow:
+        steps_traced: 8
+        time_to_first_example: "1 page"
+        friction_points:
+          - page: "homepage"
+            issue: "Value prop too abstract, no n8n comparison"
+            severity: "blocker"
+          - page: "learn/index"
+            issue: "'What is OH?' is 1 sentence, no mental model"
+            severity: "blocker"
+          - page: "quickstart"
+            issue: "Single-node example, no actual orchestration shown"
+            severity: "high"
+        mental_model_clarity:
+          flow_centric_explained: false
+          n8n_comparison_clear: false
+          hub_vs_flow_clear: false
+        missing_for_self_serve:
+          - "Comparison: OH vs n8n vs Make"
+          - "Visual/video showing live flow"
+          - "Node catalog"
+          - "Deployment guide"
+          - "Error handling tutorial"
+    agents:
+      - coverage-analyzer
+      - quality-sampler
+      - navigation-auditor
+      - onboarding-flow
+    started: null
+    completed: null
+    findings: null
+
+  wave_3:
+    name: "Synthesis"
+    status: blocked_by_wave_2
+    agents:
+      - recommendations-synthesizer
+    started: null
+    completed: null
+    findings: null
+
+# Accumulated findings by dimension
+dimensions:
+  inventory:
+    total_pages: null
+    by_section: {}
+    by_diataxis: {}
+    file_list: []
+
+  coverage:
+    documented_features: []
+    undocumented_features: []
+    outdated_docs: []
+    needs_removal: []
+
+  quality:
+    clarity_issues: []
+    missing_examples: []
+    incomplete_tutorials: []
+    broken_links: []
+    overall_scores: {}
+
+  organization:
+    current_structure: {}
+    diataxis_balance: {}
+    navigation_issues: []
+    orphan_pages: []
+
+  roadmap:
+    open_issues: []
+    upcoming_features: []
+    docs_implications: []
+
+# =============================================================================
+# USER RESEARCH - Question Tree
+# =============================================================================
+# This section tracks all questions asked to the user across multiple rounds.
+# Key part of building understanding alongside codebase research.
+
+user_research:
+  total_rounds: 14
+  target_rounds: 10  # Minimum rounds of user questions (EXCEEDED)
+
+  rounds:
+    - round: 1
+      timestamp: "2026-01-02T12:05:00Z"
+      dimension: "foundational"
+      questions_asked:
+        - "Who is the primary audience for these docs?"
+        - "What's the current maturity of Open Harness?"
+        - "What's your vision for doc quality?"
+      answers_received:
+        audience: "SDK users, Contributors, Internal team (NOT evaluators yet)"
+        maturity: "Pre-alpha (experimental, expect breaking changes)"
+        vision: "Stripe/Vercel level (best-in-class)"
+      insights:
+        - "Ambitious vision (best-in-class) despite pre-alpha state"
+        - "Three audience segments to serve simultaneously"
+        - "Docs need to handle breaking changes gracefully"
+      follow_ups_generated:
+        - "What does 'best-in-class' mean specifically to you?"
+        - "How do you want to handle breaking changes in docs?"
+        - "What's the priority order for the 3 audience segments?"
+
+    - round: 2
+      timestamp: "2026-01-02T12:10:00Z"
+      dimension: "priorities"
+      questions_asked:
+        - "What are your biggest frustrations with the current docs?"
+        - "For a pre-alpha with best-in-class aspirations, what's the priority?"
+        - "Which audience segment should we optimize for FIRST?"
+        - "When you think 'Stripe-level docs', what specifically comes to mind?"
+      answers_received:
+        pain_points: "Out of date, Hard to find things"
+        priority: "Core concepts first"
+        audience_focus: "Internal team FIRST"
+        stripe_level_means:
+          - "Progressive disclosure"
+          - "Clear visual hierarchy"
+          - "Exceptional copy-paste examples"
+      insights:
+        - "Internal team first = docs as team knowledge base"
+        - "Core concepts over API reference = invest in mental model"
+        - "Out of date is top frustration = need sync strategy"
+        - "NOT prioritizing: Interactive API explorer"
+      follow_ups_generated:
+        - "What ARE the core concepts that need nailing?"
+        - "What's the current team onboarding process?"
+        - "How should docs stay in sync with rapid changes?"
+
+    - round: 3
+      timestamp: "2026-01-02T12:15:00Z"
+      dimension: "core_concepts"
+      questions_asked:
+        - "What are THE core concepts someone MUST understand?"
+        - "What's the ONE thing people get wrong most often?"
+        - "Is there a 'golden path' example?"
+      answers_received:
+        core_concepts: "USER WANTS ME TO PROPOSE based on codebase understanding"
+        common_confusion: "Agent lifecycle"
+        golden_path: "No, but we know what it should be"
+      insights:
+        - "User testing my understanding - I need to propose core concepts"
+        - "Agent lifecycle is the #1 confusion point"
+        - "Golden path example is NEEDED but doesn't exist yet"
+        - "This is an opportunity to validate my mental model"
+      follow_ups_generated:
+        - "Present MY understanding of core concepts for validation"
+        - "What should the golden path example demonstrate?"
+        - "What makes agent lifecycle confusing specifically?"
+
+    - round: 4
+      timestamp: "2026-01-02T12:20:00Z"
+      dimension: "mental_model_validation"
+      questions_asked:
+        - "Which mental model is most accurate?"
+        - "Hub → Flow → Agents → Channels - correct?"
+        - "Hub is runtime, Flow is spec - correct?"
+      answers_received:
+        primary_model: "Flow-centric (graphs are king)"
+        pipeline_model: "Confirmed: Hub (events) → Flow (what to run) → Agents (LLM work) → Channels (I/O)"
+        hub_flow_relationship: "Hub runs, Flow defines"
+      insights:
+        - "FLOW IS KING - docs should lead with FlowSpec"
+        - "Hub is runtime infrastructure, not the star"
+        - "Pipeline mental model is correct for teaching"
+        - "Agents and Channels are downstream concepts"
+      validated_mental_model:
+        primary: "FlowSpec (declarative definition)"
+        runtime: "Hub (event-driven execution)"
+        workers: "Agents (LLM execution units)"
+        interfaces: "Channels (I/O adapters)"
+        glue: "Events (communication protocol)"
+      follow_ups_generated:
+        - "What does a minimal FlowSpec look like?"
+        - "How should we teach the Flow → Hub relationship?"
+        - "What's the simplest agent lifecycle to start with?"
+
+    - round: 5
+      timestamp: "2026-01-02T12:25:00Z"
+      dimension: "organization"
+      questions_asked:
+        - "Familiar with Diataxis framework?"
+        - "Is current structure right?"
+        - "What's ideal first 5 minutes?"
+      answers_received:
+        diataxis: "Yes, and want to follow it"
+        structure: "Keep current: Learn, Guides, Concepts, Reference, Contributing"
+        onboarding: "Concept overview first (NOT quick start code)"
+      insights:
+        - "Diataxis framework is the target"
+        - "Current structure is good, content is the problem"
+        - "Concept-first onboarding aligns with core-concepts priority"
+        - "NOT a 'bun add, paste, run' experience"
+      diataxis_mapping:
+        tutorials: "Learn"
+        how_to: "Guides"
+        explanation: "Concepts"
+        reference: "Reference"
+        meta: "Contributing"
+      follow_ups_generated:
+        - "What concepts should the overview cover?"
+        - "How long should the concept overview be?"
+        - "After concepts, then what?"
+
+    - round: 6
+      timestamp: "2026-01-02T12:30:00Z"
+      dimension: "roadmap"
+      questions_asked:
+        - "How stable is current architecture?"
+        - "Should docs include roadmap sections?"
+        - "What's the biggest upcoming feature?"
+        - "How to handle breaking changes?"
+      answers_received:
+        stability: "Core stable, edges evolving"
+        roadmap_in_docs: "Yes, but minimal"
+        next_big_thing: "Flow enhancements"
+        breaking_changes: "Changelog only"
+      insights:
+        - "Core (Hub/Flow/Events) is stable - document confidently"
+        - "Edges (Channels/Agents) evolving - document with caveats"
+        - "Minimal roadmap section - hint at direction without promises"
+        - "No versioned docs yet - keep single current version"
+        - "Flow enhancements coming - 015 patterns are foundation"
+      follow_ups_generated:
+        - "What Flow enhancements are planned?"
+        - "Which edges are most likely to change?"
+        - "What stability markers should docs have?"
+
+    - round: 7
+      timestamp: "2026-01-02T12:35:00Z"
+      dimension: "examples"
+      questions_asked:
+        - "What makes a good example?"
+        - "Should examples be runnable?"
+        - "What runtime to target?"
+      answers_received:
+        good_example: "Progressive (simple → complex)"
+        runnable: "Yes, EVERY example must run"
+        runtime: "TypeScript + Bun only"
+      insights:
+        - "Progressive disclosure aligns with Stripe-level vision"
+        - "Runnable examples = quality bar, no fragments"
+        - "Bun-only simplifies docs, no Node fallbacks"
+        - "This is a HIGH bar - need to audit existing examples"
+      example_requirements:
+        - "Must be copy-paste runnable"
+        - "Progressive: simple → complex"
+        - "TypeScript only"
+        - "Bun runtime assumed"
+      follow_ups_generated:
+        - "Do existing examples meet this bar?"
+        - "What's the minimal runnable example?"
+        - "How to test that examples still work?"
+
+    - round: 8
+      timestamp: "2026-01-02T12:40:00Z"
+      dimension: "maintenance"
+      questions_asked:
+        - "Who will maintain docs?"
+        - "How to sync with code changes?"
+        - "What about packages/kernel/docs?"
+        - "How to track quality?"
+      answers_received:
+        maintainer: "CI/CD skill/action (automated)"
+        sync_strategy: "PR checklist"
+        kernel_docs: "DELETE IT - apps/docs is sole source"
+        quality_tracking: "All of the above (manual, automated, feedback)"
+      insights:
+        - "Automated doc maintenance via CI/CD skill - sophisticated"
+        - "PR checklist = docs-as-code culture"
+        - "Single source of truth: apps/docs"
+        - "Quality is multi-signal approach"
+      action_items:
+        - "Delete packages/kernel/docs (after migrating any unique content)"
+        - "Create CI/CD doc skill/action"
+        - "Add doc checklist to PR template"
+        - "Set up link checker"
+        - "Set up example runner"
+        - "Add feedback mechanism"
+      follow_ups_generated:
+        - "What should the CI/CD doc skill do exactly?"
+        - "What goes in the PR checklist?"
+        - "Is there content in kernel/docs not in apps/docs?"
+
+    - round: 9
+      timestamp: "2026-01-02T12:45:00Z"
+      dimension: "ci_skill_and_content"
+      questions_asked:
+        - "What should CI/CD doc skill do?"
+        - "Any docs known to be good?"
+        - "Any docs known to be bad?"
+      answers_received:
+        ci_skill_scope: "All: outdated check + example runner + API gen + report"
+        good_docs: "Not sure, need to review"
+        bad_docs: "Need audit to determine"
+      insights:
+        - "CI skill is comprehensive - full audit + report"
+        - "User doesn't have visibility into doc quality - audit is essential"
+        - "No known good/bad means clean slate for recommendations"
+        - "Audit findings will drive prioritization"
+      ci_skill_requirements:
+        - "Detect outdated content (code → doc comparison)"
+        - "Run all code examples (fail on broken)"
+        - "Generate API reference from TypeScript types"
+        - "Produce summary report"
+      follow_ups_generated:
+        - "How often should CI skill run? (every PR, nightly, manual)"
+        - "What format for the audit report?"
+        - "Any existing tooling to build on?"
+
+    - round: 10
+      timestamp: "2026-01-02T12:50:00Z"
+      dimension: "015_and_inspiration"
+      questions_asked:
+        - "What's most important to document for 015?"
+        - "Any doc sites you admire?"
+        - "Single most important improvement?"
+      answers_received:
+        015_priority: "USER TRUSTS ME TO DECIDE"
+        inspiration: "ALL: Vercel, Tailwind, Cloudflare, Stripe"
+        top_priority: "Clear concept overview (what IS Open Harness)"
+      insights:
+        - "User trusts judgment on 015 doc priorities"
+        - "High bar: inspiration from best-in-class docs"
+        - "TOP PRIORITY: Concept overview - explain what OH IS"
+        - "This confirms 'concept first' from earlier rounds"
+      inspirations_to_study:
+        - site: "Vercel/Next.js"
+          strengths: "Clean, progressive, well-organized"
+        - site: "Tailwind"
+          strengths: "Searchable, practical, example-heavy"
+        - site: "Cloudflare"
+          strengths: "Technical depth, clear architecture"
+        - site: "Stripe"
+          strengths: "Exceptional examples, interactive"
+      follow_ups_generated:
+        - "What makes OH different from alternatives?"
+        - "What problem does OH solve?"
+        - "One-line pitch for OH?"
+
+    - round: 11
+      timestamp: "2026-01-02T12:55:00Z"
+      dimension: "identity"
+      questions_asked:
+        - "In one sentence, what IS Open Harness?"
+        - "What's the closest existing project?"
+        - "What's the KEY differentiator?"
+      answers_received:
+        identity: "A flow-based AI system"
+        comparison: |
+          n8n but nodes are wrappers around deep agent SDKs (Anthropic Agent SDK,
+          Codex SDK, OpenCode SDK, etc.). The agent as primitive is already capable.
+          As models improve, agents improve. Our job is workflows using agents as primitives.
+          Don't need specialized tools/MCP. Claude + skills + state schema = powerful systems.
+          All the agent needs is spec rules, then translates user ideas into one YAML file.
+          Users don't think in graphs (why LangGraph has polarity). Users aren't expected
+          to build manually - visual editor OR prompting AI to generate flows.
+        differentiator: "Flow-first design"
+      insights:
+        - "POSITIONING: n8n for AI agents, not LangChain competitor"
+        - "PRIMITIVE: Agent SDKs are the unit, not chains/tools/RAG"
+        - "PHILOSOPHY: Agents are already capable, just orchestrate them"
+        - "UX: Visual editor OR AI-generated flows, not manual YAML"
+        - "SPEC: One YAML file captures entire workflow"
+        - "FUTURE-PROOF: As models improve, OH flows improve automatically"
+      key_messaging:
+        tagline: "n8n for AI agents"
+        philosophy: "Agents as primitives - orchestrate, don't reinvent"
+        target_pain: "LangGraph complexity without the power"
+        promise: "Define flows visually or via AI, agents do the rest"
+      follow_ups_generated:
+        - "What agent SDKs are supported/planned?"
+        - "How does the visual editor work?"
+        - "How does AI-generated flow creation work?"
+
+    - round: 12
+      timestamp: "2026-01-02T13:00:00Z"
+      dimension: "implementation_status"
+      questions_asked:
+        - "Which agent SDKs are supported?"
+        - "Is 015 ReactFlow the visual editor?"
+        - "Is AI flow generation implemented?"
+      answers_received:
+        sdk_support: "Abstracted (provider-agnostic) - generic interface with adapters"
+        visual_editor: "YES, 015 flow-ui IS the visual editor"
+        ai_generation: "Partially working - basic version exists"
+      insights:
+        - "Provider-agnostic = document the abstraction, not specific SDKs"
+        - "015 is the visual editor - MUST document this in 015 docs"
+        - "AI generation exists but needs refinement - document current state"
+        - "Three creation paths: Manual YAML, Visual Editor, AI Generation"
+      docs_implications:
+        - "Need section on provider abstraction layer"
+        - "Need visual editor guide (015 work)"
+        - "Need AI generation guide (with 'partial' caveat)"
+        - "Need comparison: when to use which creation method"
+      follow_ups_generated:
+        - "What providers have adapters today?"
+        - "What can you do in the visual editor?"
+        - "How do you invoke AI flow generation?"
+
+    - round: 13
+      timestamp: "2026-01-02T13:05:00Z"
+      dimension: "use_cases_and_success"
+      questions_asked:
+        - "What's the canonical use case?"
+        - "Anyone outside team used OH?"
+        - "What's docs success in 3 months?"
+      answers_received:
+        canonical_use_case: "Multi-step agent workflow"
+        external_use: "No, internal only so far"
+        success_metric: "External devs can build without hand-holding"
+      insights:
+        - "Canonical example needed: multi-step workflow"
+        - "No external users yet = docs are for LAUNCH"
+        - "Success = self-serve adoption, no hand-holding"
+        - "Docs must stand alone for external consumption"
+      docs_implications:
+        - "Multi-step workflow tutorial is CRITICAL"
+        - "Docs must be complete enough for strangers"
+        - "Can't assume prior context or tribal knowledge"
+        - "Every concept must be explained from scratch"
+      follow_ups_generated:
+        - "What's a good example multi-step workflow?"
+        - "What questions do people ask when trying OH?"
+        - "What trips people up most?"
+
+    - round: 14
+      timestamp: "2026-01-02T13:10:00Z"
+      dimension: "content_and_tone"
+      questions_asked:
+        - "What's definitely missing from docs?"
+        - "What tone/voice should docs have?"
+        - "Should docs explain WHY or just HOW?"
+      answers_received:
+        missing: "Architecture overview, FlowSpec reference"
+        tone: "Opinionated and direct"
+        depth: "Mostly HOW, WHY in separate section"
+      insights:
+        - "Architecture overview is MISSING - critical gap"
+        - "FlowSpec reference is MISSING - need complete YAML schema"
+        - "Opinionated = strong recommendations, not wishy-washy"
+        - "Separate HOW from WHY = Diataxis alignment (Guides vs Concepts)"
+      docs_requirements:
+        - "CREATE: Architecture overview"
+        - "CREATE: FlowSpec YAML reference"
+        - "TONE: Direct, opinionated, clear recommendations"
+        - "STRUCTURE: HOW in Guides, WHY in Concepts"
+
+  # =============================================================================
+  # USER RESEARCH SYNTHESIS
+  # =============================================================================
+  synthesis:
+    audience:
+      primary: "Internal team (for now)"
+      secondary: "SDK users, Contributors"
+      success_metric: "External devs self-serve without hand-holding"
+
+    identity:
+      what_is_oh: "n8n for AI agents"
+      tagline: "Flow-based AI system with agent SDK primitives"
+      philosophy: "Agents are capable; orchestrate, don't reinvent"
+      differentiator: "Flow-first design, provider-agnostic"
+      comparison: "Like n8n, NOT like LangChain"
+
+    content_priorities:
+      1: "Clear concept overview (what IS Open Harness)"
+      2: "Architecture overview (how pieces fit)"
+      3: "FlowSpec reference (complete YAML schema)"
+      4: "Multi-step workflow tutorial (canonical use case)"
+      5: "015 features (visual editor, channels, events)"
+
+    quality_bar:
+      vision: "Stripe/Vercel level (best-in-class)"
+      examples: "Progressive, ALL must run, TypeScript + Bun only"
+      tone: "Opinionated and direct"
+      structure: "Diataxis (Learn/Guides/Concepts/Reference/Contributing)"
+      depth: "HOW first, WHY separate"
+
+    maintenance:
+      source_of_truth: "apps/docs (delete packages/kernel/docs)"
+      sync_strategy: "PR checklist + CI skill"
+      ci_skill: "Check outdated + run examples + gen API docs + report"
+      quality_tracking: "Manual + automated + feedback"
+
+    gaps_identified:
+      missing:
+        - "Architecture overview"
+        - "FlowSpec YAML reference"
+        - "Visual editor guide (015)"
+        - "AI flow generation guide"
+        - "Provider abstraction docs"
+      pain_points:
+        - "Out of date content"
+        - "Hard to find things"
+        - "Agent lifecycle confusion"
+
+  # Each round will be added as:
+  # - round: 1
+  #   timestamp: ISO-8601
+  #   dimension: "audience" | "vision" | "priorities" | etc.
+  #   questions_asked: [...]
+  #   answers_received: [...]
+  #   follow_ups_generated: [...]
+
+  # Question queue by dimension
+  question_queue:
+    audience:
+      pending: []
+      asked: []
+      scratched: []  # No longer relevant
+
+    vision:
+      pending: []
+      asked: []
+      scratched: []
+
+    priorities:
+      pending: []
+      asked: []
+      scratched: []
+
+    content:
+      pending: []
+      asked: []
+      scratched: []
+
+    organization:
+      pending: []
+      asked: []
+      scratched: []
+
+    quality:
+      pending: []
+      asked: []
+      scratched: []
+
+    examples:
+      pending: []
+      asked: []
+      scratched: []
+
+    onboarding:
+      pending: []
+      asked: []
+      scratched: []
+
+    roadmap:
+      pending: []
+      asked: []
+      scratched: []
+
+    maintenance:
+      pending: []
+      asked: []
+      scratched: []
+
+    technical:
+      pending: []
+      asked: []
+      scratched: []
+
+    inspiration:
+      pending: []
+      asked: []
+      scratched: []
+
+  # Synthesized understanding (updated after each round)
+  current_understanding:
+    audience: null
+    vision: null
+    priorities: null
+    constraints: null
+    preferences: null
+
+# Questions to resolve (from codebase research)
+pending_questions: []
+
+# =============================================================================
+# FINAL RECOMMENDATIONS
+# =============================================================================
+recommendations:
+  # P0 - BLOCKERS (must fix for external adoption)
+  p0_blockers:
+    - id: "P0-1"
+      title: "Rewrite homepage value proposition"
+      issue: "Abstract jargon, no n8n comparison, no visual"
+      action: "Add hero: 'n8n for AI agents' + diagram + 3 features"
+      effort: "small"
+
+    - id: "P0-2"
+      title: "Expand 'What is Open Harness?' intro"
+      issue: "1 sentence, no mental model"
+      action: "Write 2-3 paragraphs + Hub-Flow-Agents-Channels diagram"
+      effort: "small"
+
+    - id: "P0-3"
+      title: "Rewrite quickstart with real orchestration"
+      issue: "Single-node example, no edges"
+      action: "2-node flow: template → selector with edge"
+      effort: "medium"
+
+    - id: "P0-4"
+      title: "Fix quickstart code to use SDK"
+      issue: "Raw fetch() instead of createAnthropicTextAgent"
+      action: "Replace with proper SDK wrapper"
+      effort: "small"
+
+  # P1 - HIGH PRIORITY (critical for self-serve)
+  p1_high:
+    - id: "P1-1"
+      title: "Document Flow-UI (015 work)"
+      issue: "18 components/hooks with ZERO docs"
+      action: "Create flow-ui section with all components"
+      effort: "large"
+
+    - id: "P1-2"
+      title: "Expand debugging guide"
+      issue: "36 lines, no worked examples"
+      action: "300+ lines with troubleshooting tree"
+      effort: "medium"
+
+    - id: "P1-3"
+      title: "Create meta.json for 27 directories"
+      issue: "Content exists but not navigable"
+      action: "Add meta.json to all nested directories"
+      effort: "medium"
+
+    - id: "P1-4"
+      title: "Create comparison page"
+      issue: "No OH vs n8n vs Make comparison"
+      action: "New guide: 'For Evaluators'"
+      effort: "medium"
+
+    - id: "P1-5"
+      title: "Delete packages/kernel/docs"
+      issue: "Dual source of truth"
+      action: "Remove directory, apps/docs is sole source"
+      effort: "small"
+
+  # P2 - MEDIUM (quality improvements)
+  p2_medium:
+    - id: "P2-1"
+      title: "Expand architecture overview"
+      issue: "30-line stub"
+      action: "300+ lines with layer interaction diagram"
+      effort: "medium"
+
+    - id: "P2-2"
+      title: "Move misclassified pages"
+      issue: "3 reference pages in learn section"
+      action: "Move flow-inputs, when-policy, bindings-a3 to reference"
+      effort: "small"
+
+    - id: "P2-3"
+      title: "Fix broken cross-references"
+      issue: "3 links to non-existent building-channels"
+      action: "Create guide or update links"
+      effort: "small"
+
+    - id: "P2-4"
+      title: "Create node catalog reference"
+      issue: "No list of built-in node types"
+      action: "Document all available nodes with examples"
+      effort: "medium"
+
+    - id: "P2-5"
+      title: "Add FlowSpec YAML reference"
+      issue: "Missing complete schema docs"
+      action: "Comprehensive YAML reference with all fields"
+      effort: "medium"
+
+  # P3 - LOW (polish)
+  p3_low:
+    - id: "P3-1"
+      title: "Add 1-min flow demo video/GIF"
+      effort: "small"
+
+    - id: "P3-2"
+      title: "Create deployment guide"
+      effort: "medium"
+
+    - id: "P3-3"
+      title: "Add error handling tutorial"
+      effort: "medium"
+
+  # Implementation roadmap
+  roadmap:
+    sprint_1_week_1:
+      focus: "Unblock external adoption"
+      items: ["P0-1", "P0-2", "P0-3", "P0-4", "P1-5"]
+
+    sprint_2_week_2:
+      focus: "Navigation and structure"
+      items: ["P1-3", "P2-2", "P2-3"]
+
+    sprint_3_week_3_4:
+      focus: "015 documentation"
+      items: ["P1-1", "P1-4"]
+
+    sprint_4_ongoing:
+      focus: "Quality and depth"
+      items: ["P1-2", "P2-1", "P2-4", "P2-5", "P3-*"]
+
+  # Success metrics
+  success_metrics:
+    - "External dev can understand what OH is in 2 minutes (homepage + intro)"
+    - "External dev can run working example in 10 minutes (quickstart)"
+    - "No dead ends in learn path (all stubs expanded)"
+    - "All 160 pages navigable (meta.json complete)"
+    - "015 features documented before PR #38 merges"
+
+meta:
+  audit_completed: "2026-01-02T13:40:00Z"
+  total_user_research_rounds: 14
+  total_wave_agents: 9
+  manifest_version: "1.0"
+
+# Change log
+changelog:
+  - timestamp: "2026-01-02T12:00:00Z"
+    action: "Manifest created"
+    details: "Initialized docs audit for 015 feature work"

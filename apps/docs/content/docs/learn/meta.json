@@ -2,11 +2,12 @@
   "title": "Learn",
   "pages": [
     "index",
+    "quickstart",
     "first-flow",
-    "flow-inputs",
-    "bindings-a3",
-    "when-policy",
     "custom-node",
-    "channels"
+    "hub-events",
+    "channels",
+    "testing",
+    "...advanced"
   ]
 }
