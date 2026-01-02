@@ -129,7 +129,7 @@ function process(hub: HubImpl) { ... }
 | Protocol | Implementation |
 |----------|----------------|
 | `protocol/hub.ts` → `Hub` | `engine/hub.ts` → `HubImpl` |
-| `protocol/harness.ts` → `HarnessFactory` | `engine/harness.ts` → `defineHarness` |
+| `protocol/flow.ts` → `FlowYaml` | `flow/executor.ts` → `executeFlow` |
 | `protocol/events.ts` → types | `engine/events.ts` → utilities |
 | `protocol/agent.ts` → `AgentDefinition` | `providers/*.ts` → implementations |
 | `protocol/channel.ts` → `ChannelDefinition` | External packages |

@@ -1,0 +1,53 @@
+---
+title: OpenCode Provider
+description: OpenCode AI backend integration
+---
+
+# OpenCode Provider
+
+> **Status**: Experimental - See [GitHub Issue #23](https://github.com/Open-Harness/open-harness/issues/23)
+
+The OpenCode provider enables integration with OpenCode AI as an alternative to the Claude SDK.
+
+## Current Status
+
+A spike implementation exists to validate behavior:
+
+- Session-based mailbox pattern works
+- Streaming via SSE events confirmed
+- System prompt enforcement being tested
+
+## Planned Usage
+
+```typescript
+import { OpenCodeProvider } from "@open-harness/opencode";
+
+const runner = createFlowRunner(flow, registry, {
+  provider: OpenCodeProvider({
+    baseUrl: "http://127.0.0.1:4096",
+    providerId: process.env.OPENCODE_PROVIDER_ID,
+    modelId: process.env.OPENCODE_MODEL_ID,
+  }),
+});
+```
+
+## Architecture Mapping
+
+| Open Harness | OpenCode |
+|--------------|----------|
+| `runId` | `sessionID` |
+| `hub.sendToRun()` | Context message injection |
+| `agent:text` | `message.part.updated` |
+| `agent:complete` | `message.updated` + `session.idle` |
+
+## Next Steps
+
+1. Rerun spike with explicit provider/model settings
+2. Capture event payloads for provider mapping
+3. Implement full provider adapter
+4. Add live script and documentation
+
+## Related
+
+- [Claude SDK Provider](/docs/reference/providers/claude-sdk) - Current default
+- [GitHub Issue #23](https://github.com/Open-Harness/open-harness/issues/23) - Spike tracking

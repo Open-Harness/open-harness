@@ -1,4 +1,4 @@
 {
-  "title": "Nodes",
-  "pages": ["async-nodes", "node-capabilities", "node-schemas", "register-nodes"]
+  "title": "Node Guides",
+  "pages": ["register-nodes", "node-schemas", "node-capabilities", "async-nodes"]
 }

@@ -21,8 +21,7 @@ interface AgentDefinition<TIn, TOut> {
 Agents:
 - Take input, produce output
 - Emit events during execution
-- Can receive messages via inbox
-- Are orchestrated by harnesses or flows
+- Are orchestrated by flows
 
 ## Execution Context
 
@@ -31,7 +30,6 @@ When an agent executes, it receives context:
 ```typescript
 interface AgentExecuteContext {
   hub: Hub;        // Event bus for emitting events
-  inbox: AgentInbox;  // Incoming messages
   runId: string;   // Unique execution identifier
 }
 ```
@@ -49,23 +47,6 @@ async execute(input, ctx) {
   ctx.hub.emit({ type: "agent:text", content: result.summary });
 
   return result;
-}
-```
-
-### Inbox Access
-
-Receive injected messages:
-
-```typescript
-async execute(input, ctx) {
-  // Check for user feedback
-  const messages = ctx.inbox.drain();
-  if (messages.length > 0) {
-    // Incorporate feedback
-  }
-
-  // Or wait for next message
-  const next = await ctx.inbox.pop();
 }
 ```
 
@@ -173,7 +154,7 @@ const trackedAgent: AgentDefinition = {
 };
 ```
 
-The `emitsStartComplete` flag tells the harness to wrap execution with lifecycle events.
+The `emitsStartComplete` flag tells the flow runtime to wrap execution with lifecycle events.
 
 ## Error Handling
 
@@ -278,6 +259,5 @@ async execute(input, ctx) {
 
 ## Next Steps
 
-- [Inbox Pattern](/docs/concepts/agents/inbox-pattern) - Receiving messages
 - [Agent Definition](/docs/reference/types/agent-definition) - Type reference
-- [Anthropic Agent](/docs/reference/api/anthropic-agent) - Built-in LLM agent
+- [Claude Agent](/docs/reference/api/anthropic-agent) - Built-in LLM agent

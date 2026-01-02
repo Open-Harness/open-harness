@@ -65,16 +65,14 @@ This channel:
 ## Step 2: Use the Channel
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { createHub, createChannelAttachment } from "@open-harness/kernel";
 import { consoleChannel } from "./channels/console";
 
-const harness = defineHarness({
-  channels: [consoleChannel],
-  agents: [myAgent]
-});
+// Create hub and attach channel
+const hub = createHub();
+hub.attach(createChannelAttachment(consoleChannel));
 
-const instance = harness.create();
-await instance.run({ prompt: "Hello!" });
+// Channel now receives all hub events
 ```
 
 ## Step 3: Handle Output Events

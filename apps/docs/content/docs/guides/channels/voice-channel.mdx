@@ -1,97 +1,53 @@
 ---
 title: How to Add Voice Integration
-description: Integrate voice I/O with rtv-channel
+description: Integrate voice I/O with flows
 ---
 
 # How to Add Voice Integration
 
-Add real-time voice interaction using the rtv-channel package.
+Add real-time voice interaction to your flows using voice channels.
 
-## Install the Package
+## Available Voice Channels
+
+| Channel | Provider | Status |
+|---------|----------|--------|
+| rtv-channel | OpenAI Realtime | Experimental |
+| [ElevenLabs](/docs/reference/channels/elevenlabs) | ElevenLabs Conversational AI | Planned |
+
+## rtv-channel (OpenAI Realtime)
+
+### Install
 
 ```bash
 bun add @open-harness/rtv-channel
 ```
 
-## Create Voice Channel
+### Basic Setup
 
 ```typescript
+import { createFlowRunner } from "@open-harness/kernel";
 import { createRTVChannel } from "@open-harness/rtv-channel";
 
 const voiceChannel = createRTVChannel({
-  // OpenAI Realtime configuration
   model: "gpt-4o-realtime-preview",
   voice: "alloy",
-
-  // Audio settings
   inputAudioFormat: "pcm16",
   outputAudioFormat: "pcm16"
 });
+
+const runner = createFlowRunner(flow, registry);
+runner.attach(voiceChannel);
+await runner.run();
 ```
 
-## Attach to Harness
+### Voice Options
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
-
-const harness = defineHarness({
-  channels: [voiceChannel],
-  agents: [myAgent]
-});
-
-const instance = harness.create();
-await instance.run({ prompt: "Start voice conversation" });
-```
-
-## Handle Voice Events
-
-```typescript
-import { createHub } from "@open-harness/kernel";
-
-const hub = createHub();
-
-// Voice input detected
-hub.subscribe("voice:input", (event) => {
-  console.log("User said:", event.event.transcript);
-});
-
-// Voice output playing
-hub.subscribe("voice:output", (event) => {
-  console.log("Speaking:", event.event.text);
-});
-
-// Voice error
-hub.subscribe("voice:error", (event) => {
-  console.error("Voice error:", event.event.error);
-});
-```
-
-## With Console Fallback
-
-```typescript
-import { createRTVChannel } from "@open-harness/rtv-channel";
-import { consoleChannel } from "./channels/console";
-
-const voiceChannel = createRTVChannel({
-  model: "gpt-4o-realtime-preview",
-  voice: "shimmer",
-  fallbackToText: true // Falls back to console if voice unavailable
-});
-
-const harness = defineHarness({
-  channels: [voiceChannel, consoleChannel],
-  agents: [myAgent]
-});
-```
-
-## Voice Configuration Options
-
-```typescript
-const voiceChannel = createRTVChannel({
+createRTVChannel({
   // Model
   model: "gpt-4o-realtime-preview",
 
-  // Voice selection: alloy, echo, shimmer, ash, ballad, coral, sage, verse
+  // Voice: alloy, echo, shimmer, ash, ballad, coral, sage, verse
   voice: "alloy",
 
   // Audio formats
@@ -102,35 +58,67 @@ const voiceChannel = createRTVChannel({
   turnDetection: "server_vad",
   silenceThresholdMs: 500,
 
-  // Session
-  maxDuration: 300 // 5 minutes
+  // Session limits
+  maxDuration: 300, // 5 minutes
 });
 ```
 
-## TUI Integration
+### Listen to Voice Events
 
 ```typescript
-import { createRTVChannel } from "@open-harness/rtv-channel";
-import { createTUI } from "@open-harness/tui";
-
-const voiceChannel = createRTVChannel({
-  model: "gpt-4o-realtime-preview",
-  voice: "echo"
+hub.subscribe("voice:input", (event) => {
+  console.log("User said:", event.event.transcript);
 });
 
-const tui = createTUI({
-  voiceIndicator: true, // Show voice activity
-  transcriptView: true  // Show live transcript
+hub.subscribe("voice:output", (event) => {
+  console.log("Speaking:", event.event.text);
 });
 
-const harness = defineHarness({
-  channels: [voiceChannel, tui.channel],
-  agents: [myAgent]
+hub.subscribe("voice:error", (event) => {
+  console.error("Voice error:", event.event.error);
 });
 ```
+
+## ElevenLabs Channel (Coming Soon)
+
+The ElevenLabs channel will provide:
+
+- Voice narration of flow progress
+- Voice commands (pause, resume, status, abort)
+- Human-in-the-loop voice prompts
+- Lower latency via WebSocket
+
+```typescript
+// Planned API
+import { ElevenLabsChannel } from "@open-harness/elevenlabs";
+
+runner.attach(ElevenLabsChannel({
+  agentId: process.env.ELEVENLABS_AGENT_ID,
+  verbosity: "normal",
+}));
+
+runner.startSession(); // Enable voice commands
+```
+
+See [ElevenLabs Channel Reference](/docs/reference/channels/elevenlabs) for the planned design.
+
+## Combining Voice + Console
+
+```typescript
+import { ConsoleChannel } from "@open-harness/kernel";
+
+const runner = createFlowRunner(flow, registry);
+
+runner.attach(voiceChannel);    // Voice I/O
+runner.attach(ConsoleChannel()); // Visual fallback
+
+await runner.run();
+```
+
+Both channels receive events independently - voice narrates while console shows details.
 
 ## Related
 
-- [Attach Channel](/docs/guides/channels/attach-channel) - Channel basics
+- [ElevenLabs Reference](/docs/reference/channels/elevenlabs) - Planned voice channel
 - [Bidirectional I/O](/docs/guides/channels/bidirectional-io) - Two-way patterns
-- [Console Channel](/docs/guides/channels/console-channel) - Text alternative
+- [Console Channel](/docs/guides/channels/console-channel) - Text fallback

@@ -1,86 +1,120 @@
 ---
-title: How to Use the Anthropic Provider
-description: Create agents using Anthropic's Claude models
+title: How to Use the Claude Provider
+description: Create agents using Claude models via the Agent SDK
 ---
 
-# How to Use the Anthropic Provider
+# How to Use the Claude Provider
 
-Use the built-in Anthropic provider for Claude-powered agents.
+Use the built-in Claude provider for Claude-powered agents.
 
-## Create Anthropic Agent
+## Create Claude Agent
 
 ```typescript
-import { createAnthropicTextAgent } from "@open-harness/kernel";
+import { createClaudeAgent } from "@open-harness/kernel";
 
-const agent = createAnthropicTextAgent({
-  model: "claude-sonnet-4-20250514",
-  systemPrompt: "You are a helpful assistant."
-});
+const agent = createClaudeAgent();
 ```
 
-## Use in Harness
+## Use in Flow
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import {
+  createClaudeAgent,
+  NodeRegistry,
+  parseFlowYaml,
+  executeFlow,
+  createHub
+} from "@open-harness/kernel";
 
-const harness = defineHarness({
-  agents: [agent],
-  channels: [consoleChannel]
+// Create and register the agent
+const registry = new NodeRegistry();
+registry.register({
+  type: "claude.agent",
+  ...createClaudeAgent(),
 });
 
-const instance = harness.create();
-await instance.run({ prompt: "Hello!" });
+// Define a flow that uses the agent
+const flow = parseFlowYaml(`
+name: chat-flow
+nodes:
+  - id: respond
+    type: claude.agent
+    input:
+      prompt: "{{flow.input.question}}"
+`);
+
+// Execute the flow
+const hub = createHub();
+const result = await executeFlow(flow, registry, { hub }, {
+  question: "What is TypeScript?"
+});
+console.log(result.outputs.respond.text);
 ```
 
-## Configuration Options
+## Input Options
+
+The Claude agent accepts either a simple prompt or multi-turn messages:
 
 ```typescript
-const agent = createAnthropicTextAgent({
-  // Model selection
-  model: "claude-sonnet-4-20250514",
+// Simple prompt
+await agent.execute({
+  prompt: "Explain closures in JavaScript"
+}, ctx);
 
-  // System prompt
-  systemPrompt: "You are a coding assistant.",
+// Multi-turn messages
+await agent.execute({
+  messages: [
+    "You are a coding assistant.",
+    { content: "What is a closure?" },
+    { content: "Show me an example." },
+  ],
+}, ctx);
 
-  // Max tokens in response
-  maxTokens: 4096,
-
-  // Temperature (0-1)
-  temperature: 0.7,
-
-  // Stop sequences
-  stopSequences: ["END"],
-
-  // Streaming (default: true)
-  streaming: true
-});
+// With SDK options
+await agent.execute({
+  prompt: "Analyze this code",
+  options: {
+    maxTurns: 5,
+    model: "claude-sonnet-4-20250514",
+  },
+}, ctx);
 ```
 
-## Models Available
+## Testing with Replay
 
-| Model | ID |
-|-------|------|
-| Claude Opus 4.5 | `claude-opus-4-5-20251101` |
-| Claude Sonnet 4 | `claude-sonnet-4-20250514` |
-| Claude Haiku 3.5 | `claude-3-5-haiku-20241022` |
-
-## Streaming vs Blocking
+Use the `replay` option for deterministic testing:
 
 ```typescript
-// Streaming (default) - emits chunks as they arrive
-const streamingAgent = createAnthropicTextAgent({
-  model: "claude-sonnet-4-20250514",
-  streaming: true
+const testAgent = createClaudeAgent({
+  replay: (input) => {
+    if (input.prompt?.includes("What is 2+2")) {
+      return { text: "4", durationMs: 10 };
+    }
+    return undefined; // Fall through to real API
+  },
 });
 
-// Blocking - waits for complete response
-const blockingAgent = createAnthropicTextAgent({
-  model: "claude-sonnet-4-20250514",
-  streaming: false
-});
+// Tests get fixed responses, no network calls
+const result = await testAgent.execute(
+  { prompt: "What is 2+2?" },
+  { hub: createHub(), runId: "test" }
+);
+console.log(result.text); // "4"
+```
+
+## Authentication
+
+Open Harness uses Claude Code subscription authentication. No API key needed:
+
+```typescript
+// No ANTHROPIC_API_KEY required
+// Auth handled automatically via @anthropic-ai/claude-agent-sdk
+const agent = createClaudeAgent();
 ```
 
 ## Handle Streaming Output
+
+Subscribe to events via the Hub:
 
 ```typescript
 hub.subscribe("agent:text", (event) => {
@@ -89,53 +123,40 @@ hub.subscribe("agent:text", (event) => {
 });
 
 hub.subscribe("agent:complete", (event) => {
-  // Full response when done
-  console.log("\nFull response:", event.event.response);
+  // Agent execution finished
+  console.log("\nAgent completed");
 });
-```
-
-## Replay Mode for Testing
-
-```typescript
-import { createAnthropicTextAgent } from "@open-harness/kernel";
-
-// In test mode, agent replays recorded responses
-const agent = createAnthropicTextAgent({
-  model: "claude-sonnet-4-20250514",
-  mode: "replay",
-  fixtureDir: "./fixtures/anthropic"
-});
-```
-
-## Authentication
-
-Open Harness uses Claude Code subscription authentication:
-
-```typescript
-// No API key needed - uses subscription auth
-const agent = createAnthropicTextAgent({
-  model: "claude-sonnet-4-20250514"
-});
-
-// Auth handled automatically via @anthropic-ai/claude-agent-sdk
 ```
 
 ## Error Handling
 
 ```typescript
 try {
-  const result = await instance.run({ prompt: "Hello" });
+  const result = await agent.execute({ prompt: "Hello" }, ctx);
 } catch (error) {
-  if (error.code === "rate_limit") {
+  if (error.message.includes("rate limit")) {
     console.log("Rate limited, retry later");
-  } else if (error.code === "context_length") {
-    console.log("Input too long");
+  } else if (error.message.includes("failed")) {
+    console.log("API request failed");
   }
 }
 ```
 
+## Output Properties
+
+The `ClaudeAgentOutput` includes:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `text` | `string` | Response text |
+| `structuredOutput` | `unknown` | Parsed structured output |
+| `usage` | `NonNullableUsage` | Token usage |
+| `totalCostUsd` | `number` | Estimated cost |
+| `durationMs` | `number` | Execution time |
+| `numTurns` | `number` | Number of turns |
+
 ## Related
 
 - [Define Agent](/docs/guides/agents/define-agent) - Agent basics
-- [Agent Inbox](/docs/guides/agents/agent-inbox) - Bidirectional agents
 - [Replay Tests](/docs/guides/testing/replay-tests) - Test with fixtures
+- [Hub Events](/docs/learn/hub-events) - Event subscription

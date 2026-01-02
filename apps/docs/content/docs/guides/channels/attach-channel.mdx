@@ -23,15 +23,13 @@ const myChannel: ChannelDefinition = {
 };
 ```
 
-## Attach to Harness
+## Attach to Hub
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { createHub, createChannelAttachment } from "@open-harness/kernel";
 
-const harness = defineHarness({
-  channels: [myChannel],
-  agents: [myAgent]
-});
+const hub = createHub();
+hub.attach(createChannelAttachment(myChannel));
 ```
 
 ## Attach to Hub Directly
@@ -99,14 +97,12 @@ const myChannel: ChannelDefinition<MyState> = {
 ## Multiple Channels
 
 ```typescript
-const harness = defineHarness({
-  channels: [
-    consoleChannel,
-    loggingChannel,
-    metricsChannel
-  ],
-  agents: [myAgent]
-});
+const hub = createHub();
+
+// Attach multiple channels
+hub.attach(createChannelAttachment(consoleChannel));
+hub.attach(createChannelAttachment(loggingChannel));
+hub.attach(createChannelAttachment(metricsChannel));
 ```
 
 ## Detachment Cleanup

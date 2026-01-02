@@ -2,10 +2,9 @@
   "title": "Concepts",
   "pages": [
     "index",
-    "architecture-overview",
-    "kernel-vs-flow",
-    "event-model",
-    "conformance-model",
-    "graph"
+    "architecture",
+    "execution",
+    "hub",
+    "visual-editing"
   ]
 }

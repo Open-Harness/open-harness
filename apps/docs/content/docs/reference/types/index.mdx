@@ -7,14 +7,6 @@ description: TypeScript interface definitions for Open Harness
 
 Complete TypeScript type definitions for the Open Harness kernel.
 
-## Core Types
-
-| Type | Purpose |
-|------|---------|
-| [HarnessFactory](/docs/reference/types/harness-factory) | Factory for creating harness instances |
-| [ExecuteContext](/docs/reference/types/execute-context) | Context provided to harness run function |
-| [HarnessResult](/docs/reference/types/harness-result) | Result from harness execution |
-
 ## Flow Types
 
 | Type | Purpose |
@@ -28,7 +20,6 @@ Complete TypeScript type definitions for the Open Harness kernel.
 | Type | Purpose |
 |------|---------|
 | [AgentDefinition](/docs/reference/types/agent-definition) | Agent implementation contract |
-| [ExecutableAgent](/docs/reference/types/executable-agent) | Simplified execution interface |
 
 ## Channel Types
 
@@ -48,24 +39,23 @@ Complete TypeScript type definitions for the Open Harness kernel.
 
 ```typescript
 import type {
-  // Core
-  HarnessFactory,
-  HarnessInstance,
-  HarnessResult,
-  ExecuteContext,
-  SessionContext,
-
   // Flow
   FlowYaml,
+  FlowSpec,
   NodeSpec,
+  Edge,
   NodeTypeDefinition,
   NodeCapabilities,
+  NodeRunContext,
+  ContainerNodeContext,
   WhenExpr,
+  NodePolicy,
+  RetryPolicy,
 
   // Agent
   AgentDefinition,
-  ExecutableAgent,
   AgentExecuteContext,
+  ExecutableAgent,
 
   // Channel
   ChannelDefinition,
@@ -87,5 +77,5 @@ import type {
 ## Related
 
 - [API Reference](/docs/reference/api) - Function documentation
-- [Schemas Reference](/docs/reference/schemas) - Zod validation schemas
 - [Events Reference](/docs/reference/events) - Event type documentation
+- [Kernel Spec](/docs/reference/kernel-spec) - Complete protocol specification
