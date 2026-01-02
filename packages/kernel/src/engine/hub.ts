@@ -175,6 +175,12 @@ export class HubImpl implements Hub {
 	abort(options?: PauseOptions): void {
 		if (!this._sessionActive) return;
 
+		// T043: Guard against double-pause - don't overwrite existing paused state
+		if (options?.resumable && this._status === "paused") {
+			// Already paused, ignore duplicate pause request
+			return;
+		}
+
 		if (options?.resumable) {
 			// T018: Resumable pause - set status to "paused" and emit flow:paused
 			this._status = "paused";
