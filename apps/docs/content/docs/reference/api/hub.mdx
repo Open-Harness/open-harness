@@ -59,7 +59,11 @@ interface Hub extends AsyncIterable<EnrichedEvent> {
   sendTo(agent: string, message: string): void;
   sendToRun(runId: string, message: string): void;
   reply(promptId: string, response: UserResponse): void;
-  abort(reason?: string): void;
+  abort(options?: PauseOptions): void;
+  resume(sessionId: string, message: string): Promise<void>;
+
+  // Session state
+  getPausedSession(sessionId: string): SessionState | undefined;
 
   // Status
   readonly status: HubStatus;
@@ -161,10 +165,60 @@ hub.reply("prompt-456", {
 
 ### abort
 
-Abort the current session.
+Abort or pause the current session.
 
 ```typescript
-hub.abort("User cancelled");
+// Abort permanently
+hub.abort({ reason: "User cancelled" });
+
+// Pause for later resumption
+hub.abort({ reason: "User requested pause", resumable: true });
+```
+
+#### PauseOptions
+
+```typescript
+interface PauseOptions {
+  reason?: string;      // Optional reason for abort/pause
+  resumable?: boolean;  // If true, session can be resumed later
+}
+```
+
+### resume
+
+Resume a paused session with a user message.
+
+```typescript
+await hub.resume("session-123", "Continue with the analysis");
+```
+
+Throws `SessionNotFoundError` if session doesn't exist or `SessionAlreadyRunningError` if already running.
+
+### getPausedSession
+
+Get the state of a paused session.
+
+```typescript
+const state = hub.getPausedSession("session-123");
+if (state) {
+  console.log(`Paused at node: ${state.currentNodeId}`);
+  console.log(`Paused at: ${state.pausedAt}`);
+}
+```
+
+#### SessionState
+
+```typescript
+interface SessionState {
+  sessionId: string;
+  flowName: string;
+  currentNodeId: string;
+  currentNodeIndex: number;
+  outputs: Record<string, unknown>;
+  pendingMessages: string[];
+  pausedAt: Date;
+  pauseReason?: string;
+}
 ```
 
 ## Async Iteration
@@ -192,6 +246,7 @@ for await (const event of hub) {
 |--------|-------------|
 | `"idle"` | Not started or stopped |
 | `"running"` | Execution in progress |
+| `"paused"` | Paused and resumable |
 | `"complete"` | Finished successfully |
 | `"aborted"` | Cancelled by user |
 

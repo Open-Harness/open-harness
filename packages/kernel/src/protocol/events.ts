@@ -73,6 +73,27 @@ export type SessionReplyEvent = {
 };
 export type SessionAbortEvent = { type: "session:abort"; reason?: string };
 
+/**
+ * Emitted when a resumable pause is requested.
+ * Contains session state info for external systems.
+ */
+export type FlowPausedEvent = {
+	type: "flow:paused";
+	sessionId: string;
+	nodeId: string;
+	reason?: string;
+};
+
+/**
+ * Emitted when a paused session resumes execution.
+ */
+export type FlowResumedEvent = {
+	type: "flow:resumed";
+	sessionId: string;
+	nodeId: string;
+	injectedMessages: number;
+};
+
 export type SessionStartEvent = {
 	type: "session:start";
 	sessionId: string;
@@ -119,6 +140,8 @@ export type BaseEvent =
 	| SessionPromptEvent
 	| SessionReplyEvent
 	| SessionAbortEvent
+	| FlowPausedEvent
+	| FlowResumedEvent
 	| SessionStartEvent
 	| SessionEndEvent
 	| NarrativeEvent

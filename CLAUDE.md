@@ -21,6 +21,8 @@ READ packages/kernel/docs/*
 - N/A (in-memory event bus, message queues) (010-transport-architecture)
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod (013-anthropic-refactor)
 - N/A (no persistence layer in this package) (013-anthropic-refactor)
+- TypeScript 5.x (strict mode enabled in tsconfig.json) + @anthropic-ai/claude-agent-sdk ^0.1.76, zod ^4.2.1, yaml ^2.4.5 (016-pause-resume)
+- In-memory (Map-based session state store, no persistence to disk per spec assumptions) (016-pause-resume)
 
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod (002-sdk-validation)
 
@@ -46,9 +48,9 @@ bun run lint        # Linting
 TypeScript 5.x (strict mode): Follow standard conventions
 
 ## Recent Changes
+- 016-pause-resume: Added TypeScript 5.x (strict mode enabled in tsconfig.json) + @anthropic-ai/claude-agent-sdk ^0.1.76, zod ^4.2.1, yaml ^2.4.5
 - 013-anthropic-refactor: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod
 - 010-transport-architecture: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod
-- 009-tech-debt-cleanup: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, bun:tes
 
 
 <!-- MANUAL ADDITIONS START -->

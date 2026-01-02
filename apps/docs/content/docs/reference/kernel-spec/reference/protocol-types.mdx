@@ -57,6 +57,10 @@ type SessionAbortEvent = &#123; type: "session:abort"; reason?: string &#125;;
 type NarrativeEvent = &#123; type: "narrative"; text: string; importance?: "low" | "normal" | "high" &#125;;
 type ExtensionEvent = &#123; type: string; [k: string]: unknown &#125;;
 
+// Pause/Resume events
+type FlowPausedEvent = &#123; type: "flow:paused"; sessionId: string; reason?: string &#125;;
+type FlowResumedEvent = &#123; type: "flow:resumed"; sessionId: string &#125;;
+
 type BaseEvent =
   | WorkflowEvents
   | AgentEvents
@@ -64,6 +68,8 @@ type BaseEvent =
   | SessionPromptEvent
   | SessionReplyEvent
   | SessionAbortEvent
+  | FlowPausedEvent
+  | FlowResumedEvent
   | NarrativeEvent
   | ExtensionEvent;
 
@@ -84,7 +90,7 @@ type Unsubscribe = () =&#62; void;
 ## Hub
 
 ```typescript
-type HubStatus = "idle" | "running" | "complete" | "aborted";
+type HubStatus = "idle" | "running" | "paused" | "complete" | "aborted";
 
 interface UserResponse &#123;
   content: string;
@@ -105,11 +111,32 @@ interface Hub extends AsyncIterable&#60;EnrichedEvent&#62; &#123;
   sendTo(agent: string, message: string): void;
   sendToRun(runId: string, message: string): void;
   reply(promptId: string, response: UserResponse): void;
-  abort(reason?: string): void;
+  abort(options?: PauseOptions): void;
+
+  // Pause/Resume operations
+  getAbortSignal(): AbortSignal;
+  resume(sessionId: string, message: string): Promise&#60;void&#62;;
+  getPausedSession(sessionId: string): SessionState | undefined;
 
   // Status
   readonly status: HubStatus;
   readonly sessionActive: boolean;
+&#125;
+
+// Pause/Resume types
+interface PauseOptions &#123;
+  resumable?: boolean;  // If true, flow pauses instead of terminating
+  reason?: string;      // Optional reason for the abort/pause
+&#125;
+
+interface SessionState &#123;
+  sessionId: string;
+  flowName: string;
+  currentNodeId: string;
+  currentNodeIndex: number;
+  outputs: Record&#60;string, unknown&#62;;
+  pendingMessages: string[];
+  pauseReason?: string;
 &#125;
 ```
 

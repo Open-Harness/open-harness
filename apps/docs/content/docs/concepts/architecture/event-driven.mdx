@@ -105,7 +105,7 @@ hub.emit({ type: "narrative", text: "Processing..." });
 // Commands in
 hub.send("User feedback here");
 hub.reply(promptId, { content: "Yes, continue" });
-hub.abort("User cancelled");
+hub.abort({ reason: "User cancelled" });
 ```
 
 This bidirectional design enables interactive workflows.

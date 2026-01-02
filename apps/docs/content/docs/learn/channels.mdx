@@ -196,7 +196,7 @@ export const fullInteractiveChannel: ChannelDefinition<InteractiveState> = {
     });
 
     ctx.state.rl.on("SIGINT", () => {
-      ctx.hub.abort("User interrupted");
+      ctx.hub.abort({ reason: "User interrupted" });
       ctx.state.rl.close();
     });
   },
@@ -253,7 +253,7 @@ Channels send commands back:
 ```typescript
 ctx.hub.send("User's message");
 ctx.hub.reply(promptId, { content: "yes" });
-ctx.hub.abort("User cancelled");
+ctx.hub.abort({ reason: "User cancelled" });
 ```
 
 ## When to Use Channels
