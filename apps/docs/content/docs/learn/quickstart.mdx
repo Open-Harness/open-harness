@@ -84,16 +84,19 @@ registry.register({
   type: "llm",
   async run(ctx, input) {
     const result = await claudeAgent.execute(input, { hub: ctx.hub, runId: ctx.runId });
-    return { response: result.content };
+    return { response: result.text };
   }
 });
 
+// Create execution context
+const ctx: FlowExecutionContext = {
+  hub,
+  phase: async (name, fn) => fn(),
+  task: async (id, fn) => fn()
+};
+
 // Execute the flow
-const result = await executeFlow(flow, {
-  input: { name: "World" },
-  registry,
-  hub
-});
+const result = await executeFlow(flow, registry, ctx, { name: "World" });
 
 console.log("\nFlow complete!");
 ```

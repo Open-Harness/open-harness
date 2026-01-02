@@ -115,10 +115,13 @@ New capabilities plug in cleanly:
 - Coordinates channel attachments
 
 ```typescript
-const runner = createFlowRunner(flow, registry);
-runner.attach(ConsoleChannel());
-runner.startSession();
-await runner.run();
+import { executeFlow, createHub, createChannelAttachment } from "@open-harness/kernel";
+
+const hub = createHub();
+hub.attach(createChannelAttachment(consoleChannel));
+
+const ctx = { hub, phase: async (n, fn) => fn(), task: async (id, fn) => fn() };
+await executeFlow(flow, registry, ctx, input);
 ```
 
 ## Next Steps

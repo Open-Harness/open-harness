@@ -144,14 +144,18 @@ For important interactions, use prompts with choices rather than free-form text.
 
 ## Migration from Inbox Pattern
 
-If you have code using the old `AgentInbox`:
+If you have code using the old `AgentInbox`, use Hub session events instead:
 
 ```diff
 - const messages = ctx.inbox.drain();
-+ const messages = getSessionMessages(ctx.runId);
++ // Subscribe to session messages via hub
++ hub.subscribe("session:message", (event) => {
++   // Handle incoming message
++ });
 
 - await ctx.inbox.pop();
-+ await waitForSessionMessage(ctx.runId);
++ // Use hub.reply() for prompt responses
++ hub.reply(promptId, { content: userInput });
 ```
 
 ## Related
