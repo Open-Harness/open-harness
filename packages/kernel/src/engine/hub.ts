@@ -6,6 +6,10 @@ import type {
 	ChannelDefinition,
 	ChannelInstance,
 } from "../protocol/channel.js";
+import {
+	SessionAlreadyRunningError,
+	SessionNotFoundError,
+} from "../protocol/errors.js";
 import type {
 	BaseEvent,
 	EnrichedEvent,
@@ -13,7 +17,15 @@ import type {
 	EventFilter,
 	EventListener,
 } from "../protocol/events.js";
-import type { Hub, HubStatus, UserResponse } from "../protocol/hub.js";
+import type { SessionState } from "../protocol/flow-runtime.js";
+import type {
+	Hub,
+	HubStatus,
+	PauseOptions,
+	UserResponse,
+} from "../protocol/hub.js";
+import type { SessionContext } from "../protocol/session.js";
+import { createSessionContext } from "../protocol/session.js";
 import { createEnrichedEvent, matchesFilter } from "./events.js";
 
 type ListenerEntry = { filter: EventFilter; listener: EventListener };
@@ -32,7 +44,16 @@ export class HubImpl implements Hub {
 	private readonly _channels = new Map<string, ChannelInstance<any>>();
 	private _started = false;
 
-	constructor(private readonly sessionId: string) {}
+	// Session context for abort signal propagation (T009)
+	private _sessionContext: SessionContext;
+
+	// Storage for paused session states (T010)
+	private readonly _pausedSessions = new Map<string, SessionState>();
+
+	constructor(private readonly sessionId: string) {
+		// Initialize session context with abort controller
+		this._sessionContext = createSessionContext();
+	}
 
 	get status(): HubStatus {
 		return this._status;
@@ -44,6 +65,14 @@ export class HubImpl implements Hub {
 
 	get channels(): ReadonlyArray<string> {
 		return Array.from(this._channels.keys());
+	}
+
+	/**
+	 * Returns the current session's abort signal for cooperative cancellation.
+	 * Executor and agent nodes use this to check for pause/abort requests.
+	 */
+	getAbortSignal(): AbortSignal {
+		return this._sessionContext.abortController.signal;
 	}
 
 	subscribe(listener: EventListener): () => void;
@@ -143,13 +172,125 @@ export class HubImpl implements Hub {
 		});
 	}
 
-	abort(reason?: string): void {
+	abort(options?: PauseOptions): void {
 		if (!this._sessionActive) return;
-		this._status = "aborted";
+
+		if (options?.resumable) {
+			// T018: Resumable pause - set status to "paused" and emit flow:paused
+			this._status = "paused";
+
+			// T026: Capture SessionState on pause
+			const sessionState: SessionState = {
+				sessionId: this.sessionId,
+				flowName: "flow", // Will be set by executor in Phase 4+
+				currentNodeId: this.current().task?.id ?? "unknown",
+				currentNodeIndex: 0, // Will be set by executor in T030
+				outputs: {}, // Will be set by executor in T030
+				pendingMessages: [],
+				pausedAt: new Date(),
+				pauseReason: options.reason,
+			};
+			this._pausedSessions.set(this.sessionId, sessionState);
+
+			this.emit({
+				type: "flow:paused",
+				sessionId: this.sessionId,
+				nodeId: sessionState.currentNodeId,
+				reason: options.reason,
+			});
+		} else {
+			// T047/T050: Terminal abort - clear any paused session and transition to "aborted"
+			this._pausedSessions.delete(this.sessionId);
+			this._status = "aborted";
+			this.emit({
+				type: "session:abort",
+				reason: options?.reason,
+			});
+		}
+
+		// T019: Trigger abort signal for cooperative cancellation
+		this._sessionContext.abortController.abort();
+	}
+
+	async resume(sessionId: string, message: string): Promise<void> {
+		// T032: Validate message is non-empty
+		if (!message || message.trim() === "") {
+			throw new Error("Message is required for resume");
+		}
+
+		// T025: Check if already running
+		if (this._status === "running") {
+			throw new SessionAlreadyRunningError(sessionId);
+		}
+
+		// T024/T027: Validate sessionId exists in paused sessions
+		const state = this._pausedSessions.get(sessionId);
+		if (!state) {
+			throw new SessionNotFoundError(sessionId);
+		}
+
+		// T035: Queue the injected message (US3 preparation)
+		state.pendingMessages.push(message);
+
+		// T028: Create new SessionContext for resumed execution
+		this._sessionContext = createSessionContext();
+
+		// T029: Set status to "running" and emit flow:resumed event
+		this._status = "running";
+
+		// T036: Deliver message via session:message pattern before resuming
 		this.emit({
-			type: "session:abort",
-			reason,
+			type: "session:message",
+			content: message,
 		});
+
+		this.emit({
+			type: "flow:resumed",
+			sessionId: state.sessionId,
+			nodeId: state.currentNodeId,
+			injectedMessages: state.pendingMessages.length,
+		});
+
+		// Note: Actual resumption of executor happens externally via T030
+		// The executor will coordinate with Hub to restore state
+	}
+
+	// T041: Get paused session state for inspection
+	getPausedSession(sessionId: string): SessionState | undefined {
+		return this._pausedSessions.get(sessionId);
+	}
+
+	// T030: Bridge method for executor to update paused state with actual runtime values
+	updatePausedState(
+		nodeIndex: number,
+		outputs: Record<string, unknown>,
+		currentNodeId: string,
+		flowName?: string,
+	): void {
+		const state = this._pausedSessions.get(this.sessionId);
+		if (state) {
+			state.currentNodeIndex = nodeIndex;
+			state.outputs = outputs;
+			state.currentNodeId = currentNodeId;
+			if (flowName) {
+				state.flowName = flowName;
+			}
+		}
+	}
+
+	// T030: Get resumption state for executor to check on startup
+	getResumptionState(): SessionState | undefined {
+		// Return state if hub is in "running" state after resume() was called
+		// The status was set to "running" by resume(), indicating resumption is needed
+		if (this._status === "running") {
+			return this._pausedSessions.get(this.sessionId);
+		}
+		return undefined;
+	}
+
+	// T031: Clear paused session on completion
+	clearPausedSession(sessionId: string): void {
+		this._pausedSessions.delete(sessionId);
 	}
 
 	startSession(): void {

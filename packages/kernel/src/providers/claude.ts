@@ -136,7 +136,7 @@ export function createClaudeAgent(
 		name: "claude.agent",
 		async execute(
 			input: ClaudeAgentInput,
-			_ctx: AgentExecuteContext,
+			ctx: AgentExecuteContext,
 		): Promise<ClaudeAgentOutput> {
 			if (options.replay) {
 				const replay = options.replay(input);
@@ -174,6 +174,11 @@ export function createClaudeAgent(
 
 			let finalResult: SDKResultMessage | undefined;
 			for await (const message of queryStream) {
+				// T021: Check abort signal during agent execution for pause/resume support
+				if (ctx.hub.getAbortSignal().aborted) {
+					break;
+				}
+
 				const sdkMessage = message as SDKMessage;
 				if (sdkMessage.type === "result") {
 					finalResult = sdkMessage as SDKResultMessage;

@@ -16,6 +16,20 @@ import { compileFlow } from "./compiler.js";
 import type { NodeRegistry } from "./registry.js";
 import { evaluateWhen } from "./when.js";
 
+/**
+ * Internal execution context - created automatically by executeFlow.
+ * You don't need to create this yourself.
+ */
+interface ExecutionContext {
+	hub: Hub;
+	phase: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
+	task: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
+}
+
+/**
+ * @deprecated Use the simplified executeFlow(flow, registry, hub) signature instead.
+ * This interface is kept for backwards compatibility but will be removed.
+ */
 export interface FlowExecutionContext {
 	hub: Hub;
 	phase: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
@@ -95,7 +109,7 @@ function createBindingContext(
 async function runNode(
 	node: NodeSpec,
 	def: NodeTypeDefinition<unknown, unknown>,
-	ctx: FlowExecutionContext,
+	ctx: ExecutionContext,
 	bindingContext: BindingContext,
 	attempt: number,
 	registry?: NodeRegistry,
@@ -237,7 +251,7 @@ async function withTimeout<T>(
 async function runNodeWithPolicy(
 	node: NodeSpec,
 	def: NodeTypeDefinition<unknown, unknown>,
-	ctx: FlowExecutionContext,
+	ctx: ExecutionContext,
 	bindingContext: BindingContext,
 	registry?: NodeRegistry,
 	flowInput?: Record<string, unknown>,
@@ -288,19 +302,64 @@ function shouldContinueOnError(node: NodeSpec, flow: FlowYaml): boolean {
 	return false;
 }
 
+/**
+ * Execute a flow.
+ *
+ * @param flow - The parsed flow YAML
+ * @param registry - Node type registry
+ * @param hubOrCtx - Either a Hub instance (recommended) or a FlowExecutionContext (deprecated)
+ * @param inputOverrides - Optional input overrides
+ */
 export async function executeFlow(
 	flow: FlowYaml,
 	registry: NodeRegistry,
-	ctx: FlowExecutionContext,
+	hubOrCtx: Hub | FlowExecutionContext,
 	inputOverrides?: Record<string, unknown>,
 ): Promise<FlowRunResult> {
+	// Create internal context - either from hub directly or from legacy context
+	const ctx: ExecutionContext =
+		"emit" in hubOrCtx
+			? {
+					hub: hubOrCtx,
+					phase: <T>(name: string, fn: () => Promise<T>) =>
+						hubOrCtx.scoped({ phase: { name } }, fn) as Promise<T>,
+					task: <T>(id: string, fn: () => Promise<T>) =>
+						hubOrCtx.scoped({ task: { id } }, fn) as Promise<T>,
+				}
+			: hubOrCtx;
+
 	const compiled = compileFlow(flow);
 	const outputs: Record<string, unknown> = {};
 	const flowInput = { ...(flow.flow.input ?? {}), ...(inputOverrides ?? {}) };
 	const edgeIndex = buildEdgeIndex(compiled.edges);
 
 	await ctx.phase("Run Flow", async () => {
-		for (const node of compiled.order) {
+		// T030: Check for resumption state and determine starting index
+		const resumptionState = ctx.hub.getResumptionState();
+		let startIndex = 0;
+
+		if (resumptionState) {
+			// Resume from where we left off - start after the last completed node
+			startIndex = resumptionState.currentNodeIndex;
+			// Restore outputs from previous execution
+			Object.assign(outputs, resumptionState.outputs);
+		}
+
+		for (let nodeIndex = startIndex; nodeIndex < compiled.order.length; nodeIndex++) {
+			const node = compiled.order[nodeIndex];
+
+			// T020: Check abort signal between nodes for pause/resume support
+			if (ctx.hub.getAbortSignal().aborted) {
+				// T030: Report actual state to Hub before breaking
+				ctx.hub.updatePausedState(
+					nodeIndex,
+					{ ...outputs },
+					node.id,
+					flow.flow.name,
+				);
+				break;
+			}
+
 			const bindingContext = createBindingContext(flowInput, outputs);
 			const incoming = edgeIndex.incoming.get(node.id) ?? [];
 
@@ -402,6 +461,12 @@ export async function executeFlow(
 				edgeIndex,
 				createBindingContext(flowInput, outputs),
 			);
+		}
+
+		// T031: Clean up paused session if flow completed successfully (not aborted)
+		if (!ctx.hub.getAbortSignal().aborted) {
+			// Flow completed all nodes - clear any resumption state
+			ctx.hub.clearPausedSession(ctx.hub.current().sessionId ?? "");
 		}
 	});
 

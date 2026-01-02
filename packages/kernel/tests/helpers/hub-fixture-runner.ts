@@ -14,6 +14,15 @@ export interface HubFixtureResult {
 	events: EnrichedEvent[];
 	status: HubStatus | null;
 	sessionActive: boolean | null;
+	pausedSession?: {
+		sessionId: string;
+		flowName: string;
+		currentNodeId: string;
+		currentNodeIndex: number;
+		outputs: Record<string, unknown>;
+		pendingMessages: string[];
+		pauseReason?: string;
+	};
 }
 
 /**
@@ -101,7 +110,22 @@ export async function runHubFixture(
 				}
 
 				case "abort": {
-					hub.abort(step.reason);
+					// Support both old string reason and new PauseOptions
+					if (step.options) {
+						hub.abort(step.options);
+					} else if (step.reason) {
+						hub.abort({ reason: step.reason });
+					} else {
+						hub.abort();
+					}
+					break;
+				}
+
+				case "resume": {
+					if (!step.sessionId || !step.message) {
+						throw new Error("resume step requires sessionId and message fields");
+					}
+					await hub.resume(step.sessionId, step.message);
 					break;
 				}
 
@@ -127,10 +151,25 @@ export async function runHubFixture(
 		const status = hub.status;
 		const sessionActive = hub.sessionActive;
 
+		// Capture paused session state if exists
+		const pausedState = hub.getPausedSession(fixture.sessionId);
+		const pausedSession = pausedState
+			? {
+					sessionId: pausedState.sessionId,
+					flowName: pausedState.flowName,
+					currentNodeId: pausedState.currentNodeId,
+					currentNodeIndex: pausedState.currentNodeIndex,
+					outputs: pausedState.outputs,
+					pendingMessages: pausedState.pendingMessages,
+					pauseReason: pausedState.pauseReason,
+				}
+			: undefined;
+
 		return {
 			events: received,
 			status,
 			sessionActive,
+			pausedSession,
 		};
 	} finally {
 		unsubscribe();

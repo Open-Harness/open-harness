@@ -21,7 +21,12 @@ interface Hub extends AsyncIterable&#60;EnrichedEvent&#62; &#123;
   sendTo(agent: string, message: string): void;
   sendToRun(runId: string, message: string): void;
   reply(promptId: string, response: UserResponse): void;
-  abort(reason?: string): void;
+  abort(options?: PauseOptions): void;
+
+  // Pause/Resume operations
+  getAbortSignal(): AbortSignal;
+  resume(sessionId: string, message: string): Promise&#60;void&#62;;
+  getPausedSession(sessionId: string): SessionState | undefined;
 
   // Status
   readonly status: HubStatus;
@@ -96,13 +101,68 @@ sendToRun(runId: string, message: string): void &#123;
 
 Answer a prompt. Used when the Flow runtime is in session mode and has emitted `session:prompt`.
 
-### `abort(reason?)`
+### `abort(options?)`
 
-Abort the session/run.
+Abort or pause the session/run.
+
+```typescript
+interface PauseOptions &#123;
+  resumable?: boolean;  // If true, flow pauses instead of terminating
+  reason?: string;      // Optional reason for the abort/pause
+&#125;
+```
+
+- **`abort()`** or **`abort({ resumable: false })`** - Terminal abort. Status becomes `"aborted"`, emits `session:abort`.
+- **`abort({ resumable: true })`** - Pausable abort. Status becomes `"paused"`, emits `flow:paused`, stores session state for later resumption.
+
+## Pause/Resume Operations
+
+### `getAbortSignal()`
+
+Returns the current session's `AbortSignal` for cooperative cancellation. Executor and agent nodes check this signal between operations to support pause/resume.
+
+```typescript
+// In a node implementation:
+if (ctx.hub.getAbortSignal().aborted) &#123;
+  // Stop work, allow for potential resume
+  return currentResult;
+&#125;
+```
+
+### `resume(sessionId, message)`
+
+Resume a paused session with an injected message.
+
+- **Throws `SessionNotFoundError`** if sessionId doesn't exist in paused sessions
+- **Throws `SessionAlreadyRunningError`** if session is already running
+- **Throws `Error`** if message is empty (message is required)
+
+```typescript
+// Resume a paused flow with additional context
+await hub.resume("session-123", "User approved: continue with plan B");
+```
+
+On resume:
+1. Status changes to `"running"`
+2. Injected message is emitted via `session:message`
+3. `flow:resumed` event is emitted
+4. Fresh abort signal is created for the resumed execution
+
+### `getPausedSession(sessionId)`
+
+Get the state of a paused session for inspection. Returns `undefined` if session doesn't exist.
+
+```typescript
+const state = hub.getPausedSession("session-123");
+if (state) &#123;
+  console.log(`Paused at node: $&#123;state.currentNodeId&#125;`);
+  console.log(`Outputs so far: $&#123;Object.keys(state.outputs)&#125;`);
+&#125;
+```
 
 ## Status
 
-- `status`: `"idle" | "running" | "complete" | "aborted"`
+- `status`: `"idle" | "running" | "paused" | "complete" | "aborted"`
 - `sessionActive`: `boolean` - true if `startSession()` was called
 
 ## Key invariants

@@ -25,14 +25,14 @@
 
 **Purpose**: Project initialization and type foundation
 
-- [ ] T001 Add "paused" to HubStatus union type in packages/kernel/src/protocol/hub.ts
-- [ ] T002 [P] Create PauseOptions interface in packages/kernel/src/protocol/hub.ts
-- [ ] T003 [P] Create SessionState interface in packages/kernel/src/protocol/flow-runtime.ts
-- [ ] T004 [P] Create ResumeRequest interface (message required) in packages/kernel/src/protocol/flow-runtime.ts
-- [ ] T005 [P] Add FlowPausedEvent type to packages/kernel/src/protocol/events.ts
-- [ ] T006 [P] Add FlowResumedEvent type to packages/kernel/src/protocol/events.ts
-- [ ] T007 [P] Create Zod schemas for SessionState, PauseOptions in packages/kernel/src/protocol/flow-runtime.ts
-- [ ] T008 [P] Create SessionNotFoundError and SessionAlreadyRunningError classes in packages/kernel/src/protocol/errors.ts
+- [x] T001 Add "paused" to HubStatus union type in packages/kernel/src/protocol/hub.ts
+- [x] T002 [P] Create PauseOptions interface in packages/kernel/src/protocol/hub.ts
+- [x] T003 [P] Create SessionState interface in packages/kernel/src/protocol/flow-runtime.ts
+- [x] T004 [P] Create ResumeRequest interface (message required) in packages/kernel/src/protocol/flow-runtime.ts
+- [x] T005 [P] Add FlowPausedEvent type to packages/kernel/src/protocol/events.ts
+- [x] T006 [P] Add FlowResumedEvent type to packages/kernel/src/protocol/events.ts
+- [x] T007 [P] Create Zod schemas for SessionState, PauseOptions in packages/kernel/src/protocol/flow-runtime.ts
+- [x] T008 [P] Create SessionNotFoundError and SessionAlreadyRunningError classes in packages/kernel/src/protocol/errors.ts
 
 ---
 
@@ -42,10 +42,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Connect SessionContext to Hub: add _sessionContext private property to HubImpl in packages/kernel/src/engine/hub.ts
-- [ ] T010 Add _pausedSessions Map<string, SessionState> to HubImpl in packages/kernel/src/engine/hub.ts
-- [ ] T011 Implement getAbortSignal() method on HubImpl in packages/kernel/src/engine/hub.ts
-- [ ] T012 Update Hub protocol interface to include new method signatures in packages/kernel/src/protocol/hub.ts
+- [x] T009 Connect SessionContext to Hub: add _sessionContext private property to HubImpl in packages/kernel/src/engine/hub.ts
+- [x] T010 Add _pausedSessions Map<string, SessionState> to HubImpl in packages/kernel/src/engine/hub.ts
+- [x] T011 Implement getAbortSignal() method on HubImpl in packages/kernel/src/engine/hub.ts
+- [x] T012 Update Hub protocol interface to include new method signatures in packages/kernel/src/protocol/hub.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -61,18 +61,18 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T013 [P] [US1] Unit test: abort({resumable: true}) emits flow:paused in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T014 [P] [US1] Unit test: abort({resumable: true}) sets status to "paused" in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T015 [P] [US1] Unit test: abort({resumable: true}) triggers abortController.abort() in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T016 [P] [US1] Unit test: abort() without options emits session:abort (backward compat) in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T013 [P] [US1] Unit test: abort({resumable: true}) emits flow:paused in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T014 [P] [US1] Unit test: abort({resumable: true}) sets status to "paused" in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T015 [P] [US1] Unit test: abort({resumable: true}) triggers abortController.abort() in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T016 [P] [US1] Unit test: abort() without options emits session:abort (backward compat) in packages/kernel/tests/unit/pause-resume.test.ts
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Extend abort() method signature to accept PauseOptions in packages/kernel/src/engine/hub.ts
-- [ ] T018 [US1] Implement abort({resumable: true}) logic: set status to "paused", emit flow:paused in packages/kernel/src/engine/hub.ts
-- [ ] T019 [US1] Call abortController.abort() in abort() method in packages/kernel/src/engine/hub.ts
-- [ ] T020 [US1] Add abort signal check between nodes in executor loop in packages/kernel/src/flow/executor.ts
-- [ ] T021 [US1] Add abort signal check during agent execution in for-await loop in packages/kernel/src/providers/claude.ts
+- [x] T017 [US1] Extend abort() method signature to accept PauseOptions in packages/kernel/src/engine/hub.ts
+- [x] T018 [US1] Implement abort({resumable: true}) logic: set status to "paused", emit flow:paused in packages/kernel/src/engine/hub.ts
+- [x] T019 [US1] Call abortController.abort() in abort() method in packages/kernel/src/engine/hub.ts
+- [x] T020 [US1] Add abort signal check between nodes in executor loop in packages/kernel/src/flow/executor.ts
+- [x] T021 [US1] Add abort signal check during agent execution in for-await loop in packages/kernel/src/providers/claude.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - flows can be paused and emit flow:paused events
 
@@ -86,19 +86,19 @@
 
 ### Tests for User Story 2 (Required per Constitution III) ✓
 
-- [ ] T022 [P] [US2] Unit test: resume() emits flow:resumed in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T023 [P] [US2] Unit test: resume() sets status to "running" in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T024 [P] [US2] Unit test: resume() with invalid sessionId throws SessionNotFoundError in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T025 [P] [US2] Unit test: resume() on already-running session throws SessionAlreadyRunningError in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T022 [P] [US2] Unit test: resume() emits flow:resumed in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T023 [P] [US2] Unit test: resume() sets status to "running" in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T024 [P] [US2] Unit test: resume() with invalid sessionId throws SessionNotFoundError in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T025 [P] [US2] Unit test: resume() on already-running session throws SessionAlreadyRunningError in packages/kernel/tests/unit/pause-resume.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Capture SessionState on pause: store currentNodeId, currentNodeIndex, outputs in packages/kernel/src/engine/hub.ts
-- [ ] T027 [US2] Implement resume(sessionId, message) method: validate sessionId, retrieve state in packages/kernel/src/engine/hub.ts
-- [ ] T028 [US2] Create new SessionContext for resumed execution in packages/kernel/src/engine/hub.ts
-- [ ] T029 [US2] Set status to "running" and emit flow:resumed event in packages/kernel/src/engine/hub.ts
-- [ ] T030 [US2] Modify executor to accept resumption state and continue from currentNodeIndex in packages/kernel/src/flow/executor.ts
-- [ ] T031 [US2] Remove SessionState from _pausedSessions on successful completion in packages/kernel/src/engine/hub.ts
+- [x] T026 [US2] Capture SessionState on pause: store currentNodeId, currentNodeIndex, outputs in packages/kernel/src/engine/hub.ts
+- [x] T027 [US2] Implement resume(sessionId, message) method: validate sessionId, retrieve state in packages/kernel/src/engine/hub.ts
+- [x] T028 [US2] Create new SessionContext for resumed execution in packages/kernel/src/engine/hub.ts
+- [x] T029 [US2] Set status to "running" and emit flow:resumed event in packages/kernel/src/engine/hub.ts
+- [x] T030 [US2] Modify executor to accept resumption state and continue from currentNodeIndex in packages/kernel/src/flow/executor.ts
+- [x] T031 [US2] Remove SessionState from _pausedSessions on successful completion in packages/kernel/src/engine/hub.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should work - flows can be paused and resumed
 
@@ -112,15 +112,15 @@
 
 ### Tests for User Story 3 (Required per Constitution III) ✓
 
-- [ ] T032 [P] [US3] Unit test: resume(sessionId, message) requires non-empty message in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T033 [P] [US3] Unit test: message delivered via session:message on resume in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T034 [P] [US3] Unit test: agent receives injected message in its context after resume in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T032 [P] [US3] Unit test: resume(sessionId, message) requires non-empty message in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T033 [P] [US3] Unit test: message delivered via session:message on resume in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T034 [P] [US3] Unit test: agent receives injected message in its context after resume in packages/kernel/tests/unit/pause-resume.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Validate message is non-empty in resume() and queue into SessionState.pendingMessages in packages/kernel/src/engine/hub.ts
-- [ ] T036 [US3] Deliver message via session:message pattern before resuming execution in packages/kernel/src/engine/hub.ts
-- [ ] T037 [US3] Ensure agent nodes receive injected messages in their message history in packages/kernel/src/providers/claude.ts
+- [x] T035 [US3] Validate message is non-empty in resume() and queue into SessionState.pendingMessages in packages/kernel/src/engine/hub.ts
+- [x] T036 [US3] Deliver message via session:message pattern before resuming execution in packages/kernel/src/engine/hub.ts
+- [x] T037 [US3] Ensure agent nodes receive injected messages in their message history in packages/kernel/src/providers/claude.ts
 
 **Checkpoint**: All P1 stories complete - core pause/resume with message injection works
 
@@ -134,15 +134,15 @@
 
 ### Tests for User Story 4 (Required per Constitution III) ✓
 
-- [ ] T038 [P] [US4] Unit test: getPausedSession() returns SessionState in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T039 [P] [US4] Unit test: getPausedSession() returns undefined for invalid sessionId in packages/kernel/tests/unit/pause-resume.test.ts
-- [ ] T040 [P] [US4] Unit test: SessionState includes outputs from completed nodes in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T038 [P] [US4] Unit test: getPausedSession() returns SessionState in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T039 [P] [US4] Unit test: getPausedSession() returns undefined for invalid sessionId in packages/kernel/tests/unit/pause-resume.test.ts
+- [x] T040 [P] [US4] Unit test: SessionState includes outputs from completed nodes in packages/kernel/tests/unit/pause-resume.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T041 [US4] Implement getPausedSession(sessionId) method in packages/kernel/src/engine/hub.ts
-- [ ] T042 [US4] Ensure SessionState captures outputs from all completed nodes in packages/kernel/src/engine/hub.ts
-- [ ] T043 [US4] Export SessionState type from package index for external inspection in packages/kernel/src/index.ts
+- [x] T041 [US4] Implement getPausedSession(sessionId) method in packages/kernel/src/engine/hub.ts
+- [x] T042 [US4] Ensure SessionState captures outputs from all completed nodes in packages/kernel/src/engine/hub.ts
+- [x] T043 [US4] Export SessionState type from package index for external inspection in packages/kernel/src/index.ts
 
 **Checkpoint**: All user stories complete - full pause/resume feature with inspection capability
 
@@ -154,16 +154,16 @@
 
 ### Replay Tests
 
-- [ ] T044 [P] Replay test: pause/resume sequence determinism in packages/kernel/tests/replay/pause-resume.test.ts
-- [ ] T045 [P] Replay test: event ordering (flow:paused before status change) in packages/kernel/tests/replay/pause-resume.test.ts
-- [ ] T046 [P] Replay test: context accumulation across pause boundary in packages/kernel/tests/replay/pause-resume.test.ts
+- [x] T044 [P] Replay test: pause/resume sequence determinism in packages/kernel/tests/replay/pause-resume.test.ts
+- [x] T045 [P] Replay test: event ordering (flow:paused before status change) in packages/kernel/tests/replay/pause-resume.test.ts
+- [x] T046 [P] Replay test: context accumulation across pause boundary in packages/kernel/tests/replay/pause-resume.test.ts
 
 ### Edge Cases
 
-- [ ] T047 [P] Handle abort() on already-paused flow → transitions to "aborted" in packages/kernel/src/engine/hub.ts
-- [ ] T048 [P] Handle resume() called twice → second call is no-op if running in packages/kernel/src/engine/hub.ts
-- [ ] T049 [P] Handle flow completes before abort processed → abort is no-op in packages/kernel/src/engine/hub.ts
-- [ ] T050 Discard pending messages on terminal abort (not paused) in packages/kernel/src/engine/hub.ts
+- [x] T047 [P] Handle abort() on already-paused flow → transitions to "aborted" in packages/kernel/src/engine/hub.ts
+- [x] T048 [P] Handle resume() called twice → second call is no-op if running in packages/kernel/src/engine/hub.ts
+- [x] T049 [P] Handle flow completes before abort processed → abort is no-op in packages/kernel/src/engine/hub.ts
+- [x] T050 Discard pending messages on terminal abort (not paused) in packages/kernel/src/engine/hub.ts
 
 ---
 
@@ -171,15 +171,15 @@
 
 **Purpose**: Documentation, cleanup, and validation
 
-- [ ] T051 [P] Update hub.mdx with abort({resumable}), resume(), getAbortSignal() docs in apps/docs/content/docs/reference/kernel-spec/spec/hub.mdx
-- [ ] T052 [P] Update flow-runtime.mdx with pause/resume lifecycle docs in apps/docs/content/docs/reference/kernel-spec/spec/flow-runtime.mdx
-- [ ] T053 [P] Update protocol-types.mdx with SessionState, PauseOptions, events in apps/docs/content/docs/reference/kernel-spec/reference/protocol-types.mdx
-- [ ] T054 [P] Add note about cooperative pause via AbortSignal in node-catalog.mdx in apps/docs/content/docs/reference/kernel-spec/flow/node-catalog.mdx
-- [ ] T055 Export new types from packages/kernel/src/index.ts (PauseOptions, SessionState, errors)
-- [ ] T056 Run typecheck: `cd packages/kernel && bun run typecheck`
-- [ ] T057 Run unit tests: `bun test tests/unit/pause-resume.test.ts`
-- [ ] T058 Run replay tests: `bun test tests/replay/pause-resume.test.ts`
-- [ ] T059 Run quickstart.md validation scenarios manually
+- [x] T051 [P] Update hub.mdx with abort({resumable}), resume(), getAbortSignal() docs in apps/docs/content/docs/reference/kernel-spec/spec/hub.mdx
+- [x] T052 [P] Update flow-runtime.mdx with pause/resume lifecycle docs in apps/docs/content/docs/reference/kernel-spec/spec/flow-runtime.mdx
+- [x] T053 [P] Update protocol-types.mdx with SessionState, PauseOptions, events in apps/docs/content/docs/reference/kernel-spec/reference/protocol-types.mdx
+- [x] T054 [P] Add note about cooperative pause via AbortSignal in node-catalog.mdx in apps/docs/content/docs/reference/kernel-spec/flow/node-catalog.mdx
+- [x] T055 Export new types from packages/kernel/src/index.ts (PauseOptions, SessionState, errors)
+- [x] T056 Run typecheck: `cd packages/kernel && bun run typecheck`
+- [x] T057 Run unit tests: `bun test tests/unit/pause-resume.test.ts`
+- [x] T058 Run replay tests: `bun test tests/replay/pause-resume.test.ts`
+- [x] T059 Run live E2E tests: `bun scripts/live/pause-resume-live.ts` and `bun scripts/live/pause-resume-claude-live.ts`
 
 ---
 
