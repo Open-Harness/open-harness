@@ -99,7 +99,7 @@ export function FlowEditor() {
       if (event.type === "node:start") {
         setNodeExecutionState(event.event.nodeId, "running");
       } else if (event.type === "node:complete") {
-        setNodeExecutionState(event.event.nodeId, "success");
+        setNodeExecutionState(event.event.nodeId, "complete");
       } else if (event.type === "node:error") {
         setNodeExecutionState(event.event.nodeId, "error");
       } else if (event.type === "flow:complete") {
@@ -202,31 +202,50 @@ export function FlowEditor() {
 
 ```typescript
 // server.ts
-import { createFlowServer } from "@open-harness/flow-ui/server";
-import { HubImpl, NodeRegistry, executeFlow, parseFlowYaml } from "@open-harness/kernel";
+import { HubImpl, NodeRegistry, executeFlow } from "@open-harness/kernel";
 
 const registry = new NodeRegistry();
 // ... register your node types
 
-const server = createFlowServer({
+// Simple WebSocket server using Bun
+const server = Bun.serve({
   port: 3001,
-  onExecute: async (flowDef, emit) => {
-    const hub = new HubImpl("flow-ui-session");
+  fetch(req, server) {
+    // Upgrade to WebSocket
+    if (server.upgrade(req)) {
+      return; // Upgraded
+    }
+    return new Response("WebSocket server", { status: 200 });
+  },
+  websocket: {
+    open(ws) {
+      console.log("Client connected");
+    },
+    async message(ws, message) {
+      const data = JSON.parse(message.toString());
 
-    // Forward all events to the UI
-    hub.subscribe("*", (event) => {
-      emit(event);
-    });
+      if (data.type === "execute") {
+        const hub = new HubImpl("flow-ui-session");
 
-    // Create context
-    const ctx = {
-      hub,
-      phase: async <T>(name: string, fn: () => Promise<T>) => fn(),
-      task: async <T>(id: string, fn: () => Promise<T>) => fn(),
-    };
+        // Forward all events to the UI
+        hub.subscribe("*", (event) => {
+          ws.send(JSON.stringify(event));
+        });
 
-    // Execute the flow
-    await executeFlow(flowDef, registry, ctx);
+        // Create context
+        const ctx = {
+          hub,
+          phase: async <T>(name: string, fn: () => Promise<T>) => fn(),
+          task: async <T>(id: string, fn: () => Promise<T>) => fn(),
+        };
+
+        // Execute the flow
+        await executeFlow(data.flow, registry, ctx);
+      }
+    },
+    close(ws) {
+      console.log("Client disconnected");
+    },
   },
 });
 
