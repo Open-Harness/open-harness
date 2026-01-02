@@ -1,0 +1,52 @@
+---
+title: Node Reference
+description: Complete catalog of built-in node types
+---
+
+# Node Reference
+
+This section documents all built-in node types available in Open Harness flows.
+
+## Node Categories
+
+<Cards>
+  <Card
+    title="Control Nodes"
+    href="/docs/reference/nodes/control"
+    description="Flow control: branching, looping, merging, human-in-the-loop"
+  />
+  <Card
+    title="Agent Nodes"
+    href="/docs/reference/nodes/agent"
+    description="AI agent execution: Claude SDK, prompt templates"
+  />
+  <Card
+    title="Data Nodes"
+    href="/docs/reference/nodes/data"
+    description="Data transformation: constants, transforms, mappings"
+  />
+</Cards>
+
+## Node Structure
+
+Every node in a flow has:
+
+```yaml
+- id: unique-identifier
+  type: category.nodeName    # e.g., control.foreach, agent.claude
+  input:
+    key: value               # Input bindings
+  when:                      # Optional: conditional execution
+    equals:
+      var: someCondition
+      value: true
+  policy:                    # Optional: timeout, retry
+    timeout: 30000
+    retry: 3
+```
+
+## Finding Nodes
+
+- **By category**: Browse the sections above
+- **In kernel-spec**: See [Node Catalog](/docs/reference/kernel-spec/flow/node-catalog) for the canonical specification
+- **Custom nodes**: See [Register Nodes](/docs/guides/nodes/register-nodes) for adding your own

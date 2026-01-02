@@ -1,11 +1,11 @@
 ---
 title: How to Define an Agent
-description: Create an AgentDefinition for your harness
+description: Create an AgentDefinition for your flows
 ---
 
 # How to Define an Agent
 
-Create agent definitions that execute AI workflows.
+Create agent definitions that execute AI workflows within flows.
 
 ## Basic Agent Definition
 
@@ -15,7 +15,7 @@ import type { AgentDefinition } from "@open-harness/kernel";
 const myAgent: AgentDefinition = {
   name: "my-agent",
 
-  async run(input, ctx) {
+  async execute(input, ctx) {
     // Process input
     ctx.hub.emit({ type: "narrative", text: "Starting..." });
 
@@ -51,10 +51,8 @@ type Output = z.infer<typeof OutputSchema>;
 
 const typedAgent: AgentDefinition<Input, Output> = {
   name: "typed-agent",
-  inputSchema: InputSchema,
-  outputSchema: OutputSchema,
 
-  async run(input, ctx) {
+  async execute(input, ctx) {
     // input is typed as Input
     const response = await generateResponse(input.prompt);
 
@@ -66,24 +64,39 @@ const typedAgent: AgentDefinition<Input, Output> = {
 };
 ```
 
-## Register with Harness
+## Register as Flow Node
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { NodeRegistry, executeFlow, parseFlowYaml, createHub } from "@open-harness/kernel";
 
-const harness = defineHarness({
-  agents: [myAgent, typedAgent],
-  channels: [consoleChannel]
+const registry = new NodeRegistry();
+
+// Register agent as a node type
+registry.register({
+  type: "my-agent",
+  ...myAgent,
+  inputSchema: z.object({ data: z.string() }),
+  outputSchema: z.object({ result: z.string() }),
 });
 
-const instance = harness.create();
-await instance.run({ prompt: "Hello!" });
+// Use in flow
+const flow = parseFlowYaml(`
+name: agent-flow
+nodes:
+  - id: process
+    type: my-agent
+    input:
+      data: "{{flow.input.userInput}}"
+`);
+
+const hub = createHub();
+const result = await executeFlow(flow, registry, { hub }, { userInput: "Hello!" });
 ```
 
 ## Access Hub in Agent
 
 ```typescript
-async run(input, ctx) {
+async execute(input, ctx) {
   // Emit events
   ctx.hub.emit({ type: "narrative", text: "Processing..." });
 
@@ -96,56 +109,77 @@ async run(input, ctx) {
 }
 ```
 
-## Agent with State
+## Multi-Turn Agent
+
+For interactive agents that receive messages during execution:
 
 ```typescript
-interface MyState {
-  conversationHistory: string[];
-}
+const chatAgent: AgentDefinition = {
+  name: "chat-agent",
 
-const statefulAgent: AgentDefinition<Input, Output, MyState> = {
-  name: "stateful-agent",
+  async execute(input, ctx) {
+    const messages: string[] = [];
 
-  state: () => ({
-    conversationHistory: []
-  }),
+    // Subscribe to session messages for this run
+    const unsubscribe = ctx.hub.subscribe("session:message", (event) => {
+      if (event.context.runId === ctx.runId) {
+        messages.push(event.event.content);
 
-  async run(input, ctx) {
-    // Access state
-    ctx.state.conversationHistory.push(input.prompt);
+        ctx.hub.emit({
+          type: "agent:text",
+          content: `Echo: ${event.event.content}`,
+        });
+      }
+    });
 
-    const response = await generate(ctx.state.conversationHistory);
+    // Wait for session to complete
+    await waitForComplete(ctx.hub);
+    unsubscribe();
 
-    ctx.state.conversationHistory.push(response);
-
-    return { response };
+    return { messages };
   }
 };
 ```
 
-## Agent Configuration
+## Custom Lifecycle Events
+
+When `emitsStartComplete: true`, the agent handles its own lifecycle events:
 
 ```typescript
-const configuredAgent: AgentDefinition = {
-  name: "configured-agent",
+const customAgent: AgentDefinition = {
+  name: "custom-agent",
+  emitsStartComplete: true,
 
-  config: {
-    model: "claude-3-5-sonnet",
-    maxRetries: 3,
-    timeout: 30000
-  },
+  async execute(input, ctx) {
+    ctx.hub.emit({
+      type: "agent:start",
+      agentName: "custom-agent",
+    });
 
-  async run(input, ctx) {
-    // Access config
-    const { model, timeout } = ctx.config;
+    try {
+      const result = await doWork(input);
 
-    return await callModel(model, input, { timeout });
+      ctx.hub.emit({
+        type: "agent:complete",
+        agentName: "custom-agent",
+        success: true,
+      });
+
+      return result;
+    } catch (error) {
+      ctx.hub.emit({
+        type: "agent:complete",
+        agentName: "custom-agent",
+        success: false,
+      });
+      throw error;
+    }
   }
 };
 ```
 
 ## Related
 
-- [Anthropic Agent](/docs/guides/agents/anthropic-agent) - Use Anthropic provider
-- [Agent Inbox](/docs/guides/agents/agent-inbox) - Bidirectional agents
+- [Claude Agent](/docs/guides/agents/anthropic-agent) - Use Claude provider
 - [AgentDefinition Reference](/docs/reference/types/agent-definition) - Full reference
+- [Hub Events](/docs/learn/hub-events) - Event subscription

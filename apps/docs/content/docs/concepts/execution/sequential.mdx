@@ -1,0 +1,75 @@
+---
+title: Sequential Execution
+description: Current node-by-node execution model
+---
+
+# Sequential Execution
+
+The current FlowRuntime executes nodes one at a time in topological order.
+
+## How It Works
+
+1. **Sort nodes** by dependencies (topological order)
+2. **Execute each node** in order
+3. **Collect output** to context for downstream nodes
+4. **Emit events** for each phase (task:start, task:complete)
+
+```typescript
+// Simplified executor logic
+for (const node of topologicalSort(flow.nodes)) {
+  await executeNode(node, context);
+}
+```
+
+## Dependency Resolution
+
+A node executes when **all** its incoming edges have fired:
+
+```yaml
+nodes:
+  - id: merge-results
+    type: transform
+    input:
+      a: "{{analyze.output}}"
+      b: "{{summarize.output}}"
+
+edges:
+  - from: analyze
+    to: merge-results
+  - from: summarize
+    to: merge-results
+```
+
+`merge-results` waits for both `analyze` and `summarize`.
+
+## Edge-Level When
+
+Edges can have conditions:
+
+```yaml
+edges:
+  - from: validate
+    to: process
+    when:
+      equals:
+        var: validate.output.valid
+        value: true
+```
+
+If the edge condition is false, the edge doesn't fire. A node needs at least one incoming edge to fire.
+
+## Advantages
+
+- **Predictable**: Easy to reason about execution order
+- **Debuggable**: Clear sequence of events
+- **Simple**: No race conditions or merge conflicts
+
+## Limitations
+
+- **No parallelism**: Independent nodes run sequentially
+- **Slower for wide graphs**: Parallel branches can't overlap
+
+## Related
+
+- [Parallel Execution](/docs/concepts/execution/parallel) - Planned parallel model
+- [Edge Routing](/docs/reference/kernel-spec/flow/edge-routing) - Edge condition semantics
