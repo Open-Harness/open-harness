@@ -13,8 +13,7 @@
 
 import { Container } from "@needle-di/core";
 import { setMonologueContainer } from "../monologue/monologue-decorator.js";
-import { EventBus } from "./event-bus.js";
-import { type IConfig, IConfigToken, IEventBusToken, IUnifiedEventBusToken } from "./tokens.js";
+import { type IConfig, IConfigToken, IUnifiedEventBusToken } from "./tokens.js";
 import { UnifiedEventBus } from "./unified-event-bus.js";
 
 // Re-export for convenience
@@ -43,7 +42,7 @@ export interface ContainerOptions {
  *
  * This container provides:
  * - Configuration (IConfigToken)
- * - Event system (IEventBusToken, IUnifiedEventBusToken)
+ * - Event system (IUnifiedEventBusToken)
  * - Monologue service infrastructure (decorator container setup)
  *
  * For LLM provider support, use a provider package:
@@ -87,12 +86,6 @@ export function createContainer(options: ContainerOptions = {}): Container {
 	container.bind({
 		provide: IConfigToken,
 		useValue: config,
-	});
-
-	// Event Bus (Legacy)
-	container.bind({
-		provide: IEventBusToken,
-		useFactory: () => new EventBus(),
 	});
 
 	// Unified Event Bus (008-unified-event-system)

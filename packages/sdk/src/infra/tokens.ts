@@ -105,12 +105,8 @@ export interface IAgentRunner {
 }
 
 /**
- * @deprecated Use provider-specific tokens instead (IAnthropicRunnerToken, etc.)
- *
- * Migration guide:
- * - Replace `inject(IAgentRunnerToken)` with `inject(IAnthropicRunnerToken)`
- * - See docs/deprecation-schedule.md for full migration path
- * Removal target: v1.0.0
+ * Generic token for IAgentRunner.
+ * Provider packages bind their specific runner to this token.
  */
 export const IAgentRunnerToken = new InjectionToken<IAgentRunner>("IAgentRunner");
 
@@ -175,17 +171,6 @@ export interface IRecordingFactory {
 }
 
 export const IRecordingFactoryToken = new InjectionToken<IRecordingFactory>("IRecordingFactory");
-
-// ============================================================================
-// Event Bus (Cross-cutting Communication)
-// ============================================================================
-
-export interface IEventBus {
-	publish(event: AgentEvent): void | Promise<void>;
-	subscribe(listener: (event: AgentEvent) => void | Promise<void>): () => void;
-}
-
-export const IEventBusToken = new InjectionToken<IEventBus>("IEventBus");
 
 // ============================================================================
 // Unified Event Bus (008-unified-event-system)

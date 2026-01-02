@@ -86,24 +86,3 @@ export function setGlobalContainer(container: Container): void {
 export function getContainer(): Container {
 	return getGlobalContainer();
 }
-
-// ============================================
-// Agent Factory (Provider-Agnostic)
-// ============================================
-
-/**
- * @deprecated Agent creation is now provider-specific.
- *
- * Use provider packages instead:
- * - @openharness/anthropic: `container.get(CodingAgent)`
- *
- * This function now throws an error directing users to the proper approach.
- */
-export function createAgent(_input: unknown, _options?: unknown): never {
-	throw new Error(
-		"createAgent() is deprecated. Use a provider package instead:\n" +
-			"\n" +
-			"  import { CodingAgent } from '@openharness/anthropic';\n" +
-			"  const coder = container.get(CodingAgent);\n",
-	);
-}

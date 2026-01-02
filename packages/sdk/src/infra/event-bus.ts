@@ -9,7 +9,15 @@
  */
 
 import { injectable } from "@needle-di/core";
-import type { AgentEvent, IEventBus } from "./tokens.js";
+import type { AgentEvent } from "./tokens.js";
+
+/**
+ * Legacy EventBus interface (deprecated, use IUnifiedEventBus)
+ */
+export interface IEventBus {
+	publish(event: AgentEvent): void;
+	subscribe(listener: EventListener, options?: SubscribeOptions): () => void;
+}
 
 /**
  * Event listener type
