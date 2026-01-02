@@ -87,9 +87,9 @@ description: "Task list for Clean DI Architecture with Agent Builder Pattern"
 - [ ] T005 Create packages/anthropic/src/provider/builder.ts with @injectable() AgentBuilder class
 - [ ] T006 [P] Implement AgentBuilder.build() method that constructs ExecutableAgent with execute/stream methods
 - [ ] T007 Refactor packages/anthropic/src/provider/factory.ts to return plain AnthropicAgentDefinition objects and eliminate all global container state (remove getGlobalContainer() function and _globalContainer module-level variable)
-- [ ] T008 [P] Create packages/anthropic/src/provider/helpers.ts with executeAgent() function (Note: Extract shared container resolution logic with T009 into private helper to avoid duplication)
-- [ ] T009 [P] Create streamAgent() function in packages/anthropic/src/provider/helpers.ts (Note: Share container resolution logic with T008 via private helper function)
-- [ ] T010 [P] Implement createTemporaryContainer() helper in packages/anthropic/src/provider/helpers.ts
+- [ ] T008 [P] Create packages/anthropic/src/provider/helpers.ts with executeAgent() function (depends on T010: uses resolveAgentBuilder() for container resolution)
+- [ ] T009 [P] Create streamAgent() function in packages/anthropic/src/provider/helpers.ts (depends on T010: uses resolveAgentBuilder() for container resolution)
+- [ ] T010 [P] Implement shared container resolution helpers in packages/anthropic/src/provider/helpers.ts: (a) createTemporaryContainer() for temporary container creation, (b) resolveAgentBuilder() private helper that handles container resolution (checks options.container, creates temporary if needed, resolves AgentBuilder) - this eliminates duplication between T008 and T009
 - [ ] T011 Update packages/anthropic/src/provider/index.ts to export new helpers and types
 - [ ] T012 Verify no global containers remain using grep for "let.*Container.*=" and "getGlobalContainer"
 

@@ -73,7 +73,10 @@ Refactor `@openharness/anthropic` factory-based agents to eliminate DI anti-patt
 - **Runner**: GitHub Actions standard runner (2-core, 7GB RAM)
 - **Measurement**: p95 latency (95th percentile)
 - **Container Creation**: <5ms (cold start, no cached dependencies)
+  - **Cold Start Definition**: First container creation after process start, before any require/import caching
+  - **Measurement Protocol**: Create container in fresh process (new `bun test` invocation), measure time from `new Container()` to first `.get()` call
 - **Agent Resolution**: <10ms (warm container, builder already resolved)
+  - **Warm Container Definition**: Container with previously resolved AgentBuilder, measuring subsequent `.get(AgentBuilderToken)` calls
 
 **Method**: Benchmark test with 100 iterations, report p95 using `console.time/timeEnd`
 
