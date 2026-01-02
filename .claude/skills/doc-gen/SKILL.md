@@ -1,4 +1,5 @@
 ---
+name: Open Harness Documentation Skill
 description: Open Harness documentation site maintenance and updates. Use when updating docs after protocol changes, adding new pages, fixing broken links, or generating API references. Covers Fumadocs components, code-generated docs, and the Diátaxis framework.
 ---
 
