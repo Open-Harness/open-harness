@@ -206,18 +206,48 @@ At the end of this work:
 - ✅ Multi-client support with proper cleanup on disconnect
 - ✅ All 109 kernel tests pass
 
-### Phase 5: React Client (packages/flow-ui)
+### Phase 5: React Client (packages/flow-ui) [COMPLETE ✅]
 
 **Goal**: Visual flow editor and execution monitor.
 
 **Deliverables**:
-- [ ] New package: `packages/flow-ui`
-- [ ] ReactFlow-based flow visualization
-- [ ] WebSocket connection to kernel
-- [ ] Node palette from registry metadata
-- [ ] Execution state visualization (nodes light up)
-- [ ] Edit capabilities (add/remove/connect nodes)
-- [ ] Save to FlowYaml
+- [x] New package: `packages/flow-ui`
+- [x] ReactFlow-based flow visualization
+- [x] WebSocket connection to kernel
+- [x] Node palette from registry metadata
+- [x] Execution state visualization (nodes light up)
+- [x] Edit capabilities (add/remove/connect nodes)
+- [x] Save to FlowYaml
+
+**Files**:
+- `packages/flow-ui/package.json` - Package configuration
+- `packages/flow-ui/src/App.tsx` - Main application component
+- `packages/flow-ui/src/server.ts` - Bun development server
+- `packages/flow-ui/src/components/` - React components
+  - `FlowCanvas.tsx` - ReactFlow canvas with drag-drop
+  - `CustomNode.tsx` - Node with execution state visualization
+  - `NodePalette.tsx` - Draggable node types grouped by category
+  - `Toolbar.tsx` - Save/Load/Run/Reset actions
+  - `EventLog.tsx` - Real-time event display
+  - `ConnectionStatus.tsx` - WebSocket status indicator
+- `packages/flow-ui/src/hooks/` - React hooks
+  - `useWebSocket.ts` - WebSocket connection management
+  - `useFlowState.ts` - Flow nodes/edges with execution state
+- `packages/flow-ui/src/types/` - TypeScript types
+- `packages/flow-ui/src/styles/main.css` - Dark theme styling
+
+**Implementation Results** (2026-01-02):
+- ✅ Package structure with Bun.serve() for development
+- ✅ ReactFlow v12 with generic typing for FlowNode/FlowEdge
+- ✅ WebSocket hook with auto-reconnect and event streaming
+- ✅ Flow state hook processes node:* events for visualization
+- ✅ Custom nodes show execution state (idle/running/complete/error/skipped)
+- ✅ Node palette with category grouping and drag-drop
+- ✅ Save/Load YAML with simple parser (production would use js-yaml)
+- ✅ Dark theme with CSS variables
+- ✅ TypeScript and linting pass
+- ✅ Fixed WebSocket reconnect loop bug (callbacks stored in refs to avoid infinite renders)
+- ✅ Chrome automation validation: drag-drop, edge creation, YAML export all working
 
 **Dependencies**: Phases 1-4 complete
 
