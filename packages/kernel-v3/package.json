@@ -1,6 +1,6 @@
 {
 	"name": "@open-harness/kernel-v3",
-	"module": "index.ts",
+	"module": "src/index.ts",
 	"type": "module",
 	"private": true,
 	"scripts": {

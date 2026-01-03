@@ -1,88 +1,177 @@
-# Horizon Agent Flow
-# Multi-agent implementation system: planner → foreach(task) → coder ↔ reviewer loop
+# Horizon Agent Flow (Kernel V3)
+# Multi-agent implementation system: planner → forEach(task) → coder ↔ reviewer loop
 #
-# This flow demonstrates loop edges for controlled cycles.
-# The coder→reviewer loop continues until the reviewer approves or maxIterations is hit.
+# This flow demonstrates:
+# - State management for plan persistence
+# - forEach edges for task iteration
+# - Loop edges for coder/reviewer cycles
 
-flow:
-  name: horizon-agent
-  description: Multi-agent implementation system with planning, coding, and review cycles
-  nodePacks: [core, claude]
-  input:
-    feature: string
-    maxReviewIterations: number
+name: horizon-agent
+version: 1
+
+state:
+  initial:
+    tasks: []
+    planCreatedAt: null
+    currentTaskIndex: 0
+    currentIteration: 0
+    reviewFeedback: null
+    completedTasks: []
+    startedAt: null
+    completedAt: null
+    status: "idle"
 
 nodes:
   # Phase 1: Planning
-  # The planner analyzes the feature request and creates a structured task list
-  # NOTE: promptFile is a future feature - using inline prompts only
+  # The planner analyzes the feature request and creates a structured task list.
+  # Tasks are stored in state and are immutable after creation.
   - id: planner
     type: claude.agent
     input:
       prompt: |
-        Feature to implement: {{ flow.input.feature }}
+        # Feature Implementation Planning
 
-        Analyze this feature request and create a structured implementation plan.
-        Output a JSON array of tasks, each with: id, title, description, and dependencies.
+        ## Feature Request
+        {{ flow.input.feature }}
 
-  # Phase 2: Implementation Loop
-  # For each task, run the coder→reviewer cycle
-  - id: task_loop
-    type: control.foreach
-    input:
-      items: "{{ planner.structuredOutput.tasks }}"
-      as: task
-      body:
-        - coder
-        - reviewer
+        ## Your Role
+        You are a senior software architect. Analyze this feature request and create a detailed implementation plan.
 
-  # Child: Coder (inside foreach)
-  # Implements the current task based on the task description
+        ## Instructions
+        1. Break down the feature into atomic, implementable tasks
+        2. Order tasks by dependencies (dependent tasks come after their dependencies)
+        3. Each task should be completable in a single focused coding session
+        4. Include clear success criteria for each task
+
+        ## Output Format
+        Return a JSON object with this exact structure:
+        ```json
+        {
+          "tasks": [
+            {
+              "id": "task-1",
+              "title": "Short descriptive title",
+              "description": "Detailed description of what to implement, including specific files, functions, or components to create/modify",
+              "dependencies": []
+            },
+            {
+              "id": "task-2",
+              "title": "Another task",
+              "description": "This task depends on task-1",
+              "dependencies": ["task-1"]
+            }
+          ]
+        }
+        ```
+
+        Keep the plan focused and achievable. Aim for 3-7 tasks for typical features.
+
+  # Phase 2: Task Iteration
+  # Process each task from the planner's output using forEach
   - id: coder
     type: claude.agent
     input:
       prompt: |
-        Current task: {{ task.title }}
-        Description: {{ task.description }}
+        # Implementation Task
 
-        Implement this task. Provide complete, working code.
+        ## Current Task
+        **ID:** {{ task.id }}
+        **Title:** {{ task.title }}
+        **Description:** {{ task.description }}
 
-  # Child: Reviewer (inside foreach)
-  # Reviews the coder's implementation and provides feedback
+        ## Previous Review Feedback
+        {% if state.reviewFeedback %}
+        **Status:** {{ state.reviewFeedback.passed }}
+        **Feedback:** {{ state.reviewFeedback.feedback }}
+        **Issues to Address:**
+        {% for issue in state.reviewFeedback.issues %}
+        - {{ issue }}
+        {% endfor %}
+        {% else %}
+        This is the first iteration. No previous feedback.
+        {% endif %}
+
+        ## Instructions
+        1. Implement this task completely
+        2. If there is previous feedback, address ALL issues mentioned
+        3. Provide production-ready, working code
+        4. Include any necessary imports, type definitions, and error handling
+        5. Follow best practices for the language/framework being used
+
+        ## Output
+        Provide the complete implementation with clear file paths and code blocks.
+
+  # Reviewer agent - reviews the coder's implementation
   - id: reviewer
     type: claude.agent
     input:
       prompt: |
-        Task: {{ task.title }}
-        Description: {{ task.description }}
+        # Code Review
 
-        Coder's implementation:
+        ## Task Being Reviewed
+        **ID:** {{ task.id }}
+        **Title:** {{ task.title }}
+        **Description:** {{ task.description }}
+
+        ## Implementation to Review
         {{ coder.text }}
 
-        Review this implementation. Check for:
-        - Correctness: Does it solve the task?
-        - Code quality: Is it clean, readable, and maintainable?
-        - Edge cases: Are error conditions handled?
+        ## Review Criteria
+        1. **Correctness:** Does the implementation fully satisfy the task requirements?
+        2. **Code Quality:** Is the code clean, readable, and maintainable?
+        3. **Edge Cases:** Are error conditions and edge cases handled appropriately?
+        4. **Best Practices:** Does it follow language/framework conventions?
+        5. **Completeness:** Is anything missing that the task description requires?
 
-        Return JSON: { "passed": boolean, "feedback": string, "issues": string[] }
+        ## Instructions
+        - Be thorough but fair in your review
+        - Only fail the implementation if there are genuine issues
+        - Provide specific, actionable feedback for any issues found
+        - If the code is production-ready, approve it
+
+        ## Output Format
+        Return a JSON object with this exact structure:
+        ```json
+        {
+          "passed": true,
+          "feedback": "Summary of the review",
+          "issues": []
+        }
+        ```
+
+        Or if there are issues:
+        ```json
+        {
+          "passed": false,
+          "feedback": "Summary of what needs to be fixed",
+          "issues": [
+            "Specific issue 1 that needs to be addressed",
+            "Specific issue 2 that needs to be addressed"
+          ]
+        }
+        ```
 
 edges:
-  # Forward edges: main flow progression
+  # Planner -> Coder (with forEach for task iteration)
   - from: planner
-    to: task_loop
+    to: coder
+    forEach:
+      in: "{{ planner.structuredOutput.tasks }}"
+      as: task
 
-  # Forward edge: coder to reviewer (inside foreach body)
+  # Coder -> Reviewer (sequential within each task)
   - from: coder
     to: reviewer
 
-  # Loop edge: reviewer back to coder on failure
+  # Loop: Reviewer -> Coder on failure
   # This creates a controlled cycle for iterative improvement
+  # Note: maxIterations must be a static number (kernel-v3 doesn't support templates here)
+  # The CLI's --max-iterations option is for UI display only; this controls the actual limit
   - from: reviewer
     to: coder
-    type: loop
-    maxIterations: "{{ flow.input.maxReviewIterations }}"
     when:
       not:
         equals:
           var: reviewer.structuredOutput.passed
           value: true
+    maxIterations: 5

@@ -1,7 +1,9 @@
 /**
- * Horizon Agent WebSocket Server
+ * Horizon Agent WebSocket Server (v3)
  *
- * Extends the kernel's WebSocket channel pattern with horizon-specific commands:
+ * Uses kernel-v3 runtime for flow execution with WebSocket streaming.
+ *
+ * Commands:
  * - start: Start a new flow execution
  * - pause: Pause the current flow (resumable)
  * - resume: Resume a paused flow with optional message injection
@@ -9,12 +11,10 @@
  * - status: Get current flow status
  */
 
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { EnrichedEvent, FlowYaml } from "@open-harness/kernel";
-import { executeFlow, HubImpl, NodeRegistry } from "@open-harness/kernel";
+import type { RunSnapshot, RuntimeEvent } from "@open-harness/kernel-v3";
 import type { Server, ServerWebSocket } from "bun";
-import { parse as parseYaml } from "yaml";
+import { createHorizonRuntime, type HorizonRuntime } from "./runtime/horizon-runtime.js";
 
 /** WebSocket data attached to each connection */
 interface WSData {
@@ -35,24 +35,22 @@ export interface HorizonServerConfig {
 interface HorizonCommand {
 	type: "start" | "pause" | "resume" | "inject" | "status";
 	/** For start: flow input */
-	input?: Record<string, unknown>;
+	input?: {
+		feature?: string;
+		maxReviewIterations?: number;
+	};
 	/** For start: override flow path */
 	flowPath?: string;
 	/** For resume/inject: message to inject */
 	message?: string;
-	/** For resume: session ID to resume */
-	sessionId?: string;
 }
 
 /** Server state */
 interface ServerState {
-	hub: HubImpl | null;
-	registry: NodeRegistry | null;
-	currentFlow: FlowYaml | null;
+	runtime: HorizonRuntime | null;
 	isRunning: boolean;
-	sessionId: string | null;
-	/** Original input passed at start time - preserved for resume */
-	originalInput: Record<string, unknown> | null;
+	unsubscribe: (() => void) | null;
+	lastSnapshot: RunSnapshot | null;
 }
 
 /**
@@ -61,14 +59,13 @@ interface ServerState {
 export async function createHorizonServer(config: HorizonServerConfig = {}): Promise<Server<WSData>> {
 	const port = config.port ?? 3002;
 	const wsPath = config.path ?? "/ws";
+	const defaultFlowPath = config.flowPath ?? "./flows/agent-loop.yaml";
 
 	const state: ServerState = {
-		hub: null,
-		registry: null,
-		currentFlow: null,
+		runtime: null,
 		isRunning: false,
-		sessionId: null,
-		originalInput: null,
+		unsubscribe: null,
+		lastSnapshot: null,
 	};
 
 	const clients = new Set<ServerWebSocket<WSData>>();
@@ -94,7 +91,7 @@ export async function createHorizonServer(config: HorizonServerConfig = {}): Pro
 						status: "ok",
 						clients: clients.size,
 						flowRunning: state.isRunning,
-						sessionId: state.sessionId,
+						runId: state.lastSnapshot?.runId ?? null,
 					}),
 					{ headers: { "Content-Type": "application/json" } },
 				);
@@ -102,12 +99,13 @@ export async function createHorizonServer(config: HorizonServerConfig = {}): Pro
 
 			// Status endpoint
 			if (url.pathname === "/status") {
+				const snapshot = state.runtime?.getSnapshot();
 				return new Response(
 					JSON.stringify({
 						isRunning: state.isRunning,
-						sessionId: state.sessionId,
-						hubStatus: state.hub?.status ?? null,
-						flowName: state.currentFlow?.flow?.name ?? null,
+						runId: snapshot?.runId ?? null,
+						status: snapshot?.status ?? null,
+						nodeStatus: snapshot?.nodeStatus ?? null,
 					}),
 					{ headers: { "Content-Type": "application/json" } },
 				);
@@ -136,7 +134,7 @@ export async function createHorizonServer(config: HorizonServerConfig = {}): Pro
 			},
 
 			async message(ws: ServerWebSocket<WSData>, message) {
-				await handleCommand(ws, message, state, clients, config);
+				await handleCommand(ws, message, state, clients, defaultFlowPath);
 			},
 		},
 	});
@@ -153,7 +151,7 @@ async function handleCommand(
 	message: string | Buffer,
 	state: ServerState,
 	clients: Set<ServerWebSocket<WSData>>,
-	config: HorizonServerConfig,
+	defaultFlowPath: string,
 ): Promise<void> {
 	try {
 		const msgStr = typeof message === "string" ? message : message.toString();
@@ -161,15 +159,15 @@ async function handleCommand(
 
 		switch (command.type) {
 			case "start":
-				await handleStart(ws, command, state, clients, config);
+				await handleStart(ws, command, state, clients, defaultFlowPath);
 				break;
 
 			case "pause":
-				handlePause(ws, state);
+				handlePause(ws, state, clients);
 				break;
 
 			case "resume":
-				await handleResume(ws, command, state, clients);
+				handleResume(ws, command, state, clients);
 				break;
 
 			case "inject":
@@ -197,65 +195,68 @@ async function handleStart(
 	command: HorizonCommand,
 	state: ServerState,
 	clients: Set<ServerWebSocket<WSData>>,
-	config: HorizonServerConfig,
+	defaultFlowPath: string,
 ): Promise<void> {
 	if (state.isRunning) {
 		sendError(ws, "Flow is already running. Pause or wait for completion.");
 		return;
 	}
 
-	const flowPath = command.flowPath ?? config.flowPath;
-	if (!flowPath) {
-		sendError(ws, "No flow path specified");
+	const flowPath = resolve(command.flowPath ?? defaultFlowPath);
+	const feature = command.input?.feature;
+
+	if (!feature) {
+		sendError(ws, 'Missing required input: feature (e.g., { "input": { "feature": "..." } })');
 		return;
 	}
 
 	try {
-		// Load flow YAML
-		const absolutePath = resolve(flowPath);
-		const yamlContent = readFileSync(absolutePath, "utf-8");
-		const flow = parseYaml(yamlContent) as FlowYaml;
-		state.currentFlow = flow;
+		// Clean up previous runtime
+		if (state.unsubscribe) {
+			state.unsubscribe();
+			state.unsubscribe = null;
+		}
 
-		// Create new hub and registry
-		state.sessionId = `horizon-${Date.now()}`;
-		state.hub = new HubImpl(state.sessionId);
-		state.registry = new NodeRegistry();
+		// Create new Horizon runtime
+		state.runtime = createHorizonRuntime({
+			flowPath,
+			enablePersistence: true,
+		});
 
-		// Register node packs (simplified - in production, load from oh.config.ts)
-		await registerNodePacks(state.registry);
-
-		// Subscribe to hub events and broadcast
-		state.hub.subscribe("*", (event: EnrichedEvent) => {
+		// Subscribe to runtime events and broadcast
+		state.unsubscribe = state.runtime.onEvent((event: RuntimeEvent) => {
 			broadcast(clients, {
 				type: "flow:event",
-				event: {
-					id: event.id,
-					timestamp: event.timestamp.toISOString(),
-					context: event.context,
-					payload: event.event,
-				},
+				event,
 			});
 		});
 
+		// Set isRunning BEFORE starting the promise to prevent race conditions
+		// with incoming start commands
 		state.isRunning = true;
-		state.originalInput = command.input ?? null;
-		sendAck(ws, "start", `Flow started: ${flow.flow.name}`);
+		sendAck(ws, "start", `Flow started with feature: ${feature}`);
 
-		// Execute flow (don't await - runs in background)
-		executeFlow(flow, state.registry, state.hub, command.input)
+		// Execute flow in background - we don't await because the WebSocket
+		// handler needs to return. Events are broadcast via the subscription.
+		state.runtime
+			.run({
+				feature,
+				maxReviewIterations: command.input?.maxReviewIterations ?? 5,
+			})
 			.then((result) => {
-				// Check if flow paused vs completed
-				if (state.hub?.status === "paused") {
-					// Flow paused - don't mark as not running, broadcast paused
+				state.lastSnapshot = result;
+				// Only clear isRunning if flow truly completed (not paused)
+				state.isRunning = result.status === "running";
+
+				if (result.status === "paused") {
 					broadcast(clients, {
 						type: "flow:paused",
-						sessionId: state.sessionId,
+						runId: result.runId,
 					});
 				} else {
-					state.isRunning = false;
 					broadcast(clients, {
 						type: "flow:complete",
+						status: result.status,
 						outputs: result.outputs,
 					});
 				}
@@ -276,76 +277,56 @@ async function handleStart(
 /**
  * Handle pause command - pause flow execution (resumable).
  */
-function handlePause(ws: ServerWebSocket<WSData>, state: ServerState): void {
-	if (!state.isRunning || !state.hub) {
+function handlePause(ws: ServerWebSocket<WSData>, state: ServerState, clients: Set<ServerWebSocket<WSData>>): void {
+	if (!state.isRunning || !state.runtime) {
 		sendError(ws, "No flow is running");
 		return;
 	}
 
-	state.hub.abort({ reason: "User requested pause", resumable: true });
+	state.runtime.pause();
 	sendAck(ws, "pause", "Flow paused");
+
+	broadcast(clients, {
+		type: "flow:paused",
+		runId: state.runtime.getSnapshot().runId,
+	});
 }
 
 /**
  * Handle resume command - resume paused flow.
  */
-async function handleResume(
+function handleResume(
 	ws: ServerWebSocket<WSData>,
 	command: HorizonCommand,
 	state: ServerState,
 	clients: Set<ServerWebSocket<WSData>>,
-): Promise<void> {
-	if (!state.hub || !state.sessionId) {
-		sendError(ws, "No paused session to resume");
+): void {
+	if (!state.runtime) {
+		sendError(ws, "No runtime available to resume");
 		return;
 	}
 
-	const sessionId = command.sessionId ?? state.sessionId;
-
-	try {
-		// Use default message if not provided (hub.resume requires non-empty message)
-		const resumeMessage = command.message?.trim() || "user resumed flow";
-		await state.hub.resume(sessionId, resumeMessage);
-		state.isRunning = true;
-		sendAck(ws, "resume", `Flow resumed: ${sessionId}`);
-
-		// Re-execute flow from paused state (pass original input to preserve flow.input.*)
-		if (state.currentFlow && state.registry) {
-			executeFlow(state.currentFlow, state.registry, state.hub, state.originalInput ?? undefined)
-				.then((result) => {
-					// Check if flow paused again vs completed
-					if (state.hub?.status === "paused") {
-						// Flow paused again - don't mark as not running
-						broadcast(clients, {
-							type: "flow:paused",
-							sessionId: state.sessionId,
-						});
-					} else {
-						state.isRunning = false;
-						broadcast(clients, {
-							type: "flow:complete",
-							outputs: result.outputs,
-						});
-					}
-				})
-				.catch((error) => {
-					state.isRunning = false;
-					broadcast(clients, {
-						type: "flow:error",
-						error: error instanceof Error ? error.message : String(error),
-					});
-				});
-		}
-	} catch (error) {
-		sendError(ws, `Resume failed: ${error instanceof Error ? error.message : String(error)}`);
+	const snapshot = state.runtime.getSnapshot();
+	if (snapshot.status !== "paused") {
+		sendError(ws, `Cannot resume: flow is ${snapshot.status}`);
+		return;
 	}
+
+	state.runtime.resume(command.message);
+	state.isRunning = true;
+	sendAck(ws, "resume", "Flow resumed");
+
+	broadcast(clients, {
+		type: "flow:resumed",
+		runId: snapshot.runId,
+	});
 }
 
 /**
  * Handle inject command - inject message into running flow.
  */
 function handleInject(ws: ServerWebSocket<WSData>, command: HorizonCommand, state: ServerState): void {
-	if (!state.isRunning || !state.hub) {
+	if (!state.isRunning || !state.runtime) {
 		sendError(ws, "No flow is running");
 		return;
 	}
@@ -355,7 +336,20 @@ function handleInject(ws: ServerWebSocket<WSData>, command: HorizonCommand, stat
 		return;
 	}
 
-	state.hub.send(command.message);
+	const snapshot = state.runtime.getSnapshot();
+	const runId = snapshot.runId;
+
+	if (!runId) {
+		sendError(ws, "No active run to inject message into");
+		return;
+	}
+
+	state.runtime.dispatch({
+		type: "send",
+		runId,
+		message: command.message,
+	});
+
 	sendAck(ws, "inject", "Message injected");
 }
 
@@ -363,44 +357,20 @@ function handleInject(ws: ServerWebSocket<WSData>, command: HorizonCommand, stat
  * Handle status command - return current state.
  */
 function handleStatus(ws: ServerWebSocket<WSData>, state: ServerState): void {
+	const snapshot = state.runtime?.getSnapshot();
+	const horizonState = state.runtime?.getState();
+
 	const status = {
 		isRunning: state.isRunning,
-		sessionId: state.sessionId,
-		hubStatus: state.hub?.status ?? null,
-		flowName: state.currentFlow?.flow?.name ?? null,
+		runId: snapshot?.runId ?? null,
+		status: snapshot?.status ?? null,
+		nodeStatus: snapshot?.nodeStatus ?? null,
+		taskCount: horizonState?.tasks.length ?? 0,
+		currentTaskIndex: horizonState?.currentTaskIndex ?? 0,
+		completedTasks: horizonState?.completedTasks.length ?? 0,
 	};
 
 	ws.send(JSON.stringify({ type: "status", ...status }));
-}
-
-/**
- * Register node packs.
- */
-async function registerNodePacks(registry: NodeRegistry): Promise<void> {
-	const {
-		claudeNode,
-		echoNode,
-		constantNode,
-		controlIfNode,
-		controlSwitchNode,
-		controlNoopNode,
-		controlFailNode,
-		controlForeachNode,
-	} = await import("@open-harness/kernel");
-
-	// Register core control nodes
-	registry.register(controlIfNode);
-	registry.register(controlSwitchNode);
-	registry.register(controlNoopNode);
-	registry.register(controlFailNode);
-	registry.register(controlForeachNode);
-
-	// Register utility nodes
-	registry.register(echoNode);
-	registry.register(constantNode);
-
-	// Register claude agent node
-	registry.register(claudeNode);
 }
 
 /**
