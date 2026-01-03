@@ -18,7 +18,11 @@ import { executeFlow } from "../../src/flow/executor.js";
 import { NodeRegistry } from "../../src/flow/registry.js";
 import type { EnrichedEvent } from "../../src/protocol/events.js";
 import type { FlowYaml, NodeRunContext } from "../../src/protocol/flow.js";
-import { createClaudeAgent, type ClaudeAgentInput, type ClaudeAgentOutput } from "../../src/providers/claude.js";
+import {
+	type ClaudeAgentInput,
+	type ClaudeAgentOutput,
+	createClaudeAgent,
+} from "../../src/providers/claude.js";
 
 async function runLiveClaudeTest() {
 	console.log("🧪 Running Pause/Resume with Claude API live test...\n");
@@ -43,10 +47,15 @@ async function runLiveClaudeTest() {
 			messages: z.array(z.unknown()).optional(),
 			options: z.object({}).passthrough().optional(),
 		}),
-		outputSchema: z.object({
-			text: z.string(),
-		}).passthrough(),
-		run: async (ctx: NodeRunContext, input: ClaudeAgentInput): Promise<ClaudeAgentOutput> => {
+		outputSchema: z
+			.object({
+				text: z.string(),
+			})
+			.passthrough(),
+		run: async (
+			ctx: NodeRunContext,
+			input: ClaudeAgentInput,
+		): Promise<ClaudeAgentOutput> => {
 			return claudeAgent.execute(input, { hub: ctx.hub, runId: ctx.runId });
 		},
 	});
@@ -64,7 +73,8 @@ async function runLiveClaudeTest() {
 				id: "agent",
 				type: "claude.agent",
 				input: {
-					prompt: "Respond with exactly 'PAUSED_BEFORE_COMPLETION' if you receive any user message. Otherwise respond with 'INITIAL_PROMPT_ONLY'. Keep your response to just that phrase.",
+					prompt:
+						"Respond with exactly 'PAUSED_BEFORE_COMPLETION' if you receive any user message. Otherwise respond with 'INITIAL_PROMPT_ONLY'. Keep your response to just that phrase.",
 					options: { maxTurns: 1 },
 				},
 			},
@@ -103,7 +113,10 @@ async function runLiveClaudeTest() {
 		if (nodeId === "setup" && !pauseTriggered) {
 			pauseTriggered = true;
 			console.log("   ⏸️  Pausing before agent node...");
-			hub.abort({ resumable: true, reason: "Injecting user context before agent runs" });
+			hub.abort({
+				resumable: true,
+				reason: "Injecting user context before agent runs",
+			});
 		}
 	});
 
@@ -136,7 +149,9 @@ async function runLiveClaudeTest() {
 	console.log(`   ✓ Injected message: "${injectedMessage}"\n`);
 
 	// ========== PHASE 3: Complete execution with Claude ==========
-	console.log("📍 Phase 3: Executing agent with Claude API (this may take a moment)...");
+	console.log(
+		"📍 Phase 3: Executing agent with Claude API (this may take a moment)...",
+	);
 
 	const startTime = Date.now();
 	const result = await executeFlow(flow, registry, createContext());
@@ -147,7 +162,9 @@ async function runLiveClaudeTest() {
 	// Check agent output
 	const agentOutput = result.outputs.agent as ClaudeAgentOutput | undefined;
 	if (agentOutput?.text) {
-		console.log(`   ✓ Agent response: "${agentOutput.text.substring(0, 100)}${agentOutput.text.length > 100 ? '...' : ''}"`);
+		console.log(
+			`   ✓ Agent response: "${agentOutput.text.substring(0, 100)}${agentOutput.text.length > 100 ? "..." : ""}"`,
+		);
 	}
 
 	// ========== VALIDATION ==========

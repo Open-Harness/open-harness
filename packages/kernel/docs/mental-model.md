@@ -112,6 +112,20 @@ Running workflow with events
          equals: { var: "previous.status", value: "skip" }
    ```
 
+5. **Loop edges**: Controlled cycles for iterative workflows
+   ```yaml
+   edges:
+     - from: reviewer
+       to: coder
+       type: loop
+       maxIterations: 3
+       when:
+         not:
+           equals: { var: "reviewer.structuredOutput.passed", value: true }
+   ```
+
+   See [loop-edges.md](./loop-edges.md) for full documentation.
+
 ---
 
 ### Layer 3: Channels (External Interfaces)
@@ -439,7 +453,8 @@ hub.emit({ type: "external:user-message", message: "User's follow-up" });
 | Flow YAML structure | Standard DAG representation |
 | Binding resolution | Straightforward templating |
 | Sequential execution | Works, tested |
-| Claude integration | Direct SDK wrapper |
+| Claude integration | Direct SDK wrapper with streaming events |
+| **Loop edges** | **Validated E2E with horizon-agent** |
 
 ### Uncertain (Needs Validation)
 
@@ -449,17 +464,27 @@ hub.emit({ type: "external:user-message", message: "User's follow-up" });
 | Container nodes | Is foreach complexity needed? |
 | Policy system | Are retry/timeout actually used? |
 | ReactFlow UI | Built before core is understood |
+| **Pause/Resume** | Hub abort works, but full resume needs state persistence |
 
 ---
 
 ## 8. Next Steps to Build Confidence
 
-1. **Run an actual flow** - Not a test, a real workflow that does something
+1. ~~**Run an actual flow**~~ ✅ Done - horizon-agent coder↔reviewer loop validated
 2. **Resolve channel question** - Decide: client-side adapters or server-side channels
 3. **Build customer project** - Validate the architecture works in practice
 4. **Document gaps** - Write down what's missing when you hit them
+5. **Add state persistence** - Enable true pause/resume across restarts
+
+---
+
+## 9. Related Documentation
+
+- [loop-edges.md](./loop-edges.md) - Loop edge feature documentation
+- `apps/horizon-agent/README.md` - Multi-agent implementation system
 
 ---
 
 *Document created: 2026-01-02*
-*Status: Draft - needs validation through use*
+*Last updated: 2026-01-03*
+*Status: Partially validated - loop edges confirmed through E2E testing*
