@@ -83,6 +83,8 @@ export interface Hub extends AsyncIterable<EnrichedEvent> {
 	// Lifecycle
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	startSession(): void;
+	setStatus(status: HubStatus): void;
 
 	// Status
 	readonly status: HubStatus;

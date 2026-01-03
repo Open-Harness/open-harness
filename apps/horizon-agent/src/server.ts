@@ -9,15 +9,12 @@
  * - status: Get current flow status
  */
 
-import type { Server, ServerWebSocket } from "bun";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { EnrichedEvent, FlowYaml } from "@open-harness/kernel";
+import { executeFlow, HubImpl, NodeRegistry } from "@open-harness/kernel";
+import type { Server, ServerWebSocket } from "bun";
 import { parse as parseYaml } from "yaml";
-import type { FlowYaml } from "@open-harness/kernel";
-import { HubImpl } from "@open-harness/kernel";
-import { executeFlow } from "@open-harness/kernel";
-import { NodeRegistry } from "@open-harness/kernel";
-import type { EnrichedEvent } from "@open-harness/kernel";
 
 /** WebSocket data attached to each connection */
 interface WSData {
@@ -59,9 +56,7 @@ interface ServerState {
 /**
  * Create and start a Horizon Agent WebSocket server.
  */
-export async function createHorizonServer(
-	config: HorizonServerConfig = {},
-): Promise<Server<WSData>> {
+export async function createHorizonServer(config: HorizonServerConfig = {}): Promise<Server<WSData>> {
 	const port = config.port ?? 3002;
 	const wsPath = config.path ?? "/ws";
 
@@ -246,11 +241,20 @@ async function handleStart(
 		// Execute flow (don't await - runs in background)
 		executeFlow(flow, state.registry, state.hub, command.input)
 			.then((result) => {
-				state.isRunning = false;
-				broadcast(clients, {
-					type: "flow:complete",
-					outputs: result.outputs,
-				});
+				// Check if flow paused vs completed
+				if (state.hub?.status === "paused") {
+					// Flow paused - don't mark as not running, broadcast paused
+					broadcast(clients, {
+						type: "flow:paused",
+						sessionId: state.sessionId,
+					});
+				} else {
+					state.isRunning = false;
+					broadcast(clients, {
+						type: "flow:complete",
+						outputs: result.outputs,
+					});
+				}
 			})
 			.catch((error) => {
 				state.isRunning = false;
@@ -295,7 +299,9 @@ async function handleResume(
 	const sessionId = command.sessionId ?? state.sessionId;
 
 	try {
-		await state.hub.resume(sessionId, command.message ?? "");
+		// Use default message if not provided (hub.resume requires non-empty message)
+		const resumeMessage = command.message?.trim() || "user resumed flow";
+		await state.hub.resume(sessionId, resumeMessage);
 		state.isRunning = true;
 		sendAck(ws, "resume", `Flow resumed: ${sessionId}`);
 
@@ -303,11 +309,20 @@ async function handleResume(
 		if (state.currentFlow && state.registry) {
 			executeFlow(state.currentFlow, state.registry, state.hub)
 				.then((result) => {
-					state.isRunning = false;
-					broadcast(clients, {
-						type: "flow:complete",
-						outputs: result.outputs,
-					});
+					// Check if flow paused again vs completed
+					if (state.hub?.status === "paused") {
+						// Flow paused again - don't mark as not running
+						broadcast(clients, {
+							type: "flow:paused",
+							sessionId: state.sessionId,
+						});
+					} else {
+						state.isRunning = false;
+						broadcast(clients, {
+							type: "flow:complete",
+							outputs: result.outputs,
+						});
+					}
 				})
 				.catch((error) => {
 					state.isRunning = false;
@@ -325,11 +340,7 @@ async function handleResume(
 /**
  * Handle inject command - inject message into running flow.
  */
-function handleInject(
-	ws: ServerWebSocket<WSData>,
-	command: HorizonCommand,
-	state: ServerState,
-): void {
+function handleInject(ws: ServerWebSocket<WSData>, command: HorizonCommand, state: ServerState): void {
 	if (!state.isRunning || !state.hub) {
 		sendError(ws, "No flow is running");
 		return;
@@ -391,10 +402,7 @@ async function registerNodePacks(registry: NodeRegistry): Promise<void> {
 /**
  * Broadcast message to all connected clients.
  */
-function broadcast(
-	clients: Set<ServerWebSocket<WSData>>,
-	message: Record<string, unknown>,
-): void {
+function broadcast(clients: Set<ServerWebSocket<WSData>>, message: Record<string, unknown>): void {
 	const json = JSON.stringify(message);
 	for (const client of clients) {
 		try {
@@ -408,11 +416,7 @@ function broadcast(
 /**
  * Send acknowledgment to client.
  */
-function sendAck(
-	ws: ServerWebSocket<WSData>,
-	command: string,
-	message: string,
-): void {
+function sendAck(ws: ServerWebSocket<WSData>, command: string, message: string): void {
 	try {
 		ws.send(JSON.stringify({ type: "ack", command, message }));
 	} catch {

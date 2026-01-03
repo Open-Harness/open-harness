@@ -15,10 +15,10 @@ flow:
 nodes:
   # Phase 1: Planning
   # The planner analyzes the feature request and creates a structured task list
+  # NOTE: promptFile is a future feature - using inline prompts only
   - id: planner
     type: claude.agent
     input:
-      promptFile: ../prompts/planner.md
       prompt: |
         Feature to implement: {{ flow.input.feature }}
 
@@ -41,7 +41,6 @@ nodes:
   - id: coder
     type: claude.agent
     input:
-      promptFile: ../prompts/coder.md
       prompt: |
         Current task: {{ task.title }}
         Description: {{ task.description }}
@@ -53,7 +52,6 @@ nodes:
   - id: reviewer
     type: claude.agent
     input:
-      promptFile: ../prompts/reviewer.md
       prompt: |
         Task: {{ task.title }}
         Description: {{ task.description }}

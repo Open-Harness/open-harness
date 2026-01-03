@@ -72,13 +72,24 @@ export const NodeSpecSchema = z.object({
 
 export const EdgeTypeSchema = z.enum(["forward", "loop"]).default("forward");
 
+// Template string pattern for deferred resolution (e.g., "{{ flow.input.maxIterations }}")
+const TemplateStringSchema = z
+	.string()
+	.regex(/^\{\{.*\}\}$/, "Template strings must match {{ ... }} pattern");
+
+// maxIterations can be a number or a template string for runtime resolution
+const MaxIterationsSchema = z.union([
+	z.number().int().positive(),
+	TemplateStringSchema,
+]);
+
 export const EdgeSchema = z
 	.object({
 		from: NodeIdSchema,
 		to: NodeIdSchema,
 		when: WhenExprSchema.optional(),
 		type: EdgeTypeSchema.optional(),
-		maxIterations: z.number().int().positive().optional(),
+		maxIterations: MaxIterationsSchema.optional(),
 	})
 	.superRefine((edge, ctx) => {
 		// Loop edges require maxIterations to prevent infinite loops

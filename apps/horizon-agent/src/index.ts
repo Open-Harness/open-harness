@@ -9,5 +9,5 @@
  * Uses loop edges for controlled coder↔reviewer cycles.
  */
 
-export { createHorizonServer } from "./server.js";
 export type { HorizonServerConfig } from "./server.js";
+export { createHorizonServer } from "./server.js";

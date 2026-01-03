@@ -12,7 +12,7 @@ import type {
 } from "../protocol/flow.js";
 import type { Hub } from "../protocol/hub.js";
 import type { BindingContext } from "./bindings.js";
-import { resolveBindings } from "./bindings.js";
+import { resolveBindingPath, resolveBindings } from "./bindings.js";
 import { compileFlow } from "./compiler.js";
 import type { NodeRegistry } from "./registry.js";
 import { evaluateWhen } from "./when.js";
@@ -103,6 +103,39 @@ export class LoopIterationExceededError extends Error {
 		);
 		this.name = "LoopIterationExceededError";
 	}
+}
+
+/**
+ * Resolve maxIterations which can be a number or template string.
+ * Template strings like "{{ flow.input.maxIterations }}" are resolved at runtime.
+ */
+function resolveMaxIterations(
+	value: number | string | undefined,
+	context: BindingContext,
+): number {
+	if (value === undefined) {
+		return 1; // Default
+	}
+	if (typeof value === "number") {
+		return value;
+	}
+	// Template string - resolve it
+	const match = value.match(/^{{\s*([^}]+?)\s*}}$/);
+	if (!match) {
+		throw new Error(`Invalid maxIterations template: ${value}`);
+	}
+	const path = match[1]?.trim() ?? "";
+	const resolved = resolveBindingPath(context, path);
+	if (!resolved.found) {
+		throw new Error(`maxIterations binding path not found: ${path}`);
+	}
+	const num = Number(resolved.value);
+	if (!Number.isInteger(num) || num <= 0) {
+		throw new Error(
+			`maxIterations must resolve to a positive integer, got: ${resolved.value}`,
+		);
+	}
+	return num;
 }
 
 function createRunId(nodeId: string, attempt: number): string {
@@ -386,6 +419,11 @@ export async function executeFlow(
 				}
 			: hubOrCtx;
 
+	// Activate session so abort/send operations work (idempotent - safe on resume)
+	if (!ctx.hub.sessionActive) {
+		ctx.hub.startSession();
+	}
+
 	const compiled = compileFlow(flow);
 	const outputs: Record<string, unknown> = {};
 	const flowInput = { ...(flow.flow.input ?? {}), ...(inputOverrides ?? {}) };
@@ -407,9 +445,18 @@ export async function executeFlow(
 			startIndex = resumptionState.currentNodeIndex;
 			// Restore outputs from previous execution
 			Object.assign(outputs, resumptionState.outputs);
+			// Resolve edge states for all completed nodes so continuation works
+			const bindingCtx = createBindingContext(flowInput, outputs);
+			for (const nodeId of Object.keys(resumptionState.outputs)) {
+				resolveOutgoingEdges(nodeId, edgeIndex, bindingCtx);
+			}
 		}
 
-		for (let nodeIndex = startIndex; nodeIndex < compiled.order.length; nodeIndex++) {
+		for (
+			let nodeIndex = startIndex;
+			nodeIndex < compiled.order.length;
+			nodeIndex++
+		) {
 			const node = compiled.order[nodeIndex];
 
 			// T020: Check abort signal between nodes for pause/resume support
@@ -537,7 +584,10 @@ export async function executeFlow(
 
 				if (shouldLoop) {
 					loopState.iterationCount++;
-					const maxIter = loopState.edge.maxIterations ?? 1;
+					const maxIter = resolveMaxIterations(
+						loopState.edge.maxIterations,
+						loopBindingContext,
+					);
 
 					if (loopState.iterationCount >= maxIter) {
 						throw new LoopIterationExceededError(
@@ -557,6 +607,9 @@ export async function executeFlow(
 					});
 
 					// Jump back to target node - adjust loop index to re-execute from there
+					// Note: Node outputs are intentionally preserved across loop iterations.
+					// Re-executed nodes overwrite their outputs with fresh values (e.g., coder.code).
+					// This allows loop conditions to reference latest outputs (e.g., reviewer.passed).
 					const targetIndex = nodeIndexMap.get(loopState.edge.to);
 					if (targetIndex !== undefined) {
 						// Set nodeIndex to targetIndex - 1 because the for-loop will increment

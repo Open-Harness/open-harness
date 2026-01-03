@@ -1,0 +1,71 @@
+# Simple Coder-Reviewer Loop
+# Tests the core loop edge functionality with real Claude agents
+# No foreach - just direct coder → reviewer → (loop back if rejected)
+
+flow:
+  name: simple-coder-reviewer
+  description: Simple coder-reviewer loop for E2E testing
+  nodePacks: [core, claude]
+  input:
+    feature: string
+
+nodes:
+  - id: coder
+    type: claude.agent
+    input:
+      prompt: |
+        You are a senior software developer. Implement the following task with high-quality, production-ready TypeScript code.
+
+        ## Task
+        {{ flow.input.feature }}
+
+        ## Requirements
+        - Working code that compiles without errors
+        - Clean, readable, and well-documented
+        - Proper error handling
+        - TypeScript with proper types
+
+        Provide the complete implementation with file paths.
+
+  - id: reviewer
+    type: claude.agent
+    input:
+      prompt: |
+        You are a senior code reviewer. Review the following implementation.
+
+        ## Task
+        {{ flow.input.feature }}
+
+        ## Implementation to Review
+        {{ coder.text }}
+
+        ## Review Criteria
+        1. Correctness: Does it solve the task?
+        2. Code quality: Is it clean and maintainable?
+        3. Error handling: Are edge cases covered?
+        4. Types: Are TypeScript types properly used?
+
+        Return a JSON response:
+        ```json
+        {
+          "passed": boolean,
+          "feedback": "Overall assessment",
+          "issues": ["issue 1", "issue 2"]
+        }
+        ```
+
+        Be strict but fair. Only pass if the code is production-ready.
+
+edges:
+  - from: coder
+    to: reviewer
+
+  - from: reviewer
+    to: coder
+    type: loop
+    maxIterations: 3
+    when:
+      not:
+        equals:
+          var: reviewer.structuredOutput.passed
+          value: true

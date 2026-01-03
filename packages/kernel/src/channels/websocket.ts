@@ -248,7 +248,11 @@ function handleClientMessage(
 
 			case "abort":
 				hub.abort({ reason: command.reason, resumable: command.resumable });
-				sendAck(ws, "abort", command.resumable ? "Pause requested" : "Abort requested");
+				sendAck(
+					ws,
+					"abort",
+					command.resumable ? "Pause requested" : "Abort requested",
+				);
 				break;
 
 			default:

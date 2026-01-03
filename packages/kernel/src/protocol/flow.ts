@@ -75,8 +75,9 @@ export interface Edge {
 	/**
 	 * Maximum iterations for loop edges. Required for loop edges.
 	 * Prevents infinite loops - flow fails if exceeded.
+	 * Can be a number or a template string (e.g., "{{ flow.input.maxIterations }}").
 	 */
-	maxIterations?: number;
+	maxIterations?: number | string;
 }
 
 export interface FlowYaml {
