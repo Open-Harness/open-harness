@@ -11,8 +11,10 @@
 		"typecheck": "tsc --noEmit",
 		"test": "bun test tests/unit tests/replay",
 		"test:unit": "bun test tests/unit",
+		"test:e2e": "bun test tests/e2e",
 		"test:replay": "bun test tests/replay",
 		"test:live": "bun scripts/live/*.ts",
+		"record:fixtures": "bun scripts/record-fixtures.ts",
 		"test:watch": "bun test --watch"
 	},
 	"devDependencies": {

@@ -68,6 +68,11 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 - [x] Resume prompt defaults to "continue"
 - [x] Mock query + fixture schema + example fixture
 
+## 8.6 E2E + Recording
+- [x] E2E test using recorded fixtures
+- [x] Fixture recording script
+- [x] Recording documentation
+
 ## 9. Hard Decisions (Locked)
 - [x] Default edge gate: all
 - [x] Scheduling: sequential only (deterministic v3.0)

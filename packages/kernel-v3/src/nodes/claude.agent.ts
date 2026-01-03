@@ -43,6 +43,12 @@ export interface ClaudeAgentOutput {
 export interface ClaudeNodeOptions {
 	replay?: (input: ClaudeAgentInput) => ClaudeAgentOutput | undefined;
 	queryFn?: typeof query;
+	record?: (call: {
+		nodeId: string;
+		input: ClaudeAgentInput;
+		output: ClaudeAgentOutput;
+		events: SDKMessage[];
+	}) => void;
 }
 
 const ClaudeMessageSchema = z
@@ -157,6 +163,7 @@ export function createClaudeNode(
 			let finalResult: SDKResultMessage | undefined;
 			let sawTextStream = false;
 			let sawThinkingStream = false;
+			const recordedMessages: SDKMessage[] = [];
 			const pendingToolUses = new Map<
 				string,
 				{ toolName: string; toolInput: unknown; startedAt: number }
@@ -183,6 +190,7 @@ export function createClaudeNode(
 			try {
 				for await (const message of queryStream) {
 					const sdkMessage = message as SDKMessage;
+					recordedMessages.push(sdkMessage);
 					const sessionId = extractSessionId(sdkMessage);
 					if (!emittedStart && sessionId) {
 						emitStart(sessionId);
@@ -368,6 +376,13 @@ export function createClaudeNode(
 				totalCostUsd: output.totalCostUsd,
 				durationMs: output.durationMs ?? Math.max(0, Date.now() - startedAt),
 				numTurns: output.numTurns ?? finalResult?.num_turns ?? 0,
+			});
+
+			options.record?.({
+				nodeId: ctx.nodeId,
+				input,
+				output,
+				events: recordedMessages,
 			});
 
 			return output;
