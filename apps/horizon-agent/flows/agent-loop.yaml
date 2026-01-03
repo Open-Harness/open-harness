@@ -1,0 +1,90 @@
+# Horizon Agent Flow
+# Multi-agent implementation system: planner → foreach(task) → coder ↔ reviewer loop
+#
+# This flow demonstrates loop edges for controlled cycles.
+# The coder→reviewer loop continues until the reviewer approves or maxIterations is hit.
+
+flow:
+  name: horizon-agent
+  description: Multi-agent implementation system with planning, coding, and review cycles
+  nodePacks: [core, claude]
+  input:
+    feature: string
+    maxReviewIterations: number
+
+nodes:
+  # Phase 1: Planning
+  # The planner analyzes the feature request and creates a structured task list
+  - id: planner
+    type: claude.agent
+    input:
+      promptFile: ../prompts/planner.md
+      prompt: |
+        Feature to implement: {{ flow.input.feature }}
+
+        Analyze this feature request and create a structured implementation plan.
+        Output a JSON array of tasks, each with: id, title, description, and dependencies.
+
+  # Phase 2: Implementation Loop
+  # For each task, run the coder→reviewer cycle
+  - id: task_loop
+    type: control.foreach
+    input:
+      items: "{{ planner.structuredOutput.tasks }}"
+      as: task
+      body:
+        - coder
+        - reviewer
+
+  # Child: Coder (inside foreach)
+  # Implements the current task based on the task description
+  - id: coder
+    type: claude.agent
+    input:
+      promptFile: ../prompts/coder.md
+      prompt: |
+        Current task: {{ task.title }}
+        Description: {{ task.description }}
+
+        Implement this task. Provide complete, working code.
+
+  # Child: Reviewer (inside foreach)
+  # Reviews the coder's implementation and provides feedback
+  - id: reviewer
+    type: claude.agent
+    input:
+      promptFile: ../prompts/reviewer.md
+      prompt: |
+        Task: {{ task.title }}
+        Description: {{ task.description }}
+
+        Coder's implementation:
+        {{ coder.text }}
+
+        Review this implementation. Check for:
+        - Correctness: Does it solve the task?
+        - Code quality: Is it clean, readable, and maintainable?
+        - Edge cases: Are error conditions handled?
+
+        Return JSON: { "passed": boolean, "feedback": string, "issues": string[] }
+
+edges:
+  # Forward edges: main flow progression
+  - from: planner
+    to: task_loop
+
+  # Forward edge: coder to reviewer (inside foreach body)
+  - from: coder
+    to: reviewer
+
+  # Loop edge: reviewer back to coder on failure
+  # This creates a controlled cycle for iterative improvement
+  - from: reviewer
+    to: coder
+    type: loop
+    maxIterations: "{{ flow.input.maxReviewIterations }}"
+    when:
+      not:
+        equals:
+          var: reviewer.structuredOutput.passed
+          value: true
