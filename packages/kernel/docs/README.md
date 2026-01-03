@@ -55,11 +55,16 @@ flowchart TB
     EXEC["Scheduler<br/>(sequential MVP)"]
   end
 
-  YAML --> PARSER --> VALID --> COMP --> EXEC
+  YAML --> PARSER
+  PARSER --> VALID
+  VALID --> COMP
+  COMP --> EXEC
   REG --> EXEC
-  EXEC <--> HUB
+  EXEC --> HUB
+  HUB --> EXEC
   HARNESS --> HUB
-  CHANNELS <--> HUB
+  CHANNELS --> HUB
+  HUB --> CHANNELS
   CLI --> CHANNELS
 ```
 
