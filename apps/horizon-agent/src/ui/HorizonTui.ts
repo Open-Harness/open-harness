@@ -55,6 +55,7 @@ export class HorizonTui {
 	private startTime: number;
 	private unsubscribe?: () => void;
 	private updateInterval?: ReturnType<typeof setInterval>;
+	private autoExitTimeout?: ReturnType<typeof setTimeout>;
 
 	constructor(options: HorizonTuiOptions) {
 		this.runtime = options.runtime;
@@ -213,12 +214,16 @@ export class HorizonTui {
 					this.statusBar.setStatus("completed");
 					this.agentStream.success("Flow completed successfully!");
 				}
+				// Auto-exit after a brief delay to let user see the final state
+				this.scheduleAutoExit();
 				break;
 			}
 
 			case "flow:aborted":
 				this.statusBar.setStatus("failed");
 				this.agentStream.error("Flow aborted");
+				// Auto-exit after a brief delay
+				this.scheduleAutoExit();
 				break;
 		}
 	}
@@ -227,6 +232,25 @@ export class HorizonTui {
 		const state = this.runtime.getState();
 		this.taskList.update(state.tasks, state.currentTaskIndex, state.completedTasks);
 		this.statusBar.setTaskProgress(state.currentTaskIndex, state.tasks.length);
+	}
+
+	/**
+	 * Schedule automatic exit after flow completion.
+	 * Gives user 2 seconds to see the final state before exiting.
+	 * User can still press 'q' to exit immediately.
+	 */
+	private scheduleAutoExit(): void {
+		// Clear any existing timeout
+		if (this.autoExitTimeout) {
+			clearTimeout(this.autoExitTimeout);
+		}
+
+		this.agentStream.info("Exiting in 2 seconds... (press 'q' to exit now)");
+		this.render();
+
+		this.autoExitTimeout = setTimeout(() => {
+			this.shutdown();
+		}, 2000);
 	}
 
 	private showInjectDialog(): void {
@@ -272,6 +296,9 @@ export class HorizonTui {
 		this.unsubscribe?.();
 		if (this.updateInterval) {
 			clearInterval(this.updateInterval);
+		}
+		if (this.autoExitTimeout) {
+			clearTimeout(this.autoExitTimeout);
 		}
 
 		// Abort the runtime

@@ -103,22 +103,18 @@ async function runWithTui(
 ): Promise<void> {
 	// Create TUI - it takes over the terminal and handles its own lifecycle.
 	// The TUI subscribes to runtime events and handles shutdown via keybindings.
+	// On flow completion, the TUI auto-exits after a brief delay.
 	new HorizonTui({ runtime });
 
 	// Run the workflow and wait for completion
 	// The TUI will display progress and handle user interactions
-	const result = await runtime.run({
+	await runtime.run({
 		feature,
 		maxReviewIterations: maxIterations,
 	});
 
-	// Flow completed - TUI shutdown is handled by user pressing 'q'
-	// or when the TUI detects flow:complete event
-	if (result.status === "complete" || result.status === "aborted") {
-		// Give TUI a moment to render final state, then it will exit on its own
-		// or user can press 'q' to quit
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	}
+	// TUI handles auto-exit on flow:complete/flow:aborted events.
+	// This function may never return if the user quits early via 'q'.
 }
 
 /**

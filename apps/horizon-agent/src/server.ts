@@ -45,12 +45,20 @@ interface HorizonCommand {
 	message?: string;
 }
 
+/** Flow input parameters */
+interface FlowInput {
+	feature: string;
+	maxReviewIterations: number;
+}
+
 /** Server state */
 interface ServerState {
 	runtime: HorizonRuntime | null;
 	isRunning: boolean;
 	unsubscribe: (() => void) | null;
 	lastSnapshot: RunSnapshot | null;
+	/** Original input preserved for resume operations */
+	originalInput: FlowInput | null;
 }
 
 /**
@@ -66,6 +74,7 @@ export async function createHorizonServer(config: HorizonServerConfig = {}): Pro
 		isRunning: false,
 		unsubscribe: null,
 		lastSnapshot: null,
+		originalInput: null,
 	};
 
 	const clients = new Set<ServerWebSocket<WSData>>();
@@ -223,6 +232,13 @@ async function handleStart(
 			enablePersistence: true,
 		});
 
+		// Store original input for resume operations
+		const flowInput: FlowInput = {
+			feature,
+			maxReviewIterations: command.input?.maxReviewIterations ?? 5,
+		};
+		state.originalInput = flowInput;
+
 		// Subscribe to runtime events and broadcast
 		state.unsubscribe = state.runtime.onEvent((event: RuntimeEvent) => {
 			broadcast(clients, {
@@ -239,14 +255,13 @@ async function handleStart(
 		// Execute flow in background - we don't await because the WebSocket
 		// handler needs to return. Events are broadcast via the subscription.
 		state.runtime
-			.run({
-				feature,
-				maxReviewIterations: command.input?.maxReviewIterations ?? 5,
-			})
+			.run(flowInput)
 			.then((result) => {
 				state.lastSnapshot = result;
-				// Only clear isRunning if flow truly completed (not paused)
-				state.isRunning = result.status === "running";
+				// Flow is still resumable if paused, otherwise it's done
+				// Note: "running" is not a valid completion status; flows complete
+				// with "paused", "complete", "aborted", or "failed"
+				state.isRunning = result.status === "paused";
 
 				if (result.status === "paused") {
 					broadcast(clients, {
