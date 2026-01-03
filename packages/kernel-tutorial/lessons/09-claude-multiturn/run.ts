@@ -17,7 +17,7 @@
  * - hub.emit() - emit events
  */
 
-import { createHub, type AgentDefinition } from "@open-harness/kernel";
+import { type AgentDefinition, createHub } from "@open-harness/kernel";
 
 interface BugReport {
 	title: string;

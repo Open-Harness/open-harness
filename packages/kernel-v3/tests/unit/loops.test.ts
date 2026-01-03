@@ -1,23 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import type { FlowDefinition, RuntimeEvent } from "../../src/index.js";
-import {
-	createRuntime,
-	DefaultNodeRegistry,
-	type NodeTypeDefinition,
-} from "../../src/index.js";
+import { createRuntime, DefaultNodeRegistry, type NodeTypeDefinition } from "../../src/index.js";
 
-const incrementNode: NodeTypeDefinition<{ step?: number }, { count: number }> =
-	{
-		type: "increment",
-		run: async (ctx, input) => {
-			const current = ctx.state.get("counter");
-			const base = typeof current === "number" ? current : 0;
-			const step = typeof input.step === "number" ? input.step : 1;
-			const next = base + step;
-			ctx.state.set("counter", next);
-			return { count: next };
-		},
-	};
+const incrementNode: NodeTypeDefinition<{ step?: number }, { count: number }> = {
+	type: "increment",
+	run: async (ctx, input) => {
+		const current = ctx.state.get("counter");
+		const base = typeof current === "number" ? current : 0;
+		const step = typeof input.step === "number" ? input.step : 1;
+		const next = base + step;
+		ctx.state.set("counter", next);
+		return { count: next };
+	},
+};
 
 describe("kernel-v3 loops", () => {
 	test("re-runs nodes until loop condition fails", async () => {

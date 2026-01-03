@@ -187,48 +187,80 @@ async function syncKernelDocs({ srcRootAbs, dstRootAbs }: SyncOptions) {
     // Mermaid needs literal characters, not HTML entities
     const mermaidBlocks: string[] = [];
     const mermaidPlaceholder = (index: number) => `__MERMAID_BLOCK_${index}__`;
-    rewritten = rewritten.replace(/```mermaid\n([\s\S]*?)```/g, (match: string, _content: string) => {
-      const index = mermaidBlocks.length;
-      mermaidBlocks.push(match); // Store the entire block including ```mermaid and ```
-      return mermaidPlaceholder(index);
-    });
+    rewritten = rewritten.replace(
+      /```mermaid\n([\s\S]*?)```/g,
+      (match: string, _content: string) => {
+        const index = mermaidBlocks.length;
+        mermaidBlocks.push(match); // Store the entire block including ```mermaid and ```
+        return mermaidPlaceholder(index);
+      },
+    );
 
     // Fix MDX parsing issues:
     // 1. Escape curly braces and angle brackets in inline code (MDX tries to parse them as JSX)
     // Pattern: `{...}` or `<...>` -> escape as HTML entities
-    rewritten = rewritten.replace(/`([^`]*?)`/g, (match: string, content: string) => {
-      // Only escape if content contains braces or angle brackets that could be parsed as JSX
-      if (content.includes('{') || content.includes('<')) {
-        const escaped = content
-          .replace(/\{/g, "&#123;")
-          .replace(/\}/g, "&#125;")
-          .replace(/</g, "&#60;")
-          .replace(/>/g, "&#62;");
-        return `\`${escaped}\``;
-      }
-      return match; // No escaping needed
-    });
-    
+    rewritten = rewritten.replace(
+      /`([^`]*?)`/g,
+      (match: string, content: string) => {
+        // Only escape if content contains braces or angle brackets that could be parsed as JSX
+        if (content.includes("{") || content.includes("<")) {
+          const escaped = content
+            .replace(/\{/g, "&#123;")
+            .replace(/\}/g, "&#125;")
+            .replace(/</g, "&#60;")
+            .replace(/>/g, "&#62;");
+          return `\`${escaped}\``;
+        }
+        return match; // No escaping needed
+      },
+    );
+
     // 2. Escape < followed by numbers or letters in specific contexts (MDX tries to parse as JSX tags)
     // Pattern: <100ms, <1s, <json>, etc. -> &lt;100ms, &lt;1s, &lt;json>
     // Escape < in code blocks and when followed by numbers/letters that aren't HTML tags
-    rewritten = rewritten.replace(/`([^`]*<[a-zA-Z0-9]+[^`]*)`/g, (_match: string, content: string) => {
-      // Escape < inside code blocks if it's not part of a valid HTML tag pattern
-      return `\`${content.replace(/<([a-zA-Z0-9]+)/g, (m: string, tag: string) => {
-        // Don't escape common HTML tags
-        const htmlTags = ['code', 'div', 'span', 'p', 'a', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-        if (htmlTags.includes(tag.toLowerCase())) {
-          return m;
-        }
-        return `&lt;${tag}`;
-      })}\``;
-    });
-    
+    rewritten = rewritten.replace(
+      /`([^`]*<[a-zA-Z0-9]+[^`]*)`/g,
+      (_match: string, content: string) => {
+        // Escape < inside code blocks if it's not part of a valid HTML tag pattern
+        return `\`${content.replace(
+          /<([a-zA-Z0-9]+)/g,
+          (m: string, tag: string) => {
+            // Don't escape common HTML tags
+            const htmlTags = [
+              "code",
+              "div",
+              "span",
+              "p",
+              "a",
+              "strong",
+              "em",
+              "ul",
+              "ol",
+              "li",
+              "h1",
+              "h2",
+              "h3",
+              "h4",
+              "h5",
+              "h6",
+            ];
+            if (htmlTags.includes(tag.toLowerCase())) {
+              return m;
+            }
+            return `&lt;${tag}`;
+          },
+        )}\``;
+      },
+    );
+
     // Also escape standalone < followed by numbers (outside code blocks)
-    rewritten = rewritten.replace(/(?<!`)(?<!&lt;)<(\d+[a-zA-Z]*)/g, (_match: string, rest: string) => {
-      return `&lt;${rest}`;
-    });
-    
+    rewritten = rewritten.replace(
+      /(?<!`)(?<!&lt;)<(\d+[a-zA-Z]*)/g,
+      (_match: string, rest: string) => {
+        return `&lt;${rest}`;
+      },
+    );
+
     // 3. Fix headings with backticks and parentheses that cause parsing errors
     // Pattern: ### Title (`path`) - MDX has trouble parsing this
     // Solution: Remove backticks from headings, keep just the path in parentheses
@@ -237,7 +269,7 @@ async function syncKernelDocs({ srcRootAbs, dstRootAbs }: SyncOptions) {
       (_match: string, heading: string, path: string) => {
         // Remove backticks, keep path in parentheses
         return `${heading}(${path})`;
-      }
+      },
     );
 
     // Restore Mermaid code blocks (unchanged, no escaping applied)
@@ -371,9 +403,7 @@ async function main() {
 
   await syncKernelDocs({ srcRootAbs, dstRootAbs });
   // eslint-disable-next-line no-console
-  console.log(
-    `Synced kernel docs: ${srcRootAbs} -> ${dstRootAbs} (md -> mdx)`,
-  );
+  console.log(`Synced kernel docs: ${srcRootAbs} -> ${dstRootAbs} (md -> mdx)`);
 }
 
 await main();

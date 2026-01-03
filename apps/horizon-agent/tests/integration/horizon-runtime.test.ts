@@ -5,7 +5,7 @@
  * Uses the mock node registry for controlled testing.
  */
 
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { createHorizonRuntime, type HorizonRuntime } from "../../src/runtime/horizon-runtime.js";
 

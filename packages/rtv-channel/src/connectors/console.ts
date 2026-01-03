@@ -1,4 +1,7 @@
-import { RealtimeService, type RealtimeServiceConfig } from "../core/RealtimeService";
+import {
+	RealtimeService,
+	type RealtimeServiceConfig,
+} from "../core/RealtimeService";
 import { Tui } from "../ui/Tui";
 
 export function createRealtimeConsoleConnector(

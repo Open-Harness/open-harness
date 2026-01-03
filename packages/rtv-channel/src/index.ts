@@ -1,10 +1,10 @@
-import { createRealtimeConsoleConnector } from "./connectors/console";
 import { createConsoleVoiceChannel } from "./channel/ConsoleVoiceChannel";
+import { createRealtimeConsoleConnector } from "./connectors/console";
 
-export { createRealtimeVoiceChannel } from "./channel/RealtimeVoiceChannel";
 export { createConsoleVoiceChannel } from "./channel/ConsoleVoiceChannel";
-export { RealtimeService } from "./core/RealtimeService";
+export { createRealtimeVoiceChannel } from "./channel/RealtimeVoiceChannel";
 export { createRealtimeConsoleConnector } from "./connectors/console";
+export { RealtimeService } from "./core/RealtimeService";
 export { Tui } from "./ui/Tui";
 
 if (import.meta.main) {

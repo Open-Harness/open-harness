@@ -42,13 +42,9 @@ const FixtureInputSchema = z
 		messages: z.array(z.unknown()).optional(),
 		options: z.unknown().optional(),
 	})
-	.refine(
-		(value) =>
-			(value.prompt && !value.messages) || (!value.prompt && value.messages),
-		{
-			message: "Provide exactly one of prompt or messages",
-		},
-	);
+	.refine((value) => (value.prompt && !value.messages) || (!value.prompt && value.messages), {
+		message: "Provide exactly one of prompt or messages",
+	});
 
 const FixtureOutputSchema = z.object({
 	text: z.string(),
@@ -78,10 +74,7 @@ export function createMockQuery(options: {
 		prompt: string | AsyncIterable<SDKUserMessage>;
 		options?: Options;
 	}) => Promise<string> | string;
-}): (params: {
-	prompt: string | AsyncIterable<SDKUserMessage>;
-	options?: Options;
-}) => Query {
+}): (params: { prompt: string | AsyncIterable<SDKUserMessage>; options?: Options }) => Query {
 	const callCounts = new Map<string, number>();
 	const fixtureKeys = Object.keys(options.fixtures);
 
@@ -133,14 +126,10 @@ async function inferFixtureKey(
 		return firstText;
 	}
 
-	throw new Error(
-		"Unable to infer fixture key from prompt; provide selectFixtureKey",
-	);
+	throw new Error("Unable to infer fixture key from prompt; provide selectFixtureKey");
 }
 
-async function extractFirstText(
-	prompt: string | AsyncIterable<SDKUserMessage>,
-): Promise<string | undefined> {
+async function extractFirstText(prompt: string | AsyncIterable<SDKUserMessage>): Promise<string | undefined> {
 	if (typeof prompt === "string") return prompt;
 	for await (const message of prompt) {
 		const content = message.message?.content;
@@ -172,8 +161,7 @@ function buildResultMessage(output: FixtureOutput): SDKResultMessage {
 		total_cost_usd: output.totalCostUsd ?? 0,
 		usage,
 		modelUsage: output.modelUsage ?? {},
-		permission_denials: (output.permissionDenials ??
-			[]) as SDKPermissionDenial[],
+		permission_denials: (output.permissionDenials ?? []) as SDKPermissionDenial[],
 		structured_output: output.structuredOutput,
 		uuid: randomUUID(),
 		session_id: output.sessionId ?? "fixture-session",
@@ -189,8 +177,7 @@ function attachQueryStubs(iterator: AsyncGenerator<SDKMessage>): Query {
 	query.supportedCommands = async () => [];
 	query.supportedModels = async () => [];
 	query.mcpServerStatus = async () => [];
-	query.accountInfo = async () =>
-		({}) as Query["accountInfo"] extends () => Promise<infer T> ? T : never;
+	query.accountInfo = async () => ({}) as Query["accountInfo"] extends () => Promise<infer T> ? T : never;
 	query.rewindFiles = async () => {};
 	query.setMcpServers = async () => ({ added: [], removed: [], errors: {} });
 	query.streamInput = async () => {};

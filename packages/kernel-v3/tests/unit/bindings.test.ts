@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	resolveBindingPath,
-	resolveBindingString,
-	resolveBindings,
-} from "../../src/runtime/bindings.js";
+import { resolveBindingPath, resolveBindingString, resolveBindings } from "../../src/runtime/bindings.js";
 
 describe("bindings", () => {
 	test("resolveBindingPath finds nested values", () => {
@@ -28,25 +24,17 @@ describe("bindings", () => {
 
 	test("resolveBindingString interpolates multiple bindings", () => {
 		const context = { user: { name: "Ada" }, score: 5 };
-		const result = resolveBindingString(
-			"Hello {{ user.name }} ({{ score }})",
-			context,
-		);
+		const result = resolveBindingString("Hello {{ user.name }} ({{ score }})", context);
 		expect(result).toBe("Hello Ada (5)");
 	});
 
 	test("resolveBindingString throws on missing binding", () => {
-		expect(() => resolveBindingString("Hi {{ missing }}", {})).toThrow(
-			"Missing binding path",
-		);
+		expect(() => resolveBindingString("Hi {{ missing }}", {})).toThrow("Missing binding path");
 	});
 
 	test("resolveBindings preserves non-string values for pure bindings", () => {
 		const context = { payload: { a: 1 } };
-		const resolved = resolveBindings(
-			{ value: "{{ payload }}" } as Record<string, unknown>,
-			context,
-		);
+		const resolved = resolveBindings({ value: "{{ payload }}" } as Record<string, unknown>, context);
 		expect(resolved.value).toEqual({ a: 1 });
 	});
 

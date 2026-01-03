@@ -63,10 +63,7 @@ export interface HubEvent {
 }
 
 /** WebSocket message types */
-export type WSMessage =
-	| HubEvent
-	| { type: "ack"; command: string; message: string }
-	| { type: "error"; error: string };
+export type WSMessage = HubEvent | { type: "ack"; command: string; message: string } | { type: "error"; error: string };
 
 /** Node metadata from registry */
 export interface NodeTypeMetadata {

@@ -6,12 +6,12 @@ import { describe, expect, test } from "bun:test";
 import {
 	CompletedTaskSchema,
 	HorizonStateSchema,
+	horizonStateDefinition,
 	INITIAL_STATE,
 	ReviewFeedbackSchema,
 	ReviewIterationSchema,
 	TaskSchema,
 	WorkflowStatusSchema,
-	horizonStateDefinition,
 } from "../../src/runtime/state-schema.js";
 
 describe("TaskSchema", () => {

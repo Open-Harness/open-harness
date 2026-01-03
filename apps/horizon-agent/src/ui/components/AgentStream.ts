@@ -11,13 +11,7 @@ import { colors, formatTime } from "../theme.js";
 export class AgentStream {
 	private logWidget: contrib.Widgets.LogElement;
 
-	constructor(
-		grid: contrib.grid,
-		row: number,
-		col: number,
-		rowSpan: number,
-		colSpan: number,
-	) {
+	constructor(grid: contrib.grid, row: number, col: number, rowSpan: number, colSpan: number) {
 		this.logWidget = grid.set(row, col, rowSpan, colSpan, contrib.log, {
 			label: " Agent Output ",
 			border: "line",

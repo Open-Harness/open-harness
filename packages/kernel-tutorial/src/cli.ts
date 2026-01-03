@@ -84,9 +84,7 @@ Examples:
 		const flow = await loadFlowYamlFile(filePath);
 		const requestedPacks = flow.flow.nodePacks;
 		if (!requestedPacks || requestedPacks.length === 0) {
-			throw new Error(
-				"Flow YAML must declare flow.nodePacks (e.g. [core, claude])",
-			);
+			throw new Error("Flow YAML must declare flow.nodePacks (e.g. [core, claude])");
 		}
 
 		const availablePacks = await loadNodePacks(values.config);

@@ -1,12 +1,5 @@
-import type {
-	Attachment,
-	Cleanup,
-	EnrichedEvent,
-	FlowRunResult,
-	FlowYaml,
-	NodeRegistry,
-} from "@open-harness/kernel";
-import { HubImpl, executeFlow } from "@open-harness/kernel";
+import type { Attachment, Cleanup, EnrichedEvent, FlowRunResult, FlowYaml, NodeRegistry } from "@open-harness/kernel";
+import { executeFlow, HubImpl } from "@open-harness/kernel";
 
 type PhaseFn = <T>(name: string, fn: () => Promise<T>) => Promise<T>;
 type TaskFn = <T>(id: string, fn: () => Promise<T>) => Promise<T>;
@@ -84,12 +77,7 @@ export async function runFlowRuntime(options: {
 	hub.emit({ type: "harness:start", name: options.flow.flow.name ?? "flow" });
 
 	try {
-		const result = await executeFlow(
-			options.flow,
-			options.registry,
-			{ hub, phase, task },
-			options.inputOverrides,
-		);
+		const result = await executeFlow(options.flow, options.registry, { hub, phase, task }, options.inputOverrides);
 		outputs = result.outputs;
 		success = true;
 	} finally {

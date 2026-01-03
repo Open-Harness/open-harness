@@ -16,12 +16,7 @@ import {
 } from "@open-harness/kernel-v3";
 import { parse as parseYaml } from "yaml";
 import { createHorizonRegistry } from "./node-registry.js";
-import {
-	type HorizonState,
-	HorizonStateSchema,
-	horizonStateDefinition,
-	INITIAL_STATE,
-} from "./state-schema.js";
+import { type HorizonState, HorizonStateSchema, horizonStateDefinition, INITIAL_STATE } from "./state-schema.js";
 
 /**
  * Options for creating a Horizon runtime.

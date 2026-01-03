@@ -16,7 +16,7 @@ import {
 	ReactFlow,
 	type ReactFlowInstance,
 } from "@xyflow/react";
-import React, { useCallback, type DragEvent } from "react";
+import React, { type DragEvent, useCallback } from "react";
 import "@xyflow/react/dist/style.css";
 
 import type { FlowEdge, FlowNode, NodeTypeMetadata } from "../types/index.js";
@@ -42,19 +42,9 @@ const nodeTypes: NodeTypes = {
 	custom: CustomNode,
 };
 
-export function FlowCanvas({
-	nodes,
-	edges,
-	onNodesChange,
-	onEdgesChange,
-	onConnect,
-	onNodeDrop,
-}: FlowCanvasProps) {
+export function FlowCanvas({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeDrop }: FlowCanvasProps) {
 	// Store ReactFlow instance for coordinate conversion
-	const [reactFlowInstance, setReactFlowInstance] = React.useState<ReactFlowInstance<
-		FlowNode,
-		FlowEdge
-	> | null>(null);
+	const [reactFlowInstance, setReactFlowInstance] = React.useState<ReactFlowInstance<FlowNode, FlowEdge> | null>(null);
 
 	// Handle drag over
 	const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {

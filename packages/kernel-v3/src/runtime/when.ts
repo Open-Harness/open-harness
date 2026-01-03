@@ -8,10 +8,7 @@ import { resolveBindingPath } from "./bindings.js";
  * @param context - Binding context.
  * @returns True if expression passes.
  */
-export function evaluateWhen(
-	expr: WhenExpr | undefined,
-	context: BindingContext,
-): boolean {
+export function evaluateWhen(expr: WhenExpr | undefined, context: BindingContext): boolean {
 	if (!expr) return true;
 
 	if ("equals" in expr) {

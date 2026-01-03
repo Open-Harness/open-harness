@@ -1,9 +1,3 @@
 {
-  "pages": [
-    "index",
-    "learn",
-    "guides",
-    "reference",
-    "concepts"
-  ]
+  "pages": ["index", "learn", "guides", "reference", "concepts"]
 }

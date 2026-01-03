@@ -65,10 +65,7 @@ export class DefaultExecutor implements Executor {
 			attempt += 1;
 			try {
 				const parsedInput = parseWithSchema(def.inputSchema, input);
-				const output = await withTimeout(
-					() => def.run(runContext, parsedInput),
-					timeoutMs,
-				);
+				const output = await withTimeout(() => def.run(runContext, parsedInput), timeoutMs);
 				const parsedOutput = parseWithSchema(def.outputSchema, output);
 				return {
 					nodeId: node.id,
@@ -113,10 +110,7 @@ async function delay(ms: number): Promise<void> {
  * @param timeoutMs - Timeout duration in milliseconds.
  * @returns Resolved value of the promise.
  */
-async function withTimeout<T>(
-	run: () => Promise<T>,
-	timeoutMs?: number,
-): Promise<T> {
+async function withTimeout<T>(run: () => Promise<T>, timeoutMs?: number): Promise<T> {
 	if (!timeoutMs || timeoutMs <= 0) {
 		return await run();
 	}

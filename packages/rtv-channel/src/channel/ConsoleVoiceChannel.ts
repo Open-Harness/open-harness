@@ -49,7 +49,10 @@ class VoiceTui {
 	};
 
 	constructor(private readonly hub: Hub) {
-		this.screen = blessed.screen({ smartCSR: true, title: "Voice Channel TUI" });
+		this.screen = blessed.screen({
+			smartCSR: true,
+			title: "Voice Channel TUI",
+		});
 		const grid = new contrib.grid({ rows: 12, cols: 12, screen: this.screen });
 
 		this.transcript = grid.set(0, 0, 8, 8, contrib.log, {
@@ -97,7 +100,9 @@ class VoiceTui {
 
 		this.screen.key(["q", "C-c"], () => this.shutdown());
 		this.screen.key(["space"], () => this.toggleTalk());
-		this.screen.key(["s"], () => this.hub.emit({ type: "voice:response:cancel" }));
+		this.screen.key(["s"], () =>
+			this.hub.emit({ type: "voice:response:cancel" }),
+		);
 
 		this.renderStatus();
 		this.screen.render();
@@ -136,9 +141,7 @@ class VoiceTui {
 				);
 				break;
 			case "voice:error":
-				this.transcript.log(
-					`{red-fg}{bold}${event.message}{/bold}{/red-fg}`,
-				);
+				this.transcript.log(`{red-fg}{bold}${event.message}{/bold}{/red-fg}`);
 				break;
 			case "voice:event":
 				this.events.log(event.name);

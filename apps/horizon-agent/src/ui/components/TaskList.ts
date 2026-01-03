@@ -7,8 +7,8 @@
 
 import blessed from "blessed";
 import type contrib from "blessed-contrib";
+import type { CompletedTask, Task } from "../../runtime/state-schema.js";
 import { colors, symbols, truncate } from "../theme.js";
-import type { Task, CompletedTask } from "../../runtime/state-schema.js";
 
 export type TaskStatus = "pending" | "active" | "complete" | "failed";
 
@@ -22,13 +22,7 @@ export class TaskList {
 	private box: blessed.Widgets.BoxElement;
 	private tasks: TaskDisplay[] = [];
 
-	constructor(
-		grid: contrib.grid,
-		row: number,
-		col: number,
-		rowSpan: number,
-		colSpan: number,
-	) {
+	constructor(grid: contrib.grid, row: number, col: number, rowSpan: number, colSpan: number) {
 		this.box = grid.set(row, col, rowSpan, colSpan, blessed.box, {
 			label: " Tasks ",
 			border: "line",
@@ -49,11 +43,7 @@ export class TaskList {
 	/**
 	 * Update the task list from current state.
 	 */
-	update(
-		tasks: Task[],
-		currentTaskIndex: number,
-		completedTasks: CompletedTask[],
-	): void {
+	update(tasks: Task[], currentTaskIndex: number, completedTasks: CompletedTask[]): void {
 		const completedIds = new Set(completedTasks.map((ct) => ct.task.id));
 
 		this.tasks = tasks.map((task, index) => {

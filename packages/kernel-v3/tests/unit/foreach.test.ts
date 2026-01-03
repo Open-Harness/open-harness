@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RuntimeEvent } from "../../src/core/events.js";
-import {
-	createRuntime,
-	DefaultNodeRegistry,
-	parseFlowYaml,
-} from "../../src/index.js";
+import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
 import { constantNode, echoNode } from "../../src/nodes/index.js";
 
 describe("kernel-v3 forEach", () => {
@@ -49,11 +45,9 @@ edges:
 			],
 		});
 
-		const echoStarts = events.filter(
-			(event) => event.type === "node:start" && "nodeId" in event,
-		) as Array<{ nodeId: string }>;
-		expect(echoStarts.filter((event) => event.nodeId === "echo")).toHaveLength(
-			3,
-		);
+		const echoStarts = events.filter((event) => event.type === "node:start" && "nodeId" in event) as Array<{
+			nodeId: string;
+		}>;
+		expect(echoStarts.filter((event) => event.nodeId === "echo")).toHaveLength(3);
 	});
 });

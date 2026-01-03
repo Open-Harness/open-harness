@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { NodePack, NodeTypeDefinition } from "@open-harness/kernel";
+import { z } from "zod";
 
 /**
  * Mock Claude node for tutorials.
@@ -69,10 +69,7 @@ Permanently deletes a user from the system.
 	},
 };
 
-export const uppercaseNode: NodeTypeDefinition<
-	{ text: string },
-	{ text: string }
-> = {
+export const uppercaseNode: NodeTypeDefinition<{ text: string }, { text: string }> = {
 	type: "tutorial.uppercase",
 	inputSchema: z.object({ text: z.string() }),
 	outputSchema: z.object({ text: z.string() }),
@@ -88,10 +85,7 @@ function getAttemptFromRunId(runId: string): number {
 	return Number.isFinite(attempt) ? attempt : 1;
 }
 
-export const flakyNode: NodeTypeDefinition<
-	{ label: string },
-	{ label: string; attempt: number }
-> = {
+export const flakyNode: NodeTypeDefinition<{ label: string }, { label: string; attempt: number }> = {
 	type: "tutorial.flaky",
 	inputSchema: z.object({ label: z.string() }),
 	outputSchema: z.object({ label: z.string(), attempt: z.number() }),
@@ -104,18 +98,17 @@ export const flakyNode: NodeTypeDefinition<
 	},
 };
 
-export const delayNode: NodeTypeDefinition<{ ms: number }, { waitedMs: number }> =
-	{
-		type: "tutorial.delay",
-		inputSchema: z.object({ ms: z.number().int().nonnegative() }),
-		outputSchema: z.object({ waitedMs: z.number() }),
-		run: async (_ctx, input) => {
-			await new Promise<void>((resolve) => {
-				setTimeout(resolve, input.ms);
-			});
-			return { waitedMs: input.ms };
-		},
-	};
+export const delayNode: NodeTypeDefinition<{ ms: number }, { waitedMs: number }> = {
+	type: "tutorial.delay",
+	inputSchema: z.object({ ms: z.number().int().nonnegative() }),
+	outputSchema: z.object({ waitedMs: z.number() }),
+	run: async (_ctx, input) => {
+		await new Promise<void>((resolve) => {
+			setTimeout(resolve, input.ms);
+		});
+		return { waitedMs: input.ms };
+	},
+};
 
 export const failNode: NodeTypeDefinition<{ reason: string }, never> = {
 	type: "tutorial.fail",

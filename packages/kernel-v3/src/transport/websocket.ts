@@ -26,9 +26,7 @@ export interface WebSocketTransportOptions {
 /**
  * WebSocket transport adapter for the runtime.
  */
-type WebSocketEnvelope =
-	| { type: "event"; event: RuntimeEvent }
-	| { type: "command"; command: RuntimeCommand };
+type WebSocketEnvelope = { type: "event"; event: RuntimeEvent } | { type: "command"; command: RuntimeCommand };
 
 export class WebSocketTransport implements Transport {
 	private readonly runtime: Runtime;
@@ -107,8 +105,7 @@ export class WebSocketTransport implements Transport {
 }
 
 function decodeMessage(message: string | Uint8Array): WebSocketEnvelope | null {
-	const text =
-		typeof message === "string" ? message : new TextDecoder().decode(message);
+	const text = typeof message === "string" ? message : new TextDecoder().decode(message);
 	try {
 		const parsed = JSON.parse(text) as WebSocketEnvelope;
 		if (parsed.type !== "command" && parsed.type !== "event") {

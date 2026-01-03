@@ -45,9 +45,7 @@ export class InMemoryRunStore implements RunStore {
 
 	loadEvents(runId: string, afterSeq: number = 0): RuntimeEvent[] {
 		const list = this.events.get(runId) ?? [];
-		return list
-			.filter((entry) => entry.seq > afterSeq)
-			.map((entry) => clone(entry.event));
+		return list.filter((entry) => entry.seq > afterSeq).map((entry) => clone(entry.event));
 	}
 }
 

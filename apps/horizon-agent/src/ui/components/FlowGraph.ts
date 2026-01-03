@@ -22,13 +22,7 @@ export class FlowGraph {
 	private nodes: Map<string, GraphNode> = new Map();
 	private currentNodeId?: string;
 
-	constructor(
-		grid: contrib.grid,
-		row: number,
-		col: number,
-		rowSpan: number,
-		colSpan: number,
-	) {
+	constructor(grid: contrib.grid, row: number, col: number, rowSpan: number, colSpan: number) {
 		this.box = grid.set(row, col, rowSpan, colSpan, blessed.box, {
 			label: " Flow ",
 			border: "line",

@@ -14,19 +14,13 @@
 import { resolve } from "node:path";
 import { Command } from "commander";
 import { flowLogger, flushLogs, logFilePath, nodeLogger } from "./logger.js";
-import {
-	createHorizonRuntime,
-	type HorizonRuntime,
-} from "./runtime/horizon-runtime.js";
-import { HorizonTui } from "./ui/HorizonTui.js";
+import { createHorizonRuntime, type HorizonRuntime } from "./runtime/horizon-runtime.js";
 import { createHorizonServer } from "./server.js";
+import { HorizonTui } from "./ui/HorizonTui.js";
 
 const program = new Command();
 
-program
-	.name("horizon")
-	.description("Multi-agent implementation system")
-	.version("0.2.0");
+program.name("horizon").description("Multi-agent implementation system").version("0.2.0");
 
 // Run command - main entry point
 program
@@ -69,14 +63,10 @@ program
 				await runHeadless(runtime, feature, maxIterations, verbose);
 			}
 		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : String(error);
+			const errorMessage = error instanceof Error ? error.message : String(error);
 			const errorStack = error instanceof Error ? error.stack : undefined;
 
-			flowLogger.error(
-				{ error: errorMessage, stack: errorStack },
-				"Flow failed",
-			);
+			flowLogger.error({ error: errorMessage, stack: errorStack }, "Flow failed");
 
 			console.error("\nFlow failed:");
 			if (error instanceof Error) {
@@ -96,11 +86,7 @@ program
 /**
  * Run with Terminal UI.
  */
-async function runWithTui(
-	runtime: HorizonRuntime,
-	feature: string,
-	maxIterations: number,
-): Promise<void> {
+async function runWithTui(runtime: HorizonRuntime, feature: string, maxIterations: number): Promise<void> {
 	// Create TUI - it takes over the terminal and handles its own lifecycle.
 	// The TUI subscribes to runtime events and handles shutdown via keybindings.
 	// On flow completion, the TUI auto-exits after a brief delay.
@@ -143,10 +129,7 @@ async function runHeadless(
 			case "node:complete": {
 				const e = event as { nodeId: string; output?: unknown };
 				console.log(`[${e.nodeId}] ✓ Complete`);
-				nodeLogger.info(
-					{ nodeId: e.nodeId, output: e.output },
-					`Node ${e.nodeId} complete`,
-				);
+				nodeLogger.info({ nodeId: e.nodeId, output: e.output }, `Node ${e.nodeId} complete`);
 
 				if (verbose && e.output) {
 					const preview = JSON.stringify(e.output, null, 2).slice(0, 500);
@@ -211,10 +194,7 @@ async function runHeadless(
 		maxReviewIterations: maxIterations,
 	});
 
-	flowLogger.info(
-		{ outputs: Object.keys(result.outputs) },
-		"Flow completed successfully",
-	);
+	flowLogger.info({ outputs: Object.keys(result.outputs) }, "Flow completed successfully");
 
 	console.log("\n============================");
 	console.log("Flow Complete!");
@@ -304,10 +284,7 @@ program
 /**
  * Send a command to the WebSocket server.
  */
-async function sendWebSocketCommand(
-	port: string,
-	command: Record<string, unknown>,
-): Promise<void> {
+async function sendWebSocketCommand(port: string, command: Record<string, unknown>): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(`ws://localhost:${port}/ws`);
 		let timeoutId: ReturnType<typeof setTimeout> | null = null;

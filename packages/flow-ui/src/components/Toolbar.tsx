@@ -17,15 +17,7 @@ export interface ToolbarProps {
 	canRun?: boolean;
 }
 
-export function Toolbar({
-	connectionStatus,
-	onSave,
-	onLoad,
-	onRun,
-	onReset,
-	onDelete,
-	canRun = false,
-}: ToolbarProps) {
+export function Toolbar({ connectionStatus, onSave, onLoad, onRun, onReset, onDelete, canRun = false }: ToolbarProps) {
 	const isConnected = connectionStatus === "connected";
 
 	return (
@@ -41,20 +33,10 @@ export function Toolbar({
 			<div className="toolbar-spacer" />
 
 			{/* Edit operations */}
-			<button
-				type="button"
-				className="toolbar-button"
-				onClick={onDelete}
-				title="Delete selected nodes"
-			>
+			<button type="button" className="toolbar-button" onClick={onDelete} title="Delete selected nodes">
 				🗑️ Delete
 			</button>
-			<button
-				type="button"
-				className="toolbar-button"
-				onClick={onReset}
-				title="Reset execution states"
-			>
+			<button type="button" className="toolbar-button" onClick={onReset} title="Reset execution states">
 				🔄 Reset
 			</button>
 

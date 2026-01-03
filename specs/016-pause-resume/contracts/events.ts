@@ -122,7 +122,4 @@ export type SessionAbortEvent = z.infer<typeof SessionAbortEventSchema>;
  */
 export type PauseResumeEvent = FlowPausedEvent | FlowResumedEvent;
 
-export const PauseResumeEventSchema = z.discriminatedUnion("type", [
-	FlowPausedEventSchema,
-	FlowResumedEventSchema,
-]);
+export const PauseResumeEventSchema = z.discriminatedUnion("type", [FlowPausedEventSchema, FlowResumedEventSchema]);

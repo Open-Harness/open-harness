@@ -15,7 +15,7 @@
  * Flow YAML - useful for simple scripts and testing.
  */
 
-import { createHub, type AgentDefinition } from "@open-harness/kernel";
+import { type AgentDefinition, createHub } from "@open-harness/kernel";
 import { consoleChannel } from "../../src/channels/console-channel.js";
 
 /**
@@ -49,10 +49,7 @@ async function main() {
 	hub.emit({ type: "agent:start", agentName: "echo.agent", runId });
 
 	// Execute the agent
-	const result = await EchoAgent.execute(
-		{ text: "Hello from direct agent execution!" },
-		{ hub, runId },
-	);
+	const result = await EchoAgent.execute({ text: "Hello from direct agent execution!" }, { hub, runId });
 
 	// Emit completion event
 	hub.emit({ type: "agent:complete", agentName: "echo.agent", success: true, runId });

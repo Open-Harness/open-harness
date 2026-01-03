@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	createMockQuery,
-	createRuntime,
-	DefaultNodeRegistry,
-	parseFlowYaml,
-} from "../../src/index.js";
+import { createMockQuery, createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 import type { FixtureFile } from "../../src/testing/mock-query.js";
 import { FixtureSchema } from "../../src/testing/mock-query.js";
@@ -21,13 +16,8 @@ nodes:
 edges: []
 `);
 
-		const fixturePath = new URL(
-			"../fixtures/recordings/example/agent.json",
-			import.meta.url,
-		);
-		const fixture = FixtureSchema.parse(
-			await Bun.file(fixturePath).json(),
-		) as FixtureFile;
+		const fixturePath = new URL("../fixtures/recordings/example/agent.json", import.meta.url);
+		const fixture = FixtureSchema.parse(await Bun.file(fixturePath).json()) as FixtureFile;
 
 		const mockQuery = createMockQuery({
 			fixtures: { agent: fixture },
@@ -59,14 +49,10 @@ edges: []
 		expect(start?.prompt).toBe("fixture:agent");
 		expect(typeof start?.timestamp).toBe("number");
 
-		const text = events.find((event) => event.type === "agent:text") as
-			| { content?: string }
-			| undefined;
+		const text = events.find((event) => event.type === "agent:text") as { content?: string } | undefined;
 		expect(text?.content).toBe("fixture ");
 
-		const complete = events.find((event) => event.type === "agent:complete") as
-			| { result?: string }
-			| undefined;
+		const complete = events.find((event) => event.type === "agent:complete") as { result?: string } | undefined;
 		expect(complete?.result).toBe("fixture done");
 	});
 });

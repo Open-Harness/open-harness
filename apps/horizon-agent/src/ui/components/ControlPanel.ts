@@ -12,13 +12,7 @@ export class ControlPanel {
 	private box: blessed.Widgets.BoxElement;
 	private expanded = false;
 
-	constructor(
-		grid: contrib.grid,
-		row: number,
-		col: number,
-		rowSpan: number,
-		colSpan: number,
-	) {
+	constructor(grid: contrib.grid, row: number, col: number, rowSpan: number, colSpan: number) {
 		this.box = grid.set(row, col, rowSpan, colSpan, blessed.box, {
 			label: " Controls ",
 			border: "line",

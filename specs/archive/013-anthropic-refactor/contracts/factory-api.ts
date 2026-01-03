@@ -9,12 +9,8 @@
  */
 
 import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import type { AgentResult, IAgentCallbacks, TokenUsage } from "@openharness/sdk";
 import type { z } from "zod";
-import type {
-  IAgentCallbacks,
-  AgentResult,
-  TokenUsage,
-} from "@openharness/sdk";
 
 // ============================================================================
 // Template Types
@@ -24,23 +20,22 @@ import type {
  * Extract variable names from template string.
  * @example ExtractVars<"Hello {{name}}, your task is {{task}}"> = "name" | "task"
  */
-export type ExtractVars<S extends string> =
-  S extends `${string}{{${infer Var}}}${infer Rest}`
-    ? Var | ExtractVars<Rest>
-    : never;
+export type ExtractVars<S extends string> = S extends `${string}{{${infer Var}}}${infer Rest}`
+	? Var | ExtractVars<Rest>
+	: never;
 
 /**
  * Type-safe prompt template with compile-time variable validation.
  */
 export interface PromptTemplate<TData> {
-  /** The raw template string */
-  readonly template: string;
+	/** The raw template string */
+	readonly template: string;
 
-  /** Render the template with typed data */
-  render(data: TData): string;
+	/** Render the template with typed data */
+	render(data: TData): string;
 
-  /** Optional runtime validation */
-  validate?(data: unknown): data is TData;
+	/** Optional runtime validation */
+	validate?(data: unknown): data is TData;
 }
 
 // ============================================================================
@@ -51,32 +46,32 @@ export interface PromptTemplate<TData> {
  * Configuration for defining an Anthropic agent.
  */
 export interface AnthropicAgentDefinition<TInput, TOutput> {
-  /** Unique agent identifier */
-  name: string;
+	/** Unique agent identifier */
+	name: string;
 
-  /** Prompt template or static string */
-  prompt: PromptTemplate<TInput> | string;
+	/** Prompt template or static string */
+	prompt: PromptTemplate<TInput> | string;
 
-  /** Zod schema for input validation */
-  inputSchema: z.ZodType<TInput>;
+	/** Zod schema for input validation */
+	inputSchema: z.ZodType<TInput>;
 
-  /** Zod schema for structured output validation */
-  outputSchema: z.ZodType<TOutput>;
+	/** Zod schema for structured output validation */
+	outputSchema: z.ZodType<TOutput>;
 
-  /** Optional SDK options passthrough */
-  options?: Partial<Options>;
+	/** Optional SDK options passthrough */
+	options?: Partial<Options>;
 
-  /** Optional recording configuration */
-  recording?: {
-    enabled?: boolean;
-    vaultPath?: string;
-  };
+	/** Optional recording configuration */
+	recording?: {
+		enabled?: boolean;
+		vaultPath?: string;
+	};
 
-  /** Optional monologue configuration */
-  monologue?: {
-    enabled?: boolean;
-    scope?: string;
-  };
+	/** Optional monologue configuration */
+	monologue?: {
+		enabled?: boolean;
+		scope?: string;
+	};
 }
 
 // ============================================================================
@@ -87,24 +82,24 @@ export interface AnthropicAgentDefinition<TInput, TOutput> {
  * Options for agent.execute() method.
  */
 export interface ExecuteOptions<TOutput> {
-  /** Event callbacks */
-  callbacks?: IAgentCallbacks<TOutput>;
+	/** Event callbacks */
+	callbacks?: IAgentCallbacks<TOutput>;
 
-  /** Session identifier (auto-generated if omitted) */
-  sessionId?: string;
+	/** Session identifier (auto-generated if omitted) */
+	sessionId?: string;
 
-  /** Override prompt template at runtime */
-  prompt?: PromptTemplate<unknown>;
+	/** Override prompt template at runtime */
+	prompt?: PromptTemplate<unknown>;
 
-  /** Execution timeout in milliseconds */
-  timeoutMs?: number;
+	/** Execution timeout in milliseconds */
+	timeoutMs?: number;
 }
 
 /**
  * Options for agent.stream() method.
  */
 export interface StreamOptions<TOutput> extends ExecuteOptions<TOutput> {
-  // Streaming-specific options can be added here
+	// Streaming-specific options can be added here
 }
 
 // ============================================================================
@@ -115,17 +110,17 @@ export interface StreamOptions<TOutput> extends ExecuteOptions<TOutput> {
  * Handle returned by agent.stream() for interaction control.
  */
 export interface AgentHandle<TOutput> {
-  /** Cancel agent execution */
-  interrupt(): void;
+	/** Cancel agent execution */
+	interrupt(): void;
 
-  /** Inject additional input mid-execution */
-  streamInput(input: string): void;
+	/** Inject additional input mid-execution */
+	streamInput(input: string): void;
 
-  /** Change model mid-execution */
-  setModel(model: string): void;
+	/** Change model mid-execution */
+	setModel(model: string): void;
 
-  /** Final result promise */
-  readonly result: Promise<TOutput>;
+	/** Final result promise */
+	readonly result: Promise<TOutput>;
 }
 
 // ============================================================================
@@ -136,27 +131,27 @@ export interface AgentHandle<TOutput> {
  * The agent object returned by defineAnthropicAgent().
  */
 export interface AnthropicAgent<TInput, TOutput> {
-  /** Agent identifier (readonly) */
-  readonly name: string;
+	/** Agent identifier (readonly) */
+	readonly name: string;
 
-  /**
-   * Run agent and return typed output.
-   *
-   * @param input - Input data matching inputSchema
-   * @param options - Optional execution options
-   * @returns Promise resolving to typed output
-   * @throws Error if validation fails or execution times out
-   */
-  execute(input: TInput, options?: ExecuteOptions<TOutput>): Promise<TOutput>;
+	/**
+	 * Run agent and return typed output.
+	 *
+	 * @param input - Input data matching inputSchema
+	 * @param options - Optional execution options
+	 * @returns Promise resolving to typed output
+	 * @throws Error if validation fails or execution times out
+	 */
+	execute(input: TInput, options?: ExecuteOptions<TOutput>): Promise<TOutput>;
 
-  /**
-   * Run agent with streaming handle.
-   *
-   * @param input - Input data matching inputSchema
-   * @param options - Optional streaming options
-   * @returns Handle for interaction control
-   */
-  stream(input: TInput, options?: StreamOptions<TOutput>): AgentHandle<TOutput>;
+	/**
+	 * Run agent with streaming handle.
+	 *
+	 * @param input - Input data matching inputSchema
+	 * @param options - Optional streaming options
+	 * @returns Handle for interaction control
+	 */
+	stream(input: TInput, options?: StreamOptions<TOutput>): AgentHandle<TOutput>;
 }
 
 // ============================================================================
@@ -180,7 +175,7 @@ export interface AnthropicAgent<TInput, TOutput> {
  * ```
  */
 export declare function defineAnthropicAgent<TInput, TOutput>(
-  definition: AnthropicAgentDefinition<TInput, TOutput>
+	definition: AnthropicAgentDefinition<TInput, TOutput>,
 ): AnthropicAgent<TInput, TOutput>;
 
 // ============================================================================
@@ -200,10 +195,7 @@ export declare function defineAnthropicAgent<TInput, TOutput>(
  * const prompt = template.render({ task: "Write a function" });
  * ```
  */
-export declare function createPromptTemplate<TData>(
-  template: string,
-  schema?: z.ZodType<TData>
-): PromptTemplate<TData>;
+export declare function createPromptTemplate<TData>(template: string, schema?: z.ZodType<TData>): PromptTemplate<TData>;
 
 // ============================================================================
 // Preset Type Aliases (for presets subpath)
@@ -213,54 +205,54 @@ export declare function createPromptTemplate<TData>(
  * Coding agent input type.
  */
 export interface CodingInput {
-  task: string;
+	task: string;
 }
 
 /**
  * Coding agent output type.
  */
 export interface CodingOutput {
-  code: string;
-  explanation?: string;
-  language?: string;
+	code: string;
+	explanation?: string;
+	language?: string;
 }
 
 /**
  * Review agent input type.
  */
 export interface ReviewInput {
-  task: string;
-  implementationSummary: string;
+	task: string;
+	implementationSummary: string;
 }
 
 /**
  * Review agent output type.
  */
 export interface ReviewOutput {
-  approved: boolean;
-  issues: Array<{
-    severity: "error" | "warning" | "info";
-    message: string;
-    location?: string;
-  }>;
-  suggestions?: string[];
+	approved: boolean;
+	issues: Array<{
+		severity: "error" | "warning" | "info";
+		message: string;
+		location?: string;
+	}>;
+	suggestions?: string[];
 }
 
 /**
  * Planner agent input type.
  */
 export interface PlannerInput {
-  prd: string;
+	prd: string;
 }
 
 /**
  * Planner agent output type.
  */
 export interface PlannerOutput {
-  tasks: Array<{
-    id: string;
-    title: string;
-    description: string;
-    dependencies: string[];
-  }>;
+	tasks: Array<{
+		id: string;
+		title: string;
+		description: string;
+		dependencies: string[];
+	}>;
 }

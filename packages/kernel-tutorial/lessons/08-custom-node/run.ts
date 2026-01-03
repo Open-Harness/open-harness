@@ -15,11 +15,7 @@
 
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-	NodeRegistry,
-	corePack,
-	loadFlowYamlFile,
-} from "@open-harness/kernel";
+import { corePack, loadFlowYamlFile, NodeRegistry } from "@open-harness/kernel";
 import { consoleChannel } from "../../src/channels/console-channel.js";
 import { runFlowRuntime } from "../../src/runtime.js";
 import { wordAnalyzerNode } from "./word-analyzer-node.js";
