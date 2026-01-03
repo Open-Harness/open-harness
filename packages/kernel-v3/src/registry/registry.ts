@@ -62,22 +62,39 @@ export interface NodeRegistry {
 /**
  * Default in-memory registry implementation.
  */
-export declare class DefaultNodeRegistry implements NodeRegistry {
+export class DefaultNodeRegistry implements NodeRegistry {
+	private readonly registry = new Map<
+		string,
+		NodeTypeDefinition<unknown, unknown>
+	>();
+
 	/**
 	 * Register a node definition.
 	 * @param def - Node definition to register.
 	 */
-	register<TIn, TOut>(def: NodeTypeDefinition<TIn, TOut>): void;
+	register<TIn, TOut>(def: NodeTypeDefinition<TIn, TOut>): void {
+		this.registry.set(def.type, def as NodeTypeDefinition<unknown, unknown>);
+	}
+
 	/**
 	 * Resolve a node definition by type.
 	 * @param type - Node type id.
 	 * @returns Node definition.
 	 */
-	get(type: string): NodeTypeDefinition<unknown, unknown>;
+	get(type: string): NodeTypeDefinition<unknown, unknown> {
+		const def = this.registry.get(type);
+		if (!def) {
+			throw new Error(`Unknown node type: ${type}`);
+		}
+		return def;
+	}
+
 	/**
 	 * Check if a node type exists.
 	 * @param type - Node type id.
 	 * @returns True if registered.
 	 */
-	has(type: string): boolean;
+	has(type: string): boolean {
+		return this.registry.has(type);
+	}
 }

@@ -1,12 +1,19 @@
+import { randomUUID } from "node:crypto";
 import type {
 	RuntimeCommand,
 	RuntimeEvent,
 	RuntimeEventListener,
 } from "../core/events.js";
-import type { FlowDefinition } from "../core/types.js";
+import type { CommandInbox, StatePatch, StateStore } from "../core/state.js";
+import type { EdgeDefinition, FlowDefinition } from "../core/types.js";
 import type { RunStore } from "../persistence/run-store.js";
-import type { NodeRegistry } from "../registry/registry.js";
-import type { RunSnapshot } from "./snapshot.js";
+import type { NodeRegistry, NodeRunContext } from "../registry/registry.js";
+import { resolveBindings } from "./bindings.js";
+import { edgeKey, GraphCompiler } from "./compiler.js";
+import { DefaultExecutor } from "./executor.js";
+import { DefaultScheduler } from "./scheduler.js";
+import type { RunSnapshot, RunState } from "./snapshot.js";
+import { evaluateWhen } from "./when.js";
 
 /**
  * Event bus abstraction used by the runtime.
@@ -67,9 +74,509 @@ export interface RuntimeOptions {
 }
 
 /**
+ * In-memory event bus implementation.
+ */
+export class InMemoryEventBus implements EventBus {
+	private readonly listeners = new Set<RuntimeEventListener>();
+
+	/**
+	 * Emit an event to all subscribers.
+	 * @param event - Event payload.
+	 */
+	emit(event: RuntimeEvent): void {
+		for (const listener of this.listeners) {
+			try {
+				void listener(event);
+			} catch (error) {
+				console.error("Event listener error:", error);
+			}
+		}
+	}
+
+	/**
+	 * Subscribe to events.
+	 * @param listener - Event listener.
+	 * @returns Unsubscribe function.
+	 */
+	subscribe(listener: RuntimeEventListener): () => void {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	}
+}
+
+/**
+ * In-memory command inbox.
+ */
+export class InMemoryCommandInbox implements CommandInbox {
+	private readonly queue: RuntimeCommand[] = [];
+
+	/**
+	 * Dequeue the next available command.
+	 * @returns Next command or undefined.
+	 */
+	next(): RuntimeCommand | undefined {
+		return this.queue.shift();
+	}
+
+	/**
+	 * Enqueue a new runtime command.
+	 * @param command - Command to enqueue.
+	 */
+	enqueue(command: RuntimeCommand): void {
+		this.queue.push(command);
+	}
+}
+
+/**
+ * In-memory state store implementation using dot-path access.
+ */
+export class InMemoryStateStore implements StateStore {
+	private state: Record<string, unknown>;
+
+	/**
+	 * Create a state store with initial state.
+	 * @param initial - Initial state object.
+	 */
+	constructor(initial: Record<string, unknown> = {}) {
+		this.state = cloneRecord(initial);
+	}
+
+	/**
+	 * Read a value by path.
+	 * @param path - Dot path (e.g., "foo.bar").
+	 * @returns The stored value or undefined.
+	 */
+	get(path: string): unknown {
+		if (!path) return this.state;
+		const segments = path.split(".").filter((segment) => segment.length > 0);
+		let current: unknown = this.state;
+		for (const segment of segments) {
+			if (current && typeof current === "object" && segment in current) {
+				current = (current as Record<string, unknown>)[segment];
+			} else {
+				return undefined;
+			}
+		}
+		return current;
+	}
+
+	/**
+	 * Write a value by path.
+	 * @param path - Dot path (e.g., "foo.bar").
+	 * @param value - Value to set.
+	 */
+	set(path: string, value: unknown): void {
+		if (!path) {
+			this.state = value as Record<string, unknown>;
+			return;
+		}
+		const segments = path.split(".").filter((segment) => segment.length > 0);
+		let current: Record<string, unknown> = this.state;
+		for (let i = 0; i < segments.length - 1; i += 1) {
+			const key = segments[i] ?? "";
+			if (!key) continue;
+			if (!current[key] || typeof current[key] !== "object") {
+				current[key] = {};
+			}
+			current = current[key] as Record<string, unknown>;
+		}
+		const last = segments[segments.length - 1];
+		if (last) current[last] = value;
+	}
+
+	/**
+	 * Apply a patch operation to the state.
+	 * @param patch - Patch to apply.
+	 */
+	patch(patch: StatePatch): void {
+		if (patch.op === "set") {
+			this.set(patch.path, patch.value);
+			return;
+		}
+		const existing = this.get(patch.path);
+		const next =
+			existing && typeof existing === "object" && !Array.isArray(existing)
+				? { ...(existing as Record<string, unknown>) }
+				: {};
+		if (patch.value && typeof patch.value === "object") {
+			Object.assign(next, patch.value as Record<string, unknown>);
+		}
+		this.set(patch.path, next);
+	}
+
+	/**
+	 * Return a full snapshot of current state.
+	 * @returns Snapshot object.
+	 */
+	snapshot(): Record<string, unknown> {
+		return cloneRecord(this.state);
+	}
+}
+
+/**
+ * Default runtime implementation (in-memory).
+ */
+class InMemoryRuntime implements Runtime {
+	private readonly flow: FlowDefinition;
+	private readonly registry: NodeRegistry;
+	private readonly store?: RunStore;
+	private readonly bus: EventBus;
+	private readonly inbox: InMemoryCommandInbox;
+	private readonly stateStore: InMemoryStateStore;
+	private snapshot: RunState;
+
+	/**
+	 * Create a runtime instance.
+	 * @param options - Runtime options.
+	 */
+	constructor(options: RuntimeOptions) {
+		this.flow = options.flow;
+		this.registry = options.registry;
+		this.store = options.store;
+		this.bus = new InMemoryEventBus();
+		this.inbox = new InMemoryCommandInbox();
+		this.stateStore = new InMemoryStateStore(options.flow.state?.initial ?? {});
+		this.snapshot = createInitialSnapshot(options.flow);
+		this.snapshot.runId = randomUUID();
+	}
+
+	/**
+	 * Execute the flow to completion or pause.
+	 * @param input - Optional input overrides.
+	 * @returns Final run snapshot.
+	 */
+	async run(input: Record<string, unknown> = {}): Promise<RunSnapshot> {
+		this.snapshot.status = "running";
+		this.emit({ type: "flow:start", flowName: this.flow.name });
+
+		const compiler = new GraphCompiler();
+		const compiled = compiler.compile(this.flow);
+		const scheduler = new DefaultScheduler();
+		const executor = new DefaultExecutor();
+		const nodeById = new Map(compiled.nodes.map((node) => [node.id, node]));
+
+		while (this.snapshot.status === "running") {
+			const ready = scheduler.nextReadyNodes(this.snapshot, compiled);
+			if (ready.length === 0) break;
+
+			const nodeId = ready[0] ?? "";
+			const node = nodeById.get(nodeId);
+			if (!node) continue;
+
+			const incoming = compiled.incoming.get(nodeId) ?? [];
+			const gate = compiled.gateByNode.get(nodeId) ?? "all";
+			const gateDecision = decideGate(incoming, this.snapshot.edgeStatus, gate);
+			if (gateDecision === "skip") {
+				this.markSkipped(nodeId, "edge");
+				this.evaluateOutgoingEdges(nodeId, compiled, input);
+				continue;
+			}
+
+			const bindingContext = this.createBindingContext(input);
+			const shouldRun = evaluateWhen(node.when, bindingContext);
+			if (!shouldRun) {
+				this.markSkipped(nodeId, "when");
+				this.evaluateOutgoingEdges(nodeId, compiled, input);
+				continue;
+			}
+
+			this.snapshot.nodeStatus[nodeId] = "running";
+			const runContext: NodeRunContext = {
+				runId: randomUUID(),
+				emit: (event) => this.emit(event),
+				state: this.stateStore,
+				inbox: this.inbox,
+			};
+
+			this.emit({ type: "node:start", nodeId, runId: runContext.runId });
+			const resolvedInput = resolveBindings(node.input, bindingContext);
+			const result = await executor.runNode({
+				registry: this.registry,
+				node,
+				runContext,
+				input: resolvedInput,
+			});
+
+			if (result.error) {
+				this.snapshot.nodeStatus[nodeId] = "failed";
+				this.snapshot.outputs[nodeId] = { error: result.error };
+				this.emit({
+					type: "node:error",
+					nodeId,
+					runId: result.runId,
+					error: result.error,
+				});
+				if (!node.policy?.continueOnError) {
+					this.snapshot.status = "complete";
+					this.emit({
+						type: "flow:complete",
+						flowName: this.flow.name,
+						status: "failed",
+					});
+					this.persistSnapshot();
+					return this.getSnapshot();
+				}
+			} else {
+				this.snapshot.nodeStatus[nodeId] = "done";
+				this.snapshot.outputs[nodeId] = result.output;
+				this.emit({
+					type: "node:complete",
+					nodeId,
+					runId: result.runId,
+					output: result.output,
+				});
+			}
+
+			this.evaluateOutgoingEdges(nodeId, compiled, input);
+		}
+
+		if (hasPendingNodes(this.snapshot.nodeStatus)) {
+			throw new Error("Execution stalled: no ready nodes");
+		}
+
+		this.snapshot.status = "complete";
+		this.emit({
+			type: "flow:complete",
+			flowName: this.flow.name,
+			status: "complete",
+		});
+		this.persistSnapshot();
+		return this.getSnapshot();
+	}
+
+	/**
+	 * Dispatch a command into the runtime.
+	 * @param command - Command to dispatch.
+	 */
+	dispatch(command: RuntimeCommand): void {
+		this.inbox.enqueue(command);
+		this.emit({ type: "command:received", command });
+
+		if (command.type === "abort") {
+			this.snapshot.status = command.resumable ? "paused" : "aborted";
+			this.emit({
+				type: command.resumable ? "flow:paused" : "flow:aborted",
+			});
+			this.persistSnapshot();
+		}
+
+		if (command.type === "resume") {
+			this.snapshot.status = "running";
+			this.emit({ type: "flow:resumed" });
+		}
+	}
+
+	/**
+	 * Subscribe to runtime events.
+	 * @param listener - Event listener.
+	 * @returns Unsubscribe function.
+	 */
+	onEvent(listener: RuntimeEventListener): () => void {
+		return this.bus.subscribe(listener);
+	}
+
+	/**
+	 * Return a current snapshot of runtime state.
+	 * @returns Run snapshot.
+	 */
+	getSnapshot(): RunSnapshot {
+		return {
+			status: this.snapshot.status,
+			outputs: { ...this.snapshot.outputs },
+			state: this.stateStore.snapshot(),
+			nodeStatus: { ...this.snapshot.nodeStatus },
+			edgeStatus: { ...this.snapshot.edgeStatus },
+			loopCounters: { ...this.snapshot.loopCounters },
+			inbox: [...this.snapshot.inbox, ...this.inboxQueue()],
+		};
+	}
+
+	private markSkipped(nodeId: string, reason: "edge" | "when"): void {
+		this.snapshot.nodeStatus[nodeId] = "done";
+		this.snapshot.outputs[nodeId] = { skipped: true, reason };
+		this.emit({ type: "node:skipped", nodeId, reason });
+	}
+
+	private evaluateOutgoingEdges(
+		nodeId: string,
+		compiled: ReturnType<GraphCompiler["compile"]>,
+		input: Record<string, unknown>,
+	): void {
+		const bindingContext = this.createBindingContext(input);
+		for (const edge of compiled.edges) {
+			if (edge.from !== nodeId) continue;
+			const shouldFire = evaluateWhen(edge.when, bindingContext);
+			const key = edgeKey(edge);
+			this.snapshot.edgeStatus[key] = shouldFire ? "fired" : "skipped";
+			if (shouldFire) {
+				this.emit({
+					type: "edge:fire",
+					edgeId: edge.id,
+					from: edge.from,
+					to: edge.to,
+				});
+				if (edge.forEach) {
+					this.spawnForEach(edge, bindingContext);
+				}
+				if (edge.maxIterations) {
+					this.bumpLoopCounter(edge);
+				}
+			}
+		}
+	}
+
+	private spawnForEach(
+		edge: EdgeDefinition,
+		context: Record<string, unknown>,
+	): void {
+		const resolved = resolveBindings(
+			{ value: edge.forEach?.in ?? "" },
+			context,
+		);
+		const list = resolved.value;
+		if (!Array.isArray(list)) {
+			throw new Error(`forEach expects array at ${edge.forEach?.in}`);
+		}
+		const asKey = edge.forEach?.as ?? "item";
+		for (const item of list) {
+			this.snapshot.outputs[`${edge.to}:${String(item)}`] = { [asKey]: item };
+		}
+	}
+
+	private bumpLoopCounter(edge: EdgeDefinition): void {
+		const key = edgeKey(edge);
+		const current = this.snapshot.loopCounters[key] ?? 0;
+		const next = current + 1;
+		this.snapshot.loopCounters[key] = next;
+		this.emit({ type: "loop:iterate", edgeId: edge.id, iteration: next });
+		if (edge.maxIterations && next >= edge.maxIterations) {
+			throw new Error(
+				`Loop edge ${edge.from} -> ${edge.to} exceeded ${edge.maxIterations}`,
+			);
+		}
+	}
+
+	private createBindingContext(
+		input: Record<string, unknown>,
+	): Record<string, unknown> {
+		return {
+			flow: { input },
+			state: this.stateStore.snapshot(),
+			...this.snapshot.outputs,
+		};
+	}
+
+	/**
+	 * Emit an event and persist it if a RunStore is configured.
+	 * @param event - Runtime event to emit.
+	 */
+	private emit(event: RuntimeEvent): void {
+		this.bus.emit(event);
+		if (this.store && this.snapshot.runId) {
+			this.store.appendEvent(this.snapshot.runId, event);
+		}
+	}
+
+	/**
+	 * Persist the current snapshot if a RunStore is configured.
+	 */
+	private persistSnapshot(): void {
+		if (this.store && this.snapshot.runId) {
+			this.store.saveSnapshot(this.snapshot.runId, this.getSnapshot());
+		}
+	}
+
+	/**
+	 * Read the current inbox queue without dropping items.
+	 * @returns Current inbox commands.
+	 */
+	private inboxQueue(): RuntimeCommand[] {
+		const pending: RuntimeCommand[] = [];
+		let next = this.inbox.next();
+		while (next) {
+			pending.push(next);
+			next = this.inbox.next();
+		}
+		for (const cmd of pending) this.inbox.enqueue(cmd);
+		return pending;
+	}
+}
+
+/**
  * Create a new runtime instance.
  *
  * @param options - Runtime construction options.
  * @returns Runtime instance.
  */
-export declare function createRuntime(options: RuntimeOptions): Runtime;
+export function createRuntime(options: RuntimeOptions): Runtime {
+	return new InMemoryRuntime(options);
+}
+
+/**
+ * Build the initial run snapshot for a flow definition.
+ * @param flow - Flow definition.
+ * @returns Initial run state.
+ */
+function createInitialSnapshot(flow: FlowDefinition): RunState {
+	const nodeStatus: Record<string, "pending"> = {};
+	for (const node of flow.nodes) {
+		nodeStatus[node.id] = "pending";
+	}
+
+	const edgeStatus: Record<string, "pending"> = {};
+	const loopCounters: Record<string, number> = {};
+	for (const edge of flow.edges) {
+		const key = edgeKey(edge);
+		edgeStatus[key] = "pending";
+		loopCounters[key] = 0;
+	}
+
+	return {
+		status: "idle",
+		outputs: {},
+		state: { ...(flow.state?.initial ?? {}) },
+		nodeStatus,
+		edgeStatus,
+		loopCounters,
+		inbox: [],
+	};
+}
+
+/**
+ * Clone a record using structuredClone when available.
+ * @param input - Record to clone.
+ * @returns Cloned record.
+ */
+function cloneRecord(input: Record<string, unknown>): Record<string, unknown> {
+	if (typeof structuredClone === "function") {
+		return structuredClone(input);
+	}
+	return JSON.parse(JSON.stringify(input)) as Record<string, unknown>;
+}
+
+function decideGate(
+	incoming: EdgeDefinition[],
+	edgeStatus: Record<string, "pending" | "fired" | "skipped">,
+	gate: "any" | "all",
+): "run" | "skip" {
+	if (incoming.length === 0) return "run";
+
+	let fired = 0;
+	let skipped = 0;
+	for (const edge of incoming) {
+		const key = edgeKey(edge);
+		const status = edgeStatus[key] ?? "pending";
+		if (status === "fired") fired += 1;
+		if (status === "skipped") skipped += 1;
+	}
+
+	if (gate === "all") {
+		return skipped > 0 ? "skip" : "run";
+	}
+
+	return fired > 0 ? "run" : "skip";
+}
+
+function hasPendingNodes(nodeStatus: Record<string, string>): boolean {
+	return Object.values(nodeStatus).some((status) => status === "pending");
+}

@@ -1,4 +1,5 @@
 import type { CompiledFlow } from "./compiler.js";
+import { edgeKey } from "./compiler.js";
 import type { RunSnapshot } from "./snapshot.js";
 
 /**
@@ -15,12 +16,43 @@ export interface Scheduler {
 }
 
 /** Default scheduler implementation. */
-export declare class DefaultScheduler implements Scheduler {
+export class DefaultScheduler implements Scheduler {
 	/**
 	 * Return the ids of nodes ready to execute.
 	 * @param state - Current run snapshot.
 	 * @param graph - Compiled flow graph.
 	 * @returns List of node ids.
 	 */
-	nextReadyNodes(state: RunSnapshot, graph: CompiledFlow): string[];
+	nextReadyNodes(state: RunSnapshot, graph: CompiledFlow): string[] {
+		const ready: string[] = [];
+
+		for (const node of graph.nodes) {
+			const status = state.nodeStatus[node.id];
+			if (status === "done" || status === "failed" || status === "running") {
+				continue;
+			}
+
+			const incoming = graph.incoming.get(node.id) ?? [];
+			if (incoming.length === 0) {
+				ready.push(node.id);
+				continue;
+			}
+
+			let hasPending = false;
+			for (const edge of incoming) {
+				const key = edgeKey(edge);
+				const edgeStatus = state.edgeStatus[key] ?? "pending";
+				if (edgeStatus === "pending") {
+					hasPending = true;
+					break;
+				}
+			}
+
+			if (!hasPending) {
+				ready.push(node.id);
+			}
+		}
+
+		return ready;
+	}
 }

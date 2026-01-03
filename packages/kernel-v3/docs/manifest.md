@@ -16,26 +16,26 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 - [x] Add YAML parsing and validation entrypoint
 
 ## 2. Runtime Skeleton
-- [ ] Runtime interface + lifecycle (run, dispatch, onEvent, getSnapshot)
-- [ ] EventBus implementation
-- [ ] Command inbox implementation
-- [ ] StateStore implementation (get/set/patch/snapshot)
+- [x] Runtime interface + lifecycle (run, dispatch, onEvent, getSnapshot)
+- [x] EventBus implementation
+- [x] Command inbox implementation
+- [x] StateStore implementation (get/set/patch/snapshot)
 
 ## 3. Compiler + Scheduler
-- [ ] Compiler: validate + normalize graph
-- [ ] Scheduler: resolve ready nodes (gate any/all)
-- [ ] Edge status tracking (pending/fired/skipped)
+- [x] Compiler: validate + normalize graph
+- [x] Scheduler: resolve ready nodes (gate any/all)
+- [x] Edge status tracking (pending/fired/skipped)
 - [ ] Loop counters + maxIterations enforcement
 - [ ] forEach edge fan-out support
 
 ## 4. Executor
-- [ ] Node execution wrapper (policy: retry/timeout)
-- [ ] Binding resolution + when evaluation
-- [ ] Output tracking + node status tracking
+- [x] Node execution wrapper (policy: retry/timeout)
+- [x] Binding resolution + when evaluation
+- [x] Output tracking + node status tracking
 
 ## 5. Registry + Node Types
-- [ ] NodeRegistry implementation
-- [ ] Port core nodes (echo/constant) for smoke tests
+- [x] NodeRegistry implementation
+- [x] Port core nodes (echo/constant) for smoke tests
 - [ ] Port claude.agent node (no v2 compatibility)
 
 ## 6. Persistence (Optional)
@@ -50,10 +50,11 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 ## 8. Testing
 - [ ] Unit tests: bindings, when, gating, loops, state
 - [ ] Integration tests: branching + loops + forEach
+- [x] Integration test: parse -> compile -> run (simple flow)
 - [ ] Contract tests: event stream shape
 - [ ] Persistence tests: snapshot + resume
 
-## 9. Hard Decisions (Must Lock)
-- [ ] Default edge gate: any vs all
-- [ ] Sequential vs parallel scheduling in v3.0
-- [ ] Event naming conventions (stable or flexible)
+## 9. Hard Decisions (Locked)
+- [x] Default edge gate: all
+- [x] Scheduling: sequential only (deterministic v3.0)
+- [x] Event names: stable flow:*, node:*, edge:*, loop:*, command:*

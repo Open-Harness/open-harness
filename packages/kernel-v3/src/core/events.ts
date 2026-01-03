@@ -32,6 +32,7 @@ export type RuntimeEvent =
 	| { type: "node:start"; nodeId: string; runId: string }
 	| { type: "node:complete"; nodeId: string; runId: string; output: unknown }
 	| { type: "node:error"; nodeId: string; runId: string; error: string }
+	| { type: "node:skipped"; nodeId: string; reason: "edge" | "when" }
 	| { type: "edge:fire"; edgeId?: string; from: string; to: string }
 	| { type: "loop:iterate"; edgeId?: string; iteration: number }
 	| { type: "state:patch"; patch: StatePatch }
