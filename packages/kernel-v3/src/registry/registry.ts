@@ -1,29 +1,83 @@
 import type { RuntimeEvent } from "../core/events.js";
 import type { CommandInbox, StateStore } from "../core/state.js";
 
+/**
+ * Execution context passed to node implementations.
+ */
 export interface NodeRunContext {
+  /** Unique run identifier for this node invocation. */
   runId: string;
+  /** Emit runtime events for observability/UI updates. */
   emit: (event: RuntimeEvent) => void;
+  /** Access and mutate shared workflow state. */
   state: StateStore;
+  /** Read commands sent to this run (e.g., user replies). */
   inbox: CommandInbox;
 }
 
+/**
+ * Definition of a node type registered with the runtime.
+ */
 export interface NodeTypeDefinition<TIn, TOut> {
+  /** Unique type id referenced by NodeDefinition.type. */
   type: string;
+  /** Optional schema for input validation. */
   inputSchema?: unknown;
+  /** Optional schema for output validation. */
   outputSchema?: unknown;
+  /** Optional capability metadata for UI or runtime. */
   capabilities?: { streaming?: boolean; multiTurn?: boolean };
+  /**
+   * Execute the node.
+   * @param ctx - Node run context.
+   * @param input - Parsed node input.
+   * @returns Node output.
+   */
   run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
 }
 
+/**
+ * Registry for node type definitions.
+ */
 export interface NodeRegistry {
+  /**
+   * Register a node definition.
+   * @param def - Node definition to register.
+   */
   register<TIn, TOut>(def: NodeTypeDefinition<TIn, TOut>): void;
+  /**
+   * Resolve a node definition by type.
+   * @param type - Node type id.
+   * @returns Node definition.
+   */
   get(type: string): NodeTypeDefinition<unknown, unknown>;
+  /**
+   * Check if a node type exists.
+   * @param type - Node type id.
+   * @returns True if registered.
+   */
   has(type: string): boolean;
 }
 
+/**
+ * Default in-memory registry implementation.
+ */
 export declare class DefaultNodeRegistry implements NodeRegistry {
+  /**
+   * Register a node definition.
+   * @param def - Node definition to register.
+   */
   register<TIn, TOut>(def: NodeTypeDefinition<TIn, TOut>): void;
+  /**
+   * Resolve a node definition by type.
+   * @param type - Node type id.
+   * @returns Node definition.
+   */
   get(type: string): NodeTypeDefinition<unknown, unknown>;
+  /**
+   * Check if a node type exists.
+   * @param type - Node type id.
+   * @returns True if registered.
+   */
   has(type: string): boolean;
 }
