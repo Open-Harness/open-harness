@@ -1,0 +1,32 @@
+{
+  "name": "@open-harness/kernel-v3",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
+    "check": "biome check .",
+    "check:fix": "biome check . --write",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test tests/unit tests/replay",
+    "test:unit": "bun test tests/unit",
+    "test:replay": "bun test tests/replay",
+    "test:live": "bun scripts/live/*.ts",
+    "test:watch": "bun test --watch"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.10",
+    "@types/bun": "latest",
+    "@types/node": "^22",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.4"
+  }
+}
