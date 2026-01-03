@@ -103,24 +103,35 @@ Modify `emit()`:
 ```typescript
 emit(event: BaseEvent): void {
   // NEW: Store if ExecutionEvent
-  if (this.isExecutionEvent(event)) {
-    this._eventLog.push({ ...event, timestamp: new Date() } as ExecutionEvent);
+  if (isExecutionEvent(event)) {
+    this._eventLog.push({ ...event, timestamp: new Date() });
   }
   // ... existing subscriber notification
 }
 
-private isExecutionEvent(event: BaseEvent): boolean {
-  return [
+// Use type guard derived from ExecutionEvent union - avoids fragile string array
+function isExecutionEvent(event: BaseEvent): event is ExecutionEvent {
+  // Check for discriminant property shared by all ExecutionEvents
+  // This is more maintainable than hardcoding event type strings
+  const execEventTypes = new Set<string>([
     'flow:started', 'flow:completed', 'flow:paused', 'flow:resumed',
     'node:started', 'node:completed', 'node:error',
     'container:iterationStarted', 'container:iterationCompleted',
     'container:childStarted', 'container:childCompleted',
     'loop:iterate'
-  ].includes(event.type);
+  ]);
+  return execEventTypes.has(event.type);
 }
+
+// Alternative: derive from ExecutionEvent type at compile time
+// type ExecutionEventType = ExecutionEvent['type'];
+// const EXECUTION_EVENT_TYPES: Set<ExecutionEventType> = new Set([...]);
 ```
 
-**Acceptance**: Execution events appear in _eventLog after emit().
+**Acceptance**:
+- Execution events appear in _eventLog after emit()
+- Non-execution events (e.g., `session:message`) are NOT stored
+- Adding a new ExecutionEvent variant causes type error if not added to set
 
 ---
 
@@ -188,8 +199,14 @@ Changes:
 3. Restore `completedIterations` on resume
 4. Start at `childIndex` within resumed iteration
 5. Restore `partialChildOutputs` on resume
+6. **Bounds checking**: Clamp `iterationIndex` and `childIndex` to valid ranges
 
-**Acceptance**: Foreach resumes from correct position, no duplicate iterations.
+**Acceptance**:
+- Foreach resumes from correct position, no duplicate iterations
+- Resume with `iterationIndex` beyond array length → starts at end (no-op, returns accumulated)
+- Resume with `childIndex` beyond body length → starts at next iteration
+- Resume with negative indices → treated as 0
+- Gracefully handles corrupted/stale frame data without crashing
 
 ---
 
@@ -262,6 +279,8 @@ Test cases:
 - checkpoint() with abort → throws PauseError
 - PauseError contains correct state
 - State is stored in _pausedSessions
+- Double-pause: calling checkpoint() twice without resume → second call throws same state
+- Race condition: abort signal arrives while checkpoint() is executing → deterministic outcome
 
 **Acceptance**: All test cases pass.
 
@@ -278,6 +297,9 @@ Test cases:
 - Pause mid-iteration (child 1 of 3) → resume at child 2
 - Nested foreach pause/resume
 - Empty array foreach + pause
+- Race condition: pause signal arrives as iteration completes → pauses at next iteration boundary
+- Resume with stale state: iterationIndex > array length → gracefully handles (no-op or clamp)
+- Resume with corrupted frame: negative indices, missing fields → graceful degradation
 
 **Acceptance**: All test cases pass.
 

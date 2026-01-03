@@ -216,6 +216,11 @@ emit(event: BaseEvent): void {
 
 ## State Derivation Algorithm
 
+**Invariants**:
+- Events are appended in strict execution order (no reordering/batching)
+- `deriveState()` throws descriptive error for malformed event sequences
+- Same events always produce same state (deterministic)
+
 ```typescript
 deriveState(): SessionState {
   let currentNodeIndex = 0;
@@ -229,15 +234,18 @@ deriveState(): SessionState {
         break;
 
       case 'node:completed':
+        // NOTE: This is for TOP-LEVEL nodes only. Container children emit
+        // 'container:childCompleted', not 'node:completed'. When a top-level
+        // node completes, any container state is stale (container finished).
         outputs[event.nodeId] = event.output;
         currentNodeIndex++;
-        // Top-level node complete, clear container stack
-        containerStack.length = 0;
+        containerStack.length = 0;  // Clear - container is done
         break;
 
       case 'container:iterationStarted': {
-        // Find or create frame for this container
-        let frame = containerStack.find(f => f.nodeId === event.nodeId);
+        // Use findLast to handle re-entrant/recursive containers correctly.
+        // The most recent frame for a nodeId is the deepest nesting level.
+        let frame = containerStack.findLast(f => f.nodeId === event.nodeId);
         if (!frame) {
           frame = {
             nodeId: event.nodeId,
@@ -259,7 +267,7 @@ deriveState(): SessionState {
       }
 
       case 'container:childStarted': {
-        const frame = containerStack.find(f => f.nodeId === event.nodeId);
+        const frame = containerStack.findLast(f => f.nodeId === event.nodeId);
         if (frame) {
           frame.childIndex = event.childIndex;
         }
@@ -267,11 +275,13 @@ deriveState(): SessionState {
       }
 
       case 'container:childCompleted': {
-        const frame = containerStack.find(f => f.nodeId === event.nodeId);
+        const frame = containerStack.findLast(f => f.nodeId === event.nodeId);
         if (frame) {
           frame.partialChildOutputs[event.childId] = event.output;
         }
-        // Check if child was a nested container - remove its frame
+        // If child was a nested container, remove its frame from stack.
+        // NOTE: Intentional mutation - splice removes the nested frame so
+        // subsequent events for the parent container work correctly.
         const nestedIdx = containerStack.findIndex(f => f.nodeId === event.childId);
         if (nestedIdx >= 0) {
           containerStack.splice(nestedIdx, 1);
@@ -280,7 +290,7 @@ deriveState(): SessionState {
       }
 
       case 'container:iterationCompleted': {
-        const frame = containerStack.find(f => f.nodeId === event.nodeId);
+        const frame = containerStack.findLast(f => f.nodeId === event.nodeId);
         if (frame) {
           frame.completedIterations.push({
             index: event.index,
@@ -291,17 +301,33 @@ deriveState(): SessionState {
         }
         break;
       }
+
+      case 'loop:iterate':
+        // Loop edge events are for observability only. They don't affect
+        // containerStack because loop edges operate at the DAG level, not
+        // inside container iteration. The executor handles loop edges by
+        // jumping back in the node order, which triggers new node:started events.
+        break;
     }
   }
 
+  // Determine currentNodeId: for container pause, this is the container's nodeId.
+  // For top-level pause, it's the node that was about to execute.
   const lastNodeEvent = this._eventLog.filter(e =>
     e.type === 'node:started' || e.type === 'container:iterationStarted'
   ).pop();
 
+  // currentNodeId reflects WHERE we paused:
+  // - If containerStack is non-empty, we're inside a container (use container's nodeId)
+  // - If containerStack is empty, we're between top-level nodes
+  const currentNodeId = containerStack.length > 0
+    ? containerStack[0].nodeId  // Outermost container
+    : (lastNodeEvent?.nodeId ?? '');
+
   return {
     sessionId: this._sessionId,
     flowName: this._flowName,
-    currentNodeId: lastNodeEvent?.nodeId ?? '',
+    currentNodeId,
     currentNodeIndex,
     outputs,
     pendingMessages: [...this._pendingMessages],
@@ -325,32 +351,38 @@ run: async (ctx, input) => {
   // Skip to saved iteration
   const startIteration = myFrame?.iterationIndex ?? 0;
 
+  // Bounds check: if resume frame references invalid position, clamp to valid range
+  const safeStartIteration = Math.min(startIteration, input.items.length);
+
   // Restore completed iterations
   const iterations: CompletedIteration[] = [
     ...(myFrame?.completedIterations ?? [])
   ];
 
-  for (let i = startIteration; i < input.items.length; i++) {
+  for (let i = safeStartIteration; i < input.items.length; i++) {
     const item = input.items[i];
 
-    ctx.hub.checkpoint();  // Throws PauseError if aborted
+    // IMPORTANT: Emit event BEFORE checkpoint. If checkpoint throws PauseError,
+    // the iteration started event is already in the log for accurate state derivation.
     ctx.hub.emit({ type: 'container:iterationStarted', nodeId: ctx.nodeId, index: i, item });
+    ctx.hub.checkpoint();  // Throws PauseError if aborted
 
-    // Determine child start position
-    const childStart = (i === startIteration && myFrame)
-      ? myFrame.childIndex
+    // Determine child start position (with bounds check)
+    const childStart = (i === safeStartIteration && myFrame)
+      ? Math.min(myFrame.childIndex, input.body.length)
       : 0;
 
     // Restore partial outputs from resumed iteration
-    const outputs: Record<string, unknown> = (i === startIteration && myFrame)
+    const outputs: Record<string, unknown> = (i === safeStartIteration && myFrame)
       ? { ...myFrame.partialChildOutputs }
       : {};
 
     for (let j = childStart; j < input.body.length; j++) {
       const childId = input.body[j];
 
-      ctx.hub.checkpoint();
+      // Emit event BEFORE checkpoint for audit completeness
       ctx.hub.emit({ type: 'container:childStarted', nodeId: ctx.nodeId, childId, childIndex: j });
+      ctx.hub.checkpoint();
 
       // Pass remaining containerStack to nested containers
       const childStack = ctx.containerStack?.slice(1);

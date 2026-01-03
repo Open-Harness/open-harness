@@ -159,6 +159,10 @@ As a developer, I want all container operations to emit events so that I can obs
 - Events are append-only during execution (no mutation or deletion).
 - `deriveState()` is called on demand, not continuously (performance consideration).
 - Single Hub instance per flow (no distributed execution).
+- **Events are appended in strict execution order** — no batching, reordering, or async emission. If order is violated, `deriveState()` produces incorrect results.
+- **Event log size is bounded by total iterations × children** — for very large loops (10,000+ iterations), memory usage may be significant. Monitor via `getEventLog().length`.
+- **`deriveState()` throws on malformed events** — missing required fields or impossible event sequences (e.g., `iterationCompleted` without `iterationStarted`) result in descriptive errors.
+- **Resume frame data may be stale or corrupted** — containers apply bounds checking (clamp indices to valid ranges) to handle gracefully.
 
 ## Non-Goals
 
