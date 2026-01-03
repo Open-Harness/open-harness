@@ -143,6 +143,48 @@ export interface ForeachOutput {
 	}>;
 }
 
+/**
+ * Input type for control.loop node.
+ */
+export interface LoopInput {
+	/** WhenExpr condition to continue looping */
+	while: WhenExpr;
+	/** Maximum iterations (safety limit, default: 100) */
+	maxIterations?: number;
+	/** Child node IDs to execute per iteration */
+	body: NodeId[];
+}
+
+/**
+ * Output type for control.loop node.
+ */
+export interface LoopOutput {
+	/** Results from each iteration */
+	iterations: Array<{
+		iteration: number;
+		sessionId: string;
+		outputs: Record<string, unknown>;
+	}>;
+}
+
+/**
+ * Input type for control.wait node.
+ */
+export interface WaitInput {
+	/** Milliseconds to wait */
+	ms?: number;
+	/** Event name to wait for */
+	until?: string;
+}
+
+/**
+ * Output type for control.wait node.
+ */
+export interface WaitOutput {
+	/** Actual milliseconds waited */
+	waitedMs: number;
+}
+
 // Note: ZodSchema is a type placeholder - actual implementation will use zod
 export type ZodSchema<_T> = unknown;
 

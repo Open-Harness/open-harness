@@ -73,8 +73,13 @@ async function runLiveTest() {
 	const pauseUnsubscribe = hub.subscribe("node:complete", (e) => {
 		if (!pauseTriggered) {
 			pauseTriggered = true;
-			console.log(`   ⏸️  Pausing after node: ${(e.event as { nodeId?: string }).nodeId}`);
-			hub.abort({ resumable: true, reason: "User requested pause for context injection" });
+			console.log(
+				`   ⏸️  Pausing after node: ${(e.event as { nodeId?: string }).nodeId}`,
+			);
+			hub.abort({
+				resumable: true,
+				reason: "User requested pause for context injection",
+			});
 		}
 	});
 
@@ -91,8 +96,12 @@ async function runLiveTest() {
 		throw new Error("Expected paused session state to exist");
 	}
 
-	console.log(`   ✓ Flow paused at node index: ${pausedState.currentNodeIndex}`);
-	console.log(`   ✓ Captured outputs: ${Object.keys(pausedState.outputs).join(", ") || "(initial)"}`);
+	console.log(
+		`   ✓ Flow paused at node index: ${pausedState.currentNodeIndex}`,
+	);
+	console.log(
+		`   ✓ Captured outputs: ${Object.keys(pausedState.outputs).join(", ") || "(initial)"}`,
+	);
 	console.log(`   ✓ Flow name: ${pausedState.flowName}`);
 
 	// Check flow:paused event was emitted
@@ -109,7 +118,9 @@ async function runLiveTest() {
 	await hub.resume("live-pause-resume-session", injectedMessage);
 
 	if (hub.status !== "running") {
-		throw new Error(`Expected status 'running' after resume, got '${hub.status}'`);
+		throw new Error(
+			`Expected status 'running' after resume, got '${hub.status}'`,
+		);
 	}
 
 	// Check flow:resumed event
@@ -120,7 +131,9 @@ async function runLiveTest() {
 	console.log("   ✓ flow:resumed event emitted");
 
 	// Check session:message was emitted with injected content
-	const messageEvents = events.filter((e) => e.event.type === "session:message");
+	const messageEvents = events.filter(
+		(e) => e.event.type === "session:message",
+	);
 	if (messageEvents.length === 0) {
 		throw new Error("Expected session:message event for injected context");
 	}
@@ -139,12 +152,16 @@ async function runLiveTest() {
 	const result2 = await executeFlow(flow, registry, createContext());
 	resumeNodeUnsubscribe();
 
-	console.log(`   ✓ Resume execution triggered ${resumeNodeEvents.length} node events`);
+	console.log(
+		`   ✓ Resume execution triggered ${resumeNodeEvents.length} node events`,
+	);
 
 	// Session should be cleared after successful completion
 	const finalPausedState = hub.getPausedSession("live-pause-resume-session");
 	if (finalPausedState) {
-		console.log("   ⚠️  Note: Paused session not cleared (may still have resumption state)");
+		console.log(
+			"   ⚠️  Note: Paused session not cleared (may still have resumption state)",
+		);
 	} else {
 		console.log("   ✓ Paused session cleared after completion");
 	}
@@ -158,11 +175,11 @@ async function runLiveTest() {
 
 	// Must have these events in order
 	const requiredSequence = [
-		"node:start",      // First node starts
-		"node:complete",   // First node completes
-		"flow:paused",     // Flow pauses
+		"node:start", // First node starts
+		"node:complete", // First node completes
+		"flow:paused", // Flow pauses
 		"session:message", // Injected message
-		"flow:resumed",    // Flow resumes
+		"flow:resumed", // Flow resumes
 	];
 
 	for (const required of requiredSequence) {
@@ -182,7 +199,9 @@ async function runLiveTest() {
 	console.log(`   - Nodes: ${flow.nodes.length}`);
 	console.log(`   - Paused after: node1`);
 	console.log(`   - Injected message: "${injectedMessage}"`);
-	console.log(`   - Final outputs: ${Object.keys(result2.outputs).length} nodes`);
+	console.log(
+		`   - Final outputs: ${Object.keys(result2.outputs).length} nodes`,
+	);
 }
 
 runLiveTest().catch((error) => {

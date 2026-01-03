@@ -123,7 +123,9 @@ export async function runHubFixture(
 
 				case "resume": {
 					if (!step.sessionId || !step.message) {
-						throw new Error("resume step requires sessionId and message fields");
+						throw new Error(
+							"resume step requires sessionId and message fields",
+						);
 					}
 					await hub.resume(step.sessionId, step.message);
 					break;

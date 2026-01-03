@@ -195,6 +195,180 @@ describe("control.switch node", () => {
 			expect(controlSwitchNode.metadata?.displayName).toBe("Switch");
 			expect(controlSwitchNode.metadata?.category).toBe("control");
 		});
+
+		// Edge case tests
+		test("returns default with empty cases array", async () => {
+			const hub = createHub("test-session");
+			hub.startSession();
+
+			const ctx: ControlNodeContext = {
+				hub,
+				runId: "run-0",
+				bindingContext: {
+					flow: { input: {} },
+				},
+			};
+
+			const result = await controlSwitchNode.run(ctx, {
+				value: "anything",
+				cases: [],
+			});
+
+			// With no cases, should always return default
+			expect(result.route).toBe("default");
+			expect(result.value).toBe("anything");
+		});
+
+		test("treats null value in binding context as not found", async () => {
+			// Note: This is intentional behavior - null values are treated as "missing"
+			// by the binding system. See bindings.ts resolveBindingPath lines 29-31.
+			const hub = createHub("test-session");
+			hub.startSession();
+
+			const ctx: ControlNodeContext = {
+				hub,
+				runId: "run-0",
+				bindingContext: {
+					flow: { input: {} },
+					data: { status: null },
+				},
+			};
+
+			const result = await controlSwitchNode.run(ctx, {
+				value: "test",
+				cases: [
+					{
+						when: { equals: { var: "data.status", value: "active" } },
+						route: "active",
+					},
+					// Can't match null directly - null is treated as "not found"
+					// so this case won't match
+					{
+						when: { equals: { var: "data.status", value: null } },
+						route: "null-handler",
+					},
+				],
+			});
+
+			// Neither case matches because null is treated as "not found"
+			// This goes to default - documenting this edge case behavior
+			expect(result.route).toBe("default");
+		});
+
+		test("handles undefined variable path gracefully", async () => {
+			const hub = createHub("test-session");
+			hub.startSession();
+
+			const ctx: ControlNodeContext = {
+				hub,
+				runId: "run-0",
+				bindingContext: {
+					flow: { input: {} },
+					// data.nonexistent will be undefined
+				},
+			};
+
+			const result = await controlSwitchNode.run(ctx, {
+				value: "test",
+				cases: [
+					{
+						when: { equals: { var: "data.nonexistent", value: "something" } },
+						route: "found",
+					},
+				],
+			});
+
+			// Undefined != "something", should go to default
+			expect(result.route).toBe("default");
+		});
+
+		test("handles many cases (stress test)", async () => {
+			const hub = createHub("test-session");
+			hub.startSession();
+
+			const ctx: ControlNodeContext = {
+				hub,
+				runId: "run-0",
+				bindingContext: {
+					flow: { input: {} },
+					data: { value: 50 },
+				},
+			};
+
+			// Create 100 cases, only the 50th should match
+			const cases = Array.from({ length: 100 }, (_, i) => ({
+				when: { equals: { var: "data.value", value: i } },
+				route: `route-${i}`,
+			}));
+
+			const result = await controlSwitchNode.run(ctx, {
+				value: "payload",
+				cases,
+			});
+
+			expect(result.route).toBe("route-50");
+			expect(result.value).toBe("payload");
+		});
+
+		test("works with boolean values", async () => {
+			const hub = createHub("test-session");
+			hub.startSession();
+
+			const ctx: ControlNodeContext = {
+				hub,
+				runId: "run-0",
+				bindingContext: {
+					flow: { input: {} },
+					config: { enabled: true },
+				},
+			};
+
+			const result = await controlSwitchNode.run(ctx, {
+				value: "data",
+				cases: [
+					{
+						when: { equals: { var: "config.enabled", value: false } },
+						route: "disabled",
+					},
+					{
+						when: { equals: { var: "config.enabled", value: true } },
+						route: "enabled",
+					},
+				],
+			});
+
+			expect(result.route).toBe("enabled");
+		});
+
+		test("works with numeric values", async () => {
+			const hub = createHub("test-session");
+			hub.startSession();
+
+			const ctx: ControlNodeContext = {
+				hub,
+				runId: "run-0",
+				bindingContext: {
+					flow: { input: {} },
+					counter: { count: 42 },
+				},
+			};
+
+			const result = await controlSwitchNode.run(ctx, {
+				value: "result",
+				cases: [
+					{
+						when: { equals: { var: "counter.count", value: 0 } },
+						route: "zero",
+					},
+					{
+						when: { equals: { var: "counter.count", value: 42 } },
+						route: "answer",
+					},
+				],
+			});
+
+			expect(result.route).toBe("answer");
+		});
 	});
 
 	describe("integration tests (with executor)", () => {

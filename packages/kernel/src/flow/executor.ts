@@ -189,10 +189,22 @@ async function runNode(
 
 			// Execute the child node
 			const childRunId = createRunId(childId, 1);
-			const childResult = await childDef.run(
-				{ hub: ctx.hub, runId: childRunId },
-				parsedChildInput,
-			);
+
+			// Build context based on child node capabilities
+			let childCtx: NodeRunContext | ControlNodeContext = {
+				hub: ctx.hub,
+				runId: childRunId,
+			};
+
+			// Control nodes that need binding context get it
+			if (childDef.capabilities?.needsBindingContext) {
+				childCtx = {
+					...childCtx,
+					bindingContext: childBindingContext,
+				} as ControlNodeContext;
+			}
+
+			const childResult = await childDef.run(childCtx, parsedChildInput);
 
 			// Validate output if schema exists
 			const childOutputSchema = childDef.outputSchema as
@@ -357,7 +369,11 @@ export async function executeFlow(
 			Object.assign(outputs, resumptionState.outputs);
 		}
 
-		for (let nodeIndex = startIndex; nodeIndex < compiled.order.length; nodeIndex++) {
+		for (
+			let nodeIndex = startIndex;
+			nodeIndex < compiled.order.length;
+			nodeIndex++
+		) {
 			const node = compiled.order[nodeIndex];
 
 			// T020: Check abort signal between nodes for pause/resume support

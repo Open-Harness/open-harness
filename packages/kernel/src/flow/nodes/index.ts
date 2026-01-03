@@ -4,6 +4,8 @@ export { constantNode } from "./constant.js";
 export { controlFailNode, FlowFailError } from "./control.fail.js";
 export { controlForeachNode, createForeachNode } from "./control.foreach.js";
 export { controlIfNode } from "./control.if.js";
+export { controlLoopNode } from "./control.loop.js";
 export { controlNoopNode } from "./control.noop.js";
 export { controlSwitchNode } from "./control.switch.js";
+export { controlWaitNode } from "./control.wait.js";
 export { echoNode } from "./echo.js";
