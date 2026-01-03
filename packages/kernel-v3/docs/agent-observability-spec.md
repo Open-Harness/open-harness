@@ -21,6 +21,19 @@ This specification defines:
 | **Agent session delegation** | Agent internal state (conversation history) is managed by Claude SDK |
 | **Nested event context** | Every agent event includes `nodeId` and `runId` for self-contained processing |
 | **Per-node ordering** | Events within a node are strictly ordered; cross-node events may interleave |
+| **Audit-first replay** | Replay re-emits recorded events and snapshots for UI/debug; it does not re-execute SDK calls |
+
+### 1.2 Replay Model (Explicit)
+
+Replay is defined as **audit playback**, not deterministic re-execution:
+
+- **Replay input**: (a) latest `RunSnapshot` and (b) append-only event log
+- **Replay output**: UI timeline + reconstructed state for inspection
+- **No SDK re-execution**: Agent outputs are **not** regenerated during replay
+
+If deterministic re-execution is required later, it must be implemented as a separate mode
+("simulation replay") that uses recorded agent outputs or fixtures. That is **out of scope**
+for this spec and requires explicit approval.
 
 ---
 
@@ -285,9 +298,72 @@ For each node with status="running":
 Continue normal execution loop
 ```
 
+### 5.4 Command Routing & Prompt Injection (Explicit)
+
+**Goal**: Ensure injected prompts are delivered to the correct running agent run and
+recorded for observability.
+
+#### Command Routing Rules
+
+- `send` and `reply` commands **must include** a `runId`.
+- If `runId` is missing, the runtime **rejects the command** and does not enqueue it.
+- A rejected command is recorded as a `command:received` event with the invalid payload
+  and then surfaced as a runtime error (throw) to avoid silent misrouting.
+
+#### Injection Semantics
+
+- Injected messages are delivered only to the `CommandInbox` for that `runId`.
+- The Claude node consumes the inbox as part of its streaming message generator.
+- Each injected message is also recorded via the existing `command:received` event.
+
+#### Resume + Injection
+
+- If `resume.message` is provided, the runtime injects it into the run-specific inbox
+  before resuming.
+- If no message is provided, the default resume prompt is `"continue"`.
+
+**Rationale**: This removes ambiguity, prevents cross-run leakage, and keeps all inbound
+messages visible in the event log via `command:received`.
+
 ---
 
-## 6. Testing Infrastructure
+## 6. Recording & Replay Pipeline
+
+### 6.1 Recording
+
+All `RuntimeEvent` entries are appended to the `RunStore`:
+
+- `flow:*`, `node:*`, `edge:*`
+- `command:received`
+- **agent events** (`agent:*`)
+
+This produces an append-only log suitable for audit and UI playback.
+
+### 6.2 Replay (Audit Playback)
+
+Replay is a **read-only** reconstruction:
+
+1. Load latest `RunSnapshot` for the run
+2. Load all events (optionally filtered by sequence)
+3. Re-emit events in order to the UI
+4. Use snapshot for state, not for re-execution
+
+**Replay does not** re-run nodes or call the SDK. It is purely observational.
+
+### 6.3 Deterministic Re-Execution (Explicitly Out of Scope)
+
+If a future mode is desired where the runtime replays agent outputs deterministically,
+it must:
+
+- Record full agent outputs/tool I/O
+- Provide a fixture-backed "mock query" path
+- Prevent live SDK calls during replay
+
+That is **not implemented** in this spec and must be separately approved.
+
+---
+
+## 7. Testing Infrastructure
 
 ### 6.1 SDK Interceptor Pattern
 
@@ -387,7 +463,7 @@ Implementation deferred to post-spec coding phase.
 
 ---
 
-## 7. Implementation Checklist
+## 8. Implementation Checklist
 
 ### 7.1 Core Changes
 
@@ -427,13 +503,13 @@ Implementation deferred to post-spec coding phase.
 
 ---
 
-## 8. Open Questions
+## 9. Open Questions
 
 None - all questions resolved in spec discussion.
 
 ---
 
-## 9. Appendix: Event Type Definitions
+## 10. Appendix: Event Type Definitions
 
 ```ts
 // Full TypeScript definitions for agent events
