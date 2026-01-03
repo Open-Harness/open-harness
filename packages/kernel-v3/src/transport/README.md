@@ -6,7 +6,7 @@ commands back into the runtime.
 
 ## What's here
 - Transport: start/stop lifecycle interface.
-- WebSocketTransport: planned runtime <-> WebSocket adapter.
+- WebSocketTransport: runtime <-> WebSocket adapter.
 
 ## Structure
 - websocket.ts: Transport interface + WebSocketTransport declaration.
@@ -19,6 +19,14 @@ import { WebSocketTransport } from "../transport/websocket.js";
 
 const transport = new WebSocketTransport(runtime, { port: 7777, path: "/ws" });
 await transport.start();
+```
+
+## Wire Protocol
+Messages are JSON envelopes:
+
+```json
+{ "type": "event", "event": { "type": "node:start", "nodeId": "a", "runId": "..." } }
+{ "type": "command", "command": { "type": "abort", "resumable": true } }
 ```
 
 ## Extending

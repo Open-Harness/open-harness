@@ -116,6 +116,7 @@ export type RuntimeEvent =
   | { type: "flow:paused" | "flow:resumed" | "flow:aborted" };
 
 export type RunSnapshot = {
+  runId?: string;
   status: RuntimeStatus;
   outputs: Record<string, unknown>;
   state: Record<string, unknown>;

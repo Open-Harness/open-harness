@@ -36,29 +36,29 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 ## 5. Registry + Node Types
 - [x] NodeRegistry implementation
 - [x] Port core nodes (echo/constant) for smoke tests
-- [ ] Port claude.agent node (no v2 compatibility)
+- [x] Port claude.agent node (no v2 compatibility)
 
 ## 6. Persistence (Optional)
-- [ ] RunStore interface
-- [ ] SQLite RunStore implementation (events + snapshots)
-- [ ] Resume logic: load snapshot + replay
+- [x] RunStore interface
+- [x] SQLite RunStore implementation (events + snapshots)
+- [x] Resume logic: load snapshot + replay
 
 ## 7. Transport (Optional)
-- [ ] WebSocket transport adapter (runtime <-> UI)
-- [ ] Basic command/event protocol for UI
+- [x] WebSocket transport adapter (runtime <-> UI)
+- [x] Basic command/event protocol for UI
 
 ## 8. Testing
 - [ ] Unit tests:
-  - [ ] bindings
-  - [ ] when
-  - [ ] gating
+  - [x] bindings
+  - [x] when
+  - [x] gating
   - [x] loops
   - [x] forEach
-  - [ ] state
-- [ ] Integration tests: branching + loops + forEach
+  - [x] state
+- [x] Integration tests: branching + loops + forEach
 - [x] Integration test: parse -> compile -> run (simple flow)
-- [ ] Contract tests: event stream shape
-- [ ] Persistence tests: snapshot + resume
+- [x] Contract tests: event stream shape
+- [x] Persistence tests: snapshot + resume
 
 ## 9. Hard Decisions (Locked)
 - [x] Default edge gate: all

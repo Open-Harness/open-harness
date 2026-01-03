@@ -18,6 +18,7 @@ export type EdgeStatus = "pending" | "fired" | "skipped";
  * @property {RuntimeCommand[]} inbox - Pending commands.
  */
 export type RunSnapshot = {
+	runId?: string;
 	status: RuntimeStatus;
 	outputs: Record<string, unknown>;
 	state: Record<string, unknown>;

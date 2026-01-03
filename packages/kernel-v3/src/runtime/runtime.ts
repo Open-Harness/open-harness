@@ -3,6 +3,7 @@ import type {
 	RuntimeCommand,
 	RuntimeEvent,
 	RuntimeEventListener,
+	RuntimeStatus,
 } from "../core/events.js";
 import type { CommandInbox, StatePatch, StateStore } from "../core/state.js";
 import type { EdgeDefinition, FlowDefinition } from "../core/types.js";
@@ -71,7 +72,12 @@ export interface RuntimeOptions {
 	flow: FlowDefinition;
 	registry: NodeRegistry;
 	store?: RunStore;
+	resume?: RuntimeResumeOptions;
 }
+
+export type RuntimeResumeOptions =
+	| { runId: string }
+	| { snapshot: RunSnapshot; runId?: string };
 
 type ForEachIteration = {
 	item: unknown;
@@ -242,9 +248,25 @@ class InMemoryRuntime implements Runtime {
 		this.store = options.store;
 		this.bus = new InMemoryEventBus();
 		this.inbox = new InMemoryCommandInbox();
-		this.stateStore = new InMemoryStateStore(options.flow.state?.initial ?? {});
-		this.snapshot = createInitialSnapshot(options.flow);
-		this.snapshot.runId = randomUUID();
+
+		const resume = resolveResumeSnapshot(options);
+		if (resume) {
+			this.stateStore = new InMemoryStateStore(resume.snapshot.state ?? {});
+			this.snapshot = {
+				...resume.snapshot,
+				runId: resume.runId,
+				inbox: [],
+			};
+			for (const command of resume.snapshot.inbox ?? []) {
+				this.inbox.enqueue(command);
+			}
+		} else {
+			this.stateStore = new InMemoryStateStore(
+				options.flow.state?.initial ?? {},
+			);
+			this.snapshot = createInitialSnapshot(options.flow);
+			this.snapshot.runId = randomUUID();
+		}
 	}
 
 	/**
@@ -253,8 +275,20 @@ class InMemoryRuntime implements Runtime {
 	 * @returns Final run snapshot.
 	 */
 	async run(input: Record<string, unknown> = {}): Promise<RunSnapshot> {
+		if (
+			this.snapshot.status === "complete" ||
+			this.snapshot.status === "aborted"
+		) {
+			throw new Error(`Run ${this.snapshot.runId ?? ""} is not resumable`);
+		}
+
+		const isResume = this.snapshot.status !== "idle";
 		this.snapshot.status = "running";
-		this.emit({ type: "flow:start", flowName: this.flow.name });
+		this.emit(
+			isResume
+				? { type: "flow:resumed" }
+				: { type: "flow:start", flowName: this.flow.name },
+		);
 
 		const compiler = new GraphCompiler();
 		const compiled = compiler.compile(this.flow);
@@ -359,6 +393,12 @@ class InMemoryRuntime implements Runtime {
 			this.evaluateOutgoingEdges(nodeId, compiled, input);
 		}
 
+		const status = this.snapshot.status as RuntimeStatus;
+		if (status === "paused" || status === "aborted") {
+			this.persistSnapshot();
+			return this.getSnapshot();
+		}
+
 		if (hasPendingNodes(this.snapshot.nodeStatus)) {
 			throw new Error("Execution stalled: no ready nodes");
 		}
@@ -410,6 +450,7 @@ class InMemoryRuntime implements Runtime {
 	 */
 	getSnapshot(): RunSnapshot {
 		return {
+			runId: this.snapshot.runId,
 			status: this.snapshot.status,
 			outputs: { ...this.snapshot.outputs },
 			state: this.stateStore.snapshot(),
@@ -436,9 +477,7 @@ class InMemoryRuntime implements Runtime {
 			if (edge.from !== nodeId) continue;
 			const shouldFire = evaluateWhen(edge.when, bindingContext);
 			const key = edgeKey(edge);
-			const isLoop = isLoopEdge(edge);
-			const didReset =
-				isLoop && shouldFire ? this.resetNodeForReentry(edge) : false;
+			const didReset = shouldFire ? this.resetNodeForReentry(edge) : false;
 			this.snapshot.edgeStatus[key] = shouldFire ? "fired" : "skipped";
 			if (shouldFire) {
 				this.emit({
@@ -651,6 +690,32 @@ function createInitialSnapshot(flow: FlowDefinition): RunState {
 		loopCounters,
 		inbox: [],
 	};
+}
+
+type ResumeSnapshot = {
+	runId: string;
+	snapshot: RunSnapshot;
+};
+
+function resolveResumeSnapshot(options: RuntimeOptions): ResumeSnapshot | null {
+	if (!options.resume) return null;
+	if ("snapshot" in options.resume) {
+		const runId = options.resume.runId ?? options.resume.snapshot.runId;
+		if (!runId) {
+			throw new Error("Resume snapshot requires a runId");
+		}
+		return { runId, snapshot: options.resume.snapshot };
+	}
+
+	if (!options.store) {
+		throw new Error("RunStore is required to resume by runId");
+	}
+
+	const snapshot = options.store.loadSnapshot(options.resume.runId);
+	if (!snapshot) {
+		throw new Error(`No snapshot found for runId ${options.resume.runId}`);
+	}
+	return { runId: options.resume.runId, snapshot };
 }
 
 /**

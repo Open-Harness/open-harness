@@ -53,7 +53,6 @@ export class GraphCompiler implements Compiler {
 		for (const node of nodes) {
 			adjacency.set(node.id, []);
 			incoming.set(node.id, []);
-			gateByNode.set(node.id, "all");
 		}
 
 		for (const edge of edges) {
@@ -64,8 +63,8 @@ export class GraphCompiler implements Compiler {
 			if (inList) inList.push(edge);
 
 			if (edge.gate) {
-				const current = gateByNode.get(edge.to) ?? "all";
-				if (current !== edge.gate) {
+				const current = gateByNode.get(edge.to);
+				if (current && current !== edge.gate) {
 					throw new Error(
 						`Conflicting gate settings for node "${edge.to}": ${current} vs ${edge.gate}`,
 					);

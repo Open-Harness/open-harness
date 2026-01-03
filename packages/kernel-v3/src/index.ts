@@ -6,6 +6,7 @@ export * from "./core/events.js";
 export * from "./core/state.js";
 export * from "./core/types.js";
 export * from "./nodes/index.js";
+export * from "./persistence/memory-run-store.js";
 export * from "./persistence/run-store.js";
 export * from "./persistence/sqlite-run-store.js";
 export * from "./registry/registry.js";

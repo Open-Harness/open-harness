@@ -36,6 +36,19 @@ await runtime.run();
 unsubscribe();
 ```
 
+## Resume
+If you persist snapshots via a RunStore, you can resume with a run id:
+
+```ts
+const resumed = createRuntime({
+  flow,
+  registry,
+  store,
+  resume: { runId },
+});
+await resumed.run();
+```
+
 ## Extending
 - Swap in custom compiler/scheduler/executor implementations if you need
   different graph semantics or execution policies.
