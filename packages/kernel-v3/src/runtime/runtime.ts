@@ -73,6 +73,13 @@ export interface RuntimeOptions {
 	store?: RunStore;
 }
 
+type ForEachIteration = {
+	item: unknown;
+	output?: unknown;
+	error?: string;
+	skipped?: boolean;
+};
+
 /**
  * In-memory event bus implementation.
  */
@@ -273,6 +280,27 @@ class InMemoryRuntime implements Runtime {
 				continue;
 			}
 
+			const forEachEdge = selectForEachEdge(
+				incomingAll,
+				this.snapshot.edgeStatus,
+			);
+			if (forEachEdge) {
+				const iterations = await this.runForEachNode({
+					node,
+					edge: forEachEdge,
+					executor,
+					input,
+				});
+				if (this.snapshot.status !== "running") {
+					this.persistSnapshot();
+					return this.getSnapshot();
+				}
+				this.snapshot.nodeStatus[nodeId] = "done";
+				this.snapshot.outputs[nodeId] = { iterations };
+				this.evaluateOutgoingEdges(nodeId, compiled, input);
+				continue;
+			}
+
 			const bindingContext = this.createBindingContext(input);
 			const shouldRun = evaluateWhen(node.when, bindingContext);
 			if (!shouldRun) {
@@ -419,9 +447,6 @@ class InMemoryRuntime implements Runtime {
 					from: edge.from,
 					to: edge.to,
 				});
-				if (edge.forEach) {
-					this.spawnForEach(edge, bindingContext);
-				}
 				if (edge.maxIterations && didReset) {
 					this.bumpLoopCounter(edge);
 				}
@@ -440,22 +465,91 @@ class InMemoryRuntime implements Runtime {
 		return true;
 	}
 
-	private spawnForEach(
-		edge: EdgeDefinition,
-		context: Record<string, unknown>,
-	): void {
-		const resolved = resolveBindings(
-			{ value: edge.forEach?.in ?? "" },
-			context,
-		);
+	private async runForEachNode({
+		node,
+		edge,
+		executor,
+		input,
+	}: {
+		node: FlowDefinition["nodes"][number];
+		edge: EdgeDefinition;
+		executor: DefaultExecutor;
+		input: Record<string, unknown>;
+	}): Promise<ForEachIteration[]> {
+		const forEach = edge.forEach;
+		if (!forEach) return [];
+
+		const bindingContext = this.createBindingContext(input);
+		const resolved = resolveBindings({ value: forEach.in }, bindingContext);
 		const list = resolved.value;
 		if (!Array.isArray(list)) {
-			throw new Error(`forEach expects array at ${edge.forEach?.in}`);
+			throw new Error(`forEach expects array at ${forEach.in}`);
 		}
-		const asKey = edge.forEach?.as ?? "item";
+
+		const iterations: ForEachIteration[] = [];
+		const asKey = forEach.as;
+		this.snapshot.nodeStatus[node.id] = "running";
+
 		for (const item of list) {
-			this.snapshot.outputs[`${edge.to}:${String(item)}`] = { [asKey]: item };
+			const iterationContext = this.createBindingContext(input, {
+				[asKey]: item,
+			});
+			const shouldRun = evaluateWhen(node.when, iterationContext);
+			if (!shouldRun) {
+				iterations.push({ item, skipped: true });
+				continue;
+			}
+
+			const runContext: NodeRunContext = {
+				runId: randomUUID(),
+				emit: (event) => this.emit(event),
+				state: this.stateStore,
+				inbox: this.inbox,
+			};
+
+			this.emit({
+				type: "node:start",
+				nodeId: node.id,
+				runId: runContext.runId,
+			});
+			const resolvedInput = resolveBindings(node.input, iterationContext);
+			const result = await executor.runNode({
+				registry: this.registry,
+				node,
+				runContext,
+				input: resolvedInput,
+			});
+
+			if (result.error) {
+				this.snapshot.nodeStatus[node.id] = "failed";
+				iterations.push({ item, error: result.error });
+				this.emit({
+					type: "node:error",
+					nodeId: node.id,
+					runId: result.runId,
+					error: result.error,
+				});
+				if (!node.policy?.continueOnError) {
+					this.snapshot.status = "complete";
+					this.emit({
+						type: "flow:complete",
+						flowName: this.flow.name,
+						status: "failed",
+					});
+					return iterations;
+				}
+			} else {
+				iterations.push({ item, output: result.output });
+				this.emit({
+					type: "node:complete",
+					nodeId: node.id,
+					runId: result.runId,
+					output: result.output,
+				});
+			}
 		}
+
+		return iterations;
 	}
 
 	private bumpLoopCounter(edge: EdgeDefinition): void {
@@ -473,11 +567,13 @@ class InMemoryRuntime implements Runtime {
 
 	private createBindingContext(
 		input: Record<string, unknown>,
+		extra: Record<string, unknown> = {},
 	): Record<string, unknown> {
 		return {
 			flow: { input },
 			state: this.stateStore.snapshot(),
 			...this.snapshot.outputs,
+			...extra,
 		};
 	}
 
@@ -598,4 +694,19 @@ function hasPendingNodes(nodeStatus: Record<string, string>): boolean {
 
 function isLoopEdge(edge: { maxIterations?: number }): boolean {
 	return typeof edge.maxIterations === "number";
+}
+
+function selectForEachEdge(
+	incoming: EdgeDefinition[],
+	edgeStatus: Record<string, "pending" | "fired" | "skipped">,
+): EdgeDefinition | undefined {
+	const candidates = incoming.filter(
+		(edge) => edge.forEach && edgeStatus[edgeKey(edge)] === "fired",
+	);
+	if (candidates.length > 1) {
+		throw new Error(
+			`Multiple forEach edges fired into node "${candidates[0]?.to ?? ""}"`,
+		);
+	}
+	return candidates[0];
 }

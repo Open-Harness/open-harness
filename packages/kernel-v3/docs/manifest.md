@@ -26,7 +26,7 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 - [x] Scheduler: resolve ready nodes (gate any/all)
 - [x] Edge status tracking (pending/fired/skipped)
 - [x] Loop counters + maxIterations enforcement
-- [ ] forEach edge fan-out support
+- [x] forEach edge fan-out support
 
 ## 4. Executor
 - [x] Node execution wrapper (policy: retry/timeout)
@@ -53,6 +53,7 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
   - [ ] when
   - [ ] gating
   - [x] loops
+  - [x] forEach
   - [ ] state
 - [ ] Integration tests: branching + loops + forEach
 - [x] Integration test: parse -> compile -> run (simple flow)
