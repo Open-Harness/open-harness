@@ -1,11 +1,4 @@
 {
   "title": "API",
-  "pages": [
-    "index",
-    "events",
-    "hub",
-    "agent",
-    "channel",
-    "flow-runtime"
-  ]
+  "pages": ["index", "events", "hub", "agent", "channel", "flow-runtime"]
 }

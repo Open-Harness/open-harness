@@ -25,42 +25,42 @@ import type { z } from "zod";
  * ```
  */
 export interface PromptTemplate<TData> {
-  /**
-   * Template string with {{variable}} placeholders.
-   *
-   * Variables are extracted at compile time for type checking.
-   */
-  readonly template: string;
+	/**
+	 * Template string with {{variable}} placeholders.
+	 *
+	 * Variables are extracted at compile time for type checking.
+	 */
+	readonly template: string;
 
-  /**
-   * Render template with provided data.
-   *
-   * Validates that all required variables are present.
-   * Substitutes {{variable}} with data[variable].
-   *
-   * @param data - Data matching template variables
-   * @returns Rendered prompt string
-   *
-   * @throws {Error} If required variable missing
-   *
-   * @example
-   * ```typescript
-   * const prompt = template.render({ prd: "Build TODO app" });
-   * // "You are a planner. Break down this PRD:\n\nBuild TODO app\n\n..."
-   * ```
-   */
-  render(data: TData): string;
+	/**
+	 * Render template with provided data.
+	 *
+	 * Validates that all required variables are present.
+	 * Substitutes {{variable}} with data[variable].
+	 *
+	 * @param data - Data matching template variables
+	 * @returns Rendered prompt string
+	 *
+	 * @throws {Error} If required variable missing
+	 *
+	 * @example
+	 * ```typescript
+	 * const prompt = template.render({ prd: "Build TODO app" });
+	 * // "You are a planner. Break down this PRD:\n\nBuild TODO app\n\n..."
+	 * ```
+	 */
+	render(data: TData): string;
 
-  /**
-   * Optional validation function.
-   *
-   * Called before render to validate data structure.
-   * Throws if data doesn't match expected shape.
-   *
-   * @param data - Data to validate
-   * @throws {Error} If validation fails
-   */
-  validate?(data: TData): void;
+	/**
+	 * Optional validation function.
+	 *
+	 * Called before render to validate data structure.
+	 * Throws if data doesn't match expected shape.
+	 *
+	 * @param data - Data to validate
+	 * @throws {Error} If validation fails
+	 */
+	validate?(data: TData): void;
 }
 
 /**
@@ -70,10 +70,9 @@ export interface PromptTemplate<TData> {
  *
  * @template S - Template string literal type
  */
-export type ExtractVars<S extends string> =
-  S extends `${string}{{${infer Var}}}${infer Rest}`
-    ? Var | ExtractVars<Rest>
-    : never;
+export type ExtractVars<S extends string> = S extends `${string}{{${infer Var}}}${infer Rest}`
+	? Var | ExtractVars<Rest>
+	: never;
 
 /**
  * Factory function for creating typed prompt templates.
@@ -106,6 +105,6 @@ export type ExtractVars<S extends string> =
  * ```
  */
 export declare function createPromptTemplate<TData>(
-  template: string,
-  schema?: z.ZodSchema<TData>,
+	template: string,
+	schema?: z.ZodSchema<TData>,
 ): PromptTemplate<TData>;

@@ -16,7 +16,7 @@
  * allowing agents to filter and receive only their messages.
  */
 
-import { createHub, type AgentDefinition } from "@open-harness/kernel";
+import { type AgentDefinition, createHub } from "@open-harness/kernel";
 
 interface ReviewInput {
 	pullRequestId: string;
@@ -82,10 +82,7 @@ async function main() {
 			// Use queueMicrotask to ensure agent's subscription is set up first
 			queueMicrotask(() => {
 				console.log("[CI] Security scan detected issue, sending to reviewer...");
-				hub.sendToRun(
-					payload.runId,
-					"SECURITY: SQL injection risk in db-query.ts line 42",
-				);
+				hub.sendToRun(payload.runId, "SECURITY: SQL injection risk in db-query.ts line 42");
 			});
 		}
 	});

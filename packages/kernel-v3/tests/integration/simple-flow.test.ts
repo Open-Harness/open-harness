@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RuntimeEvent } from "../../src/core/events.js";
-import {
-	createRuntime,
-	DefaultNodeRegistry,
-	GraphCompiler,
-	parseFlowYaml,
-} from "../../src/index.js";
+import { createRuntime, DefaultNodeRegistry, GraphCompiler, parseFlowYaml } from "../../src/index.js";
 import { constantNode, echoNode } from "../../src/nodes/index.js";
 
 describe("kernel-v3 integration", () => {

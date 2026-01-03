@@ -8,13 +8,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import React, { useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import {
-	ConnectionStatus,
-	EventLog,
-	FlowCanvas,
-	NodePalette,
-	Toolbar,
-} from "./components/index.js";
+import { ConnectionStatus, EventLog, FlowCanvas, NodePalette, Toolbar } from "./components/index.js";
 import { useFlowState, useWebSocket } from "./hooks/index.js";
 import type { FlowDefinition, NodeTypeMetadata } from "./types/index.js";
 

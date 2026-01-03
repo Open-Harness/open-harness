@@ -79,10 +79,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 	// Connect to WebSocket
 	const connect = useCallback(() => {
 		// Don't connect if already connected or connecting
-		if (
-			wsRef.current?.readyState === WebSocket.OPEN ||
-			wsRef.current?.readyState === WebSocket.CONNECTING
-		) {
+		if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
 			return;
 		}
 
@@ -139,9 +136,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 			wsRef.current = ws;
 		} catch (err) {
 			setStatus("disconnected");
-			onErrorRef.current?.(
-				`Failed to connect: ${err instanceof Error ? err.message : "Unknown error"}`,
-			);
+			onErrorRef.current?.(`Failed to connect: ${err instanceof Error ? err.message : "Unknown error"}`);
 		}
 	}, [url, reconnectDelay, clearReconnectTimeout]);
 
@@ -168,9 +163,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 		try {
 			wsRef.current.send(JSON.stringify(command));
 		} catch (err) {
-			onErrorRef.current?.(
-				`Failed to send command: ${err instanceof Error ? err.message : "Unknown error"}`,
-			);
+			onErrorRef.current?.(`Failed to send command: ${err instanceof Error ? err.message : "Unknown error"}`);
 		}
 	}, []);
 

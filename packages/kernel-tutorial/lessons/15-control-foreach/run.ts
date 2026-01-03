@@ -16,7 +16,7 @@
  * - session:start / session:end events - lifecycle tracking
  */
 
-import { createHub, createSessionId, type AgentDefinition } from "@open-harness/kernel";
+import { type AgentDefinition, createHub, createSessionId } from "@open-harness/kernel";
 
 interface FileInput {
 	file: string;
@@ -110,10 +110,7 @@ async function main() {
 		try {
 			hub.emit({ type: "agent:start", agentName: "file-analyzer", runId });
 
-			const result = await AnalyzerAgent.execute(
-				{ file, sessionId },
-				{ hub, runId },
-			);
+			const result = await AnalyzerAgent.execute({ file, sessionId }, { hub, runId });
 			results.push(result);
 
 			hub.emit({ type: "agent:complete", agentName: "file-analyzer", success: true, runId });

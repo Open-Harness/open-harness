@@ -56,13 +56,7 @@ async function main() {
 	console.log("Scenario: Build and execute a dynamic flow\n");
 
 	// Dynamic input - could come from user, API, database, etc.
-	const steps = [
-		"Initialize workspace",
-		"Fetch dependencies",
-		"Run build",
-		"Execute tests",
-		"Deploy to staging",
-	];
+	const steps = ["Initialize workspace", "Fetch dependencies", "Run build", "Execute tests", "Deploy to staging"];
 
 	console.log("--- Building Flow ---");
 	console.log(`Steps: ${steps.length}`);

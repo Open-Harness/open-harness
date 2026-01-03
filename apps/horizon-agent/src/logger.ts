@@ -2,7 +2,7 @@
 // Uses pino with file transport for observability
 
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import pino from "pino";
 
 const LOG_DIR = resolve(import.meta.dir, "../logs");

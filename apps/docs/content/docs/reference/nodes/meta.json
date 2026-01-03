@@ -1,9 +1,4 @@
 {
   "title": "Node Reference",
-  "pages": [
-    "index",
-    "control/...",
-    "agent/...",
-    "data/..."
-  ]
+  "pages": ["index", "control/...", "agent/...", "data/..."]
 }

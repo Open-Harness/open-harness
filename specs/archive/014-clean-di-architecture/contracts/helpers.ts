@@ -57,9 +57,9 @@ import type { AgentHandle, ExecuteOptions, StreamOptions } from "./execution-opt
  * ```
  */
 export declare function executeAgent<TInput, TOutput>(
-  definition: AnthropicAgentDefinition<TInput, TOutput>,
-  input: TInput,
-  options?: ExecuteOptions<TOutput>,
+	definition: AnthropicAgentDefinition<TInput, TOutput>,
+	input: TInput,
+	options?: ExecuteOptions<TOutput>,
 ): Promise<TOutput>;
 
 /**
@@ -104,9 +104,9 @@ export declare function executeAgent<TInput, TOutput>(
  * ```
  */
 export declare function streamAgent<TInput, TOutput>(
-  definition: AnthropicAgentDefinition<TInput, TOutput>,
-  input: TInput,
-  options?: StreamOptions<TOutput>,
+	definition: AnthropicAgentDefinition<TInput, TOutput>,
+	input: TInput,
+	options?: StreamOptions<TOutput>,
 ): AgentHandle<TOutput>;
 
 /**

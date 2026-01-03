@@ -84,9 +84,7 @@ export function NodePalette({ nodeTypes }: NodePaletteProps) {
 			<div className="node-palette">
 				<div className="palette-empty">
 					<p>No node types available</p>
-					<p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-						Connect to a hub to load node types
-					</p>
+					<p style={{ fontSize: 12, color: "var(--text-secondary)" }}>Connect to a hub to load node types</p>
 				</div>
 			</div>
 		);
@@ -97,9 +95,7 @@ export function NodePalette({ nodeTypes }: NodePaletteProps) {
 			{categorizedNodes.map(([category, nodes]) => (
 				<div key={category} className="palette-category">
 					<div className="palette-category-title">
-						<span style={{ marginRight: 6 }}>
-							{CATEGORY_ICONS[category] || CATEGORY_ICONS.default}
-						</span>
+						<span style={{ marginRight: 6 }}>{CATEGORY_ICONS[category] || CATEGORY_ICONS.default}</span>
 						{category}
 					</div>
 					{nodes.map((nodeType) => (

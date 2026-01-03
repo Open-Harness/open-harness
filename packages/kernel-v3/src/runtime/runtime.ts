@@ -76,9 +76,7 @@ export interface RuntimeOptions {
 	resume?: RuntimeResumeOptions;
 }
 
-export type RuntimeResumeOptions =
-	| { runId: string }
-	| { snapshot: RunSnapshot; runId?: string };
+export type RuntimeResumeOptions = { runId: string } | { snapshot: RunSnapshot; runId?: string };
 
 type ForEachIteration = {
 	item: unknown;
@@ -280,9 +278,7 @@ class InMemoryRuntime implements Runtime {
 				this.resumeRunId = inboxRunIds[0];
 			}
 		} else {
-			this.stateStore = new InMemoryStateStore(
-				options.flow.state?.initial ?? {},
-			);
+			this.stateStore = new InMemoryStateStore(options.flow.state?.initial ?? {});
 			this.snapshot = createInitialSnapshot(options.flow);
 			this.snapshot.runId = randomUUID();
 		}
@@ -294,10 +290,7 @@ class InMemoryRuntime implements Runtime {
 	 * @returns Final run snapshot.
 	 */
 	async run(input: Record<string, unknown> = {}): Promise<RunSnapshot> {
-		if (
-			this.snapshot.status === "complete" ||
-			this.snapshot.status === "aborted"
-		) {
+		if (this.snapshot.status === "complete" || this.snapshot.status === "aborted") {
 			throw new Error(`Run ${this.snapshot.runId ?? ""} is not resumable`);
 		}
 
@@ -314,11 +307,7 @@ class InMemoryRuntime implements Runtime {
 			}
 		}
 		this.snapshot.status = "running";
-		this.emit(
-			isResume
-				? { type: "flow:resumed" }
-				: { type: "flow:start", flowName: this.flow.name },
-		);
+		this.emit(isResume ? { type: "flow:resumed" } : { type: "flow:start", flowName: this.flow.name });
 
 		const compiler = new GraphCompiler();
 		const compiled = compiler.compile(this.flow);
@@ -344,10 +333,7 @@ class InMemoryRuntime implements Runtime {
 				continue;
 			}
 
-			const forEachEdge = selectForEachEdge(
-				incomingAll,
-				this.snapshot.edgeStatus,
-			);
+			const forEachEdge = selectForEachEdge(incomingAll, this.snapshot.edgeStatus);
 			if (forEachEdge) {
 				const iterations = await this.runForEachNode({
 					node,
@@ -380,9 +366,7 @@ class InMemoryRuntime implements Runtime {
 				runId = this.resumeRunId;
 				this.resumeRunId = undefined;
 			}
-			const resumeMessage = isResuming
-				? (this.pendingResumeMessage ?? "continue")
-				: undefined;
+			const resumeMessage = isResuming ? (this.pendingResumeMessage ?? "continue") : undefined;
 			if (isResuming && resumeMessage) {
 				this.dispatch({ type: "send", runId, message: resumeMessage });
 				this.resumingNodes.delete(nodeId);
@@ -465,10 +449,7 @@ class InMemoryRuntime implements Runtime {
 	 * @param command - Command to dispatch.
 	 */
 	dispatch(command: RuntimeCommand): void {
-		if (
-			(command.type === "send" || command.type === "reply") &&
-			!command.runId
-		) {
+		if ((command.type === "send" || command.type === "reply") && !command.runId) {
 			this.emit({ type: "command:received", command });
 			throw new Error("Runtime command missing runId");
 		}
@@ -606,8 +587,7 @@ class InMemoryRuntime implements Runtime {
 				state: this.stateStore,
 				inbox: this.getInbox(runId),
 				getAgentSession: () => this.snapshot.agentSessions[node.id],
-				setAgentSession: (sessionId) =>
-					this.setAgentSession(node.id, sessionId),
+				setAgentSession: (sessionId) => this.setAgentSession(node.id, sessionId),
 			};
 
 			this.emit({
@@ -662,9 +642,7 @@ class InMemoryRuntime implements Runtime {
 		this.snapshot.loopCounters[key] = next;
 		this.emit({ type: "loop:iterate", edgeId: edge.id, iteration: next });
 		if (edge.maxIterations && next >= edge.maxIterations) {
-			throw new Error(
-				`Loop edge ${edge.from} -> ${edge.to} exceeded ${edge.maxIterations}`,
-			);
+			throw new Error(`Loop edge ${edge.from} -> ${edge.to} exceeded ${edge.maxIterations}`);
 		}
 	}
 
@@ -841,13 +819,9 @@ function selectForEachEdge(
 	incoming: EdgeDefinition[],
 	edgeStatus: Record<string, "pending" | "fired" | "skipped">,
 ): EdgeDefinition | undefined {
-	const candidates = incoming.filter(
-		(edge) => edge.forEach && edgeStatus[edgeKey(edge)] === "fired",
-	);
+	const candidates = incoming.filter((edge) => edge.forEach && edgeStatus[edgeKey(edge)] === "fired");
 	if (candidates.length > 1) {
-		throw new Error(
-			`Multiple forEach edges fired into node "${candidates[0]?.to ?? ""}"`,
-		);
+		throw new Error(`Multiple forEach edges fired into node "${candidates[0]?.to ?? ""}"`);
 	}
 	return candidates[0];
 }

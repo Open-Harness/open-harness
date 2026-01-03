@@ -77,7 +77,9 @@ export function createRealtimeVoiceChannel(
 		service.on("assistant_audio", (pcm: Buffer) =>
 			emit({ type: "voice:assistant_audio", audio: pcm.toString("base64") }),
 		);
-		service.on("event", (line: string) => emit({ type: "voice:event", name: line }));
+		service.on("event", (line: string) =>
+			emit({ type: "voice:event", name: line }),
+		);
 		service.on("log", (event) => {
 			if (event.kind === "user")
 				emit({ type: "voice:transcript", text: event.text });

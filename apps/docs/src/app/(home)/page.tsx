@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -10,7 +10,8 @@ export default function HomePage() {
           n8n for AI agents
         </p>
         <p className="text-base text-muted-foreground mb-8">
-          Build multi-step agent workflows visually or with AI. Agents are the primitives — as models improve, your flows improve.
+          Build multi-step agent workflows visually or with AI. Agents are the
+          primitives — as models improve, your flows improve.
         </p>
         <div className="flex gap-4 justify-center mb-12">
           <Link
@@ -50,21 +51,24 @@ export default function HomePage() {
           <div className="text-2xl mb-2">🔀</div>
           <h3 className="font-semibold mb-2">Flow-First Design</h3>
           <p className="text-sm text-muted-foreground">
-            Define workflows as declarative YAML specs. One file captures your entire agent orchestration.
+            Define workflows as declarative YAML specs. One file captures your
+            entire agent orchestration.
           </p>
         </div>
         <div className="p-6 border border-border rounded-lg">
           <div className="text-2xl mb-2">🤖</div>
           <h3 className="font-semibold mb-2">Agents as Primitives</h3>
           <p className="text-sm text-muted-foreground">
-            Provider-agnostic SDK wrappers. Claude, GPT, or any model — swap without rewriting your flows.
+            Provider-agnostic SDK wrappers. Claude, GPT, or any model — swap
+            without rewriting your flows.
           </p>
         </div>
         <div className="p-6 border border-border rounded-lg">
           <div className="text-2xl mb-2">🎨</div>
           <h3 className="font-semibold mb-2">Visual or AI-Generated</h3>
           <p className="text-sm text-muted-foreground">
-            Build flows in the visual editor or describe what you want — AI generates the FlowSpec.
+            Build flows in the visual editor or describe what you want — AI
+            generates the FlowSpec.
           </p>
         </div>
       </div>

@@ -1,6 +1,10 @@
 import blessed from "blessed";
 import contrib from "blessed-contrib";
-import type { LogEvent, RealtimeService, ServiceState } from "../core/RealtimeService";
+import type {
+	LogEvent,
+	RealtimeService,
+	ServiceState,
+} from "../core/RealtimeService";
 
 export class Tui {
 	private screen: blessed.Widgets.Screen;
@@ -11,7 +15,10 @@ export class Tui {
 	private spkGauge: contrib.Widgets.GaugeElement;
 
 	constructor(private readonly service: RealtimeService) {
-		this.screen = blessed.screen({ smartCSR: true, title: "Realtime Voice TUI" });
+		this.screen = blessed.screen({
+			smartCSR: true,
+			title: "Realtime Voice TUI",
+		});
 		const grid = new contrib.grid({ rows: 12, cols: 12, screen: this.screen });
 
 		this.transcript = grid.set(0, 0, 8, 8, contrib.log, {
@@ -61,7 +68,9 @@ export class Tui {
 		this.screen.key(["q", "C-c"], () => this.shutdown());
 		this.screen.key(["space"], () => this.service.toggleTalk());
 		this.screen.key(["m", "M"], () => this.service.toggleMode());
-		this.screen.key(["s"], () => this.service.stopAssistantSpeech("interrupted"));
+		this.screen.key(["s"], () =>
+			this.service.stopAssistantSpeech("interrupted"),
+		);
 
 		this.service.on("state", (state: ServiceState) => this.updateStatus(state));
 		this.service.on("log", (event: LogEvent) => this.log(event));

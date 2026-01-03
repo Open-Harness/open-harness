@@ -419,7 +419,9 @@ export const IUnifiedEventBusToken = Symbol("IUnifiedEventBus");
 // ============================================================================
 
 /** Check if event is a workflow event (harness/phase/task) */
-export function isWorkflowEvent(event: BaseEvent): event is
+export function isWorkflowEvent(
+	event: BaseEvent,
+): event is
 	| HarnessStartEvent
 	| HarnessCompleteEvent
 	| PhaseStartEvent
@@ -427,15 +429,13 @@ export function isWorkflowEvent(event: BaseEvent): event is
 	| TaskStartEvent
 	| TaskCompleteEvent
 	| TaskFailedEvent {
-	return (
-		event.type.startsWith("harness:") ||
-		event.type.startsWith("phase:") ||
-		event.type.startsWith("task:")
-	);
+	return event.type.startsWith("harness:") || event.type.startsWith("phase:") || event.type.startsWith("task:");
 }
 
 /** Check if event is an agent event */
-export function isAgentEvent(event: BaseEvent): event is
+export function isAgentEvent(
+	event: BaseEvent,
+): event is
 	| AgentStartEvent
 	| AgentThinkingEvent
 	| AgentTextEvent
@@ -451,10 +451,7 @@ export function isNarrativeEvent(event: BaseEvent): event is NarrativeEvent {
 }
 
 /** Check if event is a session event */
-export function isSessionEvent(event: BaseEvent): event is
-	| SessionPromptEvent
-	| SessionReplyEvent
-	| SessionAbortEvent {
+export function isSessionEvent(event: BaseEvent): event is SessionPromptEvent | SessionReplyEvent | SessionAbortEvent {
 	return event.type.startsWith("session:");
 }
 

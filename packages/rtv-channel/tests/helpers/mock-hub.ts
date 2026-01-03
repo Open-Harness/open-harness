@@ -70,7 +70,10 @@ export class MockHub implements Hub {
 		}
 	}
 
-	scoped<T>(context: Partial<EventContext>, fn: () => T | Promise<T>): T | Promise<T> {
+	scoped<T>(
+		context: Partial<EventContext>,
+		fn: () => T | Promise<T>,
+	): T | Promise<T> {
 		const prev = this.context;
 		this.context = { ...this.context, ...context };
 		const result = fn();
