@@ -5,7 +5,9 @@
     "packages": [
       "apps/*",
       "packages/*",
-      "examples/*"
+      "depricated/*",
+      "examples/*",
+      "spikes/*"
     ],
     "catalog": {
       "dotenv": "^17.2.2",
