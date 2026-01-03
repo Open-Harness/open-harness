@@ -1,4 +1,10 @@
-import type { EdgeDefinition, FlowDefinition, NodeDefinition } from "../core/types.js";
+import { parse } from "yaml";
+import type {
+	EdgeDefinition,
+	FlowDefinition,
+	NodeDefinition,
+} from "../core/types.js";
+import { FlowDefinitionSchema } from "../core/types.js";
 
 /**
  * Compiled representation of a flow.
@@ -9,30 +15,30 @@ import type { EdgeDefinition, FlowDefinition, NodeDefinition } from "../core/typ
  * @property {Map<string, EdgeDefinition[]>} incoming - Incoming edge map.
  */
 export type CompiledFlow = {
-  nodes: NodeDefinition[];
-  edges: EdgeDefinition[];
-  adjacency: Map<string, string[]>;
-  incoming: Map<string, EdgeDefinition[]>;
+	nodes: NodeDefinition[];
+	edges: EdgeDefinition[];
+	adjacency: Map<string, string[]>;
+	incoming: Map<string, EdgeDefinition[]>;
 };
 
 /** Compiler interface for FlowDefinition. */
 export interface Compiler {
-  /**
-   * Compile a flow definition into an internal graph representation.
-   * @param definition - Flow definition.
-   * @returns Compiled flow.
-   */
-  compile(definition: FlowDefinition): CompiledFlow;
+	/**
+	 * Compile a flow definition into an internal graph representation.
+	 * @param definition - Flow definition.
+	 * @returns Compiled flow.
+	 */
+	compile(definition: FlowDefinition): CompiledFlow;
 }
 
 /** Default graph compiler implementation. */
 export declare class GraphCompiler implements Compiler {
-  /**
-   * Compile a flow definition into an internal graph representation.
-   * @param definition - Flow definition.
-   * @returns Compiled flow.
-   */
-  compile(definition: FlowDefinition): CompiledFlow;
+	/**
+	 * Compile a flow definition into an internal graph representation.
+	 * @param definition - Flow definition.
+	 * @returns Compiled flow.
+	 */
+	compile(definition: FlowDefinition): CompiledFlow;
 }
 
 /**
@@ -40,11 +46,16 @@ export declare class GraphCompiler implements Compiler {
  * @param source - YAML string.
  * @returns Parsed and validated flow definition.
  */
-export declare function parseFlowYaml(source: string): FlowDefinition;
+export function parseFlowYaml(source: string): FlowDefinition {
+	const parsed = parse(source) as unknown;
+	return validateFlowDefinition(parsed);
+}
 
 /**
  * Validate an unknown value as a FlowDefinition.
  * @param input - Value to validate.
  * @returns Validated flow definition.
  */
-export declare function validateFlowDefinition(input: unknown): FlowDefinition;
+export function validateFlowDefinition(input: unknown): FlowDefinition {
+	return FlowDefinitionSchema.parse(input);
+}

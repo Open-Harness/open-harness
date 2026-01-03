@@ -2,14 +2,14 @@
  * Context object used to resolve bindings.
  */
 export type BindingContext = {
-  flow?: { input?: Record<string, unknown> };
-  [key: string]: unknown;
+	flow?: { input?: Record<string, unknown> };
+	[key: string]: unknown;
 };
 
 /** Result of resolving a binding path. */
 export type BindingResolution = {
-  found: boolean;
-  value?: unknown;
+	found: boolean;
+	value?: unknown;
 };
 
 /**
@@ -19,8 +19,8 @@ export type BindingResolution = {
  * @returns Binding resolution result.
  */
 export declare function resolveBindingPath(
-  context: BindingContext,
-  path: string,
+	context: BindingContext,
+	path: string,
 ): BindingResolution;
 
 /**
@@ -30,8 +30,8 @@ export declare function resolveBindingPath(
  * @returns Resolved string.
  */
 export declare function resolveBindingString(
-  template: string,
-  context: BindingContext,
+	template: string,
+	context: BindingContext,
 ): string;
 
 /**
@@ -41,6 +41,6 @@ export declare function resolveBindingString(
  * @returns Resolved object.
  */
 export declare function resolveBindings<T extends Record<string, unknown>>(
-  input: T,
-  context: BindingContext,
+	input: T,
+	context: BindingContext,
 ): T;

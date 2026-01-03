@@ -10,10 +10,10 @@ import type { NodeRegistry, NodeRunContext } from "../registry/registry.js";
  * @property {string} [error] - Error string, if failed.
  */
 export interface NodeExecutionResult {
-  nodeId: string;
-  runId: string;
-  output?: unknown;
-  error?: string;
+	nodeId: string;
+	runId: string;
+	output?: unknown;
+	error?: string;
 }
 
 /**
@@ -25,30 +25,30 @@ export interface NodeExecutionResult {
  * @property {Record<string, unknown>} input - Resolved input payload.
  */
 export interface ExecutorContext {
-  registry: NodeRegistry;
-  node: NodeDefinition;
-  runContext: NodeRunContext;
-  input: Record<string, unknown>;
+	registry: NodeRegistry;
+	node: NodeDefinition;
+	runContext: NodeRunContext;
+	input: Record<string, unknown>;
 }
 
 /**
  * Node executor interface.
  */
 export interface Executor {
-  /**
-   * Execute a node with the provided context.
-   * @param context - Execution context.
-   * @returns Execution result.
-   */
-  runNode(context: ExecutorContext): Promise<NodeExecutionResult>;
+	/**
+	 * Execute a node with the provided context.
+	 * @param context - Execution context.
+	 * @returns Execution result.
+	 */
+	runNode(context: ExecutorContext): Promise<NodeExecutionResult>;
 }
 
 /** Default executor implementation. */
 export declare class DefaultExecutor implements Executor {
-  /**
-   * Execute a node with the provided context.
-   * @param context - Execution context.
-   * @returns Execution result.
-   */
-  runNode(context: ExecutorContext): Promise<NodeExecutionResult>;
+	/**
+	 * Execute a node with the provided context.
+	 * @param context - Execution context.
+	 * @returns Execution result.
+	 */
+	runNode(context: ExecutorContext): Promise<NodeExecutionResult>;
 }

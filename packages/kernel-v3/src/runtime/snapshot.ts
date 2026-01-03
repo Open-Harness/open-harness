@@ -18,13 +18,13 @@ export type EdgeStatus = "pending" | "fired" | "skipped";
  * @property {RuntimeCommand[]} inbox - Pending commands.
  */
 export type RunSnapshot = {
-  status: RuntimeStatus;
-  outputs: Record<string, unknown>;
-  state: Record<string, unknown>;
-  nodeStatus: Record<string, NodeStatus>;
-  edgeStatus: Record<string, EdgeStatus>;
-  loopCounters: Record<string, number>;
-  inbox: RuntimeCommand[];
+	status: RuntimeStatus;
+	outputs: Record<string, unknown>;
+	state: Record<string, unknown>;
+	nodeStatus: Record<string, NodeStatus>;
+	edgeStatus: Record<string, EdgeStatus>;
+	loopCounters: Record<string, number>;
+	inbox: RuntimeCommand[];
 };
 
 /**
@@ -33,5 +33,5 @@ export type RunSnapshot = {
  * @property {string} [runId] - Optional runtime run id.
  */
 export type RunState = RunSnapshot & {
-  runId?: string;
+	runId?: string;
 };

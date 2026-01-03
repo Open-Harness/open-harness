@@ -5,15 +5,15 @@ Last updated: 2026-01-03
 This is a task-oriented manifest derived from the architecture. It is not a spec.
 
 ## 0. Bootstrap
-- [ ] Create package.json and tsconfig.json for packages/kernel-v3
-- [ ] Wire workspace tooling (lint/typecheck/test scripts)
-- [ ] Add README with quickstart + links to docs
+- [x] Create package.json and tsconfig.json for packages/kernel-v3
+- [x] Wire workspace tooling (lint/typecheck/test scripts)
+- [x] Add README with quickstart + links to docs
 
 ## 1. Core Types + Validation
-- [ ] Define FlowDefinition / NodeDefinition / EdgeDefinition / StateSchemaDefinition
-- [ ] Define RuntimeEvent / RuntimeCommand / RunSnapshot
-- [ ] Add Zod schemas for flow validation
-- [ ] Add YAML parsing and validation entrypoint
+- [x] Define FlowDefinition / NodeDefinition / EdgeDefinition / StateSchemaDefinition
+- [x] Define RuntimeEvent / RuntimeCommand / RunSnapshot
+- [x] Add Zod schemas for flow validation
+- [x] Add YAML parsing and validation entrypoint
 
 ## 2. Runtime Skeleton
 - [ ] Runtime interface + lifecycle (run, dispatch, onEvent, getSnapshot)

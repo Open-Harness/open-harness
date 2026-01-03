@@ -8,6 +8,6 @@ import type { BindingContext } from "./bindings.js";
  * @returns True if expression passes.
  */
 export declare function evaluateWhen(
-  expr: WhenExpr | undefined,
-  context: BindingContext,
+	expr: WhenExpr | undefined,
+	context: BindingContext,
 ): boolean;
