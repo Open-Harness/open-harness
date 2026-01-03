@@ -25,7 +25,7 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 - [x] Compiler: validate + normalize graph
 - [x] Scheduler: resolve ready nodes (gate any/all)
 - [x] Edge status tracking (pending/fired/skipped)
-- [ ] Loop counters + maxIterations enforcement
+- [x] Loop counters + maxIterations enforcement
 - [ ] forEach edge fan-out support
 
 ## 4. Executor
@@ -48,7 +48,12 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 - [ ] Basic command/event protocol for UI
 
 ## 8. Testing
-- [ ] Unit tests: bindings, when, gating, loops, state
+- [ ] Unit tests:
+  - [ ] bindings
+  - [ ] when
+  - [ ] gating
+  - [x] loops
+  - [ ] state
 - [ ] Integration tests: branching + loops + forEach
 - [x] Integration test: parse -> compile -> run (simple flow)
 - [ ] Contract tests: event stream shape

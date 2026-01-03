@@ -32,7 +32,8 @@ export class DefaultScheduler implements Scheduler {
 				continue;
 			}
 
-			const incoming = graph.incoming.get(node.id) ?? [];
+			const incomingAll = graph.incoming.get(node.id) ?? [];
+			const incoming = incomingAll.filter((edge) => !isLoopEdge(edge));
 			if (incoming.length === 0) {
 				ready.push(node.id);
 				continue;
@@ -55,4 +56,8 @@ export class DefaultScheduler implements Scheduler {
 
 		return ready;
 	}
+}
+
+function isLoopEdge(edge: { maxIterations?: number }): boolean {
+	return typeof edge.maxIterations === "number";
 }

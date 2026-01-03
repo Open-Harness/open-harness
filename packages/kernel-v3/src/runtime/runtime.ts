@@ -263,7 +263,8 @@ class InMemoryRuntime implements Runtime {
 			const node = nodeById.get(nodeId);
 			if (!node) continue;
 
-			const incoming = compiled.incoming.get(nodeId) ?? [];
+			const incomingAll = compiled.incoming.get(nodeId) ?? [];
+			const incoming = incomingAll.filter((edge) => !isLoopEdge(edge));
 			const gate = compiled.gateByNode.get(nodeId) ?? "all";
 			const gateDecision = decideGate(incoming, this.snapshot.edgeStatus, gate);
 			if (gateDecision === "skip") {
@@ -407,6 +408,9 @@ class InMemoryRuntime implements Runtime {
 			if (edge.from !== nodeId) continue;
 			const shouldFire = evaluateWhen(edge.when, bindingContext);
 			const key = edgeKey(edge);
+			const isLoop = isLoopEdge(edge);
+			const didReset =
+				isLoop && shouldFire ? this.resetNodeForReentry(edge) : false;
 			this.snapshot.edgeStatus[key] = shouldFire ? "fired" : "skipped";
 			if (shouldFire) {
 				this.emit({
@@ -418,11 +422,22 @@ class InMemoryRuntime implements Runtime {
 				if (edge.forEach) {
 					this.spawnForEach(edge, bindingContext);
 				}
-				if (edge.maxIterations) {
+				if (edge.maxIterations && didReset) {
 					this.bumpLoopCounter(edge);
 				}
 			}
 		}
+	}
+
+	private resetNodeForReentry(edge: EdgeDefinition): boolean {
+		const status = this.snapshot.nodeStatus[edge.to];
+		if (status === "pending" || status === "running") {
+			return false;
+		}
+
+		this.snapshot.nodeStatus[edge.to] = "pending";
+
+		return true;
 	}
 
 	private spawnForEach(
@@ -579,4 +594,8 @@ function decideGate(
 
 function hasPendingNodes(nodeStatus: Record<string, string>): boolean {
 	return Object.values(nodeStatus).some((status) => status === "pending");
+}
+
+function isLoopEdge(edge: { maxIterations?: number }): boolean {
+	return typeof edge.maxIterations === "number";
 }
