@@ -436,6 +436,14 @@ program
 async function sendWebSocketCommand(port: string, command: Record<string, unknown>): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(`ws://localhost:${port}/ws`);
+		let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+		const cleanup = () => {
+			if (timeoutId) {
+				clearTimeout(timeoutId);
+				timeoutId = null;
+			}
+		};
 
 		ws.onopen = () => {
 			ws.send(JSON.stringify(command));
@@ -445,10 +453,12 @@ async function sendWebSocketCommand(port: string, command: Record<string, unknow
 			const data = JSON.parse(event.data as string);
 			if (data.type === "ack") {
 				console.log(`✓ ${data.message}`);
+				cleanup();
 				ws.close();
 				resolve();
 			} else if (data.type === "error") {
 				console.error(`✗ ${data.error}`);
+				cleanup();
 				ws.close();
 				reject(new Error(data.error));
 			}
@@ -456,11 +466,12 @@ async function sendWebSocketCommand(port: string, command: Record<string, unknow
 
 		ws.onerror = () => {
 			console.error(`Cannot connect to server on port ${port}`);
+			cleanup();
 			reject(new Error("Connection failed"));
 		};
 
 		// Timeout after 5 seconds
-		setTimeout(() => {
+		timeoutId = setTimeout(() => {
 			ws.close();
 			reject(new Error("Command timeout"));
 		}, 5000);

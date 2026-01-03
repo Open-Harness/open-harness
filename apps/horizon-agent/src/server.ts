@@ -51,6 +51,8 @@ interface ServerState {
 	currentFlow: FlowYaml | null;
 	isRunning: boolean;
 	sessionId: string | null;
+	/** Original input passed at start time - preserved for resume */
+	originalInput: Record<string, unknown> | null;
 }
 
 /**
@@ -66,6 +68,7 @@ export async function createHorizonServer(config: HorizonServerConfig = {}): Pro
 		currentFlow: null,
 		isRunning: false,
 		sessionId: null,
+		originalInput: null,
 	};
 
 	const clients = new Set<ServerWebSocket<WSData>>();
@@ -236,6 +239,7 @@ async function handleStart(
 		});
 
 		state.isRunning = true;
+		state.originalInput = command.input ?? null;
 		sendAck(ws, "start", `Flow started: ${flow.flow.name}`);
 
 		// Execute flow (don't await - runs in background)
@@ -305,9 +309,9 @@ async function handleResume(
 		state.isRunning = true;
 		sendAck(ws, "resume", `Flow resumed: ${sessionId}`);
 
-		// Re-execute flow from paused state
+		// Re-execute flow from paused state (pass original input to preserve flow.input.*)
 		if (state.currentFlow && state.registry) {
-			executeFlow(state.currentFlow, state.registry, state.hub)
+			executeFlow(state.currentFlow, state.registry, state.hub, state.originalInput ?? undefined)
 				.then((result) => {
 					// Check if flow paused again vs completed
 					if (state.hub?.status === "paused") {
