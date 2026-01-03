@@ -70,11 +70,34 @@ export const NodeSpecSchema = z.object({
 	position: NodePositionSchema.optional(),
 });
 
-export const EdgeSchema = z.object({
-	from: NodeIdSchema,
-	to: NodeIdSchema,
-	when: WhenExprSchema.optional(),
-});
+export const EdgeTypeSchema = z.enum(["forward", "loop"]).default("forward");
+
+export const EdgeSchema = z
+	.object({
+		from: NodeIdSchema,
+		to: NodeIdSchema,
+		when: WhenExprSchema.optional(),
+		type: EdgeTypeSchema.optional(),
+		maxIterations: z.number().int().positive().optional(),
+	})
+	.superRefine((edge, ctx) => {
+		// Loop edges require maxIterations to prevent infinite loops
+		if (edge.type === "loop" && edge.maxIterations === undefined) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "Loop edges require maxIterations to prevent infinite loops",
+				path: ["maxIterations"],
+			});
+		}
+		// Forward edges should not have maxIterations
+		if (edge.type !== "loop" && edge.maxIterations !== undefined) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "maxIterations is only valid for loop edges",
+				path: ["maxIterations"],
+			});
+		}
+	});
 
 export const FlowYamlSchema = z
 	.object({

@@ -56,10 +56,27 @@ export interface NodeSpec {
 	position?: NodePosition;
 }
 
+/**
+ * Edge type discriminator.
+ * - "forward": Standard DAG edge, included in topological sort (default)
+ * - "loop": Back-edge for cycles, evaluated at runtime, excluded from topo sort
+ */
+export type EdgeType = "forward" | "loop";
+
 export interface Edge {
 	from: NodeId;
 	to: NodeId;
 	when?: WhenExpr;
+	/**
+	 * Edge type. Defaults to "forward".
+	 * Loop edges enable controlled cycles (e.g., coder → reviewer → coder).
+	 */
+	type?: EdgeType;
+	/**
+	 * Maximum iterations for loop edges. Required for loop edges.
+	 * Prevents infinite loops - flow fails if exceeded.
+	 */
+	maxIterations?: number;
 }
 
 export interface FlowYaml {

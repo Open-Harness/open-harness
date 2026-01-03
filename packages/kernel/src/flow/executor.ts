@@ -59,6 +59,52 @@ type EdgeIndex = {
 	outgoing: Map<string, EdgeState[]>;
 };
 
+/**
+ * Loop edge tracking for controlled cycles.
+ * Each loop edge has an iteration counter to prevent infinite loops.
+ */
+type LoopEdgeState = {
+	edge: Edge;
+	iterationCount: number;
+};
+
+type LoopEdgeIndex = {
+	/** Loop edges keyed by source node */
+	outgoing: Map<string, LoopEdgeState[]>;
+};
+
+function buildLoopEdgeIndex(loopEdges: Edge[]): LoopEdgeIndex {
+	const outgoing = new Map<string, LoopEdgeState[]>();
+
+	for (const edge of loopEdges) {
+		const state: LoopEdgeState = { edge, iterationCount: 0 };
+		const list = outgoing.get(edge.from);
+		if (list) {
+			list.push(state);
+		} else {
+			outgoing.set(edge.from, [state]);
+		}
+	}
+
+	return { outgoing };
+}
+
+/**
+ * Error thrown when a loop edge exceeds its maximum iterations.
+ */
+export class LoopIterationExceededError extends Error {
+	constructor(
+		public readonly edgeFrom: string,
+		public readonly edgeTo: string,
+		public readonly maxIterations: number,
+	) {
+		super(
+			`Loop edge ${edgeFrom} → ${edgeTo} exceeded maximum iterations (${maxIterations})`,
+		);
+		this.name = "LoopIterationExceededError";
+	}
+}
+
 function createRunId(nodeId: string, attempt: number): string {
 	return `run-${nodeId}-${attempt}-${Date.now()}`;
 }
@@ -343,7 +389,13 @@ export async function executeFlow(
 	const compiled = compileFlow(flow);
 	const outputs: Record<string, unknown> = {};
 	const flowInput = { ...(flow.flow.input ?? {}), ...(inputOverrides ?? {}) };
-	const edgeIndex = buildEdgeIndex(compiled.edges);
+	// Forward edges control DAG traversal; loop edges enable controlled cycles
+	const edgeIndex = buildEdgeIndex(compiled.forwardEdges);
+	const loopEdgeIndex = buildLoopEdgeIndex(compiled.loopEdges);
+	// Build node-to-index map for loop edge jumps
+	const nodeIndexMap = new Map<string, number>(
+		compiled.order.map((node, i) => [node.id, i]),
+	);
 
 	await ctx.phase("Run Flow", async () => {
 		// T030: Check for resumption state and determine starting index
@@ -473,6 +525,46 @@ export async function executeFlow(
 				edgeIndex,
 				createBindingContext(flowInput, outputs),
 			);
+
+			// Check outgoing loop edges for controlled cycles
+			const loopEdges = loopEdgeIndex.outgoing.get(node.id) ?? [];
+			for (const loopState of loopEdges) {
+				const loopBindingContext = createBindingContext(flowInput, outputs);
+				const shouldLoop = evaluateWhen(
+					loopState.edge.when,
+					loopBindingContext,
+				);
+
+				if (shouldLoop) {
+					loopState.iterationCount++;
+					const maxIter = loopState.edge.maxIterations ?? 1;
+
+					if (loopState.iterationCount >= maxIter) {
+						throw new LoopIterationExceededError(
+							loopState.edge.from,
+							loopState.edge.to,
+							maxIter,
+						);
+					}
+
+					// Emit loop iteration event
+					ctx.hub.emit({
+						type: "loop:iterate",
+						edgeFrom: loopState.edge.from,
+						edgeTo: loopState.edge.to,
+						iteration: loopState.iterationCount,
+						maxIterations: maxIter,
+					});
+
+					// Jump back to target node - adjust loop index to re-execute from there
+					const targetIndex = nodeIndexMap.get(loopState.edge.to);
+					if (targetIndex !== undefined) {
+						// Set nodeIndex to targetIndex - 1 because the for-loop will increment
+						nodeIndex = targetIndex - 1;
+						break; // Only one loop edge can fire per node completion
+					}
+				}
+			}
 		}
 
 		// T031/T042: Clean up paused session after flow execution completes (unless paused)
