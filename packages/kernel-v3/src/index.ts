@@ -18,4 +18,6 @@ export * from "./runtime/scheduler.js";
 export * from "./runtime/snapshot.js";
 export * from "./runtime/when.js";
 
+export * from "./testing/mock-query.js";
+
 export * from "./transport/websocket.js";

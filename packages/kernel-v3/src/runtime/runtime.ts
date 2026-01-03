@@ -3,6 +3,7 @@ import type {
 	RuntimeCommand,
 	RuntimeEvent,
 	RuntimeEventListener,
+	RuntimeEventPayload,
 	RuntimeStatus,
 } from "../core/events.js";
 import type { CommandInbox, StatePatch, StateStore } from "../core/state.js";
@@ -138,6 +139,14 @@ export class InMemoryCommandInbox implements CommandInbox {
 	enqueue(command: RuntimeCommand): void {
 		this.queue.push(command);
 	}
+
+	/**
+	 * Return a shallow copy of queued commands.
+	 * @returns Current queued commands.
+	 */
+	snapshot(): RuntimeCommand[] {
+		return [...this.queue];
+	}
 }
 
 /**
@@ -234,9 +243,12 @@ class InMemoryRuntime implements Runtime {
 	private readonly registry: NodeRegistry;
 	private readonly store?: RunStore;
 	private readonly bus: EventBus;
-	private readonly inbox: InMemoryCommandInbox;
+	private readonly inboxes = new Map<string, InMemoryCommandInbox>();
 	private readonly stateStore: InMemoryStateStore;
 	private snapshot: RunState;
+	private resumingNodes = new Set<string>();
+	private pendingResumeMessage?: string;
+	private resumeRunId?: string;
 
 	/**
 	 * Create a runtime instance.
@@ -247,7 +259,6 @@ class InMemoryRuntime implements Runtime {
 		this.registry = options.registry;
 		this.store = options.store;
 		this.bus = new InMemoryEventBus();
-		this.inbox = new InMemoryCommandInbox();
 
 		const resume = resolveResumeSnapshot(options);
 		if (resume) {
@@ -256,9 +267,17 @@ class InMemoryRuntime implements Runtime {
 				...resume.snapshot,
 				runId: resume.runId,
 				inbox: [],
+				agentSessions: resume.snapshot.agentSessions ?? {},
 			};
 			for (const command of resume.snapshot.inbox ?? []) {
-				this.inbox.enqueue(command);
+				if (command.type === "send" || command.type === "reply") {
+					if (!command.runId) continue;
+					this.getInbox(command.runId).enqueue(command);
+				}
+			}
+			const inboxRunIds = [...this.inboxes.keys()];
+			if (inboxRunIds.length === 1) {
+				this.resumeRunId = inboxRunIds[0];
 			}
 		} else {
 			this.stateStore = new InMemoryStateStore(
@@ -283,6 +302,17 @@ class InMemoryRuntime implements Runtime {
 		}
 
 		const isResume = this.snapshot.status !== "idle";
+		if (isResume) {
+			this.resumingNodes = new Set();
+			const resumeMessage = this.pendingResumeMessage ?? "continue";
+			this.pendingResumeMessage = resumeMessage;
+			for (const [nodeId, status] of Object.entries(this.snapshot.nodeStatus)) {
+				if (status === "running") {
+					this.snapshot.nodeStatus[nodeId] = "pending";
+					this.resumingNodes.add(nodeId);
+				}
+			}
+		}
 		this.snapshot.status = "running";
 		this.emit(
 			isResume
@@ -344,11 +374,28 @@ class InMemoryRuntime implements Runtime {
 			}
 
 			this.snapshot.nodeStatus[nodeId] = "running";
+			const isResuming = this.resumingNodes.has(nodeId);
+			let runId: string = randomUUID();
+			if (isResuming && this.resumeRunId) {
+				runId = this.resumeRunId;
+				this.resumeRunId = undefined;
+			}
+			const resumeMessage = isResuming
+				? (this.pendingResumeMessage ?? "continue")
+				: undefined;
+			if (isResuming && resumeMessage) {
+				this.dispatch({ type: "send", runId, message: resumeMessage });
+				this.resumingNodes.delete(nodeId);
+			}
 			const runContext: NodeRunContext = {
-				runId: randomUUID(),
+				nodeId,
+				runId,
 				emit: (event) => this.emit(event),
 				state: this.stateStore,
-				inbox: this.inbox,
+				inbox: this.getInbox(runId),
+				getAgentSession: () => this.snapshot.agentSessions[nodeId],
+				setAgentSession: (sessionId) => this.setAgentSession(nodeId, sessionId),
+				resumeMessage,
 			};
 
 			this.emit({ type: "node:start", nodeId, runId: runContext.runId });
@@ -418,7 +465,17 @@ class InMemoryRuntime implements Runtime {
 	 * @param command - Command to dispatch.
 	 */
 	dispatch(command: RuntimeCommand): void {
-		this.inbox.enqueue(command);
+		if (
+			(command.type === "send" || command.type === "reply") &&
+			!command.runId
+		) {
+			this.emit({ type: "command:received", command });
+			throw new Error("Runtime command missing runId");
+		}
+
+		if (command.type === "send" || command.type === "reply") {
+			this.getInbox(command.runId).enqueue(command);
+		}
 		this.emit({ type: "command:received", command });
 
 		if (command.type === "abort") {
@@ -430,6 +487,7 @@ class InMemoryRuntime implements Runtime {
 		}
 
 		if (command.type === "resume") {
+			this.pendingResumeMessage = command.message ?? "continue";
 			this.snapshot.status = "running";
 			this.emit({ type: "flow:resumed" });
 		}
@@ -458,6 +516,7 @@ class InMemoryRuntime implements Runtime {
 			edgeStatus: { ...this.snapshot.edgeStatus },
 			loopCounters: { ...this.snapshot.loopCounters },
 			inbox: [...this.snapshot.inbox, ...this.inboxQueue()],
+			agentSessions: { ...this.snapshot.agentSessions },
 		};
 	}
 
@@ -539,11 +598,16 @@ class InMemoryRuntime implements Runtime {
 				continue;
 			}
 
+			const runId: string = randomUUID();
 			const runContext: NodeRunContext = {
-				runId: randomUUID(),
+				nodeId: node.id,
+				runId,
 				emit: (event) => this.emit(event),
 				state: this.stateStore,
-				inbox: this.inbox,
+				inbox: this.getInbox(runId),
+				getAgentSession: () => this.snapshot.agentSessions[node.id],
+				setAgentSession: (sessionId) =>
+					this.setAgentSession(node.id, sessionId),
 			};
 
 			this.emit({
@@ -620,10 +684,11 @@ class InMemoryRuntime implements Runtime {
 	 * Emit an event and persist it if a RunStore is configured.
 	 * @param event - Runtime event to emit.
 	 */
-	private emit(event: RuntimeEvent): void {
-		this.bus.emit(event);
+	private emit(event: RuntimeEventPayload): void {
+		const timestamped: RuntimeEvent = { ...event, timestamp: Date.now() };
+		this.bus.emit(timestamped);
 		if (this.store && this.snapshot.runId) {
-			this.store.appendEvent(this.snapshot.runId, event);
+			this.store.appendEvent(this.snapshot.runId, timestamped);
 		}
 	}
 
@@ -636,18 +701,28 @@ class InMemoryRuntime implements Runtime {
 		}
 	}
 
+	private setAgentSession(nodeId: string, sessionId: string): void {
+		this.snapshot.agentSessions[nodeId] = sessionId;
+		this.persistSnapshot();
+	}
+
+	private getInbox(runId: string): InMemoryCommandInbox {
+		const existing = this.inboxes.get(runId);
+		if (existing) return existing;
+		const inbox = new InMemoryCommandInbox();
+		this.inboxes.set(runId, inbox);
+		return inbox;
+	}
+
 	/**
 	 * Read the current inbox queue without dropping items.
 	 * @returns Current inbox commands.
 	 */
 	private inboxQueue(): RuntimeCommand[] {
 		const pending: RuntimeCommand[] = [];
-		let next = this.inbox.next();
-		while (next) {
-			pending.push(next);
-			next = this.inbox.next();
+		for (const inbox of this.inboxes.values()) {
+			pending.push(...inbox.snapshot());
 		}
-		for (const cmd of pending) this.inbox.enqueue(cmd);
 		return pending;
 	}
 }
@@ -689,6 +764,7 @@ function createInitialSnapshot(flow: FlowDefinition): RunState {
 		edgeStatus,
 		loopCounters,
 		inbox: [],
+		agentSessions: {},
 	};
 }
 

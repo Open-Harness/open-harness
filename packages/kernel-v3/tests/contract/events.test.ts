@@ -39,23 +39,30 @@ edges:
 		expect(snapshot.runId).toBeTruthy();
 
 		const flowStart = events.find((event) => event.type === "flow:start");
-		expect(flowStart).toEqual({ type: "flow:start", flowName: "contract" });
+		expect(flowStart).toMatchObject({
+			type: "flow:start",
+			flowName: "contract",
+		});
+		expect(typeof flowStart?.timestamp).toBe("number");
 
 		const nodeStart = events.find((event) => event.type === "node:start") as
-			| { nodeId: string; runId: string }
+			| { nodeId: string; runId: string; timestamp: number }
 			| undefined;
 		expect(nodeStart?.nodeId).toBeTruthy();
 		expect(nodeStart?.runId).toBeTruthy();
+		expect(typeof nodeStart?.timestamp).toBe("number");
 
 		const edge = events.find((event) => event.type === "edge:fire") as
-			| { from: string; to: string }
+			| { from: string; to: string; timestamp: number }
 			| undefined;
 		expect(edge?.from).toBe("a");
 		expect(edge?.to).toBe("b");
+		expect(typeof edge?.timestamp).toBe("number");
 
 		const complete = events.find((event) => event.type === "flow:complete") as
-			| { status: string }
+			| { status: string; timestamp: number }
 			| undefined;
 		expect(complete?.status).toBe("complete");
+		expect(typeof complete?.timestamp).toBe("number");
 	});
 });

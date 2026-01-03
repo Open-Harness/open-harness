@@ -8,6 +8,7 @@ import type { RunSnapshot } from "../../src/runtime/snapshot.js";
 const sampleEvent = (flowName: string): RuntimeEvent => ({
 	type: "flow:start",
 	flowName,
+	timestamp: 1,
 });
 
 const sampleSnapshot = (runId: string): RunSnapshot => ({
@@ -19,6 +20,7 @@ const sampleSnapshot = (runId: string): RunSnapshot => ({
 	edgeStatus: {},
 	loopCounters: {},
 	inbox: [],
+	agentSessions: {},
 });
 
 function runStoreContract(
@@ -41,12 +43,24 @@ function runStoreContract(
 
 			const all = store.loadEvents("run-1");
 			expect(all).toHaveLength(2);
-			expect(all[0]).toEqual({ type: "flow:start", flowName: "one" });
-			expect(all[1]).toEqual({ type: "flow:start", flowName: "two" });
+			expect(all[0]).toEqual({
+				type: "flow:start",
+				flowName: "one",
+				timestamp: 1,
+			});
+			expect(all[1]).toEqual({
+				type: "flow:start",
+				flowName: "two",
+				timestamp: 1,
+			});
 
 			const afterFirst = store.loadEvents("run-1", 1);
 			expect(afterFirst).toHaveLength(1);
-			expect(afterFirst[0]).toEqual({ type: "flow:start", flowName: "two" });
+			expect(afterFirst[0]).toEqual({
+				type: "flow:start",
+				flowName: "two",
+				timestamp: 1,
+			});
 			cleanup?.();
 		});
 

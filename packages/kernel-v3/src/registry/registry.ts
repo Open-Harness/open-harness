@@ -1,18 +1,26 @@
-import type { RuntimeEvent } from "../core/events.js";
+import type { RuntimeEventPayload } from "../core/events.js";
 import type { CommandInbox, StateStore } from "../core/state.js";
 
 /**
  * Execution context passed to node implementations.
  */
 export interface NodeRunContext {
+	/** Node identifier for this execution. */
+	nodeId: string;
 	/** Unique run identifier for this node invocation. */
 	runId: string;
 	/** Emit runtime events for observability/UI updates. */
-	emit: (event: RuntimeEvent) => void;
+	emit: (event: RuntimeEventPayload) => void;
 	/** Access and mutate shared workflow state. */
 	state: StateStore;
 	/** Read commands sent to this run (e.g., user replies). */
 	inbox: CommandInbox;
+	/** Read the stored agent session id for this node, if any. */
+	getAgentSession: () => string | undefined;
+	/** Persist the agent session id for this node. */
+	setAgentSession: (sessionId: string) => void;
+	/** Optional resume prompt injected for resumed nodes. */
+	resumeMessage?: string;
 }
 
 /**

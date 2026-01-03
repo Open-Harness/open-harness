@@ -133,12 +133,20 @@ edges:
 
 		const runtime = createRuntime({ flow, registry });
 		const events: RuntimeEvent[] = [];
+		const pendingReplies = ["one", "two"];
 		runtime.onEvent((event) => {
 			events.push(event);
+			if (event.type === "node:start" && event.nodeId === "agent") {
+				const reply = pendingReplies.shift();
+				if (reply) {
+					runtime.dispatch({
+						type: "send",
+						runId: event.runId,
+						message: reply,
+					});
+				}
+			}
 		});
-
-		runtime.dispatch({ type: "send", message: "one" });
-		runtime.dispatch({ type: "send", message: "two" });
 
 		const snapshot = await runtime.run();
 

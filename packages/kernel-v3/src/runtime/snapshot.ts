@@ -16,6 +16,7 @@ export type EdgeStatus = "pending" | "fired" | "skipped";
  * @property {Record<string, EdgeStatus>} edgeStatus - Edge status map.
  * @property {Record<string, number>} loopCounters - Loop counters by edge id.
  * @property {RuntimeCommand[]} inbox - Pending commands.
+ * @property {Record<string, string>} agentSessions - Agent session ids by node id.
  */
 export type RunSnapshot = {
 	runId?: string;
@@ -26,6 +27,7 @@ export type RunSnapshot = {
 	edgeStatus: Record<string, EdgeStatus>;
 	loopCounters: Record<string, number>;
 	inbox: RuntimeCommand[];
+	agentSessions: Record<string, string>;
 };
 
 /**

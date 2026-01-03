@@ -60,6 +60,14 @@ This is a task-oriented manifest derived from the architecture. It is not a spec
 - [x] Contract tests: event stream shape
 - [x] Persistence tests: snapshot + resume
 
+## 8.5 Agent Observability (Spec)
+- [x] Agent events: start/thinking/text/tool/error/complete
+- [x] Event timestamps on runtime events
+- [x] Snapshot agentSessions persistence
+- [x] Command routing requires runId
+- [x] Resume prompt defaults to "continue"
+- [x] Mock query + fixture schema + example fixture
+
 ## 9. Hard Decisions (Locked)
 - [x] Default edge gate: all
 - [x] Scheduling: sequential only (deterministic v3.0)

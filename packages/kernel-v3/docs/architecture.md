@@ -98,10 +98,10 @@ The runtime owns state and execution. It emits events and consumes commands.
 export type RuntimeStatus = "idle" | "running" | "paused" | "aborted" | "complete";
 
 export type RuntimeCommand =
-  | { type: "send"; message: string; runId?: string }
-  | { type: "reply"; promptId: string; content: string }
+  | { type: "send"; message: string; runId: string }
+  | { type: "reply"; promptId: string; content: string; runId: string }
   | { type: "abort"; resumable?: boolean; reason?: string }
-  | { type: "resume"; message: string };
+  | { type: "resume"; message?: string };
 
 export type RuntimeEvent =
   | { type: "flow:start"; flowName: string }
@@ -115,6 +115,9 @@ export type RuntimeEvent =
   | { type: "command:received"; command: RuntimeCommand }
   | { type: "flow:paused" | "flow:resumed" | "flow:aborted" };
 
+// All runtime events include a timestamp (ms since epoch).
+type TimestampedRuntimeEvent = RuntimeEvent & { timestamp: number };
+
 export type RunSnapshot = {
   runId?: string;
   status: RuntimeStatus;
@@ -124,6 +127,7 @@ export type RunSnapshot = {
   edgeStatus: Record<string, "pending" | "fired" | "skipped">;
   loopCounters: Record<string, number>;
   inbox: RuntimeCommand[];
+  agentSessions: Record<string, string>;
 };
 
 export interface Runtime {
