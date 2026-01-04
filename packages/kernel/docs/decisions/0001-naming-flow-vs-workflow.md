@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 The term "workflow" is overloaded:
-- It can mean "a harness run" (kernel concept)
+- It can mean "a runtime run" (kernel concept)
 - It can mean "a YAML DAG definition" (flow layer concept)
 - It's used in product marketing contexts
 
@@ -28,7 +28,7 @@ Keep **workflow** only for:
 
 - YAML top-level key is `flow:` (not `workflow:`)
 - All canonical docs use "Flow" terminology
-- The kernel layer remains "Harness" (not "Workflow")
+- The kernel layer remains "FlowRuntime" (not "Workflow")
 
 ## Alternatives considered
 
