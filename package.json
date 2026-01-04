@@ -16,7 +16,8 @@
 		"check-types": "turbo check-types",
 		"dev:native": "turbo -F native dev",
 		"dev:web": "turbo -F web dev",
-		"dev:server": "turbo -F server dev"
+		"dev:server": "turbo -F server dev",
+		"bd:ui": "bdui start --open"
 	},
 	"dependencies": {
 		"@clack/prompts": "^0.11.0",
