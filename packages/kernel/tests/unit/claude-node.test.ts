@@ -42,13 +42,26 @@ edges: []
 }
 
 describe("claude node event emission", () => {
+	function isContentEvent(obj: unknown): obj is { content: string } {
+		return (
+			typeof obj === "object" &&
+			obj !== null &&
+			"content" in obj &&
+			typeof (obj as any).content === "string"
+		);
+	}
+
 	describe("streaming text (agent:text:delta)", () => {
 		test("emits agent:text:delta for stream_event with text_delta", async () => {
 			const { events } = await runWithFixture("agent", "agent");
 
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 			expect(textDeltas.length).toBeGreaterThan(0);
-			expect((textDeltas[0] as { content: string }).content).toBe("fixture ");
+			const firstDelta = textDeltas[0];
+			expect(isContentEvent(firstDelta)).toBe(true);
+			if (isContentEvent(firstDelta)) {
+				expect(firstDelta.content).toBe("fixture ");
+			}
 		});
 
 		test("ALSO emits agent:text when streaming occurs (both events are emitted)", async () => {
@@ -68,7 +81,11 @@ describe("claude node event emission", () => {
 
 			const textComplete = events.filter((e) => e.type === "agent:text");
 			expect(textComplete.length).toBeGreaterThan(0);
-			expect((textComplete[0] as { content: string }).content).toBe("complete text without streaming");
+			const firstComplete = textComplete[0];
+			expect(isContentEvent(firstComplete)).toBe(true);
+			if (isContentEvent(firstComplete)) {
+				expect(firstComplete.content).toBe("complete text without streaming");
+			}
 		});
 
 		test("does NOT emit agent:text:delta when no stream_event occurs", async () => {
@@ -86,7 +103,11 @@ describe("claude node event emission", () => {
 
 			const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
 			expect(thinkingDeltas.length).toBeGreaterThan(0);
-			expect((thinkingDeltas[0] as { content: string }).content).toBe("Let me think about this...");
+			const firstDelta = thinkingDeltas[0];
+			expect(isContentEvent(firstDelta)).toBe(true);
+			if (isContentEvent(firstDelta)) {
+				expect(firstDelta.content).toBe("Let me think about this...");
+			}
 		});
 
 		test("emits both thinking deltas AND complete thinking events when streaming", async () => {
@@ -107,7 +128,11 @@ describe("claude node event emission", () => {
 
 			const thinkingComplete = events.filter((e) => e.type === "agent:thinking");
 			expect(thinkingComplete.length).toBeGreaterThan(0);
-			expect((thinkingComplete[0] as { content: string }).content).toBe("Complete thinking block without streaming");
+			const firstComplete = thinkingComplete[0];
+			expect(isContentEvent(firstComplete)).toBe(true);
+			if (isContentEvent(firstComplete)) {
+				expect(firstComplete.content).toBe("Complete thinking block without streaming");
+			}
 		});
 
 		test("emits agent:text for text block without stream_event", async () => {
@@ -115,7 +140,11 @@ describe("claude node event emission", () => {
 
 			const textComplete = events.filter((e) => e.type === "agent:text");
 			expect(textComplete.length).toBeGreaterThan(0);
-			expect((textComplete[0] as { content: string }).content).toBe("answer with thinking block");
+			const firstComplete = textComplete[0];
+			expect(isContentEvent(firstComplete)).toBe(true);
+			if (isContentEvent(firstComplete)) {
+				expect(firstComplete.content).toBe("answer with thinking block");
+			}
 		});
 
 		test("does NOT emit delta events when no stream_event occurs", async () => {
