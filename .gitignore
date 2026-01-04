@@ -37,6 +37,7 @@ report.[0-9]_[0-9]_[0-9]_[0-9]_.json
 .cache
 *.tsbuildinfo
 __pycache__
+.turbo/
 
 # ============================================
 # IDE Files
