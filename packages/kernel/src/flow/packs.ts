@@ -1,10 +1,12 @@
 // Flow node packs
 
-import { claudeNode } from "./nodes/claude.agent.js";
-import { conditionEqualsNode } from "./nodes/condition.equals.js";
-import { constantNode } from "./nodes/constant.js";
-import { controlForeachNode } from "./nodes/control.foreach.js";
-import { echoNode } from "./nodes/echo.js";
+import {
+	claudeNode,
+	conditionEqualsNode,
+	constantNode,
+	controlForeachNode,
+	echoNode,
+} from "./nodes/index.js";
 import type { NodeRegistry } from "./registry.js";
 
 export interface NodePack {
