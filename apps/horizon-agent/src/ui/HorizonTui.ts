@@ -2,7 +2,6 @@
  * HorizonTui - Main Terminal UI Class
  *
  * Orchestrates all UI components and handles runtime events.
- * Based on the pattern from packages/rtv-channel/src/ui/Tui.ts
  */
 
 import blessed from "blessed";
