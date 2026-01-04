@@ -34,10 +34,10 @@ edges: []
 
 		runtime.onEvent((event) => {
 			events.push(event);
-			if (event.type === "agent:text") {
+			if (event.type === "agent:text:delta") {
 				textChunks++;
-				// After receiving some text, trigger pause
-				if (textChunks >= 3) {
+				// After receiving some streaming deltas, trigger pause
+				if (textChunks >= 5) {
 					runtime.dispatch({ type: "abort", resumable: true });
 				}
 			}
@@ -65,7 +65,7 @@ edges: []
 		expect(flowPaused).toBeDefined();
 
 		console.log("✅ Pause test passed");
-		console.log(`   Received ${textChunks} text chunks before pause`);
+		console.log(`   Received ${textChunks} streaming deltas before pause`);
 		console.log(`   Partial output length: ${output?.text?.length ?? 0} chars`);
 	}, 60000); // 60s timeout for live test
 
@@ -85,14 +85,14 @@ edges: []
 
 		const runtime = createRuntime({ flow, registry });
 		const events: RuntimeEvent[] = [];
-		let textChunks = 0;
+		let deltaCount = 0;
 
 		runtime.onEvent((event) => {
 			events.push(event);
-			if (event.type === "agent:text") {
-				textChunks++;
-				// After receiving some text, trigger hard abort
-				if (textChunks >= 2) {
+			if (event.type === "agent:text:delta") {
+				deltaCount++;
+				// After receiving some streaming deltas, trigger hard abort
+				if (deltaCount >= 3) {
 					runtime.dispatch({ type: "abort", resumable: false });
 				}
 			}
@@ -116,7 +116,7 @@ edges: []
 		expect(snapshot.outputs.agent).toBeUndefined();
 
 		console.log("✅ Abort test passed");
-		console.log(`   Received ${textChunks} text chunks before abort`);
+		console.log(`   Received ${deltaCount} streaming deltas before abort`);
 	}, 60000); // 60s timeout for live test
 
 	test("session preserved after pause allows resume", async () => {
@@ -135,13 +135,13 @@ edges: []
 
 		const runtime = createRuntime({ flow, registry });
 		const events: RuntimeEvent[] = [];
-		let sawText = false;
+		let sawDelta = false;
 
 		runtime.onEvent((event) => {
 			events.push(event);
-			if (event.type === "agent:text" && !sawText) {
-				sawText = true;
-				// Pause after first text
+			if (event.type === "agent:text:delta" && !sawDelta) {
+				sawDelta = true;
+				// Pause after first streaming delta
 				runtime.dispatch({ type: "abort", resumable: true });
 			}
 		});

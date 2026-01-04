@@ -93,6 +93,19 @@ Never claim a task is complete without:
 - Never manually create fixtures with made-up data - this masks real SDK behavior differences
 - When fixing SDK integration bugs, always capture new fixtures from live SDK to prove the fix works
 
+### 6. No Unilateral Architectural Decisions
+**CRITICAL: You are NOT allowed to make architectural decisions without explicit approval.**
+- If you identify something that might be a bug but involves design choices (e.g., "who is responsible for X?", "should component A or B handle this?"), you MUST:
+  1. Document the observation clearly
+  2. Ask the user for guidance OR create an issue for discussion
+  3. **Do NOT implement changes** that affect system architecture or component responsibilities
+- Examples of architectural decisions that require approval:
+  - Changing which component is responsible for state/data
+  - Adding new event types or changing event semantics
+  - Modifying the contract between components
+  - Changing data flow patterns (who produces vs consumes)
+- When in doubt, ask. A quick question is better than an unauthorized refactor.
+
 ## CRITICAL: Authentication
 
 **DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.
