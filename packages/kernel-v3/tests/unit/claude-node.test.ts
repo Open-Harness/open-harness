@@ -49,8 +49,13 @@ edges: []
 		expect(start?.prompt).toBe("fixture:agent");
 		expect(typeof start?.timestamp).toBe("number");
 
-		const text = events.find((event) => event.type === "agent:text") as { content?: string } | undefined;
-		expect(text?.content).toBe("fixture ");
+		// Streaming deltas now emit agent:text:delta (not agent:text)
+		const textDelta = events.find((event) => event.type === "agent:text:delta") as { content?: string } | undefined;
+		expect(textDelta?.content).toBe("fixture ");
+
+		// Verify agent:text (complete blocks) is NOT emitted when streaming occurs
+		const textComplete = events.find((event) => event.type === "agent:text") as { content?: string } | undefined;
+		expect(textComplete).toBeUndefined();
 
 		const complete = events.find((event) => event.type === "agent:complete") as { result?: string } | undefined;
 		expect(complete?.result).toBe("fixture done");

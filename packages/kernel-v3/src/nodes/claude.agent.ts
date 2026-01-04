@@ -185,7 +185,7 @@ export function createClaudeNode(
 							if (delta?.type === "text_delta" && delta.text) {
 								sawTextStream = true;
 								ctx.emit({
-									type: "agent:text",
+									type: "agent:text:delta",
 									nodeId: ctx.nodeId,
 									runId: ctx.runId,
 									content: delta.text,
@@ -194,7 +194,7 @@ export function createClaudeNode(
 							if (delta?.type === "thinking_delta" && delta.thinking) {
 								sawThinkingStream = true;
 								ctx.emit({
-									type: "agent:thinking",
+									type: "agent:thinking:delta",
 									nodeId: ctx.nodeId,
 									runId: ctx.runId,
 									content: delta.thinking,

@@ -169,12 +169,14 @@ export class HorizonTui {
 				break;
 			}
 
+			case "agent:text:delta":
 			case "agent:text": {
 				const content = event.content as string;
 				this.agentStream.appendText(content);
 				break;
 			}
 
+			case "agent:thinking:delta":
 			case "agent:thinking": {
 				const content = event.content as string;
 				this.agentStream.appendThinking(content);

@@ -145,6 +145,7 @@ async function runHeadless(
 				break;
 			}
 
+			case "agent:text:delta":
 			case "agent:text": {
 				if (verbose) {
 					const e = event as { content: string };
