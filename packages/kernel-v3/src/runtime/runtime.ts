@@ -332,7 +332,7 @@ class InMemoryRuntime implements Runtime {
 			const gateDecision = decideGate(incoming, this.snapshot.edgeStatus, gate);
 			if (gateDecision === "skip") {
 				this.markSkipped(nodeId, "edge");
-				this.evaluateOutgoingEdges(nodeId, compiled, input);
+				await this.evaluateOutgoingEdges(nodeId, compiled, input);
 				continue;
 			}
 
@@ -350,15 +350,15 @@ class InMemoryRuntime implements Runtime {
 				}
 				this.snapshot.nodeStatus[nodeId] = "done";
 				this.snapshot.outputs[nodeId] = { iterations };
-				this.evaluateOutgoingEdges(nodeId, compiled, input);
+				await this.evaluateOutgoingEdges(nodeId, compiled, input);
 				continue;
 			}
 
 			const bindingContext = this.createBindingContext(input);
-			const shouldRun = evaluateWhen(node.when, bindingContext);
+			const shouldRun = await evaluateWhen(node.when, bindingContext);
 			if (!shouldRun) {
 				this.markSkipped(nodeId, "when");
-				this.evaluateOutgoingEdges(nodeId, compiled, input);
+				await this.evaluateOutgoingEdges(nodeId, compiled, input);
 				continue;
 			}
 
@@ -388,7 +388,7 @@ class InMemoryRuntime implements Runtime {
 			};
 
 			this.emit({ type: "node:start", nodeId, runId: runContext.runId });
-			const resolvedInput = resolveBindings(node.input, bindingContext);
+			const resolvedInput = await resolveBindings(node.input, bindingContext);
 			let result: Awaited<ReturnType<DefaultExecutor["runNode"]>> | undefined;
 			try {
 				result = await executor.runNode({
@@ -442,7 +442,7 @@ class InMemoryRuntime implements Runtime {
 				});
 			}
 
-			this.evaluateOutgoingEdges(nodeId, compiled, input);
+			await this.evaluateOutgoingEdges(nodeId, compiled, input);
 		}
 
 		const status = this.snapshot.status as RuntimeStatus;
@@ -536,15 +536,15 @@ class InMemoryRuntime implements Runtime {
 		this.emit({ type: "node:skipped", nodeId, reason });
 	}
 
-	private evaluateOutgoingEdges(
+	private async evaluateOutgoingEdges(
 		nodeId: string,
 		compiled: ReturnType<GraphCompiler["compile"]>,
 		input: Record<string, unknown>,
-	): void {
+	): Promise<void> {
 		const bindingContext = this.createBindingContext(input);
 		for (const edge of compiled.edges) {
 			if (edge.from !== nodeId) continue;
-			const shouldFire = evaluateWhen(edge.when, bindingContext);
+			const shouldFire = await evaluateWhen(edge.when, bindingContext);
 			const key = edgeKey(edge);
 			const didReset = shouldFire ? this.resetNodeForReentry(edge) : false;
 			this.snapshot.edgeStatus[key] = shouldFire ? "fired" : "skipped";
@@ -588,7 +588,7 @@ class InMemoryRuntime implements Runtime {
 		if (!forEach) return [];
 
 		const bindingContext = this.createBindingContext(input);
-		const resolved = resolveBindings({ value: forEach.in }, bindingContext);
+		const resolved = await resolveBindings({ value: forEach.in }, bindingContext);
 		const list = resolved.value;
 		if (!Array.isArray(list)) {
 			throw new Error(`forEach expects array at ${forEach.in}`);
@@ -598,11 +598,16 @@ class InMemoryRuntime implements Runtime {
 		const asKey = forEach.as;
 		this.snapshot.nodeStatus[node.id] = "running";
 
-		for (const item of list) {
+		for (let i = 0; i < list.length; i++) {
+			const item = list[i];
 			const iterationContext = this.createBindingContext(input, {
 				[asKey]: item,
+				$iteration: i,
+				$first: i === 0,
+				$last: i === list.length - 1,
+				$maxIterations: list.length,
 			});
-			const shouldRun = evaluateWhen(node.when, iterationContext);
+			const shouldRun = await evaluateWhen(node.when, iterationContext);
 			if (!shouldRun) {
 				iterations.push({ item, skipped: true });
 				continue;
@@ -626,7 +631,7 @@ class InMemoryRuntime implements Runtime {
 				nodeId: node.id,
 				runId: runContext.runId,
 			});
-			const resolvedInput = resolveBindings(node.input, iterationContext);
+			const resolvedInput = await resolveBindings(node.input, iterationContext);
 			let result: Awaited<ReturnType<DefaultExecutor["runNode"]>> | undefined;
 			try {
 				result = await executor.runNode({
