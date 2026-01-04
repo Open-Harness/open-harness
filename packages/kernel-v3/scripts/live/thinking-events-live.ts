@@ -1,10 +1,12 @@
 /**
- * Live test for agent:thinking:delta events with extended thinking.
+ * Live test for agent:thinking:delta and agent:thinking events with extended thinking.
  *
  * This test runs against the REAL Claude SDK with extended thinking enabled to verify:
- * 1. agent:thinking:delta events are emitted during thinking
- * 2. agent:text:delta events are emitted for the response
- * 3. The thinking content is captured correctly
+ * 1. agent:thinking:delta events are emitted during thinking (real-time)
+ * 2. agent:thinking events are ALSO emitted (complete content for consumers)
+ * 3. agent:text:delta events are emitted for the response (real-time)
+ * 4. agent:text events are ALSO emitted (complete content for consumers)
+ * 5. BOTH delta and complete events are emitted - they are NOT mutually exclusive
  *
  * Usage: bun scripts/live/thinking-events-live.ts
  */
@@ -94,23 +96,23 @@ edges: []
 			console.log("⚠️  TEST 2 SKIPPED: No agent:thinking:delta events (model may not support extended thinking)");
 		}
 
-		// Test 3: agent:text should NOT be emitted when streaming occurred
-		if (textComplete.length === 0) {
-			console.log("✅ TEST 3 PASSED: agent:text was NOT emitted (streaming was used)");
+		// Test 3: agent:text SHOULD be emitted (complete content for consumers)
+		if (textComplete.length > 0) {
+			console.log("✅ TEST 3 PASSED: agent:text was emitted (complete content for consumers)");
 			passed++;
 		} else {
-			console.log(`❌ TEST 3 FAILED: agent:text was emitted ${textComplete.length} times`);
+			console.log("❌ TEST 3 FAILED: agent:text was NOT emitted (should always be emitted)");
 			failed++;
 		}
 
-		// Test 4: agent:thinking should NOT be emitted when thinking streamed
-		if (thinkingDeltas.length > 0 && thinkingComplete.length === 0) {
-			console.log("✅ TEST 4 PASSED: agent:thinking was NOT emitted (streaming was used)");
+		// Test 4: agent:thinking SHOULD be emitted when thinking occurred
+		if (thinkingDeltas.length > 0 && thinkingComplete.length > 0) {
+			console.log("✅ TEST 4 PASSED: agent:thinking was emitted (complete content for consumers)");
 			passed++;
 		} else if (thinkingDeltas.length === 0) {
-			console.log("⚠️  TEST 4 SKIPPED: No thinking deltas to verify against");
+			console.log("⚠️  TEST 4 SKIPPED: No thinking deltas (model may not support extended thinking)");
 		} else {
-			console.log(`❌ TEST 4 FAILED: agent:thinking was emitted ${thinkingComplete.length} times`);
+			console.log("❌ TEST 4 FAILED: agent:thinking was NOT emitted (should be emitted when thinking occurs)");
 			failed++;
 		}
 

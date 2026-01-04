@@ -21,6 +21,19 @@
 					"parent_tool_use_id": null,
 					"uuid": "fixture-stream-1",
 					"session_id": "sess-fixture-1"
+				},
+				{
+					"type": "assistant",
+					"message": {
+						"role": "assistant",
+						"content": [
+							{
+								"type": "text",
+								"text": "fixture done"
+							}
+						]
+					},
+					"session_id": "sess-fixture-1"
 				}
 			]
 		}

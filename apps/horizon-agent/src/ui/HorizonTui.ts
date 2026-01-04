@@ -170,6 +170,7 @@ export class HorizonTui {
 			}
 
 			case "agent:text:delta":
+			// falls through - both delta and complete events are handled the same way
 			case "agent:text": {
 				const content = event.content as string;
 				this.agentStream.appendText(content);
@@ -177,6 +178,7 @@ export class HorizonTui {
 			}
 
 			case "agent:thinking:delta":
+			// falls through - both delta and complete events are handled the same way
 			case "agent:thinking": {
 				const content = event.content as string;
 				this.agentStream.appendThinking(content);

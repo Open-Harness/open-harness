@@ -28,6 +28,23 @@
 						"delta": { "type": "text_delta", "text": "answer after thinking" }
 					},
 					"session_id": "sess-thinking-1"
+				},
+				{
+					"type": "assistant",
+					"message": {
+						"role": "assistant",
+						"content": [
+							{
+								"type": "thinking",
+								"thinking": "Let me think about this..."
+							},
+							{
+								"type": "text",
+								"text": "answer after thinking"
+							}
+						]
+					},
+					"session_id": "sess-thinking-1"
 				}
 			]
 		}

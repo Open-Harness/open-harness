@@ -2,9 +2,10 @@
  * Integration test for delta events in horizon-agent.
  *
  * This test validates that:
- * 1. agent:text:delta events are emitted during streaming
- * 2. agent:text (complete) is NOT emitted when streaming occurs
- * 3. The TUI/CLI correctly handles both delta and complete events
+ * 1. agent:text:delta events are emitted during streaming (real-time)
+ * 2. agent:text (complete) is ALSO emitted (complete content for consumers)
+ * 3. BOTH delta and complete events are emitted - they are NOT mutually exclusive
+ * 4. The TUI/CLI correctly handles both delta and complete events
  *
  * Run with: bun test tests/integration/delta-events.test.ts
  */
@@ -16,7 +17,7 @@ import { createHorizonRuntime } from "../../src/runtime/horizon-runtime.js";
 const TEST_FLOW_PATH = resolve(import.meta.dir, "../../flows/test-delta-events.yaml");
 
 describe("delta events integration", () => {
-	test("streaming produces agent:text:delta events, not agent:text", async () => {
+	test("streaming produces BOTH agent:text:delta AND agent:text events", async () => {
 		const runtime = createHorizonRuntime({
 			flowPath: TEST_FLOW_PATH,
 			enablePersistence: false,
@@ -41,16 +42,16 @@ describe("delta events integration", () => {
 		const textComplete = events.filter((e) => e.type === "agent:text");
 		const agentComplete = events.filter((e) => e.type === "agent:complete");
 
-		// Assertions
+		// Assertions - BOTH delta and complete events should be emitted
 		expect(textDeltas.length).toBeGreaterThan(0);
-		expect(textComplete.length).toBe(0); // Should NOT have agent:text when streaming
+		expect(textComplete.length).toBeGreaterThan(0); // Complete events are ALSO emitted
 		expect(agentComplete.length).toBe(1);
 
 		// Verify deltas contain actual content
 		const concatenated = textDeltas.map((e) => e.content ?? "").join("");
 		expect(concatenated.length).toBeGreaterThan(0);
 
-		console.log(`✅ Received ${textDeltas.length} text deltas, 0 text complete events`);
+		console.log(`✅ Received ${textDeltas.length} text deltas, ${textComplete.length} text complete events`);
 		console.log(`✅ Concatenated content: "${concatenated.slice(0, 50)}..."`);
 	}, 60000); // 60 second timeout for live SDK call
 

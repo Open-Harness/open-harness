@@ -1,10 +1,11 @@
 /**
- * Live test for agent:text:delta and agent:thinking:delta events.
+ * Live test for agent:text:delta and agent:text events.
  *
  * This test runs against the REAL Claude SDK to verify:
- * 1. Streaming produces agent:text:delta events (not agent:text)
- * 2. agent:text is NOT emitted when streaming occurs
- * 3. agent:complete contains the final result
+ * 1. Streaming produces agent:text:delta events (real-time deltas)
+ * 2. agent:text is ALSO emitted (complete content for consumers)
+ * 3. BOTH event types are emitted - they are NOT mutually exclusive
+ * 4. agent:complete contains the final result
  *
  * Usage: bun scripts/live/delta-events-live.ts
  */
@@ -79,12 +80,12 @@ edges: []
 			failed++;
 		}
 
-		// Test 2: agent:text should NOT be emitted when streaming occurred
-		if (textComplete.length === 0) {
-			console.log("✅ TEST 2 PASSED: agent:text was NOT emitted (correct - streaming was used)");
+		// Test 2: agent:text SHOULD be emitted (complete content for consumers who want full message)
+		if (textComplete.length > 0) {
+			console.log("✅ TEST 2 PASSED: agent:text was emitted (complete content for consumers)");
 			passed++;
 		} else {
-			console.log(`❌ TEST 2 FAILED: agent:text was emitted ${textComplete.length} times (should be 0 when streaming)`);
+			console.log("❌ TEST 2 FAILED: agent:text was NOT emitted (should always be emitted)");
 			failed++;
 		}
 

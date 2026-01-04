@@ -143,8 +143,6 @@ export function createClaudeNode(
 			const startedAt = Date.now();
 			let emittedStart = false;
 			let finalResult: SDKResultMessage | undefined;
-			let sawTextStream = false;
-			let sawThinkingStream = false;
 			const recordedMessages: SDKMessage[] = [];
 			const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown; startedAt: number }>();
 
@@ -183,7 +181,6 @@ export function createClaudeNode(
 						if (streamEvent?.type === "content_block_delta") {
 							const delta = streamEvent.delta;
 							if (delta?.type === "text_delta" && delta.text) {
-								sawTextStream = true;
 								ctx.emit({
 									type: "agent:text:delta",
 									nodeId: ctx.nodeId,
@@ -192,7 +189,6 @@ export function createClaudeNode(
 								});
 							}
 							if (delta?.type === "thinking_delta" && delta.thinking) {
-								sawThinkingStream = true;
 								ctx.emit({
 									type: "agent:thinking:delta",
 									nodeId: ctx.nodeId,
@@ -215,7 +211,10 @@ export function createClaudeNode(
 						}
 
 						const content = sdkMessage.message?.content;
-						if (typeof content === "string" && !sawTextStream) {
+						// Always emit complete text/thinking events (not just as fallback)
+						// Deltas are for real-time streaming, complete events are for consumers
+						// who want the full content
+						if (typeof content === "string") {
 							ctx.emit({
 								type: "agent:text",
 								nodeId: ctx.nodeId,
@@ -234,7 +233,7 @@ export function createClaudeNode(
 										startedAt: Date.now(),
 									});
 								}
-								if (blockType === "text" && !sawTextStream) {
+								if (blockType === "text") {
 									const text = block.text;
 									if (typeof text === "string" && text.length > 0) {
 										ctx.emit({
@@ -245,7 +244,7 @@ export function createClaudeNode(
 										});
 									}
 								}
-								if (blockType === "thinking" && !sawThinkingStream) {
+								if (blockType === "thinking") {
 									const thinking = block.thinking;
 									if (typeof thinking === "string" && thinking.length > 0) {
 										ctx.emit({

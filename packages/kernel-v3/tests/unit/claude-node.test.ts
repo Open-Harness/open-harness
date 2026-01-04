@@ -50,16 +50,19 @@ describe("claude node event emission", () => {
 			expect((textDeltas[0] as { content: string }).content).toBe("fixture ");
 		});
 
-		test("does NOT emit agent:text when streaming occurs", async () => {
+		test("ALSO emits agent:text when streaming occurs (both events are emitted)", async () => {
 			const { events } = await runWithFixture("agent", "agent");
 
+			// Both delta and complete events should be emitted
+			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 			const textComplete = events.filter((e) => e.type === "agent:text");
-			expect(textComplete.length).toBe(0);
+			expect(textDeltas.length).toBeGreaterThan(0);
+			expect(textComplete.length).toBeGreaterThan(0);
 		});
 	});
 
-	describe("non-streaming text fallback (agent:text)", () => {
-		test("emits agent:text for assistant message without prior stream_event", async () => {
+	describe("non-streaming text (agent:text only)", () => {
+		test("emits agent:text for assistant message without stream_event", async () => {
 			const { events } = await runWithFixture("agent-no-streaming", "no-streaming");
 
 			const textComplete = events.filter((e) => e.type === "agent:text");
@@ -67,9 +70,10 @@ describe("claude node event emission", () => {
 			expect((textComplete[0] as { content: string }).content).toBe("complete text without streaming");
 		});
 
-		test("does NOT emit agent:text:delta when no streaming occurs", async () => {
+		test("does NOT emit agent:text:delta when no stream_event occurs", async () => {
 			const { events } = await runWithFixture("agent-no-streaming", "no-streaming");
 
+			// No stream_event means no deltas, but complete event is still emitted
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 			expect(textDeltas.length).toBe(0);
 		});
@@ -84,16 +88,10 @@ describe("claude node event emission", () => {
 			expect((thinkingDeltas[0] as { content: string }).content).toBe("Let me think about this...");
 		});
 
-		test("does NOT emit agent:thinking when streaming occurs", async () => {
+		test("emits both thinking deltas AND complete thinking events when streaming", async () => {
 			const { events } = await runWithFixture("agent-thinking-stream", "thinking-stream");
 
-			const thinkingComplete = events.filter((e) => e.type === "agent:thinking");
-			expect(thinkingComplete.length).toBe(0);
-		});
-
-		test("emits both thinking and text deltas when both stream", async () => {
-			const { events } = await runWithFixture("agent-thinking-stream", "thinking-stream");
-
+			// Both delta and complete events should be emitted - not mutually exclusive
 			const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 
@@ -102,8 +100,8 @@ describe("claude node event emission", () => {
 		});
 	});
 
-	describe("non-streaming thinking fallback (agent:thinking)", () => {
-		test("emits agent:thinking for thinking block without prior stream_event", async () => {
+	describe("non-streaming thinking (agent:thinking only)", () => {
+		test("emits agent:thinking for thinking block without stream_event", async () => {
 			const { events } = await runWithFixture("agent-thinking-no-stream", "thinking-no-stream");
 
 			const thinkingComplete = events.filter((e) => e.type === "agent:thinking");
@@ -111,7 +109,7 @@ describe("claude node event emission", () => {
 			expect((thinkingComplete[0] as { content: string }).content).toBe("Complete thinking block without streaming");
 		});
 
-		test("emits agent:text for text block without prior stream_event", async () => {
+		test("emits agent:text for text block without stream_event", async () => {
 			const { events } = await runWithFixture("agent-thinking-no-stream", "thinking-no-stream");
 
 			const textComplete = events.filter((e) => e.type === "agent:text");
@@ -119,9 +117,10 @@ describe("claude node event emission", () => {
 			expect((textComplete[0] as { content: string }).content).toBe("answer with thinking block");
 		});
 
-		test("does NOT emit delta events when no streaming occurs", async () => {
+		test("does NOT emit delta events when no stream_event occurs", async () => {
 			const { events } = await runWithFixture("agent-thinking-no-stream", "thinking-no-stream");
 
+			// No stream_event means no deltas, but complete events are still emitted
 			const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 
