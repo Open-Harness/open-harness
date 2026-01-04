@@ -1,15 +1,114 @@
 ---
 title: Channel API
-description: Channel adapter interface for external communication
+description: Channel definition and lifecycle interface
 ---
 
-Channels are bidirectional adapters that connect the kernel to external interfaces.
+# Channel API
 
-## Channel Contract
+Channels connect external systems to the Hub.
 
-Channels observe kernel events and can send commands back to the runtime.
+## ChannelDefinition
 
-## Learn More
+```typescript
+interface ChannelDefinition {
+  name: string;
+  on?: Record<string, EventHandler>;
+  onStart?: (ctx: ChannelContext) => Promise<void>;
+  onStop?: (ctx: ChannelContext) => Promise<void>;
+}
+```
 
-- [Channel Spec](/docs/reference/kernel-spec/spec/channel) - Complete channel protocol specification
-- [Channels Guide](/docs/learn/channels) - Guide to using channels
+## ChannelContext
+
+```typescript
+interface ChannelContext {
+  hub: Hub;
+}
+```
+
+## EventHandler
+
+```typescript
+type EventHandler = (ctx: EventHandlerContext) => void | Promise<void>;
+
+interface EventHandlerContext {
+  event: RuntimeEvent;
+  hub: Hub;
+}
+```
+
+## Event Subscription Patterns
+
+### Specific Event Type
+
+```typescript
+on: {
+  "agent:complete": ({ event, hub }) => {
+    console.log(event.output);
+  }
+}
+```
+
+### Wildcard Subscription
+
+```typescript
+on: {
+  "*": ({ event }) => {
+    console.log(`[${event.type}]`, event);
+  }
+}
+```
+
+### Pattern Matching
+
+```typescript
+on: {
+  "agent:*": ({ event }) => {
+    // Matches agent:start, agent:text, agent:complete
+  }
+}
+```
+
+## Lifecycle Hooks
+
+### onStart
+
+Called when the Hub starts:
+
+```typescript
+async onStart({ hub }) {
+  await this.connection.connect();
+  console.log("Channel connected");
+}
+```
+
+### onStop
+
+Called when the Hub stops:
+
+```typescript
+async onStop({ hub }) {
+  await this.connection.disconnect();
+  console.log("Channel disconnected");
+}
+```
+
+## Emitting Events
+
+Channels can emit events to the Hub:
+
+```typescript
+onStart({ hub }) {
+  externalService.on("message", (msg) => {
+    hub.emit({
+      type: "external:message",
+      content: msg.text,
+    });
+  });
+}
+```
+
+## See Also
+
+- [Custom Channels Guide](/docs/guides/channels/custom-channels) — Building channels
+- [WebSocket Channel](/docs/guides/channels/websocket) — Built-in WebSocket

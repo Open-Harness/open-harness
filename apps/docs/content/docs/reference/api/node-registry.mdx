@@ -1,204 +1,98 @@
 ---
-title: NodeRegistry
-description: Registry for custom node type definitions used in flow execution
+title: Node Registry
+description: Register and manage node types
 ---
 
-# NodeRegistry
+# Node Registry
 
-A registry for storing and retrieving node type definitions. Used by `executeFlow` to look up node implementations.
+The NodeRegistry manages available node types for flows.
 
-## Constructor
+## Creating a Registry
 
 ```typescript
+import { NodeRegistry } from "@open-harness/kernel";
+
 const registry = new NodeRegistry();
 ```
 
 ## Methods
 
-### register
+### `register(node)`
 
-Register a node type definition.
+Register a node type:
 
 ```typescript
-register<TIn, TOut>(def: NodeTypeDefinition<TIn, TOut>): void
+registry.register(myAgent);
+registry.register(httpGetNode);
 ```
 
-#### Parameters
+### `get(name)`
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `def` | `NodeTypeDefinition<TIn, TOut>` | Node type definition to register |
-
-#### Example
+Get a registered node:
 
 ```typescript
-import { NodeRegistry } from "@open-harness/kernel";
-import { z } from "zod";
-
-const registry = new NodeRegistry();
-
-registry.register({
-  type: "echo",
-  inputSchema: z.object({ message: z.string() }),
-  outputSchema: z.object({ echoed: z.string() }),
-  run: async (ctx, input) => ({ echoed: input.message }),
-});
+const node = registry.get("claude.agent");
 ```
 
-### get
+### `has(name)`
 
-Retrieve a registered node type definition.
-
-```typescript
-get(type: string): NodeTypeDefinition<unknown, unknown>
-```
-
-#### Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `type` | `string` | Node type identifier |
-
-#### Returns
-
-`NodeTypeDefinition<unknown, unknown>` - The registered node definition.
-
-#### Throws
-
-`Error` if node type is not registered.
-
-#### Example
+Check if a node exists:
 
 ```typescript
-const echoNode = registry.get("echo");
-console.log(echoNode.type); // "echo"
-```
-
-### has
-
-Check if a node type is registered.
-
-```typescript
-has(type: string): boolean
-```
-
-#### Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `type` | `string` | Node type identifier |
-
-#### Returns
-
-`boolean` - `true` if registered, `false` otherwise.
-
-#### Example
-
-```typescript
-if (registry.has("custom-node")) {
-  const node = registry.get("custom-node");
+if (registry.has("my-agent")) {
+  // ...
 }
 ```
 
-### list
+### `list()`
 
-List all registered node type identifiers.
+List all registered nodes:
 
 ```typescript
-list(): string[]
+const nodes = registry.list();
+// ["claude.agent", "http.get", "my-agent"]
 ```
 
-#### Returns
+## Built-in Nodes
 
-`string[]` - Array of registered node type names.
+The kernel includes these nodes:
 
-#### Example
+| Name | Description |
+|------|-------------|
+| `claude.agent` | Claude AI agent |
+| `http.get` | HTTP GET request |
+| `http.post` | HTTP POST request |
+| `map` | Parallel array processing |
+| `delay` | Wait for duration |
+
+## Registering Custom Nodes
 
 ```typescript
-const types = registry.list();
-console.log(types); // ["echo", "constant", "transform"]
+import { defineAgent } from "@open-harness/kernel";
+
+const customAgent = defineAgent({
+  name: "custom.processor",
+  async execute(input, ctx) {
+    return { result: process(input) };
+  },
+});
+
+registry.register(customAgent);
 ```
 
-## Complete Example
+## Using with Hub
 
 ```typescript
-import { NodeRegistry, executeFlow, parseFlowYaml, createHub } from "@open-harness/kernel";
-import { z } from "zod";
-
-// Create registry
-const registry = new NodeRegistry();
-
-// Register multiple node types
-registry.register({
-  type: "constant",
-  inputSchema: z.object({ value: z.unknown() }),
-  outputSchema: z.object({ output: z.unknown() }),
-  run: async (ctx, input) => ({ output: input.value }),
+const hub = createHub("session", {
+  registry,
+  store,
 });
 
-registry.register({
-  type: "uppercase",
-  inputSchema: z.object({ text: z.string() }),
-  outputSchema: z.object({ result: z.string() }),
-  run: async (ctx, input) => ({ result: input.text.toUpperCase() }),
-});
-
-// Use with flow execution
-const flow = parseFlowYaml(`
-flow:
-  name: text-processing
-nodes:
-  - id: source
-    type: constant
-    input:
-      value: "hello world"
-  - id: transform
-    type: uppercase
-    input:
-      text: "{{source.output}}"
-edges:
-  - from: source
-    to: transform
-`);
-
-const hub = createHub();
-const result = await executeFlow(flow, registry, {
-  hub,
-  phase: async (name, fn) => fn(),
-  task: async (id, fn) => fn(),
-});
-
-console.log(result.outputs.transform); // { result: "HELLO WORLD" }
-```
-
-## NodeTypeDefinition
-
-The definition structure for registering nodes:
-
-```typescript
-interface NodeTypeDefinition<TIn, TOut> {
-  type: string;                      // Unique type identifier
-  inputSchema: ZodSchema<TIn>;       // Zod schema for input validation
-  outputSchema: ZodSchema<TOut>;     // Zod schema for output validation
-  capabilities?: NodeCapabilities;   // Optional capability flags
-  run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
-}
-
-interface NodeCapabilities {
-  isStreaming?: boolean;     // Emits incremental output
-  supportsInbox?: boolean;   // Can receive messages during execution
-  isLongLived?: boolean;     // May run indefinitely
-}
-
-interface NodeRunContext {
-  hub: Hub;                  // Event bus
-  runId: string;             // Unique run identifier
-  inbox?: AgentInbox;        // Message inbox (if supportsInbox)
-}
+// Flows can now use registered nodes
+await hub.startFlow("my-flow", input);
 ```
 
 ## See Also
 
-- [executeFlow](/docs/reference/api/execute-flow) - Execute flows with registry
-- [NodeTypeDefinition](/docs/reference/types/node-type-definition) - Definition interface
-- [NodeSpec](/docs/reference/types/node-spec) - Node specification in flows
+- [Agent API](/docs/reference/api/agent) — Agent definition
+- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Building agents

@@ -1,0 +1,138 @@
+---
+title: Graph-First Design
+description: Why Open Harness uses graphs for agent orchestration
+---
+
+# Graph-First Design
+
+Open Harness uses directed graphs as the primary abstraction for agent orchestration.
+
+## The Problem
+
+Agent systems need to:
+
+- Coordinate multiple agents
+- Handle conditional branching
+- Support parallel execution
+- Enable observability
+- Allow resumption after failures
+
+Traditional approaches (imperative code, state machines) become unwieldy as complexity grows.
+
+## The Solution: Graphs
+
+Flows are directed graphs where:
+
+- **Nodes** are processing steps
+- **Edges** define execution order
+- **Conditions** enable branching
+- **Bindings** pass data
+
+```yaml
+nodes:
+  - id: classify
+    type: claude.agent
+  - id: handle-bug
+    type: claude.agent
+  - id: handle-feature
+    type: claude.agent
+
+edges:
+  - from: classify
+    to: handle-bug
+    condition: "{{ nodes.classify.output.type = 'bug' }}"
+  - from: classify
+    to: handle-feature
+    condition: "{{ nodes.classify.output.type = 'feature' }}"
+```
+
+## Benefits
+
+### Visual Understanding
+
+Graphs are naturally visual. Complex workflows can be understood at a glance.
+
+### Implicit Parallelism
+
+Nodes without dependencies run in parallel automatically:
+
+```yaml
+nodes:
+  - id: fetch-users    # These run in parallel
+    type: http.get
+  - id: fetch-orders   # No dependency on fetch-users
+    type: http.get
+  - id: combine        # Waits for both
+    type: claude.agent
+    input:
+      users: "{{ nodes.fetch-users.output }}"
+      orders: "{{ nodes.fetch-orders.output }}"
+```
+
+### Declarative Data Flow
+
+Data dependencies are explicit in bindings:
+
+```yaml
+input:
+  data: "{{ nodes.fetch.output }}"
+```
+
+The runtime knows exactly what each node needs.
+
+### Observable Execution
+
+Every node emits events. The graph structure makes it clear:
+- What has executed
+- What is executing
+- What will execute next
+
+### Composable
+
+Flows can invoke other flows as nodes:
+
+```yaml
+- id: sub-workflow
+  type: flow
+  input:
+    flowId: "shared-validation"
+    data: "{{ flow.input }}"
+```
+
+## Trade-offs
+
+### Learning Curve
+
+Developers need to think in graphs rather than sequential code.
+
+**Mitigation**: Simple flows look like sequential code. Complexity is opt-in.
+
+### Limited Dynamic Behavior
+
+Graph structure is static. Can't add nodes at runtime.
+
+**Mitigation**: Use conditional edges and the `map` node for dynamic patterns.
+
+### Verbosity for Simple Cases
+
+A single agent call requires more boilerplate than a function call.
+
+**Mitigation**: Keep flows focused. Use the Claude agent directly for one-off calls.
+
+## When to Use Flows
+
+**Good fit**:
+- Multi-step agent workflows
+- Workflows needing observability
+- Processes requiring resumption
+- Team collaboration on complex logic
+
+**Consider alternatives**:
+- Single agent interactions
+- Highly dynamic behavior
+- Performance-critical paths
+
+## Next Steps
+
+- [Architecture](/docs/concepts/architecture) — System overview
+- [Control Flow Guide](/docs/guides/flows/control-flow) — Flow patterns

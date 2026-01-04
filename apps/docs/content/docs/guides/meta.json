@@ -1,16 +1,10 @@
 {
   "title": "Guides",
   "pages": [
-    "index",
-    "for-evaluators",
-    "...expressions",
-    "...flows",
-    "...nodes",
-    "...hub",
-    "...channels",
+    "...deployment",
     "...agents",
-    "...testing",
-    "...debugging",
-    "faq"
+    "...channels",
+    "...expressions",
+    "...flows"
   ]
 }

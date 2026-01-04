@@ -1,15 +1,102 @@
 ---
 title: Agent API
-description: Agent definition and execution interface
+description: Agent definition and context interface
 ---
 
-Agents are executable units that implement business logic and emit events.
+# Agent API
 
-## Agent Definition
+Define custom agents that integrate with the Hub.
 
-An agent must implement the `AgentDefinition` contract with an `execute` function.
+## AgentDefinition
 
-## Learn More
+```typescript
+interface AgentDefinition<TIn = unknown, TOut = unknown> {
+  name: string;
+  inputSchema?: ZodSchema<TIn>;
+  outputSchema?: ZodSchema<TOut>;
+  execute(input: TIn, ctx: AgentContext): Promise<TOut>;
+}
+```
 
-- [Agent Spec](/docs/reference/kernel-spec/spec/agent) - Complete agent protocol specification
-- [Custom Nodes](/docs/learn/custom-node) - Guide to creating custom node types
+## AgentContext
+
+Provided to every agent execution:
+
+```typescript
+interface AgentContext {
+  hub: Hub;
+  runId: string;
+  nodeId: string;
+  abortSignal?: AbortSignal;
+}
+```
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `hub` | `Hub` | Reference to the Hub for emitting events |
+| `runId` | `string` | Current flow run identifier |
+| `nodeId` | `string` | Current node identifier |
+| `abortSignal` | `AbortSignal` | Signal for cancellation |
+
+## defineAgent()
+
+Helper to create type-safe agents:
+
+```typescript
+import { defineAgent } from "@open-harness/kernel";
+import { z } from "zod";
+
+export const myAgent = defineAgent({
+  name: "my-agent",
+  inputSchema: z.object({
+    prompt: z.string(),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+  async execute(input, ctx) {
+    // Implementation
+    return { text: "Result" };
+  },
+});
+```
+
+## Emitting Events
+
+Agents should emit standard events:
+
+```typescript
+async execute(input, ctx) {
+  ctx.hub.emit({ type: "agent:start", agentName: this.name });
+
+  // Stream text chunks
+  ctx.hub.emit({ type: "agent:text", content: "..." });
+
+  // Complete
+  ctx.hub.emit({ type: "agent:complete", output: result });
+
+  return result;
+}
+```
+
+## Handling Cancellation
+
+```typescript
+async execute(input, ctx) {
+  const response = await fetch(url, {
+    signal: ctx.abortSignal,
+  });
+
+  // Or check manually
+  if (ctx.abortSignal?.aborted) {
+    throw new Error("Cancelled");
+  }
+}
+```
+
+## See Also
+
+- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Building agents
+- [Events API](/docs/reference/api/events) — Agent events

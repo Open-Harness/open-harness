@@ -1,0 +1,78 @@
+---
+title: Your First Agent
+description: Build a custom Claude agent with streaming
+---
+
+# Your First Agent
+
+Learn how to create a Claude agent that streams responses through the Hub.
+
+## What You'll Build
+
+An agent that:
+- Connects to Claude via the SDK
+- Streams text tokens as events
+- Emits structured output when complete
+
+## The Agent Interface
+
+Every agent implements this interface:
+
+```typescript
+interface AgentDefinition<TIn, TOut> {
+  name: string;
+  execute(input: TIn, ctx: AgentContext): Promise<TOut>;
+}
+```
+
+## Create Your Agent
+
+```typescript
+import { defineAgent } from "@open-harness/kernel";
+
+export const myAgent = defineAgent({
+  name: "my-agent",
+
+  async execute(input: { prompt: string }, ctx) {
+    // Emit that we're starting
+    ctx.hub.emit({ type: "agent:start", agentName: "my-agent" });
+
+    // Call Claude (your implementation)
+    const response = await callClaude(input.prompt);
+
+    // Stream tokens
+    for await (const chunk of response.stream) {
+      ctx.hub.emit({
+        type: "agent:text",
+        content: chunk.text
+      });
+    }
+
+    // Return final output
+    return { text: response.fullText };
+  }
+});
+```
+
+## Use in a Flow
+
+```yaml
+nodes:
+  - id: assistant
+    type: my-agent
+    input:
+      prompt: "{{ flow.input.question }}"
+```
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| `ctx.hub` | Event bus for emitting events |
+| `ctx.runId` | Unique ID for this execution |
+| Streaming | Emit `agent:text` events for real-time output |
+
+## Next Steps
+
+- [Multi-Agent Flow](/docs/learn/multi-agent-flow) — Connect multiple agents
+- [Hub Events](/docs/concepts/event-system) — Understand event types

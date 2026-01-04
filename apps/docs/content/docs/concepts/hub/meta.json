@@ -1,9 +1,0 @@
-{
-  "title": "Hub",
-  "pages": [
-    "session-messages",
-    "event-bus",
-    "commands-vs-events",
-    "context-propagation"
-  ]
-}

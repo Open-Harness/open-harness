@@ -1,9 +1,0 @@
-{
-  "title": "Node Guides",
-  "pages": [
-    "register-nodes",
-    "node-schemas",
-    "node-capabilities",
-    "async-nodes"
-  ]
-}

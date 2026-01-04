@@ -1,0 +1,147 @@
+---
+title: Event System
+description: Event-driven communication in Open Harness
+---
+
+# Event System
+
+Everything in Open Harness communicates through events.
+
+## Core Principle
+
+> Events are the single source of truth for system state.
+
+Instead of direct method calls, components emit and subscribe to events. This provides:
+
+- **Observability**: See exactly what happened
+- **Replay**: Reconstruct state from events
+- **Decoupling**: Components don't know about each other
+
+## Event Structure
+
+All events share a common structure:
+
+```typescript
+interface RuntimeEvent {
+  type: string;        // Category:action format
+  timestamp?: Date;    // When it occurred
+  runId?: string;      // Associated flow run
+  nodeId?: string;     // Associated node
+  [key: string]: any;  // Event-specific data
+}
+```
+
+## Event Categories
+
+### Flow Events
+
+Track flow lifecycle:
+
+```typescript
+{ type: "flow:start", flowId, input }
+{ type: "flow:complete", flowId, output }
+{ type: "flow:error", flowId, error }
+```
+
+### Node Events
+
+Track node execution:
+
+```typescript
+{ type: "node:start", nodeId }
+{ type: "node:complete", nodeId, output }
+```
+
+### Agent Events
+
+Track LLM interactions:
+
+```typescript
+{ type: "agent:start", agentName }
+{ type: "agent:text", content }      // Streaming
+{ type: "agent:tool_use", name, input }
+{ type: "agent:complete", output }
+```
+
+## Subscribing to Events
+
+Components subscribe via the Hub:
+
+```typescript
+// Specific event type
+hub.subscribe("agent:text", (event) => {
+  process.stdout.write(event.event.content);
+});
+
+// Wildcard pattern
+hub.subscribe("agent:*", (event) => {
+  console.log(event.type, event.event);
+});
+
+// All events
+hub.subscribe("*", (event) => {
+  logger.log(event);
+});
+```
+
+## Emitting Events
+
+Components emit via the Hub:
+
+```typescript
+hub.emit({
+  type: "custom:notification",
+  message: "Task completed",
+  priority: "high",
+});
+```
+
+## Event Persistence
+
+Events are persisted to the RunStore:
+
+```typescript
+// All events for a run
+const events = await store.getEvents(runId);
+
+// Replay events
+for (const event of events) {
+  await processor.handle(event);
+}
+```
+
+## Benefits
+
+### Debugging
+
+See exactly what happened:
+
+```typescript
+hub.subscribe("*", (e) => console.log(JSON.stringify(e)));
+```
+
+### Testing
+
+Assert on event sequences:
+
+```typescript
+expect(events).toContainEqual({
+  type: "agent:complete",
+  output: expect.any(Object),
+});
+```
+
+### Integration
+
+React to any event from any channel:
+
+```typescript
+hub.subscribe("agent:complete", async (e) => {
+  await notifySlack(e.event.output);
+});
+```
+
+## Next Steps
+
+- [Events API](/docs/reference/api/events) — Event type reference
+- [RuntimeEvent](/docs/reference/types/runtime-event) — Type definition

@@ -1,0 +1,99 @@
+---
+title: Context Variables
+description: Variables available in JSONata expressions
+---
+
+# Context Variables
+
+These variables are available in all JSONata expressions.
+
+## flow
+
+The current flow context.
+
+### flow.input
+
+Input passed when starting the flow:
+
+```yaml
+# Starting the flow
+await hub.startFlow("my-flow", { name: "World", count: 5 });
+
+# In expressions
+prompt: "Hello, {{ flow.input.name }}!"
+times: "{{ flow.input.count }}"
+```
+
+### flow.id
+
+The flow definition ID:
+
+```yaml
+log: "Running flow: {{ flow.id }}"
+```
+
+## nodes
+
+Access outputs from completed nodes.
+
+### nodes.\<id\>.output
+
+Output from a specific node:
+
+```yaml
+nodes:
+  - id: fetch
+    type: http.get
+    input:
+      url: "https://api.example.com/data"
+
+  - id: process
+    type: claude.agent
+    input:
+      data: "{{ nodes.fetch.output.body }}"
+```
+
+### Nested Output Access
+
+```yaml
+# Access nested fields
+{{ nodes.api.output.data.users[0].name }}
+
+# Check if node completed
+{{ nodes.optional.output ? nodes.optional.output.value : 'default' }}
+```
+
+## $env
+
+Environment variables (read-only):
+
+```yaml
+input:
+  apiKey: "{{ $env.API_KEY }}"
+  endpoint: "{{ $env.SERVICE_URL }}"
+```
+
+## $
+
+Current context in iterations:
+
+```yaml
+# In map operations
+items: "{{ flow.input.users.({ 'id': $.id, 'name': $.name }) }}"
+
+# Current item
+transform: "{{ $.value * 2 }}"
+```
+
+## $now()
+
+Current timestamp:
+
+```yaml
+createdAt: "{{ $now() }}"
+```
+
+## See Also
+
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Expression syntax
+- [Functions](/docs/reference/expressions/functions) — Built-in functions
