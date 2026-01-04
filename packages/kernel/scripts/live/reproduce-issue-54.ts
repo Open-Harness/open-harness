@@ -11,7 +11,7 @@
  * Usage: bun packages/kernel/scripts/live/reproduce-issue-54.ts
  */
 
-import type { SDKResultMessage, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { SDKMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 async function reproduceIssue54() {
@@ -116,7 +116,10 @@ Only return the JSON, nothing else.`;
 		}
 
 		console.log("Total messages received:", allMessages2.length);
-		console.log("Message types:", allMessages2.map((m) => (m as { type?: string }).type));
+		console.log(
+			"Message types:",
+			allMessages2.map((m) => (m as { type?: string }).type),
+		);
 
 		if (result2) {
 			console.log("result.result (text):", result2.result?.slice(0, 200));

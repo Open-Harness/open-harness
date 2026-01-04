@@ -8,10 +8,10 @@
  * Usage: bun packages/kernel/scripts/live/test-structured-output.ts
  */
 
-import type { SDKResultMessage, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import type { SDKMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
-import { dirname, resolve } from "path";
 
 const SCHEMA_DIR = resolve(import.meta.dir, "../../tests/fixtures/schemas");
 
@@ -49,7 +49,7 @@ const reviewerSchema = {
 };
 
 async function testInlineSchema(): Promise<boolean> {
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("TEST 1: INLINE SCHEMA via outputFormat");
 	console.log("=".repeat(80));
 
@@ -58,7 +58,7 @@ async function testInlineSchema(): Promise<boolean> {
 Return ONLY valid JSON matching this structure (no markdown, no explanation):
 {"tasks": [{"id": "task-1", "title": "..."}]}`;
 
-	console.log("Prompt:", prompt.slice(0, 100) + "...");
+	console.log("Prompt:", `${prompt.slice(0, 100)}...`);
 	console.log("Schema:", JSON.stringify(taskSchema, null, 2));
 
 	let result: SDKResultMessage | undefined;
@@ -80,7 +80,10 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
 			}
 		}
 
-		console.log("\nMessage types received:", allMessages.map((m) => (m as { type?: string }).type));
+		console.log(
+			"\nMessage types received:",
+			allMessages.map((m) => (m as { type?: string }).type),
+		);
 
 		if (result) {
 			console.log("result.subtype:", result.subtype);
@@ -106,7 +109,7 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
 }
 
 async function testFileBasedSchema(): Promise<boolean> {
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("TEST 2: FILE-BASED SCHEMA via outputSchemaFile");
 	console.log("=".repeat(80));
 
@@ -130,7 +133,7 @@ function add(a: number, b: number): number {
 Return ONLY valid JSON (no markdown):
 {"passed": true/false, "feedback": "...", "issues": [...]}`;
 
-	console.log("Prompt:", prompt.slice(0, 100) + "...");
+	console.log("Prompt:", `${prompt.slice(0, 100)}...`);
 
 	let result: SDKResultMessage | undefined;
 	const allMessages: SDKMessage[] = [];
@@ -151,7 +154,10 @@ Return ONLY valid JSON (no markdown):
 			}
 		}
 
-		console.log("\nMessage types received:", allMessages.map((m) => (m as { type?: string }).type));
+		console.log(
+			"\nMessage types received:",
+			allMessages.map((m) => (m as { type?: string }).type),
+		);
 
 		if (result) {
 			console.log("result.subtype:", result.subtype);
@@ -178,7 +184,7 @@ Return ONLY valid JSON (no markdown):
 }
 
 async function testWithoutSchema(): Promise<void> {
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("TEST 0: WITHOUT SCHEMA (baseline - should fail)");
 	console.log("=".repeat(80));
 
@@ -225,7 +231,7 @@ async function main() {
 	const fileResult = await testFileBasedSchema();
 
 	// Summary
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("SUMMARY");
 	console.log("=".repeat(80));
 	console.log(`Inline schema:     ${inlineResult ? "✅ PASS" : "❌ FAIL"}`);

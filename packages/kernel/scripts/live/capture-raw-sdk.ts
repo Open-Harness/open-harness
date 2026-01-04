@@ -95,7 +95,7 @@ Then tell me what 15 * 17 equals.`;
 		console.log();
 
 		// Analyze stream_event subtypes
-		const streamEvents = messagesByType["stream_event"] ?? [];
+		const streamEvents = messagesByType.stream_event ?? [];
 		const streamSubtypes: Record<string, number> = {};
 		for (const se of streamEvents) {
 			const event = (se.raw as { event?: { type?: string } }).event;
@@ -139,16 +139,16 @@ Then tell me what 15 * 17 equals.`;
 		console.log();
 
 		const hasStreamEvents = streamEvents.length > 0;
-		const hasAssistantMessages = (messagesByType["assistant"] ?? []).length > 0;
-		const hasResultMessages = (messagesByType["result"] ?? []).length > 0;
-		const hasTextDeltas = (deltaTypes["text_delta"] ?? 0) > 0;
-		const hasThinkingDeltas = (deltaTypes["thinking_delta"] ?? 0) > 0;
+		const hasAssistantMessages = (messagesByType.assistant ?? []).length > 0;
+		const hasResultMessages = (messagesByType.result ?? []).length > 0;
+		const hasTextDeltas = (deltaTypes.text_delta ?? 0) > 0;
+		const hasThinkingDeltas = (deltaTypes.thinking_delta ?? 0) > 0;
 
 		console.log(`✓ stream_event messages: ${hasStreamEvents} (count: ${streamEvents.length})`);
-		console.log(`✓ assistant messages: ${hasAssistantMessages} (count: ${(messagesByType["assistant"] ?? []).length})`);
-		console.log(`✓ result messages: ${hasResultMessages} (count: ${(messagesByType["result"] ?? []).length})`);
-		console.log(`✓ text_delta in stream: ${hasTextDeltas} (count: ${deltaTypes["text_delta"] ?? 0})`);
-		console.log(`✓ thinking_delta in stream: ${hasThinkingDeltas} (count: ${deltaTypes["thinking_delta"] ?? 0})`);
+		console.log(`✓ assistant messages: ${hasAssistantMessages} (count: ${(messagesByType.assistant ?? []).length})`);
+		console.log(`✓ result messages: ${hasResultMessages} (count: ${(messagesByType.result ?? []).length})`);
+		console.log(`✓ text_delta in stream: ${hasTextDeltas} (count: ${deltaTypes.text_delta ?? 0})`);
+		console.log(`✓ thinking_delta in stream: ${hasThinkingDeltas} (count: ${deltaTypes.thinking_delta ?? 0})`);
 		console.log();
 
 		if (hasStreamEvents && hasAssistantMessages) {
@@ -166,7 +166,7 @@ Then tell me what 15 * 17 equals.`;
 		console.log();
 
 		// Examine assistant message structure
-		const assistantMessages = messagesByType["assistant"] ?? [];
+		const assistantMessages = messagesByType.assistant ?? [];
 		if (assistantMessages.length > 0) {
 			console.log("ASSISTANT MESSAGE STRUCTURE:");
 			for (const am of assistantMessages) {
@@ -184,7 +184,7 @@ Then tell me what 15 * 17 equals.`;
 		}
 
 		// Result message
-		const resultMessages = messagesByType["result"] ?? [];
+		const resultMessages = messagesByType.result ?? [];
 		if (resultMessages.length > 0) {
 			console.log("RESULT MESSAGE:");
 			const result = resultMessages[0].raw as { result?: string; duration_ms?: number; num_turns?: number };
@@ -195,7 +195,8 @@ Then tell me what 15 * 17 equals.`;
 		}
 
 		// Write raw capture to file
-		const captureFile = "/Users/abuusama/conductor/workspaces/open-harness/nashville/packages/kernel-v3/tests/fixtures/recordings/captured/raw-sdk-capture.json";
+		const captureFile =
+			"/Users/abuusama/conductor/workspaces/open-harness/nashville/packages/kernel-v3/tests/fixtures/recordings/captured/raw-sdk-capture.json";
 
 		await Bun.write(
 			captureFile,
@@ -203,22 +204,19 @@ Then tell me what 15 * 17 equals.`;
 				{
 					prompt,
 					totalMessages: messages.length,
-					messageTypes: Object.fromEntries(
-						Object.entries(messagesByType).map(([k, v]) => [k, v.length])
-					),
+					messageTypes: Object.fromEntries(Object.entries(messagesByType).map(([k, v]) => [k, v.length])),
 					streamSubtypes,
 					deltaTypes,
 					messages: messages.map((m) => m.raw),
 				},
 				null,
-				2
-			)
+				2,
+			),
 		);
 
 		console.log(`📁 Raw capture saved to: ${captureFile}`);
 		console.log();
 		console.log("Use this captured data to create REAL fixtures!");
-
 	} catch (error) {
 		console.error("CAPTURE FAILED:", error);
 		process.exit(1);

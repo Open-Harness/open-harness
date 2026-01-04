@@ -11,9 +11,9 @@
  * Usage: bun scripts/live/thinking-events-live.ts
  */
 
+import type { RuntimeEvent } from "../../src/core/events.js";
 import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
-import type { RuntimeEvent } from "../../src/core/events.js";
 
 async function runLiveTest() {
 	console.log("🧪 Running thinking events live test against REAL SDK...\n");
@@ -54,7 +54,7 @@ edges: []
 	const startTime = Date.now();
 
 	try {
-		const snapshot = await runtime.run();
+		const _snapshot = await runtime.run();
 		const duration = Date.now() - startTime;
 
 		console.log(`\nFlow completed in ${duration}ms\n`);
@@ -136,7 +136,6 @@ edges: []
 		}
 
 		console.log("\n✅ ALL APPLICABLE TESTS PASSED");
-
 	} catch (error) {
 		console.error("\n❌ Flow execution failed:", error);
 		process.exit(1);

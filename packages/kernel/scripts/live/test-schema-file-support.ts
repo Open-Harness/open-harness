@@ -6,10 +6,10 @@
  * Usage: bun packages/kernel/scripts/live/test-schema-file-support.ts
  */
 
-import { mkdirSync, writeFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { createClaudeNode } from "../../src/nodes/claude.agent.js";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { RuntimeCommand } from "../../src/core/events.js";
+import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 
 const SCHEMA_DIR = resolve(import.meta.dir, "../../tests/fixtures/schemas");
 
@@ -41,7 +41,7 @@ function createMockContext(nodeId: string) {
 }
 
 async function testInlineOutputFormat() {
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("TEST 1: Inline outputFormat via options");
 	console.log("=".repeat(80));
 
@@ -58,7 +58,7 @@ async function testInlineOutputFormat() {
 
 	try {
 		const result = await node.run(ctx, {
-			prompt: "Say hello in JSON format: {\"greeting\": \"Hello!\"}",
+			prompt: 'Say hello in JSON format: {"greeting": "Hello!"}',
 			options: {
 				maxTurns: 5,
 				outputFormat: { type: "json_schema", schema },
@@ -82,7 +82,7 @@ async function testInlineOutputFormat() {
 }
 
 async function testOutputSchemaFile() {
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("TEST 2: File-based outputSchemaFile");
 	console.log("=".repeat(80));
 
@@ -103,12 +103,12 @@ async function testOutputSchemaFile() {
 	const ctx = createMockContext("test-file");
 
 	// Use relative path from cwd
-	const relativePath = schemaFilePath.replace(process.cwd() + "/", "");
+	const relativePath = schemaFilePath.replace(`${process.cwd()}/`, "");
 	console.log("Using relative path:", relativePath);
 
 	try {
 		const result = await node.run(ctx, {
-			prompt: "Say hello in JSON format: {\"greeting\": \"Hello!\"}",
+			prompt: 'Say hello in JSON format: {"greeting": "Hello!"}',
 			options: {
 				maxTurns: 5,
 				outputSchemaFile: relativePath,
@@ -132,7 +132,7 @@ async function testOutputSchemaFile() {
 }
 
 async function testMissingSchemaFile() {
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("TEST 3: Missing schema file error handling");
 	console.log("=".repeat(80));
 
@@ -171,7 +171,7 @@ async function main() {
 	const test2 = await testOutputSchemaFile();
 	const test3 = await testMissingSchemaFile();
 
-	console.log("\n" + "=".repeat(80));
+	console.log(`\n${"=".repeat(80)}`);
 	console.log("SUMMARY");
 	console.log("=".repeat(80));
 	console.log(`Inline outputFormat:        ${test1 ? "✅ PASS" : "❌ FAIL"}`);

@@ -10,9 +10,9 @@
  * Usage: bun scripts/live/delta-events-live.ts
  */
 
+import type { RuntimeEvent } from "../../src/core/events.js";
 import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
-import type { RuntimeEvent } from "../../src/core/events.js";
 
 async function runLiveTest() {
 	console.log("🧪 Running delta events live test against REAL SDK...\n");
@@ -48,7 +48,7 @@ edges: []
 	const startTime = Date.now();
 
 	try {
-		const snapshot = await runtime.run();
+		const _snapshot = await runtime.run();
 		const duration = Date.now() - startTime;
 
 		console.log(`\nFlow completed in ${duration}ms\n`);
@@ -113,7 +113,7 @@ edges: []
 		// Test 5: Concatenated deltas should approximate the final result
 		if (textDeltas.length > 0 && agentComplete.length > 0) {
 			const concatenated = textDeltas.map((e) => (e as { content: string }).content).join("");
-			const finalResult = (agentComplete[0] as { result: string }).result;
+			const _finalResult = (agentComplete[0] as { result: string }).result;
 
 			// The concatenated deltas should be close to the final result
 			// (they may not match exactly due to SDK formatting)

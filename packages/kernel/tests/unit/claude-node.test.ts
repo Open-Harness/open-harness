@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { join } from "path";
+import { join } from "node:path";
 import { createMockQuery, createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
 import { createClaudeNode, resolveOutputSchema } from "../../src/nodes/claude.agent.js";
 import type { FixtureFile } from "../../src/testing/mock-query.js";
@@ -154,11 +154,13 @@ describe("claude node event emission", () => {
 		test("emits agent:start with sessionId and prompt", async () => {
 			const { events } = await runWithFixture("agent", "agent");
 
-			const start = events.find((e) => e.type === "agent:start") as {
-				sessionId: string;
-				prompt: string;
-				timestamp: number;
-			} | undefined;
+			const start = events.find((e) => e.type === "agent:start") as
+				| {
+						sessionId: string;
+						prompt: string;
+						timestamp: number;
+				  }
+				| undefined;
 
 			expect(start).toBeDefined();
 			expect(start?.sessionId).toBe("sess-fixture-1");
