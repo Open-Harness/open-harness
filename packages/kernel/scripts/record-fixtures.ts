@@ -25,7 +25,10 @@ const claudeNode = createClaudeNode({
 		const entry = recordings.get(nodeId) ?? { calls: [] };
 		entry.calls.push({
 			input,
-			output,
+			output: {
+				...output,
+				text: output.text ?? "",
+			},
 			events: events as SDKMessage[],
 		});
 		recordings.set(nodeId, entry);

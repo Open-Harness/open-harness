@@ -403,7 +403,7 @@ export function createClaudeNode(
 				type: "agent:complete",
 				nodeId: ctx.nodeId,
 				runId: ctx.runId,
-				result: output.text,
+				result: output.text ?? "",
 				structuredOutput: output.structuredOutput,
 				usage: toUsage(output.usage),
 				modelUsage: toModelUsage(output.modelUsage),
