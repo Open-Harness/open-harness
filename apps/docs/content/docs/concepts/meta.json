@@ -1,4 +1,10 @@
 {
   "title": "Concepts",
-  "pages": ["index", "architecture", "execution", "hub", "visual-editing"]
+  "pages": [
+    "architecture",
+    "event-system",
+    "expressions",
+    "persistence",
+    "...design-decisions"
+  ]
 }

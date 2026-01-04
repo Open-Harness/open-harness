@@ -1,18 +1,15 @@
 ---
 title: Quickstart
-description: Get your first Open Harness flow running in 5 minutes
+description: Run your first Open Harness flow in 5 minutes
 ---
 
 # Quickstart
 
-Let's build your first multi-step AI workflow. In five minutes, you'll see how Open Harness orchestrates agents through flows.
+Build your first multi-agent workflow. In five minutes, you'll see how Open Harness orchestrates agents through flows.
 
 ## What You'll Build
 
-A flow that demonstrates actual orchestration:
-1. **Template Node** — Generates a structured prompt from user input
-2. **Agent Node** — Claude processes the template and responds
-3. **Edge** — Data flows from template → agent
+A flow with two nodes connected by an edge:
 
 ```
 ┌──────────────┐        ┌──────────────┐
@@ -49,13 +46,13 @@ nodes:
     type: template
     input:
       template: |
-        Write a {{flow.input.style}} greeting for {{flow.input.name}}.
+        Write a {{ flow.input.style }} greeting for {{ flow.input.name }}.
         Keep it brief (1-2 sentences).
 
   - id: greet
     type: agent
     input:
-      prompt: "{{template.output}}"
+      prompt: "{{ template.output }}"
 
 edges:
   - from: template
@@ -67,7 +64,7 @@ This flow:
 - Has a **template node** that constructs the prompt
 - Has an **agent node** that calls Claude
 - Uses an **edge** to ensure template runs before agent
-- Uses `{{template.output}}` to pass data between nodes
+- Uses `{{ template.output }}` to pass data between nodes
 
 ## Step 3: Run It
 
@@ -120,7 +117,6 @@ registry.register({
       hub: ctx.hub,
       runId: ctx.runId,
     });
-    ctx.hub.emit({ type: "agent:text", content: result.text });
     return { text: result.text };
   },
 });
@@ -148,37 +144,15 @@ Run it:
 bun run run.ts
 ```
 
-You should see Claude's enthusiastic greeting appear!
-
 ## What Just Happened?
 
-In this example, you:
-
 1. **Defined a multi-node flow** with template → agent orchestration
-2. **Used edges** to control data flow between nodes
-3. **Used bindings** (`{{template.output}}`) to pass data
-4. **Used the SDK wrapper** (`createClaudeAgent`) for Claude
-5. **Observed events** through the Hub as the flow ran
-
-The flow automatically:
-- Ran nodes in topological order (template before agent)
-- Resolved bindings at runtime
-- Emitted events you could subscribe to
-
-## Key Concepts Demonstrated
-
-| Concept | In This Example |
-|---------|-----------------|
-| **Nodes** | `template` and `greet` |
-| **Edges** | `from: template, to: greet` |
-| **Bindings** | `{{flow.input.name}}`, `{{template.output}}` |
-| **Hub** | Event subscription for streaming output |
-| **Provider** | `createClaudeAgent()` SDK wrapper |
+2. **Used edges** to control execution order
+3. **Used JSONata bindings** (`{{ template.output }}`) to pass data
+4. **Observed events** through the Hub as the flow ran
 
 ## Next Steps
 
-You've just scratched the surface. Continue learning:
-
-- **[First Flow Tutorial](/docs/learn/first-flow)** — Understand flow structure in depth
-- **[Concepts: Architecture](/docs/concepts/architecture/overview)** — How Open Harness works
-- **[Custom Nodes](/docs/learn/custom-node)** — Build your own node types
+- [Your First Agent](/docs/learn/your-first-agent) — Build a custom agent
+- [Architecture](/docs/concepts/architecture) — Understand Hub, Flow, Channels
+- [JSONata Bindings](/docs/guides/expressions/bindings) — Master expressions

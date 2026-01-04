@@ -1,4 +1,4 @@
 {
   "title": "Schemas",
-  "pages": ["flow-yaml-schema", "index", "node-spec-schema", "when-expr-schema"]
+  "pages": ["flow-yaml"]
 }

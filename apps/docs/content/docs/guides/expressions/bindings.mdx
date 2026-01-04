@@ -1,0 +1,83 @@
+---
+title: Data Bindings
+description: Connect nodes using JSONata expressions
+---
+
+# Data Bindings
+
+Use JSONata expressions to pass data between nodes in your flow.
+
+## Basic Binding Syntax
+
+Reference data using double curly braces:
+
+```yaml
+nodes:
+  - id: greet
+    type: claude.agent
+    input:
+      prompt: "Hello, {{ flow.input.name }}!"
+```
+
+## Context Variables
+
+Available in all expressions:
+
+| Variable | Description |
+|----------|-------------|
+| `flow.input` | Input passed when starting the flow |
+| `nodes.<id>.output` | Output from a completed node |
+| `$env` | Environment variables |
+
+## Node Output References
+
+Access previous node results:
+
+```yaml
+nodes:
+  - id: fetch
+    type: http.get
+    input:
+      url: "https://api.example.com/user"
+
+  - id: greet
+    type: claude.agent
+    input:
+      prompt: "Summarize: {{ nodes.fetch.output.data }}"
+```
+
+## Transformations
+
+JSONata supports rich transformations:
+
+```yaml
+# Extract specific field
+prompt: "{{ nodes.fetch.output.items[0].name }}"
+
+# String concatenation
+prompt: "{{ flow.input.firstName & ' ' & flow.input.lastName }}"
+
+# Array operations
+items: "{{ nodes.list.output.results[status = 'active'] }}"
+```
+
+## Object Construction
+
+Build complex objects:
+
+```yaml
+input:
+  user: |
+    {{
+      {
+        "name": flow.input.name,
+        "email": flow.input.email,
+        "created": $now()
+      }
+    }}
+```
+
+## Next Steps
+
+- [Conditionals](/docs/guides/expressions/conditionals) — Control flow with expressions
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Full syntax reference

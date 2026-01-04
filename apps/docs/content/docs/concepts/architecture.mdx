@@ -1,0 +1,93 @@
+---
+title: Architecture
+description: Understanding the Hub-Flow-Channel architecture
+---
+
+# Architecture
+
+Open Harness uses a three-layer architecture for building agent systems.
+
+## The Three Layers
+
+```
+┌─────────────────────────────────────────┐
+│              Channels                   │
+│   (WebSocket, HTTP, Slack, Custom...)   │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│                Hub                       │
+│    (Event Bus + Coordination)            │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│               Flows                      │
+│    (Agent Orchestration Graphs)          │
+└─────────────────────────────────────────┘
+```
+
+## Hub
+
+The **Hub** is the central nervous system:
+
+- **Event Bus**: Routes events between components
+- **Coordination**: Manages flow execution
+- **Session State**: Tracks active runs
+- **Persistence**: Stores events for replay
+
+```typescript
+const hub = createHub("session-id", {
+  store: sqliteStore,
+  registry: nodeRegistry,
+});
+```
+
+## Flows
+
+**Flows** define agent behavior as directed graphs:
+
+- **Nodes**: Individual processing steps (agents, API calls, transforms)
+- **Edges**: Connections with optional conditions
+- **Bindings**: JSONata expressions for data flow
+
+```yaml
+id: my-flow
+nodes:
+  - id: analyze
+    type: claude.agent
+    input:
+      prompt: "{{ flow.input.text }}"
+```
+
+## Channels
+
+**Channels** connect external systems:
+
+- **Observe**: React to Hub events
+- **Emit**: Send events into the Hub
+- **Bidirectional**: Two-way communication
+
+```typescript
+const wsChannel = new WebSocketChannel(wss);
+hub.registerChannel(wsChannel);
+```
+
+## Event Flow
+
+1. **Input** arrives via Channel
+2. **Hub** routes to appropriate Flow
+3. **Flow** executes nodes, emitting events
+4. **Hub** broadcasts events to Channels
+5. **Channels** forward to external systems
+
+## Why This Architecture?
+
+- **Decoupled**: Components communicate via events
+- **Observable**: Every action produces events
+- **Replayable**: Events can reconstruct state
+- **Extensible**: Add channels without changing flows
+
+## Next Steps
+
+- [Event System](/docs/concepts/event-system) — Event-driven communication
+- [Hub API](/docs/reference/api/hub) — Hub interface

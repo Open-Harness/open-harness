@@ -1,0 +1,125 @@
+---
+title: FlowDefinition
+description: Flow definition type reference
+---
+
+# FlowDefinition
+
+The structure of a flow definition.
+
+## Type
+
+```typescript
+interface FlowDefinition {
+  id: string;
+  name?: string;
+  description?: string;
+  nodes: NodeDefinition[];
+  edges?: EdgeDefinition[];
+  input?: ZodSchema;
+  output?: ZodSchema;
+}
+```
+
+## Properties
+
+### id
+
+Unique identifier for the flow:
+
+```yaml
+id: greeting-flow
+```
+
+### name
+
+Human-readable name (optional):
+
+```yaml
+name: Greeting Flow
+```
+
+### description
+
+Flow description (optional):
+
+```yaml
+description: Greets users by name
+```
+
+### nodes
+
+Array of node definitions:
+
+```yaml
+nodes:
+  - id: greet
+    type: claude.agent
+    input:
+      prompt: "Say hello"
+```
+
+### edges
+
+Connections between nodes (optional, inferred from data dependencies):
+
+```yaml
+edges:
+  - from: classify
+    to: handle-bug
+    condition: "{{ nodes.classify.output.type = 'bug' }}"
+```
+
+### input
+
+Zod schema for flow input validation:
+
+```typescript
+const flow: FlowDefinition = {
+  id: "my-flow",
+  input: z.object({
+    name: z.string(),
+    count: z.number().optional(),
+  }),
+  nodes: [...],
+};
+```
+
+### output
+
+Zod schema for flow output validation:
+
+```typescript
+output: z.object({
+  result: z.string(),
+  success: z.boolean(),
+})
+```
+
+## YAML Format
+
+Flows are typically defined in YAML:
+
+```yaml
+id: code-review
+name: Code Review Flow
+description: Reviews code changes
+
+nodes:
+  - id: analyze
+    type: claude.agent
+    input:
+      prompt: "Analyze this code: {{ flow.input.code }}"
+
+  - id: summarize
+    type: claude.agent
+    input:
+      analysis: "{{ nodes.analyze.output.text }}"
+      prompt: "Summarize the analysis"
+```
+
+## See Also
+
+- [NodeDefinition](/docs/reference/types/node-definition) — Node structure
+- [EdgeDefinition](/docs/reference/types/edge-definition) — Edge structure
+- [Flow YAML Schema](/docs/reference/schemas/flow-yaml) — YAML schema

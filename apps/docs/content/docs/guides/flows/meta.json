@@ -1,10 +1,4 @@
 {
-  "title": "Flow Guides",
-  "pages": [
-    "execute-flow",
-    "flow-inputs",
-    "parse-yaml-flow",
-    "conditional-execution",
-    "error-handling"
-  ]
+  "title": "Flows",
+  "pages": ["control-flow"]
 }

@@ -1,0 +1,169 @@
+---
+title: RuntimeEvent
+description: Runtime event type reference
+---
+
+# RuntimeEvent
+
+All runtime communication uses typed events.
+
+## Base Type
+
+```typescript
+interface RuntimeEvent {
+  type: string;
+  timestamp?: Date;
+  runId?: string;
+  nodeId?: string;
+  [key: string]: unknown;
+}
+```
+
+## Properties
+
+### type
+
+Event type identifier (required):
+
+```typescript
+{ type: "agent:text" }
+```
+
+Convention: `category:action`
+- `flow:start`, `flow:complete`, `flow:error`
+- `node:start`, `node:complete`
+- `agent:text`, `agent:tool_use`, `agent:complete`
+
+### timestamp
+
+When the event occurred:
+
+```typescript
+{ type: "agent:text", timestamp: new Date() }
+```
+
+### runId
+
+Associated flow run:
+
+```typescript
+{ type: "agent:text", runId: "run-abc123" }
+```
+
+### nodeId
+
+Associated node:
+
+```typescript
+{ type: "node:complete", nodeId: "greet", runId: "run-abc123" }
+```
+
+## Event Categories
+
+### Flow Events
+
+```typescript
+// Flow started
+{
+  type: "flow:start",
+  flowId: string,
+  runId: string,
+  input: unknown
+}
+
+// Flow completed
+{
+  type: "flow:complete",
+  flowId: string,
+  runId: string,
+  output: unknown
+}
+
+// Flow failed
+{
+  type: "flow:error",
+  flowId: string,
+  runId: string,
+  error: { message: string, stack?: string }
+}
+```
+
+### Node Events
+
+```typescript
+// Node started
+{
+  type: "node:start",
+  nodeId: string,
+  runId: string
+}
+
+// Node completed
+{
+  type: "node:complete",
+  nodeId: string,
+  runId: string,
+  output: unknown
+}
+```
+
+### Agent Events
+
+```typescript
+// Agent started
+{
+  type: "agent:start",
+  agentName: string,
+  runId: string
+}
+
+// Text chunk (streaming)
+{
+  type: "agent:text",
+  content: string,
+  runId: string
+}
+
+// Tool invocation
+{
+  type: "agent:tool_use",
+  name: string,
+  input: unknown,
+  runId: string
+}
+
+// Agent completed
+{
+  type: "agent:complete",
+  output: unknown,
+  runId: string
+}
+
+// Agent error
+{
+  type: "agent:error",
+  error: { message: string },
+  runId: string
+}
+```
+
+## Custom Events
+
+Define your own events:
+
+```typescript
+hub.emit({
+  type: "custom:notification",
+  message: "Task completed",
+  priority: "high",
+});
+
+hub.subscribe("custom:notification", (event) => {
+  console.log(event.event.message);
+});
+```
+
+## See Also
+
+- [Events API](/docs/reference/api/events) — Event handling
+- [Hub API](/docs/reference/api/hub) — Event emission

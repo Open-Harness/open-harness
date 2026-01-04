@@ -1,9 +1,0 @@
-{
-  "title": "Hub Guides",
-  "pages": [
-    "emit-events",
-    "subscribe-events",
-    "scoped-subscriptions",
-    "event-context"
-  ]
-}
