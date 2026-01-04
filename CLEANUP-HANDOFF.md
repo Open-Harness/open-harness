@@ -468,12 +468,76 @@ cd ../../apps/horizon-agent && bun run typecheck
 
 ---
 
+## Part 4: Docs App Linting (apps/docs)
+
+**Status**: Minor linting issues, types pass
+
+### Issue Categories
+
+#### Biome Config Schema Mismatch
+**File**: `biome.json`
+**Issue**: Schema version 2.2.0 doesn't match CLI 2.3.10
+
+**Fix**:
+```bash
+cd apps/docs
+biome migrate  # Updates config to current version
+```
+
+#### Non-null Assertions (4 warnings)
+**Rule**: `lint/style/noNonNullAssertion`
+**Files**:
+- `scripts/sync-kernel-docs.ts` (lines 177, 277, 359, 372)
+
+**Pattern**: Using `!` operator on array access
+
+**Fix approach**:
+```typescript
+// Before
+const link = links[k]!;  // ❌ Non-null assertion
+
+// After - Option 1: Guard check
+const link = links[k];
+if (!link) continue;
+// Use link safely here
+
+// After - Option 2: Optional chaining (if safe to skip)
+const link = links[k];
+if (link) {
+  // Process link
+}
+```
+
+#### Explicit Any (1 warning)
+**File**: `src/app/docs/[[...slug]]/page.tsx` (line 51)
+**Pattern**: Using `as any` cast
+
+**Fix approach**:
+```typescript
+// Before
+a: createRelativeLink(source, page) as any,
+
+// After: Define proper type
+a: createRelativeLink(source, page) as ComponentType<AnchorHTMLAttributes<HTMLAnchorElement>>
+// Or if the type is too complex, at least add a comment explaining why
+```
+
+#### CSS !important (2 auto-fixable)
+**File**: `src/app/global.css` (lines 8, 14)
+**Pattern**: Using `!important` in CSS
+
+**Fix**: Auto-fixable with `biome check --write`
+
+---
+
 ## Success Criteria
 
 **Before pushing**:
 - [ ] `cd packages/kernel && bun run check` exits 0 (no errors, warnings, or infos)
 - [ ] `cd packages/kernel && bun run typecheck` exits 0 (no type errors)
 - [ ] `cd apps/horizon-agent && bun run typecheck` exits 0 (no type errors)
+- [ ] `cd apps/docs && biome check .` exits 0 (no errors, warnings, or infos)
+- [ ] `cd apps/docs && bun run types:check` exits 0 (already passing)
 - [ ] All changes committed with clear, categorized commit messages
 - [ ] Git status clean
 
