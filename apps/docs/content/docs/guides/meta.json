@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "for-evaluators",
+    "...expressions",
     "...flows",
     "...nodes",
     "...hub",

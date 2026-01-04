@@ -156,7 +156,7 @@ In this example, you:
 
 1. **Defined a multi-node flow** with template → agent orchestration
 2. **Used edges** to control data flow between nodes
-3. **Used bindings** (`{{template.output}}`) to pass data
+3. **Used JSONata bindings** (`{{ template.output }}`) to pass data between nodes
 4. **Used the SDK wrapper** (`createClaudeAgent`) for Claude
 5. **Observed events** through the Hub as the flow ran
 
@@ -179,6 +179,7 @@ The flow automatically:
 
 You've just scratched the surface. Continue learning:
 
-- **[First Flow Tutorial](/docs/learn/first-flow)** — Understand flow structure in depth
-- **[Concepts: Architecture](/docs/concepts/architecture/overview)** — How Open Harness works
+- **[Data Bindings with JSONata](/docs/guides/expressions/bindings)** — Master the expression language
+- **[Architecture Overview](/docs/concepts/architecture/overview)** — Understand Hub, Flow, and Channels
+- **[First Flow Tutorial](/docs/learn/first-flow)** — Deeper dive into flow structure
 - **[Custom Nodes](/docs/learn/custom-node)** — Build your own node types

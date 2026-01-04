@@ -1,131 +1,195 @@
 ---
 title: Architecture Overview
-description: High-level architecture and design philosophy of Open Harness
+description: Understand the Hub, Flow, and Channel model that powers Open Harness
 ---
 
 # Architecture Overview
 
-Open Harness is an AI workflow orchestration framework built for declarative, event-driven workflows. This page explains the big picture and why the architecture exists.
+Open Harness is an event-driven workflow execution system. This page explains the mental model you need to build multi-agent systems.
 
-## What is Open Harness?
-
-Open Harness provides a structured way to build AI-powered applications. Rather than writing imperative code that directly calls LLM APIs and manages state, you define workflows declaratively and let the framework handle execution, event routing, and I/O.
-
-The framework is designed for:
-- **AI agents** that reason and act
-- **Multi-step workflows** that chain operations
-- **Interactive sessions** with human-in-the-loop
-- **Multiple I/O channels** (console, GitHub, voice)
-
-## The Big Picture
-
-At the center of everything is the **Hub** - a bidirectional event bus that connects all components:
+## The Core Idea
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Hub                                 │
-│         (events out ← → commands in)                        │
-└─────────────────────────────────────────────────────────────┘
-       ↑              ↑              ↑              ↑
-       │              │              │              │
-   ┌───┴───┐    ┌─────┴─────┐   ┌────┴────┐   ┌─────┴─────┐
-   │ Flow  │    │  Agents   │   │ Channels │   │ Observers │
-   │ (DAG) │    │(executors)│   │  (I/O)  │   │(logging)  │
-   └───────┘    └───────────┘   └─────────┘   └───────────┘
+YAML Flow Definition
+       ↓
+   [Parse + Validate]
+       ↓
+   [Compile to DAG]
+       ↓
+   [Execute Nodes in Order]
+       ↓
+   [Events flow through Hub]
+       ↓
+   [Channels observe & interact]
 ```
 
-**FlowRuntime** orchestrates the workflow, owning lifecycle events and session management. **Agents** do the actual work (calling LLMs, processing data). **Channels** handle external I/O (console, GitHub, voice). Everything communicates through the Hub.
+That's it. Everything else is details.
 
-## Design Philosophy
+## The Three Layers
 
-### Event-Driven Over Imperative
+### Layer 1: Hub (The Event Bus)
 
-Rather than direct function calls, components communicate through events. When an agent produces output, it emits an event. When a user sends input, it becomes an event. This creates:
+The **Hub** is a message bus that all events flow through.
 
-- **Observability**: Every action is visible
-- **Testability**: Events can be recorded and replayed
-- **Extensibility**: New components subscribe without changes
+**What it does:**
+- `emit(event)` - Publish an event
+- `subscribe(filter, listener)` - Listen for events
+- `scoped(context, fn)` - Run code with context attached to all events
+- `sendToRun(runId, message)` - Inject messages to running agents
 
-### Declarative Over Procedural
+**Why it matters:** Everything goes through the Hub. No side channels. This gives you:
+- Full observability (subscribe to `*` and see everything)
+- Context propagation (events know which task/phase/agent they came from)
+- Command injection (external systems can send messages to running agents)
 
-Workflows are defined as YAML DAGs (Directed Acyclic Graphs):
+```typescript
+// Subscribe to all events
+hub.subscribe("*", (event) => {
+  console.log(`[${event.context.task?.id}] ${event.event.type}`);
+});
+
+// Run code with context
+await hub.scoped({ phase: { name: "Execute" } }, async () => {
+  hub.emit({ type: "custom:event" }); // Has phase context attached
+});
+```
+
+### Layer 2: Flow (The Workflow Engine)
+
+The **Flow** layer is a DAG execution engine that runs YAML-defined workflows.
+
+```
+YAML String → parser → FlowYaml → validator → compiler → executor → Events
+```
+
+**Key concepts:**
+
+1. **Nodes**: Executable units with input/output
+   ```yaml
+   - id: ask_user
+     type: claude.agent
+     input:
+       prompt: "What is your name?"
+   ```
+
+2. **Edges**: Explicit dependencies between nodes
+   ```yaml
+   edges:
+     - from: ask_user
+       to: greet_user
+   ```
+
+3. **Bindings**: Data threading via JSONata expressions
+   ```yaml
+   - id: greet_user
+     type: echo
+     input:
+       text: "Hello, {{ ask_user.text }}!"
+   ```
+
+4. **When expressions**: Conditional execution with JSONata
+   ```yaml
+   - id: conditional_node
+     when: "score > 80"
+   ```
+
+### Layer 3: Channels (External Interfaces)
+
+**Channels** are adapters that connect external systems to the Hub.
+
+What a channel does:
+1. Subscribes to hub events (observe)
+2. Sends commands to hub (interact)
+3. Maintains its own state (connection info, etc.)
+
+```typescript
+hub.registerChannel({
+  name: "logger",
+  on: {
+    "node:*": ({ event }) => {
+      console.log(`[${event.event.type}] ${event.event.nodeId}`);
+    },
+  },
+});
+```
+
+## How Execution Works
+
+Let's trace what happens when you run this flow:
 
 ```yaml
 flow:
-  name: research-and-summarize
+  name: "Simple Flow"
+
 nodes:
-  - id: research
-    type: agent.claude
+  - id: ask
+    type: claude.agent
     input:
-      prompt: "Research: {{flow.input.topic}}"
-  - id: summarize
-    type: agent.claude
+      prompt: "Say hello"
+
+  - id: log
+    type: echo
     input:
-      prompt: "Summarize: {{research.output}}"
+      text: "Agent said: {{ ask.text }}"
+
 edges:
-  - from: research
-    to: summarize
+  - from: ask
+    to: log
 ```
 
-This declarative approach enables:
-- **Visual editing** via n8n-style interfaces
-- **Easy modification** without code changes
-- **Clear data flow** between nodes
+1. **Parse & Validate** - YAML is parsed and checked against Zod schemas
+2. **Compile** - Nodes are topologically sorted (ask before log)
+3. **Execute `ask`** - Claude is called, returns `{ text: "Hello!" }`
+4. **Store output** - `outputs["ask"] = { text: "Hello!" }`
+5. **Resolve bindings** - `{{ ask.text }}` becomes `"Hello!"`
+6. **Execute `log`** - Echoes `"Agent said: Hello!"`
 
-### Composable Primitives
+Each step emits events (`node:start`, `node:complete`) that channels can observe.
 
-The system is built from four composable primitives:
-- **Hub**: Event routing and context propagation
-- **Agent**: Executable work unit (LLM or custom)
-- **Channel**: Bidirectional I/O adapter
-- **Flow**: DAG-based workflow orchestration
-
-These primitives combine in predictable ways. Understanding them unlocks the full system.
-
-## Why This Architecture?
-
-### Testability
-
-AI responses are non-deterministic and API calls are slow. By routing everything through events:
-- Record event streams during execution
-- Replay recordings for deterministic tests
-- No network calls during test runs
-
-### Observability
-
-With a central event bus:
-- Every action is logged
-- Easy debugging with full event history
-- Metrics and monitoring built-in
-
-### Extensibility
-
-New capabilities plug in cleanly:
-- Custom nodes for specific tasks
-- New channels for different I/O
-- Subscribers for logging, analytics, dashboards
-
-## The Runtime
-
-**FlowRuntime** is the orchestration layer that:
-
-- Executes FlowSpec DAGs in topological order
-- Manages lifecycle events (`harness:start/complete`, `phase:*`, `task:*`)
-- Routes session messages to running agents
-- Coordinates channel attachments
+## The Canonical Interface
 
 ```typescript
-import { executeFlow, createHub, createChannelAttachment } from "@open-harness/kernel";
+import {
+  createHub,
+  executeFlow,
+  parseFlowYaml,
+  NodeRegistry,
+  claudeNode
+} from "@open-harness/kernel";
 
-const hub = createHub();
-hub.attach(createChannelAttachment(consoleChannel));
+// 1. Create hub
+const hub = createHub("my-session");
 
-const ctx = { hub, phase: async (n, fn) => fn(), task: async (id, fn) => fn() };
-await executeFlow(flow, registry, ctx, input);
+// 2. Register channels FIRST
+hub.registerChannel({
+  name: "logger",
+  on: {
+    "node:*": ({ event }) => console.log(event.event.type),
+  },
+});
+
+// 3. Register node types
+const registry = new NodeRegistry();
+registry.register(claudeNode);
+
+// 4. Parse and execute
+const flow = parseFlowYaml(yamlString);
+await hub.start();
+const result = await executeFlow(flow, registry, hub);
+await hub.stop();
 ```
 
-## Next Steps
+## Design Principles
 
-- [Kernel Primitives](/docs/concepts/architecture/kernel-primitives) - Deep dive into Hub, Agent, Channel, Flow
-- [Execution Models](/docs/concepts/execution) - Sequential and parallel execution
-- [Event-Driven Design](/docs/concepts/architecture/event-driven) - Why events matter
+| Principle | Benefit |
+|-----------|---------|
+| **Event-driven** | Full observability, replay testing |
+| **Declarative YAML** | Visual editing, easy modification |
+| **Hub-centric** | Single source of truth for all events |
+| **Channel adapters** | Clean I/O separation |
+
+## What's Next
+
+- [Data Bindings with JSONata](/docs/guides/expressions/bindings) - Learn the expression language
+- [Hub Events](/docs/concepts/hub/event-bus) - Deep dive into event types
+- [Custom Agents](/docs/guides/agents/custom-agents) - Build your own agents
