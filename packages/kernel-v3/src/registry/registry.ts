@@ -1,3 +1,4 @@
+import type { CancelContext } from "../core/cancel.js";
 import type { RuntimeEventPayload } from "../core/events.js";
 import type { CommandInbox, StateStore } from "../core/state.js";
 
@@ -21,6 +22,8 @@ export interface NodeRunContext {
 	setAgentSession: (sessionId: string) => void;
 	/** Optional resume prompt injected for resumed nodes. */
 	resumeMessage?: string;
+	/** Cancellation context for mid-stream interruption. */
+	cancel: CancelContext;
 }
 
 /**

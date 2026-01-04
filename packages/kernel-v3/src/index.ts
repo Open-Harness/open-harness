@@ -2,6 +2,7 @@
  * Kernel V3 public API exports.
  */
 
+export * from "./core/cancel.js";
 export * from "./core/events.js";
 export * from "./core/state.js";
 export * from "./core/types.js";
