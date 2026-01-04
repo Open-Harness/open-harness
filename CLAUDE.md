@@ -85,6 +85,14 @@ Never claim a task is complete without:
 
 **Unit tests that mock everything prove nothing about real behavior. Integration tests are mandatory.**
 
+### 5. Fixture Recording Policy
+**CRITICAL: You are NOT allowed to fabricate fixtures.**
+- All test fixtures MUST be recorded from REAL SDK interactions
+- Use `packages/kernel-v3/scripts/record-fixtures.ts` or similar to capture real responses
+- Fixtures must include actual SDK message types, timing, and structure
+- Never manually create fixtures with made-up data - this masks real SDK behavior differences
+- When fixing SDK integration bugs, always capture new fixtures from live SDK to prove the fix works
+
 ## CRITICAL: Authentication
 
 **DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.

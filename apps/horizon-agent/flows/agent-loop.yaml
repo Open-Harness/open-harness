@@ -43,28 +43,10 @@ nodes:
         3. Each task should be completable in a single focused coding session
         4. Include clear success criteria for each task
 
-        ## Output Format
-        Return a JSON object with this exact structure:
-        ```json
-        {
-          "tasks": [
-            {
-              "id": "task-1",
-              "title": "Short descriptive title",
-              "description": "Detailed description of what to implement, including specific files, functions, or components to create/modify",
-              "dependencies": []
-            },
-            {
-              "id": "task-2",
-              "title": "Another task",
-              "description": "This task depends on task-1",
-              "dependencies": ["task-1"]
-            }
-          ]
-        }
-        ```
-
         Keep the plan focused and achievable. Aim for 3-7 tasks for typical features.
+      options:
+        # Use file-based schema for structured output
+        outputSchemaFile: apps/horizon-agent/schemas/planner.json
 
   # Phase 2: Task Iteration
   # Process each task from the planner's output using forEach
@@ -128,28 +110,9 @@ nodes:
         - Only fail the implementation if there are genuine issues
         - Provide specific, actionable feedback for any issues found
         - If the code is production-ready, approve it
-
-        ## Output Format
-        Return a JSON object with this exact structure:
-        ```json
-        {
-          "passed": true,
-          "feedback": "Summary of the review",
-          "issues": []
-        }
-        ```
-
-        Or if there are issues:
-        ```json
-        {
-          "passed": false,
-          "feedback": "Summary of what needs to be fixed",
-          "issues": [
-            "Specific issue 1 that needs to be addressed",
-            "Specific issue 2 that needs to be addressed"
-          ]
-        }
-        ```
+      options:
+        # Use file-based schema for structured output
+        outputSchemaFile: apps/horizon-agent/schemas/reviewer.json
 
 edges:
   # Planner -> Coder (with forEach for task iteration)
