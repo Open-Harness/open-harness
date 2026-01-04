@@ -2,7 +2,7 @@
 
 import type { WhenExpr, WhenExprAST } from "../core/types.js";
 import type { BindingContext } from "./bindings.js";
-import { evaluateExpression, type ExpressionContext } from "./expressions.js";
+import { type ExpressionContext, evaluateExpression } from "./expressions.js";
 
 function isDeepEqual(left: unknown, right: unknown): boolean {
 	if (Object.is(left, right)) return true;
@@ -17,16 +17,10 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
  * Evaluate a structured YAML AST-style when expression.
  * Uses JSONata internally for path resolution.
  */
-async function evaluateWhenAST(
-	expr: WhenExprAST,
-	context: BindingContext,
-): Promise<boolean> {
+async function evaluateWhenAST(expr: WhenExprAST, context: BindingContext): Promise<boolean> {
 	if ("equals" in expr) {
 		// Use JSONata to resolve the variable path
-		const resolved = await evaluateExpression(
-			expr.equals.var,
-			context as ExpressionContext,
-		);
+		const resolved = await evaluateExpression(expr.equals.var, context as ExpressionContext);
 		if (resolved === undefined) {
 			return false;
 		}
@@ -82,10 +76,7 @@ async function evaluateWhenAST(
  * @param context - Binding context with node outputs and flow input
  * @returns true if the condition is satisfied, false otherwise
  */
-export async function evaluateWhen(
-	expr: WhenExpr | undefined,
-	context: BindingContext,
-): Promise<boolean> {
+export async function evaluateWhen(expr: WhenExpr | undefined, context: BindingContext): Promise<boolean> {
 	// No condition = always true
 	if (expr === undefined || expr === null) {
 		return true;
@@ -93,10 +84,7 @@ export async function evaluateWhen(
 
 	// JSONata expression string
 	if (typeof expr === "string") {
-		const result = await evaluateExpression(
-			expr,
-			context as ExpressionContext,
-		);
+		const result = await evaluateExpression(expr, context as ExpressionContext);
 		// Coerce result to boolean
 		// undefined/null/false/"" -> false
 		// everything else -> truthy check

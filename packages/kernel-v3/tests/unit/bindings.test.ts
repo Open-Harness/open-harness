@@ -45,21 +45,18 @@ describe("resolveBindings", () => {
 			flow: { input: { name: "Ada" } },
 			user: { meta: { id: 42 } },
 		};
-		const input = {
+		const input: Record<string, unknown> = {
 			name: "{{ flow.input.name }}",
 			id: "{{ user.meta.id }}",
 		};
 		const resolved = await resolveBindings(input, context);
-		expect(resolved.name).toBe("Ada");
-		expect(resolved.id).toBe(42);
+		expect(resolved.name).toEqual("Ada");
+		expect(resolved.id).toEqual(42);
 	});
 
 	test("preserves non-string values for pure bindings", async () => {
 		const context = { payload: { a: 1 } };
-		const resolved = await resolveBindings(
-			{ value: "{{ payload }}" } as Record<string, unknown>,
-			context,
-		);
+		const resolved = await resolveBindings({ value: "{{ payload }}" } as Record<string, unknown>, context);
 		expect(resolved.value).toEqual({ a: 1 });
 	});
 
@@ -78,10 +75,7 @@ describe("resolveBindings", () => {
 
 	test("passes through non-string values unchanged", async () => {
 		const context = {};
-		const resolved = await resolveBindings(
-			{ num: 42, bool: true, nil: null } as Record<string, unknown>,
-			context,
-		);
+		const resolved = await resolveBindings({ num: 42, bool: true, nil: null } as Record<string, unknown>, context);
 		expect(resolved.num).toBe(42);
 		expect(resolved.bool).toBe(true);
 		expect(resolved.nil).toBe(null);

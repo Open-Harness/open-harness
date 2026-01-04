@@ -1,14 +1,14 @@
 // Integration tests for JSONata expression evaluator
 // Tests the core capabilities needed for flow orchestration
 
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
-	evaluateExpression,
-	parseTemplate,
-	isPureBinding,
-	resolveTemplate,
 	clearExpressionCache,
 	type ExpressionContext,
+	evaluateExpression,
+	isPureBinding,
+	parseTemplate,
+	resolveTemplate,
 } from "../../src/runtime/expressions.js";
 
 beforeEach(() => {
@@ -101,16 +101,16 @@ describe("evaluateExpression", () => {
 		test("ternary with missing value defaults", async () => {
 			const ctx: ExpressionContext = {};
 			// When reviewer is missing, use default
-			expect(
-				await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)
-			).toBe("No feedback yet");
+			expect(await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)).toBe(
+				"No feedback yet",
+			);
 		});
 
 		test("ternary with existing value", async () => {
 			const ctx: ExpressionContext = { reviewer: { text: "Looks good!" } };
-			expect(
-				await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)
-			).toBe("Looks good!");
+			expect(await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)).toBe(
+				"Looks good!",
+			);
 		});
 	});
 
@@ -268,7 +268,7 @@ describe("orchestration patterns", () => {
 {{ $exists(reviewer) ? "## Feedback\\n" & reviewer.text : "" }}
 
 {{ $first ? "Implement this task." : "Address the feedback above." }}`,
-				ctx
+				ctx,
 			);
 
 			expect(prompt).toContain("# Task: Implement auth");
@@ -288,7 +288,7 @@ describe("orchestration patterns", () => {
 			const prompt = await resolveTemplate(
 				`{{ $exists(reviewer) ? "## Feedback\\n" & reviewer.text : "" }}
 {{ $first ? "Implement this task." : "Address the feedback above." }}`,
-				ctx
+				ctx,
 			);
 
 			expect(prompt).toContain("## Feedback");
@@ -333,7 +333,7 @@ And this summary:
 {{ summarizer.text }}
 
 Write a blog post.`,
-				ctx
+				ctx,
 			);
 
 			expect(writerPrompt).toContain("Found 3 relevant papers");
