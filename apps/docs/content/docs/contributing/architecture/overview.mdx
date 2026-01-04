@@ -15,10 +15,10 @@ Open Harness uses a monorepo with multiple packages:
 open-harness/
 ├── packages/
 │   ├── kernel/           # Core runtime (main package)
-│   ├── rtv-channel/      # Real-time voice channel
-│   └── config/           # Shared configuration
+│   └── kernel-v3/        # Next-gen kernel with graph-based flows
 ├── apps/
-│   └── docs/             # Documentation site
+│   ├── docs/             # Documentation site
+│   └── horizon-agent/    # Terminal UI for kernel-v3
 ├── bun.lockb
 └── package.json
 ```
@@ -29,17 +29,8 @@ open-harness/
 ┌─────────────────────────────────────────────────────┐
 │                    Applications                      │
 │                                                      │
-│   ┌──────────────┐                                  │
-│   │    docs      │                                  │
-│   └──────────────┘                                  │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│                     Channels                         │
-│                                                      │
 │   ┌──────────────┐   ┌──────────────┐              │
-│   │ rtv-channel  │   │ (future)     │              │
+│   │    docs      │   │horizon-agent │              │
 │   └──────────────┘   └──────────────┘              │
 └─────────────────────────────────────────────────────┘
                         │
@@ -49,8 +40,11 @@ open-harness/
 │                                                      │
 │   ┌──────────────────────────────────────────────┐  │
 │   │               @open-harness/kernel            │  │
-│   │                                               │  │
 │   │  protocol/ → engine/ → flow/ → providers/    │  │
+│   └──────────────────────────────────────────────┘  │
+│   ┌──────────────────────────────────────────────┐  │
+│   │             @open-harness/kernel-v3           │  │
+│   │  graph-based flows, Claude nodes, runtime    │  │
 │   └──────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
