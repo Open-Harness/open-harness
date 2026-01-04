@@ -268,8 +268,12 @@ async function runNode(
 
 			// Execute the child node
 			const childRunId = createRunId(childId, 1);
+			// Control nodes need binding context to evaluate conditions
+			const childRunCtx = childDef.capabilities?.needsBindingContext
+				? { hub: ctx.hub, runId: childRunId, bindingContext: childBindingContext }
+				: { hub: ctx.hub, runId: childRunId };
 			const childResult = await childDef.run(
-				{ hub: ctx.hub, runId: childRunId },
+				childRunCtx,
 				parsedChildInput,
 			);
 
@@ -448,7 +452,7 @@ export async function executeFlow(
 			// Resolve edge states for all completed nodes so continuation works
 			const bindingCtx = createBindingContext(flowInput, outputs);
 			for (const nodeId of Object.keys(resumptionState.outputs)) {
-				resolveOutgoingEdges(nodeId, edgeIndex, bindingCtx);
+				await resolveOutgoingEdges(nodeId, edgeIndex, bindingCtx);
 			}
 		}
 
@@ -576,7 +580,21 @@ export async function executeFlow(
 			// Check outgoing loop edges for controlled cycles
 			const loopEdges = loopEdgeIndex.outgoing.get(node.id) ?? [];
 			for (const loopState of loopEdges) {
-				const loopBindingContext = createBindingContext(flowInput, outputs);
+				// Calculate max iterations first (needed for $last and $maxIterations)
+				const maxIter = resolveMaxIterations(
+					loopState.edge.maxIterations,
+					createBindingContext(flowInput, outputs),
+				);
+
+				// Create binding context with iteration variables for edge condition
+				const loopBindingContext = {
+					...createBindingContext(flowInput, outputs),
+					$iteration: loopState.iterationCount,
+					$first: loopState.iterationCount === 0,
+					$last: loopState.iterationCount >= maxIter - 1,
+					$maxIterations: maxIter,
+				};
+
 				const shouldLoop = await evaluateWhen(
 					loopState.edge.when,
 					loopBindingContext,
@@ -584,10 +602,6 @@ export async function executeFlow(
 
 				if (shouldLoop) {
 					loopState.iterationCount++;
-					const maxIter = resolveMaxIterations(
-						loopState.edge.maxIterations,
-						loopBindingContext,
-					);
 
 					if (loopState.iterationCount >= maxIter) {
 						throw new LoopIterationExceededError(
