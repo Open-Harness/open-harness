@@ -43,6 +43,13 @@ nodes:
         3. Each task should be completable in a single focused coding session
         4. Include clear success criteria for each task
 
+        ## Output Format
+        Return a JSON object with a "tasks" array. Each task must have:
+        - id: Unique identifier like "task-1", "task-2"
+        - title: Short descriptive title
+        - description: Detailed description of what to implement
+        - dependencies: Array of task IDs this depends on (empty array if none)
+
         Keep the plan focused and achievable. Aim for 3-7 tasks for typical features.
       options:
         # Use file-based schema for structured output
