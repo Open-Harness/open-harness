@@ -59,17 +59,21 @@ Only return the JSON, nothing else.`;
 	}
 
 	if (result1) {
-		console.log("result.result (text):", result1.result?.slice(0, 200));
-		console.log("result.structured_output:", result1.structured_output);
-		console.log();
+		if (result1.subtype === "success") {
+			console.log("result.result (text):", result1.result?.slice(0, 200));
+			console.log("result.structured_output:", result1.structured_output);
+			console.log();
 
-		if (result1.structured_output === undefined) {
-			console.log("❌ ISSUE CONFIRMED: structured_output is undefined!");
-			console.log("   The flow expects {{ planner.structuredOutput.tasks }}");
-			console.log("   But structuredOutput is undefined, so binding resolution FAILS");
-			console.log("   Error: 'Missing binding path: planner.structuredOutput.tasks'");
+			if (result1.structured_output === undefined) {
+				console.log("❌ ISSUE CONFIRMED: structured_output is undefined!");
+				console.log("   The flow expects {{ planner.structuredOutput.tasks }}");
+				console.log("   But structuredOutput is undefined, so binding resolution FAILS");
+				console.log("   Error: 'Missing binding path: planner.structuredOutput.tasks'");
+			} else {
+				console.log("✅ structured_output is populated:", result1.structured_output);
+			}
 		} else {
-			console.log("✅ structured_output is populated:", result1.structured_output);
+			console.log("❌ Result is not success, subtype:", result1.subtype);
 		}
 	}
 
@@ -122,17 +126,21 @@ Only return the JSON, nothing else.`;
 		);
 
 		if (result2) {
-			console.log("result.result (text):", result2.result?.slice(0, 200));
-			console.log("result.structured_output:", JSON.stringify(result2.structured_output, null, 2));
-			console.log("result.subtype:", result2.subtype);
-			console.log();
+			if (result2.subtype === "success") {
+				console.log("result.result (text):", result2.result?.slice(0, 200));
+				console.log("result.structured_output:", JSON.stringify(result2.structured_output, null, 2));
+				console.log("result.subtype:", result2.subtype);
+				console.log();
 
-			if (result2.structured_output !== undefined) {
-				console.log("✅ WITH outputFormat: structured_output is populated!");
-				console.log("   The flow CAN access {{ planner.structuredOutput.tasks }}");
+				if (result2.structured_output !== undefined) {
+					console.log("✅ WITH outputFormat: structured_output is populated!");
+					console.log("   The flow CAN access {{ planner.structuredOutput.tasks }}");
+				} else {
+					console.log("❌ Even with outputFormat, structured_output is undefined");
+					console.log("   Full result:", JSON.stringify(result2, null, 2).slice(0, 500));
+				}
 			} else {
-				console.log("❌ Even with outputFormat, structured_output is undefined");
-				console.log("   Full result:", JSON.stringify(result2, null, 2).slice(0, 500));
+				console.log("❌ Result is not success, subtype:", result2.subtype);
 			}
 		} else {
 			console.log("❌ No result message received!");

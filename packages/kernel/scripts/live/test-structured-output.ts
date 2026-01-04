@@ -86,16 +86,21 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
 		);
 
 		if (result) {
-			console.log("result.subtype:", result.subtype);
-			console.log("result.result (text):", result.result?.slice(0, 200));
-			console.log("result.structured_output:", JSON.stringify(result.structured_output, null, 2));
+			if (result.subtype === "success") {
+				console.log("result.subtype:", result.subtype);
+				console.log("result.result (text):", result.result?.slice(0, 200));
+				console.log("result.structured_output:", JSON.stringify(result.structured_output, null, 2));
 
-			if (result.structured_output !== undefined) {
-				console.log("\n✅ INLINE SCHEMA WORKS! structured_output is populated");
-				return true;
+				if (result.structured_output !== undefined) {
+					console.log("\n✅ INLINE SCHEMA WORKS! structured_output is populated");
+					return true;
+				} else {
+					console.log("\n❌ INLINE SCHEMA FAILED: structured_output is undefined");
+					console.log("   subtype:", result.subtype);
+					return false;
+				}
 			} else {
-				console.log("\n❌ INLINE SCHEMA FAILED: structured_output is undefined");
-				console.log("   subtype:", result.subtype);
+				console.log("\n❌ Result is not success, subtype:", result.subtype);
 				return false;
 			}
 		} else {
@@ -160,17 +165,22 @@ Return ONLY valid JSON (no markdown):
 		);
 
 		if (result) {
-			console.log("result.subtype:", result.subtype);
-			console.log("result.result (text):", result.result?.slice(0, 200));
-			console.log("result.structured_output:", JSON.stringify(result.structured_output, null, 2));
+			if (result.subtype === "success") {
+				console.log("result.subtype:", result.subtype);
+				console.log("result.result (text):", result.result?.slice(0, 200));
+				console.log("result.structured_output:", JSON.stringify(result.structured_output, null, 2));
 
-			if (result.structured_output !== undefined) {
-				console.log("\n✅ FILE-BASED SCHEMA WORKS! structured_output is populated");
-				console.log("   This proves outputSchemaFile can work if we add file loading to claude.agent.ts");
-				return true;
+				if (result.structured_output !== undefined) {
+					console.log("\n✅ FILE-BASED SCHEMA WORKS! structured_output is populated");
+					console.log("   This proves outputSchemaFile can work if we add file loading to claude.agent.ts");
+					return true;
+				} else {
+					console.log("\n❌ FILE-BASED SCHEMA FAILED: structured_output is undefined");
+					console.log("   subtype:", result.subtype);
+					return false;
+				}
 			} else {
-				console.log("\n❌ FILE-BASED SCHEMA FAILED: structured_output is undefined");
-				console.log("   subtype:", result.subtype);
+				console.log("\n❌ Result is not success, subtype:", result.subtype);
 				return false;
 			}
 		} else {
@@ -204,13 +214,17 @@ async function testWithoutSchema(): Promise<void> {
 	}
 
 	if (result) {
-		console.log("result.result (text):", result.result?.slice(0, 100));
-		console.log("result.structured_output:", result.structured_output);
+		if (result.subtype === "success") {
+			console.log("result.result (text):", result.result?.slice(0, 100));
+			console.log("result.structured_output:", result.structured_output);
 
-		if (result.structured_output === undefined) {
-			console.log("\n✅ BASELINE CONFIRMED: Without schema, structured_output is undefined");
+			if (result.structured_output === undefined) {
+				console.log("\n✅ BASELINE CONFIRMED: Without schema, structured_output is undefined");
+			} else {
+				console.log("\n⚠️  UNEXPECTED: structured_output is populated without schema!");
+			}
 		} else {
-			console.log("\n⚠️  UNEXPECTED: structured_output is populated without schema!");
+			console.log("\n❌ Result is not success, subtype:", result.subtype);
 		}
 	}
 }
