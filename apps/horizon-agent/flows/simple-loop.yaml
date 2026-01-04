@@ -45,16 +45,10 @@ nodes:
         3. Error handling: Are edge cases covered?
         4. Types: Are TypeScript types properly used?
 
-        Return a JSON response:
-        ```json
-        {
-          "passed": boolean,
-          "feedback": "Overall assessment",
-          "issues": ["issue 1", "issue 2"]
-        }
-        ```
-
         Be strict but fair. Only pass if the code is production-ready.
+      options:
+        # Use file-based schema for structured output
+        outputSchemaFile: apps/horizon-agent/schemas/reviewer.json
 
 edges:
   - from: coder

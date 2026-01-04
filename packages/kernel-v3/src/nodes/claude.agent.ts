@@ -8,9 +8,23 @@ import type {
 	SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { readFileSync, existsSync } from "fs";
+import { resolve } from "path";
 import { z } from "zod";
 import type { RuntimeCommand } from "../core/events.js";
 import type { NodeTypeDefinition } from "../registry/registry.js";
+
+/**
+ * Extended options that support file-based schema references.
+ * - outputSchemaFile: Path to a JSON Schema file (resolved relative to cwd)
+ * - outputFormat: Inline schema (SDK native format)
+ */
+export interface ClaudeAgentExtendedOptions extends Omit<Options, "outputFormat"> {
+	/** Path to JSON Schema file for structured output. Resolved relative to cwd. */
+	outputSchemaFile?: string;
+	/** Inline JSON Schema for structured output (SDK native format). */
+	outputFormat?: { type: "json_schema"; schema: Record<string, unknown> };
+}
 
 export type ClaudeMessageInput =
 	| string
@@ -25,7 +39,8 @@ export type ClaudeMessageInput =
 export interface ClaudeAgentInput {
 	prompt?: string;
 	messages?: ClaudeMessageInput[];
-	options?: Options;
+	/** SDK options with extended support for outputSchemaFile */
+	options?: ClaudeAgentExtendedOptions;
 }
 
 export interface ClaudeAgentOutput {
@@ -358,7 +373,50 @@ export function createClaudeNode(
  */
 export const claudeNode = createClaudeNode();
 
-function mergeOptions(options?: Options, sessionId?: string): Options | undefined {
+/**
+ * Resolve outputSchemaFile to outputFormat if provided.
+ * Priority: outputFormat > outputSchemaFile
+ * @internal Exported for testing only
+ */
+export function resolveOutputSchema(options?: ClaudeAgentExtendedOptions): Options | undefined {
+	if (!options) return undefined;
+
+	// Extract our custom field and convert to SDK format
+	const { outputSchemaFile, outputFormat, ...sdkOptions } = options;
+
+	// If outputFormat is already provided (inline schema), use it directly
+	if (outputFormat) {
+		return { ...sdkOptions, outputFormat } as Options;
+	}
+
+	// If outputSchemaFile is provided, load and convert
+	if (outputSchemaFile) {
+		const resolvedPath = resolve(process.cwd(), outputSchemaFile);
+
+		if (!existsSync(resolvedPath)) {
+			throw new Error(`outputSchemaFile not found: ${resolvedPath}`);
+		}
+
+		try {
+			const schemaContent = readFileSync(resolvedPath, "utf-8");
+			const schema = JSON.parse(schemaContent) as Record<string, unknown>;
+
+			return {
+				...sdkOptions,
+				outputFormat: { type: "json_schema", schema },
+			} as Options;
+		} catch (error) {
+			throw new Error(
+				`Failed to load outputSchemaFile: ${resolvedPath}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
+
+	// No schema specified, return options as-is
+	return sdkOptions as Options;
+}
+
+function mergeOptions(options?: ClaudeAgentExtendedOptions, sessionId?: string): Options | undefined {
 	const defaults: Partial<Options> = {
 		maxTurns: 100,
 		persistSession: true,
@@ -366,7 +424,11 @@ function mergeOptions(options?: Options, sessionId?: string): Options | undefine
 		permissionMode: "bypassPermissions",
 		allowDangerouslySkipPermissions: true,
 	};
-	const merged = options ? { ...defaults, ...options } : { ...defaults };
+
+	// First resolve any schema file references
+	const resolvedOptions = resolveOutputSchema(options);
+
+	const merged = resolvedOptions ? { ...defaults, ...resolvedOptions } : { ...defaults };
 	if (sessionId && !merged.resume && !merged.continue) {
 		merged.resume = sessionId;
 	}

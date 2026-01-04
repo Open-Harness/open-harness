@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PlannerOutput",
+  "description": "Schema for planner node output - list of implementation tasks",
+  "type": "object",
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "description": "List of implementation tasks",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique task identifier (e.g., 'task-1')"
+          },
+          "title": {
+            "type": "string",
+            "description": "Short descriptive title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of what to implement"
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "IDs of tasks this depends on",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        },
+        "required": ["id", "title", "description", "dependencies"]
+      }
+    }
+  },
+  "required": ["tasks"]
+}
