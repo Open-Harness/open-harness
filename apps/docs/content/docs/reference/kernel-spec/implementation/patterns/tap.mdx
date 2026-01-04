@@ -1,0 +1,1271 @@
+---
+title: "Temporal Accumulation Pattern (TAP)"
+description: "> **The foundational pattern for building intelligent, context-aware AI agents that learn and improve over time**"
+---
+
+> **The foundational pattern for building intelligent, context-aware AI agents that learn and improve over time**
+
+**Note**: This is an **implementation pattern**, not part of the kernel protocol spec. It uses **extension events** (e.g. `schedule:*`) that are allowed by the protocol but not required or standardized.
+
+---
+
+## What is TAP?
+
+The **Temporal Accumulation Pattern (TAP)** is an architectural approach where agents build knowledge by accumulating their outputs over time, rather than being stateless functions. Each agent execution builds on previous outputs, increasing confidence and enabling sophisticated temporal reasoning.
+
+**Core Principle**: *Every agent has memory. Every output becomes context for future decisions.*
+
+---
+
+## The Paradigm Shift
+
+### Traditional Agent Architecture (Stateless)
+
+```
+Input → Agent → Output
+        (no memory)
+```
+
+- Each execution is independent
+- No learning from previous runs
+- No confidence building
+- No pattern recognition
+
+### TAP Architecture (Temporal Accumulation)
+
+```
+Input + History → Agent → Output + Confidence + Evidence + Schedule
+                    ↓
+              Store in History
+                    ↓
+              Future executions use this
+```
+
+- Each execution builds on previous outputs
+- Confidence increases with evidence
+- Patterns emerge over time
+- Agents schedule future work via **extension events** interpreted by drivers
+
+---
+
+## Core Concepts
+
+### 1. Temporal Accumulation
+
+**Definition**: Agents store their outputs over time and use this history as context for future executions.
+
+**Example - Location Agent**:
+
+**Run 1** (08:00 AM):
+```typescript
+&#123;
+  inferredLocation: "HOME",
+  confidence: 0.95,
+  evidence: ["GPS matches home address", "Stable for 8+ hours"],
+  timestamp: "08:00"
+&#125;
+```
+
+**Run 2** (08:15 AM) - *Uses Run 1 as context*:
+```typescript
+&#123;
+  inferredLocation: "COMMUTING", 
+  confidence: 0.72,
+  evidence: [
+    "GPS moving away from home",
+    "Previous state was HOME (from Run 1)",  // ← Using history!
+    "Direction matches work commute"
+  ],
+  stateTransition: &#123;
+    from: "HOME",
+    to: "COMMUTING",
+    reasoning: "Started moving from home location"
+  &#125;,
+  timestamp: "08:15"
+&#125;
+```
+
+**Run 3** (08:30 AM) - *Uses Run 1 + 2 as context*:
+```typescript
+&#123;
+  inferredLocation: "COMMUTING",
+  confidence: 0.89,  // ← Higher confidence!
+  evidence: [
+    "Continued movement toward work",
+    "Traveled 600m in 15 min (consistent with driving)",
+    "Previous 2 outputs show HOME → COMMUTING transition"  // ← Full history!
+  ],
+  pattern: &#123;
+    matchesHistoricalCommute: true,
+    reasoning: "Matches Tuesday morning pattern from past 4 weeks"
+  &#125;,
+  timestamp: "08:30"
+&#125;
+```
+
+**Key Insight**: The agent becomes MORE CONFIDENT as it sees consistent patterns over time.
+
+---
+
+### 2. Every Agent is Temporal
+
+**All agents maintain output history**:
+
+```typescript
+interface AgentOutput&#60;T&#62; &#123;
+  agentName: string;
+  timestamp: Date;
+  runId: string;
+  
+  // The actual output
+  output: T;
+  
+  // Metadata
+  confidence: number;
+  evidence: string[];
+  reasoning: string;
+  
+  // Context
+  previousOutputCount: number;
+  stateTransition?: &#123;
+    from: string;
+    to: string;
+    transitionTime: Date;
+    reasoning: string;
+  &#125;;
+&#125;
+```
+
+**Harness State**:
+```typescript
+interface TAPState &#123;
+  // Current trigger for this run (set by driver)
+  trigger: TriggerEvent;
+
+  // Temporal accumulation for each agent
+  agentOutputs: &#123;
+    location: AgentOutput&#60;LocationData&#62;[];
+    calendar: AgentOutput&#60;CalendarData&#62;[];
+    brain: AgentOutput&#60;Decision&#62;[];
+    // ... all agents store history
+  &#125;;
+  
+  // Quick access to latest (optional derived cache)
+  latest?: &#123;
+    location: AgentOutput&#60;LocationData&#62;;
+    calendar: AgentOutput&#60;CalendarData&#62;;
+    // ...
+  &#125;;
+  
+  // Learned patterns (computed from history)
+  patterns: &#123;
+    userBehavior: UserPatterns;
+    locationPatterns: LocationPatterns;
+    // ...
+  &#125;;
+  
+  // Pending scheduled tasks
+  scheduledTasks: ScheduledTask[];
+&#125;
+```
+
+---
+
+### 3. Agent Autonomy via Events
+
+**Key Principle**: Agents don't execute actions directly - they emit events to schedule work.
+
+The Hub is bidirectional:
+- **Events OUT**: Agents emit events, including **extension events** (e.g. `schedule:*`) that drivers interpret
+- **Commands IN**: External systems can send messages to trigger runs
+
+**Agents schedule future work by emitting extension events**:
+
+```typescript
+// Inside an agent's execution
+emit(&#123; 
+  type: "schedule:task", 
+  taskId: "notify-prayer",
+  executeAt: "2025-01-15T09:00:00Z",
+  action: "send_notification",
+  parameters: &#123; message: "Prayer in 20 min" &#125;,
+  reasoning: "User typically needs 20 min lead time"
+&#125;);
+
+// Schedule the next harness run
+emit(&#123;
+  type: "schedule:run",
+  trigger: &#123; type: "periodic-check" &#125;,
+  executeAt: "2025-01-15T08:30:00Z",
+  reasoning: "Regular 15-minute check"
+&#125;);
+```
+
+**Immediate execution is still scheduling**:
+```typescript
+emit(&#123;
+  type: "schedule:task",
+  taskId: "urgent-notify",
+  executeAt: "immediately",
+  action: "send_urgent_notification",
+  parameters: &#123; message: "⚠️ Prayer window closing!" &#125;,
+  reasoning: "Critical time window"
+&#125;);
+```
+
+---
+
+## Architecture Overview
+
+### The Two-Layer Model
+
+TAP uses a clean separation between **orchestration logic** (harness) and **execution timing** (driver):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         DRIVER                               │
+│  (Dumb plumbing - handles persistence and timing)           │
+│                                                              │
+│  1. Load state from store                                    │
+│  2. Create harness + run                                     │
+│  3. Save returned state                                      │
+│  4. Read schedule:* extension events, set up timers          │
+│  5. When timer fires, goto 1                                │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        HARNESS                               │
+│  (All business logic - bounded, testable, pure)             │
+│                                                              │
+│  • Receives: trigger + previous state                       │
+│  • Runs agents with full history                            │
+│  • Agents emit schedule:* extension events for future work  │
+│  • Returns: updated state + events + result                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Insight**: The harness is the single source of truth for state. The driver doesn't own any business state - it just persists what the harness returns and respects schedule events.
+
+### Component Responsibilities
+
+**1. Harness (Orchestrator)**
+- Owns all business logic
+- Maintains agent output histories in state
+- Provides history to agents on each run
+- Bounded execution: `run()` → `HarnessResult`
+- Agents emit `schedule:*` extension events for future work
+
+**2. Specialist Agents (Data + Inference)**
+- Process domain-specific data
+- Build on own history
+- Output: Data + Confidence + Evidence + Reasoning
+- Examples: LocationAgent, CalendarAgent, PrayerTimesAgent
+
+**3. Brain Agent (Decision Maker)**
+- Analyzes context from all specialists
+- Uses full history for reasoning
+- Output: Decisions + Schedule Events
+- NO tools (pure reasoning)
+
+**4. Driver (External Runtime)**
+- Persists harness state between runs
+- Reads `schedule:*` extension events from harness output
+- Sets up timers/triggers for scheduled work
+- Invokes harness when triggers fire
+- **Contains zero business logic**
+
+---
+
+## The TAP Workflow
+
+### Harness Definition
+
+```typescript
+// ============================================
+// TAP HARNESS - owns all business logic
+// ============================================
+
+interface TAPInput &#123;
+  trigger: TriggerEvent;      // What caused this run
+  previousState?: TAPState;   // Loaded by driver
+&#125;
+
+const TAPHarness = defineHarness(&#123;
+  name: "tap-harness",
+  
+  agents: &#123;
+    location: LocationAgent,
+    calendar: CalendarAgent,
+    brain: BrainAgent,
+  &#125;,
+  
+  state: (input: TAPInput): TAPState =&#62; &#123;
+    const base = input.previousState ?? &#123;
+      agentOutputs: &#123; location: [], calendar: [], brain: [] &#125;,
+      patterns: &#123;&#125;,
+      scheduledTasks: []
+    &#125;;
+    return &#123; ...base, trigger: input.trigger &#125;;
+  &#125;,
+  
+  run: async (&#123; agents, state, emit, task &#125;) =&#62; &#123;
+    const &#123; trigger &#125; = state;
+    
+    // ========== PERIODIC CHECK ==========
+    if (trigger.type === "periodic-check" || trigger.type === "startup") &#123;
+      
+      // --- Location Agent (with history) ---
+      await task("location-inference", async () =&#62; &#123;
+        const output = await agents.location.execute(&#123;
+          currentGPS: await fetchGPS(),
+          previousOutputs: state.agentOutputs.location,  // ← Full history!
+          patterns: state.patterns
+        &#125;);
+        
+        state.agentOutputs.location.push(output);
+        
+        // Rolling window - keep last 100
+        if (state.agentOutputs.location.length &#62; 100) &#123;
+          state.agentOutputs.location.shift();
+        &#125;
+      &#125;);
+      
+      // --- Calendar Agent (with history) ---
+      await task("calendar-sync", async () =&#62; &#123;
+        const output = await agents.calendar.execute(&#123;
+          currentTime: new Date(),
+          previousOutputs: state.agentOutputs.calendar,
+        &#125;);
+        state.agentOutputs.calendar.push(output);
+      &#125;);
+      
+      // --- Brain Agent (analyzes everything) ---
+      await task("brain-decision", async () =&#62; &#123;
+        const decision = await agents.brain.execute(&#123;
+          currentContext: &#123;
+            location: state.agentOutputs.location.at(-1)!,
+            calendar: state.agentOutputs.calendar.at(-1)!,
+          &#125;,
+          fullHistory: state.agentOutputs,
+          patterns: state.patterns
+        &#125;);
+        
+        state.agentOutputs.brain.push(decision);
+        
+        // ⭐ AGENT SCHEDULES TASKS VIA EVENTS
+        for (const task of decision.recommendedTasks) &#123;
+          emit(&#123; 
+            type: "schedule:task",
+            taskId: task.taskId,
+            executeAt: task.executeAt,
+            action: task.action,
+            parameters: task.parameters,
+            reasoning: task.reasoning
+          &#125;);
+        &#125;
+      &#125;);
+      
+      // ⭐ SCHEDULE NEXT RUN
+      emit(&#123;
+        type: "schedule:run",
+        trigger: &#123; type: "periodic-check" &#125;,
+        executeAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        reasoning: "Regular 15-minute check"
+      &#125;);
+    &#125;
+    
+    // ========== TASK DUE ==========
+    else if (trigger.type === "task-due") &#123;
+      await task(`execute-${trigger.taskId}`, async () =&#62; &#123;
+        const scheduledTask = state.scheduledTasks.find(
+          t =&#62; t.taskId === trigger.taskId
+        );
+        if (scheduledTask) &#123;
+          await executeTask(scheduledTask);
+          scheduledTask.status = "completed";
+        &#125;
+      &#125;);
+    &#125;
+    
+    // Return latest decision
+    return state.agentOutputs.brain.at(-1) ?? null;
+  &#125;
+&#125;);
+```
+
+### Driver Implementation
+
+```typescript
+// ============================================
+// DRIVER - dumb plumbing, no business logic
+// ============================================
+
+class TAPDriver &#123;
+  private store: StateStore;  // SQLite, Redis, file, etc.
+  private timers: Map&#60;string, NodeJS.Timeout&#62; = new Map();
+  
+  async handleTrigger(trigger: TriggerEvent) &#123;
+    // 1. Load state (harness state IS the state)
+    const previousState = await this.store.load();
+    
+    // 2. Run harness
+    const harness = TAPHarness.create(&#123; trigger, previousState &#125;);
+    const result = await harness.run();
+    
+    // 3. Persist state
+    await this.store.save(result.state);
+    
+    // 4. Process schedule events
+    for (const event of result.events) &#123;
+      if (event.event.type === "schedule:run") &#123;
+        this.scheduleRun(event.event);
+      &#125; else if (event.event.type === "schedule:task") &#123;
+        this.scheduleTask(event.event);
+      &#125;
+    &#125;
+  &#125;
+  
+  private scheduleRun(event: ScheduleRunEvent) &#123;
+    const delay = new Date(event.executeAt).getTime() - Date.now();
+    if (delay &#60;= 0) &#123;
+      this.handleTrigger(event.trigger);
+    &#125; else &#123;
+      const timer = setTimeout(() =&#62; &#123;
+        this.handleTrigger(event.trigger);
+      &#125;, delay);
+      this.timers.set(`run-${event.executeAt}`, timer);
+    &#125;
+  &#125;
+  
+  private scheduleTask(event: ScheduleTaskEvent) &#123;
+    const delay = event.executeAt === "immediately" 
+      ? 0 
+      : new Date(event.executeAt).getTime() - Date.now();
+    
+    const timer = setTimeout(() =&#62; &#123;
+      this.handleTrigger(&#123; 
+        type: "task-due", 
+        taskId: event.taskId,
+        parameters: event.parameters 
+      &#125;);
+    &#125;, Math.max(0, delay));
+    
+    this.timers.set(`task-${event.taskId}`, timer);
+  &#125;
+  
+  // Bootstrap
+  start() &#123;
+    this.handleTrigger(&#123; type: "startup" &#125;);
+  &#125;
+&#125;
+
+// ============================================
+// USAGE
+// ============================================
+
+const driver = new TAPDriver();
+driver.start();  // First run schedules subsequent runs
+```
+
+---
+
+## Schedule Event Types (Extension)
+
+Agents communicate scheduling intent through **extension events**. These shapes are **not** part of the kernel protocol; they are a TAP convention that drivers interpret.
+
+```typescript
+// Schedule a future harness run (extension event)
+interface ScheduleRunEvent &#123;
+  type: "schedule:run";
+  trigger: TriggerEvent;
+  executeAt: string;  // ISO timestamp
+  reasoning: string;
+&#125;
+
+// Schedule a task execution (extension event)
+interface ScheduleTaskEvent &#123;
+  type: "schedule:task";
+  taskId: string;
+  executeAt: string | "immediately";
+  action: string;
+  parameters: Record&#60;string, unknown&#62;;
+  reasoning: string;
+&#125;
+
+// Cancel a previously scheduled item (extension event)
+interface ScheduleCancelEvent &#123;
+  type: "schedule:cancel";
+  targetId: string;  // taskId or run ID
+  reasoning: string;
+&#125;
+
+// Trigger types the harness responds to (example input contract)
+type TriggerEvent = 
+  | &#123; type: "startup" &#125;
+  | &#123; type: "periodic-check" &#125;
+  | &#123; type: "task-due"; taskId: string; parameters?: Record&#60;string, unknown&#62; &#125;
+  | &#123; type: "user-action"; action: string; data?: unknown &#125;
+  | &#123; type: "external-event"; source: string; payload: unknown &#125;;
+```
+
+---
+
+## Agent Design with TAP
+
+### Agent Input Schema
+
+```typescript
+const LocationAgent = defineAgent(&#123;
+  name: "Location",
+  
+  inputSchema: z.object(&#123;
+    // Current data
+    currentGPS: GPSSchema,
+    timestamp: z.date(),
+    
+    // Temporal accumulation (from harness state)
+    previousOutputs: z.array(LocationOutputSchema),
+    
+    // Learned patterns
+    userPatterns: z.object(&#123;
+      homeLocation: GPSSchema.optional(),
+      workLocation: GPSSchema.optional(),
+      typicalRoutes: z.array(RouteSchema)
+    &#125;).optional()
+  &#125;),
+  
+  outputSchema: z.object(&#123;
+    // Inference
+    inferredLocation: z.object(&#123;
+      type: z.enum(["HOME", "WORK", "COMMUTING", "TRAVELING", "UNKNOWN"]),
+      confidence: z.number().min(0).max(1),
+      evidence: z.array(z.string()),
+      reasoning: z.string()
+    &#125;),
+    
+    // Raw data
+    rawGPS: GPSSchema,
+    timestamp: z.date(),
+    
+    // Metadata
+    metadata: z.object(&#123;
+      stability: z.enum(["stable", "moving", "variable"]),
+      velocity: z.number().optional(),
+      heading: z.string().optional()
+    &#125;),
+    
+    // State transition (if any)
+    stateTransition: z.object(&#123;
+      from: z.string(),
+      to: z.string(),
+      transitionTime: z.date(),
+      reasoning: z.string()
+    &#125;).optional(),
+    
+    // Pattern matching
+    pattern: z.object(&#123;
+      matchesHistoricalPattern: z.boolean(),
+      patternName: z.string().optional(),
+      confidence: z.number()
+    &#125;).optional()
+  &#125;),
+  
+  prompt: `
+You are a location inference agent. Determine WHERE the user is with CONFIDENCE.
+
+Current GPS: {{currentGPS}}
+Timestamp: {{timestamp}}
+
+Previous Outputs:
+{{#each previousOutputs}}
+- {{this.timestamp}}: {{this.inferredLocation.type}} (confidence: {{this.inferredLocation.confidence}})
+  Evidence: {{join this.inferredLocation.evidence ", "}}
+{{/each}}
+
+Known Patterns:
+- Home: {{userPatterns.homeLocation}}
+- Work: {{userPatterns.workLocation}}
+
+CRITICAL:
+1. Use previous outputs to detect STATE TRANSITIONS
+2. Confidence should INCREASE with consistent patterns
+3. Always provide EVIDENCE for your inference
+4. If ambiguous, say so (lower confidence)
+5. Compare with historical patterns when available
+
+Infer the user's current location with reasoning.
+  `
+});
+```
+
+---
+
+## Confidence Accumulation
+
+### How Confidence Builds
+
+**Initial Run** (No history):
+```typescript
+confidence = baseInference()  // 0.5-0.7
+```
+
+**With History** (Consistent pattern):
+```typescript
+confidence = baseInference()
+  + consistencyBonus(previousOutputs)      // +0.1-0.2
+  + patternMatchBonus(historicalPatterns)  // +0.1-0.15
+  + temporalStabilityBonus()               // +0.05-0.1
+
+// Result: 0.75-0.95 confidence
+```
+
+**With Contradictions** (Ambiguous):
+```typescript
+confidence = baseInference()
+  - inconsistencyPenalty(previousOutputs)  // -0.1-0.3
+
+// Result: 0.3-0.6 confidence (appropriately low!)
+```
+
+**Key Principle**: Confidence reflects EVIDENCE, not guessing.
+
+---
+
+## State Transitions with Reasoning
+
+### Detecting Transitions
+
+```typescript
+const detectTransition = (currentInference, previousOutputs) =&#62; &#123;
+  if (previousOutputs.length === 0) &#123;
+    return null;  // No history, no transition
+  &#125;
+  
+  const lastOutput = previousOutputs[previousOutputs.length - 1];
+  
+  if (currentInference.type !== lastOutput.inferredLocation.type) &#123;
+    return &#123;
+      from: lastOutput.inferredLocation.type,
+      to: currentInference.type,
+      transitionTime: currentInference.timestamp,
+      reasoning: buildTransitionReasoning(lastOutput, currentInference)
+    &#125;;
+  &#125;
+  
+  return null;
+&#125;;
+```
+
+**Example Transition**:
+```typescript
+&#123;
+  from: "AT_WORK",
+  to: "COMMUTING_HOME",
+  transitionTime: "2025-01-15T17:00:00Z",
+  reasoning: "Left work location at 5 PM, moving toward home, matches historical evening commute pattern"
+&#125;
+```
+
+---
+
+## Task Scheduling
+
+### The Scheduling Principle
+
+**Everything is a scheduled task - even "now"**
+
+```typescript
+interface ScheduledTask &#123;
+  taskId: string;
+  action: string;
+  executeAt: Date | "immediately";
+  parameters: Record&#60;string, unknown&#62;;
+  reasoning: string;
+  
+  // Lifecycle
+  status: "pending" | "executing" | "completed" | "cancelled";
+  scheduledAt: Date;
+  executedAt?: Date;
+  result?: unknown;
+  
+  // Context
+  createdBy: string;  // Which agent created this task
+  supersedes?: string[];  // Task IDs this replaces
+&#125;
+```
+
+### Brain Agent Emits Schedule Events
+
+```typescript
+// Inside BrainAgent execution
+const decision = &#123;
+  shouldNotify: true,
+  reasoning: "User at work, prayer in 30 min, good time to notify",
+  recommendedTasks: [
+    &#123;
+      taskId: "notify-dhuhr-" + Date.now(),
+      action: "send_notification",
+      executeAt: "2025-01-15T11:55:00Z",
+      parameters: &#123; 
+        message: "Dhuhr in 20 min",
+        priority: "normal" 
+      &#125;,
+      reasoning: "Notify 20 min before, user typically needs this lead time"
+    &#125;
+  ]
+&#125;;
+
+// Harness converts these to schedule events
+for (const task of decision.recommendedTasks) &#123;
+  emit(&#123; type: "schedule:task", ...task &#125;);
+&#125;
+```
+
+---
+
+## Output Storage Strategies
+
+### 1. Rolling Window
+
+Keep last N outputs per agent:
+
+```typescript
+// Inside harness run, after each agent run
+state.agentOutputs[agentName].push(newOutput);
+
+// Maintain window size
+if (state.agentOutputs[agentName].length &#62; MAX_OUTPUTS) &#123;
+  state.agentOutputs[agentName].shift();  // Remove oldest
+&#125;
+```
+
+**Recommended sizes**:
+- High-frequency runs (every 5 min): Keep last 100 outputs (~8 hours)
+- Medium-frequency runs (every 15 min): Keep last 50 outputs (~12 hours)
+- Low-frequency runs (hourly): Keep last 24 outputs (1 day)
+
+---
+
+### 2. Compressed Archives
+
+For long-term pattern learning, schedule a daily compression task:
+
+```typescript
+// Brain agent can recommend a compression task
+if (shouldCompressDaily()) &#123;
+  emit(&#123;
+    type: "schedule:task",
+    taskId: "daily-compress",
+    executeAt: "2025-01-16T00:00:00Z",  // Midnight
+    action: "compress_history",
+    parameters: &#123;&#125;,
+    reasoning: "Daily compression to save memory and extract patterns"
+  &#125;);
+&#125;
+
+// When the task executes:
+async function executeCompressHistory(state: TAPState) &#123;
+  const dailySummary = &#123;
+    date: today,
+    mostCommonState: computeMode(state.agentOutputs.location),
+    transitions: countTransitions(state.agentOutputs.location),
+    avgConfidence: average(state.agentOutputs.location.map(o =&#62; o.confidence)),
+    patterns: extractPatterns(state.agentOutputs.location)
+  &#125;;
+  
+  state.patterns.locationPatterns.dailySummaries.push(dailySummary);
+  
+  // Keep only last 24 hours of detailed outputs
+  state.agentOutputs.location = state.agentOutputs.location.slice(-96);
+&#125;
+```
+
+---
+
+### 3. Pattern Cache
+
+Computed patterns for fast access:
+
+```typescript
+interface PatternCache &#123;
+  userBehavior: &#123;
+    typicalWakeTime: string;
+    typicalBedTime: string;
+    workdays: string[];
+    typicalLocations: &#123;
+      home: GPS;
+      work: GPS;
+      gym?: GPS;
+    &#125;;
+  &#125;;
+  
+  locationPatterns: &#123;
+    dailySummaries: DailySummary[];
+    weeklyPatterns: WeeklyPattern[];
+    commonRoutes: Route[];
+  &#125;;
+  
+  prayerHabits: &#123;
+    preferredPrayerTimes: Record&#60;string, string&#62;;
+    preferredLocations: Record&#60;string, string&#62;;
+    averageResponseTime: number;
+  &#125;;
+&#125;
+
+// Update patterns after each brain decision
+function updatePatterns(state: TAPState) &#123;
+  state.patterns = computePatterns(state.agentOutputs);
+&#125;
+```
+
+---
+
+## Deployment Patterns
+
+### Long-Running Process (Node.js/Bun)
+
+```typescript
+// Simple in-memory driver
+const driver = new TAPDriver();
+driver.start();
+
+// State persisted to SQLite/Redis between runs
+// Timers managed in-memory
+```
+
+### Serverless (AWS Lambda + EventBridge)
+
+```typescript
+export async function handler(event: LambdaEvent) &#123;
+  // Load state from DynamoDB
+  const previousState = await loadFromDynamo(event.userId);
+  
+  // Run harness
+  const result = await TAPHarness.create(&#123;
+    trigger: event.trigger,
+    previousState
+  &#125;).run();
+  
+  // Persist state
+  await saveToDynamo(event.userId, result.state);
+  
+  // Schedule future runs via EventBridge
+  for (const e of result.events) &#123;
+    if (e.event.type === "schedule:run") &#123;
+      await eventBridge.putRule(&#123;
+        name: `tap-${event.userId}-${e.event.executeAt}`,
+        scheduleExpression: `at(${e.event.executeAt})`,
+        target: &#123;
+          functionArn: context.functionArn,
+          input: JSON.stringify(&#123; 
+            userId: event.userId, 
+            trigger: e.event.trigger 
+          &#125;)
+        &#125;
+      &#125;);
+    &#125;
+  &#125;
+  
+  return result.result;
+&#125;
+```
+
+### Edge/Mobile (React Native)
+
+```typescript
+// Use background tasks API
+BackgroundFetch.configure(&#123;
+  minimumFetchInterval: 15,
+&#125;, async (taskId) =&#62; &#123;
+  const previousState = await AsyncStorage.getItem('tap-state');
+  
+  const result = await TAPHarness.create(&#123;
+    trigger: &#123; type: "periodic-check" &#125;,
+    previousState: JSON.parse(previousState)
+  &#125;).run();
+  
+  await AsyncStorage.setItem('tap-state', JSON.stringify(result.state));
+  
+  // Handle immediate tasks
+  for (const e of result.events) &#123;
+    if (e.event.type === "schedule:task" && e.event.executeAt === "immediately") &#123;
+      await executeTask(e.event);
+    &#125;
+  &#125;
+  
+  BackgroundFetch.finish(taskId);
+&#125;);
+```
+
+---
+
+## Benefits of TAP
+
+### 1. Intelligence Over Time
+
+Agents become smarter as they accumulate evidence:
+
+**Week 1**: Generic behavior, low confidence
+**Week 4**: Personalized to user patterns, high confidence
+**Week 12**: Predictive, anticipates user needs
+
+---
+
+### 2. Explainability
+
+Every decision has a reasoning trace:
+
+```typescript
+&#123;
+  decision: "Send notification now",
+  reasoning: "User transitioned from COMMUTING to AT_WORK 5 minutes ago (detected from location history), prayer is in 30 min, user typically prays 15-20 min after arriving at work (pattern from last 3 weeks)"
+&#125;
+```
+
+Users can see WHY the app made a decision.
+
+---
+
+### 3. Confidence-Based Actions
+
+Agents can be conservative when uncertain:
+
+```typescript
+if (locationOutput.confidence &#60; 0.7) &#123;
+  // Low confidence - be conservative
+  emit(&#123;
+    type: "schedule:run",
+    trigger: &#123; type: "periodic-check" &#125;,
+    executeAt: fifteenMinutesFromNow,
+    reasoning: "Location unclear, check again soon"
+  &#125;);
+  
+&#125; else if (locationOutput.confidence &#62; 0.9) &#123;
+  // High confidence - take action
+  emit(&#123;
+    type: "schedule:task",
+    taskId: "notify-prayer",
+    executeAt: "immediately",
+    action: "send_notification",
+    parameters: &#123; message: "Prayer time!" &#125;,
+    reasoning: "High confidence user is at work"
+  &#125;);
+&#125;
+```
+
+---
+
+### 4. Debugging
+
+Full history makes debugging easy:
+
+```
+User: "Why did you notify me at 11:45?"
+
+Developer checks harness events:
+- Location history shows: HOME → COMMUTING → AT_WORK (arrived 11:40)
+- Brain history shows: "User just arrived at work, prayer in 30 min"
+- Schedule event: &#123; type: "schedule:task", executeAt: "11:45", reasoning: "..." &#125;
+
+Answer: App learned your pattern and timed notification perfectly!
+```
+
+---
+
+### 5. Testability
+
+Because harness runs are bounded and pure:
+
+```typescript
+import &#123; test, expect &#125; from "bun:test";
+
+test("schedules notification after arrival at work", async () =&#62; &#123;
+  const result = await TAPHarness.create(&#123;
+    trigger: &#123; type: "periodic-check" &#125;,
+    previousState: &#123;
+      agentOutputs: &#123;
+        location: [
+          &#123; inferredLocation: &#123; type: "HOME" &#125;, timestamp: "08:00" &#125;,
+          &#123; inferredLocation: &#123; type: "COMMUTING" &#125;, timestamp: "08:15" &#125;,
+        ]
+      &#125;
+    &#125;
+  &#125;).run();
+  
+  // Assert on schedule events
+  const scheduleEvents = result.events.filter(e =&#62; e.event.type === "schedule:task");
+  expect(scheduleEvents).toHaveLength(1);
+  expect(scheduleEvents[0].event.action).toBe("send_notification");
+&#125;);
+```
+
+---
+
+## Real-World Example: Prayer Companion
+
+**High-level flow**:
+
+```
+08:00 - Trigger: startup
+        Location: HOME (conf: 0.95)
+        Brain: Too early, schedule next check
+        Emits: schedule:run at 08:15
+        
+08:15 - Trigger: periodic-check
+        Location: COMMUTING (conf: 0.72, transition from HOME)
+        Brain: User commuting, check on arrival
+        Emits: schedule:run at 08:30
+        
+08:30 - Trigger: periodic-check
+        Location: COMMUTING (conf: 0.85)
+        Brain: Still commuting
+        Emits: schedule:run at 08:45
+        
+08:45 - Trigger: periodic-check
+        Location: AT_WORK (conf: 0.88, transition from COMMUTING)
+        Brain: User arrived, prayer at 12:15
+        Emits: schedule:task at 11:55 (notify)
+        Emits: schedule:run at 11:50 (pre-notify check)
+        
+11:50 - Trigger: periodic-check
+        Location: AT_WORK (conf: 0.95, stable)
+        Calendar: Free until 13:00 meeting
+        Brain: Confirm notification
+        
+11:55 - Trigger: task-due (notify)
+        Action: send_notification
+        Message: "Dhuhr in 20 min. You have time before your 1 PM meeting."
+```
+
+---
+
+## Implementation Checklist
+
+When implementing TAP:
+
+✅ **Agent Design**:
+- [ ] Input schema includes `previousOutputs`
+- [ ] Output schema includes `confidence`, `evidence`, `reasoning`
+- [ ] Output schema includes `stateTransition` (if applicable)
+- [ ] Prompt instructs agent to use history
+- [ ] Confidence increases with evidence
+
+✅ **Harness State**:
+- [ ] `agentOutputs` stores history per agent
+- [ ] `patterns` cache for computed insights
+- [ ] Rolling window to limit memory
+- [ ] State passed in and returned out (pure function)
+
+✅ **Brain Agent**:
+- [ ] Recommends tasks (not executes them)
+- [ ] Uses history from ALL agents
+- [ ] Provides reasoning for every decision
+- [ ] Harness emits schedule extension events based on recommendations
+
+✅ **Schedule Events (Extension)**:
+- [ ] `schedule:run` for future harness invocations
+- [ ] `schedule:task` for specific actions
+- [ ] `schedule:cancel` to cancel previous schedules
+- [ ] All events include `reasoning`
+
+✅ **Driver**:
+- [ ] Loads state before run
+- [ ] Saves state after run
+- [ ] Processes `schedule:*` extension events
+- [ ] Contains zero business logic
+
+---
+
+## Anti-Patterns (What NOT to Do)
+
+❌ **Don't**: Make agents stateless
+```typescript
+// BAD
+const agent = (input) =&#62; &#123;
+  return processInput(input);  // No memory!
+&#125;
+```
+
+✅ **Do**: Pass history to agents
+```typescript
+// GOOD  
+const agent = (input, previousOutputs) =&#62; &#123;
+  const patterns = analyzeHistory(previousOutputs);
+  return processInput(input, patterns);
+&#125;
+```
+
+---
+
+❌ **Don't**: Execute actions directly in agents
+```typescript
+// BAD
+const brain = async (context) =&#62; &#123;
+  if (shouldNotify) &#123;
+    await sendNotification();  // Direct execution!
+  &#125;
+&#125;
+```
+
+✅ **Do**: Emit schedule events
+```typescript
+// GOOD
+const brain = async (context, emit) =&#62; &#123;
+  if (shouldNotify) &#123;
+    emit(&#123;
+      type: "schedule:task",
+      taskId: "notify",
+      executeAt: "immediately",
+      action: "send_notification",
+      reasoning: "User needs notification now"
+    &#125;);
+  &#125;
+&#125;
+```
+
+---
+
+❌ **Don't**: Put business logic in the driver
+```typescript
+// BAD
+class Driver &#123;
+  async handleTrigger(trigger) &#123;
+    if (trigger.type === "task-due" && isWeekend()) &#123;
+      return;  // Business logic in driver!
+    &#125;
+    // ...
+  &#125;
+&#125;
+```
+
+✅ **Do**: Keep driver dumb
+```typescript
+// GOOD
+class Driver &#123;
+  async handleTrigger(trigger) &#123;
+    const state = await this.store.load();
+    const harness = TAPHarness.create(&#123; trigger, previousState: state &#125;);
+    const result = await harness.run();
+    await this.store.save(result.state);
+    // Process schedule events...
+  &#125;
+&#125;
+// Weekend logic lives in the harness/agents
+```
+
+---
+
+❌ **Don't**: Ignore confidence scores
+```typescript
+// BAD
+if (location.type === "AT_WORK") &#123;
+  notify();  // What if confidence is 0.3?
+&#125;
+```
+
+✅ **Do**: Use confidence appropriately
+```typescript
+// GOOD
+if (location.type === "AT_WORK" && location.confidence &#62; 0.8) &#123;
+  emit(&#123; type: "schedule:task", action: "notify", ... &#125;);
+&#125; else if (location.confidence &#60; 0.7) &#123;
+  // Low confidence - schedule another check soon
+  emit(&#123; type: "schedule:run", executeAt: soonTimestamp, ... &#125;);
+&#125;
+```
+
+---
+
+## Advanced Patterns
+
+### Multi-Agent Confidence Aggregation
+
+```typescript
+const computeOverallConfidence = (outputs) =&#62; &#123;
+  const weights = &#123;
+    location: 0.4,
+    calendar: 0.3,
+    prayerTimes: 0.2,
+    userState: 0.1
+  &#125;;
+  
+  const weightedConfidence = 
+    outputs.location.confidence * weights.location +
+    outputs.calendar.confidence * weights.calendar +
+    outputs.prayerTimes.confidence * weights.prayerTimes +
+    outputs.userState.confidence * weights.userState;
+  
+  return weightedConfidence;
+&#125;;
+```
+
+---
+
+### Temporal Reasoning Queries
+
+Agents can query their own history:
+
+```typescript
+const findLastTransition = (history, targetState) =&#62; &#123;
+  return history
+    .reverse()
+    .find(output =&#62; 
+      output.stateTransition && 
+      output.stateTransition.to === targetState
+    );
+&#125;;
+
+const avgConfidenceLastHour = (history) =&#62; &#123;
+  const lastHour = history.filter(
+    output =&#62; output.timestamp &#62; (Date.now() - 3600000)
+  );
+  return average(lastHour.map(o =&#62; o.confidence));
+&#125;;
+
+const timeSinceLastTransition = (history) =&#62; &#123;
+  const lastTransition = history.findLast(o =&#62; o.stateTransition);
+  if (!lastTransition) return Infinity;
+  return Date.now() - new Date(lastTransition.timestamp).getTime();
+&#125;;
+```
+
+---
+
+## Summary
+
+**TAP Principles**:
+1. Every agent has memory (temporal accumulation)
+2. Confidence builds with evidence
+3. Agents schedule work via events (autonomous)
+4. Harness is bounded and pure (testable)
+5. Driver is dumb plumbing (no business logic)
+6. Reasoning is explicit and traceable
+7. Patterns emerge from history
+
+**TAP Benefits**:
+- Agents get smarter over time
+- Decisions are explainable
+- Confidence-based behavior
+- Easy debugging
+- Fully testable
+- Extensible to any domain
+
+**When to Use TAP**:
+- Context-aware applications
+- Time-based decision making
+- Learning from user patterns
+- Need for explainability
+- Complex multi-agent systems
+
+---
+
+## References
+
+- [OpenHarness Documentation](../OPENHARNESS.mdx)
+- [Kernel Protocol Spec](../../../packages/kernel/docs/index.mdx)
+- [Hub API Reference](../../../packages/kernel/docs/spec/hub.mdx)
+
+---
+
+*Temporal Accumulation Pattern - Building intelligence through memory*

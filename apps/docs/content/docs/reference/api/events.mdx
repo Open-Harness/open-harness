@@ -1,0 +1,48 @@
+---
+title: Events API
+description: Event types and interfaces for Open Harness
+---
+
+The events API defines all event types emitted by the Open Harness kernel and flow runtime.
+
+## Event Envelope
+
+All events are wrapped in an `EnrichedEvent` envelope that includes metadata and context:
+
+<TypeTable type={{
+  id: { type: "string", description: "Unique event identifier" },
+  timestamp: { type: "Date", description: "Event timestamp" },
+  context: { type: "EventContext", description: "Execution context" },
+  event: { type: "BaseEvent", description: "The event payload" }
+}} />
+
+## Event Context
+
+The `EventContext` provides hierarchical context about where the event originated:
+
+<TypeTable type={{
+  sessionId: { type: "string", description: "Session identifier" },
+  phase: { type: "{ name: string; number?: number }", description: "Optional phase context" },
+  task: { type: "{ id: string }", description: "Optional task context" },
+  agent: { type: "{ name: string; type?: string }", description: "Optional agent context" }
+}} />
+
+## Base Event Types
+
+Events are categorized into several groups:
+
+- **Workflow Events**: `harness:start`, `phase:start`, `task:complete`, etc.
+- **Agent Events**: `agent:start`, `agent:text`, `agent:tool:complete`, etc.
+- **Session Events**: `session:message`, `session:prompt`, `session:reply`, etc.
+- **Narrative Events**: `narrative` - Text output with importance levels
+- **Extension Events**: Custom event types
+
+## TypeScript Types
+
+For complete TypeScript type definitions, see the source file: [`packages/kernel/src/protocol/events.ts`](https://github.com/your-org/openharness/blob/main/packages/kernel/src/protocol/events.ts)
+
+## Learn More
+
+- [Events Spec](/docs/reference/kernel-spec/spec/events) - Complete event protocol specification
+- [Event Model](/docs/concepts/event-model) - How events flow through the system
+- [Hub API](/docs/reference/api/hub) - Event bus interface

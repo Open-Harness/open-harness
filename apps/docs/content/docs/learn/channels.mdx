@@ -1,0 +1,32 @@
+---
+title: Channels
+description: Bidirectional communication adapters
+---
+
+Channels are adapters that connect the kernel to external interfaces like consoles, websockets, or voice assistants.
+
+## What are Channels?
+
+Channels observe kernel events and can send commands back to the runtime. They enable:
+
+- Console output and input
+- WebSocket connections
+- Voice interfaces
+- Custom integrations
+
+## Using Channels
+
+Channels are automatically connected when you use the CLI or runtime:
+
+```typescript
+import { FlowRuntime } from '@openharness/kernel';
+import { ConsoleChannel } from '@openharness/channels';
+
+const runtime = new FlowRuntime();
+runtime.addChannel(new ConsoleChannel());
+```
+
+## Learn More
+
+- See the [Channel spec](/docs/reference/kernel-spec/spec/channel) for the channel contract
+- Check the [Concepts](/docs/concepts) section for architecture details

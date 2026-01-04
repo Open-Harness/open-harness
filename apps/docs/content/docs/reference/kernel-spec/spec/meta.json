@@ -1,0 +1,11 @@
+{
+  "title": "Kernel Protocol",
+  "pages": [
+    "agent",
+    "channel",
+    "events",
+    "flow-runtime",
+    "harness",
+    "hub"
+  ]
+}

@@ -1,0 +1,238 @@
+---
+title: "Conformance Definition"
+description: "This document defines **what \"done\" means** for each milestone. Code must pass conformance gates before advancing."
+---
+
+This document defines **what "done" means** for each milestone. Code must pass conformance gates before advancing.
+
+## Test Tiers
+
+### Unit Tests (tests/unit/)
+
+**Purpose**: Test pure logic without external dependencies.
+
+**Characteristics**:
+- No network calls
+- No fixtures
+- No file I/O (except temp files)
+- Fast execution (&lt;100ms per test)
+- Pure functions, data structures, algorithms
+
+**Example**: Filter matching logic, context merging, type guards.
+
+**Command**: `bun test tests/unit/`
+
+---
+
+### Replay Tests (tests/replay/)
+
+**Purpose**: Fast, deterministic tests using recorded fixtures.
+
+**Characteristics**:
+- Uses fixtures from `tests/fixtures/golden/`
+- No network calls (validated)
+- No file writes (validated)
+- Fast execution (&lt;1s total)
+- Deterministic (same fixture = same result)
+
+**Example**: Testing Hub subscription with recorded event sequences.
+
+**Command**: `bun test tests/replay/`
+
+**Behavioral Gates**:
+- Must complete in &lt;1s
+- Must not make network calls (timeout guard: 30s max)
+- Must not write files (verify git status unchanged)
+- Must be deterministic (same fixture = same result)
+
+---
+
+### Live Tests (scripts/live/)
+
+**Purpose**: Authoritative verification with real SDK.
+
+**Characteristics**:
+- Uses real SDK (no mocks)
+- May make network calls
+- Proves production behavior
+- Run before marking milestone complete
+- Timeout: 30s (or milestone-specific)
+
+**Example**: Running all replay scenarios against real Hub implementation.
+
+**Command**: `bun scripts/live/&#60;component&#62;-live.ts`
+
+**Behavioral Gates**:
+- Must use real SDK (no mocks)
+- Must complete successfully
+- Must produce results matching replay test expectations
+
+---
+
+## Fixture Policy
+
+### Directory Structure
+
+```
+tests/fixtures/
+├── golden/           # Committed to repo, used in CI
+│   └── &#60;component&#62;/
+│       └── &#60;fixture-name&#62;.jsonl
+└── scratch/          # Gitignored, local experiments
+    └── &#60;component&#62;/
+        └── &#60;fixture-name&#62;.jsonl
+```
+
+### Recording Workflow
+
+1. **Record**: `bun scripts/record-fixture.ts &#60;component&#62; &#60;fixture-name&#62;`
+   - Writes to `tests/fixtures/scratch/` (gitignored)
+2. **Review**: Inspect fixture manually
+3. **Promote**: Move to `tests/fixtures/golden/` after review
+4. **Commit**: Commit golden fixtures
+
+### Rules
+
+- **Never auto-record** during test runs
+- **Always write to scratch first** (never directly to golden)
+- **Manual promotion** after review
+- **Validation checks** verify golden fixtures unchanged after replay tests
+
+---
+
+## Behavioral Gates
+
+### Default Test Suite (bun test)
+
+**Must**:
+- Run only safe tests (unit + replay)
+- Complete in &lt;1s
+- Make no network calls
+- Write no files
+- Be deterministic
+
+**Validation**:
+```bash
+# Set timeout guard
+timeout 30 bun test
+
+# Check git status (no unexpected changes)
+git status --porcelain
+# Should show no changes (or only expected temp files)
+```
+
+### Replay Tests
+
+**Must**:
+- Use fixtures from `tests/fixtures/golden/`
+- Complete in &lt;1s
+- Make no network calls
+- Write no files
+- Be deterministic
+
+**Validation**:
+```bash
+# Before running
+git status --porcelain > /tmp/before.txt
+
+# Run tests
+bun test tests/replay/
+
+# After running
+git status --porcelain > /tmp/after.txt
+diff /tmp/before.txt /tmp/after.txt
+# Should show no changes
+```
+
+### Live Tests
+
+**Must**:
+- Use real SDK (verify in code - no mocks)
+- Complete successfully
+- Produce results matching replay expectations
+
+**Validation**:
+```bash
+# Check for mocks
+grep -E "(mock|Mock|stub|Stub|fake|Fake)" scripts/live/&#60;component&#62;-live.ts
+# Should return nothing
+
+# Run live test
+bun scripts/live/&#60;component&#62;-live.ts
+# Must pass
+```
+
+---
+
+## Command Conventions
+
+### Package Scripts
+
+```json
+&#123;
+  "scripts": &#123;
+    "test": "bun test tests/unit tests/replay",
+    "test:unit": "bun test tests/unit",
+    "test:replay": "bun test tests/replay",
+    "test:live": "bun scripts/live/*.ts"
+  &#125;
+&#125;
+```
+
+**Rules**:
+- `bun test` (default) = safe tests only (unit + replay)
+- `bun test:unit` = unit tests only
+- `bun test:replay` = replay tests only
+- `bun test:live` = explicit opt-in for live tests
+
+### Script Naming
+
+- **Live scripts**: `scripts/live/&#60;component&#62;-live.ts`
+- **Recording scripts**: `scripts/record-fixture.ts`
+- **Helper scripts**: `scripts/&#60;purpose&#62;.ts`
+
+---
+
+## Conformance Checklist (Per Milestone)
+
+Before marking a milestone "done", verify:
+
+### Static Structure
+- [ ] All required files exist
+- [ ] Test files follow naming conventions
+- [ ] Fixtures exist in `tests/fixtures/golden/`
+- [ ] Live script exists
+
+### Behavioral Verification
+- [ ] `bun test` completes in &lt;1s
+- [ ] `bun test` makes no network calls
+- [ ] `bun test` writes no files (git status clean)
+- [ ] `bun scripts/live/&#60;component&#62;-live.ts` passes
+
+### Completeness
+- [ ] All test-spec requirements have tests
+- [ ] All tests have corresponding fixtures (if replay)
+- [ ] Live script covers all replay scenarios
+- [ ] Unit tests exist for pure logic (if applicable)
+
+---
+
+## Key Invariants
+
+1. **Default tests are safe**: `bun test` must never require network or write files
+2. **Recording is explicit**: Never auto-record, always via script
+3. **Fixtures are real**: Never hand-craft, always record from real scenarios
+4. **Live proves completion**: Every milestone must pass live test
+5. **Conformance gates are non-negotiable**: Must pass before advancing
+
+---
+
+## Previous Audit Findings (Addressed)
+
+This conformance definition addresses previous issues:
+
+- **Static validation only**: Now requires behavioral verification (timeout guards, git status checks)
+- **Accidental recording**: Now explicit opt-in, scratch → golden workflow
+- **Missing behavioral gates**: Now defined with specific validation steps
+- **Incomplete coverage**: Now requires traceability matrix
+- **Missing live tests**: Now required for every milestone

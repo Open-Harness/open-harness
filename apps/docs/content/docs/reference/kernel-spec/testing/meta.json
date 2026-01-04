@@ -1,0 +1,10 @@
+{
+  "title": "Testing",
+  "pages": [
+    "index",
+    "test-spec-template",
+    "testing-protocol",
+    "validation",
+    "workflow"
+  ]
+}
