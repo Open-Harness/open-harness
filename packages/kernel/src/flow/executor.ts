@@ -167,14 +167,14 @@ function buildEdgeIndex(edges: Edge[]): EdgeIndex {
 	return { incoming, outgoing };
 }
 
-function resolveOutgoingEdges(
+async function resolveOutgoingEdges(
 	nodeId: string,
 	index: EdgeIndex,
 	context: BindingContext,
-): void {
+): Promise<void> {
 	const edges = index.outgoing.get(nodeId) ?? [];
 	for (const edgeState of edges) {
-		const shouldFire = evaluateWhen(edgeState.edge.when, context);
+		const shouldFire = await evaluateWhen(edgeState.edge.when, context);
 		edgeState.status = shouldFire ? "fired" : "skipped";
 	}
 }
@@ -197,7 +197,7 @@ async function runNode(
 	outputs?: Record<string, unknown>,
 	allNodes?: NodeSpec[],
 ): Promise<unknown> {
-	const resolvedInput = resolveBindings(node.input, bindingContext);
+	const resolvedInput = await resolveBindings(node.input, bindingContext);
 	const inputSchema = def.inputSchema as
 		| {
 				parse: (value: unknown) => unknown;
@@ -255,7 +255,7 @@ async function runNode(
 			};
 
 			// Resolve child node's input bindings
-			const resolvedChildInput = resolveBindings(
+			const resolvedChildInput = await resolveBindings(
 				childNode.input,
 				childBindingContext,
 			);
@@ -488,7 +488,7 @@ export async function executeFlow(
 						nodeId: node.id,
 						reason: "edge",
 					});
-					resolveOutgoingEdges(
+					await resolveOutgoingEdges(
 						node.id,
 						edgeIndex,
 						createBindingContext(flowInput, outputs),
@@ -497,7 +497,7 @@ export async function executeFlow(
 				}
 			}
 
-			const shouldRun = evaluateWhen(node.when, bindingContext);
+			const shouldRun = await evaluateWhen(node.when, bindingContext);
 			if (!shouldRun) {
 				outputs[node.id] = { skipped: true };
 				ctx.hub.emit({
@@ -505,7 +505,7 @@ export async function executeFlow(
 					nodeId: node.id,
 					reason: "when",
 				});
-				resolveOutgoingEdges(
+				await resolveOutgoingEdges(
 					node.id,
 					edgeIndex,
 					createBindingContext(flowInput, outputs),
@@ -567,7 +567,7 @@ export async function executeFlow(
 				}
 			}
 
-			resolveOutgoingEdges(
+			await resolveOutgoingEdges(
 				node.id,
 				edgeIndex,
 				createBindingContext(flowInput, outputs),
@@ -577,7 +577,7 @@ export async function executeFlow(
 			const loopEdges = loopEdgeIndex.outgoing.get(node.id) ?? [];
 			for (const loopState of loopEdges) {
 				const loopBindingContext = createBindingContext(flowInput, outputs);
-				const shouldLoop = evaluateWhen(
+				const shouldLoop = await evaluateWhen(
 					loopState.edge.when,
 					loopBindingContext,
 				);
