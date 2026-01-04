@@ -63,6 +63,13 @@ export class DefaultExecutor implements Executor {
 
 		while (attempt < maxAttempts) {
 			attempt += 1;
+			if (runContext.cancel.cancelled) {
+				return {
+					nodeId: node.id,
+					runId: runContext.runId,
+					error: `Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
+				};
+			}
 			try {
 				const parsedInput = parseWithSchema(def.inputSchema, input);
 				const output = await withTimeout(() => def.run(runContext, parsedInput), timeoutMs);

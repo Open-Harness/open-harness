@@ -11,6 +11,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { z } from "zod";
+import type { CancelContextInternal } from "../core/cancel.js";
 import type { RuntimeCommand } from "../core/events.js";
 import type { NodeTypeDefinition } from "../registry/registry.js";
 
@@ -53,6 +54,7 @@ export interface ClaudeAgentOutput {
 	sessionId?: string;
 	numTurns?: number;
 	permissionDenials?: SDKPermissionDenial[];
+	paused?: boolean;
 }
 
 export interface ClaudeNodeOptions {
@@ -98,6 +100,7 @@ const ClaudeAgentOutputSchema = z.object({
 	sessionId: z.string().optional(),
 	numTurns: z.number().optional(),
 	permissionDenials: z.unknown().optional(),
+	paused: z.boolean().optional(),
 });
 
 /**
@@ -149,15 +152,22 @@ export function createClaudeNode(
 			const mergedOptions = mergeOptions(input.options, knownSessionId);
 			const queryFn = options.queryFn ?? query;
 			const prompt = messageStream(promptMessages, knownSessionId);
+			const cancelContext = ctx.cancel as CancelContextInternal | undefined;
 			const queryStream = queryFn({
 				prompt,
-				options: mergedOptions,
+				options: {
+					...mergedOptions,
+					abortController: cancelContext?.__controller,
+				},
 			});
+			cancelContext?.__setQuery(queryStream);
 
 			const promptForEvent = resumeMessage ?? basePrompt ?? baseMessages ?? promptMessages;
 			const startedAt = Date.now();
 			let emittedStart = false;
 			let finalResult: SDKResultMessage | undefined;
+			let accumulatedText = "";
+			let lastSessionId = knownSessionId;
 			const recordedMessages: SDKMessage[] = [];
 			const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown; startedAt: number }>();
 
@@ -184,6 +194,7 @@ export function createClaudeNode(
 					const sdkMessage = message as SDKMessage;
 					recordedMessages.push(sdkMessage);
 					const sessionId = extractSessionId(sdkMessage);
+					if (sessionId) lastSessionId = sessionId;
 					if (!emittedStart && sessionId) {
 						emitStart(sessionId);
 					}
@@ -196,6 +207,7 @@ export function createClaudeNode(
 						if (streamEvent?.type === "content_block_delta") {
 							const delta = streamEvent.delta;
 							if (delta?.type === "text_delta" && delta.text) {
+								accumulatedText += delta.text;
 								ctx.emit({
 									type: "agent:text:delta",
 									nodeId: ctx.nodeId,
@@ -251,6 +263,7 @@ export function createClaudeNode(
 								if (blockType === "text") {
 									const text = block.text;
 									if (typeof text === "string" && text.length > 0) {
+										accumulatedText += text;
 										ctx.emit({
 											type: "agent:text",
 											nodeId: ctx.nodeId,
@@ -325,8 +338,30 @@ export function createClaudeNode(
 							});
 						}
 					}
+
+					if (ctx.cancel.cancelled) {
+						if (ctx.cancel.reason === "pause") {
+							break;
+						}
+						if (ctx.cancel.reason === "abort") {
+							const abortError = new Error("Aborted");
+							abortError.name = "AbortError";
+							throw abortError;
+						}
+					}
 				}
 			} catch (error) {
+				const isAbortError = error instanceof Error && error.name === "AbortError";
+				if (isAbortError) {
+					ctx.emit({
+						type: "agent:aborted",
+						nodeId: ctx.nodeId,
+						runId: ctx.runId,
+						reason: ctx.cancel.reason ?? "abort",
+					});
+					throw error;
+				}
+
 				ctx.emit({
 					type: "agent:error",
 					nodeId: ctx.nodeId,
@@ -336,6 +371,24 @@ export function createClaudeNode(
 					details: error,
 				});
 				throw error;
+			}
+
+			if (ctx.cancel.cancelled && ctx.cancel.reason === "pause") {
+				ctx.emit({
+					type: "agent:paused",
+					nodeId: ctx.nodeId,
+					runId: ctx.runId,
+					partialText: accumulatedText || undefined,
+					sessionId: lastSessionId,
+					numTurns: finalResult?.num_turns,
+				});
+
+				return {
+					text: accumulatedText,
+					paused: true,
+					sessionId: lastSessionId,
+					numTurns: finalResult?.num_turns,
+				};
 			}
 
 			const output = getResultOrThrow(finalResult);
