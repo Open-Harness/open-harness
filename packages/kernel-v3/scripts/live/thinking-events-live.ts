@@ -17,16 +17,14 @@ async function runLiveTest() {
 	console.log("🧪 Running thinking events live test against REAL SDK...\n");
 	console.log("⚠️  Note: Extended thinking requires a model that supports it (e.g., claude-3-5-sonnet)\n");
 
-	// Flow that should trigger extended thinking
-	// Note: Extended thinking with streaming is only available on certain models
-	// We use a simple prompt that may trigger thinking on supported models
+	// Flow that triggers extended thinking using "ultrathink" keyword
 	const flow = parseFlowYaml(`
 name: "thinking-test"
 nodes:
   - id: agent
     type: claude.agent
     input:
-      prompt: "What is 15 * 17? Show your work step by step."
+      prompt: "ultrathink What is 15 * 17?"
 edges: []
 `);
 
