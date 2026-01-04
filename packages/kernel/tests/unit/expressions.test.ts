@@ -1,16 +1,15 @@
 // Integration tests for JSONata expression evaluator
 // Tests the core capabilities needed for flow orchestration
 
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import {
-	evaluateExpression,
-	parseTemplate,
-	isPureBinding,
-	resolveTemplate,
-	resolveBindingsDeep,
 	clearExpressionCache,
 	type ExpressionContext,
-} from "../../src/flow/expressions.js";
+	evaluateExpression,
+	isPureBinding,
+	parseTemplate,
+	resolveTemplate,
+} from "../../src/runtime/expressions.js";
 
 beforeEach(() => {
 	clearExpressionCache();
@@ -102,16 +101,16 @@ describe("evaluateExpression", () => {
 		test("ternary with missing value defaults", async () => {
 			const ctx: ExpressionContext = {};
 			// When reviewer is missing, use default
-			expect(
-				await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)
-			).toBe("No feedback yet");
+			expect(await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)).toBe(
+				"No feedback yet",
+			);
 		});
 
 		test("ternary with existing value", async () => {
 			const ctx: ExpressionContext = { reviewer: { text: "Looks good!" } };
-			expect(
-				await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)
-			).toBe("Looks good!");
+			expect(await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)).toBe(
+				"Looks good!",
+			);
 		});
 	});
 
@@ -250,37 +249,6 @@ describe("resolveTemplate", () => {
 	});
 });
 
-describe("resolveBindingsDeep", () => {
-	test("resolves nested object", async () => {
-		const ctx: ExpressionContext = { name: "Test", count: 5 };
-		const input = {
-			title: "{{ name }}",
-			meta: {
-				total: "{{ count }}",
-			},
-		};
-		const result = await resolveBindingsDeep(input, ctx);
-		expect(result).toEqual({
-			title: "Test",
-			meta: {
-				total: 5, // pure binding preserves number type
-			},
-		});
-	});
-
-	test("resolves array elements", async () => {
-		const ctx: ExpressionContext = { a: "one", b: "two" };
-		const input = ["{{ a }}", "{{ b }}"];
-		expect(await resolveBindingsDeep(input, ctx)).toEqual(["one", "two"]);
-	});
-
-	test("passes through non-string values", async () => {
-		const ctx: ExpressionContext = {};
-		const input = { num: 42, bool: true, nil: null };
-		expect(await resolveBindingsDeep(input, ctx)).toEqual({ num: 42, bool: true, nil: null });
-	});
-});
-
 // Real-world patterns that users need
 describe("orchestration patterns", () => {
 	describe("coder-reviewer loop", () => {
@@ -300,7 +268,7 @@ describe("orchestration patterns", () => {
 {{ $exists(reviewer) ? "## Feedback\\n" & reviewer.text : "" }}
 
 {{ $first ? "Implement this task." : "Address the feedback above." }}`,
-				ctx
+				ctx,
 			);
 
 			expect(prompt).toContain("# Task: Implement auth");
@@ -320,7 +288,7 @@ describe("orchestration patterns", () => {
 			const prompt = await resolveTemplate(
 				`{{ $exists(reviewer) ? "## Feedback\\n" & reviewer.text : "" }}
 {{ $first ? "Implement this task." : "Address the feedback above." }}`,
-				ctx
+				ctx,
 			);
 
 			expect(prompt).toContain("## Feedback");
@@ -365,7 +333,7 @@ And this summary:
 {{ summarizer.text }}
 
 Write a blog post.`,
-				ctx
+				ctx,
 			);
 
 			expect(writerPrompt).toContain("Found 3 relevant papers");

@@ -1,10 +1,10 @@
 /**
  * Node Registry Setup for Horizon Agent
  *
- * Registers kernel-v3 built-in nodes for the planner/coder/reviewer workflow.
+ * Registers kernel built-in nodes for the planner/coder/reviewer workflow.
  */
 
-import { claudeNode, constantNode, DefaultNodeRegistry, echoNode, type NodeRegistry } from "@open-harness/kernel-v3";
+import { claudeNode, constantNode, DefaultNodeRegistry, echoNode, type NodeRegistry } from "@open-harness/kernel";
 
 /**
  * Create a node registry with all nodes required for Horizon Agent.

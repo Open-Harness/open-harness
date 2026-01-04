@@ -2,10 +2,10 @@
  * Horizon Agent State Schema
  *
  * Defines the state shape for the planner → coder ↔ reviewer workflow.
- * State is managed by kernel-v3's StateStore with dot-path access.
+ * State is managed by kernel's StateStore with dot-path access.
  */
 
-import type { StateSchemaDefinition } from "@open-harness/kernel-v3";
+import type { StateSchemaDefinition } from "@open-harness/kernel";
 import { z } from "zod";
 
 /**

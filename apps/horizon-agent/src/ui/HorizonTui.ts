@@ -10,7 +10,7 @@ import { flushLogs } from "../logger.js";
 import type { HorizonRuntime } from "../runtime/horizon-runtime.js";
 import { AgentStream, ControlPanel, FlowGraph, StatusBar, TaskList } from "./components/index.js";
 
-/** Runtime event type (simplified from kernel-v3) */
+/** Runtime event type (simplified from kernel) */
 interface RuntimeEvent {
 	type: string;
 	timestamp: number;

@@ -1,7 +1,7 @@
 /**
  * Horizon Runtime Wrapper
  *
- * Wraps kernel-v3's createRuntime with Horizon-specific configuration.
+ * Wraps kernel's createRuntime with Horizon-specific configuration.
  * Provides a higher-level API for the planner/coder/reviewer workflow.
  */
 
@@ -13,7 +13,7 @@ import {
 	type RunSnapshot,
 	type Runtime,
 	type RuntimeEvent,
-} from "@open-harness/kernel-v3";
+} from "@open-harness/kernel";
 import { parse as parseYaml } from "yaml";
 import { createHorizonRegistry } from "./node-registry.js";
 import { type HorizonState, HorizonStateSchema, horizonStateDefinition, INITIAL_STATE } from "./state-schema.js";
@@ -42,10 +42,10 @@ export interface HorizonInput {
 
 /**
  * Horizon runtime instance.
- * Wraps kernel-v3 Runtime with typed state access.
+ * Wraps kernel Runtime with typed state access.
  */
 export interface HorizonRuntime {
-	/** Underlying kernel-v3 runtime */
+	/** Underlying kernel runtime */
 	readonly runtime: Runtime;
 
 	/** Run the workflow */
@@ -93,7 +93,7 @@ export function createHorizonRuntime(options: HorizonRuntimeOptions): HorizonRun
 	// Create optional persistence store
 	const store = options.enablePersistence ? new InMemoryRunStore() : undefined;
 
-	// Create kernel-v3 runtime
+	// Create kernel runtime
 	const runtime = createRuntime({
 		flow,
 		registry,
@@ -125,7 +125,7 @@ export function createHorizonRuntime(options: HorizonRuntimeOptions): HorizonRun
 
 		getState(): HorizonState {
 			const snapshot = runtime.getSnapshot();
-			// Validate state at runtime to catch kernel-v3 inconsistencies
+			// Validate state at runtime to catch kernel inconsistencies
 			const result = HorizonStateSchema.safeParse(snapshot.state);
 			if (result.success) {
 				return result.data;

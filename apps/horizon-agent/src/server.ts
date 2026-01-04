@@ -1,7 +1,7 @@
 /**
- * Horizon Agent WebSocket Server (v3)
+ * Horizon Agent WebSocket Server
  *
- * Uses kernel-v3 runtime for flow execution with WebSocket streaming.
+ * Uses kernel runtime for flow execution with WebSocket streaming.
  *
  * Commands:
  * - start: Start a new flow execution
@@ -12,7 +12,7 @@
  */
 
 import { resolve } from "node:path";
-import type { RunSnapshot, RuntimeEvent } from "@open-harness/kernel-v3";
+import type { RunSnapshot, RuntimeEvent } from "@open-harness/kernel";
 import type { Server, ServerWebSocket } from "bun";
 import { createHorizonRuntime, type HorizonRuntime } from "./runtime/horizon-runtime.js";
 

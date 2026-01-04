@@ -36,7 +36,7 @@ program
 		const useTui = options.tui !== false;
 		const verbose = options.verbose ?? false;
 
-		console.log("Horizon Agent v2 (kernel-v3)");
+		console.log("Horizon Agent v2");
 		console.log("============================");
 		console.log(`Feature: ${feature}`);
 		console.log(`Flow: ${flowPath}`);

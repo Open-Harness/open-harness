@@ -6,7 +6,7 @@
  * - Coder: Implements each task
  * - Reviewer: Reviews and provides feedback
  *
- * Uses kernel-v3 runtime with loop edges for controlled coder↔reviewer cycles.
+ * Uses kernel runtime with loop edges for controlled coder↔reviewer cycles.
  */
 
 // Runtime
