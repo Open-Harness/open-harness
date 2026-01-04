@@ -150,6 +150,104 @@ BEHAVIORAL DECORATORS:
 - Keep the rolling `dev` → `master` PR open as the release train.
 - Review and merge stacks bottom → top.
 - When ready to release, merge the `dev` → `master` PR.
+
+## Beads Issue Tracking (Agent Workflow)
+
+This project uses [Beads](https://github.com/steveyegge/beads) for git-native issue tracking. As an agent, you MUST follow these patterns.
+
+### Architecture
+
+```
+Code branches:              Beads data:
+master ← dev ← feat/*       beads-sync (dedicated branch)
+```
+
+Issue data lives on the `beads-sync` branch via git worktree. Your feature branches stay clean of beads commits.
+
+### Session Start
+
+Context is auto-injected via hooks. You'll see issue status in your session context.
+
+```bash
+# Check what you're working on
+bd list --mine           # Issues assigned to you
+bd status                # Overall database status
+```
+
+### During Work
+
+```bash
+# Start working on an issue
+bd start <issue-id>      # Marks issue in-progress
+
+# Add progress notes (do this frequently)
+bd comment <issue-id> "Implemented X, moving to Y"
+
+# Create issues for discovered work
+bd create                # Interactive creation
+
+# Link commits to issues
+git commit -m "Fix bug in parser (bd-abc123)"
+```
+
+### Session End (CRITICAL)
+
+**NEVER end a session without syncing beads.** Unpushed beads changes cause severe problems for other agents and humans.
+
+```bash
+# This is MANDATORY before ending any session
+bd sync                  # Commits beads changes to beads-sync branch
+git push                 # Push your code changes
+```
+
+The `bd sync` command:
+1. Exports pending changes to JSONL
+2. Commits to `beads-sync` branch (via worktree)
+3. Pulls remote changes
+4. Imports updates
+5. Pushes to remote
+
+### Multi-Agent Coordination
+
+When multiple agents work simultaneously:
+
+1. **Hash-based IDs prevent collisions** - Creating issues simultaneously is safe
+2. **Append-only JSONL** - Changes merge cleanly
+3. **Daemon batches commits** - 30-second debounce prevents spam
+4. **Always sync before stopping** - This is the golden rule
+
+### Common Commands
+
+| Command | When to Use |
+|---------|-------------|
+| `bd list` | See open issues |
+| `bd list --mine` | Issues assigned to you |
+| `bd show <id>` | View issue details |
+| `bd start <id>` | Begin work on issue |
+| `bd comment <id> "msg"` | Add progress note |
+| `bd close <id>` | Mark issue complete |
+| `bd create` | Create new issue |
+| `bd sync` | **ALWAYS run before session end** |
+| `bd doctor` | Diagnose problems |
+
+### Handling Conflicts
+
+If you encounter beads merge conflicts:
+
+```bash
+# Accept remote version and re-import
+git checkout --theirs .beads/issues.jsonl
+bd import
+bd sync
+```
+
+### Do NOT
+
+- Create issues on feature branches (use `bd create` which goes to `beads-sync`)
+- End sessions without `bd sync`
+- Manually edit `.beads/issues.jsonl`
+- Ignore `bd doctor` warnings
+
 <!-- MANUAL ADDITIONS END -->
 
 ## Landing the Plane (Session Completion)
