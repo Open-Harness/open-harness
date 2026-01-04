@@ -8,10 +8,27 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { CancelContext } from "../../src/core/cancel.js";
 import type { RuntimeCommand } from "../../src/core/events.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 
 const SCHEMA_DIR = resolve(import.meta.dir, "../../tests/fixtures/schemas");
+
+// Create a mock cancel context
+function createMockCancelContext(): CancelContext {
+	const controller = new AbortController();
+	return {
+		signal: controller.signal,
+		reason: undefined,
+		cancelled: false,
+		interrupt: async () => {},
+		abort: () => {
+			controller.abort();
+		},
+		throwIfCancelled: () => {},
+		onCancel: () => () => {},
+	};
+}
 
 // Create a mock context for the node
 function createMockContext(nodeId: string) {
@@ -27,9 +44,12 @@ function createMockContext(nodeId: string) {
 		state: {
 			get: () => undefined,
 			set: () => {},
+			patch: () => {},
+			snapshot: () => ({}),
 		},
 		inbox: {
 			next: () => undefined as RuntimeCommand | undefined,
+			enqueue: () => {},
 		},
 		getAgentSession: () => agentSession,
 		setAgentSession: (id: string) => {
@@ -37,6 +57,7 @@ function createMockContext(nodeId: string) {
 		},
 		resumeMessage: undefined,
 		events,
+		cancel: createMockCancelContext(),
 	};
 }
 
