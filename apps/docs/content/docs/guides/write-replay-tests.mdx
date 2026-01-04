@@ -1,0 +1,34 @@
+---
+title: Write Replay Tests
+description: Write tests that replay recorded interactions
+---
+
+Replay tests execute flows using recorded fixtures, providing fast, deterministic tests.
+
+## Basic Replay Test
+
+```typescript
+import { test } from 'bun:test';
+import { replayFlow } from '@openharness/kernel/testing';
+
+test('my flow', async () => {
+  const result = await replayFlow({
+    flowFile: 'flow.yaml',
+    fixtureFile: 'fixtures/my-test.jsonl',
+  });
+  
+  expect(result.success).toBe(true);
+});
+```
+
+## Test Structure
+
+1. Load the flow definition
+2. Load the fixture
+3. Execute the flow with the fixture
+4. Assert on results
+
+## Learn More
+
+- [Testing Protocol](/docs/reference/kernel-spec/testing/testing-protocol) - Complete testing API
+- [Test Spec Template](/docs/reference/kernel-spec/testing/test-spec-template) - Template for test specs

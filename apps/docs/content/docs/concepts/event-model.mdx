@@ -1,0 +1,38 @@
+---
+title: Event Model
+description: How events flow through the Open Harness system
+---
+
+Events are the primary communication mechanism in Open Harness.
+
+## Event Structure
+
+All events follow the `EnrichedEvent` envelope:
+
+```typescript
+interface EnrichedEvent {
+  id: string;
+  timestamp: Date;
+  context: EventContext;
+  event: BaseEvent;
+}
+```
+
+## Event Types
+
+- **Workflow events**: `harness:start`, `phase:start`, `task:complete`, etc.
+- **Agent events**: `agent:start`, `agent:text`, `agent:tool:complete`, etc.
+- **Session events**: `session:message`, `session:prompt`, `session:reply`, etc.
+
+## Event Flow
+
+1. Nodes emit events through the Hub
+2. Channels observe events and can send commands
+3. FlowRuntime routes commands to the appropriate inbox
+4. Agents process commands and emit new events
+
+## Learn More
+
+- [Events Spec](/docs/reference/kernel-spec/spec/events) - Complete event protocol
+- [Hub Spec](/docs/reference/kernel-spec/spec/hub) - Event bus API
+- [API Reference: Events](/docs/reference/api/events) - TypeScript types

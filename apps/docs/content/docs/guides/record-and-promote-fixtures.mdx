@@ -1,0 +1,36 @@
+---
+title: Record & Promote Fixtures
+description: Create and manage test fixtures for replay tests
+---
+
+Fixtures capture recorded interactions that can be replayed in tests.
+
+## Recording Fixtures
+
+Use the test recorder to capture interactions:
+
+```bash
+bun run record-fixture --file flow.yaml --output fixtures/my-test.jsonl
+```
+
+## Fixture Structure
+
+Fixtures are JSONL files containing event sequences:
+
+```jsonl
+{"id": "1", "timestamp": "...", "event": {"type": "agent:start", ...}}
+{"id": "2", "timestamp": "...", "event": {"type": "agent:text", ...}}
+```
+
+## Promoting Fixtures
+
+Once a fixture is validated, promote it to the golden fixtures directory:
+
+```bash
+cp fixtures/my-test.jsonl recordings/golden/my-test.jsonl
+```
+
+## Learn More
+
+- [Testing Protocol](/docs/reference/kernel-spec/testing/testing-protocol) - Fixture format details
+- [Validation Guide](/docs/reference/kernel-spec/testing/validation) - Validate fixtures

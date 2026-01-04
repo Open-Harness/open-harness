@@ -1,0 +1,12 @@
+{
+  "title": "Learn",
+  "pages": [
+    "index",
+    "first-flow",
+    "flow-inputs",
+    "bindings-a3",
+    "when-policy",
+    "custom-node",
+    "channels"
+  ]
+}

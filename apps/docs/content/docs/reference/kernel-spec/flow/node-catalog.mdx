@@ -1,0 +1,105 @@
+---
+title: "Node Catalog (v1)"
+description: "This document defines the canonical node set for Flow. It is the source of truth for node availability in the runtime and for UI/editor tooling."
+---
+
+This document defines the canonical node set for Flow. It is the source of truth for node availability in the runtime and for UI/editor tooling.
+
+## Conventions
+
+- Each node type is registered in the Flow registry.
+- Agent nodes are **stateful**, **injectable**, and may **stream**.
+- Control nodes shape graph execution but do not call external providers.
+- Full input/output schemas live in the registered `NodeTypeDefinition` sources.
+
+## A) Control Nodes
+
+| Node | Input | Output | Notes |
+| --- | --- | --- | --- |
+| `control.switch` | `&#123; value, cases: [&#123; when, route &#125;] &#125;` | `&#123; route, value &#125;` | Routes by first matching case |
+| `control.if` | `&#123; condition: WhenExpr &#125;` | `&#123; condition: boolean &#125;` | Binary branch |
+| `control.merge` | `&#123; mode: \"all\" \\| \"any\" &#125;` | `&#123; merged: true &#125;` | Overrides readiness rules |
+| `control.foreach` | `&#123; list: unknown[], as?: string &#125;` | `&#123; item, index, count &#125;` | Emits per item |
+| `control.loop` | `&#123; while: WhenExpr, maxIterations?: number &#125;` | `&#123; iteration &#125;` | Stops when condition false |
+| `control.wait` | `&#123; ms?: number, until?: string &#125;` | `&#123; waitedMs &#125;` | Delay or event wait |
+| `control.gate` | `&#123; prompt, choices?, allowText? &#125;` | `&#123; response &#125;` | Uses session prompt |
+| `control.subflow` | `&#123; name, input? &#125;` | `&#123; outputs &#125;` | Executes nested flow |
+| `control.fail` | `&#123; message &#125;` | (throws) | Fails the run |
+| `control.noop` | `&#123; value? &#125;` | `&#123; value? &#125;` | Structural only |
+
+## B) Agent Nodes
+
+| Node | Input | Output | Notes |
+| --- | --- | --- | --- |
+| `agent.run` | `&#123; input, tools?, system?, model?, metadata? &#125;` | `&#123; result &#125;` | Full agent config |
+| `agent.plan` | `&#123; input &#125;` | `&#123; result &#125;` | Preset agent |
+| `agent.classify` | `&#123; input &#125;` | `&#123; result &#125;` | Preset agent |
+| `agent.coder` | `&#123; input &#125;` | `&#123; result &#125;` | Preset agent (tools) |
+| `agent.reviewer` | `&#123; input &#125;` | `&#123; result &#125;` | Preset agent |
+| `agent.summarize` | `&#123; input &#125;` | `&#123; result &#125;` | Preset agent |
+| `claude.agent` | `&#123; prompt \\| messages, options? &#125;` | `&#123; text, structuredOutput?, usage? &#125;` | Canonical Claude node |
+
+All agent nodes:
+- Always have inbox support.
+- Emit `agent:*` and `agent:tool:*` events.
+- Support streaming (`agent:text`).
+
+## C) Data / Transform
+
+| Node | Input | Output | Notes |
+| --- | --- | --- | --- |
+| `data.map` | `&#123; list, template? &#125;` | `&#123; list &#125;` | Map items |
+| `data.filter` | `&#123; list, when &#125;` | `&#123; list &#125;` | Filter items |
+| `data.reduce` | `&#123; list, initial? &#125;` | `&#123; value &#125;` | Reduce items |
+| `data.merge` | `&#123; objects &#125;` | `&#123; object &#125;` | Merge objects |
+| `data.pick` | `&#123; object, keys &#125;` | `&#123; object &#125;` | Pick keys |
+| `data.set` | `&#123; object, path, value &#125;` | `&#123; object &#125;` | Set field |
+| `data.json.parse` | `&#123; text &#125;` | `&#123; value &#125;` | Parse JSON |
+| `data.json.stringify` | `&#123; value &#125;` | `&#123; text &#125;` | Stringify JSON |
+| `data.template` | `&#123; template, values? &#125;` | `&#123; text &#125;` | Render string |
+| `data.validate` | `&#123; value, schema &#125;` | `&#123; valid, errors? &#125;` | Validate |
+
+## D) System / Runtime
+
+| Node | Input | Output | Notes |
+| --- | --- | --- | --- |
+| `system.log` | `&#123; level, message &#125;` | `&#123; ok: true &#125;` | Emit log |
+| `system.metrics` | `&#123; name, value, tags? &#125;` | `&#123; ok: true &#125;` | Emit metric |
+| `system.cache.get` | `&#123; key &#125;` | `&#123; value? &#125;` | Cache read |
+| `system.cache.set` | `&#123; key, value, ttlMs? &#125;` | `&#123; ok: true &#125;` | Cache write |
+| `system.state.get` | `&#123; key &#125;` | `&#123; value? &#125;` | Runtime state read |
+| `system.state.set` | `&#123; key, value &#125;` | `&#123; ok: true &#125;` | Runtime state write |
+
+## Channels (not nodes)
+
+Channels are **interfaces** to a running flow (console, voice, websocket, etc.). They attach to the runtime and are **not** declared as nodes in the graph.
+
+```typescript
+const instance = createFlowRunner(flow, registry, &#123;
+  channels: [ConsoleChannel(), VoiceChannel()],
+&#125;);
+```
+
+## Capabilities (NodeType)
+
+The registry should expose capabilities so the runtime can enforce invariants:
+
+```typescript
+interface NodeCapabilities &#123;
+  isStreaming?: boolean;
+  supportsInbox?: boolean;
+  isLongLived?: boolean;
+  isAgent?: boolean;
+&#125;
+```
+
+Rules:
+- All `agent.*` nodes set `isAgent: true` and `supportsInbox: true`.
+- Control and data nodes do not set `supportsInbox`.
+- Long-lived nodes must be explicit (not part of MVP).
+
+## Key invariants
+
+1. Channel interfaces are **not** nodes.
+2. Agent nodes are stateful and injectable.
+3. Control nodes define routing and structure only.
