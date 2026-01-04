@@ -45,7 +45,9 @@ export interface ClaudeAgentInput {
 }
 
 export interface ClaudeAgentOutput {
-	text: string;
+	// Note: text is optional when paused=true (SDK maintains history via sessionId)
+	// Consumers needing partial text should accumulate from agent:text:delta events
+	text?: string;
 	structuredOutput?: unknown;
 	usage?: NonNullableUsage;
 	modelUsage?: Record<string, ModelUsage>;
@@ -91,7 +93,7 @@ const ClaudeAgentInputSchema = z
 	});
 
 const ClaudeAgentOutputSchema = z.object({
-	text: z.string(),
+	text: z.string().optional(), // Optional when paused=true
 	structuredOutput: z.unknown().optional(),
 	usage: z.unknown().optional(),
 	modelUsage: z.unknown().optional(),
@@ -166,7 +168,10 @@ export function createClaudeNode(
 			const startedAt = Date.now();
 			let emittedStart = false;
 			let finalResult: SDKResultMessage | undefined;
-			let accumulatedText = "";
+			// Note: We intentionally do NOT accumulate text here.
+			// - For pause/resume: SDK maintains full conversation history via sessionId
+			// - For streaming UIs: Consumers receive agent:text:delta events in real-time
+			// - See issue #78 for the design decision rationale
 			let lastSessionId = knownSessionId;
 			const recordedMessages: SDKMessage[] = [];
 			const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown; startedAt: number }>();
@@ -207,7 +212,6 @@ export function createClaudeNode(
 						if (streamEvent?.type === "content_block_delta") {
 							const delta = streamEvent.delta;
 							if (delta?.type === "text_delta" && delta.text) {
-								accumulatedText += delta.text;
 								ctx.emit({
 									type: "agent:text:delta",
 									nodeId: ctx.nodeId,
@@ -263,7 +267,6 @@ export function createClaudeNode(
 								if (blockType === "text") {
 									const text = block.text;
 									if (typeof text === "string" && text.length > 0) {
-										accumulatedText += text;
 										ctx.emit({
 											type: "agent:text",
 											nodeId: ctx.nodeId,
@@ -378,13 +381,13 @@ export function createClaudeNode(
 					type: "agent:paused",
 					nodeId: ctx.nodeId,
 					runId: ctx.runId,
-					partialText: accumulatedText || undefined,
+					// Note: partialText removed - consumers should accumulate from agent:text:delta events
+					// SDK maintains full conversation history via sessionId for resume
 					sessionId: lastSessionId,
 					numTurns: finalResult?.num_turns,
 				});
 
 				return {
-					text: accumulatedText,
 					paused: true,
 					sessionId: lastSessionId,
 					numTurns: finalResult?.num_turns,

@@ -53,20 +53,23 @@ edges: []
 		expect(pausedEvent).toBeDefined();
 		expect(pausedEvent?.type).toBe("agent:paused");
 
-		// Verify partial output was captured
-		const output = snapshot.outputs.agent as { text?: string; paused?: boolean } | undefined;
+		// Verify paused flag was set (text no longer accumulated - SDK handles history)
+		// Consumers needing partial text should accumulate from agent:text:delta events
+		const output = snapshot.outputs.agent as { paused?: boolean; sessionId?: string } | undefined;
 		expect(output?.paused).toBe(true);
-		expect(output?.text).toBeDefined();
-		expect(typeof output?.text).toBe("string");
-		expect((output?.text?.length ?? 0) > 0).toBe(true);
+		expect(output?.sessionId).toBeDefined(); // Session ID for resume
 
 		// Verify we got flow:paused event
 		const flowPaused = events.find((e) => e.type === "flow:paused");
 		expect(flowPaused).toBeDefined();
 
+		// Verify streaming deltas were received (consumers can accumulate these)
+		const deltaEvents = events.filter((e) => e.type === "agent:text:delta");
+		expect(deltaEvents.length).toBeGreaterThan(0);
+
 		console.log("✅ Pause test passed");
 		console.log(`   Received ${textChunks} streaming deltas before pause`);
-		console.log(`   Partial output length: ${output?.text?.length ?? 0} chars`);
+		console.log(`   Session ID for resume: ${output?.sessionId?.substring(0, 20)}...`);
 	}, 60000); // 60s timeout for live test
 
 	test("abort kills real claude agent immediately", async () => {
