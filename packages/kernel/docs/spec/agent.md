@@ -20,7 +20,7 @@ If `true`, the agent implementation is responsible for emitting:
 
 This is useful for provider adapters (e.g., streaming SDKs) that want tighter control over run lifecycle events.
 
-If `false` or omitted, the harness emits these events automatically.
+If `false` or omitted, the runtime emits these events automatically.
 
 ## Execute context
 
@@ -44,6 +44,7 @@ Read-only inbox for messages injected by channels (via `hub.sendToRun(runId, ...
 interface AgentInbox extends AsyncIterable<InjectedMessage> {
   pop(): Promise<InjectedMessage>;
   drain(): InjectedMessage[];
+  close(): void;
 }
 
 interface InjectedMessage {
@@ -64,6 +65,41 @@ Unique ID for this particular agent execution. This is the routing key for `hub.
 1. Listen for `agent:start` events to get the `runId`
 2. Call `hub.sendToRun(runId, message)` (not `hub.sendTo(agentName, message)`)
 
+## Async prompt stream (Claude SDK)
+
+Multi-turn agent nodes must provide an **async iterable** prompt stream to the Claude SDK.
+
+Contract:
+- Yield initial messages from node input (prompt or messages array)
+- Then yield new user messages from `AgentInbox`
+- Terminate via explicit inbox close or SDK maxTurns
+
+```ts
+async function* promptStream(
+  initial: SDKUserMessage[],
+  inbox: AgentInbox,
+  sessionId: string,
+): AsyncGenerator<SDKUserMessage> {
+  for (const msg of initial) yield msg;
+  for await (const injected of inbox) {
+    yield toSdkUserMessage(injected, sessionId);
+  }
+}
+```
+
+### SDK user message shape
+
+```ts
+type SDKUserMessage = {
+  type: "user";
+  message: { role: "user"; content: string };
+  parent_tool_use_id: string | null;
+  session_id: string;
+  isSynthetic?: boolean;
+  tool_use_result?: unknown;
+};
+```
+
 ## ExecutableAgent (runtime view)
 
 At runtime, workflow code sees:
@@ -75,10 +111,10 @@ interface ExecutableAgent<TIn = unknown, TOut = unknown> {
 }
 ```
 
-The harness wraps `AgentDefinition` to provide this simpler interface (no context args).
+The runtime wraps `AgentDefinition` to provide this simpler interface (no context args).
 
 ## Key invariants
 
 1. **Agents emit events via hub** - they don't "print directly"
-2. **Agents can receive injected messages** - via `inbox` (if the provider wrapper supports it)
+2. **Agents can receive injected messages** - via `inbox`
 3. **runId is the routing key** - for run-scoped message injection
