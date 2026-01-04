@@ -107,26 +107,49 @@ type AgentStartEvent = AgentEventBase & {
 
 **Note:** We store the full prompt/messages. UI can truncate for display if needed. This matches the actual `ClaudeAgentInput` interface which accepts either form.
 
+#### `agent:thinking:delta`
+
+Emitted for streaming extended thinking tokens (real-time deltas).
+
+```ts
+type AgentThinkingDeltaEvent = AgentEventBase & {
+  type: "agent:thinking:delta";
+  content: string;       // Thinking text chunk (delta)
+  tokenCount?: number;   // Tokens in this chunk
+};
+```
+
 #### `agent:thinking`
 
-Emitted for extended thinking tokens (streaming).
+Emitted for complete thinking blocks (contains full content, emitted alongside deltas).
 
 ```ts
 type AgentThinkingEvent = AgentEventBase & {
   type: "agent:thinking";
-  content: string;       // Thinking text chunk
-  tokenCount?: number;   // Tokens in this chunk
+  content: string;       // Complete thinking text block
+  tokenCount?: number;   // Tokens in this block
+};
+```
+
+#### `agent:text:delta`
+
+Emitted for streaming assistant text output (real-time deltas).
+
+```ts
+type AgentTextDeltaEvent = AgentEventBase & {
+  type: "agent:text:delta";
+  content: string;  // Text chunk (delta)
 };
 ```
 
 #### `agent:text`
 
-Emitted for assistant text output (streaming).
+Emitted for complete text blocks (contains full content, emitted alongside deltas).
 
 ```ts
 type AgentTextEvent = AgentEventBase & {
   type: "agent:text";
-  content: string;  // Text chunk
+  content: string;  // Complete text block
 };
 ```
 
@@ -195,14 +218,19 @@ type AgentCompleteEvent = AgentEventBase & {
 ### 3.2 Event Flow Example
 
 ```
-agent:start       { nodeId: "task-agent", sessionId: "sess-123", prompt: "..." }
-agent:thinking    { nodeId: "task-agent", content: "Let me analyze..." }
-agent:text        { nodeId: "task-agent", content: "I'll start by..." }
-agent:tool        { nodeId: "task-agent", toolName: "read_file", toolInput: {...}, toolOutput: {...} }
-agent:tool        { nodeId: "task-agent", toolName: "write_file", toolInput: {...}, toolOutput: {...} }
-agent:text        { nodeId: "task-agent", content: "Done! I've updated..." }
-agent:complete    { nodeId: "task-agent", result: "...", usage: {...}, durationMs: 4523 }
+agent:start          { nodeId: "task-agent", sessionId: "sess-123", prompt: "..." }
+agent:thinking:delta { nodeId: "task-agent", content: "Let me " }
+agent:thinking:delta { nodeId: "task-agent", content: "analyze..." }
+agent:text:delta     { nodeId: "task-agent", content: "I'll " }
+agent:text:delta     { nodeId: "task-agent", content: "start by..." }
+agent:tool           { nodeId: "task-agent", toolName: "read_file", toolInput: {...}, toolOutput: {...} }
+agent:tool           { nodeId: "task-agent", toolName: "write_file", toolInput: {...}, toolOutput: {...} }
+agent:text:delta     { nodeId: "task-agent", content: "Done! " }
+agent:text:delta     { nodeId: "task-agent", content: "I've updated..." }
+agent:complete       { nodeId: "task-agent", result: "...", usage: {...}, durationMs: 4523 }
 ```
+
+**Note:** Both delta and complete events are emitted during streaming. Delta events (`agent:text:delta`, `agent:thinking:delta`) provide real-time chunks for streaming UIs. Complete events (`agent:text`, `agent:thinking`) provide full content for consumers who don't need real-time updates. Subscribe to whichever suits your use case.
 
 ---
 
@@ -517,7 +545,9 @@ None - all questions resolved in spec discussion.
 export type AgentEvent =
   | AgentStartEvent
   | AgentThinkingEvent
+  | AgentThinkingDeltaEvent
   | AgentTextEvent
+  | AgentTextDeltaEvent
   | AgentToolEvent
   | AgentErrorEvent
   | AgentCompleteEvent;
@@ -532,13 +562,30 @@ export interface AgentStartEvent {
   prompt: string | ClaudeMessageInput[];  // Full prompt or messages array
 }
 
+export interface AgentThinkingDeltaEvent {
+  type: "agent:thinking:delta";
+  nodeId: string;
+  runId: string;
+  timestamp: number;
+  content: string;       // Streaming thinking chunk
+  tokenCount?: number;
+}
+
 export interface AgentThinkingEvent {
   type: "agent:thinking";
   nodeId: string;
   runId: string;
   timestamp: number;
-  content: string;
+  content: string;       // Complete thinking block (full content)
   tokenCount?: number;
+}
+
+export interface AgentTextDeltaEvent {
+  type: "agent:text:delta";
+  nodeId: string;
+  runId: string;
+  timestamp: number;
+  content: string;       // Streaming text chunk
 }
 
 export interface AgentTextEvent {
@@ -546,7 +593,7 @@ export interface AgentTextEvent {
   nodeId: string;
   runId: string;
   timestamp: number;
-  content: string;
+  content: string;       // Complete text block (full content)
 }
 
 export interface AgentToolEvent {

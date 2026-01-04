@@ -145,6 +145,8 @@ async function runHeadless(
 				break;
 			}
 
+			// Handle both delta (streaming) and complete events the same way
+			case "agent:text:delta":
 			case "agent:text": {
 				if (verbose) {
 					const e = event as { content: string };
