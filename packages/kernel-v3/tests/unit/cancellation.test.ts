@@ -99,7 +99,8 @@ edges: []
 		const events: Array<{ type: string }> = [];
 		runtime.onEvent((event) => {
 			events.push(event);
-			if (event.type === "agent:text") {
+			// Trigger pause on streaming delta (not agent:text which requires assistant message)
+			if (event.type === "agent:text:delta") {
 				runtime.dispatch({ type: "abort", resumable: true });
 			}
 		});
@@ -108,8 +109,9 @@ edges: []
 		expect(snapshot.status).toBe("paused");
 		expect(snapshot.nodeStatus.agent).toBe("running");
 
-		const output = snapshot.outputs.agent as { text?: string; paused?: boolean } | undefined;
-		expect(output?.text).toBe("Hi");
+		// Note: output.text is no longer set on pause - SDK maintains history via sessionId
+		// Consumers needing partial text should accumulate from agent:text:delta events
+		const output = snapshot.outputs.agent as { paused?: boolean; sessionId?: string } | undefined;
 		expect(output?.paused).toBe(true);
 		expect(events.some((event) => event.type === "agent:paused")).toBe(true);
 	});
@@ -132,7 +134,8 @@ edges: []
 		const events: Array<{ type: string }> = [];
 		runtime.onEvent((event) => {
 			events.push(event);
-			if (event.type === "agent:text") {
+			// Trigger abort on streaming delta (not agent:text which requires assistant message)
+			if (event.type === "agent:text:delta") {
 				runtime.dispatch({ type: "abort", resumable: false });
 			}
 		});
