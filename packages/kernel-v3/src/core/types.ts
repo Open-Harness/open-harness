@@ -108,7 +108,7 @@ export type EdgeDefinition = {
 };
 
 /**
- * Declarative conditional expression.
+ * Structured conditional expression (YAML AST format).
  *
  * Variants:
  * - equals: compare a binding to a literal value
@@ -116,11 +116,25 @@ export type EdgeDefinition = {
  * - and: logical conjunction
  * - or: logical disjunction
  */
-export type WhenExpr =
+export type WhenExprAST =
 	| { equals: { var: string; value: unknown } }
-	| { not: WhenExpr }
-	| { and: WhenExpr[] }
-	| { or: WhenExpr[] };
+	| { not: WhenExprAST }
+	| { and: WhenExprAST[] }
+	| { or: WhenExprAST[] };
+
+/**
+ * Conditional expression - either a JSONata string or structured AST.
+ *
+ * String format uses JSONata expressions:
+ * - "status = 'success'"
+ * - "$exists(reviewer) and reviewer.passed"
+ * - "count > 5"
+ *
+ * AST format for declarative conditions:
+ * - { equals: { var: "status", value: "success" } }
+ * - { and: [...] }
+ */
+export type WhenExpr = string | WhenExprAST;
 
 /**
  * Retry policy for a node execution.
@@ -173,23 +187,29 @@ const NodePolicySchema = z.object({
 	continueOnError: z.boolean().optional(),
 });
 
-/** Zod schema for WhenExpr validation. */
-export const WhenExprSchema: ZodType<WhenExpr> = z.lazy(() =>
+/** Zod schema for WhenExprAST validation (structured format). */
+export const WhenExprASTSchema: ZodType<WhenExprAST> = z.lazy(() =>
 	z.union([
 		z.object({
 			equals: z.object({ var: z.string(), value: z.unknown() }),
 		}),
 		z.object({
-			not: WhenExprSchema,
+			not: WhenExprASTSchema,
 		}),
 		z.object({
-			and: z.array(WhenExprSchema),
+			and: z.array(WhenExprASTSchema),
 		}),
 		z.object({
-			or: z.array(WhenExprSchema),
+			or: z.array(WhenExprASTSchema),
 		}),
 	]),
 );
+
+/** Zod schema for WhenExpr validation (string or AST). */
+export const WhenExprSchema: ZodType<WhenExpr> = z.union([
+	z.string(),
+	WhenExprASTSchema,
+]);
 
 const EdgeForEachSchema = z.object({
 	in: z.string().min(1),
