@@ -82,10 +82,11 @@ Then tell me what 15 * 17 equals.`;
 		// Categorize messages by type
 		const messagesByType: Record<string, CapturedMessage[]> = {};
 		for (const msg of messages) {
-			if (!messagesByType[msg.type]) {
-				messagesByType[msg.type] = [];
+			const type = msg.type;
+			if (!messagesByType[type]) {
+				messagesByType[type] = [];
 			}
-			messagesByType[msg.type].push(msg);
+			messagesByType[type]!.push(msg);
 		}
 
 		console.log("MESSAGE TYPE COUNTS:");
@@ -187,11 +188,14 @@ Then tell me what 15 * 17 equals.`;
 		const resultMessages = messagesByType.result ?? [];
 		if (resultMessages.length > 0) {
 			console.log("RESULT MESSAGE:");
-			const result = resultMessages[0].raw as { result?: string; duration_ms?: number; num_turns?: number };
-			console.log(`  Result text: "${(result.result ?? "").slice(0, 100)}..."`);
-			console.log(`  Duration: ${result.duration_ms}ms`);
-			console.log(`  Turns: ${result.num_turns}`);
-			console.log();
+			const firstResult = resultMessages[0];
+			if (firstResult) {
+				const result = firstResult.raw as { result?: string; duration_ms?: number; num_turns?: number };
+				console.log(`  Result text: "${(result.result ?? "").slice(0, 100)}..."`);
+				console.log(`  Duration: ${result.duration_ms}ms`);
+				console.log(`  Turns: ${result.num_turns}`);
+				console.log();
+			}
 		}
 
 		// Write raw capture to file
