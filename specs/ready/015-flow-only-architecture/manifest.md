@@ -208,11 +208,12 @@ For every phase below, we must include:
   - Agent event emission (`agent:*`, `agent:tool:*`)
   - Unit + replay tests + fixtures
   - Live script: `scripts/live/flow-agent-nodes-live.ts`
-  - Tutorials: Lesson 06 (PromptFile + Claude) and Lesson 09 (Multi-Turn)
+- Tutorials: Lesson 06 (PromptFile + Claude) and Lesson 09 (Multi-Turn) (Blocked - auth issues)
 - Tutorial Migration Checklist
-  - Update Lessons 06 and 09 to FlowRuntime APIs
-  - Run `bun run lesson:06` and `bun run lesson:09`
-  - Confirm outputs match tutorial specs
+- Update Lessons 06 and 09 to FlowRuntime APIs
+- Run `bun run lesson:06` and `bun run lesson:09`
+- Confirm outputs match tutorial specs
+- Keep lessons **Blocked** until Claude auth issues are resolved
 - Verification Steps
   - `bun run typecheck`
   - `bun run lint`
@@ -222,7 +223,7 @@ For every phase below, we must include:
   - Agent nodes always receive inbox
   - runId fresh per invocation
   - Multi-turn termination rules enforced
-  - Lessons 06 and 09 pass
+- Lessons 06 and 09 pass (once Claude auth issues are resolved)
 - Retro (mandatory)
   - Lessons learned:
   - Risks discovered:

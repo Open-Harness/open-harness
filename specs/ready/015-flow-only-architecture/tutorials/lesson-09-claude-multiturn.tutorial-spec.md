@@ -2,7 +2,7 @@
 
 **Lesson**: `packages/kernel-tutorial/lessons/09-claude-multiturn`  
 **Last Updated**: 2025-12-31  
-**Status**: Blocked
+**Status**: Blocked (auth issues)
 
 ## Goal
 
@@ -41,4 +41,4 @@ Required for Phase 4 tutorial gate.
 
 ## Notes
 
-Blocked until async iterable + inbox close wiring is complete.
+Blocked until Claude auth issues are resolved; do not unblock even if wiring is complete.
