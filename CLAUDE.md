@@ -55,6 +55,36 @@ TypeScript 5.x (strict mode): Follow standard conventions
 
 <!-- MANUAL ADDITIONS START -->
 
+## CRITICAL: Testing Requirements
+
+**MANDATORY - NEVER SKIP THESE:**
+
+### 1. External System Integration Testing
+When code interfaces with external systems (SDK, APIs, databases), you MUST:
+- Write integration tests that validate REAL behavior against the actual system
+- Create fixtures from REAL SDK responses, not fabricated data
+- Run tests against the live system to verify behavior before claiming "done"
+
+### 2. UI/TUI Testing
+When modifying UI components (especially `apps/horizon-agent`), you MUST:
+- Use the `tttd` skill to visually validate TUI changes
+- Capture before/after screenshots or recordings
+- Verify streaming behavior works correctly in the actual terminal
+
+### 3. Event System Changes
+When modifying event types or emission patterns, you MUST:
+- Create or update fixtures with REAL captured events from SDK
+- Write integration tests that run against the live SDK
+- Verify consumers handle the new events correctly via actual execution
+
+### 4. Validation Before "Done"
+Never claim a task is complete without:
+- Running integration tests that touch real systems
+- Visually validating UI changes if applicable
+- Proving the behavior works, not just that types compile
+
+**Unit tests that mock everything prove nothing about real behavior. Integration tests are mandatory.**
+
 ## CRITICAL: Authentication
 
 **DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.
