@@ -121,7 +121,7 @@ type AgentThinkingDeltaEvent = AgentEventBase & {
 
 #### `agent:thinking`
 
-Emitted for complete thinking blocks (non-streaming fallback).
+Emitted for complete thinking blocks (contains full content, emitted alongside deltas).
 
 ```ts
 type AgentThinkingEvent = AgentEventBase & {
@@ -144,7 +144,7 @@ type AgentTextDeltaEvent = AgentEventBase & {
 
 #### `agent:text`
 
-Emitted for complete text blocks (non-streaming fallback).
+Emitted for complete text blocks (contains full content, emitted alongside deltas).
 
 ```ts
 type AgentTextEvent = AgentEventBase & {
@@ -230,7 +230,7 @@ agent:text:delta     { nodeId: "task-agent", content: "I've updated..." }
 agent:complete       { nodeId: "task-agent", result: "...", usage: {...}, durationMs: 4523 }
 ```
 
-**Note:** Delta events (`agent:text:delta`, `agent:thinking:delta`) are emitted during streaming. Complete events (`agent:text`, `agent:thinking`) are only emitted as fallback when streaming is not available.
+**Note:** Both delta and complete events are emitted during streaming. Delta events (`agent:text:delta`, `agent:thinking:delta`) provide real-time chunks for streaming UIs. Complete events (`agent:text`, `agent:thinking`) provide full content for consumers who don't need real-time updates. Subscribe to whichever suits your use case.
 
 ---
 
@@ -576,7 +576,7 @@ export interface AgentThinkingEvent {
   nodeId: string;
   runId: string;
   timestamp: number;
-  content: string;       // Complete thinking block (non-streaming fallback)
+  content: string;       // Complete thinking block (full content)
   tokenCount?: number;
 }
 
@@ -593,7 +593,7 @@ export interface AgentTextEvent {
   nodeId: string;
   runId: string;
   timestamp: number;
-  content: string;       // Complete text block (non-streaming fallback)
+  content: string;       // Complete text block (full content)
 }
 
 export interface AgentToolEvent {
