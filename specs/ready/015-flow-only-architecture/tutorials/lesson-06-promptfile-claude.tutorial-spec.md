@@ -2,7 +2,7 @@
 
 **Lesson**: `packages/kernel-tutorial/lessons/06-promptfile-claude`  
 **Last Updated**: 2025-12-31  
-**Status**: Blocked
+**Status**: Blocked (auth issues)
 
 ## Goal
 
@@ -38,4 +38,4 @@ Required for Phase 4 tutorial gate.
 
 ## Notes
 
-Blocked until claude.agent multi-turn wiring is fixed and lesson restored.
+Blocked until Claude auth issues are resolved; do not unblock even if wiring is restored.

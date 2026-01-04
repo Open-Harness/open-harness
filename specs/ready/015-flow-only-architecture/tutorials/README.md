@@ -13,10 +13,10 @@ This folder defines **non-ad-hoc tutorial specifications**. Each lesson has a de
 - `lesson-03-flow-inputs.tutorial-spec.md`
 - `lesson-04-flow-bindings.tutorial-spec.md`
 - `lesson-05-flow-when-policy.tutorial-spec.md`
-- `lesson-06-promptfile-claude.tutorial-spec.md` (Blocked)
+- `lesson-06-promptfile-claude.tutorial-spec.md` (Blocked - auth issues)
 - `lesson-07-flow-node-packs.tutorial-spec.md`
 - `lesson-08-custom-node.tutorial-spec.md`
-- `lesson-09-claude-multiturn.tutorial-spec.md` (Blocked)
+- `lesson-09-claude-multiturn.tutorial-spec.md` (Blocked - auth issues)
 - `lesson-10-runtime-hello.tutorial-spec.md`
 - `lesson-11-phases-tasks.tutorial-spec.md`
 - `lesson-12-channels.tutorial-spec.md`
