@@ -174,7 +174,8 @@ async function syncKernelDocs({ srcRootAbs, dstRootAbs }: SyncOptions) {
     const links = findMarkdownLinks(raw);
     // Apply replacements from end to start to preserve indices
     for (let k = links.length - 1; k >= 0; k--) {
-      const link = links[k]!;
+      const link = links[k];
+      if (!link) continue;
       const newHref = rewriteHref(link.href);
       if (newHref === link.href) continue;
       rewritten =

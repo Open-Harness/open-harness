@@ -26,6 +26,7 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
           components={getMDXComponents({
             // this allows you to link to other pages with relative file paths
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // biome-ignore lint/suspicious/noExplicitAny: fumadocs createRelativeLink return type incompatible with MDXComponents
             a: createRelativeLink(source, page) as any,
           })}
         />
