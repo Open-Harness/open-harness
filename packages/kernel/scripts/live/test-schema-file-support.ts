@@ -87,13 +87,18 @@ async function testInlineOutputFormat() {
 		});
 
 		console.log("result.text:", result.text?.slice(0, 100));
-		console.log("result.structuredOutput:", JSON.stringify(result.structuredOutput, null, 2));
+		console.log(
+			"result.structuredOutput:",
+			JSON.stringify(result.structuredOutput, null, 2),
+		);
 
 		if (result.structuredOutput !== undefined) {
 			console.log("\n✅ INLINE outputFormat WORKS!");
 			return true;
 		} else {
-			console.log("\n❌ INLINE outputFormat FAILED: structuredOutput is undefined");
+			console.log(
+				"\n❌ INLINE outputFormat FAILED: structuredOutput is undefined",
+			);
 			return false;
 		}
 	} catch (error) {
@@ -137,13 +142,18 @@ async function testOutputSchemaFile() {
 		});
 
 		console.log("result.text:", result.text?.slice(0, 100));
-		console.log("result.structuredOutput:", JSON.stringify(result.structuredOutput, null, 2));
+		console.log(
+			"result.structuredOutput:",
+			JSON.stringify(result.structuredOutput, null, 2),
+		);
 
 		if (result.structuredOutput !== undefined) {
 			console.log("\n✅ FILE-BASED outputSchemaFile WORKS!");
 			return true;
 		} else {
-			console.log("\n❌ FILE-BASED outputSchemaFile FAILED: structuredOutput is undefined");
+			console.log(
+				"\n❌ FILE-BASED outputSchemaFile FAILED: structuredOutput is undefined",
+			);
 			return false;
 		}
 	} catch (error) {

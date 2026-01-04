@@ -1,5 +1,10 @@
 import { parse } from "yaml";
-import type { EdgeDefinition, EdgeGate, FlowDefinition, NodeDefinition } from "../core/types.js";
+import type {
+	EdgeDefinition,
+	EdgeGate,
+	FlowDefinition,
+	NodeDefinition,
+} from "../core/types.js";
 import { FlowDefinitionSchema } from "../core/types.js";
 
 /**
@@ -60,7 +65,9 @@ export class GraphCompiler implements Compiler {
 			if (edge.gate) {
 				const current = gateByNode.get(edge.to);
 				if (current && current !== edge.gate) {
-					throw new Error(`Conflicting gate settings for node "${edge.to}": ${current} vs ${edge.gate}`);
+					throw new Error(
+						`Conflicting gate settings for node "${edge.to}": ${current} vs ${edge.gate}`,
+					);
 				}
 				gateByNode.set(edge.to, edge.gate);
 			}

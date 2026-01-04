@@ -50,15 +50,21 @@ export class SqliteRunStore implements RunStore {
       CREATE INDEX IF NOT EXISTS run_snapshots_run_id_seq ON run_snapshots(run_id, seq);`,
 		);
 
-		this.insertEvent = this.db.prepare("INSERT INTO run_events (run_id, seq, event, created_at) VALUES (?, ?, ?, ?)");
+		this.insertEvent = this.db.prepare(
+			"INSERT INTO run_events (run_id, seq, event, created_at) VALUES (?, ?, ?, ?)",
+		);
 		this.insertSnapshot = this.db.prepare(
 			"INSERT INTO run_snapshots (run_id, seq, snapshot, created_at) VALUES (?, ?, ?, ?)",
 		);
 		this.selectSnapshot = this.db.prepare(
 			"SELECT snapshot FROM run_snapshots WHERE run_id = ? ORDER BY seq DESC, id DESC LIMIT 1",
 		);
-		this.selectEvents = this.db.prepare("SELECT event FROM run_events WHERE run_id = ? AND seq > ? ORDER BY seq ASC");
-		this.selectMaxSeq = this.db.prepare("SELECT MAX(seq) as seq FROM run_events WHERE run_id = ?");
+		this.selectEvents = this.db.prepare(
+			"SELECT event FROM run_events WHERE run_id = ? AND seq > ? ORDER BY seq ASC",
+		);
+		this.selectMaxSeq = this.db.prepare(
+			"SELECT MAX(seq) as seq FROM run_events WHERE run_id = ?",
+		);
 	}
 
 	appendEvent(runId: string, event: RuntimeEvent): void {

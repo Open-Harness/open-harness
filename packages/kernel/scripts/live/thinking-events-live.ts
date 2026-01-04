@@ -12,12 +12,18 @@
  */
 
 import type { RuntimeEvent } from "../../src/core/events.js";
-import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import {
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 
 async function runLiveTest() {
 	console.log("🧪 Running thinking events live test against REAL SDK...\n");
-	console.log("⚠️  Note: Extended thinking requires a model that supports it (e.g., claude-3-5-sonnet)\n");
+	console.log(
+		"⚠️  Note: Extended thinking requires a model that supports it (e.g., claude-3-5-sonnet)\n",
+	);
 
 	// Flow that triggers extended thinking using "ultrathink" keyword
 	const flow = parseFlowYaml(`
@@ -62,7 +68,9 @@ edges: []
 		// Analyze events
 		const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 		const textComplete = events.filter((e) => e.type === "agent:text");
-		const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
+		const thinkingDeltas = events.filter(
+			(e) => e.type === "agent:thinking:delta",
+		);
 		const thinkingComplete = events.filter((e) => e.type === "agent:thinking");
 		const agentComplete = events.filter((e) => e.type === "agent:complete");
 
@@ -89,30 +97,46 @@ edges: []
 		// Test 2: Check for thinking deltas (may or may not be present depending on model)
 		if (thinkingDeltas.length > 0) {
 			console.log("✅ TEST 2 PASSED: agent:thinking:delta events were emitted");
-			const thinkingContent = thinkingDeltas.map((e) => (e as { content: string }).content).join("");
-			console.log(`   Thinking content (${thinkingContent.length} chars): "${thinkingContent.slice(0, 100)}..."`);
+			const thinkingContent = thinkingDeltas
+				.map((e) => (e as { content: string }).content)
+				.join("");
+			console.log(
+				`   Thinking content (${thinkingContent.length} chars): "${thinkingContent.slice(0, 100)}..."`,
+			);
 			passed++;
 		} else {
-			console.log("⚠️  TEST 2 SKIPPED: No agent:thinking:delta events (model may not support extended thinking)");
+			console.log(
+				"⚠️  TEST 2 SKIPPED: No agent:thinking:delta events (model may not support extended thinking)",
+			);
 		}
 
 		// Test 3: agent:text SHOULD be emitted (complete content for consumers)
 		if (textComplete.length > 0) {
-			console.log("✅ TEST 3 PASSED: agent:text was emitted (complete content for consumers)");
+			console.log(
+				"✅ TEST 3 PASSED: agent:text was emitted (complete content for consumers)",
+			);
 			passed++;
 		} else {
-			console.log("❌ TEST 3 FAILED: agent:text was NOT emitted (should always be emitted)");
+			console.log(
+				"❌ TEST 3 FAILED: agent:text was NOT emitted (should always be emitted)",
+			);
 			failed++;
 		}
 
 		// Test 4: agent:thinking SHOULD be emitted when thinking occurred
 		if (thinkingDeltas.length > 0 && thinkingComplete.length > 0) {
-			console.log("✅ TEST 4 PASSED: agent:thinking was emitted (complete content for consumers)");
+			console.log(
+				"✅ TEST 4 PASSED: agent:thinking was emitted (complete content for consumers)",
+			);
 			passed++;
 		} else if (thinkingDeltas.length === 0) {
-			console.log("⚠️  TEST 4 SKIPPED: No thinking deltas (model may not support extended thinking)");
+			console.log(
+				"⚠️  TEST 4 SKIPPED: No thinking deltas (model may not support extended thinking)",
+			);
 		} else {
-			console.log("❌ TEST 4 FAILED: agent:thinking was NOT emitted (should be emitted when thinking occurs)");
+			console.log(
+				"❌ TEST 4 FAILED: agent:thinking was NOT emitted (should be emitted when thinking occurs)",
+			);
 			failed++;
 		}
 
@@ -123,7 +147,9 @@ edges: []
 			console.log(`   Result: "${result.slice(0, 100)}..."`);
 			passed++;
 		} else {
-			console.log(`❌ TEST 5 FAILED: agent:complete emitted ${agentComplete.length} times`);
+			console.log(
+				`❌ TEST 5 FAILED: agent:complete emitted ${agentComplete.length} times`,
+			);
 			failed++;
 		}
 

@@ -1,12 +1,18 @@
 // Tests for async binding resolution using JSONata
 
 import { describe, expect, test } from "bun:test";
-import { resolveBindingString, resolveBindings } from "../../src/runtime/bindings.js";
+import {
+	resolveBindingString,
+	resolveBindings,
+} from "../../src/runtime/bindings.js";
 
 describe("resolveBindingString", () => {
 	test("interpolates multiple bindings", async () => {
 		const context = { user: { name: "Ada" }, score: 5 };
-		const result = await resolveBindingString("Hello {{ user.name }} ({{ score }})", context);
+		const result = await resolveBindingString(
+			"Hello {{ user.name }} ({{ score }})",
+			context,
+		);
 		expect(result).toBe("Hello Ada (5)");
 	});
 
@@ -56,7 +62,10 @@ describe("resolveBindings", () => {
 
 	test("preserves non-string values for pure bindings", async () => {
 		const context = { payload: { a: 1 } };
-		const resolved = await resolveBindings({ value: "{{ payload }}" } as Record<string, unknown>, context);
+		const resolved = await resolveBindings(
+			{ value: "{{ payload }}" } as Record<string, unknown>,
+			context,
+		);
 		expect(resolved.value).toEqual({ a: 1 });
 	});
 
@@ -75,7 +84,10 @@ describe("resolveBindings", () => {
 
 	test("passes through non-string values unchanged", async () => {
 		const context = {};
-		const resolved = await resolveBindings({ num: 42, bool: true, nil: null } as Record<string, unknown>, context);
+		const resolved = await resolveBindings(
+			{ num: 42, bool: true, nil: null } as Record<string, unknown>,
+			context,
+		);
 		expect(resolved.num).toBe(42);
 		expect(resolved.bool).toBe(true);
 		expect(resolved.nil).toBe(null);

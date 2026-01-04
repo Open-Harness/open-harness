@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import {
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { constantNode, echoNode } from "../../src/nodes/index.js";
 import { InMemoryRunStore } from "../../src/persistence/memory-run-store.js";
 

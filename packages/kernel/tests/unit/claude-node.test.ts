@@ -1,12 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { createMockQuery, createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
-import { createClaudeNode, resolveOutputSchema } from "../../src/nodes/claude.agent.js";
+import {
+	createMockQuery,
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
+import {
+	createClaudeNode,
+	resolveOutputSchema,
+} from "../../src/nodes/claude.agent.js";
 import type { FixtureFile } from "../../src/testing/mock-query.js";
 import { FixtureSchema } from "../../src/testing/mock-query.js";
 
 async function loadFixture(name: string): Promise<FixtureFile> {
-	const fixturePath = new URL(`../fixtures/recordings/example/${name}.json`, import.meta.url);
+	const fixturePath = new URL(
+		`../fixtures/recordings/example/${name}.json`,
+		import.meta.url,
+	);
 	return FixtureSchema.parse(await Bun.file(fixturePath).json()) as FixtureFile;
 }
 
@@ -77,7 +88,10 @@ describe("claude node event emission", () => {
 
 	describe("non-streaming text (agent:text only)", () => {
 		test("emits agent:text for assistant message without stream_event", async () => {
-			const { events } = await runWithFixture("agent-no-streaming", "no-streaming");
+			const { events } = await runWithFixture(
+				"agent-no-streaming",
+				"no-streaming",
+			);
 
 			const textComplete = events.filter((e) => e.type === "agent:text");
 			expect(textComplete.length).toBeGreaterThan(0);
@@ -89,7 +103,10 @@ describe("claude node event emission", () => {
 		});
 
 		test("does NOT emit agent:text:delta when no stream_event occurs", async () => {
-			const { events } = await runWithFixture("agent-no-streaming", "no-streaming");
+			const { events } = await runWithFixture(
+				"agent-no-streaming",
+				"no-streaming",
+			);
 
 			// No stream_event means no deltas, but complete event is still emitted
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
@@ -99,9 +116,14 @@ describe("claude node event emission", () => {
 
 	describe("streaming thinking (agent:thinking:delta)", () => {
 		test("emits agent:thinking:delta for stream_event with thinking_delta", async () => {
-			const { events } = await runWithFixture("agent-thinking-stream", "thinking-stream");
+			const { events } = await runWithFixture(
+				"agent-thinking-stream",
+				"thinking-stream",
+			);
 
-			const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
+			const thinkingDeltas = events.filter(
+				(e) => e.type === "agent:thinking:delta",
+			);
 			expect(thinkingDeltas.length).toBeGreaterThan(0);
 			const firstDelta = thinkingDeltas[0];
 			expect(isContentEvent(firstDelta)).toBe(true);
@@ -111,10 +133,15 @@ describe("claude node event emission", () => {
 		});
 
 		test("emits both thinking deltas AND complete thinking events when streaming", async () => {
-			const { events } = await runWithFixture("agent-thinking-stream", "thinking-stream");
+			const { events } = await runWithFixture(
+				"agent-thinking-stream",
+				"thinking-stream",
+			);
 
 			// Both delta and complete events should be emitted - not mutually exclusive
-			const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
+			const thinkingDeltas = events.filter(
+				(e) => e.type === "agent:thinking:delta",
+			);
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 
 			expect(thinkingDeltas.length).toBeGreaterThan(0);
@@ -124,19 +151,29 @@ describe("claude node event emission", () => {
 
 	describe("non-streaming thinking (agent:thinking only)", () => {
 		test("emits agent:thinking for thinking block without stream_event", async () => {
-			const { events } = await runWithFixture("agent-thinking-no-stream", "thinking-no-stream");
+			const { events } = await runWithFixture(
+				"agent-thinking-no-stream",
+				"thinking-no-stream",
+			);
 
-			const thinkingComplete = events.filter((e) => e.type === "agent:thinking");
+			const thinkingComplete = events.filter(
+				(e) => e.type === "agent:thinking",
+			);
 			expect(thinkingComplete.length).toBeGreaterThan(0);
 			const firstComplete = thinkingComplete[0];
 			expect(isContentEvent(firstComplete)).toBe(true);
 			if (isContentEvent(firstComplete)) {
-				expect(firstComplete.content).toBe("Complete thinking block without streaming");
+				expect(firstComplete.content).toBe(
+					"Complete thinking block without streaming",
+				);
 			}
 		});
 
 		test("emits agent:text for text block without stream_event", async () => {
-			const { events } = await runWithFixture("agent-thinking-no-stream", "thinking-no-stream");
+			const { events } = await runWithFixture(
+				"agent-thinking-no-stream",
+				"thinking-no-stream",
+			);
 
 			const textComplete = events.filter((e) => e.type === "agent:text");
 			expect(textComplete.length).toBeGreaterThan(0);
@@ -148,10 +185,15 @@ describe("claude node event emission", () => {
 		});
 
 		test("does NOT emit delta events when no stream_event occurs", async () => {
-			const { events } = await runWithFixture("agent-thinking-no-stream", "thinking-no-stream");
+			const { events } = await runWithFixture(
+				"agent-thinking-no-stream",
+				"thinking-no-stream",
+			);
 
 			// No stream_event means no deltas, but complete events are still emitted
-			const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
+			const thinkingDeltas = events.filter(
+				(e) => e.type === "agent:thinking:delta",
+			);
 			const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 
 			expect(thinkingDeltas.length).toBe(0);
@@ -163,19 +205,30 @@ describe("claude node event emission", () => {
 		test("emits agent:complete with result from streaming fixture", async () => {
 			const { events, snapshot } = await runWithFixture("agent", "agent");
 
-			const complete = events.find((e) => e.type === "agent:complete") as { result: string } | undefined;
+			const complete = events.find((e) => e.type === "agent:complete") as
+				| { result: string }
+				| undefined;
 			expect(complete).toBeDefined();
 			expect(complete?.result).toBe("fixture done");
-			expect((snapshot.outputs.agent as { text: string }).text).toBe("fixture done");
+			expect((snapshot.outputs.agent as { text: string }).text).toBe(
+				"fixture done",
+			);
 		});
 
 		test("emits agent:complete with result from non-streaming fixture", async () => {
-			const { events, snapshot } = await runWithFixture("agent-no-streaming", "no-streaming");
+			const { events, snapshot } = await runWithFixture(
+				"agent-no-streaming",
+				"no-streaming",
+			);
 
-			const complete = events.find((e) => e.type === "agent:complete") as { result: string } | undefined;
+			const complete = events.find((e) => e.type === "agent:complete") as
+				| { result: string }
+				| undefined;
 			expect(complete).toBeDefined();
 			expect(complete?.result).toBe("complete text without streaming");
-			expect((snapshot.outputs.agent as { text: string }).text).toBe("complete text without streaming");
+			expect((snapshot.outputs.agent as { text: string }).text).toBe(
+				"complete text without streaming",
+			);
 		});
 	});
 
@@ -216,7 +269,10 @@ describe("resolveOutputSchema", () => {
 
 	describe("inline outputFormat", () => {
 		test("passes through inline outputFormat directly", () => {
-			const schema = { type: "object", properties: { test: { type: "string" } } };
+			const schema = {
+				type: "object",
+				properties: { test: { type: "string" } },
+			};
 			const result = resolveOutputSchema({
 				outputFormat: { type: "json_schema", schema },
 			});
@@ -227,7 +283,10 @@ describe("resolveOutputSchema", () => {
 		});
 
 		test("inline outputFormat takes precedence over outputSchemaFile", () => {
-			const schema = { type: "object", properties: { inline: { type: "boolean" } } };
+			const schema = {
+				type: "object",
+				properties: { inline: { type: "boolean" } },
+			};
 			const result = resolveOutputSchema({
 				outputFormat: { type: "json_schema", schema },
 				outputSchemaFile: join(fixturesDir, "greeting-schema.json"),

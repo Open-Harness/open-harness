@@ -239,3 +239,4 @@
 {"location":"page.tsx:18","message":"Page lookup result","data":{"pageFound":true,"pageTitle":"NodeDefinition","pageSlugs":["reference","types","node-definition"]},"timestamp":1767567438698,"sessionId":"debug-session","runId":"initial","hypothesisId":"C"}
 {"location":"page.tsx:16","message":"Params resolved","data":{"slug":["reference","types","flow-definition"],"slugType":"object","slugArray":["reference","types","flow-definition"]},"timestamp":1767567438711,"sessionId":"debug-session","runId":"initial","hypothesisId":"B"}
 {"location":"page.tsx:18","message":"Page lookup result","data":{"pageFound":true,"pageTitle":"FlowDefinition","pageSlugs":["reference","types","flow-definition"]},"timestamp":1767567438711,"sessionId":"debug-session","runId":"initial","hypothesisId":"C"}
+{"location":"source.ts:7","message":"Source loader config","data":{"baseUrl":"/docs"},"timestamp":1767567875812,"sessionId":"debug-session","runId":"initial","hypothesisId":"A"}

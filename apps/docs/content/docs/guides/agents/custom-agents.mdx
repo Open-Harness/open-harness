@@ -79,7 +79,9 @@ export const streamingAgent = defineAgent({
 ## Register and Use
 
 ```typescript
-const registry = new NodeRegistry();
+import { DefaultNodeRegistry } from "@open-harness/kernel";
+
+const registry = new DefaultNodeRegistry();
 registry.register(echoAgent);
 
 // In flow.yaml

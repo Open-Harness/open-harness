@@ -2,7 +2,12 @@ import type { ClaudeMessageInput } from "../nodes/claude.agent.js";
 import type { StatePatch } from "./state.js";
 
 /** Runtime lifecycle status for a flow execution. */
-export type RuntimeStatus = "idle" | "running" | "paused" | "aborted" | "complete";
+export type RuntimeStatus =
+	| "idle"
+	| "running"
+	| "paused"
+	| "aborted"
+	| "complete";
 
 /**
  * Commands ingested by the runtime (from UI, CLI, or other adapters).
@@ -130,7 +135,9 @@ export type AgentCompleteEvent = AgentCompleteEventPayload & {
 	timestamp: number;
 };
 export type AgentPausedEvent = AgentPausedEventPayload & { timestamp: number };
-export type AgentAbortedEvent = AgentAbortedEventPayload & { timestamp: number };
+export type AgentAbortedEvent = AgentAbortedEventPayload & {
+	timestamp: number;
+};
 
 export type AgentEventPayload =
 	| AgentStartEventPayload

@@ -26,7 +26,9 @@ describe("evaluateExpression", () => {
 			const ctx: ExpressionContext = {
 				task: { metadata: { author: "John" } },
 			};
-			expect(await evaluateExpression("task.metadata.author", ctx)).toBe("John");
+			expect(await evaluateExpression("task.metadata.author", ctx)).toBe(
+				"John",
+			);
 		});
 
 		test("missing path returns undefined (NOT throw)", async () => {
@@ -37,7 +39,9 @@ describe("evaluateExpression", () => {
 
 		test("deeply missing path returns undefined", async () => {
 			const ctx: ExpressionContext = { task: {} };
-			expect(await evaluateExpression("task.metadata.author.name", ctx)).toBeUndefined();
+			expect(
+				await evaluateExpression("task.metadata.author.name", ctx),
+			).toBeUndefined();
 		});
 	});
 
@@ -50,8 +54,12 @@ describe("evaluateExpression", () => {
 
 		test("boolean equality", async () => {
 			const ctx: ExpressionContext = { reviewer: { passed: true } };
-			expect(await evaluateExpression("reviewer.passed = true", ctx)).toBe(true);
-			expect(await evaluateExpression("reviewer.passed = false", ctx)).toBe(false);
+			expect(await evaluateExpression("reviewer.passed = true", ctx)).toBe(
+				true,
+			);
+			expect(await evaluateExpression("reviewer.passed = false", ctx)).toBe(
+				false,
+			);
 		});
 
 		test("inequality", async () => {
@@ -95,33 +103,45 @@ describe("evaluateExpression", () => {
 	describe("ternary", () => {
 		test("basic ternary", async () => {
 			const ctx: ExpressionContext = { condition: true };
-			expect(await evaluateExpression('condition ? "yes" : "no"', ctx)).toBe("yes");
+			expect(await evaluateExpression('condition ? "yes" : "no"', ctx)).toBe(
+				"yes",
+			);
 		});
 
 		test("ternary with missing value defaults", async () => {
 			const ctx: ExpressionContext = {};
 			// When reviewer is missing, use default
-			expect(await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)).toBe(
-				"No feedback yet",
-			);
+			expect(
+				await evaluateExpression(
+					'$exists(reviewer) ? reviewer.text : "No feedback yet"',
+					ctx,
+				),
+			).toBe("No feedback yet");
 		});
 
 		test("ternary with existing value", async () => {
 			const ctx: ExpressionContext = { reviewer: { text: "Looks good!" } };
-			expect(await evaluateExpression('$exists(reviewer) ? reviewer.text : "No feedback yet"', ctx)).toBe(
-				"Looks good!",
-			);
+			expect(
+				await evaluateExpression(
+					'$exists(reviewer) ? reviewer.text : "No feedback yet"',
+					ctx,
+				),
+			).toBe("Looks good!");
 		});
 	});
 
 	describe("array access", () => {
 		test("first element", async () => {
-			const ctx: ExpressionContext = { tasks: [{ title: "First" }, { title: "Second" }] };
+			const ctx: ExpressionContext = {
+				tasks: [{ title: "First" }, { title: "Second" }],
+			};
 			expect(await evaluateExpression("tasks[0].title", ctx)).toBe("First");
 		});
 
 		test("last element with negative index", async () => {
-			const ctx: ExpressionContext = { tasks: [{ title: "First" }, { title: "Last" }] };
+			const ctx: ExpressionContext = {
+				tasks: [{ title: "First" }, { title: "Last" }],
+			};
 			// JSONata uses -1 for last element
 			expect(await evaluateExpression("tasks[-1].title", ctx)).toBe("Last");
 		});
@@ -130,7 +150,9 @@ describe("evaluateExpression", () => {
 	describe("string operations", () => {
 		test("concatenation", async () => {
 			const ctx: ExpressionContext = { name: "World" };
-			expect(await evaluateExpression('"Hello " & name', ctx)).toBe("Hello World");
+			expect(await evaluateExpression('"Hello " & name', ctx)).toBe(
+				"Hello World",
+			);
 		});
 	});
 
@@ -157,7 +179,9 @@ describe("evaluateExpression", () => {
 
 		test("iteration context in conditions", async () => {
 			const ctx: ExpressionContext = { $iteration: 0, $first: true };
-			expect(await evaluateExpression('$first ? "Initial" : "Retry"', ctx)).toBe("Initial");
+			expect(
+				await evaluateExpression('$first ? "Initial" : "Retry"', ctx),
+			).toBe("Initial");
 		});
 	});
 });
@@ -235,7 +259,9 @@ describe("resolveTemplate", () => {
 
 	test("mixed template returns string", async () => {
 		const ctx: ExpressionContext = { name: "World" };
-		expect(await resolveTemplate("Hello {{ name }}!", ctx)).toBe("Hello World!");
+		expect(await resolveTemplate("Hello {{ name }}!", ctx)).toBe(
+			"Hello World!",
+		);
 	});
 
 	test("mixed template with missing value uses empty string", async () => {
@@ -245,7 +271,9 @@ describe("resolveTemplate", () => {
 
 	test("mixed template with object stringifies", async () => {
 		const ctx: ExpressionContext = { data: { a: 1 } };
-		expect(await resolveTemplate("Data: {{ data }}", ctx)).toBe('Data: {"a":1}');
+		expect(await resolveTemplate("Data: {{ data }}", ctx)).toBe(
+			'Data: {"a":1}',
+		);
 	});
 });
 
@@ -280,7 +308,10 @@ describe("orchestration patterns", () => {
 		test("subsequent iteration: reviewer present, feedback shown", async () => {
 			const ctx: ExpressionContext = {
 				task: { title: "Implement auth", description: "Add login" },
-				reviewer: { text: "Add error handling", structuredOutput: { passed: false } },
+				reviewer: {
+					text: "Add error handling",
+					structuredOutput: { passed: false },
+				},
 				$iteration: 1,
 				$first: false,
 			};
@@ -300,21 +331,36 @@ describe("orchestration patterns", () => {
 			// Iteration 0: reviewer undefined
 			const ctx0: ExpressionContext = { $iteration: 0 };
 			// $not(undefined = true) should be true (continue loop)
-			expect(await evaluateExpression("$not(reviewer.structuredOutput.passed = true)", ctx0)).toBe(true);
+			expect(
+				await evaluateExpression(
+					"$not(reviewer.structuredOutput.passed = true)",
+					ctx0,
+				),
+			).toBe(true);
 
 			// Iteration 1: reviewer.passed = false
 			const ctx1: ExpressionContext = {
 				reviewer: { structuredOutput: { passed: false } },
 				$iteration: 1,
 			};
-			expect(await evaluateExpression("$not(reviewer.structuredOutput.passed = true)", ctx1)).toBe(true);
+			expect(
+				await evaluateExpression(
+					"$not(reviewer.structuredOutput.passed = true)",
+					ctx1,
+				),
+			).toBe(true);
 
 			// Final: reviewer.passed = true
 			const ctxFinal: ExpressionContext = {
 				reviewer: { structuredOutput: { passed: true } },
 				$iteration: 2,
 			};
-			expect(await evaluateExpression("$not(reviewer.structuredOutput.passed = true)", ctxFinal)).toBe(false);
+			expect(
+				await evaluateExpression(
+					"$not(reviewer.structuredOutput.passed = true)",
+					ctxFinal,
+				),
+			).toBe(false);
 		});
 	});
 
@@ -353,9 +399,15 @@ Write a blog post.`,
 				},
 			};
 
-			expect(await evaluateExpression("analyzer.structuredOutput.score", ctx)).toBe(85);
-			expect(await evaluateExpression("analyzer.structuredOutput.score > 80", ctx)).toBe(true);
-			expect(await evaluateExpression("analyzer.structuredOutput.issues[0]", ctx)).toBe("Missing tests");
+			expect(
+				await evaluateExpression("analyzer.structuredOutput.score", ctx),
+			).toBe(85);
+			expect(
+				await evaluateExpression("analyzer.structuredOutput.score > 80", ctx),
+			).toBe(true);
+			expect(
+				await evaluateExpression("analyzer.structuredOutput.issues[0]", ctx),
+			).toBe("Missing tests");
 		});
 	});
 });

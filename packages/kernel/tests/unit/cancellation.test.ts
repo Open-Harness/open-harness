@@ -1,10 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import type { Options, Query, SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
-import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import type {
+	Options,
+	Query,
+	SDKMessage,
+	SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import {
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 import type { NodeTypeDefinition } from "../../src/registry/registry.js";
 
-type QueryFactory = (params: { prompt: string | AsyncIterable<SDKUserMessage>; options?: Options }) => Query;
+type QueryFactory = (params: {
+	prompt: string | AsyncIterable<SDKUserMessage>;
+	options?: Options;
+}) => Query;
 
 function attachQueryStubs(iterator: AsyncGenerator<SDKMessage>): Query {
 	const query = iterator as Query;
@@ -15,7 +27,8 @@ function attachQueryStubs(iterator: AsyncGenerator<SDKMessage>): Query {
 	query.supportedCommands = async () => [];
 	query.supportedModels = async () => [];
 	query.mcpServerStatus = async () => [];
-	query.accountInfo = async () => ({}) as Query["accountInfo"] extends () => Promise<infer T> ? T : never;
+	query.accountInfo = async () =>
+		({}) as Query["accountInfo"] extends () => Promise<infer T> ? T : never;
 	query.rewindFiles = async () => {};
 	query.setMcpServers = async () => ({ added: [], removed: [], errors: {} });
 	query.streamInput = async () => {};
@@ -93,7 +106,9 @@ edges: []
 `);
 
 		const registry = new DefaultNodeRegistry();
-		registry.register(createClaudeNode({ queryFn: createInterruptibleQuery() }));
+		registry.register(
+			createClaudeNode({ queryFn: createInterruptibleQuery() }),
+		);
 
 		const runtime = createRuntime({ flow, registry });
 		const events: Array<{ type: string }> = [];
@@ -111,7 +126,9 @@ edges: []
 
 		// Note: output.text is no longer set on pause - SDK maintains history via sessionId
 		// Consumers needing partial text should accumulate from agent:text:delta events
-		const output = snapshot.outputs.agent as { paused?: boolean; sessionId?: string } | undefined;
+		const output = snapshot.outputs.agent as
+			| { paused?: boolean; sessionId?: string }
+			| undefined;
 		expect(output?.paused).toBe(true);
 		expect(events.some((event) => event.type === "agent:paused")).toBe(true);
 	});
@@ -162,7 +179,10 @@ edges: []
 		const started = new Promise<void>((resolve) => {
 			markStarted = resolve;
 		});
-		const waitNode: NodeTypeDefinition<Record<string, never>, { done: boolean }> = {
+		const waitNode: NodeTypeDefinition<
+			Record<string, never>,
+			{ done: boolean }
+		> = {
 			type: "wait",
 			run: async (ctx) => {
 				markStarted?.();

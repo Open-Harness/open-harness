@@ -20,7 +20,9 @@ export interface ExpressionContext {
 /**
  * A segment of a parsed template - either literal text or an expression.
  */
-export type TemplateSegment = { type: "text"; value: string } | { type: "expression"; value: string };
+export type TemplateSegment =
+	| { type: "text"; value: string }
+	| { type: "expression"; value: string };
 
 // Cache compiled JSONata expressions for performance
 const expressionCache = new Map<string, jsonata.Expression>();
@@ -44,7 +46,9 @@ function getCompiledExpression(expr: string): jsonata.Expression {
  * the bindings object should NOT have the $ prefix.
  * Example: { iteration: 2 } allows access via $iteration in expressions.
  */
-function prepareBindings(context: ExpressionContext): Record<string, unknown> | undefined {
+function prepareBindings(
+	context: ExpressionContext,
+): Record<string, unknown> | undefined {
 	const bindings: Record<string, unknown> = {};
 	let hasBindings = false;
 
@@ -86,7 +90,10 @@ function prepareBindings(context: ExpressionContext): Record<string, unknown> | 
  * await evaluateExpression('$not(reviewer.passed)', context) // Negation
  * await evaluateExpression('condition ? "yes" : "no"', context) // Ternary
  */
-export async function evaluateExpression(expr: string, context: ExpressionContext): Promise<unknown> {
+export async function evaluateExpression(
+	expr: string,
+	context: ExpressionContext,
+): Promise<unknown> {
 	try {
 		const compiled = getCompiledExpression(expr);
 		const bindings = prepareBindings(context);
@@ -168,7 +175,10 @@ export function isPureBinding(template: string): boolean {
  * @param context - Evaluation context
  * @returns String result with expressions interpolated
  */
-export async function evaluateTemplate(segments: TemplateSegment[], context: ExpressionContext): Promise<string> {
+export async function evaluateTemplate(
+	segments: TemplateSegment[],
+	context: ExpressionContext,
+): Promise<string> {
 	const parts = await Promise.all(
 		segments.map(async (segment) => {
 			if (segment.type === "text") {
@@ -204,7 +214,10 @@ export async function evaluateTemplate(segments: TemplateSegment[], context: Exp
  * await resolveTemplate('{{ missing }}', ctx) // Returns undefined
  * await resolveTemplate('Value: {{ missing }}', ctx) // Returns "Value: "
  */
-export async function resolveTemplate(template: string, context: ExpressionContext): Promise<unknown> {
+export async function resolveTemplate(
+	template: string,
+	context: ExpressionContext,
+): Promise<unknown> {
 	// Fast path: pure binding preserves type
 	if (isPureBinding(template)) {
 		const segments = parseTemplate(template);

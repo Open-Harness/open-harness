@@ -18,7 +18,10 @@ const EchoOutputSchema = z.object({
 /**
  * Echo node returns the provided text input.
  */
-export const echoNode: NodeTypeDefinition<z.infer<typeof EchoInputSchema>, z.infer<typeof EchoOutputSchema>> = {
+export const echoNode: NodeTypeDefinition<
+	z.infer<typeof EchoInputSchema>,
+	z.infer<typeof EchoOutputSchema>
+> = {
 	type: "echo",
 	inputSchema: EchoInputSchema,
 	outputSchema: EchoOutputSchema,

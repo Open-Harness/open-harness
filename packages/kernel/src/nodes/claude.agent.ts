@@ -20,7 +20,8 @@ import type { NodeTypeDefinition } from "../registry/registry.js";
  * - outputSchemaFile: Path to a JSON Schema file (resolved relative to cwd)
  * - outputFormat: Inline schema (SDK native format)
  */
-export interface ClaudeAgentExtendedOptions extends Omit<Options, "outputFormat"> {
+export interface ClaudeAgentExtendedOptions
+	extends Omit<Options, "outputFormat"> {
 	/** Path to JSON Schema file for structured output. Resolved relative to cwd. */
 	outputSchemaFile?: string;
 	/** Inline JSON Schema for structured output (SDK native format). */
@@ -62,7 +63,12 @@ export interface ClaudeAgentOutput {
 export interface ClaudeNodeOptions {
 	replay?: (input: ClaudeAgentInput) => ClaudeAgentOutput | undefined;
 	queryFn?: typeof query;
-	record?: (call: { nodeId: string; input: ClaudeAgentInput; output: ClaudeAgentOutput; events: SDKMessage[] }) => void;
+	record?: (call: {
+		nodeId: string;
+		input: ClaudeAgentInput;
+		output: ClaudeAgentOutput;
+		events: SDKMessage[];
+	}) => void;
 }
 
 const ClaudeMessageSchema = z
@@ -88,9 +94,13 @@ const ClaudeAgentInputSchema = z
 		messages: z.array(ClaudeMessageSchema).optional(),
 		options: z.unknown().optional(),
 	})
-	.refine((value) => (value.prompt && !value.messages) || (!value.prompt && value.messages), {
-		message: "Provide exactly one of prompt or messages",
-	});
+	.refine(
+		(value) =>
+			(value.prompt && !value.messages) || (!value.prompt && value.messages),
+		{
+			message: "Provide exactly one of prompt or messages",
+		},
+	);
 
 const ClaudeAgentOutputSchema = z.object({
 	text: z.string().optional(), // Optional when paused=true
@@ -129,11 +139,19 @@ export function createClaudeNode(
 			const hasPrompt = typeof input.prompt === "string";
 			const hasMessages = Array.isArray(input.messages);
 			if (!resumeMessage && hasPrompt === hasMessages) {
-				throw new Error("ClaudeAgentInput requires exactly one of prompt or messages");
+				throw new Error(
+					"ClaudeAgentInput requires exactly one of prompt or messages",
+				);
 			}
 
-			const basePrompt = !resumeMessage && typeof input.prompt === "string" ? input.prompt : undefined;
-			const baseMessages = !resumeMessage && Array.isArray(input.messages) ? input.messages : undefined;
+			const basePrompt =
+				!resumeMessage && typeof input.prompt === "string"
+					? input.prompt
+					: undefined;
+			const baseMessages =
+				!resumeMessage && Array.isArray(input.messages)
+					? input.messages
+					: undefined;
 
 			const queuedCommands = drainInbox(ctx.inbox);
 			const queuedMessages = commandsToMessages(queuedCommands);
@@ -164,7 +182,8 @@ export function createClaudeNode(
 			});
 			cancelContext?.__setQuery(queryStream);
 
-			const promptForEvent = resumeMessage ?? basePrompt ?? baseMessages ?? promptMessages;
+			const promptForEvent =
+				resumeMessage ?? basePrompt ?? baseMessages ?? promptMessages;
 			const startedAt = Date.now();
 			let emittedStart = false;
 			let finalResult: SDKResultMessage | undefined;
@@ -174,7 +193,10 @@ export function createClaudeNode(
 			// - See issue #78 for the design decision rationale
 			let lastSessionId = knownSessionId;
 			const recordedMessages: SDKMessage[] = [];
-			const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown; startedAt: number }>();
+			const pendingToolUses = new Map<
+				string,
+				{ toolName: string; toolInput: unknown; startedAt: number }
+			>();
 
 			const emitStart = (sessionId: string) => {
 				if (emittedStart) return;
@@ -257,7 +279,11 @@ export function createClaudeNode(
 						if (Array.isArray(content)) {
 							for (const block of content as Array<Record<string, unknown>>) {
 								const blockType = block.type;
-								if (blockType === "tool_use" && typeof block.id === "string" && typeof block.name === "string") {
+								if (
+									blockType === "tool_use" &&
+									typeof block.id === "string" &&
+									typeof block.name === "string"
+								) {
 									pendingToolUses.set(block.id, {
 										toolName: block.name,
 										toolInput: block.input,
@@ -292,20 +318,30 @@ export function createClaudeNode(
 
 					if (sdkMessage.type === "user" && sdkMessage.tool_use_result) {
 						const toolUseId = sdkMessage.parent_tool_use_id;
-						const pending = toolUseId ? pendingToolUses.get(toolUseId) : undefined;
+						const pending = toolUseId
+							? pendingToolUses.get(toolUseId)
+							: undefined;
 						const toolName =
 							pending?.toolName ??
 							(typeof sdkMessage.tool_use_result === "object" &&
 							sdkMessage.tool_use_result &&
 							"tool_name" in sdkMessage.tool_use_result
-								? String((sdkMessage.tool_use_result as { tool_name?: unknown }).tool_name ?? "unknown")
+								? String(
+										(sdkMessage.tool_use_result as { tool_name?: unknown })
+											.tool_name ?? "unknown",
+									)
 								: "unknown");
-						const durationMs = pending ? Math.max(0, Date.now() - pending.startedAt) : undefined;
+						const durationMs = pending
+							? Math.max(0, Date.now() - pending.startedAt)
+							: undefined;
 						const error =
 							typeof sdkMessage.tool_use_result === "object" &&
 							sdkMessage.tool_use_result &&
 							"error" in sdkMessage.tool_use_result
-								? String((sdkMessage.tool_use_result as { error?: unknown }).error ?? "")
+								? String(
+										(sdkMessage.tool_use_result as { error?: unknown }).error ??
+											"",
+									)
 								: undefined;
 
 						ctx.emit({
@@ -327,7 +363,8 @@ export function createClaudeNode(
 					if (sdkMessage.type === "result") {
 						finalResult = sdkMessage as SDKResultMessage;
 						if (finalResult.subtype !== "success") {
-							const errors = "errors" in finalResult ? (finalResult.errors as string[]) : [];
+							const errors =
+								"errors" in finalResult ? (finalResult.errors as string[]) : [];
 							ctx.emit({
 								type: "agent:error",
 								nodeId: ctx.nodeId,
@@ -354,7 +391,8 @@ export function createClaudeNode(
 					}
 				}
 			} catch (error) {
-				const isAbortError = error instanceof Error && error.name === "AbortError";
+				const isAbortError =
+					error instanceof Error && error.name === "AbortError";
 				if (isAbortError) {
 					ctx.emit({
 						type: "agent:aborted",
@@ -434,7 +472,9 @@ export const claudeNode = createClaudeNode();
  * Priority: outputFormat > outputSchemaFile
  * @internal Exported for testing only
  */
-export function resolveOutputSchema(options?: ClaudeAgentExtendedOptions): Options | undefined {
+export function resolveOutputSchema(
+	options?: ClaudeAgentExtendedOptions,
+): Options | undefined {
 	if (!options) return undefined;
 
 	// Extract our custom field and convert to SDK format
@@ -472,7 +512,10 @@ export function resolveOutputSchema(options?: ClaudeAgentExtendedOptions): Optio
 	return sdkOptions as Options;
 }
 
-function mergeOptions(options?: ClaudeAgentExtendedOptions, sessionId?: string): Options | undefined {
+function mergeOptions(
+	options?: ClaudeAgentExtendedOptions,
+	sessionId?: string,
+): Options | undefined {
 	const defaults: Partial<Options> = {
 		maxTurns: 100,
 		persistSession: true,
@@ -484,14 +527,19 @@ function mergeOptions(options?: ClaudeAgentExtendedOptions, sessionId?: string):
 	// First resolve any schema file references
 	const resolvedOptions = resolveOutputSchema(options);
 
-	const merged = resolvedOptions ? { ...defaults, ...resolvedOptions } : { ...defaults };
+	const merged = resolvedOptions
+		? { ...defaults, ...resolvedOptions }
+		: { ...defaults };
 	if (sessionId && !merged.resume && !merged.continue) {
 		merged.resume = sessionId;
 	}
 	return merged;
 }
 
-function toUserMessage(input: ClaudeMessageInput, sessionId?: string): SDKUserMessage {
+function toUserMessage(
+	input: ClaudeMessageInput,
+	sessionId?: string,
+): SDKUserMessage {
 	const resolvedSessionId = sessionId ?? "";
 	if (typeof input === "string") {
 		return {
@@ -504,7 +552,9 @@ function toUserMessage(input: ClaudeMessageInput, sessionId?: string): SDKUserMe
 
 	const message =
 		input.message ??
-		(input.content ? ({ role: "user", content: input.content } as SDKUserMessage["message"]) : undefined);
+		(input.content
+			? ({ role: "user", content: input.content } as SDKUserMessage["message"])
+			: undefined);
 
 	if (!message) {
 		throw new Error("Claude message input must include message or content");
@@ -520,13 +570,18 @@ function toUserMessage(input: ClaudeMessageInput, sessionId?: string): SDKUserMe
 	} as SDKUserMessage;
 }
 
-async function* messageStream(messages: ClaudeMessageInput[], sessionId?: string): AsyncGenerator<SDKUserMessage> {
+async function* messageStream(
+	messages: ClaudeMessageInput[],
+	sessionId?: string,
+): AsyncGenerator<SDKUserMessage> {
 	for (const message of messages) {
 		yield toUserMessage(message, sessionId);
 	}
 }
 
-function drainInbox(inbox: { next: () => RuntimeCommand | undefined }): RuntimeCommand[] {
+function drainInbox(inbox: {
+	next: () => RuntimeCommand | undefined;
+}): RuntimeCommand[] {
 	const commands: RuntimeCommand[] = [];
 	let next = inbox.next();
 	while (next) {
@@ -577,7 +632,8 @@ function toModelUsage(
 	modelUsage?: Record<string, ModelUsage>,
 ): Record<string, { inputTokens: number; outputTokens: number }> | undefined {
 	if (!modelUsage) return undefined;
-	const mapped: Record<string, { inputTokens: number; outputTokens: number }> = {};
+	const mapped: Record<string, { inputTokens: number; outputTokens: number }> =
+		{};
 	for (const [model, usage] of Object.entries(modelUsage)) {
 		mapped[model] = {
 			inputTokens: usage.inputTokens ?? 0,
@@ -595,7 +651,9 @@ function getResultOrThrow(result?: SDKResultMessage): ClaudeAgentOutput {
 	if (result.subtype !== "success") {
 		const errors = "errors" in result ? (result.errors as string[]) : [];
 		const errorMessage =
-			errors && errors.length > 0 ? errors.join("; ") : `Claude agent failed with subtype: ${result.subtype}`;
+			errors && errors.length > 0
+				? errors.join("; ")
+				: `Claude agent failed with subtype: ${result.subtype}`;
 		throw new Error(errorMessage);
 	}
 

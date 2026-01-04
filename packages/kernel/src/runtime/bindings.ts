@@ -26,7 +26,10 @@ export type BindingContext = ExpressionContext;
  * @param context - Binding context
  * @returns Resolved value
  */
-export async function resolveBindingString(template: string, context: BindingContext): Promise<unknown> {
+export async function resolveBindingString(
+	template: string,
+	context: BindingContext,
+): Promise<unknown> {
 	// Fast path: pure binding preserves type
 	if (isPureBinding(template)) {
 		const segments = parseTemplate(template);
@@ -58,7 +61,10 @@ export async function resolveBindings<T extends Record<string, unknown>>(
 /**
  * Recursively resolve bindings in any value.
  */
-async function resolveValue(value: unknown, context: BindingContext): Promise<unknown> {
+async function resolveValue(
+	value: unknown,
+	context: BindingContext,
+): Promise<unknown> {
 	if (typeof value === "string") {
 		return resolveBindingString(value, context);
 	}
@@ -69,7 +75,10 @@ async function resolveValue(value: unknown, context: BindingContext): Promise<un
 		const result: Record<string, unknown> = {};
 		const entries = Object.entries(value);
 		const resolvedEntries = await Promise.all(
-			entries.map(async ([key, entry]) => [key, await resolveValue(entry, context)] as const),
+			entries.map(
+				async ([key, entry]) =>
+					[key, await resolveValue(entry, context)] as const,
+			),
 		);
 		for (const [key, resolved] of resolvedEntries) {
 			result[key] = resolved;

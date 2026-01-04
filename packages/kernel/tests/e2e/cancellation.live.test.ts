@@ -10,7 +10,11 @@
 import { describe, expect, test } from "bun:test";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { RuntimeEvent } from "../../src/core/events.js";
-import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import {
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 
 describe("cancellation live e2e", () => {
@@ -55,7 +59,9 @@ edges: []
 
 		// Verify paused flag was set (text no longer accumulated - SDK handles history)
 		// Consumers needing partial text should accumulate from agent:text:delta events
-		const output = snapshot.outputs.agent as { paused?: boolean; sessionId?: string } | undefined;
+		const output = snapshot.outputs.agent as
+			| { paused?: boolean; sessionId?: string }
+			| undefined;
 		expect(output?.paused).toBe(true);
 		expect(output?.sessionId).toBeDefined(); // Session ID for resume
 
@@ -69,7 +75,9 @@ edges: []
 
 		console.log("✅ Pause test passed");
 		console.log(`   Received ${textChunks} streaming deltas before pause`);
-		console.log(`   Session ID for resume: ${output?.sessionId?.substring(0, 20)}...`);
+		console.log(
+			`   Session ID for resume: ${output?.sessionId?.substring(0, 20)}...`,
+		);
 	}, 60000); // 60s timeout for live test
 
 	test("abort kills real claude agent immediately", async () => {

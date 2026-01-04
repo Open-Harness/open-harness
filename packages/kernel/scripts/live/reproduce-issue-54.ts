@@ -11,7 +11,10 @@
  * Usage: bun packages/kernel/scripts/live/reproduce-issue-54.ts
  */
 
-import type { SDKMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
+import type {
+	SDKMessage,
+	SDKResultMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 async function reproduceIssue54() {
@@ -39,7 +42,9 @@ Only return the JSON, nothing else.`;
 	console.log("-".repeat(40));
 	console.log();
 
-	console.log("TEST 1: WITHOUT outputFormat (current behavior in agent-loop.yaml)");
+	console.log(
+		"TEST 1: WITHOUT outputFormat (current behavior in agent-loop.yaml)",
+	);
 	console.log("-".repeat(40));
 
 	let result1: SDKResultMessage | undefined;
@@ -67,10 +72,17 @@ Only return the JSON, nothing else.`;
 			if (result1.structured_output === undefined) {
 				console.log("❌ ISSUE CONFIRMED: structured_output is undefined!");
 				console.log("   The flow expects {{ planner.structuredOutput.tasks }}");
-				console.log("   But structuredOutput is undefined, so binding resolution FAILS");
-				console.log("   Error: 'Missing binding path: planner.structuredOutput.tasks'");
+				console.log(
+					"   But structuredOutput is undefined, so binding resolution FAILS",
+				);
+				console.log(
+					"   Error: 'Missing binding path: planner.structuredOutput.tasks'",
+				);
 			} else {
-				console.log("✅ structured_output is populated:", result1.structured_output);
+				console.log(
+					"✅ structured_output is populated:",
+					result1.structured_output,
+				);
 			}
 		} else {
 			console.log("❌ Result is not success, subtype:", result1.subtype);
@@ -128,23 +140,36 @@ Only return the JSON, nothing else.`;
 		if (result2) {
 			if (result2.subtype === "success") {
 				console.log("result.result (text):", result2.result?.slice(0, 200));
-				console.log("result.structured_output:", JSON.stringify(result2.structured_output, null, 2));
+				console.log(
+					"result.structured_output:",
+					JSON.stringify(result2.structured_output, null, 2),
+				);
 				console.log("result.subtype:", result2.subtype);
 				console.log();
 
 				if (result2.structured_output !== undefined) {
 					console.log("✅ WITH outputFormat: structured_output is populated!");
-					console.log("   The flow CAN access {{ planner.structuredOutput.tasks }}");
+					console.log(
+						"   The flow CAN access {{ planner.structuredOutput.tasks }}",
+					);
 				} else {
-					console.log("❌ Even with outputFormat, structured_output is undefined");
-					console.log("   Full result:", JSON.stringify(result2, null, 2).slice(0, 500));
+					console.log(
+						"❌ Even with outputFormat, structured_output is undefined",
+					);
+					console.log(
+						"   Full result:",
+						JSON.stringify(result2, null, 2).slice(0, 500),
+					);
 				}
 			} else {
 				console.log("❌ Result is not success, subtype:", result2.subtype);
 			}
 		} else {
 			console.log("❌ No result message received!");
-			console.log("All messages:", JSON.stringify(allMessages2, null, 2).slice(0, 1000));
+			console.log(
+				"All messages:",
+				JSON.stringify(allMessages2, null, 2).slice(0, 1000),
+			);
 		}
 	} catch (error) {
 		console.log("❌ Error with outputFormat:", error);
@@ -155,11 +180,17 @@ Only return the JSON, nothing else.`;
 	console.log("CONCLUSION");
 	console.log("=".repeat(80));
 	console.log();
-	console.log("Issue #54 is CONFIRMED: structuredOutput is undefined without proper SDK config.");
+	console.log(
+		"Issue #54 is CONFIRMED: structuredOutput is undefined without proper SDK config.",
+	);
 	console.log();
 	console.log("ROOT CAUSE:");
-	console.log("The flow agent-loop.yaml uses {{ planner.structuredOutput.tasks }} in forEach");
-	console.log("but the claude.agent node doesn't pass outputFormat to the SDK.");
+	console.log(
+		"The flow agent-loop.yaml uses {{ planner.structuredOutput.tasks }} in forEach",
+	);
+	console.log(
+		"but the claude.agent node doesn't pass outputFormat to the SDK.",
+	);
 	console.log("Therefore structuredOutput is always undefined.");
 	console.log();
 	console.log("FIX OPTIONS:");

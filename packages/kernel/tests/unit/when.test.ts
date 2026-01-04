@@ -17,13 +17,19 @@ describe("when evaluation", () => {
 
 	describe("JSONata string expressions", () => {
 		test("equality comparison", async () => {
-			expect(await evaluateWhen('status = "done"', { status: "done" })).toBe(true);
-			expect(await evaluateWhen('status = "done"', { status: "pending" })).toBe(false);
+			expect(await evaluateWhen('status = "done"', { status: "done" })).toBe(
+				true,
+			);
+			expect(await evaluateWhen('status = "done"', { status: "pending" })).toBe(
+				false,
+			);
 		});
 
 		test("boolean expressions", async () => {
 			expect(await evaluateWhen("passed = true", { passed: true })).toBe(true);
-			expect(await evaluateWhen("passed = true", { passed: false })).toBe(false);
+			expect(await evaluateWhen("passed = true", { passed: false })).toBe(
+				false,
+			);
 		});
 
 		test("comparison operators", async () => {
@@ -33,7 +39,9 @@ describe("when evaluation", () => {
 		});
 
 		test("$exists function", async () => {
-			expect(await evaluateWhen("$exists(reviewer)", { reviewer: { text: "ok" } })).toBe(true);
+			expect(
+				await evaluateWhen("$exists(reviewer)", { reviewer: { text: "ok" } }),
+			).toBe(true);
 			expect(await evaluateWhen("$exists(reviewer)", {})).toBe(false);
 		});
 
@@ -49,10 +57,14 @@ describe("when evaluation", () => {
 		});
 
 		test("complex expression", async () => {
-			expect(await evaluateWhen("$exists(reviewer) and reviewer.passed = true", { reviewer: { passed: true } })).toBe(
-				true,
-			);
-			expect(await evaluateWhen("$exists(reviewer) and reviewer.passed = true", {})).toBe(false);
+			expect(
+				await evaluateWhen("$exists(reviewer) and reviewer.passed = true", {
+					reviewer: { passed: true },
+				}),
+			).toBe(true);
+			expect(
+				await evaluateWhen("$exists(reviewer) and reviewer.passed = true", {}),
+			).toBe(false);
 		});
 
 		test("missing path evaluates to falsy", async () => {
@@ -94,7 +106,10 @@ describe("when evaluation", () => {
 				and: [
 					{ equals: { var: "a", value: 1 } },
 					{
-						or: [{ equals: { var: "b", value: 2 } }, { equals: { var: "c", value: 3 } }],
+						or: [
+							{ equals: { var: "b", value: 2 } },
+							{ equals: { var: "c", value: 3 } },
+						],
 					},
 				],
 			};
@@ -110,9 +125,15 @@ describe("when evaluation", () => {
 		});
 
 		test("equals with object value", async () => {
-			const expr: WhenExpr = { equals: { var: "config", value: { enabled: true } } };
-			expect(await evaluateWhen(expr, { config: { enabled: true } })).toBe(true);
-			expect(await evaluateWhen(expr, { config: { enabled: false } })).toBe(false);
+			const expr: WhenExpr = {
+				equals: { var: "config", value: { enabled: true } },
+			};
+			expect(await evaluateWhen(expr, { config: { enabled: true } })).toBe(
+				true,
+			);
+			expect(await evaluateWhen(expr, { config: { enabled: false } })).toBe(
+				false,
+			);
 		});
 	});
 });

@@ -10,7 +10,10 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { SDKMessage, SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
+import type {
+	SDKMessage,
+	SDKResultMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 const SCHEMA_DIR = resolve(import.meta.dir, "../../tests/fixtures/schemas");
@@ -89,13 +92,20 @@ Return ONLY valid JSON matching this structure (no markdown, no explanation):
 			if (result.subtype === "success") {
 				console.log("result.subtype:", result.subtype);
 				console.log("result.result (text):", result.result?.slice(0, 200));
-				console.log("result.structured_output:", JSON.stringify(result.structured_output, null, 2));
+				console.log(
+					"result.structured_output:",
+					JSON.stringify(result.structured_output, null, 2),
+				);
 
 				if (result.structured_output !== undefined) {
-					console.log("\n✅ INLINE SCHEMA WORKS! structured_output is populated");
+					console.log(
+						"\n✅ INLINE SCHEMA WORKS! structured_output is populated",
+					);
 					return true;
 				} else {
-					console.log("\n❌ INLINE SCHEMA FAILED: structured_output is undefined");
+					console.log(
+						"\n❌ INLINE SCHEMA FAILED: structured_output is undefined",
+					);
 					console.log("   subtype:", result.subtype);
 					return false;
 				}
@@ -168,14 +178,23 @@ Return ONLY valid JSON (no markdown):
 			if (result.subtype === "success") {
 				console.log("result.subtype:", result.subtype);
 				console.log("result.result (text):", result.result?.slice(0, 200));
-				console.log("result.structured_output:", JSON.stringify(result.structured_output, null, 2));
+				console.log(
+					"result.structured_output:",
+					JSON.stringify(result.structured_output, null, 2),
+				);
 
 				if (result.structured_output !== undefined) {
-					console.log("\n✅ FILE-BASED SCHEMA WORKS! structured_output is populated");
-					console.log("   This proves outputSchemaFile can work if we add file loading to claude.agent.ts");
+					console.log(
+						"\n✅ FILE-BASED SCHEMA WORKS! structured_output is populated",
+					);
+					console.log(
+						"   This proves outputSchemaFile can work if we add file loading to claude.agent.ts",
+					);
 					return true;
 				} else {
-					console.log("\n❌ FILE-BASED SCHEMA FAILED: structured_output is undefined");
+					console.log(
+						"\n❌ FILE-BASED SCHEMA FAILED: structured_output is undefined",
+					);
 					console.log("   subtype:", result.subtype);
 					return false;
 				}
@@ -219,9 +238,13 @@ async function testWithoutSchema(): Promise<void> {
 			console.log("result.structured_output:", result.structured_output);
 
 			if (result.structured_output === undefined) {
-				console.log("\n✅ BASELINE CONFIRMED: Without schema, structured_output is undefined");
+				console.log(
+					"\n✅ BASELINE CONFIRMED: Without schema, structured_output is undefined",
+				);
 			} else {
-				console.log("\n⚠️  UNEXPECTED: structured_output is populated without schema!");
+				console.log(
+					"\n⚠️  UNEXPECTED: structured_output is populated without schema!",
+				);
 			}
 		} else {
 			console.log("\n❌ Result is not success, subtype:", result.subtype);
@@ -253,9 +276,13 @@ async function main() {
 
 	if (inlineResult && fileResult) {
 		console.log("\n🎉 Both approaches work with the SDK!");
-		console.log("   Next: Implement outputSchemaFile resolution in claude.agent.ts");
+		console.log(
+			"   Next: Implement outputSchemaFile resolution in claude.agent.ts",
+		);
 	} else if (!inlineResult && !fileResult) {
-		console.log("\n⚠️  Neither approach works - SDK may not support outputFormat yet");
+		console.log(
+			"\n⚠️  Neither approach works - SDK may not support outputFormat yet",
+		);
 		console.log("   Check SDK version and documentation");
 	}
 }

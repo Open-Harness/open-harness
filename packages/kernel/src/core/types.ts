@@ -206,7 +206,10 @@ export const WhenExprASTSchema: ZodType<WhenExprAST> = z.lazy(() =>
 );
 
 /** Zod schema for WhenExpr validation (string or AST). */
-export const WhenExprSchema: ZodType<WhenExpr> = z.union([z.string(), WhenExprASTSchema]);
+export const WhenExprSchema: ZodType<WhenExpr> = z.union([
+	z.string(),
+	WhenExprASTSchema,
+]);
 
 const EdgeForEachSchema = z.object({
 	in: z.string().min(1),

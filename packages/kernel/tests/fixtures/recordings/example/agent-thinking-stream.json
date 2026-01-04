@@ -16,7 +16,10 @@
 					"event": {
 						"type": "content_block_delta",
 						"index": 0,
-						"delta": { "type": "thinking_delta", "thinking": "Let me think about this..." }
+						"delta": {
+							"type": "thinking_delta",
+							"thinking": "Let me think about this..."
+						}
 					},
 					"session_id": "sess-thinking-1"
 				},

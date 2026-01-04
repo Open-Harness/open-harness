@@ -1,10 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import type { RuntimeEvent } from "../../src/core/events.js";
-import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import {
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { constantNode, echoNode } from "../../src/nodes/index.js";
 import type { NodeTypeDefinition } from "../../src/registry/registry.js";
 
-const counterNode: NodeTypeDefinition<Record<string, never>, { count: number }> = {
+const counterNode: NodeTypeDefinition<
+	Record<string, never>,
+	{ count: number }
+> = {
 	type: "counter",
 	run: async (ctx) => {
 		const current = ctx.state.get("counter");
@@ -19,7 +26,10 @@ const counterNode: NodeTypeDefinition<Record<string, never>, { count: number }> 
 	},
 };
 
-const reviewNode: NodeTypeDefinition<Record<string, never>, { passed: boolean }> = {
+const reviewNode: NodeTypeDefinition<
+	Record<string, never>,
+	{ passed: boolean }
+> = {
 	type: "review",
 	run: async (ctx) => {
 		const current = ctx.state.get("counter");
@@ -28,7 +38,10 @@ const reviewNode: NodeTypeDefinition<Record<string, never>, { passed: boolean }>
 	},
 };
 
-const agentNode: NodeTypeDefinition<{ text: string }, { text: string; reply?: string }> = {
+const agentNode: NodeTypeDefinition<
+	{ text: string },
+	{ text: string; reply?: string }
+> = {
 	type: "mock.agent",
 	run: async (ctx, input) => {
 		const command = ctx.inbox.next();

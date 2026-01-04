@@ -11,7 +11,11 @@
  */
 
 import type { RuntimeEvent } from "../../src/core/events.js";
-import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import {
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 
 async function runLiveTest() {
@@ -39,7 +43,8 @@ edges: []
 		events.push(event);
 		// Log events as they arrive for visibility
 		if (event.type.startsWith("agent:")) {
-			const content = "content" in event ? ` "${String(event.content).slice(0, 50)}..."` : "";
+			const content =
+				"content" in event ? ` "${String(event.content).slice(0, 50)}..."` : "";
 			console.log(`  📡 ${event.type}${content}`);
 		}
 	});
@@ -56,7 +61,9 @@ edges: []
 		// Analyze events
 		const textDeltas = events.filter((e) => e.type === "agent:text:delta");
 		const textComplete = events.filter((e) => e.type === "agent:text");
-		const thinkingDeltas = events.filter((e) => e.type === "agent:thinking:delta");
+		const thinkingDeltas = events.filter(
+			(e) => e.type === "agent:thinking:delta",
+		);
 		const thinkingComplete = events.filter((e) => e.type === "agent:thinking");
 		const agentComplete = events.filter((e) => e.type === "agent:complete");
 
@@ -76,16 +83,22 @@ edges: []
 			console.log("\n✅ TEST 1 PASSED: agent:text:delta events were emitted");
 			passed++;
 		} else {
-			console.log("\n❌ TEST 1 FAILED: No agent:text:delta events (streaming not working?)");
+			console.log(
+				"\n❌ TEST 1 FAILED: No agent:text:delta events (streaming not working?)",
+			);
 			failed++;
 		}
 
 		// Test 2: agent:text SHOULD be emitted (complete content for consumers who want full message)
 		if (textComplete.length > 0) {
-			console.log("✅ TEST 2 PASSED: agent:text was emitted (complete content for consumers)");
+			console.log(
+				"✅ TEST 2 PASSED: agent:text was emitted (complete content for consumers)",
+			);
 			passed++;
 		} else {
-			console.log("❌ TEST 2 FAILED: agent:text was NOT emitted (should always be emitted)");
+			console.log(
+				"❌ TEST 2 FAILED: agent:text was NOT emitted (should always be emitted)",
+			);
 			failed++;
 		}
 
@@ -94,7 +107,9 @@ edges: []
 			console.log("✅ TEST 3 PASSED: agent:complete emitted exactly once");
 			passed++;
 		} else {
-			console.log(`❌ TEST 3 FAILED: agent:complete emitted ${agentComplete.length} times (expected 1)`);
+			console.log(
+				`❌ TEST 3 FAILED: agent:complete emitted ${agentComplete.length} times (expected 1)`,
+			);
 			failed++;
 		}
 
@@ -102,7 +117,9 @@ edges: []
 		if (agentComplete.length > 0) {
 			const complete = agentComplete[0] as { result?: string };
 			if (complete.result && complete.result.length > 0) {
-				console.log(`✅ TEST 4 PASSED: agent:complete has result: "${complete.result.slice(0, 50)}..."`);
+				console.log(
+					`✅ TEST 4 PASSED: agent:complete has result: "${complete.result.slice(0, 50)}..."`,
+				);
 				passed++;
 			} else {
 				console.log("❌ TEST 4 FAILED: agent:complete has no result");
@@ -112,13 +129,17 @@ edges: []
 
 		// Test 5: Concatenated deltas should approximate the final result
 		if (textDeltas.length > 0 && agentComplete.length > 0) {
-			const concatenated = textDeltas.map((e) => (e as { content: string }).content).join("");
+			const concatenated = textDeltas
+				.map((e) => (e as { content: string }).content)
+				.join("");
 			const _finalResult = (agentComplete[0] as { result: string }).result;
 
 			// The concatenated deltas should be close to the final result
 			// (they may not match exactly due to SDK formatting)
 			if (concatenated.length > 0) {
-				console.log(`✅ TEST 5 PASSED: Deltas concatenate to meaningful content (${concatenated.length} chars)`);
+				console.log(
+					`✅ TEST 5 PASSED: Deltas concatenate to meaningful content (${concatenated.length} chars)`,
+				);
 				passed++;
 			} else {
 				console.log("❌ TEST 5 FAILED: Concatenated deltas are empty");

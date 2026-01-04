@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { RuntimeEvent } from "../../src/core/events.js";
-import { createMockQuery, createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
+import {
+	createMockQuery,
+	createRuntime,
+	DefaultNodeRegistry,
+	parseFlowYaml,
+} from "../../src/index.js";
 import { createClaudeNode } from "../../src/nodes/claude.agent.js";
 import type { FixtureFile } from "../../src/testing/mock-query.js";
 import { FixtureSchema } from "../../src/testing/mock-query.js";
@@ -30,10 +35,14 @@ edges:
 `);
 
 		const plannerFixture = FixtureSchema.parse(
-			await Bun.file(new URL("../fixtures/recordings/e2e/planner.json", import.meta.url)).json(),
+			await Bun.file(
+				new URL("../fixtures/recordings/e2e/planner.json", import.meta.url),
+			).json(),
 		) as FixtureFile;
 		const reviewerFixture = FixtureSchema.parse(
-			await Bun.file(new URL("../fixtures/recordings/e2e/reviewer.json", import.meta.url)).json(),
+			await Bun.file(
+				new URL("../fixtures/recordings/e2e/reviewer.json", import.meta.url),
+			).json(),
 		) as FixtureFile;
 
 		const mockQuery = createMockQuery({
@@ -85,15 +94,21 @@ edges:
 `);
 
 		const plannerFixture = FixtureSchema.parse(
-			await Bun.file(new URL("../fixtures/recordings/e2e/planner.json", import.meta.url)).json(),
+			await Bun.file(
+				new URL("../fixtures/recordings/e2e/planner.json", import.meta.url),
+			).json(),
 		) as FixtureFile;
 		const reviewerFixture = FixtureSchema.parse(
-			await Bun.file(new URL("../fixtures/recordings/e2e/reviewer.json", import.meta.url)).json(),
+			await Bun.file(
+				new URL("../fixtures/recordings/e2e/reviewer.json", import.meta.url),
+			).json(),
 		) as FixtureFile;
 
 		// Helper to extract text from prompt (string or AsyncIterable)
 		async function extractPromptText(
-			prompt: string | AsyncIterable<{ message?: { content?: string | unknown[] } }>,
+			prompt:
+				| string
+				| AsyncIterable<{ message?: { content?: string | unknown[] } }>,
 		): Promise<string> {
 			if (typeof prompt === "string") return prompt;
 			for await (const msg of prompt) {
@@ -134,7 +149,9 @@ edges:
 
 		// Verify the JSONata binding was resolved correctly:
 		// writer.text from fixture is "Plan v1", so prompt should be "Review this: Plan v1"
-		expect(capturedPrompts.some((p) => p === "Review this: Plan v1")).toBe(true);
+		expect(capturedPrompts.some((p) => p === "Review this: Plan v1")).toBe(
+			true,
+		);
 	});
 
 	test("multi-agent loop with recorded fixtures", async () => {
@@ -163,10 +180,14 @@ edges:
 `);
 
 		const plannerFixture = FixtureSchema.parse(
-			await Bun.file(new URL("../fixtures/recordings/e2e/planner.json", import.meta.url)).json(),
+			await Bun.file(
+				new URL("../fixtures/recordings/e2e/planner.json", import.meta.url),
+			).json(),
 		) as FixtureFile;
 		const reviewerFixture = FixtureSchema.parse(
-			await Bun.file(new URL("../fixtures/recordings/e2e/reviewer.json", import.meta.url)).json(),
+			await Bun.file(
+				new URL("../fixtures/recordings/e2e/reviewer.json", import.meta.url),
+			).json(),
 		) as FixtureFile;
 
 		const mockQuery = createMockQuery({
@@ -196,7 +217,9 @@ edges:
 		expect(snapshot.agentSessions.reviewer).toBe("sess-reviewer");
 
 		const agentStart = events.filter((event) => event.type === "agent:start");
-		const agentComplete = events.filter((event) => event.type === "agent:complete");
+		const agentComplete = events.filter(
+			(event) => event.type === "agent:complete",
+		);
 		expect(agentStart.length).toBeGreaterThanOrEqual(2);
 		expect(agentComplete.length).toBeGreaterThanOrEqual(2);
 	});

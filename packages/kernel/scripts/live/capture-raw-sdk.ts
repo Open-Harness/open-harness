@@ -120,7 +120,8 @@ Then tell me what 15 * 17 equals.`;
 
 		const deltaTypes: Record<string, number> = {};
 		for (const cbd of contentBlockDeltas) {
-			const event = (cbd.raw as { event?: { delta?: { type?: string } } }).event;
+			const event = (cbd.raw as { event?: { delta?: { type?: string } } })
+				.event;
 			const deltaType = event?.delta?.type ?? "unknown";
 			deltaTypes[deltaType] = (deltaTypes[deltaType] ?? 0) + 1;
 		}
@@ -145,21 +146,41 @@ Then tell me what 15 * 17 equals.`;
 		const hasTextDeltas = (deltaTypes.text_delta ?? 0) > 0;
 		const hasThinkingDeltas = (deltaTypes.thinking_delta ?? 0) > 0;
 
-		console.log(`✓ stream_event messages: ${hasStreamEvents} (count: ${streamEvents.length})`);
-		console.log(`✓ assistant messages: ${hasAssistantMessages} (count: ${(messagesByType.assistant ?? []).length})`);
-		console.log(`✓ result messages: ${hasResultMessages} (count: ${(messagesByType.result ?? []).length})`);
-		console.log(`✓ text_delta in stream: ${hasTextDeltas} (count: ${deltaTypes.text_delta ?? 0})`);
-		console.log(`✓ thinking_delta in stream: ${hasThinkingDeltas} (count: ${deltaTypes.thinking_delta ?? 0})`);
+		console.log(
+			`✓ stream_event messages: ${hasStreamEvents} (count: ${streamEvents.length})`,
+		);
+		console.log(
+			`✓ assistant messages: ${hasAssistantMessages} (count: ${(messagesByType.assistant ?? []).length})`,
+		);
+		console.log(
+			`✓ result messages: ${hasResultMessages} (count: ${(messagesByType.result ?? []).length})`,
+		);
+		console.log(
+			`✓ text_delta in stream: ${hasTextDeltas} (count: ${deltaTypes.text_delta ?? 0})`,
+		);
+		console.log(
+			`✓ thinking_delta in stream: ${hasThinkingDeltas} (count: ${deltaTypes.thinking_delta ?? 0})`,
+		);
 		console.log();
 
 		if (hasStreamEvents && hasAssistantMessages) {
-			console.log("✅ VERIFIED: SDK sends BOTH stream_event AND assistant messages");
-			console.log("   Our design of emitting both delta and complete events is VALID.");
+			console.log(
+				"✅ VERIFIED: SDK sends BOTH stream_event AND assistant messages",
+			);
+			console.log(
+				"   Our design of emitting both delta and complete events is VALID.",
+			);
 		} else if (hasStreamEvents && !hasAssistantMessages) {
-			console.log("❌ PROBLEM: SDK sends stream_event but NO assistant message");
-			console.log("   agent:text will never emit during streaming - DESIGN FAILS!");
+			console.log(
+				"❌ PROBLEM: SDK sends stream_event but NO assistant message",
+			);
+			console.log(
+				"   agent:text will never emit during streaming - DESIGN FAILS!",
+			);
 		} else if (!hasStreamEvents && hasAssistantMessages) {
-			console.log("⚠️  No streaming: SDK only sent assistant messages (no stream_event)");
+			console.log(
+				"⚠️  No streaming: SDK only sent assistant messages (no stream_event)",
+			);
 			console.log("   Check includePartialMessages option.");
 		} else {
 			console.log("⚠️  UNEXPECTED: Check the raw output above");
@@ -176,9 +197,13 @@ Then tell me what 15 * 17 equals.`;
 				console.log(`  [${am.index}] content type: ${contentType}`);
 				if (Array.isArray(raw.message?.content)) {
 					const blocks = raw.message.content as Array<{ type?: string }>;
-					console.log(`       content blocks: ${blocks.map((b) => b.type).join(", ")}`);
+					console.log(
+						`       content blocks: ${blocks.map((b) => b.type).join(", ")}`,
+					);
 				} else if (typeof raw.message?.content === "string") {
-					console.log(`       string: "${(raw.message.content as string).slice(0, 80)}..."`);
+					console.log(
+						`       string: "${(raw.message.content as string).slice(0, 80)}..."`,
+					);
 				}
 			}
 			console.log();
@@ -190,8 +215,14 @@ Then tell me what 15 * 17 equals.`;
 			console.log("RESULT MESSAGE:");
 			const firstResult = resultMessages[0];
 			if (firstResult) {
-				const result = firstResult.raw as { result?: string; duration_ms?: number; num_turns?: number };
-				console.log(`  Result text: "${(result.result ?? "").slice(0, 100)}..."`);
+				const result = firstResult.raw as {
+					result?: string;
+					duration_ms?: number;
+					num_turns?: number;
+				};
+				console.log(
+					`  Result text: "${(result.result ?? "").slice(0, 100)}..."`,
+				);
 				console.log(`  Duration: ${result.duration_ms}ms`);
 				console.log(`  Turns: ${result.num_turns}`);
 				console.log();
@@ -208,7 +239,9 @@ Then tell me what 15 * 17 equals.`;
 				{
 					prompt,
 					totalMessages: messages.length,
-					messageTypes: Object.fromEntries(Object.entries(messagesByType).map(([k, v]) => [k, v.length])),
+					messageTypes: Object.fromEntries(
+						Object.entries(messagesByType).map(([k, v]) => [k, v.length]),
+					),
 					streamSubtypes,
 					deltaTypes,
 					messages: messages.map((m) => m.raw),
