@@ -156,6 +156,45 @@ BEHAVIORAL DECORATORS:
 
     **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
 
+## Git Branching Workflow
+
+**CRITICAL: Branch from `dev`, NOT `master`**
+
+This project uses a **feature → dev → master** workflow:
+
+```
+master (production/stable)
+  ↑
+  └── dev (integration branch)
+       ↑
+       └── feat/* (feature branches)
+```
+
+**MANDATORY RULES:**
+
+1. **ALWAYS create feature branches from `dev`**:
+   ```bash
+   git checkout dev
+   git pull origin dev
+   git checkout -b feat/your-feature
+   ```
+
+2. **ALWAYS merge feature branches into `dev`**:
+   - Open PRs targeting `dev`, NOT `master`
+   - `dev` is the integration branch for all ongoing work
+
+3. **NEVER branch from `master`**:
+   - `master` is the stable production branch
+   - Only `dev` merges into `master` (via release PR)
+   - Branching from `master` causes massive merge conflicts
+
+4. **Release workflow**:
+   - Features merge to `dev` continuously
+   - When ready to release, merge `dev` → `master`
+   - Keep the rolling `dev` → `master` PR open as the release train
+
+**Why this matters**: If you branch from `master`, your branch is missing all the work in `dev`. When you try to merge back to `dev`, you'll have ~100+ conflicting files from divergent history. This is what happened with the JSONata PR and required a full rebase to fix.
+
 ## PR Workflow Policy (Graphite)
 
 - Use Graphite stacks for all PRs; do not open PRs directly in GitHub.
