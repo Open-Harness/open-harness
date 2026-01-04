@@ -47,7 +47,7 @@ describe("claude node event emission", () => {
 			typeof obj === "object" &&
 			obj !== null &&
 			"content" in obj &&
-			typeof (obj as any).content === "string"
+			typeof (obj as Record<string, unknown>).content === "string"
 		);
 	}
 

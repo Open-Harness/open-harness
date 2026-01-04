@@ -86,7 +86,7 @@ Then tell me what 15 * 17 equals.`;
 			if (!messagesByType[type]) {
 				messagesByType[type] = [];
 			}
-			messagesByType[type]!.push(msg);
+			messagesByType[type]?.push(msg);
 		}
 
 		console.log("MESSAGE TYPE COUNTS:");
