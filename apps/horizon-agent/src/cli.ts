@@ -12,9 +12,10 @@
  */
 
 import { resolve } from "node:path";
+import { createFlow, type TypedRuntime } from "@open-harness/kernel-v3";
 import { Command } from "commander";
 import { flowLogger, flushLogs, logFilePath, nodeLogger } from "./logger.js";
-import { createHorizonRuntime, type HorizonRuntime } from "./runtime/horizon-runtime.js";
+import { HorizonStateSchema, type HorizonState } from "./runtime/state-schema.js";
 import { createHorizonServer } from "./server.js";
 import { HorizonTui } from "./ui/HorizonTui.js";
 
@@ -49,10 +50,10 @@ program
 		flowLogger.info({ feature, flowPath, maxIterations }, "Starting flow run");
 
 		try {
-			// Create Horizon runtime
-			const runtime = createHorizonRuntime({
-				flowPath,
-				enablePersistence: true,
+			// Create runtime directly from kernel - no wrapper needed!
+			const runtime = await createFlow<HorizonState>(flowPath, {
+				stateSchema: HorizonStateSchema,
+				persistence: true,
 			});
 
 			if (useTui) {
@@ -86,18 +87,28 @@ program
 /**
  * Run with Terminal UI.
  */
-async function runWithTui(runtime: HorizonRuntime, feature: string, maxIterations: number): Promise<void> {
+async function runWithTui(
+	runtime: TypedRuntime<HorizonState>,
+	feature: string,
+	maxIterations: number,
+): Promise<void> {
 	// Create TUI - it takes over the terminal and handles its own lifecycle.
 	// The TUI subscribes to runtime events and handles shutdown via keybindings.
 	// On flow completion, the TUI auto-exits after a brief delay.
-	new HorizonTui({ runtime });
+	const tui = new HorizonTui({ runtime });
 
-	// Run the workflow and wait for completion
-	// The TUI will display progress and handle user interactions
-	await runtime.run({
-		feature,
-		maxReviewIterations: maxIterations,
-	});
+	try {
+		// Run the workflow and wait for completion
+		// The TUI will display progress and handle user interactions
+		await runtime.run({
+			feature,
+			maxReviewIterations: maxIterations,
+		});
+	} catch (error) {
+		// Ensure TUI is cleaned up on any error to restore terminal state
+		tui.shutdown();
+		throw error;
+	}
 
 	// TUI handles auto-exit on flow:complete/flow:aborted events.
 	// This function may never return if the user quits early via 'q'.
@@ -107,7 +118,7 @@ async function runWithTui(runtime: HorizonRuntime, feature: string, maxIteration
  * Run in headless mode (no TUI).
  */
 async function runHeadless(
-	runtime: HorizonRuntime,
+	runtime: TypedRuntime<HorizonState>,
 	feature: string,
 	maxIterations: number,
 	verbose: boolean,

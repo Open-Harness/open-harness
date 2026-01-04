@@ -12,9 +12,10 @@
  */
 
 import { resolve } from "node:path";
-import type { RunSnapshot, RuntimeEvent } from "@open-harness/kernel-v3";
+import { createFlow, type RuntimeEvent, type TypedRuntime } from "@open-harness/kernel-v3";
+import type { RunSnapshot } from "@open-harness/kernel-v3";
 import type { Server, ServerWebSocket } from "bun";
-import { createHorizonRuntime, type HorizonRuntime } from "./runtime/horizon-runtime.js";
+import { HorizonStateSchema, type HorizonState } from "./runtime/state-schema.js";
 
 /** WebSocket data attached to each connection */
 interface WSData {
@@ -53,7 +54,7 @@ interface FlowInput {
 
 /** Server state */
 interface ServerState {
-	runtime: HorizonRuntime | null;
+	runtime: TypedRuntime<HorizonState> | null;
 	isRunning: boolean;
 	unsubscribe: (() => void) | null;
 	lastSnapshot: RunSnapshot | null;
@@ -226,10 +227,10 @@ async function handleStart(
 			state.unsubscribe = null;
 		}
 
-		// Create new Horizon runtime
-		state.runtime = createHorizonRuntime({
-			flowPath,
-			enablePersistence: true,
+		// Create runtime directly from kernel - no wrapper needed!
+		state.runtime = await createFlow<HorizonState>(flowPath, {
+			stateSchema: HorizonStateSchema,
+			persistence: true,
 		});
 
 		// Store original input for resume operations
@@ -258,10 +259,9 @@ async function handleStart(
 			.run(flowInput)
 			.then((result) => {
 				state.lastSnapshot = result;
-				// Flow is still resumable if paused, otherwise it's done
-				// Note: "running" is not a valid completion status; flows complete
-				// with "paused", "complete", "aborted", or "failed"
-				state.isRunning = result.status === "paused";
+				// Flow execution has stopped - it's no longer running regardless of status.
+				// If paused, it can be resumed. If complete/aborted/failed, it's done.
+				state.isRunning = false;
 
 				if (result.status === "paused") {
 					broadcast(clients, {

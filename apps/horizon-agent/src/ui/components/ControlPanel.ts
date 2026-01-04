@@ -50,11 +50,12 @@ export class ControlPanel {
 			"{bold}Keyboard Controls:{/bold}",
 			"",
 			"  {bold}q{/bold} / {bold}Ctrl+C{/bold}  Quit the application",
-			"  {bold}p{/bold}           Pause the workflow",
+			"  {bold}p{/bold}           Pause workflow (after current node completes)",
 			"  {bold}r{/bold}           Resume the workflow",
 			"  {bold}i{/bold}           Inject a message",
 			"  {bold}?{/bold}           Toggle this help",
 			"",
+			"{gray-fg}Note: Pause cannot interrupt mid-turn; waits for node to finish.{/gray-fg}",
 			"{gray-fg}Press ? to close{/gray-fg}",
 		].join("\n");
 	}

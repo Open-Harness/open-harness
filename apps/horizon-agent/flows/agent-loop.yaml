@@ -5,6 +5,7 @@
 # - State management for plan persistence
 # - forEach edges for task iteration
 # - Loop edges for coder/reviewer cycles
+# - External prompt files and Zod schemas for structured output
 
 name: horizon-agent
 version: 1
@@ -24,132 +25,27 @@ state:
 nodes:
   # Phase 1: Planning
   # The planner analyzes the feature request and creates a structured task list.
-  # Tasks are stored in state and are immutable after creation.
   - id: planner
     type: claude.agent
     input:
-      prompt: |
-        # Feature Implementation Planning
+      promptFile: ./prompts/planner.md
+      outputSchemaFile: ./schemas/planner.ts
 
-        ## Feature Request
-        {{ flow.input.feature }}
-
-        ## Your Role
-        You are a senior software architect. Analyze this feature request and create a detailed implementation plan.
-
-        ## Instructions
-        1. Break down the feature into atomic, implementable tasks
-        2. Order tasks by dependencies (dependent tasks come after their dependencies)
-        3. Each task should be completable in a single focused coding session
-        4. Include clear success criteria for each task
-
-        ## Output Format
-        Return a JSON object with this exact structure:
-        ```json
-        {
-          "tasks": [
-            {
-              "id": "task-1",
-              "title": "Short descriptive title",
-              "description": "Detailed description of what to implement, including specific files, functions, or components to create/modify",
-              "dependencies": []
-            },
-            {
-              "id": "task-2",
-              "title": "Another task",
-              "description": "This task depends on task-1",
-              "dependencies": ["task-1"]
-            }
-          ]
-        }
-        ```
-
-        Keep the plan focused and achievable. Aim for 3-7 tasks for typical features.
-
-  # Phase 2: Task Iteration
-  # Process each task from the planner's output using forEach
+  # Phase 2: Task Implementation
+  # The coder implements each task from the plan.
   - id: coder
     type: claude.agent
     input:
-      prompt: |
-        # Implementation Task
+      promptFile: ./prompts/coder.md
+      outputSchemaFile: ./schemas/coder.ts
 
-        ## Current Task
-        **ID:** {{ task.id }}
-        **Title:** {{ task.title }}
-        **Description:** {{ task.description }}
-
-        ## Previous Review Feedback
-        {% if state.reviewFeedback %}
-        **Status:** {{ state.reviewFeedback.passed }}
-        **Feedback:** {{ state.reviewFeedback.feedback }}
-        **Issues to Address:**
-        {% for issue in state.reviewFeedback.issues %}
-        - {{ issue }}
-        {% endfor %}
-        {% else %}
-        This is the first iteration. No previous feedback.
-        {% endif %}
-
-        ## Instructions
-        1. Implement this task completely
-        2. If there is previous feedback, address ALL issues mentioned
-        3. Provide production-ready, working code
-        4. Include any necessary imports, type definitions, and error handling
-        5. Follow best practices for the language/framework being used
-
-        ## Output
-        Provide the complete implementation with clear file paths and code blocks.
-
-  # Reviewer agent - reviews the coder's implementation
+  # Phase 3: Code Review
+  # The reviewer evaluates the implementation and provides feedback.
   - id: reviewer
     type: claude.agent
     input:
-      prompt: |
-        # Code Review
-
-        ## Task Being Reviewed
-        **ID:** {{ task.id }}
-        **Title:** {{ task.title }}
-        **Description:** {{ task.description }}
-
-        ## Implementation to Review
-        {{ coder.text }}
-
-        ## Review Criteria
-        1. **Correctness:** Does the implementation fully satisfy the task requirements?
-        2. **Code Quality:** Is the code clean, readable, and maintainable?
-        3. **Edge Cases:** Are error conditions and edge cases handled appropriately?
-        4. **Best Practices:** Does it follow language/framework conventions?
-        5. **Completeness:** Is anything missing that the task description requires?
-
-        ## Instructions
-        - Be thorough but fair in your review
-        - Only fail the implementation if there are genuine issues
-        - Provide specific, actionable feedback for any issues found
-        - If the code is production-ready, approve it
-
-        ## Output Format
-        Return a JSON object with this exact structure:
-        ```json
-        {
-          "passed": true,
-          "feedback": "Summary of the review",
-          "issues": []
-        }
-        ```
-
-        Or if there are issues:
-        ```json
-        {
-          "passed": false,
-          "feedback": "Summary of what needs to be fixed",
-          "issues": [
-            "Specific issue 1 that needs to be addressed",
-            "Specific issue 2 that needs to be addressed"
-          ]
-        }
-        ```
+      promptFile: ./prompts/reviewer.md
+      outputSchemaFile: ./schemas/reviewer.ts
 
 edges:
   # Planner -> Coder (with forEach for task iteration)
@@ -165,8 +61,6 @@ edges:
 
   # Loop: Reviewer -> Coder on failure
   # This creates a controlled cycle for iterative improvement
-  # Note: maxIterations must be a static number (kernel-v3 doesn't support templates here)
-  # The CLI's --max-iterations option is for UI display only; this controls the actual limit
   - from: reviewer
     to: coder
     when:

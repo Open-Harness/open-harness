@@ -10,6 +10,9 @@ import { colors, formatTime } from "../theme.js";
 
 export class AgentStream {
 	private logWidget: contrib.Widgets.LogElement;
+	private textBuffer = "";
+	private lastFlushTime = 0;
+	private flushInterval = 100; // ms between buffer flushes
 
 	constructor(grid: contrib.grid, row: number, col: number, rowSpan: number, colSpan: number) {
 		this.logWidget = grid.set(row, col, rowSpan, colSpan, contrib.log, {
@@ -31,9 +34,42 @@ export class AgentStream {
 
 	/**
 	 * Append streaming text from agent.
+	 * Buffers text and flushes complete lines or on interval.
 	 */
 	appendText(content: string): void {
-		this.logWidget.log(content);
+		this.textBuffer += content;
+
+		// Flush complete lines immediately
+		const lines = this.textBuffer.split("\n");
+		if (lines.length > 1) {
+			// Log all complete lines (all but the last)
+			for (let i = 0; i < lines.length - 1; i++) {
+				const line = lines[i].trim();
+				if (line) {
+					this.logWidget.log(line);
+				}
+			}
+			// Keep the incomplete line in the buffer
+			this.textBuffer = lines[lines.length - 1];
+		}
+
+		// Also flush periodically for long lines without newlines
+		const now = Date.now();
+		if (now - this.lastFlushTime > this.flushInterval && this.textBuffer.length > 80) {
+			this.flushBuffer();
+		}
+	}
+
+	/**
+	 * Flush any remaining buffered text to the log.
+	 * Call this when the agent completes.
+	 */
+	flushBuffer(): void {
+		if (this.textBuffer.trim()) {
+			this.logWidget.log(this.textBuffer.trim());
+			this.textBuffer = "";
+			this.lastFlushTime = Date.now();
+		}
 	}
 
 	/**

@@ -5,10 +5,11 @@
  * Based on the pattern from packages/rtv-channel/src/ui/Tui.ts
  */
 
+import type { TypedRuntime } from "@open-harness/kernel-v3";
 import blessed from "blessed";
 import contrib from "blessed-contrib";
 import { flushLogs } from "../logger.js";
-import type { HorizonRuntime } from "../runtime/horizon-runtime.js";
+import type { HorizonState } from "../runtime/state-schema.js";
 import { AgentStream, ControlPanel, FlowGraph, StatusBar, TaskList } from "./components/index.js";
 
 /** Runtime event type (simplified from kernel-v3) */
@@ -20,7 +21,7 @@ interface RuntimeEvent {
 
 export interface HorizonTuiOptions {
 	/** The Horizon runtime to visualize */
-	runtime: HorizonRuntime;
+	runtime: TypedRuntime<HorizonState>;
 }
 
 /**
@@ -51,7 +52,7 @@ export class HorizonTui {
 	private controlPanel!: ControlPanel;
 
 	// State
-	private runtime: HorizonRuntime;
+	private runtime: TypedRuntime<HorizonState>;
 	private startTime: number;
 	private unsubscribe?: () => void;
 	private updateInterval?: ReturnType<typeof setInterval>;
@@ -101,10 +102,13 @@ export class HorizonTui {
 		// Quit
 		this.screen.key(["q", "C-c"], () => this.shutdown());
 
-		// Pause
+		// Pause flow execution.
+		// NOTE: Pause takes effect between nodes, not mid-turn.
+		// The SDK cannot interrupt a streaming agent response in progress.
+		// The current node will complete before the pause takes effect.
 		this.screen.key(["p"], () => {
 			this.runtime.pause();
-			this.agentStream.warn("Flow paused by user");
+			this.agentStream.warn("Flow paused (takes effect after current node completes)");
 		});
 
 		// Resume
@@ -156,6 +160,8 @@ export class HorizonTui {
 			case "node:complete": {
 				const nodeId = event.nodeId as string;
 				this.flowGraph.completeNode(nodeId);
+				// Flush any buffered streaming text before logging completion
+				this.agentStream.flushBuffer();
 				this.agentStream.success(`[${nodeId}] Complete`);
 				this.updateFromState();
 				break;
