@@ -17,12 +17,7 @@ describe("Binding Paths (replay)", () => {
 			}
 			const template = entry.template;
 
-			if (entry.error) {
-				expect(() => resolveBindingString(template, context)).toThrow();
-				continue;
-			}
-
-			const resolved = resolveBindingString(template, context);
+			const resolved = await resolveBindingString(template, context);
 			expect(resolved).toBe(entry.expected);
 		}
 	});

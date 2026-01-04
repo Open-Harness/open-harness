@@ -98,8 +98,8 @@ export const controlIfNode: NodeTypeDefinition<IfInput, IfOutput> = {
 			);
 		}
 
-		// Evaluate the WhenExpr condition
-		const condition = evaluateWhen(
+		// Evaluate the WhenExpr condition (async for JSONata support)
+		const condition = await evaluateWhen(
 			input.condition as WhenExpr,
 			controlCtx.bindingContext,
 		);

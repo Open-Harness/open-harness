@@ -22,12 +22,23 @@ export interface FlowPolicy {
 	failFast?: boolean;
 }
 
-export interface WhenExpr {
+/**
+ * YAML AST-style when expression (legacy format).
+ * @deprecated Use JSONata expression strings instead.
+ */
+export interface WhenExprAST {
 	equals?: { var: string; value: unknown };
-	not?: WhenExpr;
-	and?: WhenExpr[];
-	or?: WhenExpr[];
+	not?: WhenExprAST;
+	and?: WhenExprAST[];
+	or?: WhenExprAST[];
 }
+
+/**
+ * When condition - can be either:
+ * - string: JSONata expression (preferred, e.g., "$not(reviewer.passed = true)")
+ * - object: YAML AST format (legacy, for backward compatibility)
+ */
+export type WhenExpr = string | WhenExprAST;
 
 export interface RetryPolicy {
 	maxAttempts: number;

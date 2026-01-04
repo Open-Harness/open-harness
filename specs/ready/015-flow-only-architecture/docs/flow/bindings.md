@@ -1,0 +1,162 @@
+# Bindings Protocol
+
+Bindings resolve dynamic values in node inputs using the `{{ expression }}` template syntax. The expression language is powered by [JSONata](https://jsonata.org/).
+
+## Basic Syntax
+
+```yaml
+nodes:
+  - id: writer
+    type: claude.agent
+    input:
+      prompt: "Write about: {{ task.title }}"
+      context: "{{ researcher.summary }}"
+```
+
+## Binding Context
+
+Expressions have access to:
+
+| Path | Description |
+|------|-------------|
+| `flow.input.*` | Flow-level input parameters |
+| `<nodeId>.*` | Output from a completed node |
+| `$iteration` | Current loop iteration (0-based) |
+| `$first` | True on first iteration |
+| `$last` | True on last iteration |
+| `$maxIterations` | Total iterations in loop |
+
+## Expression Types
+
+### Pure Bindings (Type Preserving)
+
+When a template is just `{{ expression }}` with no surrounding text, the type is preserved:
+
+```yaml
+# Returns the actual array, not a string
+items: "{{ taskCreator.tasks }}"
+
+# Returns the number 42, not "42"
+count: "{{ analyzer.score }}"
+
+# Returns the full object
+metadata: "{{ task }}"
+```
+
+### Template Strings (Always String)
+
+When expressions are mixed with text, the result is always a string:
+
+```yaml
+# Returns "Score: 85"
+summary: "Score: {{ analyzer.score }}"
+
+# Objects get JSON stringified
+debug: "Data: {{ task }}"  # Returns "Data: {\"title\":\"...\"}"
+```
+
+## JSONata Features
+
+### Path Access
+
+```yaml
+# Simple path
+title: "{{ task.title }}"
+
+# Nested path
+author: "{{ task.metadata.author }}"
+
+# Array index
+first: "{{ items[0] }}"
+
+# Last element
+last: "{{ items[-1] }}"
+```
+
+### Operators
+
+```yaml
+# String concatenation
+greeting: "{{ 'Hello ' & name }}"
+
+# Ternary conditional
+message: "{{ hasError ? 'Failed' : 'Success' }}"
+
+# Comparison
+isHighScore: "{{ score > 80 }}"
+```
+
+### Functions
+
+```yaml
+# Check existence (prevents crashes on missing values)
+feedback: "{{ $exists(reviewer) ? reviewer.text : 'No feedback' }}"
+
+# Negation
+shouldRetry: "{{ $not(passed) }}"
+
+# Count
+total: "{{ $count(items) }}"
+```
+
+## Iteration Context
+
+Inside `control.foreach` loops, iteration variables are available:
+
+```yaml
+nodes:
+  - id: process-tasks
+    type: control.foreach
+    input:
+      items: "{{ taskCreator.tasks }}"
+      as: "task"
+      body:
+        - processor
+
+  - id: processor
+    type: claude.agent
+    input:
+      prompt: |
+        {{ $first ? 'Starting batch processing...' : '' }}
+
+        Task {{ $iteration + 1 }} of {{ $maxIterations }}:
+        {{ task.title }}
+
+        {{ $last ? 'This is the final task.' : '' }}
+```
+
+## Missing Values Behavior
+
+JSONata expressions handle missing values gracefully:
+
+```yaml
+# Missing path returns undefined (no crash)
+feedback: "{{ reviewer.text }}"  # Returns undefined if reviewer missing
+
+# Use $exists() for conditional access
+feedback: "{{ $exists(reviewer) ? reviewer.text : 'No feedback yet' }}"
+
+# In template strings, undefined becomes empty string
+summary: "Feedback: {{ reviewer.text }}"  # Returns "Feedback: " if missing
+```
+
+## Legacy Syntax (Deprecated)
+
+For backward compatibility, these legacy forms are still supported:
+
+```yaml
+# Optional binding (returns empty string if missing)
+text: "{{ ?missing }}"
+
+# Default value
+text: "{{ missing | default: \"fallback\" }}"
+```
+
+> **Note**: Use JSONata conditional expressions instead of legacy syntax for new flows.
+
+## Key Invariants
+
+1. Bindings are resolved **after** the binding context is built (flow input + upstream node outputs).
+2. Pure bindings preserve type; template strings stringify.
+3. Missing paths in JSONata return `undefined` (no throw).
+4. All binding resolution is asynchronous.
