@@ -1,8 +1,0 @@
-{
-  "name": "@open-harness/workflow-demo",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "demo": "bun scripts/workflow-demo.ts"
-  }
-}
