@@ -78,11 +78,13 @@ export function createHarness(options: HarnessOptions): Harness {
     store: options.store,
   });
 
+  let transport: Transport | undefined;
+  let unsbs: (() => void) | undefined;
+
   if (options.onEvent) {
-    runtime.onEvent(options.onEvent);
+    unsbs = runtime.onEvent(options.onEvent);
   }
 
-  let transport: Transport | undefined;
   if (options.transport?.websocket) {
     transport = new WebSocketTransport(runtime, options.transport.websocket);
   }
@@ -97,6 +99,10 @@ export function createHarness(options: HarnessOptions): Harness {
     runtime,
     transport,
     async stop() {
+      if (unsbs) {
+        unsbs();
+        unsbs = undefined;
+      }
       if (transport) {
         await transport.stop();
       }
