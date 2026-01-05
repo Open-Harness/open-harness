@@ -11,13 +11,13 @@ Create a `ChatTransport` adapter that transforms Open Harness runtime events int
 
 **Language/Version**: TypeScript 5.x (strict mode enabled)  
 **Primary Dependencies**: `ai` (Vercel AI SDK v6.0.9), `@open-harness/sdk` (peer dependency)  
-**Storage**: N/A (in-memory message accumulation, no persistence)  
+**Storage**: N/A (stateless transforms, AI SDK handles message accumulation)  
 **Testing**: `bun:test` for unit tests, integration tests with real runtime  
 **Target Platform**: Node.js/Bun server, React browser (via AI SDK hooks)  
 **Project Type**: Library package (new package `packages/ai-sdk/` in monorepo)  
 **Performance Goals**: <100ms latency from event emission to chunk delivery, handle 100 concurrent streams  
 **Constraints**: Must be compatible with AI SDK v6 `ChatTransport` interface, zero client-side code required  
-**Scale/Scope**: Single package with ~500 LOC, 4 main modules (transport, transforms, accumulator, types)
+**Scale/Scope**: Single package with ~300 LOC, 3 main modules (transport, transforms, types)
 
 ## Constitution Check
 
@@ -76,13 +76,10 @@ packages/ai-sdk/
 ├── src/
 │   ├── index.ts                    # Barrel export
 │   ├── transport.ts                # OpenHarnessChatTransport class
-│   ├── transforms.ts               # Event → Chunk transform functions
-│   ├── accumulator.ts              # MessageAccumulator state machine
-│   └── types.ts                    # OH-specific types and DataUIParts
+│   └── transforms.ts               # Event → Chunk transforms + PartTracker
 └── tests/
     ├── unit/
-    │   ├── transforms.test.ts      # Pure transform function tests
-    │   └── accumulator.test.ts     # State machine tests
+    │   └── transforms.test.ts      # Pure transform function tests
     └── integration/
         └── transport.test.ts       # Full transport with mock runtime
 
@@ -94,6 +91,8 @@ apps/ui/
 ```
 
 **Structure Decision**: New package `packages/ai-sdk/` following monorepo conventions. Separate from SDK core to keep peer dependencies optional. Demo page in existing `apps/ui/` for integration testing with real React/Next.js environment.
+
+**Note on Simplicity**: No separate accumulator module needed. The AI SDK handles message accumulation internally. We only need minimal state (`PartTracker`: two boolean flags) to detect first delta for `*-start` chunks, which lives in `transforms.ts`.
 
 ## Complexity Tracking
 
@@ -164,9 +163,7 @@ No constitution violations requiring justification.
 packages/ai-sdk/package.json           # Package manifest
 packages/ai-sdk/src/index.ts           # Barrel export
 packages/ai-sdk/src/transport.ts       # Main transport class
-packages/ai-sdk/src/transforms.ts      # Transform functions
-packages/ai-sdk/src/accumulator.ts     # State machine
-packages/ai-sdk/src/types.ts           # Type definitions
+packages/ai-sdk/src/transforms.ts      # Transform functions + PartTracker
 packages/ai-sdk/tests/unit/transforms.test.ts    # Unit tests
 packages/ai-sdk/tests/integration/transport.test.ts  # Integration test
 apps/ui/src/app/demo/page.tsx          # Demo page
@@ -174,6 +171,6 @@ apps/ui/src/app/demo/page.tsx          # Demo page
 
 ### Test Coverage Expectations
 
-- **Minimum line coverage**: 80% for new code (transforms and accumulator are pure functions)
+- **Minimum line coverage**: 80% for new code (transforms are pure functions)
 - **Required test types**: Unit tests for all transform functions, integration test with mock runtime
 - **Skip flag**: `--skip-tests` available for iterative development (must pass before merge)
