@@ -136,7 +136,7 @@ interface AgentOutput&#60;T&#62; &#123;
 &#125;
 ```
 
-**Harness State**:
+**Flow State (driver-owned)**:
 ```typescript
 interface TAPState &#123;
   // Current trigger for this run (set by driver)
@@ -192,7 +192,7 @@ emit(&#123;
   reasoning: "User typically needs 20 min lead time"
 &#125;);
 
-// Schedule the next harness run
+// Schedule the next flow run
 emit(&#123;
   type: "schedule:run",
   trigger: &#123; type: "periodic-check" &#125;,
@@ -219,7 +219,7 @@ emit(&#123;
 
 ### The Two-Layer Model
 
-TAP uses a clean separation between **orchestration logic** (harness) and **execution timing** (driver):
+TAP uses a clean separation between **orchestration logic** (FlowRuntime) and **execution timing** (driver):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -227,7 +227,7 @@ TAP uses a clean separation between **orchestration logic** (harness) and **exec
 │  (Dumb plumbing - handles persistence and timing)           │
 │                                                              │
 │  1. Load state from store                                    │
-│  2. Create harness + run                                     │
+│  2. Create flow runner + run                                 │
 │  3. Save returned state                                      │
 │  4. Read schedule:* extension events, set up timers          │
 │  5. When timer fires, goto 1                                │
@@ -235,7 +235,7 @@ TAP uses a clean separation between **orchestration logic** (harness) and **exec
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                        HARNESS                               │
+│                      FLOW RUNTIME                            │
 │  (All business logic - bounded, testable, pure)             │
 │                                                              │
 │  • Receives: trigger + previous state                       │
@@ -245,15 +245,15 @@ TAP uses a clean separation between **orchestration logic** (harness) and **exec
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key Insight**: The harness is the single source of truth for state. The driver doesn't own any business state - it just persists what the harness returns and respects schedule events.
+**Key Insight**: Flow state is the single source of truth. The driver doesn't own any business logic - it just persists the state returned by the flow run and respects schedule events.
 
 ### Component Responsibilities
 
-**1. Harness (Orchestrator)**
+**1. FlowRuntime (Orchestrator)**
 - Owns all business logic
 - Maintains agent output histories in state
 - Provides history to agents on each run
-- Bounded execution: `run()` → `HarnessResult`
+- Bounded execution: `createFlowRunner(...).run()` → `FlowRunResult`
 - Agents emit `schedule:*` extension events for future work
 
 **2. Specialist Agents (Data + Inference)**
@@ -269,21 +269,21 @@ TAP uses a clean separation between **orchestration logic** (harness) and **exec
 - NO tools (pure reasoning)
 
 **4. Driver (External Runtime)**
-- Persists harness state between runs
-- Reads `schedule:*` extension events from harness output
+- Persists flow state between runs
+- Reads `schedule:*` extension events from flow output
 - Sets up timers/triggers for scheduled work
-- Invokes harness when triggers fire
+- Invokes FlowRuntime when triggers fire
 - **Contains zero business logic**
 
 ---
 
 ## The TAP Workflow
 
-### Harness Definition
+### Flow Definition (FlowSpec + Registry)
 
 ```typescript
 // ============================================
-// TAP HARNESS - owns all business logic
+// TAP FLOW - orchestration expressed as FlowSpec
 // ============================================
 
 interface TAPInput &#123;
@@ -291,107 +291,41 @@ interface TAPInput &#123;
   previousState?: TAPState;   // Loaded by driver
 &#125;
 
-const TAPHarness = defineHarness(&#123;
-  name: "tap-harness",
-  
-  agents: &#123;
-    location: LocationAgent,
-    calendar: CalendarAgent,
-    brain: BrainAgent,
-  &#125;,
-  
-  state: (input: TAPInput): TAPState =&#62; &#123;
-    const base = input.previousState ?? &#123;
-      agentOutputs: &#123; location: [], calendar: [], brain: [] &#125;,
-      patterns: &#123;&#125;,
-      scheduledTasks: []
-    &#125;;
-    return &#123; ...base, trigger: input.trigger &#125;;
-  &#125;,
-  
-  run: async (&#123; agents, state, emit, task &#125;) =&#62; &#123;
-    const &#123; trigger &#125; = state;
-    
-    // ========== PERIODIC CHECK ==========
-    if (trigger.type === "periodic-check" || trigger.type === "startup") &#123;
-      
-      // --- Location Agent (with history) ---
-      await task("location-inference", async () =&#62; &#123;
-        const output = await agents.location.execute(&#123;
-          currentGPS: await fetchGPS(),
-          previousOutputs: state.agentOutputs.location,  // ← Full history!
-          patterns: state.patterns
-        &#125;);
-        
-        state.agentOutputs.location.push(output);
-        
-        // Rolling window - keep last 100
-        if (state.agentOutputs.location.length &#62; 100) &#123;
-          state.agentOutputs.location.shift();
-        &#125;
-      &#125;);
-      
-      // --- Calendar Agent (with history) ---
-      await task("calendar-sync", async () =&#62; &#123;
-        const output = await agents.calendar.execute(&#123;
-          currentTime: new Date(),
-          previousOutputs: state.agentOutputs.calendar,
-        &#125;);
-        state.agentOutputs.calendar.push(output);
-      &#125;);
-      
-      // --- Brain Agent (analyzes everything) ---
-      await task("brain-decision", async () =&#62; &#123;
-        const decision = await agents.brain.execute(&#123;
-          currentContext: &#123;
-            location: state.agentOutputs.location.at(-1)!,
-            calendar: state.agentOutputs.calendar.at(-1)!,
-          &#125;,
-          fullHistory: state.agentOutputs,
-          patterns: state.patterns
-        &#125;);
-        
-        state.agentOutputs.brain.push(decision);
-        
-        // ⭐ AGENT SCHEDULES TASKS VIA EVENTS
-        for (const task of decision.recommendedTasks) &#123;
-          emit(&#123; 
-            type: "schedule:task",
-            taskId: task.taskId,
-            executeAt: task.executeAt,
-            action: task.action,
-            parameters: task.parameters,
-            reasoning: task.reasoning
-          &#125;);
-        &#125;
-      &#125;);
-      
-      // ⭐ SCHEDULE NEXT RUN
-      emit(&#123;
-        type: "schedule:run",
-        trigger: &#123; type: "periodic-check" &#125;,
-        executeAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        reasoning: "Regular 15-minute check"
-      &#125;);
-    &#125;
-    
-    // ========== TASK DUE ==========
-    else if (trigger.type === "task-due") &#123;
-      await task(`execute-${trigger.taskId}`, async () =&#62; &#123;
-        const scheduledTask = state.scheduledTasks.find(
-          t =&#62; t.taskId === trigger.taskId
-        );
-        if (scheduledTask) &#123;
-          await executeTask(scheduledTask);
-          scheduledTask.status = "completed";
-        &#125;
-      &#125;);
-    &#125;
-    
-    // Return latest decision
-    return state.agentOutputs.brain.at(-1) ?? null;
-  &#125;
+const tapFlow: FlowSpec = &#123;
+  flow: &#123; name: "tap-flow" &#125;,
+  // Pseudocode wiring:
+  // - route by inputs.trigger.type using control.switch + edge when
+  // - agent nodes read inputs.previousState.* for history
+  // - outputs include the updated TAP state and any schedule events
+  nodes: [
+    &#123; id: "location", type: "agent.location" &#125;,
+    &#123; id: "calendar", type: "agent.calendar" &#125;,
+    &#123; id: "brain", type: "agent.brain" &#125;,
+    &#123; id: "execute-task", type: "control.if" &#125;
+  ],
+  edges: [
+    // omitted for brevity
+  ]
+&#125;;
+
+const registry = createRegistryWithNodes(&#123;
+  "agent.location": LocationAgent,
+  "agent.calendar": CalendarAgent,
+  "agent.brain": BrainAgent,
+  "control.if": ControlIfNode
 &#125;);
+
+async function runTapFlow(input: TAPInput) &#123;
+  const runner = createFlowRunner(tapFlow, registry, &#123;
+    sessionId: `tap-${Date.now()}`,
+    inputs: input
+  &#125;);
+
+  const result = await runner.run();
+  const nextState = (result.outputs.tapState as TAPState) ?? input.previousState;
+
+  return &#123; result, nextState &#125;;
+&#125;
 ```
 
 ### Driver Implementation
@@ -406,15 +340,14 @@ class TAPDriver &#123;
   private timers: Map&#60;string, NodeJS.Timeout&#62; = new Map();
   
   async handleTrigger(trigger: TriggerEvent) &#123;
-    // 1. Load state (harness state IS the state)
+    // 1. Load state (flow state IS the state)
     const previousState = await this.store.load();
     
-    // 2. Run harness
-    const harness = TAPHarness.create(&#123; trigger, previousState &#125;);
-    const result = await harness.run();
+    // 2. Run flow
+    const &#123; result, nextState &#125; = await runTapFlow(&#123; trigger, previousState &#125;);
     
     // 3. Persist state
-    await this.store.save(result.state);
+    await this.store.save(nextState);
     
     // 4. Process schedule events
     for (const event of result.events) &#123;
@@ -475,7 +408,7 @@ driver.start();  // First run schedules subsequent runs
 Agents communicate scheduling intent through **extension events**. These shapes are **not** part of the kernel protocol; they are a TAP convention that drivers interpret.
 
 ```typescript
-// Schedule a future harness run (extension event)
+// Schedule a future flow run (extension event)
 interface ScheduleRunEvent &#123;
   type: "schedule:run";
   trigger: TriggerEvent;
@@ -500,7 +433,7 @@ interface ScheduleCancelEvent &#123;
   reasoning: string;
 &#125;
 
-// Trigger types the harness responds to (example input contract)
+// Trigger types the flow responds to (example input contract)
 type TriggerEvent = 
   | &#123; type: "startup" &#125;
   | &#123; type: "periodic-check" &#125;
@@ -524,7 +457,7 @@ const LocationAgent = defineAgent(&#123;
     currentGPS: GPSSchema,
     timestamp: z.date(),
     
-    // Temporal accumulation (from harness state)
+    // Temporal accumulation (from flow state)
     previousOutputs: z.array(LocationOutputSchema),
     
     // Learned patterns
@@ -716,7 +649,7 @@ const decision = &#123;
   ]
 &#125;;
 
-// Harness converts these to schedule events
+// Flow runtime surfaces these as schedule events
 for (const task of decision.recommendedTasks) &#123;
   emit(&#123; type: "schedule:task", ...task &#125;);
 &#125;
@@ -731,7 +664,7 @@ for (const task of decision.recommendedTasks) &#123;
 Keep last N outputs per agent:
 
 ```typescript
-// Inside harness run, after each agent run
+// Inside flow run, after each agent run
 state.agentOutputs[agentName].push(newOutput);
 
 // Maintain window size
@@ -841,14 +774,14 @@ export async function handler(event: LambdaEvent) &#123;
   // Load state from DynamoDB
   const previousState = await loadFromDynamo(event.userId);
   
-  // Run harness
-  const result = await TAPHarness.create(&#123;
+  // Run flow
+  const &#123; result, nextState &#125; = await runTapFlow(&#123;
     trigger: event.trigger,
     previousState
-  &#125;).run();
+  &#125;);
   
   // Persist state
-  await saveToDynamo(event.userId, result.state);
+  await saveToDynamo(event.userId, nextState);
   
   // Schedule future runs via EventBridge
   for (const e of result.events) &#123;
@@ -880,12 +813,12 @@ BackgroundFetch.configure(&#123;
 &#125;, async (taskId) =&#62; &#123;
   const previousState = await AsyncStorage.getItem('tap-state');
   
-  const result = await TAPHarness.create(&#123;
+  const &#123; result, nextState &#125; = await runTapFlow(&#123;
     trigger: &#123; type: "periodic-check" &#125;,
     previousState: JSON.parse(previousState)
-  &#125;).run();
+  &#125;);
   
-  await AsyncStorage.setItem('tap-state', JSON.stringify(result.state));
+  await AsyncStorage.setItem('tap-state', JSON.stringify(nextState));
   
   // Handle immediate tasks
   for (const e of result.events) &#123;
@@ -963,7 +896,7 @@ Full history makes debugging easy:
 ```
 User: "Why did you notify me at 11:45?"
 
-Developer checks harness events:
+Developer checks flow runtime events:
 - Location history shows: HOME → COMMUTING → AT_WORK (arrived 11:40)
 - Brain history shows: "User just arrived at work, prayer in 30 min"
 - Schedule event: &#123; type: "schedule:task", executeAt: "11:45", reasoning: "..." &#125;
@@ -975,13 +908,13 @@ Answer: App learned your pattern and timed notification perfectly!
 
 ### 5. Testability
 
-Because harness runs are bounded and pure:
+Because flow runs are bounded and pure:
 
 ```typescript
 import &#123; test, expect &#125; from "bun:test";
 
 test("schedules notification after arrival at work", async () =&#62; &#123;
-  const result = await TAPHarness.create(&#123;
+  const &#123; result &#125; = await runTapFlow(&#123;
     trigger: &#123; type: "periodic-check" &#125;,
     previousState: &#123;
       agentOutputs: &#123;
@@ -991,7 +924,7 @@ test("schedules notification after arrival at work", async () =&#62; &#123;
         ]
       &#125;
     &#125;
-  &#125;).run();
+  &#125;);
   
   // Assert on schedule events
   const scheduleEvents = result.events.filter(e =&#62; e.event.type === "schedule:task");
@@ -1051,7 +984,7 @@ When implementing TAP:
 - [ ] Prompt instructs agent to use history
 - [ ] Confidence increases with evidence
 
-✅ **Harness State**:
+✅ **Flow State**:
 - [ ] `agentOutputs` stores history per agent
 - [ ] `patterns` cache for computed insights
 - [ ] Rolling window to limit memory
@@ -1061,10 +994,10 @@ When implementing TAP:
 - [ ] Recommends tasks (not executes them)
 - [ ] Uses history from ALL agents
 - [ ] Provides reasoning for every decision
-- [ ] Harness emits schedule extension events based on recommendations
+- [ ] Flow runtime emits schedule extension events based on recommendations
 
 ✅ **Schedule Events (Extension)**:
-- [ ] `schedule:run` for future harness invocations
+- [ ] `schedule:run` for future flow invocations
 - [ ] `schedule:task` for specific actions
 - [ ] `schedule:cancel` to cancel previous schedules
 - [ ] All events include `reasoning`
@@ -1145,13 +1078,12 @@ class Driver &#123;
 class Driver &#123;
   async handleTrigger(trigger) &#123;
     const state = await this.store.load();
-    const harness = TAPHarness.create(&#123; trigger, previousState: state &#125;);
-    const result = await harness.run();
-    await this.store.save(result.state);
+    const &#123; result, nextState &#125; = await runTapFlow(&#123; trigger, previousState: state &#125;);
+    await this.store.save(nextState);
     // Process schedule events...
   &#125;
 &#125;
-// Weekend logic lives in the harness/agents
+// Weekend logic lives in the flow/agents
 ```
 
 ---
@@ -1238,7 +1170,7 @@ const timeSinceLastTransition = (history) =&#62; &#123;
 1. Every agent has memory (temporal accumulation)
 2. Confidence builds with evidence
 3. Agents schedule work via events (autonomous)
-4. Harness is bounded and pure (testable)
+4. Flow is bounded and pure (testable)
 5. Driver is dumb plumbing (no business logic)
 6. Reasoning is explicit and traceable
 7. Patterns emerge from history

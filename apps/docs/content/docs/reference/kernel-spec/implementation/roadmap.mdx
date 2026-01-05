@@ -87,31 +87,30 @@ This roadmap defines the **dependency-ordered milestones** for compiling the spe
 
 ---
 
-## Milestone 3: Harness Lifecycle + Phase/Task Helpers
+## Milestone 3: FlowRuntime Lifecycle + Phase/Task Helpers
 
-**Goal**: Implement Harness factory, lifecycle events, phase/task helpers, and attachments.
+**Goal**: Implement FlowRuntime lifecycle events, phase/task helpers, and attachments.
 
 **Inputs**:
-- `docs/spec/harness.md` - Harness protocol
-- `tests/specs/harness.test-spec.md` - Harness test requirements (R1-R6)
+- `docs/spec/flow-runtime.md` - FlowRuntime protocol
+- `tests/specs/flow-runtime.test-spec.md` - FlowRuntime test requirements
 
 **Outputs**:
-- `src/engine/harness.ts` - Harness implementation
-- Replay tests: `tests/replay/harness.*.test.ts`
-- Fixtures: `tests/fixtures/golden/harness/*.jsonl`
-- Authoritative script: `scripts/live/harness-live.ts`
+- `src/flow/runtime.ts` - FlowRuntime implementation
+- Replay tests: `tests/replay/flow.runtime.test.ts`
+- Fixtures: `tests/fixtures/golden/flow/runtime-*.jsonl`
+- Authoritative script: `scripts/live/flow-runtime-live.ts`
 
 **Conformance Gates**:
-- [ ] Harness factory creates instances correctly
 - [ ] Lifecycle events (`harness:start`, `harness:complete`) emit correctly
 - [ ] `phase()` and `task()` helpers propagate context
 - [ ] Attachments receive hub and can subscribe
 - [ ] All replay tests pass
 - [ ] Live script proves it works
 
-**Authoritative Script**: `bun scripts/live/harness-live.ts`
+**Authoritative Script**: `bun scripts/live/flow-runtime-live.ts`
 
-**Done Criteria**: Can create harness, run it, see lifecycle events, use phase/task helpers. Attachments work. All tests pass.
+**Done Criteria**: Can create FlowRuntime, run a flow, see lifecycle events, use phase/task helpers. Attachments work. All tests pass.
 
 ---
 
@@ -120,17 +119,17 @@ This roadmap defines the **dependency-ordered milestones** for compiling the spe
 **Goal**: Implement run-scoped message routing (sendToRun) and inbox semantics.
 
 **Inputs**:
-- `docs/spec/harness.md` - Inbox routing requirements
+- `docs/spec/flow-runtime.md` - Inbox routing requirements
 - `docs/spec/agent.md` - AgentInbox interface
-- `tests/specs/harness.test-spec.md` - R6: Inbox Routing
-- `tests/specs/agent.test-spec.md` - R3: Inbox Interface, R6: RunId Uniqueness
+- `tests/specs/flow-runtime.test-spec.md` - Inbox routing requirements
+- `tests/specs/agent.test-spec.md` - Inbox interface, RunId uniqueness
 
 **Outputs**:
-- `src/engine/harness.ts` - Inbox routing implementation
+- `src/flow/runtime.ts` - Inbox routing implementation
 - `src/engine/inbox.ts` - AgentInbox implementation
-- Replay tests: `tests/replay/harness.inbox.test.ts`, `tests/replay/agent.inbox.test.ts`
-- Fixtures: `tests/fixtures/golden/harness/inbox-*.jsonl`, `tests/fixtures/golden/agent/inbox-*.jsonl`
-- Authoritative script: `scripts/live/harness-live.ts` (updated)
+- Replay tests: `tests/replay/flow.runtime.test.ts`, `tests/replay/agent.inbox.test.ts`
+- Fixtures: `tests/fixtures/golden/flow/runtime-*.jsonl`, `tests/fixtures/golden/agent/*.jsonl`
+- Authoritative script: `scripts/live/flow-runtime-live.ts` (updated)
 
 **Conformance Gates**:
 - [ ] `sendToRun(runId, message)` routes to correct inbox
@@ -140,7 +139,7 @@ This roadmap defines the **dependency-ordered milestones** for compiling the spe
 - [ ] All replay tests pass
 - [ ] Live script proves it works
 
-**Authoritative Script**: `bun scripts/live/harness-live.ts`
+**Authoritative Script**: `bun scripts/live/flow-runtime-live.ts`
 
 **Done Criteria**: Can send messages to specific agent runs. Inbox works correctly. Multiple concurrent runs work independently. All tests pass.
 
@@ -225,7 +224,7 @@ M1 (Hub)
   ↓
 M2 (Context)
   ↓
-M3 (Harness)
+M3 (FlowRuntime)
   ↓
 M4 (Inbox)
   ↓

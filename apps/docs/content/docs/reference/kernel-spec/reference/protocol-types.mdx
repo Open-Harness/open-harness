@@ -113,46 +113,23 @@ interface Hub extends AsyncIterable&#60;EnrichedEvent&#62; &#123;
 &#125;
 ```
 
-## Harness (deprecated)
+## Flow Runtime
 
 ```typescript
 type Cleanup = void | (() =&#62; void) | (() =&#62; Promise&#60;void&#62;);
 type Attachment = (hub: Hub) =&#62; Cleanup;
 
-interface SessionContext &#123;
-  waitForUser(prompt: string, options?: &#123; choices?: string[]; allowText?: boolean &#125;): Promise&#60;UserResponse&#62;;
-  hasMessages(): boolean;
-  readMessages(): Array&#60;&#123; content: string; agent?: string; timestamp: Date &#125;&#62;;
-  isAborted(): boolean;
-&#125;
-
-interface ExecuteContext&#60;TAgentDefs extends Record&#60;string, AgentDefinition&#62;, TState&#62; &#123;
-  agents: ExecutableAgents&#60;TAgentDefs&#62;;
-  state: TState;
-  hub: Hub;
-  phase: &#60;T&#62;(name: string, fn: () =&#62; Promise&#60;T&#62;) =&#62; Promise&#60;T&#62;;
-  task: &#60;T&#62;(id: string, fn: () =&#62; Promise&#60;T&#62;) =&#62; Promise&#60;T&#62;;
-  emit: (event: BaseEvent) =&#62; void;
-  session?: SessionContext;
-&#125;
-
-interface HarnessResult&#60;TState, TResult&#62; &#123;
-  result: TResult;
-  state: TState;
+interface FlowRunResult &#123;
+  outputs: Record&#60;string, unknown&#62;;
   events: EnrichedEvent[];
   durationMs: number;
   status: HubStatus;
 &#125;
 
-interface HarnessInstance&#60;TState, TResult&#62; extends Hub &#123;
-  readonly state: TState;
+interface FlowRuntimeInstance extends Hub &#123;
   attach(attachment: Attachment): this;
   startSession(): this;
-  run(): Promise&#60;HarnessResult&#60;TState, TResult&#62;&#62;;
-&#125;
-
-interface HarnessFactory&#60;TInput, TState, TResult&#62; &#123;
-  create(input: TInput): HarnessInstance&#60;TState, TResult&#62;;
+  run(): Promise&#60;FlowRunResult&#62;;
 &#125;
 ```
 
@@ -286,29 +263,5 @@ interface NodeTypeDefinition&#60;TIn, TOut&#62; &#123;
   outputSchema: ZodSchema&#60;TOut&#62;;
   capabilities?: NodeCapabilities;
   run(ctx: NodeRunContext, input: TIn): Promise&#60;TOut&#62;;
-&#125;
-```
-
-## Flow Runtime
-
-```typescript
-interface FlowRunnerOptions &#123;
-  sessionId?: string;
-  input?: Record&#60;string, unknown&#62;;
-  channels?: ChannelDefinition&#60;any&#62;[];
-  policy?: FlowPolicy;
-&#125;
-
-interface FlowRunResult &#123;
-  outputs: Record&#60;string, unknown&#62;;
-  events: EnrichedEvent[];
-  durationMs: number;
-  status: HubStatus;
-&#125;
-
-interface FlowInstance extends Hub &#123;
-  attach(channel: ChannelDefinition&#60;any&#62;): this;
-  startSession(): this;
-  run(): Promise&#60;FlowRunResult&#62;;
 &#125;
 ```
