@@ -1,5 +1,5 @@
 {
-  "name": "@open-harness/kernel",
+  "name": "@open-harness/sdk",
   "module": "src/index.ts",
   "type": "module",
   "private": true,

@@ -23,7 +23,7 @@ A flow with two nodes connected by an edge:
 ```bash
 mkdir my-first-flow && cd my-first-flow
 bun init -y
-bun add @open-harness/kernel
+bun add @open-harness/sdk
 ```
 
 ## Step 2: Create Your Flow
@@ -76,7 +76,7 @@ import {
   parseFlowYaml,
   DefaultNodeRegistry,
   claudeNode,
-} from "@open-harness/kernel";
+} from "@open-harness/sdk";
 import { readFileSync } from "fs";
 import { z } from "zod";
 
