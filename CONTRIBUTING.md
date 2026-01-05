@@ -165,7 +165,7 @@ bd show <issue-id>
 bd create
 
 # Start working on issue
-bd update <issue-id> --claim
+bd update <issue-id> --status in_progress
 
 # Close issue
 bd close <issue-id>
@@ -187,7 +187,7 @@ Agents should follow the Beads workflow and quality gates.
 ### Beads Workflow
 
 1. `bd ready` to find unblocked work.
-2. `bd update <issue-id> --claim` to claim the issue.
+2. `bd update <issue-id> --status in_progress` to mark the issue in progress.
 3. Implement in a dedicated worktree if needed.
 4. `bd close <issue-id>` when done, then `bd sync` before ending the session.
 
