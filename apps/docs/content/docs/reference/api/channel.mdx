@@ -1,15 +1,58 @@
 ---
-title: Channel API
-description: Channel adapter interface for external communication
+title: Transport API
+description: Runtime transports and WebSocket adapter
 ---
 
-Channels are bidirectional adapters that connect the kernel to external interfaces.
+# Transport API
 
-## Channel Contract
+Transports connect runtimes to external systems.
 
-Channels observe kernel events and can send commands back to the runtime.
+## Transport Interface
 
-## Learn More
+```typescript
+interface Transport {
+  start(): Promise<void>;
+  stop(): Promise<void>;
+}
+```
 
-- [Channel Spec](/docs/reference/kernel-spec/spec/channel) - Complete channel protocol specification
-- [Channels Guide](/docs/learn/channels) - Guide to using channels
+## WebSocketTransport
+
+The SDK includes a Bun-based WebSocket transport:
+
+```typescript
+import { WebSocketTransport } from "@open-harness/sdk";
+
+const transport = new WebSocketTransport(runtime, {
+  port: 8080,
+  path: "/ws",
+});
+
+await transport.start();
+```
+
+### WebSocketTransportOptions
+
+```typescript
+interface WebSocketTransportOptions {
+  port: number;
+  path?: string;
+}
+```
+
+### Client Protocol
+
+Clients send commands and receive events as JSON:
+
+```json
+{ "type": "command", "command": { "type": "send", "runId": "run-123", "message": "hi" } }
+```
+
+```json
+{ "type": "event", "event": { "type": "node:complete", "nodeId": "echo", "runId": "run-123", "output": { "text": "Hi" }, "timestamp": 1710000000000 } }
+```
+
+## See Also
+
+- [Events API](/docs/reference/api/events) — Event payloads
+- [Runtime API](/docs/reference/api/hub) — Runtime usage

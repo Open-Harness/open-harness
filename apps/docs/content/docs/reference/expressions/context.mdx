@@ -1,0 +1,97 @@
+---
+title: Context Variables
+description: Variables available in JSONata expressions
+---
+
+# Context Variables
+
+These variables are available in all JSONata expressions.
+
+## flow.input
+
+Input passed when starting the flow:
+
+```typescript
+const snapshot = await runtime.run({ name: "World", count: 5 });
+```
+
+```yaml
+prompt: "Hello, {{ flow.input.name }}!"
+times: "{{ flow.input.count }}"
+```
+
+## state
+
+Flow state snapshot:
+
+```yaml
+runs: "{{ state.runs }}"
+```
+
+## Node Outputs
+
+Completed node outputs are available by node id:
+
+```yaml
+nodes:
+  - id: fetch
+    type: http.get
+    input:
+      url: "https://api.example.com/data"
+
+  - id: process
+    type: echo
+    input:
+      text: "{{ fetch.body }}"
+```
+
+Nested access works as expected:
+
+```yaml
+{{ fetch.data.users[0].name }}
+{{ optional.value ? optional.value : 'default' }}
+```
+
+## $env
+
+Environment variables (read-only):
+
+```yaml
+input:
+  apiKey: "{{ $env.API_KEY }}"
+  endpoint: "{{ $env.SERVICE_URL }}"
+```
+
+## Iteration Context
+
+When using `forEach`, JSONata provides loop variables:
+
+- `$iteration`
+- `$first`
+- `$last`
+- `$maxIterations`
+
+```yaml
+when: "$iteration = 0"
+```
+
+## $
+
+Current item in JSONata mapping:
+
+```yaml
+items: "{{ flow.input.users.({ 'id': $.id, 'name': $.name }) }}"
+```
+
+## $now()
+
+Current timestamp:
+
+```yaml
+createdAt: "{{ $now() }}"
+```
+
+## See Also
+
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Expression syntax
+- [Functions](/docs/reference/expressions/functions) — Built-in functions

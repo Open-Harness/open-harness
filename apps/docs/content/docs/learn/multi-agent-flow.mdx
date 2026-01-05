@@ -1,0 +1,101 @@
+---
+title: Multi-Agent Flow
+description: Connect multiple agents in a coordinated workflow
+---
+
+# Multi-Agent Flow
+
+Build a workflow where multiple agents collaborate: a planner, coder, and reviewer.
+
+## What You'll Build
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│ Planner  │────▶│  Coder   │────▶│ Reviewer │
+└──────────┘     └──────────┘     └──────────┘
+                       │                │
+                       └────── loop ────┘
+```
+
+## The Flow
+
+```yaml
+flow:
+  name: code-with-review
+
+nodes:
+  - id: planner
+    type: claude.agent
+    input:
+      prompt: |
+        Plan the implementation for: {{ flow.input.task }}
+        Output a step-by-step plan.
+
+  - id: coder
+    type: claude.agent
+    input:
+      prompt: |
+        Implement this plan:
+        {{ planner.text }}
+
+        {{ $exists(reviewer) ? 'Address this feedback: ' & reviewer.feedback : '' }}
+
+  - id: reviewer
+    type: claude.agent
+    input:
+      prompt: |
+        Review this code:
+        {{ coder.text }}
+
+        Respond with JSON: { "passed": boolean, "feedback": string }
+
+edges:
+  - from: planner
+    to: coder
+  - from: coder
+    to: reviewer
+  - from: reviewer
+    to: coder
+    type: loop
+    maxIterations: 3
+    when: "reviewer.passed = false"
+```
+
+## Key Concepts
+
+### Data Flow with Bindings
+
+Each node can access outputs from upstream nodes:
+- `{{ planner.text }}` — Planner's output
+- `{{ coder.text }}` — Coder's output
+- `{{ reviewer.feedback }}` — Reviewer's feedback
+
+### Conditional Expressions
+
+Use JSONata for dynamic content:
+```yaml
+{{ $exists(reviewer) ? 'Fix: ' & reviewer.feedback : '' }}
+```
+
+### Loop Edges
+
+The `reviewer → coder` edge is a loop that:
+- Runs up to 3 times
+- Continues while `reviewer.passed = false`
+
+## Run It
+
+```typescript
+const runtime = createRuntime({ flow, registry });
+const snapshot = await runtime.run({
+  task: "Create a function to validate email addresses"
+});
+
+console.log("Final code:", snapshot.outputs.coder.text);
+console.log("Review passed:", snapshot.outputs.reviewer.passed);
+```
+
+## Next Steps
+
+- [Persistence](/docs/learn/persistence) — Save state for long-running flows
+- [Loop Edges](/docs/guides/flows/control-flow) — Advanced loop patterns

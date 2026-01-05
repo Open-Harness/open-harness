@@ -1,10 +1,11 @@
 {
-  "title": "Concepts",
-  "pages": [
-    "index",
-    "architecture",
-    "execution",
-    "hub",
-    "visual-editing"
-  ]
+	"title": "Concepts",
+	"pages": [
+		"architecture",
+		"event-system",
+		"expressions",
+		"why-jsonata",
+		"persistence",
+		"...design-decisions"
+	]
 }

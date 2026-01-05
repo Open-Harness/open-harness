@@ -1,0 +1,82 @@
+---
+title: Persistence Configuration
+description: Configure RunStore options for durable workflows
+---
+
+# Persistence Configuration
+
+Open Harness can persist runtime events and snapshots through a `RunStore`.
+
+## In-Memory Store (Development)
+
+Use `InMemoryRunStore` for quick iteration:
+
+```typescript
+import { InMemoryRunStore } from "@open-harness/sdk";
+
+const store = new InMemoryRunStore();
+```
+
+## SQLite Store (Production)
+
+Use `SqliteRunStore` for durable storage:
+
+```typescript
+import { SqliteRunStore } from "@open-harness/sdk";
+
+const store = new SqliteRunStore({ filename: "./data/runs.db" });
+```
+
+## Custom Store
+
+Implement the `RunStore` interface:
+
+```typescript
+import type { RunStore } from "@open-harness/sdk";
+import type { RuntimeEvent } from "@open-harness/sdk";
+import type { RunSnapshot } from "@open-harness/sdk";
+
+class PostgresRunStore implements RunStore {
+  appendEvent(runId: string, event: RuntimeEvent): void {
+    // Persist event (use sequence ids in your storage)
+  }
+
+  saveSnapshot(runId: string, snapshot: RunSnapshot): void {
+    // Persist snapshot
+  }
+
+  loadSnapshot(runId: string): RunSnapshot | null {
+    // Load last snapshot
+    return null;
+  }
+
+  loadEvents(runId: string, afterSeq: number = 0): RuntimeEvent[] {
+    // Load events after the sequence cursor
+    return [];
+  }
+}
+```
+
+## What Gets Persisted
+
+- **Events**: every runtime event (`node:start`, `node:complete`, etc.)
+- **Snapshots**: the latest run snapshot for replay or resume
+
+## Trade-offs
+
+| Store | Pros | Cons |
+|-------|------|------|
+| In-memory | Fast, zero setup | Lost on restart |
+| SQLite | Single file, easy ops | Single-process |
+| Custom DB | Scalable, shared | More ops work |
+
+## Migrating to Production
+
+1. Start with `InMemoryRunStore` locally.
+2. Switch to `SqliteRunStore` for staging.
+3. Move to a custom store if you need multi-process scaling.
+
+## Next Steps
+
+- [Production Deployment](/docs/guides/deployment/production) — Deployment guide
+- [Run Store API](/docs/reference/api/run-store) — Interface details

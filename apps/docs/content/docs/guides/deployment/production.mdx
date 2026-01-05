@@ -1,0 +1,108 @@
+---
+title: Production Deployment
+description: Checklist for deploying Open Harness to production
+---
+
+# Production Deployment
+
+A practical checklist for running Open Harness in production.
+
+## Deployment Targets
+
+- **Node.js server**: run flows behind an HTTP API.
+- **Bun service**: use Bun for faster startup and WebSocket transport support.
+- **Serverless**: supported for short-lived flows (avoid long-lived streaming).
+
+## Example: Standalone Runtime Service
+
+```typescript
+import express from "express";
+import {
+  createRuntime,
+  DefaultNodeRegistry,
+  parseFlowYaml,
+  SqliteRunStore,
+} from "@open-harness/sdk";
+import { readFileSync } from "node:fs";
+
+const app = express();
+app.use(express.json());
+
+const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
+const registry = new DefaultNodeRegistry();
+const store = new SqliteRunStore({ filename: "./data/runs.db" });
+
+app.post("/run", async (req, res) => {
+  const runtime = createRuntime({ flow, registry, store });
+  const snapshot = await runtime.run(req.body ?? {});
+  res.json({ outputs: snapshot.outputs, status: snapshot.status });
+});
+
+app.listen(3000, () => {
+  console.log("Runtime service on :3000");
+});
+```
+
+## Error Handling
+
+Subscribe to runtime events and log failures:
+
+```typescript
+runtime.onEvent((event) => {
+  if (event.type === "node:error") {
+    logger.error("Node failed", {
+      nodeId: event.nodeId,
+      error: event.error,
+    });
+  }
+});
+```
+
+## Timeouts and Retries
+
+Configure node execution policy:
+
+```yaml
+nodes:
+  - id: agent
+    type: claude.agent
+    policy:
+      timeoutMs: 120000
+      retry:
+        maxAttempts: 3
+        backoffMs: 500
+```
+
+## Observability
+
+- Emit metrics per event type using `runtime.onEvent`.
+- Persist snapshots with a `RunStore` for replay and auditing.
+- Capture logs with run id and node id for correlation.
+
+## Security Best Practices
+
+- **Authentication**: protect any HTTP endpoints that start flows.
+- **Rate limiting**: throttle runs per user or API key.
+- **Input validation**: validate user input before `runtime.run`.
+- **Secrets management**: store API keys in environment variables.
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | Claude API key (if using `claude.agent`) | Optional |
+| `RUN_DB_PATH` | SQLite database path | Optional |
+| `LOG_LEVEL` | Logging verbosity | Optional |
+
+## Pre-Production Checklist
+
+- [ ] Validate flows with test inputs
+- [ ] Add timeouts/retries for LLM calls
+- [ ] Enable persistence for auditability
+- [ ] Add structured logging and metrics
+- [ ] Lock down network access and secrets
+
+## Next Steps
+
+- [Persistence Configuration](/docs/guides/deployment/persistence) — Store options
+- [Run Store API](/docs/reference/api/run-store) — Persistence API

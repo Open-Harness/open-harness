@@ -1,0 +1,77 @@
+{
+  "name": "@open-harness/sdk",
+  "version": "0.1.0-alpha.1",
+  "type": "module",
+  "private": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "description": "Event-driven workflow orchestration for production multi-agent AI systems",
+  "keywords": [
+    "ai agents",
+    "workflow",
+    "orchestration",
+    "multi-agent",
+    "claude",
+    "anthropic",
+    "jsonata",
+    "event-driven",
+    "typescript",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/open-harness.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/open-harness/issues"
+  },
+  "homepage": "https://docs.open-harness.dev",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "scripts": {
+    "build": "bun run build:types && bun run build:bundle",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:bundle": "bun build src/index.ts --outdir dist --format esm --target=bun --sourcemap=external",
+    "lint": "biome check . --write",
+    "lint:fix": "biome check . --write",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test tests/unit tests/replay",
+    "test:unit": "bun test tests/unit",
+    "test:e2e": "bun test tests/e2e",
+    "test:replay": "bun test tests/replay",
+    "test:live": "bun scripts/live/*.ts",
+    "record:fixtures": "bun scripts/record-fixtures.ts",
+    "test:watch": "bun test --watch"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.3.10",
+    "@types/bun": "latest",
+    "@types/node": "^22",
+    "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+    "jsonata": "^2.1.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.4"
+  }
+}

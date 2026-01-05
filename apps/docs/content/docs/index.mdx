@@ -1,21 +1,54 @@
 ---
-title: Open Harness Documentation
-description: Complete documentation for Open Harness
+title: Open Harness
+description: Event-driven workflow orchestration for multi-agent AI systems
 ---
 
-Welcome to the Open Harness documentation. Choose your path based on what you want to do.
+# Open Harness
 
-## For Users
+Open Harness is an event-driven workflow execution system for building production multi-agent AI systems.
+
+## Why Open Harness?
+
+- **Declarative Workflows**: Define agent pipelines in YAML, not imperative code
+- **Full Observability**: Every event flows through a central Hub you can subscribe to
+- **JSONata Expressions**: Powerful data bindings with a proven expression language
+- **Replay Testing**: Record and replay agent interactions for deterministic tests
+
+## Quick Example
+
+```yaml
+flow:
+  name: research-and-summarize
+
+nodes:
+  - id: researcher
+    type: claude.agent
+    input:
+      prompt: "Research: {{ flow.input.topic }}"
+
+  - id: summarizer
+    type: claude.agent
+    input:
+      prompt: "Summarize this research: {{ researcher.text }}"
+
+edges:
+  - from: researcher
+    to: summarizer
+```
+
+## Get Started
 
 <Cards>
-  <Card title="Learn" href="/docs/learn" description="Get started with flows, nodes, and channels" />
-  <Card title="Guides" href="/docs/guides" description="Step-by-step guides for common tasks" />
-  <Card title="Concepts" href="/docs/concepts" description="Architecture and design concepts" />
-</Cards>
-
-## For Contributors
-
-<Cards>
-  <Card title="API Reference" href="/docs/reference/api" description="TypeScript API types and interfaces" />
-  <Card title="Kernel Spec" href="/docs/reference/kernel-spec" description="Canonical protocol specification" />
+  <Card title="Quickstart" href="/docs/learn/quickstart">
+    Run your first flow in 5 minutes
+  </Card>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Understand Hub, Flow, and Channels
+  </Card>
+  <Card title="JSONata Bindings" href="/docs/guides/expressions/bindings">
+    Master the expression language
+  </Card>
+  <Card title="API Reference" href="/docs/reference/api/hub">
+    Explore the full API
+  </Card>
 </Cards>

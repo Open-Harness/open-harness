@@ -1,48 +1,82 @@
 ---
-title: Events API
-description: Event types and interfaces for Open Harness
+title: Events
+description: Runtime event types and structure
 ---
 
-The events API defines all event types emitted by the Open Harness kernel and flow runtime.
+# Events
 
-## Event Envelope
+Runtime execution is observable through typed events.
 
-All events are wrapped in an `EnrichedEvent` envelope that includes metadata and context:
+## RuntimeEvent Shape
 
-<TypeTable type={{
-  id: { type: "string", description: "Unique event identifier" },
-  timestamp: { type: "Date", description: "Event timestamp" },
-  context: { type: "EventContext", description: "Execution context" },
-  event: { type: "BaseEvent", description: "The event payload" }
-}} />
+```typescript
+type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
+```
 
-## Event Context
+## Flow Events
 
-The `EventContext` provides hierarchical context about where the event originated:
+```typescript
+{ type: "flow:start", flowName: "greeting" }
+{ type: "flow:complete", flowName: "greeting", status: "complete" }
+{ type: "flow:paused" }
+{ type: "flow:resumed" }
+{ type: "flow:aborted" }
+```
 
-<TypeTable type={{
-  sessionId: { type: "string", description: "Session identifier" },
-  phase: { type: "{ name: string; number?: number }", description: "Optional phase context" },
-  task: { type: "{ id: string }", description: "Optional task context" },
-  agent: { type: "{ name: string; type?: string }", description: "Optional agent context" }
-}} />
+## Node Events
 
-## Base Event Types
+```typescript
+{ type: "node:start", nodeId: "echo", runId: "run-123" }
+{ type: "node:complete", nodeId: "echo", runId: "run-123", output: { text: "Hi" } }
+{ type: "node:error", nodeId: "echo", runId: "run-123", error: "timeout" }
+{ type: "node:skipped", nodeId: "audit", reason: "when" }
+```
 
-Events are categorized into several groups:
+## Edge Events
 
-- **Workflow Events**: `harness:start`, `phase:start`, `task:complete`, etc.
-- **Agent Events**: `agent:start`, `agent:text`, `agent:tool:complete`, etc.
-- **Session Events**: `session:message`, `session:prompt`, `session:reply`, etc.
-- **Narrative Events**: `narrative` - Text output with importance levels
-- **Extension Events**: Custom event types
+```typescript
+{ type: "edge:fire", edgeId: "a->b", from: "a", to: "b" }
+{ type: "loop:iterate", edgeId: "loop-edge", iteration: 2 }
+```
 
-## TypeScript Types
+## State Events
 
-For complete TypeScript type definitions, see the source file: [`packages/kernel/src/protocol/events.ts`](https://github.com/your-org/openharness/blob/main/packages/kernel/src/protocol/events.ts)
+```typescript
+{ type: "state:patch", patch: { op: "set", path: "runs", value: 2 } }
+```
 
-## Learn More
+## Command Events
 
-- [Events Spec](/docs/reference/kernel-spec/spec/events) - Complete event protocol specification
-- [Event Model](/docs/concepts/event-model) - How events flow through the system
-- [Hub API](/docs/reference/api/hub) - Event bus interface
+```typescript
+{ type: "command:received", command: { type: "send", runId: "run-123", message: "hi" } }
+```
+
+## Agent Events
+
+```typescript
+{ type: "agent:start", nodeId: "claude", runId: "run-123", sessionId: "session-1", prompt: "..." }
+{ type: "agent:thinking", nodeId: "claude", runId: "run-123", content: "..." }
+{ type: "agent:thinking:delta", nodeId: "claude", runId: "run-123", content: "..." }
+{ type: "agent:text", nodeId: "claude", runId: "run-123", content: "Hello" }
+{ type: "agent:text:delta", nodeId: "claude", runId: "run-123", content: "Hel" }
+{ type: "agent:tool", nodeId: "claude", runId: "run-123", toolName: "search", toolInput: {}, toolOutput: {} }
+{ type: "agent:error", nodeId: "claude", runId: "run-123", errorType: "api", message: "Rate limited" }
+{ type: "agent:complete", nodeId: "claude", runId: "run-123", result: "Done", usage: { inputTokens: 10, outputTokens: 20 }, durationMs: 1200, numTurns: 1 }
+{ type: "agent:paused", nodeId: "claude", runId: "run-123", sessionId: "session-1" }
+{ type: "agent:aborted", nodeId: "claude", runId: "run-123", reason: "user_cancelled" }
+```
+
+## Subscribing to Events
+
+```typescript
+runtime.onEvent((event) => {
+  if (event.type === "node:error") {
+    console.error(event.error);
+  }
+});
+```
+
+## See Also
+
+- [RuntimeEvent Type](/docs/reference/types/runtime-event) — Full type definition
+- [Runtime API](/docs/reference/api/hub) — Event emission

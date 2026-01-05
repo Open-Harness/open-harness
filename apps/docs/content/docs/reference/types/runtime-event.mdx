@@ -1,0 +1,78 @@
+---
+title: RuntimeEvent
+description: Runtime event type reference
+---
+
+# RuntimeEvent
+
+All runtime communication uses typed events.
+
+## Base Type
+
+```typescript
+type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
+```
+
+## Common Fields
+
+- `type`: event identifier
+- `timestamp`: milliseconds since epoch
+- `runId` and `nodeId`: included on node/agent events
+
+## Event Categories
+
+### Flow Events
+
+```typescript
+{ type: "flow:start", flowName: string }
+{ type: "flow:complete", flowName: string, status: "complete" | "failed" }
+{ type: "flow:paused" }
+{ type: "flow:resumed" }
+{ type: "flow:aborted" }
+```
+
+### Node Events
+
+```typescript
+{ type: "node:start", nodeId: string, runId: string }
+{ type: "node:complete", nodeId: string, runId: string, output: unknown }
+{ type: "node:error", nodeId: string, runId: string, error: string }
+{ type: "node:skipped", nodeId: string, reason: "edge" | "when" }
+```
+
+### Edge Events
+
+```typescript
+{ type: "edge:fire", edgeId?: string, from: string, to: string }
+{ type: "loop:iterate", edgeId?: string, iteration: number }
+```
+
+### Agent Events
+
+```typescript
+{ type: "agent:start", nodeId: string, runId: string, sessionId: string, prompt: unknown }
+{ type: "agent:text", nodeId: string, runId: string, content: string }
+{ type: "agent:text:delta", nodeId: string, runId: string, content: string }
+{ type: "agent:tool", nodeId: string, runId: string, toolName: string, toolInput: unknown, toolOutput: unknown }
+{ type: "agent:complete", nodeId: string, runId: string, result: string }
+```
+
+### State and Command Events
+
+```typescript
+{ type: "state:patch", patch: StatePatch }
+{ type: "command:received", command: RuntimeCommand }
+```
+
+## Subscribing
+
+```typescript
+runtime.onEvent((event) => {
+  console.log(event.type, event.timestamp);
+});
+```
+
+## See Also
+
+- [Events API](/docs/reference/api/events) — Event details
+- [Runtime API](/docs/reference/api/hub) — Event emission

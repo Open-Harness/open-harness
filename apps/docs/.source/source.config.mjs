@@ -1,11 +1,6 @@
 // source.config.ts
-import {
-  defineConfig,
-  defineDocs,
-  frontmatterSchema,
-  metaSchema
-} from "fumadocs-mdx/config";
 import { remarkMdxMermaid } from "fumadocs-core/mdx-plugins";
+import { defineConfig, defineDocs, frontmatterSchema, metaSchema } from "fumadocs-mdx/config";
 var docs = defineDocs({
   dir: "content/docs",
   docs: {

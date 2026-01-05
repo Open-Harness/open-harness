@@ -1,0 +1,76 @@
+---
+title: Claude Agent
+description: Configure the built-in Claude agent
+---
+
+# Claude Agent
+
+Configure and use the built-in Claude agent powered by the Anthropic SDK.
+
+## Basic Usage
+
+```yaml
+nodes:
+  - id: assistant
+    type: claude.agent
+    input:
+      prompt: "{{ flow.input.question }}"
+```
+
+## Configuration Options
+
+```yaml
+nodes:
+  - id: assistant
+    type: claude.agent
+    input:
+      prompt: "Answer this question"
+      model: "claude-sonnet-4-20250514"
+      maxTokens: 4096
+      temperature: 0.7
+      system: "You are a helpful assistant."
+```
+
+## Available Models
+
+| Model | Use Case |
+|-------|----------|
+| `claude-sonnet-4-20250514` | Balanced performance |
+| `claude-opus-4-20250514` | Complex reasoning |
+| `claude-haiku-3-20250307` | Fast, simple tasks |
+
+## Streaming Events
+
+The Claude agent emits these events:
+
+```typescript
+// Text chunks
+{ type: "agent:text", content: "Hello..." }
+
+// Tool use
+{ type: "agent:tool_use", name: "search", input: {...} }
+
+// Completion
+{ type: "agent:complete", output: { text: "..." } }
+```
+
+## Subscribe to Events
+
+```typescript
+hub.subscribe("agent:text", (event) => {
+  process.stdout.write(event.event.content);
+});
+```
+
+## Error Handling
+
+```typescript
+hub.subscribe("agent:error", (event) => {
+  console.error("Agent failed:", event.event.error);
+});
+```
+
+## Next Steps
+
+- [Custom Agents](/docs/guides/agents/custom-agents) — Build your own agents
+- [Events API](/docs/reference/api/events) — Full event reference

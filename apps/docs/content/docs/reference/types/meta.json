@@ -1,4 +1,9 @@
 {
-  "title": "Types",
-  "pages": ["agent-definition", "base-event", "channel-definition", "enriched-event", "event-context", "flow-yaml", "index", "node-spec", "node-type-definition"]
+	"title": "Types",
+	"pages": [
+		"flow-definition",
+		"node-definition",
+		"edge-definition",
+		"runtime-event"
+	]
 }

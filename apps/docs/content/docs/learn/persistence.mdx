@@ -1,0 +1,83 @@
+---
+title: Persistence
+description: Add SQLite persistence for state and replay
+---
+
+# Persistence
+
+Add persistent storage so flows can be paused, resumed, and replayed.
+
+## Why Persistence?
+
+- **Pause/Resume**: Stop a flow and continue later
+- **Replay Testing**: Record events and replay deterministically
+- **Audit Trail**: Full history of all events
+
+## Configure SQLite Store
+
+```typescript
+import {
+  createRuntime,
+  SqliteRunStore,
+  parseFlowYaml
+} from "@open-harness/sdk";
+
+// Create persistent store
+const store = new SqliteRunStore("./runs.db");
+
+// Create runtime with store
+const runtime = createRuntime({
+  flow,
+  registry,
+  store
+});
+
+// Execute flow - events are persisted
+const snapshot = await runtime.run(input);
+
+// Later: retrieve the run
+const runData = await store.getRun(snapshot.runId);
+```
+
+## Run Store Interface
+
+```typescript
+interface RunStore {
+  // Save an event
+  saveEvent(runId: string, event: RuntimeEvent): Promise<void>;
+
+  // Get all events for a run
+  getEvents(runId: string): Promise<RuntimeEvent[]>;
+
+  // Get run metadata
+  getRun(runId: string): Promise<RunMetadata | null>;
+}
+```
+
+## Built-in Stores
+
+| Store | Use Case |
+|-------|----------|
+| `MemoryRunStore` | Testing, ephemeral sessions |
+| `SqliteRunStore` | Production, persistence |
+
+## Replay for Testing
+
+```typescript
+import { replayRun } from "@open-harness/sdk";
+
+// Record a run
+const recording = await recordRun(flow, registry, input);
+
+// Save to fixture
+await writeFile("fixture.json", JSON.stringify(recording));
+
+// Replay in tests (no network calls)
+const result = await replayRun(recording);
+expect(result.outputs.agent.text).toContain("Hello");
+```
+
+## Next Steps
+
+- [Production Deployment](/docs/guides/deployment/production) — Deploy with persistence
+- [Replay Testing](/docs/reference/api/run-store) — Full RunStore API
