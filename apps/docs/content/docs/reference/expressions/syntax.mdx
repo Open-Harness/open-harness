@@ -24,7 +24,10 @@ Access nested data with dot notation:
 {{ flow.input.name }}
 
 # Nested path
-{{ nodes.api.output.data.user.email }}
+{{ profile.contact.email }}
+
+# Node output by id
+{{ fetch.data.user.email }}
 
 # Array index
 {{ flow.input.items[0] }}
@@ -120,7 +123,7 @@ Access nested data with dot notation:
   {
     "name": flow.input.name,
     "timestamp": $now(),
-    "items": nodes.fetch.output.data
+    "items": fetch.data
   }
 }}
 ```

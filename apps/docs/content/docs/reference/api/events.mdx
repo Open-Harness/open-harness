@@ -5,149 +5,78 @@ description: Runtime event types and structure
 
 # Events
 
-All communication in Open Harness flows through typed events.
+Runtime execution is observable through typed events.
 
-## Event Structure
+## RuntimeEvent Shape
 
 ```typescript
-interface RuntimeEvent {
-  type: string;
-  timestamp?: Date;
-  runId?: string;
-  nodeId?: string;
-  [key: string]: unknown;
-}
+type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
 ```
 
 ## Flow Events
 
-### flow:start
-
 ```typescript
-{
-  type: "flow:start",
-  flowId: "greeting-flow",
-  runId: "run-123",
-  input: { name: "World" }
-}
-```
-
-### flow:complete
-
-```typescript
-{
-  type: "flow:complete",
-  flowId: "greeting-flow",
-  runId: "run-123",
-  output: { text: "Hello, World!" }
-}
-```
-
-### flow:error
-
-```typescript
-{
-  type: "flow:error",
-  flowId: "greeting-flow",
-  runId: "run-123",
-  error: { message: "Something went wrong" }
-}
+{ type: "flow:start", flowName: "greeting" }
+{ type: "flow:complete", flowName: "greeting", status: "complete" }
+{ type: "flow:paused" }
+{ type: "flow:resumed" }
+{ type: "flow:aborted" }
 ```
 
 ## Node Events
 
-### node:start
-
 ```typescript
-{
-  type: "node:start",
-  nodeId: "greet",
-  runId: "run-123"
-}
+{ type: "node:start", nodeId: "echo", runId: "run-123" }
+{ type: "node:complete", nodeId: "echo", runId: "run-123", output: { text: "Hi" } }
+{ type: "node:error", nodeId: "echo", runId: "run-123", error: "timeout" }
+{ type: "node:skipped", nodeId: "audit", reason: "when" }
 ```
 
-### node:complete
+## Edge Events
 
 ```typescript
-{
-  type: "node:complete",
-  nodeId: "greet",
-  runId: "run-123",
-  output: { text: "Hello!" }
-}
+{ type: "edge:fire", edgeId: "a->b", from: "a", to: "b" }
+{ type: "loop:iterate", edgeId: "loop-edge", iteration: 2 }
+```
+
+## State Events
+
+```typescript
+{ type: "state:patch", patch: { op: "set", path: "runs", value: 2 } }
+```
+
+## Command Events
+
+```typescript
+{ type: "command:received", command: { type: "send", runId: "run-123", message: "hi" } }
 ```
 
 ## Agent Events
 
-### agent:start
-
 ```typescript
-{
-  type: "agent:start",
-  agentName: "claude",
-  runId: "run-123"
-}
-```
-
-### agent:text
-
-Streaming text chunks:
-
-```typescript
-{
-  type: "agent:text",
-  content: "Hello",
-  runId: "run-123"
-}
-```
-
-### agent:tool_use
-
-Tool invocation:
-
-```typescript
-{
-  type: "agent:tool_use",
-  name: "search",
-  input: { query: "..." },
-  runId: "run-123"
-}
-```
-
-### agent:complete
-
-```typescript
-{
-  type: "agent:complete",
-  output: { text: "Final response" },
-  runId: "run-123"
-}
-```
-
-### agent:error
-
-```typescript
-{
-  type: "agent:error",
-  error: { message: "Rate limited" },
-  runId: "run-123"
-}
+{ type: "agent:start", nodeId: "claude", runId: "run-123", sessionId: "session-1", prompt: "..." }
+{ type: "agent:thinking", nodeId: "claude", runId: "run-123", content: "..." }
+{ type: "agent:thinking:delta", nodeId: "claude", runId: "run-123", content: "..." }
+{ type: "agent:text", nodeId: "claude", runId: "run-123", content: "Hello" }
+{ type: "agent:text:delta", nodeId: "claude", runId: "run-123", content: "Hel" }
+{ type: "agent:tool", nodeId: "claude", runId: "run-123", toolName: "search", toolInput: {}, toolOutput: {} }
+{ type: "agent:error", nodeId: "claude", runId: "run-123", errorType: "api", message: "Rate limited" }
+{ type: "agent:complete", nodeId: "claude", runId: "run-123", result: "Done", usage: { inputTokens: 10, outputTokens: 20 }, durationMs: 1200, numTurns: 1 }
+{ type: "agent:paused", nodeId: "claude", runId: "run-123", sessionId: "session-1" }
+{ type: "agent:aborted", nodeId: "claude", runId: "run-123", reason: "user_cancelled" }
 ```
 
 ## Subscribing to Events
 
 ```typescript
-// Specific type
-hub.subscribe("agent:text", handler);
-
-// Wildcard
-hub.subscribe("agent:*", handler);
-
-// All events
-hub.subscribe("*", handler);
+runtime.onEvent((event) => {
+  if (event.type === "node:error") {
+    console.error(event.error);
+  }
+});
 ```
 
 ## See Also
 
 - [RuntimeEvent Type](/docs/reference/types/runtime-event) — Full type definition
-- [Hub API](/docs/reference/api/hub) — Event emission
+- [Runtime API](/docs/reference/api/hub) — Event emission

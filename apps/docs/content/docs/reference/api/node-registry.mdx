@@ -5,7 +5,7 @@ description: Register and manage node types
 
 # Node Registry
 
-The NodeRegistry manages available node types for flows.
+The `NodeRegistry` stores node type definitions used by the runtime.
 
 ## Creating a Registry
 
@@ -17,82 +17,56 @@ const registry = new DefaultNodeRegistry();
 
 ## Methods
 
-### `register(node)`
-
-Register a node type:
+### `register(def)`
 
 ```typescript
-registry.register(myAgent);
-registry.register(httpGetNode);
+registry.register(customNode);
 ```
 
-### `get(name)`
-
-Get a registered node:
+### `get(type)`
 
 ```typescript
-const node = registry.get("claude.agent");
+const def = registry.get("echo");
 ```
 
-### `has(name)`
-
-Check if a node exists:
+### `has(type)`
 
 ```typescript
-if (registry.has("my-agent")) {
+if (registry.has("claude.agent")) {
   // ...
 }
 ```
 
-### `list()`
-
-List all registered nodes:
-
-```typescript
-const nodes = registry.list();
-// ["claude.agent", "http.get", "my-agent"]
-```
-
 ## Built-in Nodes
 
-The kernel includes these nodes:
+The SDK ships with these node definitions:
 
-| Name | Description |
-|------|-------------|
-| `claude.agent` | Claude AI agent |
-| `http.get` | HTTP GET request |
-| `http.post` | HTTP POST request |
-| `map` | Parallel array processing |
-| `delay` | Wait for duration |
+| Type | Export | Description |
+|------|--------|-------------|
+| `claude.agent` | `claudeNode` | Claude agent node |
+| `constant` | `constantNode` | Emits a constant value |
+| `echo` | `echoNode` | Echoes text input |
 
 ## Registering Custom Nodes
 
 ```typescript
-import { defineAgent } from "@open-harness/sdk";
+import type { NodeTypeDefinition } from "@open-harness/sdk";
 
-const customAgent = defineAgent({
-  name: "custom.processor",
-  async execute(input, ctx) {
-    return { result: process(input) };
-  },
-});
+const customNode: NodeTypeDefinition<{ input: string }, { output: string }> = {
+  type: "custom.processor",
+  run: async (_ctx, input) => ({ output: input.input }),
+};
 
-registry.register(customAgent);
+registry.register(customNode);
 ```
 
-## Using with Hub
+## Using with Runtime
 
 ```typescript
-const hub = createHub("session", {
-  registry,
-  store,
-});
-
-// Flows can now use registered nodes
-await hub.startFlow("my-flow", input);
+const runtime = createRuntime({ flow, registry });
 ```
 
 ## See Also
 
-- [Agent API](/docs/reference/api/agent) — Agent definition
-- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Building agents
+- [Node Types](/docs/reference/api/agent) — Node definition details
+- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Building nodes

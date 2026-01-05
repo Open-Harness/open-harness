@@ -1,103 +1,101 @@
 ---
-title: Hub
-description: Central event bus and coordination API
+title: Runtime
+description: Execute flows and subscribe to runtime events
 ---
 
-# Hub
+# Runtime
 
-The Hub is the central nervous system of your flow runtime.
+The Runtime executes a single flow definition and emits events as it runs.
 
-## Creating a Hub
+## Creating a Runtime
 
 ```typescript
-import { createHub } from "@open-harness/sdk";
+import {
+  createRuntime,
+  DefaultNodeRegistry,
+  parseFlowYaml,
+  constantNode,
+  echoNode,
+} from "@open-harness/sdk";
 
-const hub = createHub("session-123", {
-  store: sqliteStore,
-  registry: nodeRegistry,
+const flow = parseFlowYaml(`
+name: "hello"
+nodes:
+  - id: a
+    type: constant
+    input:
+      value: "Hello"
+  - id: b
+    type: echo
+    input:
+      text: "{{ a.value }}"
+edges:
+  - from: a
+    to: b
+`);
+
+const registry = new DefaultNodeRegistry();
+registry.register(constantNode);
+registry.register(echoNode);
+
+const runtime = createRuntime({ flow, registry });
+const snapshot = await runtime.run();
+
+console.log(snapshot.outputs);
+```
+
+## Runtime API
+
+### `run(input?)`
+
+Execute the flow to completion:
+
+```typescript
+const snapshot = await runtime.run({ name: "World" });
+```
+
+### `dispatch(command)`
+
+Send a command into a running flow:
+
+```typescript
+runtime.dispatch({ type: "send", runId: "run-123", message: "continue" });
+runtime.dispatch({ type: "abort", reason: "user_cancelled" });
+```
+
+### `onEvent(listener)`
+
+Subscribe to runtime events:
+
+```typescript
+runtime.onEvent((event) => {
+  if (event.type === "node:error") {
+    console.error(event.error);
+  }
 });
 ```
 
-## Methods
+### `getSnapshot()`
 
-### `start()`
-
-Start the hub and all registered channels.
+Inspect current runtime state:
 
 ```typescript
-await hub.start();
+const snapshot = runtime.getSnapshot();
 ```
 
-### `stop()`
-
-Gracefully stop the hub.
+## Runtime Options
 
 ```typescript
-await hub.stop();
-```
-
-### `emit(event)`
-
-Emit an event to all subscribers.
-
-```typescript
-hub.emit({
-  type: "custom:event",
-  data: { message: "Hello" },
+const runtime = createRuntime({
+  flow,
+  registry,
+  store, // Optional RunStore for persistence
+  resume: { runId: "run-123" }, // Optional resume
 });
 ```
-
-### `subscribe(type, handler)`
-
-Subscribe to events by type. Returns unsubscribe function.
-
-```typescript
-const unsubscribe = hub.subscribe("agent:text", (event) => {
-  console.log(event.event.content);
-});
-
-// Later
-unsubscribe();
-```
-
-### `registerChannel(channel)`
-
-Register a channel for bidirectional communication.
-
-```typescript
-hub.registerChannel(wsChannel);
-```
-
-### `startFlow(flowId, input)`
-
-Start a flow execution.
-
-```typescript
-const runId = await hub.startFlow("my-flow", {
-  name: "World",
-});
-```
-
-### `sendToRun(runId, message)`
-
-Send a message to a running flow.
-
-```typescript
-hub.sendToRun(runId, {
-  type: "user_message",
-  content: "Continue with that",
-});
-```
-
-## Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `sessionId` | `string` | Unique session identifier |
-| `store` | `RunStore` | Persistence layer |
-| `registry` | `NodeRegistry` | Registered node types |
 
 ## See Also
 
+- [Runtime Execution](/docs/reference/api/flow-runtime) — Snapshots and commands
 - [Events API](/docs/reference/api/events) — Event types
-- [Channel API](/docs/reference/api/channel) — Channel interface
+- [Node Registry](/docs/reference/api/node-registry) — Register node types

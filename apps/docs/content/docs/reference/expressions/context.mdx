@@ -7,38 +7,30 @@ description: Variables available in JSONata expressions
 
 These variables are available in all JSONata expressions.
 
-## flow
-
-The current flow context.
-
-### flow.input
+## flow.input
 
 Input passed when starting the flow:
 
-```yaml
-# Starting the flow
-await hub.startFlow("my-flow", { name: "World", count: 5 });
+```typescript
+const snapshot = await runtime.run({ name: "World", count: 5 });
+```
 
-# In expressions
+```yaml
 prompt: "Hello, {{ flow.input.name }}!"
 times: "{{ flow.input.count }}"
 ```
 
-### flow.id
+## state
 
-The flow definition ID:
+Flow state snapshot:
 
 ```yaml
-log: "Running flow: {{ flow.id }}"
+runs: "{{ state.runs }}"
 ```
 
-## nodes
+## Node Outputs
 
-Access outputs from completed nodes.
-
-### nodes.\<id\>.output
-
-Output from a specific node:
+Completed node outputs are available by node id:
 
 ```yaml
 nodes:
@@ -48,19 +40,16 @@ nodes:
       url: "https://api.example.com/data"
 
   - id: process
-    type: claude.agent
+    type: echo
     input:
-      data: "{{ nodes.fetch.output.body }}"
+      text: "{{ fetch.body }}"
 ```
 
-### Nested Output Access
+Nested access works as expected:
 
 ```yaml
-# Access nested fields
-{{ nodes.api.output.data.users[0].name }}
-
-# Check if node completed
-{{ nodes.optional.output ? nodes.optional.output.value : 'default' }}
+{{ fetch.data.users[0].name }}
+{{ optional.value ? optional.value : 'default' }}
 ```
 
 ## $env
@@ -73,16 +62,25 @@ input:
   endpoint: "{{ $env.SERVICE_URL }}"
 ```
 
-## $
+## Iteration Context
 
-Current context in iterations:
+When using `forEach`, JSONata provides loop variables:
+
+- `$iteration`
+- `$first`
+- `$last`
+- `$maxIterations`
 
 ```yaml
-# In map operations
-items: "{{ flow.input.users.({ 'id': $.id, 'name': $.name }) }}"
+when: "$iteration = 0"
+```
 
-# Current item
-transform: "{{ $.value * 2 }}"
+## $
+
+Current item in JSONata mapping:
+
+```yaml
+items: "{{ flow.input.users.({ 'id': $.id, 'name': $.name }) }}"
 ```
 
 ## $now()

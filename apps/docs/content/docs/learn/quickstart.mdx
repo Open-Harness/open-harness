@@ -1,124 +1,84 @@
 ---
 title: Quickstart
-description: Run your first Open Harness flow in 5 minutes
+description: Run your first Open Harness flow in under 5 minutes
 ---
 
 # Quickstart
 
-Build your first multi-agent workflow. In five minutes, you'll see how Open Harness orchestrates agents through flows.
+Build and run a "Hello World" flow in under five minutes.
 
 ## What You'll Build
 
-A flow with two nodes connected by an edge:
+A single-agent flow that takes a name and returns a greeting:
 
 ```
-┌──────────────┐        ┌──────────────┐
-│   template   │───────▶│    agent     │
-│   (format)   │  edge  │   (Claude)   │
-└──────────────┘        └──────────────┘
+┌────────────────┐
+│  hello.agent   │
+│  (custom node) │
+└────────────────┘
 ```
 
-## Step 1: Create Project
+## Prerequisites
+
+- Bun 1.0+
+- A terminal with access to your project directory
+
+## Step 1: Create a Project
 
 ```bash
-mkdir my-first-flow && cd my-first-flow
+mkdir my-first-flow
+cd my-first-flow
 bun init -y
 bun add @open-harness/sdk
 ```
 
-## Step 2: Create Your Flow
+## Step 2: Define the Flow
 
 Create `flow.yaml`:
 
 ```yaml
-flow:
-  name: greeting-flow
-  version: "1.0"
-  input:
-    name:
-      type: string
-    style:
-      type: string
-      default: "friendly"
-
+name: hello-world
 nodes:
-  - id: template
-    type: template
+  - id: hello
+    type: hello.agent
     input:
-      template: |
-        Write a {{ flow.input.style }} greeting for {{ flow.input.name }}.
-        Keep it brief (1-2 sentences).
-
-  - id: greet
-    type: claude.agent
-    input:
-      prompt: "{{ template.output }}"
-
-edges:
-  - from: template
-    to: greet
+      name: "{{ flow.input.name }}"
+edges: []
 ```
 
-This flow:
-- Declares two inputs: `name` (required) and `style` (defaults to "friendly")
-- Has a **template node** that constructs the prompt
-- Has an **agent node** that calls Claude
-- Uses an **edge** to ensure template runs before agent
-- Uses `{{ template.output }}` to pass data between nodes
-
-## Step 3: Run It
+## Step 3: Create the Runtime
 
 Create `run.ts`:
 
 ```typescript
 import {
   createRuntime,
-  parseFlowYaml,
   DefaultNodeRegistry,
-  claudeNode,
+  parseFlowYaml,
+  type NodeTypeDefinition,
 } from "@open-harness/sdk";
-import { readFileSync } from "fs";
-import { z } from "zod";
+import { readFileSync } from "node:fs";
 
-// Load and parse the flow
-const yaml = readFileSync("flow.yaml", "utf-8");
-const flow = parseFlowYaml(yaml);
+const helloAgent: NodeTypeDefinition<{ name: string }, { message: string }> = {
+  type: "hello.agent",
+  run: async (_ctx, input) => ({ message: `Hello, ${input.name}!` }),
+};
 
-// Create registry with node types
+const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
+
 const registry = new DefaultNodeRegistry();
+registry.register(helloAgent);
 
-// Register built-in Claude node
-registry.register(claudeNode);
+const runtime = createRuntime({ flow, registry });
 
-// Register custom template node
-registry.register({
-  type: "template",
-  inputSchema: z.object({ template: z.string() }),
-  outputSchema: z.object({ output: z.string() }),
-  run: async (_ctx, input) => ({ output: input.template }),
-});
-
-// Create runtime
-const runtime = createRuntime({
-  flow,
-  registry,
-});
-
-// Subscribe to agent text events
 runtime.onEvent((event) => {
-  if (event.type === "agent:text:delta") {
-    process.stdout.write(event.delta);
+  if (event.type === "node:complete" && event.nodeId === "hello") {
+    console.log("Agent output:", event.output);
   }
 });
 
-// Execute the flow
-const snapshot = await runtime.run({
-  name: "World",
-  style: "enthusiastic",
-});
-
-console.log("\n\nFlow complete!");
-console.log("Output:", snapshot.outputs);
+const snapshot = await runtime.run({ name: "World" });
+console.log("Final outputs:", snapshot.outputs);
 ```
 
 Run it:
@@ -127,16 +87,22 @@ Run it:
 bun run run.ts
 ```
 
+You should see output similar to:
+
+```
+Agent output: { message: "Hello, World!" }
+Final outputs: { hello: { message: "Hello, World!" } }
+```
+
 ## What Just Happened?
 
-1. **Defined a multi-node flow** with template → agent orchestration
-2. **Used edges** to control execution order
-3. **Used JSONata bindings** (`{{ template.output }}`) to pass data
-4. **Observed events** through `runtime.onEvent()` as the flow ran
-5. **Used the built-in `claudeNode`** for Claude AI integration
+1. You defined a flow with a single custom agent node.
+2. You registered the agent in a node registry.
+3. You created a runtime and ran the flow with input.
+4. You listened for runtime events and printed the output.
 
 ## Next Steps
 
-- [Your First Agent](/docs/learn/your-first-agent) — Build a custom agent
-- [Architecture](/docs/concepts/architecture) — Understand Hub, Flow, Channels
-- [JSONata Bindings](/docs/guides/expressions/bindings) — Master expressions
+- [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow
+- [Architecture](/docs/concepts/architecture) — Understand the system pieces
+- [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes

@@ -1,78 +1,150 @@
 ---
 title: Your First Agent
-description: Build a custom Claude agent with streaming
+description: Build a multi-node flow with conditions and state
 ---
 
 # Your First Agent
 
-Learn how to create a Claude agent that streams responses through the Hub.
+Build a task triage agent that routes work based on priority.
 
 ## What You'll Build
 
-An agent that:
-- Connects to Claude via the SDK
-- Streams text tokens as events
-- Emits structured output when complete
+A flow that:
+- Classifies incoming tasks as `urgent` or `normal`
+- Branches based on that classification
+- Tracks how many runs have executed
 
-## The Agent Interface
-
-Every agent implements this interface:
-
-```typescript
-interface AgentDefinition<TIn, TOut> {
-  name: string;
-  execute(input: TIn, ctx: AgentContext): Promise<TOut>;
-}
+```
+┌──────────────┐
+│  task.triage │
+└──────┬───────┘
+       │
+  ┌────┴─────┐
+  │          │
+┌─▼──────┐ ┌─▼──────┐
+│ urgent │ │ normal │
+└────────┘ └────────┘
 ```
 
-## Create Your Agent
+## Step 1: Define the Flow
 
-```typescript
-import { defineAgent } from "@open-harness/sdk";
-
-export const myAgent = defineAgent({
-  name: "my-agent",
-
-  async execute(input: { prompt: string }, ctx) {
-    // Emit that we're starting
-    ctx.hub.emit({ type: "agent:start", agentName: "my-agent" });
-
-    // Call Claude (your implementation)
-    const response = await callClaude(input.prompt);
-
-    // Stream tokens
-    for await (const chunk of response.stream) {
-      ctx.hub.emit({
-        type: "agent:text",
-        content: chunk.text
-      });
-    }
-
-    // Return final output
-    return { text: response.fullText };
-  }
-});
-```
-
-## Use in a Flow
+Create `flow.yaml`:
 
 ```yaml
+name: task-triage
+state:
+  initial:
+    runs: 0
 nodes:
-  - id: assistant
-    type: my-agent
+  - id: triage
+    type: task.triage
     input:
-      prompt: "{{ flow.input.question }}"
+      text: "{{ flow.input.text }}"
+
+  - id: urgent
+    type: echo
+    input:
+      text: "URGENT: {{ triage.summary }} (run {{ state.runs }})"
+
+  - id: normal
+    type: echo
+    input:
+      text: "Next up: {{ triage.summary }} (run {{ state.runs }})"
+
+edges:
+  - from: triage
+    to: urgent
+    when: "triage.priority = 'urgent'"
+
+  - from: triage
+    to: normal
+    when: "triage.priority = 'normal'"
 ```
 
-## Key Concepts
+## Step 2: Create the Agent Node
 
-| Concept | Description |
-|---------|-------------|
-| `ctx.hub` | Event bus for emitting events |
-| `ctx.runId` | Unique ID for this execution |
-| Streaming | Emit `agent:text` events for real-time output |
+Create `run.ts`:
+
+```typescript
+import {
+  createRuntime,
+  DefaultNodeRegistry,
+  parseFlowYaml,
+  type NodeTypeDefinition,
+  echoNode,
+} from "@open-harness/sdk";
+import { readFileSync } from "node:fs";
+
+type TriageInput = { text: string };
+type TriageOutput = { priority: "urgent" | "normal"; summary: string };
+
+const triageNode: NodeTypeDefinition<TriageInput, TriageOutput> = {
+  type: "task.triage",
+  run: async (ctx, input) => {
+    const normalized = input.text.toLowerCase();
+    const priority =
+      normalized.includes("urgent") || normalized.includes("asap")
+        ? "urgent"
+        : "normal";
+
+    const runs = Number(ctx.state.get("runs") ?? 0) + 1;
+    ctx.state.set("runs", runs);
+
+    return {
+      priority,
+      summary: input.text.slice(0, 80),
+    };
+  },
+};
+
+const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
+const registry = new DefaultNodeRegistry();
+registry.register(triageNode);
+registry.register(echoNode);
+
+const runtime = createRuntime({ flow, registry });
+
+runtime.onEvent((event) => {
+  if (event.type === "node:complete") {
+    console.log(`[${event.nodeId}]`, event.output);
+  }
+});
+
+const snapshot = await runtime.run({
+  text: "ASAP: reset production password for the admin user",
+});
+
+console.log("Final outputs:", snapshot.outputs);
+```
+
+Run it:
+
+```bash
+bun run run.ts
+```
+
+Expected output (trimmed):
+
+```
+[triage] { priority: "urgent", summary: "ASAP: reset production password for the admin user" }
+[urgent] { text: "URGENT: ASAP: reset production password for the admin user (run 1)" }
+Final outputs: { triage: { ... }, urgent: { ... } }
+```
+
+## How the Flow Works
+
+- **Conditional logic**: `when` on edges routes to `urgent` or `normal`.
+- **State management**: `ctx.state` tracks the total run count.
+- **Multi-node orchestration**: one node makes a decision, another responds.
+
+## When to Use Agents vs Simple Nodes
+
+- Use **agents** (LLM-backed nodes) when you need reasoning, natural language,
+  or multi-turn interaction.
+- Use **simple nodes** for deterministic transforms, validation, or routing.
 
 ## Next Steps
 
-- [Multi-Agent Flow](/docs/learn/multi-agent-flow) — Connect multiple agents
-- [Hub Events](/docs/concepts/event-system) — Understand event types
+- [Architecture](/docs/concepts/architecture) — Learn how runtime and transports fit
+- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
+- [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
