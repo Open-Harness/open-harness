@@ -46,12 +46,18 @@
         "typescript": "^5.9.3",
       },
     },
+<<<<<<< HEAD
     "packages/config": {
       "name": "@openharnes/config",
       "version": "0.0.0",
     },
     "packages/github-channel": {
       "name": "@openharness/github-channel",
+=======
+    "packages/sdk": {
+      "name": "@open-harness/sdk",
+      "version": "0.1.0-alpha.1",
+>>>>>>> b47f929 (feat: complete alpha release prep (docs, READMEs, npm package metadata))
       "dependencies": {
         "pino": "^10.1.0",
       },
