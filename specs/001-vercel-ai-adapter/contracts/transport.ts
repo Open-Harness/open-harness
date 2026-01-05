@@ -108,6 +108,32 @@ export interface IOpenHarnessChatTransport extends ChatTransport<UIMessage> {
 }
 
 // =============================================================================
+// Part Tracker (Minimal State)
+// =============================================================================
+
+/**
+ * Minimal state for detecting "first delta" to emit *-start chunks.
+ *
+ * Why this exists: AI SDK expects `text-start` before any `text-delta`.
+ * We only get `agent:text:delta` events (no explicit start event).
+ * So we track whether we've seen the first delta to emit start + delta together.
+ *
+ * This is NOT an accumulator. The AI SDK accumulates chunks into messages.
+ * We just need to know "have I emitted start yet?"
+ */
+export interface PartTracker {
+  /** Whether `text-start` has been emitted */
+  textStarted: boolean;
+  /** Whether `reasoning-start` has been emitted */
+  reasoningStarted: boolean;
+}
+
+/**
+ * Create a new PartTracker with initial state.
+ */
+export declare function createPartTracker(): PartTracker;
+
+// =============================================================================
 // Transform Functions
 // =============================================================================
 
@@ -115,87 +141,17 @@ export interface IOpenHarnessChatTransport extends ChatTransport<UIMessage> {
  * Transform a single RuntimeEvent into zero or more UIMessageChunks.
  *
  * @param event - Open Harness runtime event
- * @param context - Transformation context (message ID, accumulator state)
+ * @param tracker - Part tracker for detecting first deltas
+ * @param messageId - Current message ID for chunks
+ * @param options - Transport options
  * @returns Array of UIMessageChunks (may be empty for non-mapped events)
  */
 export type TransformFunction = (
   event: RuntimeEvent,
-  context: TransformContext
+  tracker: PartTracker,
+  messageId: string,
+  options: Required<OpenHarnessChatTransportOptions>
 ) => UIMessageChunk[];
-
-/**
- * Context passed to transform functions.
- */
-export interface TransformContext {
-  /** Current message ID */
-  messageId: string;
-  /** Accumulator for tracking state */
-  accumulator: IMessageAccumulator;
-  /** Transport options */
-  options: Required<OpenHarnessChatTransportOptions>;
-}
-
-// =============================================================================
-// Message Accumulator
-// =============================================================================
-
-/**
- * State machine for tracking message construction.
- */
-export interface IMessageAccumulator {
-  /** Current message ID */
-  readonly messageId: string;
-
-  /** Current text part state */
-  readonly textState: PartState;
-
-  /** Current reasoning part state */
-  readonly reasoningState: PartState;
-
-  /** Tool states by toolCallId */
-  readonly toolStates: ReadonlyMap<string, ToolInvocationState>;
-
-  /** Whether any chunk has been emitted */
-  readonly hasEmittedAny: boolean;
-
-  /** Mark text streaming started */
-  startText(): void;
-
-  /** Mark text streaming complete */
-  endText(): void;
-
-  /** Mark reasoning streaming started */
-  startReasoning(): void;
-
-  /** Mark reasoning streaming complete */
-  endReasoning(): void;
-
-  /** Track a tool invocation */
-  trackTool(toolCallId: string, toolName: string, input: unknown): void;
-
-  /** Mark tool as complete with output */
-  completeTool(toolCallId: string, output: unknown): void;
-
-  /** Mark tool as errored */
-  errorTool(toolCallId: string, errorText: string): void;
-}
-
-/**
- * State of a text or reasoning part.
- */
-export type PartState = "idle" | "streaming" | "done";
-
-/**
- * State of a tool invocation.
- */
-export interface ToolInvocationState {
-  toolCallId: string;
-  toolName: string;
-  state: "input-available" | "output-available" | "error";
-  input: unknown;
-  output?: unknown;
-  errorText?: string;
-}
 
 // =============================================================================
 // Custom Data Types

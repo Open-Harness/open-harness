@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document defines the data structures and state transitions for the Vercel AI SDK adapter. The adapter transforms Open Harness runtime events into AI SDK UIMessageChunks for streaming to React clients.
+This document defines the data structures for the Vercel AI SDK adapter. The adapter is a **thin translation layer** that transforms Open Harness runtime events into AI SDK UIMessageChunks. The AI SDK handles all message accumulation internally—we just emit chunks.
 
 ---
 
@@ -23,8 +23,9 @@ The main adapter class implementing AI SDK's `ChatTransport` interface.
 
 **Relationships**:
 - References one `Runtime` instance
-- Creates `MessageAccumulator` per stream
+- Creates `PartTracker` per stream (minimal state)
 - Emits `UIMessageChunk` to stream
+- **Does NOT accumulate messages** (AI SDK does this)
 
 ---
 
@@ -44,132 +45,97 @@ Configuration for transport behavior.
 
 ---
 
-### 3. MessageAccumulator
+### 3. PartTracker
 
-Internal state machine tracking current message construction.
-
-**Attributes**:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `messageId` | `string` | Current assistant message ID |
-| `textState` | `'idle' \| 'streaming' \| 'done'` | Text part state |
-| `reasoningState` | `'idle' \| 'streaming' \| 'done'` | Reasoning part state |
-| `toolStates` | `Map<string, ToolState>` | Tool invocation states by toolCallId |
-| `hasEmittedStart` | `boolean` | Whether message has started |
-
-**State Transitions**:
-
-```
-Initial → textStreaming → textDone
-        → reasoningStreaming → reasoningDone
-        → toolStarted → toolComplete
-```
-
----
-
-### 4. ToolState
-
-Tracks individual tool invocation lifecycle.
+Minimal state for detecting "first delta" to emit `*-start` chunks.
 
 **Attributes**:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `toolCallId` | `string` | Unique tool call identifier |
-| `toolName` | `string` | Name of the tool |
-| `state` | `'input-available' \| 'output-available' \| 'error'` | Current state |
-| `input` | `unknown` | Tool input data |
-| `output` | `unknown \| undefined` | Tool output (when complete) |
-| `errorText` | `string \| undefined` | Error message (when failed) |
+| `textStarted` | `boolean` | Whether `text-start` has been emitted |
+| `reasoningStarted` | `boolean` | Whether `reasoning-start` has been emitted |
+
+**Why this exists**: AI SDK expects `text-start` before any `text-delta`. We only get `agent:text:delta` events (no explicit start). So we track whether we've seen the first delta to emit `text-start` + `text-delta` together.
+
+**This is NOT an accumulator**. The AI SDK accumulates chunks into messages. We just need to know "have I emitted start yet?"
 
 ---
 
 ## Event to Chunk Mapping
 
-### Input Events (from Open Harness Runtime)
+### How Open Harness Events Map to AI SDK Chunks
 
-| Event Type | Key Fields | Maps To |
-|------------|------------|---------|
-| `agent:text:delta` | `content`, `runId` | `text-start`, `text-delta` |
-| `agent:text` | `content`, `runId` | `text-end` |
-| `agent:thinking:delta` | `content`, `runId` | `reasoning-start`, `reasoning-delta` |
-| `agent:thinking` | `content`, `runId` | `reasoning-end` |
-| `agent:tool` | `toolName`, `toolInput`, `toolOutput` | `tool-input-available`, `tool-output-available` |
-| `agent:error` | `message`, `errorType` | `error` |
-| `agent:complete` | `result`, `usage` | Stream close |
-| `agent:paused` | `sessionId` | Stream close |
-| `agent:aborted` | `reason` | `error`, stream close |
-| `node:start` | `nodeId`, `runId` | `step-start` |
-| `node:complete` | `nodeId`, `output` | `data-node-output` (optional) |
-| `flow:paused` | - | `data-flow-status` (optional) |
-| `flow:complete` | `status` | `data-flow-status` (optional), stream close |
+| Open Harness Event | Meaning | AI SDK Chunk(s) |
+|--------------------|---------|-----------------|
+| `agent:start` | Agent begins | (no chunk needed) |
+| `agent:text:delta` | Streaming text chunk | `text-start` (first only) + `text-delta` |
+| `agent:text` | Text complete | `text-end` |
+| `agent:thinking:delta` | Streaming thinking | `reasoning-start` (first only) + `reasoning-delta` |
+| `agent:thinking` | Thinking complete | `reasoning-end` |
+| `agent:tool` | Tool executed (has input+output) | `tool-input-available` + `tool-output-available` |
+| `agent:error` | Error occurred | `error` |
+| `agent:complete` | Agent finished | Stream closes |
+| `agent:paused` | Agent paused | Stream closes |
+| `agent:aborted` | Agent aborted | `error` + stream closes |
+| `node:start` | Node begins | `step-start` |
+| `node:complete` | Node finished | `data-node-output` (optional) |
+| `flow:complete` | Flow finished | `data-flow-status` (optional) + stream closes |
 
-### Output Chunks (to AI SDK)
+### Key Insight: Our Events Already Have Start/End Semantics
 
-| Chunk Type | Fields | When Emitted |
-|------------|--------|--------------|
-| `text-start` | `id` | First `agent:text:delta` |
-| `text-delta` | `id`, `delta` | Each `agent:text:delta` |
-| `text-end` | `id` | After final text or new part type |
-| `reasoning-start` | `id` | First `agent:thinking:delta` |
-| `reasoning-delta` | `id`, `delta` | Each `agent:thinking:delta` |
-| `reasoning-end` | `id` | After final thinking or new part type |
-| `tool-input-available` | `toolCallId`, `toolName`, `input` | `agent:tool` with input |
-| `tool-output-available` | `toolCallId`, `output` | `agent:tool` with output |
-| `step-start` | - | `node:start` |
-| `error` | `errorText` | `agent:error`, `agent:aborted` |
+We don't need to invent start/end—we already have them:
+
+```
+agent:start         → START of agent execution
+agent:text:delta    → streaming text (detect "first" for text-start)  
+agent:text          → END of text (complete event with final content)
+agent:thinking:delta→ streaming thinking (detect "first" for reasoning-start)
+agent:thinking      → END of thinking (complete event with final content)
+agent:tool          → single event with BOTH input AND output
+agent:complete      → END of agent execution
+```
 
 ---
 
-## State Transitions
+## Transform Logic
 
-### MessageAccumulator State Machine
+### Text Transform
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        MessageAccumulator                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────┐   agent:text:delta   ┌───────────────┐            │
-│  │  idle    │ ─────────────────────▶│ textStreaming │            │
-│  └──────────┘                       └───────┬───────┘            │
-│       │                                     │                    │
-│       │ agent:thinking:delta                │ agent:text/        │
-│       │                                     │ new part type      │
-│       ▼                                     ▼                    │
-│  ┌──────────────────┐              ┌───────────────┐            │
-│  │ reasoningStreaming│              │   textDone    │            │
-│  └────────┬─────────┘              └───────────────┘            │
-│           │                                                      │
-│           │ agent:thinking/new part                              │
-│           ▼                                                      │
-│  ┌──────────────────┐                                           │
-│  │  reasoningDone   │                                           │
-│  └──────────────────┘                                           │
-│                                                                  │
-│  Tools: Independent state per toolCallId                        │
-│  ┌────────────────┐   agent:tool    ┌─────────────────┐         │
-│  │ (not started)  │ ───────────────▶│ input-available │         │
-│  └────────────────┘                 └────────┬────────┘         │
-│                                              │                   │
-│                               agent:tool     │                   │
-│                               (with output)  │                   │
-│                                              ▼                   │
-│                                     ┌─────────────────┐         │
-│                                     │ output-available│         │
-│                                     └─────────────────┘         │
-│                                              │                   │
-│                               agent:tool     │                   │
-│                               (with error)   │                   │
-│                                              ▼                   │
-│                                     ┌─────────────────┐         │
-│                                     │     error       │         │
-│                                     └─────────────────┘         │
-└─────────────────────────────────────────────────────────────────┘
+First agent:text:delta  →  [{ type: 'text-start', id }, { type: 'text-delta', id, delta }]
+                            (set textStarted = true)
+                            
+Subsequent agent:text:delta  →  [{ type: 'text-delta', id, delta }]
+
+agent:text (complete)  →  [{ type: 'text-end', id }]
 ```
 
-### Stream Lifecycle
+### Reasoning Transform
+
+```
+First agent:thinking:delta  →  [{ type: 'reasoning-start', id }, { type: 'reasoning-delta', id, delta }]
+                               (set reasoningStarted = true)
+                               
+Subsequent agent:thinking:delta  →  [{ type: 'reasoning-delta', id, delta }]
+
+agent:thinking (complete)  →  [{ type: 'reasoning-end', id }]
+```
+
+### Tool Transform
+
+```
+agent:tool  →  [
+  { type: 'tool-input-available', toolCallId, toolName, input },
+  { type: 'tool-output-available', toolCallId, output }
+]
+```
+
+Note: Open Harness emits a single `agent:tool` event with both input and output (tool has already executed). We emit both chunks together.
+
+---
+
+## Stream Lifecycle
 
 ```
 sendMessages() called
@@ -177,6 +143,7 @@ sendMessages() called
         ▼
 ┌───────────────────┐
 │  Create stream    │
+│  Create PartTracker│
 │  Subscribe to     │
 │  runtime events   │
 └────────┬──────────┘
@@ -184,8 +151,8 @@ sendMessages() called
          │ runtime.dispatch({ type: 'send', message })
          ▼
 ┌───────────────────┐
-│  Emit chunks as   │◀──── Runtime events arrive
-│  events arrive    │
+│  Transform events │◀──── Runtime events arrive
+│  to chunks, emit  │      (pure functions + PartTracker)
 └────────┬──────────┘
          │
          │ agent:complete / agent:paused / agent:aborted
@@ -207,18 +174,17 @@ sendMessages() called
 3. Tool events MUST have `toolName`
 4. Events without required fields are logged and skipped
 
-### Stream Validation
+### Chunk Ordering
 
-1. Stream MUST emit at least one chunk before closing
-2. `text-start` MUST precede any `text-delta` for a text part
-3. `text-end` MUST follow the final `text-delta` for a text part
-4. Same rules apply to reasoning parts
+1. `text-start` MUST precede any `text-delta` (handled by PartTracker)
+2. `text-end` follows after `agent:text` complete event
+3. Same rules apply to reasoning parts
 
-### Message ID Validation
+### Message ID
 
-1. Message ID MUST be unique per stream
-2. All chunks in a stream MUST use the same message ID (where applicable)
-3. Tool call IDs MUST be unique within a message
+1. Message ID generated once per stream
+2. All chunks use the same message ID (where applicable)
+3. Tool call IDs derived from `toolName` (unique within message)
 
 ---
 
