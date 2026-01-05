@@ -161,7 +161,7 @@ const metricChannel: ChannelDefinition<{ count: number }> = {
 ```
 
 State is:
-- Initialized per harness run
+- Initialized per flow run
 - Isolated between channels
 - Available in all handlers
 - Cleaned up on completion
@@ -240,16 +240,13 @@ const testChannel: ChannelDefinition = {
 
 ### Multiple Outputs
 
-One workflow, many destinations:
+One flow, many destinations:
 
 ```typescript
-defineHarness({
-  channels: [
-    terminalChannel,
-    logChannel,
-    metricsChannel
-  ]
-});
+// Attach channels to the hub
+hub.attach(createChannelAttachment(terminalChannel));
+hub.attach(createChannelAttachment(logChannel));
+hub.attach(createChannelAttachment(metricsChannel));
 ```
 
 ## Design Rationale
@@ -270,4 +267,4 @@ Pattern matching (`"agent:*"`) allows handling event families without listing ea
 
 - [Bidirectional Channels](/docs/concepts/channels/bidirectional) - Full-duplex patterns
 - [Channel Definition](/docs/reference/types/channel-definition) - Type reference
-- [Building Channels](/docs/guides/channels/building-channels) - Practical guide
+- [Attach Channels](/docs/guides/channels/attach-channel) - Practical guide

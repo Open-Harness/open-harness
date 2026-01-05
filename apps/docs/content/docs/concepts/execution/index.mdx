@@ -1,0 +1,59 @@
+---
+title: Execution Models
+description: How flows execute - sequential and parallel
+---
+
+# Execution Models
+
+This section explains how flows execute their nodes and manage concurrent work.
+
+## Current: Sequential Execution
+
+The current executor runs nodes in topological order, one at a time:
+
+```
+Node A → Node B → Node C → Node D
+  ↓        ↓        ↓        ↓
+ run      run      run      run
+```
+
+Nodes wait for all dependencies before executing:
+
+```yaml
+edges:
+  - from: research
+    to: analyze    # analyze waits for research
+  - from: research
+    to: summarize  # summarize waits for research
+  - from: analyze
+    to: report     # report waits for analyze
+  - from: summarize
+    to: report     # report waits for BOTH analyze AND summarize
+```
+
+## Coming: Parallel Execution
+
+Parallel execution will run independent nodes concurrently:
+
+```
+Node A ─────→ Node B ─────→ Node D
+        ╲                 ╱
+         → Node C ───────→
+```
+
+When A completes, B and C can run in parallel since they're independent.
+
+See [Parallel Execution](/docs/concepts/execution/parallel) for the planned design.
+
+## Key Concepts
+
+- **Topological Order**: Nodes execute after their dependencies
+- **Edge Gating**: Edges can have `when` conditions
+- **Super-steps**: Groups of nodes that can run together (planned)
+- **State Reducers**: Merge parallel outputs (planned)
+
+## Related
+
+- [DAG Model](/docs/concepts/flows/dag-model) - Flow structure
+- [Node Lifecycle](/docs/concepts/flows/node-lifecycle) - Node execution phases
+- [GitHub Issue #35](https://github.com/Open-Harness/open-harness/issues/35) - Parallel execution tracking

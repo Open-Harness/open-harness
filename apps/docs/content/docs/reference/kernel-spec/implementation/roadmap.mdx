@@ -242,3 +242,47 @@ M6 (Providers)
 3. **Authoritative scripts**: Every milestone has a "prove it works" command
 4. **No provider complexity until M6**: Use built-in nodes for Flow testing
 5. **Replay-first**: Provider adapters must work with fixtures before live tests
+
+---
+
+## Validation Scripts
+
+End-to-end validation scripts that prove the full stack works with the real Claude SDK.
+
+### `scripts/real-claude-test.ts`
+
+**Purpose**: Raw SDK isolation test - verifies the Claude Code SDK works independently.
+
+```bash
+timeout 60 bun scripts/real-claude-test.ts
+```
+
+**What it tests**:
+- Direct `query()` call to Claude SDK
+- Response streaming and result extraction
+- No FlowRuntime involved - pure SDK validation
+
+### `scripts/real-flow-test.ts`
+
+**Purpose**: Full stack validation - proves FlowRuntime → executor → claude.agent node → SDK pipeline works.
+
+```bash
+timeout 90 bun scripts/real-flow-test.ts
+```
+
+**What it tests**:
+- YAML flow parsing and execution
+- Node registry with real `claudePack`
+- Claude provider calling real SDK
+- Response propagation through the stack
+
+**Expected output**: `✓ SUCCESS - Claude responded: Hello from FlowRuntime`
+
+### When to use these scripts
+
+| Script | Use Case |
+|--------|----------|
+| `real-claude-test.ts` | Debugging SDK issues, verifying SDK works in isolation |
+| `real-flow-test.ts` | Validating full integration after provider changes |
+
+**Note**: These scripts make real API calls using Claude Code subscription auth. They are not part of the regular test suite (which uses mocks).

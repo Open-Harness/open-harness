@@ -1,0 +1,11 @@
+{
+  "title": "Testing Guides",
+  "pages": [
+    "testing-workflow",
+    "unit-tests",
+    "replay-tests",
+    "live-tests",
+    "write-replay-tests",
+    "record-and-promote-fixtures"
+  ]
+}

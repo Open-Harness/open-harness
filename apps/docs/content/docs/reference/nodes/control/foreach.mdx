@@ -1,0 +1,66 @@
+---
+title: control.foreach
+description: Iterate over an array, executing a node for each item
+---
+
+# control.foreach
+
+Iterates over an array and executes a specified node for each item. Results are collected and returned as an array.
+
+## Schema
+
+```typescript
+// Input
+{
+  items: unknown[];        // Array to iterate over
+  nodeId: string;          // Node ID to execute for each item
+}
+
+// Output
+{
+  results: unknown[];      // Array of outputs from each iteration
+  count: number;           // Number of items processed
+}
+```
+
+## Example
+
+```yaml
+nodes:
+  - id: process-each
+    type: control.foreach
+    input:
+      items: "{{flow.input.documents}}"
+      nodeId: summarize-doc
+
+  - id: summarize-doc
+    type: agent.claude
+    input:
+      prompt: "Summarize: {{item}}"
+
+edges:
+  - from: process-each
+    to: collect-results
+```
+
+## Behavior
+
+1. Receives `items` array from input
+2. For each item, executes the node specified by `nodeId`
+3. The current item is available as `{{item}}` in the child node's bindings
+4. Collects all outputs into `results` array
+5. Emits `phase:start` and `phase:complete` for the iteration container
+
+## Capabilities
+
+```typescript
+{
+  isContainer: true,      // Contains child node execution
+  supportsInbox: false,   // No direct inbox (children may have inbox)
+}
+```
+
+## Related
+
+- [control.loop](/docs/reference/nodes/control/loop) - While-style loops (planned)
+- [control.merge](/docs/reference/nodes/control/merge) - Merging parallel results (planned)

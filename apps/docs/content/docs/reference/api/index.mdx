@@ -5,15 +5,14 @@ description: Complete API reference for the Open Harness kernel
 
 # API Reference
 
-The Open Harness kernel exports functions and classes for building AI-powered workflows.
+The Open Harness kernel exports functions and classes for building AI-powered flows.
 
 ## Core Functions
 
 | Function | Purpose |
 |----------|---------|
-| [defineHarness](/docs/reference/api/define-harness) | Create a harness factory for workflow execution |
-| [createHub](/docs/reference/api/hub) | Create a standalone event bus |
-| [executeFlow](/docs/reference/api/execute-flow) | Execute a YAML-defined flow DAG |
+| [createHub](/docs/reference/api/hub) | Create an event hub for pub/sub messaging |
+| [executeFlow](/docs/reference/api/execute-flow) | Execute a compiled flow DAG |
 
 ## Flow Functions
 
@@ -34,27 +33,35 @@ The Open Harness kernel exports functions and classes for building AI-powered wo
 
 | Function | Purpose |
 |----------|---------|
-| [createAnthropicTextAgent](/docs/reference/api/anthropic-agent) | Create Anthropic Claude text agent |
+| [createClaudeAgent](/docs/reference/api/anthropic-agent) | Create Claude agent using Claude Agent SDK |
 
 ## Import
 
 ```typescript
 import {
-  defineHarness,
+  // Core
   createHub,
   executeFlow,
+
+  // Flow
   parseFlowYaml,
   compileFlow,
   NodeRegistry,
   resolveBindings,
   evaluateWhen,
-  createAnthropicTextAgent,
+
+  // Providers
+  createClaudeAgent,
+
+  // Node packs
+  registerNodePacks,
+  corePack,
+  claudePack,
 } from "@open-harness/kernel";
 ```
 
 ## Related
 
 - [Types Reference](/docs/reference/types) - Interface definitions
-- [Schemas Reference](/docs/reference/schemas) - Zod validation schemas
 - [Events Reference](/docs/reference/events) - Event type definitions
 - [Kernel Spec](/docs/reference/kernel-spec) - Complete protocol specification
