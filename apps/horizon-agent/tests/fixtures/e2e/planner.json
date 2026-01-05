@@ -1,0 +1,38 @@
+{
+	"calls": [
+		{
+			"input": { "prompt": "fixture:planner" },
+			"output": {
+				"text": "I've analyzed the feature request and created a task breakdown.",
+				"structuredOutput": {
+					"tasks": [
+						{
+							"id": "task-1",
+							"title": "Implement core feature",
+							"description": "Build the main functionality",
+							"dependencies": []
+						}
+					]
+				},
+				"usage": { "input_tokens": 100, "output_tokens": 50 },
+				"durationMs": 500,
+				"sessionId": "sess-planner",
+				"numTurns": 1,
+				"totalCostUsd": 0.001
+			},
+			"events": [
+				{
+					"type": "stream_event",
+					"event": {
+						"type": "content_block_delta",
+						"index": 0,
+						"delta": { "type": "text_delta", "text": "I've analyzed the feature request" }
+					},
+					"parent_tool_use_id": null,
+					"uuid": "planner-stream-1",
+					"session_id": "sess-planner"
+				}
+			]
+		}
+	]
+}

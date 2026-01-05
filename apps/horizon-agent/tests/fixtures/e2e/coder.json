@@ -1,0 +1,52 @@
+{
+	"calls": [
+		{
+			"input": { "prompt": "fixture:coder" },
+			"output": {
+				"text": "## Implementation v1\n\n```typescript\nfunction coreFeature() {\n  // Initial implementation\n  return 'hello';\n}\n```",
+				"usage": { "input_tokens": 80, "output_tokens": 40 },
+				"durationMs": 400,
+				"sessionId": "sess-coder",
+				"numTurns": 1,
+				"totalCostUsd": 0.001
+			},
+			"events": [
+				{
+					"type": "stream_event",
+					"event": {
+						"type": "content_block_delta",
+						"index": 0,
+						"delta": { "type": "text_delta", "text": "## Implementation v1" }
+					},
+					"parent_tool_use_id": null,
+					"uuid": "coder-stream-1",
+					"session_id": "sess-coder"
+				}
+			]
+		},
+		{
+			"input": { "prompt": "fixture:coder" },
+			"output": {
+				"text": "## Implementation v2 (Revised)\n\n```typescript\nfunction coreFeature() {\n  // Fixed based on review feedback\n  // Added error handling\n  try {\n    return 'hello world';\n  } catch (e) {\n    throw new Error('Feature failed');\n  }\n}\n```",
+				"usage": { "input_tokens": 120, "output_tokens": 60 },
+				"durationMs": 450,
+				"sessionId": "sess-coder",
+				"numTurns": 2,
+				"totalCostUsd": 0.001
+			},
+			"events": [
+				{
+					"type": "stream_event",
+					"event": {
+						"type": "content_block_delta",
+						"index": 0,
+						"delta": { "type": "text_delta", "text": "## Implementation v2 (Revised)" }
+					},
+					"parent_tool_use_id": null,
+					"uuid": "coder-stream-2",
+					"session_id": "sess-coder"
+				}
+			]
+		}
+	]
+}
