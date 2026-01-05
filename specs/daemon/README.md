@@ -61,7 +61,7 @@ CLI:
 Example:
 
 ```
-open-harness-daemon --flow flow.yaml --input '{"name":"World"}' --stream --ws-port 7777
+open-harness-daemon --flow flow.yaml --input '{"name":"World"}' --stream --ws-port 42069
 ```
 
 ## WebSocket Protocol Option A (Runtime Envelope)

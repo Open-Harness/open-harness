@@ -5,7 +5,7 @@ It does not introduce a new protocol for v1.
 
 ## Endpoint
 
-- Default: `ws://localhost:7777/ws`
+- Default: `ws://localhost:42069/ws`
 - Configurable via CLI flags.
 
 ## Envelope

@@ -14,7 +14,7 @@
 - `--input-file <path>`: flow input as JSON file.
 - `--stream` / `--no-stream`: streaming agent deltas (default: `--stream`).
 - `--verbosity <quiet|normal|verbose|debug>` (default: `normal`).
-- `--ws-port <number>` (default: `7777`).
+- `--ws-port <number>` (default: `42069`).
 - `--ws-path <string>` (default: `/ws`).
 - `--no-ws`: disable WebSocket server (logs only).
 - `--print-json`: render events as JSON lines (overrides text renderer).

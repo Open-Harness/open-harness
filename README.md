@@ -1,29 +1,95 @@
 # Open Harness
 
-A TypeScript monorepo for building AI agent systems using the Claude Agent SDK.
+![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
+
+> Event-driven workflow orchestration for production multi-agent AI systems.
 
 ## Overview
 
-Open Harness provides infrastructure for building, testing, and running multi-agent AI systems:
+Open Harness provides a declarative, event-driven framework for building multi-agent systems:
 
-- **kernel** - Core agent execution engine with event streaming
-- **horizon-agent** - Multi-agent implementation system (planner, coder, reviewer)
-- **flow-ui** - Terminal UI components for agent interfaces
+- **Declarative Workflows**: Define agent pipelines in YAML, not imperative code
+- **Full Observability**: Every event flows through a central Hub you can subscribe to
+- **JSONata Expressions**: Powerful data bindings with a proven expression language
+- **Replay Testing**: Record and replay agent interactions for deterministic tests
 
 ## Quick Start
 
+### Installation
+
 ```bash
+# Add the SDK to your project
+bun add @open-harness/sdk
+```
+
+### Hello World Flow
+
+Create `flow.yaml`:
+
+```yaml
+name: hello-world
+nodes:
+  - id: researcher
+    type: claude.agent
+    input:
+      prompt: "Research: {{ flow.input.topic }}"
+
+  - id: summarizer
+    type: claude.agent
+    input:
+      prompt: "Summarize this research: {{ researcher.text }}"
+
+edges:
+  - from: researcher
+    to: summarizer
+```
+
+Run it:
+
+```typescript
+import { runFlow, parseFlowYaml } from "@open-harness/sdk";
+import { readFileSync } from "node:fs";
+
+const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
+const snapshot = await runFlow({ flow, input: { topic: "quantum computing" } });
+
+console.log("Results:", snapshot.outputs);
+```
+
+## Documentation
+
+- 📚 [Full Documentation](https://docs.open-harness.dev) - Tutorials, guides, and API reference
+- 🚀 [Quickstart Tutorial](https://docs.open-harness.dev/docs/learn/quickstart) - Run your first flow in 5 minutes
+- 🏗️ [Architecture](https://docs.open-harness.dev/docs/concepts/architecture) - Understand the system design
+- 📖 [Contributing Guide](CONTRIBUTING.md) - How to contribute to Open Harness
+
+## Features
+
+- **Event-Driven Architecture**: All components communicate through events for full observability
+- **JSONata Bindings**: Connect data between nodes with a powerful expression language
+- **Conditional Flow Control**: Branch workflows based on node outputs
+- **State Management**: Track run state across executions
+- **Multiple Transports**: WebSocket, HTTP, CLI adapters for different environments
+- **Replay Testing**: Record live executions and replay for deterministic tests
+
+## Development
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/open-harness.git
+cd open-harness
+
 # Install dependencies
 bun install
 
-# Run the horizon agent
-bun run dev
+# Run tests
+bun run test
 
-# Type check
-bun run check-types
+# Type checking
+bun run typecheck
 
 # Lint and format
-bun run check
+bun run lint
 ```
 
 ## Project Structure
@@ -31,38 +97,23 @@ bun run check
 ```
 open-harness/
 ├── apps/
-│   ├── horizon-agent/    # Multi-agent TUI application
-│   └── docs/             # Documentation site
+│   └── docs/             # Documentation site (Next.js + Fumadocs)
 ├── packages/
-│   ├── kernel/           # Core agent execution engine
-│   ├── flow-ui/          # Terminal UI components
-│   └── ...
+│   └── sdk/              # Core Open Harness SDK
 ├── specs/                # Feature specifications
-└── .beads/               # Issue tracking (see Workflow below)
+└── .beads/               # Issue tracking
 ```
 
-## Development
+## Authentication
 
-### Commands
+When using the SDK with Claude agents, authentication is handled automatically through the Claude Code subscription:
 
 ```bash
-# Run tests (safe - no network)
-bun run test
-
-# Run with live SDK (requires Claude Code subscription)
+# Live tests work automatically with subscription auth
 bun run test:live
-
-# Type checking
-bun run check-types
-
-# Lint
-bun run check
 ```
 
-### Authentication
-
-This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`.
-**Do not set `ANTHROPIC_API_KEY`** - the SDK handles auth automatically through your Claude Code subscription.
+**Do not set `ANTHROPIC_API_KEY`** - the SDK handles auth through your Claude Code subscription.
 
 ## Git Workflow
 
@@ -155,10 +206,22 @@ bd hooks install
 
 1. Create a feature branch from `dev`
 2. Make your changes
-3. Run `bun run check-types && bun run check`
+3. Run `bun run typecheck && bun run lint`
 4. Create PR targeting `dev`
 5. Ensure `bd sync` is run before ending your session
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
+
+## Alpha Status
+
+This is an **alpha release**. Expect:
+
+- evolving APIs and potentially breaking changes
+- documentation gaps that we're actively improving
+- missing features that are planned for future releases
+
+We welcome feedback, bug reports, and contributions as we prepare for beta.
+
 ## License
 
-Private - All rights reserved
+MIT - see [LICENSE](LICENSE) for details

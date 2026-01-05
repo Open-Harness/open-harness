@@ -1,6 +1,6 @@
 {
   "name": "@open-harness/sdk",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "private": false,
   "main": "./dist/index.js",
@@ -12,6 +12,30 @@
       "import": "./dist/index.js"
     }
   },
+  "description": "Event-driven workflow orchestration for production multi-agent AI systems",
+  "keywords": [
+    "ai agents",
+    "workflow",
+    "orchestration",
+    "multi-agent",
+    "claude",
+    "anthropic",
+    "jsonata",
+    "event-driven",
+    "typescript",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/open-harness.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/open-harness/issues"
+  },
+  "homepage": "https://docs.open-harness.dev",
   "files": [
     "dist",
     "README.md",
