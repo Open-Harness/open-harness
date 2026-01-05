@@ -3,6 +3,10 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 import type {
+	ChannelDefinition,
+	ChannelInstance,
+} from "../protocol/channel.js";
+import type {
 	BaseEvent,
 	EnrichedEvent,
 	EventContext,
@@ -23,6 +27,11 @@ export class HubImpl implements Hub {
 	private _status: HubStatus = "idle";
 	private _sessionActive = false;
 
+	// Channel registry
+	// biome-ignore lint/suspicious/noExplicitAny: Generic channel storage requires any
+	private readonly _channels = new Map<string, ChannelInstance<any>>();
+	private _started = false;
+
 	constructor(private readonly sessionId: string) {}
 
 	get status(): HubStatus {
@@ -31,6 +40,10 @@ export class HubImpl implements Hub {
 
 	get sessionActive(): boolean {
 		return this._sessionActive;
+	}
+
+	get channels(): ReadonlyArray<string> {
+		return Array.from(this._channels.keys());
 	}
 
 	subscribe(listener: EventListener): () => void;
@@ -145,6 +158,152 @@ export class HubImpl implements Hub {
 
 	setStatus(status: HubStatus): void {
 		this._status = status;
+	}
+
+	// Channel management
+
+	registerChannel<TState>(channel: ChannelDefinition<TState>): this {
+		// Validate
+		if (!channel.name || typeof channel.name !== "string") {
+			throw new Error("Channel must have a valid name");
+		}
+		if (this._channels.has(channel.name)) {
+			throw new Error(`Channel "${channel.name}" is already registered`);
+		}
+
+		// Initialize state
+		const state = channel.state ? channel.state() : ({} as TState);
+
+		// Create instance
+		const instance: ChannelInstance<TState> = {
+			definition: channel,
+			state,
+			subscriptions: [],
+			started: false,
+		};
+
+		this._channels.set(channel.name, instance);
+		this.emit({ type: "channel:registered", name: channel.name });
+
+		// Late registration: start immediately if hub already started
+		if (this._started) {
+			void this._startChannel(instance);
+		}
+
+		return this;
+	}
+
+	unregisterChannel(name: string): boolean {
+		const instance = this._channels.get(name);
+		if (!instance) return false;
+
+		if (instance.started) {
+			void this._stopChannel(instance);
+		}
+
+		this._channels.delete(name);
+		this.emit({ type: "channel:unregistered", name });
+		return true;
+	}
+
+	async start(): Promise<void> {
+		if (this._started) return; // Idempotent
+		this._started = true;
+
+		const startPromises = Array.from(this._channels.values()).map((instance) =>
+			this._startChannel(instance),
+		);
+
+		await Promise.allSettled(startPromises);
+	}
+
+	async stop(): Promise<void> {
+		if (!this._started) return; // Idempotent
+
+		const stopPromises = Array.from(this._channels.values()).map((instance) =>
+			this._stopChannel(instance),
+		);
+
+		await Promise.allSettled(stopPromises);
+		this._started = false;
+	}
+
+	private async _startChannel<TState>(
+		instance: ChannelInstance<TState>,
+	): Promise<void> {
+		if (instance.started) return;
+
+		const { definition, state } = instance;
+		const emit = (event: BaseEvent) => this.emit(event);
+
+		try {
+			// Subscribe to each pattern
+			for (const [pattern, handler] of Object.entries(definition.on)) {
+				const unsubscribe = this.subscribe(pattern, async (event) => {
+					try {
+						await handler({ hub: this, state, event, emit });
+					} catch (err) {
+						console.error(`Channel "${definition.name}" handler error:`, err);
+						this.emit({
+							type: "channel:error",
+							name: definition.name,
+							error: String(err),
+						});
+					}
+				});
+				instance.subscriptions.push(unsubscribe);
+			}
+
+			// Call onStart
+			if (definition.onStart) {
+				await definition.onStart({ hub: this, state, emit });
+			}
+
+			instance.started = true;
+			this.emit({ type: "channel:started", name: definition.name });
+		} catch (err) {
+			// Cleanup on failure
+			for (const unsub of instance.subscriptions) unsub();
+			instance.subscriptions = [];
+
+			console.error(`Channel "${definition.name}" failed to start:`, err);
+			this.emit({
+				type: "channel:error",
+				name: definition.name,
+				error: String(err),
+			});
+			throw err;
+		}
+	}
+
+	private async _stopChannel<TState>(
+		instance: ChannelInstance<TState>,
+	): Promise<void> {
+		if (!instance.started) return;
+
+		const { definition, state } = instance;
+		const emit = (event: BaseEvent) => this.emit(event);
+
+		try {
+			if (definition.onComplete) {
+				await definition.onComplete({ hub: this, state, emit });
+			}
+		} catch (err) {
+			console.error(`Channel "${definition.name}" onComplete error:`, err);
+		}
+
+		// Unsubscribe all
+		for (const unsub of instance.subscriptions) {
+			try {
+				unsub();
+			} catch {
+				// Ignore unsubscribe errors
+			}
+		}
+		instance.subscriptions = [];
+		instance.started = false;
+
+		this.emit({ type: "channel:stopped", name: definition.name });
 	}
 
 	async *[Symbol.asyncIterator](): AsyncGenerator<EnrichedEvent> {

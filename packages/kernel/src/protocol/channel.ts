@@ -30,3 +30,11 @@ export interface ChannelDefinition<TState> {
 	}) => void | Promise<void>;
 	on: Record<string, ChannelHandler<TState>>;
 }
+
+/** Internal: Active channel instance managed by Hub */
+export interface ChannelInstance<TState = unknown> {
+	definition: ChannelDefinition<TState>;
+	state: TState;
+	subscriptions: Array<() => void>;
+	started: boolean;
+}
