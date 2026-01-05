@@ -128,10 +128,16 @@ git checkout -b feat/your-feature-name
 
 ### Pull Requests
 
-- Target `dev` branch (NOT `master`)
+- Target `dev` branch (not `master`)
+- Open PRs with `gh pr create` (or GitHub UI if needed)
 - Ensure all hooks pass
-- Update documentation if needed
 - Add tests for new features
+- Link the bead/issue in the PR description
+
+### Documentation Updates
+
+- If you change behavior, configuration, or user-facing surfaces, update docs in the same PR.
+- If docs are not impacted, note "N/A" with a brief explanation in the PR checklist.
 
 ## Project Structure
 
@@ -159,15 +165,53 @@ bd show <issue-id>
 bd create
 
 # Start working on issue
-bd update <issue-id> --status=in_progress
+bd update <issue-id> --status in_progress
 
 # Close issue
 bd close <issue-id>
 ```
 
+### Issue Reporting Guidelines
+
+When creating issues (Beads or GitHub), include:
+- What you were trying to do
+- Steps to reproduce (for bugs)
+- Expected vs actual behavior
+- Logs, screenshots, or recordings when relevant
+- Environment details (OS, Bun version, package versions)
+
+## Agent Workflow
+
+Agents should follow the Beads workflow and quality gates.
+
+### Beads Workflow
+
+1. `bd ready` to find unblocked work.
+2. `bd update <issue-id> --status in_progress` to mark the issue in progress.
+3. Implement in a dedicated worktree if needed.
+4. `bd close <issue-id>` when done, then `bd sync` before ending the session.
+
+### Quality Gates
+
+- `bun run typecheck`
+- `bun run lint`
+- `bun run test`
+- `bun run test:live` when SDK integrations are touched
+
+### Escalation
+
+- If blocked, create a blocking issue and stop work until a human resolves it.
+
+### Human-Only Tasks
+
+- Releases and deployments
+- Security-sensitive changes (auth, permissions, secrets)
+- Breaking API changes
+- New architectural patterns
+
 ## Getting Help
 
-- Check existing documentation in `specs/` and `packages/sdk/docs/`
+- Check existing documentation in `apps/docs/` and `specs/`
 - Review the [Open Harness CLI guidelines](CLAUDE.md)
 - Open a beads issue: `bd create`
 - Ask in project discussions

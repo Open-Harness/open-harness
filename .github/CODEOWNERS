@@ -1,0 +1,8 @@
+# Human-only paths (require review)
+
+packages/*/src/auth/** @AaronAbuUsama @Open-Harness/maintainers
+packages/*/src/security/** @AaronAbuUsama @Open-Harness/maintainers
+**/secrets/** @AaronAbuUsama @Open-Harness/maintainers
+**/.env* @AaronAbuUsama @Open-Harness/maintainers
+**/*.pem @AaronAbuUsama @Open-Harness/maintainers
+**/*.key @AaronAbuUsama @Open-Harness/maintainers
