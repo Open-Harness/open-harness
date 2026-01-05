@@ -4,13 +4,15 @@
 
 /* Force sidebar and TOC widths at appropriate breakpoints */
 @media (min-width: 768px) {
-  #nd-docs-layout {
-    --fd-sidebar-width: 268px !important;
-  }
+	#nd-docs-layout {
+		/* biome-ignore lint/complexity/noImportantStyles: Required to override fumadocs default CSS variables */
+		--fd-sidebar-width: 268px !important;
+	}
 }
 
 @media (min-width: 1280px) {
-  #nd-docs-layout {
-    --fd-toc-width: 268px !important;
-  }
+	#nd-docs-layout {
+		/* biome-ignore lint/complexity/noImportantStyles: Required to override fumadocs default CSS variables */
+		--fd-toc-width: 268px !important;
+	}
 }

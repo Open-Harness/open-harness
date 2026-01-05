@@ -88,7 +88,7 @@ Never claim a task is complete without:
 ### 5. Fixture Recording Policy
 **CRITICAL: You are NOT allowed to fabricate fixtures.**
 - All test fixtures MUST be recorded from REAL SDK interactions
-- Use `packages/kernel-v3/scripts/record-fixtures.ts` or similar to capture real responses
+- Use `packages/kernel/scripts/record-fixtures.ts` or similar to capture real responses
 - Fixtures must include actual SDK message types, timing, and structure
 - Never manually create fixtures with made-up data - this masks real SDK behavior differences
 - When fixing SDK integration bugs, always capture new fixtures from live SDK to prove the fix works

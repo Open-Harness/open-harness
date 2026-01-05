@@ -1,4 +1,4 @@
 {
-  "title": "Channels",
-  "pages": ["websocket", "custom-channels"]
+	"title": "Channels",
+	"pages": ["websocket", "custom-channels"]
 }

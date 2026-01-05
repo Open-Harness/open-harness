@@ -86,12 +86,13 @@ The `reviewer → coder` edge is a loop that:
 ## Run It
 
 ```typescript
-const result = await executeFlow(flow, registry, ctx, {
+const runtime = createRuntime({ flow, registry });
+const snapshot = await runtime.run({
   task: "Create a function to validate email addresses"
 });
 
-console.log("Final code:", result.outputs.coder.text);
-console.log("Review passed:", result.outputs.reviewer.passed);
+console.log("Final code:", snapshot.outputs.coder.text);
+console.log("Review passed:", snapshot.outputs.reviewer.passed);
 ```
 
 ## Next Steps

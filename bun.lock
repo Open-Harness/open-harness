@@ -55,7 +55,6 @@
       },
       "dependencies": {
         "@open-harness/kernel": "workspace:*",
-        "@open-harness/kernel-v3": "workspace:*",
         "blessed": "^0.1.81",
         "blessed-contrib": "^4.11.0",
         "commander": "^14.0.2",
@@ -93,50 +92,8 @@
         "typescript": "^5.0.0",
       },
     },
-    "packages/github-channel": {
-      "name": "@openharness/github-channel",
-      "dependencies": {
-        "pino": "^10.1.0",
-      },
-      "devDependencies": {
-        "@biomejs/biome": "2.3.10",
-        "@types/bun": "latest",
-        "@types/node": "^22.10.0",
-        "tsx": "^4.19.2",
-        "typescript": "^5.7.2",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
     "packages/kernel": {
       "name": "@open-harness/kernel",
-      "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "jsonata": "^2.1.0",
-        "vitest": "^4.0.16",
-        "yaml": "^2.4.5",
-        "zod": "^4.2.1",
-      },
-      "devDependencies": {
-        "@biomejs/biome": "2.3.10",
-        "@types/bun": "latest",
-        "@types/node": "^22",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "packages/kernel-tutorial": {
-      "name": "@open-harness/kernel-tutorial",
-      "version": "1.0.0",
-      "dependencies": {
-        "@open-harness/kernel": "workspace:*",
-        "zod": "^4.2.1",
-      },
-    },
-    "packages/kernel-v3": {
-      "name": "@open-harness/kernel-v3",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.76",
         "jsonata": "^2.1.0",
@@ -378,12 +335,6 @@
     "@open-harness/horizon-agent": ["@open-harness/horizon-agent@workspace:apps/horizon-agent"],
 
     "@open-harness/kernel": ["@open-harness/kernel@workspace:packages/kernel"],
-
-    "@open-harness/kernel-tutorial": ["@open-harness/kernel-tutorial@workspace:packages/kernel-tutorial"],
-
-    "@open-harness/kernel-v3": ["@open-harness/kernel-v3@workspace:packages/kernel-v3"],
-
-    "@openharness/github-channel": ["@openharness/github-channel@workspace:packages/github-channel"],
 
     "@orama/orama": ["@orama/orama@3.1.18", "", {}, "sha512-a61ljmRVVyG5MC/698C8/FfFDw5a8LOIvyOLW5fztgUXqUpc1jOfQzOitSCbge657OgXXThmY3Tk8fpiDb4UcA=="],
 
@@ -1543,9 +1494,9 @@
 
     "@open-harness/flow-ui/@biomejs/biome": ["@biomejs/biome@1.9.4", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "1.9.4", "@biomejs/cli-darwin-x64": "1.9.4", "@biomejs/cli-linux-arm64": "1.9.4", "@biomejs/cli-linux-arm64-musl": "1.9.4", "@biomejs/cli-linux-x64": "1.9.4", "@biomejs/cli-linux-x64-musl": "1.9.4", "@biomejs/cli-win32-arm64": "1.9.4", "@biomejs/cli-win32-x64": "1.9.4" }, "bin": { "biome": "bin/biome" } }, "sha512-1rkd7G70+o9KkTn5KLmDYXihGoTaIGO9PIIN2ZB7UJxFrWw04CZHPYiMRjYsaDvVV7hP1dYNRLxSANLaBFGpog=="],
 
-    "@open-harness/kernel/zod": ["zod@4.3.5", "", {}, "sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g=="],
+    "@open-harness/horizon-agent/zod": ["zod@4.3.5", "", {}, "sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g=="],
 
-    "@open-harness/kernel-v3/zod": ["zod@4.3.5", "", {}, "sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g=="],
+    "@open-harness/kernel/zod": ["zod@4.3.5", "", {}, "sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g=="],
 
     "@radix-ui/react-collection/@radix-ui/react-slot": ["@radix-ui/react-slot@1.2.3", "", { "dependencies": { "@radix-ui/react-compose-refs": "1.1.2" }, "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-aeNmHnBxbi2St0au6VBVC7JXFlhLlOnvIIlePNniyUNAClzmtAUEY8/pBiK3iHjufOlwA+c20/8jngo7xcrg8A=="],
 

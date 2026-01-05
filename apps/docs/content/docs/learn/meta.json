@@ -1,9 +1,4 @@
 {
-  "title": "Learn",
-  "pages": [
-    "quickstart",
-    "your-first-agent",
-    "multi-agent-flow",
-    "persistence"
-  ]
+	"title": "Learn",
+	"pages": ["quickstart", "your-first-agent", "multi-agent-flow", "persistence"]
 }

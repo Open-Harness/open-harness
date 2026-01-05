@@ -1,9 +1,4 @@
 {
-  "title": "Reference",
-  "pages": [
-    "...api",
-    "...expressions",
-    "...types",
-    "...schemas"
-  ]
+	"title": "Reference",
+	"pages": ["...api", "...expressions", "...types", "...schemas"]
 }
