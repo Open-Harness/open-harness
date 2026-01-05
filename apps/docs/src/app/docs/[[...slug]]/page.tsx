@@ -2,20 +2,37 @@ import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/layo
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import type { ComponentType } from "react";
 import { getPageImage, source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
-export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
+type PageParams = {
+	slug?: string[];
+};
+
+type PageProps = {
+	params: PageParams;
+};
+
+type DocsPageProps = Parameters<typeof DocsPage>[0];
+
+export default async function Page(props: PageProps) {
 	const params = await props.params;
 	const page = source.getPage(params.slug);
 	if (!page) notFound();
 
-	const MDX = page.data.body;
+	// Fumadocs types do not currently expose MDX fields on PageData.
+	const pageData = page.data as typeof page.data & {
+		body: ComponentType<Record<string, unknown>>;
+		toc: DocsPageProps["toc"];
+		full: DocsPageProps["full"];
+	};
+	const MDX = pageData.body;
 
 	return (
-		<DocsPage toc={page.data.toc} full={page.data.full}>
-			<DocsTitle>{page.data.title}</DocsTitle>
-			<DocsDescription>{page.data.description}</DocsDescription>
+		<DocsPage toc={pageData.toc} full={pageData.full}>
+			<DocsTitle>{pageData.title}</DocsTitle>
+			<DocsDescription>{pageData.description}</DocsDescription>
 			<DocsBody>
 				<MDX
 					components={getMDXComponents({
@@ -34,7 +51,7 @@ export async function generateStaticParams() {
 	return source.generateParams();
 }
 
-export async function generateMetadata(props: PageProps<"/docs/[[...slug]]">): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
 	const params = await props.params;
 	const page = source.getPage(params.slug);
 	if (!page) notFound();
