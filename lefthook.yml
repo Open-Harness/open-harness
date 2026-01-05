@@ -36,6 +36,11 @@ pre-push:
       run: bun run lint
       stage_fixed: false
 
+    # Check markdown links in docs
+    lint-links:
+      run: cd apps/docs && bun run lint:links
+      stage_fixed: false
+
     # Type check before push (catches type errors before CI)
     typecheck:
       run: bun run typecheck
