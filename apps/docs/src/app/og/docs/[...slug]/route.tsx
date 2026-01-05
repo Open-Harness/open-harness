@@ -4,9 +4,9 @@ import { ImageResponse } from "next/og";
 import { getPageImage, source } from "@/lib/source";
 
 type RouteContext = {
-	params: {
+	params: Promise<{
 		slug: string[];
-	};
+	}>;
 };
 
 export const revalidate = false;

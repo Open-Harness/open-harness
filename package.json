@@ -16,13 +16,18 @@
 		"prepare": "lefthook install",
 
 		"hooks:install": "lefthook install",
-		"hooks:uninstall": "lefthook uninstall"
+		"hooks:uninstall": "lefthook uninstall",
+		"worktree": "scripts/new-worktree",
+		"changeset": "changeset",
+		"changeset:version": "changeset version",
+		"changeset:publish": "changeset publish"
 	},
 	"dependencies": {
 		"dotenv": "^17.2.2"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.0",
+		"@changesets/cli": "^2.29.8",
 		"@types/bun": "^1.3.4",
 		"lefthook": "^2.0.13",
 		"lint-staged": "^16.2.7",

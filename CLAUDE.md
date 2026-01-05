@@ -226,6 +226,24 @@ bd list --mine           # Issues assigned to you
 bd status                # Overall database status
 ```
 
+### Worktree Helper Script
+
+Use the repo script to create a worktree + branch, claim the epic, disable the beads daemon in the new tab, and launch the app.
+
+```bash
+bun run worktree -- --epic open-harness-69b --feature "Alpha Release Prep"
+```
+
+Options:
+- `--app claude` to launch Claude Code instead of OpenCode (default).
+- `--base origin/dev` to override the base branch.
+
+Notes:
+- `--epic` must reference a beads epic (the script validates the issue type).
+- Worktree names are `bead-city` (3-digit bead derived from epic id + random historical city).
+- Uses Ghostty AppleScript to open a new tab; ensure Accessibility permissions for System Events.
+- The tab exports `BEADS_NO_DAEMON=1` to avoid worktree daemon issues.
+
 ### During Work
 
 ```bash
