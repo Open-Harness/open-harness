@@ -1,9 +1,29 @@
 {
   "name": "@open-harness/sdk",
-  "module": "src/index.ts",
+  "version": "0.0.0-alpha.1",
   "type": "module",
   "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
   "scripts": {
+    "build": "bun run build:types && bun run build:bundle",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:bundle": "bun build src/index.ts --outdir dist --format esm --target=bun --sourcemap=external",
     "lint": "biome check . --write",
     "lint:fix": "biome check . --write",
     "typecheck": "tsc --noEmit",
