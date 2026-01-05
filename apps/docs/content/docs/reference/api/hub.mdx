@@ -7,44 +7,50 @@ description: Execute flows and subscribe to runtime events
 
 The Runtime executes a single flow definition and emits events as it runs.
 
-## Creating a Runtime
+## Quick Start
+
+**For most cases**, use the simplified APIs:
+
+```typescript
+import { runFlow, parseFlowYaml } from "@open-harness/sdk";
+
+// Simplest one-shot execution
+const snapshot = await runFlow({
+  flow: parseFlowYaml(yamlString),
+  input: { name: "World" },
+});
+```
+
+```typescript
+import { createHarness, parseFlowYaml } from "@open-harness/sdk";
+
+// Full control with event handling
+const harness = createHarness({
+  flow: parseFlowYaml(yamlString),
+  onEvent: (event) => console.log(event.type),
+});
+
+await harness.run();
+harness.runtime.dispatch({ type: "pause" });
+```
+
+## Runtime API
+
+For advanced control over execution, use `createRuntime()`:
 
 ```typescript
 import {
   createRuntime,
   DefaultNodeRegistry,
   parseFlowYaml,
-  constantNode,
-  echoNode,
+  createDefaultRegistry,
 } from "@open-harness/sdk";
 
-const flow = parseFlowYaml(`
-name: "hello"
-nodes:
-  - id: a
-    type: constant
-    input:
-      value: "Hello"
-  - id: b
-    type: echo
-    input:
-      text: "{{ a.value }}"
-edges:
-  - from: a
-    to: b
-`);
-
-const registry = new DefaultNodeRegistry();
-registry.register(constantNode);
-registry.register(echoNode);
+const registry = createDefaultRegistry();
 
 const runtime = createRuntime({ flow, registry });
 const snapshot = await runtime.run();
-
-console.log(snapshot.outputs);
 ```
-
-## Runtime API
 
 ### `run(input?)`
 

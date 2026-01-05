@@ -46,17 +46,12 @@ nodes:
 edges: []
 ```
 
-## Step 3: Create the Runtime
+## Step 3: Run It
 
 Create `run.ts`:
 
 ```typescript
-import {
-  createRuntime,
-  DefaultNodeRegistry,
-  parseFlowYaml,
-  type NodeTypeDefinition,
-} from "@open-harness/sdk";
+import { runFlow, parseFlowYaml, DefaultNodeRegistry, type NodeTypeDefinition } from "@open-harness/sdk";
 import { readFileSync } from "node:fs";
 
 const helloAgent: NodeTypeDefinition<{ name: string }, { message: string }> = {
@@ -65,20 +60,16 @@ const helloAgent: NodeTypeDefinition<{ name: string }, { message: string }> = {
 };
 
 const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-
 const registry = new DefaultNodeRegistry();
 registry.register(helloAgent);
 
-const runtime = createRuntime({ flow, registry });
-
-runtime.onEvent((event) => {
-  if (event.type === "node:complete" && event.nodeId === "hello") {
-    console.log("Agent output:", event.output);
-  }
+const snapshot = await runFlow({
+  flow,
+  registry,
+  input: { name: "World" },
 });
 
-const snapshot = await runtime.run({ name: "World" });
-console.log("Final outputs:", snapshot.outputs);
+console.log("Output:", snapshot.outputs);
 ```
 
 Run it:
@@ -90,19 +81,17 @@ bun run run.ts
 You should see output similar to:
 
 ```
-Agent output: { message: "Hello, World!" }
-Final outputs: { hello: { message: "Hello, World!" } }
+Output: { hello: { message: "Hello, World!" } }
 ```
 
 ## What Just Happened?
 
 1. You defined a flow with a single custom agent node.
-2. You registered the agent in a node registry.
-3. You created a runtime and ran the flow with input.
-4. You listened for runtime events and printed the output.
+2. You created a custom registry with your agent type.
+3. You ran the flow with input using `runFlow()`.
 
 ## Next Steps
 
 - [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow
-- [Architecture](/docs/concepts/architecture) — Understand the system pieces
+- [Runtime API](/docs/reference/api/hub) — Full control with `createHarness()`
 - [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes

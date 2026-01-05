@@ -67,7 +67,7 @@ Create `run.ts`:
 
 ```typescript
 import {
-  createRuntime,
+  createHarness,
   DefaultNodeRegistry,
   parseFlowYaml,
   type NodeTypeDefinition,
@@ -102,15 +102,17 @@ const registry = new DefaultNodeRegistry();
 registry.register(triageNode);
 registry.register(echoNode);
 
-const runtime = createRuntime({ flow, registry });
-
-runtime.onEvent((event) => {
-  if (event.type === "node:complete") {
-    console.log(`[${event.nodeId}]`, event.output);
-  }
+const harness = createHarness({
+  flow,
+  registry,
+  onEvent: (event) => {
+    if (event.type === "node:complete") {
+      console.log(`[${event.nodeId}]`, event.output);
+    }
+  },
 });
 
-const snapshot = await runtime.run({
+const snapshot = await harness.run({
   text: "ASAP: reset production password for the admin user",
 });
 
