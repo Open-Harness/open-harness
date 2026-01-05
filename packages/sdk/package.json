@@ -1,8 +1,8 @@
 {
   "name": "@open-harness/sdk",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.0",
   "type": "module",
-  "private": true,
+  "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
