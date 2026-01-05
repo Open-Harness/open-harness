@@ -1,83 +1,122 @@
 ---
 title: Data Bindings
-description: Connect nodes using JSONata expressions
+description: Connect node inputs with JSONata expressions
 ---
 
 # Data Bindings
 
-Use JSONata expressions to pass data between nodes in your flow.
+Use JSONata expressions inside `{{ }}` to bind data into node inputs.
 
-## Basic Binding Syntax
+## Binding Basics
 
-Reference data using double curly braces:
-
-```yaml
-nodes:
-  - id: greet
-    type: claude.agent
-    input:
-      prompt: "Hello, {{ flow.input.name }}!"
-```
-
-## Context Variables
-
-Available in all expressions:
-
-| Variable | Description |
-|----------|-------------|
-| `flow.input` | Input passed when starting the flow |
-| `nodes.<id>.output` | Output from a completed node |
-| `$env` | Environment variables |
-
-## Node Output References
-
-Access previous node results:
-
-```yaml
-nodes:
-  - id: fetch
-    type: http.get
-    input:
-      url: "https://api.example.com/user"
-
-  - id: greet
-    type: claude.agent
-    input:
-      prompt: "Summarize: {{ nodes.fetch.output.data }}"
-```
-
-## Transformations
-
-JSONata supports rich transformations:
-
-```yaml
-# Extract specific field
-prompt: "{{ nodes.fetch.output.items[0].name }}"
-
-# String concatenation
-prompt: "{{ flow.input.firstName & ' ' & flow.input.lastName }}"
-
-# Array operations
-items: "{{ nodes.list.output.results[status = 'active'] }}"
-```
-
-## Object Construction
-
-Build complex objects:
+A binding is any `{{ expression }}` in a string:
 
 ```yaml
 input:
-  user: |
+  prompt: "Hello, {{ flow.input.name }}!"
+```
+
+Bindings can reference:
+
+| Variable | Description |
+|----------|-------------|
+| `flow.input` | Input passed to `runtime.run()` |
+| `state` | Flow state snapshot |
+| `<nodeId>` | Output from a completed node (by id) |
+| `$env` | Environment variables |
+| `$iteration`, `$first`, `$last` | Loop context (for `forEach`) |
+
+## Example: Flow Input
+
+```yaml
+nodes:
+  - id: greeting
+    type: echo
+    input:
+      text: "Hello, {{ flow.input.name }}!"
+```
+
+Expected output:
+
+```
+{ greeting: { text: "Hello, Ada!" } }
+```
+
+## Example: Previous Node Output
+
+```yaml
+nodes:
+  - id: source
+    type: constant
+    input:
+      value: "Welcome"
+
+  - id: greet
+    type: echo
+    input:
+      text: "{{ source.value }} to Open Harness"
+```
+
+Expected output:
+
+```
+{ greet: { text: "Welcome to Open Harness" } }
+```
+
+## Example: Arrays and Filters
+
+```yaml
+nodes:
+  - id: summary
+    type: echo
+    input:
+      text: "Active users: {{ users[status = 'active'].name }}"
+```
+
+Expected output:
+
+```
+Active users: ["Ada", "Grace"]
+```
+
+## Example: Object Construction (Pure Binding)
+
+If the entire value is a binding, the output preserves its type:
+
+```yaml
+input:
+  payload: |
     {{
       {
         "name": flow.input.name,
-        "email": flow.input.email,
-        "created": $now()
+        "role": flow.input.role,
+        "active": true
       }
     }}
 ```
 
+Expected output:
+
+```
+{ payload: { name: "Ada", role: "Engineer", active: true } }
+```
+
+## Common Patterns
+
+- **State access**: `{{ state.runs }}`
+- **String concat**: `{{ flow.input.first & ' ' & flow.input.last }}`
+- **Nested access**: `{{ profile.contact.email }}`
+
+## Troubleshooting
+
+- **Blank output**: Missing paths return `""` in mixed templates. Use a pure
+  binding (`{{ value }}`) if you need `null`/`undefined` behavior.
+- **Wrong path**: Node outputs are available as `{{ nodeId.field }}`, not
+  `{{ nodes.nodeId.output.field }}`.
+- **Forgetting `flow.input`**: Inputs from `runtime.run()` live under
+  `flow.input`, not at the top level.
+
 ## Next Steps
 
-- [Conditionals](/docs/guides/expressions/conditionals) — Control flow with expressions
+- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
 - [JSONata Syntax](/docs/reference/expressions/syntax) — Full syntax reference

@@ -5,80 +5,82 @@ description: Control flow execution with JSONata conditions
 
 # Conditional Expressions
 
-Use JSONata expressions to control which paths your flow takes.
+Use JSONata expressions to decide when nodes and edges should run.
 
 ## Edge Conditions
 
-Add conditions to edges to create branching logic:
+Add `when` to edges for branching logic:
 
 ```yaml
 nodes:
   - id: classify
-    type: claude.agent
+    type: task.triage
     input:
-      prompt: "Classify as 'bug' or 'feature': {{ flow.input.text }}"
+      text: "{{ flow.input.text }}"
 
-  - id: handle-bug
-    type: claude.agent
+  - id: handle-urgent
+    type: echo
     input:
-      prompt: "Triage this bug report"
+      text: "URGENT: {{ classify.summary }}"
 
-  - id: handle-feature
-    type: claude.agent
+  - id: handle-normal
+    type: echo
     input:
-      prompt: "Write a feature spec"
+      text: "Next: {{ classify.summary }}"
 
 edges:
   - from: classify
-    to: handle-bug
-    condition: "{{ nodes.classify.output.text = 'bug' }}"
+    to: handle-urgent
+    when: "classify.priority = 'urgent'"
 
   - from: classify
-    to: handle-feature
-    condition: "{{ nodes.classify.output.text = 'feature' }}"
+    to: handle-normal
+    when: "classify.priority = 'normal'"
 ```
 
-## Comparison Operators
+## Node Conditions
+
+Skip a node entirely unless a condition passes:
+
+```yaml
+nodes:
+  - id: audit
+    type: echo
+    when: "state.runs > 10"
+    input:
+      text: "High volume run detected"
+```
+
+## Boolean and Comparison Operators
 
 ```yaml
 # Equality
-condition: "{{ flow.input.type = 'premium' }}"
+when: "flow.input.plan = 'pro'"
 
 # Numeric comparison
-condition: "{{ nodes.score.output.value > 0.8 }}"
+when: "score >= 0.85"
 
 # Boolean logic
-condition: "{{ flow.input.urgent and flow.input.priority > 5 }}"
+when: "flow.input.urgent and flow.input.priority > 5"
 
-# String contains
-condition: "{{ $contains(flow.input.text, 'error') }}"
+# Existence check
+when: "$exists(flow.input.owner)"
 ```
 
-## Ternary Expressions
+## Error Handling and Safeguards
 
-Use inline conditionals in bindings:
+A common pattern is to skip downstream nodes when a previous node failed:
 
 ```yaml
-input:
-  prompt: |
-    {{
-      flow.input.priority > 5
-        ? "URGENT: " & flow.input.message
-        : flow.input.message
-    }}
+when: "$not(classify.error)"
 ```
 
-## Default Values
+## Edge Cases
 
-Handle missing data gracefully:
-
-```yaml
-# Fallback if field is missing
-name: "{{ flow.input.name ? flow.input.name : 'Anonymous' }}"
-
-# Null coalescing pattern
-config: "{{ flow.input.config ? flow.input.config : {} }}"
-```
+- **Missing paths**: JSONata returns `undefined`. Compare with `$exists()` when
+  a field may be missing.
+- **Strings**: Use single quotes inside expressions: `status = 'ok'`.
+- **Equality**: JSONata uses `=` (not `==`).
 
 ## Next Steps
 

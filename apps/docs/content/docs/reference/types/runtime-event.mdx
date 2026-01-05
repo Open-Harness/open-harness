@@ -10,160 +10,69 @@ All runtime communication uses typed events.
 ## Base Type
 
 ```typescript
-interface RuntimeEvent {
-  type: string;
-  timestamp?: Date;
-  runId?: string;
-  nodeId?: string;
-  [key: string]: unknown;
-}
+type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
 ```
 
-## Properties
+## Common Fields
 
-### type
-
-Event type identifier (required):
-
-```typescript
-{ type: "agent:text" }
-```
-
-Convention: `category:action`
-- `flow:start`, `flow:complete`, `flow:error`
-- `node:start`, `node:complete`
-- `agent:text`, `agent:tool_use`, `agent:complete`
-
-### timestamp
-
-When the event occurred:
-
-```typescript
-{ type: "agent:text", timestamp: new Date() }
-```
-
-### runId
-
-Associated flow run:
-
-```typescript
-{ type: "agent:text", runId: "run-abc123" }
-```
-
-### nodeId
-
-Associated node:
-
-```typescript
-{ type: "node:complete", nodeId: "greet", runId: "run-abc123" }
-```
+- `type`: event identifier
+- `timestamp`: milliseconds since epoch
+- `runId` and `nodeId`: included on node/agent events
 
 ## Event Categories
 
 ### Flow Events
 
 ```typescript
-// Flow started
-{
-  type: "flow:start",
-  flowId: string,
-  runId: string,
-  input: unknown
-}
-
-// Flow completed
-{
-  type: "flow:complete",
-  flowId: string,
-  runId: string,
-  output: unknown
-}
-
-// Flow failed
-{
-  type: "flow:error",
-  flowId: string,
-  runId: string,
-  error: { message: string, stack?: string }
-}
+{ type: "flow:start", flowName: string }
+{ type: "flow:complete", flowName: string, status: "complete" | "failed" }
+{ type: "flow:paused" }
+{ type: "flow:resumed" }
+{ type: "flow:aborted" }
 ```
 
 ### Node Events
 
 ```typescript
-// Node started
-{
-  type: "node:start",
-  nodeId: string,
-  runId: string
-}
+{ type: "node:start", nodeId: string, runId: string }
+{ type: "node:complete", nodeId: string, runId: string, output: unknown }
+{ type: "node:error", nodeId: string, runId: string, error: string }
+{ type: "node:skipped", nodeId: string, reason: "edge" | "when" }
+```
 
-// Node completed
-{
-  type: "node:complete",
-  nodeId: string,
-  runId: string,
-  output: unknown
-}
+### Edge Events
+
+```typescript
+{ type: "edge:fire", edgeId?: string, from: string, to: string }
+{ type: "loop:iterate", edgeId?: string, iteration: number }
 ```
 
 ### Agent Events
 
 ```typescript
-// Agent started
-{
-  type: "agent:start",
-  agentName: string,
-  runId: string
-}
-
-// Text chunk (streaming)
-{
-  type: "agent:text",
-  content: string,
-  runId: string
-}
-
-// Tool invocation
-{
-  type: "agent:tool_use",
-  name: string,
-  input: unknown,
-  runId: string
-}
-
-// Agent completed
-{
-  type: "agent:complete",
-  output: unknown,
-  runId: string
-}
-
-// Agent error
-{
-  type: "agent:error",
-  error: { message: string },
-  runId: string
-}
+{ type: "agent:start", nodeId: string, runId: string, sessionId: string, prompt: unknown }
+{ type: "agent:text", nodeId: string, runId: string, content: string }
+{ type: "agent:text:delta", nodeId: string, runId: string, content: string }
+{ type: "agent:tool", nodeId: string, runId: string, toolName: string, toolInput: unknown, toolOutput: unknown }
+{ type: "agent:complete", nodeId: string, runId: string, result: string }
 ```
 
-## Custom Events
-
-Define your own events:
+### State and Command Events
 
 ```typescript
-hub.emit({
-  type: "custom:notification",
-  message: "Task completed",
-  priority: "high",
-});
+{ type: "state:patch", patch: StatePatch }
+{ type: "command:received", command: RuntimeCommand }
+```
 
-hub.subscribe("custom:notification", (event) => {
-  console.log(event.event.message);
+## Subscribing
+
+```typescript
+runtime.onEvent((event) => {
+  console.log(event.type, event.timestamp);
 });
 ```
 
 ## See Also
 
-- [Events API](/docs/reference/api/events) — Event handling
-- [Hub API](/docs/reference/api/hub) — Event emission
+- [Events API](/docs/reference/api/events) — Event details
+- [Runtime API](/docs/reference/api/hub) — Event emission

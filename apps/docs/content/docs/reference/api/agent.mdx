@@ -1,102 +1,65 @@
 ---
-title: Agent API
-description: Agent definition and context interface
+title: Node Types
+description: Define custom node behavior and execution context
 ---
 
-# Agent API
+# Node Types
 
-Define custom agents that integrate with the Hub.
+Custom nodes implement `NodeTypeDefinition` and are registered with the runtime.
 
-## AgentDefinition
+## NodeTypeDefinition
 
 ```typescript
-interface AgentDefinition<TIn = unknown, TOut = unknown> {
-  name: string;
-  inputSchema?: ZodSchema<TIn>;
-  outputSchema?: ZodSchema<TOut>;
-  execute(input: TIn, ctx: AgentContext): Promise<TOut>;
+import type { NodeTypeDefinition } from "@open-harness/sdk";
+
+interface NodeTypeDefinition<TIn, TOut> {
+  type: string;
+  inputSchema?: unknown;
+  outputSchema?: unknown;
+  capabilities?: { streaming?: boolean; multiTurn?: boolean };
+  run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
 }
 ```
 
-## AgentContext
+## NodeRunContext
 
-Provided to every agent execution:
+The runtime passes execution context to each node:
 
 ```typescript
-interface AgentContext {
-  hub: Hub;
-  runId: string;
+interface NodeRunContext {
   nodeId: string;
-  abortSignal?: AbortSignal;
+  runId: string;
+  emit: (event: RuntimeEventPayload) => void;
+  state: StateStore;
+  inbox: CommandInbox;
+  getAgentSession: () => string | undefined;
+  setAgentSession: (sessionId: string) => void;
+  resumeMessage?: string;
+  cancel: CancelContext;
 }
 ```
 
-### Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `hub` | `Hub` | Reference to the Hub for emitting events |
-| `runId` | `string` | Current flow run identifier |
-| `nodeId` | `string` | Current node identifier |
-| `abortSignal` | `AbortSignal` | Signal for cancellation |
-
-## defineAgent()
-
-Helper to create type-safe agents:
+## Custom Node Example
 
 ```typescript
-import { defineAgent } from "@open-harness/sdk";
-import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/sdk";
 
-export const myAgent = defineAgent({
-  name: "my-agent",
-  inputSchema: z.object({
-    prompt: z.string(),
-  }),
-  outputSchema: z.object({
-    text: z.string(),
-  }),
-  async execute(input, ctx) {
-    // Implementation
-    return { text: "Result" };
-  },
-});
+export const echoUpper: NodeTypeDefinition<{ text: string }, { text: string }> = {
+  type: "echo.upper",
+  run: async (_ctx, input) => ({ text: input.text.toUpperCase() }),
+};
 ```
 
 ## Emitting Events
 
-Agents should emit standard events:
-
 ```typescript
-async execute(input, ctx) {
-  ctx.hub.emit({ type: "agent:start", agentName: this.name });
-
-  // Stream text chunks
-  ctx.hub.emit({ type: "agent:text", content: "..." });
-
-  // Complete
-  ctx.hub.emit({ type: "agent:complete", output: result });
-
-  return result;
-}
-```
-
-## Handling Cancellation
-
-```typescript
-async execute(input, ctx) {
-  const response = await fetch(url, {
-    signal: ctx.abortSignal,
-  });
-
-  // Or check manually
-  if (ctx.abortSignal?.aborted) {
-    throw new Error("Cancelled");
-  }
+run: async (ctx, input) => {
+  ctx.emit({ type: "node:start", nodeId: ctx.nodeId, runId: ctx.runId });
+  return { text: input.text };
 }
 ```
 
 ## See Also
 
-- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Building agents
-- [Events API](/docs/reference/api/events) — Agent events
+- [Node Registry](/docs/reference/api/node-registry) — Register node types
+- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Extended patterns

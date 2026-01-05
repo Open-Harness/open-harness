@@ -359,3 +359,33 @@ Ensure component is imported in `mdx-components.tsx`:
 ```typescript
 import { TypeTable } from 'fumadocs-ui/components/type-table';
 ```
+
+### Pages break except landing page (Next.js params type error)
+
+**CRITICAL: This has broken the docs site multiple times. DO NOT repeat this mistake.**
+
+In Next.js 15+, `params` in page/route components is a Promise and MUST be typed as `Promise<PageParams>`, not just `PageParams`.
+
+#### ❌ WRONG (breaks at runtime):
+```typescript
+type PageProps = {
+	params: { slug?: string[] };  // ❌ Wrong
+};
+```
+
+#### ✅ CORRECT:
+```typescript
+type PageParams = {
+	slug?: string[];
+};
+
+type PageProps = {
+	params: Promise<PageParams>;  // ✅ Correct
+};
+```
+
+**Symptoms**: All docs pages return 404 or error except the landing page (`/docs`).
+
+**Fix**: Update the type definition in `apps/docs/src/app/docs/[[...slug]]/page.tsx` to use `Promise<PageParams>`.
+
+**Reference**: See `apps/docs/src/app/og/docs/[...slug]/route.tsx` for correct pattern.
