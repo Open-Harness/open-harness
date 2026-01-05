@@ -16,8 +16,10 @@ import { WebSocketTransport } from "../transport/websocket.js";
 export interface HarnessOptions {
   /** Flow definition to run. */
   flow: FlowDefinition;
-  /** Optional node registry (default: registry with standard nodes). */
-  registry?: NodeRegistry;
+  /** Optional node registry (NodeRegistry or plain object of nodes). */
+  registry?:
+    | NodeRegistry
+    | Record<string, NodeTypeDefinition<unknown, unknown>>;
   /** Optional persistence store. */
   store?: RunStore;
   /** Optional transport configuration. */
@@ -44,10 +46,32 @@ export interface Harness {
 }
 
 /**
+ * Normalize registry input - accepts NodeRegistry or plain object of nodes.
+ */
+function normalizeRegistry(
+  registry?:
+    | NodeRegistry
+    | Record<string, NodeTypeDefinition<unknown, unknown>>,
+): NodeRegistry | undefined {
+  if (!registry) return undefined;
+  if ("register" in registry && "get" in registry) {
+    return registry as NodeRegistry;
+  }
+
+  // Convert plain object to NodeRegistry
+  const nodeRegistry = new DefaultNodeRegistry();
+  for (const node of Object.values(registry)) {
+    nodeRegistry.register(node);
+  }
+  return nodeRegistry;
+}
+
+/**
  * Create a harness with smart defaults and automatic wiring.
  */
 export function createHarness(options: HarnessOptions): Harness {
-  const registry = options.registry ?? createDefaultRegistry();
+  const registry =
+    normalizeRegistry(options.registry) ?? createDefaultRegistry();
   const runtime = createRuntime({
     flow: options.flow,
     registry,
@@ -88,8 +112,10 @@ export interface RunFlowOptions {
   flow: FlowDefinition;
   /** Optional input for the flow. */
   input?: Record<string, unknown>;
-  /** Optional node registry (default: registry with standard nodes). */
-  registry?: NodeRegistry;
+  /** Optional node registry (NodeRegistry or plain object of nodes). */
+  registry?:
+    | NodeRegistry
+    | Record<string, NodeTypeDefinition<unknown, unknown>>;
   /** Optional persistence store. */
   store?: RunStore;
   /** Optional transport configuration. */

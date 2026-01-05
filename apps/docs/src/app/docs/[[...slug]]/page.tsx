@@ -11,7 +11,7 @@ type PageParams = {
 };
 
 type PageProps = {
-	params: PageParams;
+	params: Promise<PageParams>;
 };
 
 type DocsPageProps = Parameters<typeof DocsPage>[0];

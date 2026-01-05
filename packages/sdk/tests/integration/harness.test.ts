@@ -196,4 +196,37 @@ edges: []
     await harness.run();
     await harness.stop();
   });
+
+  test("runFlow accepts plain object registry", async () => {
+    const flow = parseFlowYaml(`
+name: "simple"
+nodes:
+  - id: a
+    type: custom.node
+    input:
+      text: "{{ flow.input.message }}"
+edges: []
+`);
+
+    const customNode: {
+      type: string;
+      run: (
+        _ctx: unknown,
+        input: { text: string },
+      ) => Promise<{ result: string }>;
+    } = {
+      type: "custom.node",
+      run: async (_ctx: unknown, input: { text: string }) => ({
+        result: input.text.toUpperCase(),
+      }),
+    };
+
+    const snapshot = await runFlow({
+      flow,
+      registry: { [customNode.type]: customNode },
+      input: { message: "hello" },
+    });
+
+    expect(snapshot.outputs.a).toEqual({ result: "HELLO" });
+  });
 });

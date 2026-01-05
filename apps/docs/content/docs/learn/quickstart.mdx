@@ -51,21 +51,18 @@ edges: []
 Create `run.ts`:
 
 ```typescript
-import { runFlow, parseFlowYaml, DefaultNodeRegistry, type NodeTypeDefinition } from "@open-harness/sdk";
+import { runFlow, parseFlowYaml } from "@open-harness/sdk";
 import { readFileSync } from "node:fs";
 
-const helloAgent: NodeTypeDefinition<{ name: string }, { message: string }> = {
-  type: "hello.agent",
-  run: async (_ctx, input) => ({ message: `Hello, ${input.name}!` }),
-};
-
 const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const registry = new DefaultNodeRegistry();
-registry.register(helloAgent);
+const helloAgent = {
+  type: "hello.agent" as const,
+  run: async (_ctx: any, input: { name: string }) => ({ message: `Hello, ${input.name}!` }),
+};
 
 const snapshot = await runFlow({
   flow,
-  registry,
+  registry: { [helloAgent.type]: helloAgent },
   input: { name: "World" },
 });
 
@@ -87,8 +84,8 @@ Output: { hello: { message: "Hello, World!" } }
 ## What Just Happened?
 
 1. You defined a flow with a single custom agent node.
-2. You created a custom registry with your agent type.
-3. You ran the flow with input using `runFlow()`.
+2. You passed that node directly to `runFlow()` (no need to create a registry).
+3. You ran the flow with input.
 
 ## Next Steps
 
