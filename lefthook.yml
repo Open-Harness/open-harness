@@ -29,13 +29,7 @@ pre-commit:
     #   stage_fixed: false
 
 pre-push:
-  parallel: true
   commands:
-    # Run full test suite before push
-    test:
-      run: bun run test
-      stage_fixed: false
-
     # Type check before push (catches type errors before CI)
     typecheck:
       run: bun run typecheck
