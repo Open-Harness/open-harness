@@ -73,6 +73,8 @@ specs/001-vercel-ai-adapter/
 packages/ai-sdk/
 ├── package.json
 ├── tsconfig.json
+├── tsconfig.build.json
+├── biome.json                      # Biome linter/formatter config
 ├── src/
 │   ├── index.ts                    # Barrel export
 │   ├── transport.ts                # OpenHarnessChatTransport class
@@ -133,8 +135,9 @@ No constitution violations requiring justification.
 
 - [ ] All tests pass: `bun run test` (in packages/ai-sdk/)
 - [ ] Type checking passes: `bun run typecheck`
-- [ ] Linting passes: `bun run lint`
+- [ ] Biome linting passes: `bun run lint` (runs `biome check . --write`)
 - [ ] No console.log/debug statements in production code
+- [ ] Can run from root: `turbo test typecheck lint --filter=@open-harness/ai-sdk`
 
 ### Task Completion Gates
 
@@ -160,13 +163,16 @@ No constitution violations requiring justification.
 > These files MUST exist at feature completion
 
 ```text
-packages/ai-sdk/package.json           # Package manifest
-packages/ai-sdk/src/index.ts           # Barrel export
-packages/ai-sdk/src/transport.ts       # Main transport class
-packages/ai-sdk/src/transforms.ts      # Transform functions + PartTracker
-packages/ai-sdk/tests/unit/transforms.test.ts    # Unit tests
+packages/ai-sdk/package.json                         # Package manifest
+packages/ai-sdk/tsconfig.json                        # TypeScript config
+packages/ai-sdk/tsconfig.build.json                  # Build config
+packages/ai-sdk/biome.json                           # Biome linter config
+packages/ai-sdk/src/index.ts                         # Barrel export
+packages/ai-sdk/src/transport.ts                     # Main transport class
+packages/ai-sdk/src/transforms.ts                    # Transform functions + PartTracker
+packages/ai-sdk/tests/unit/transforms.test.ts        # Unit tests
 packages/ai-sdk/tests/integration/transport.test.ts  # Integration test
-apps/ui/src/app/demo/page.tsx          # Demo page
+apps/ui/src/app/demo/page.tsx                        # Demo page
 ```
 
 ### Test Coverage Expectations
