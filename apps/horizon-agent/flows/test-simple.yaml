@@ -1,0 +1,41 @@
+# Simple test flow for fixture recording
+# No schemas, just basic agent interactions
+
+name: test-simple
+version: 1
+
+state:
+  initial:
+    status: "idle"
+
+nodes:
+  - id: planner
+    type: claude.agent
+    input:
+      prompt: |
+        You are a planner. Given this feature request, create a simple JSON plan.
+
+        Feature: {{ flow.input.feature }}
+
+        Respond with a JSON object containing:
+        {
+          "tasks": [
+            {"id": "task-1", "title": "...", "description": "..."}
+          ]
+        }
+
+        Keep it simple - just 1 task.
+
+  - id: coder
+    type: claude.agent
+    input:
+      prompt: |
+        Implement this task:
+
+        {{ planner.text }}
+
+        Provide a simple implementation.
+
+edges:
+  - from: planner
+    to: coder

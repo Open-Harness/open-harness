@@ -1,11 +1,10 @@
 # Horizon Agent Flow (Kernel)
 # Multi-agent implementation system: planner → forEach(task) → coder ↔ reviewer loop
 #
-# This flow demonstrates:
-# - State management for plan persistence
-# - forEach edges for task iteration
-# - Loop edges for coder/reviewer cycles
-# - JSONata expressions for bindings ({{ expr }}) and conditions (when)
+# Syntax:
+# - {{ expr }} for JSONata interpolation (bindings.ts)
+# - when: "jsonata-expr" for edge conditions (when.ts)
+# - NO {% %} Jinja control flow - use JSONata ternary instead
 
 name: horizon-agent
 version: 1
@@ -13,19 +12,13 @@ version: 1
 state:
   initial:
     tasks: []
-    planCreatedAt: null
-    currentTaskIndex: 0
-    currentIteration: 0
     reviewFeedback: null
     completedTasks: []
-    startedAt: null
-    completedAt: null
     status: "idle"
 
 nodes:
   # Phase 1: Planning
-  # The planner analyzes the feature request and creates a structured task list.
-  # Tasks are stored in state and are immutable after creation.
+  # Analyzes feature request and creates structured task list
   - id: planner
     type: claude.agent
     input:
@@ -53,11 +46,10 @@ nodes:
 
         Keep the plan focused and achievable. Aim for 3-7 tasks for typical features.
       options:
-        # Use file-based schema for structured output
         outputSchemaFile: apps/horizon-agent/schemas/planner.json
 
-  # Phase 2: Task Iteration
-  # Process each task from the planner's output using forEach
+  # Phase 2: Implementation
+  # Processes each task, handles both initial and revision iterations
   - id: coder
     type: claude.agent
     input:
@@ -70,16 +62,7 @@ nodes:
         **Description:** {{ task.description }}
 
         ## Previous Review Feedback
-        {% if state.reviewFeedback %}
-        **Status:** {{ state.reviewFeedback.passed }}
-        **Feedback:** {{ state.reviewFeedback.feedback }}
-        **Issues to Address:**
-        {% for issue in state.reviewFeedback.issues %}
-        - {{ issue }}
-        {% endfor %}
-        {% else %}
-        This is the first iteration. No previous feedback.
-        {% endif %}
+        {{ $exists(state.reviewFeedback) ? '**Status:** ' & (state.reviewFeedback.passed ? 'Passed' : 'Needs Revision') & '\n**Feedback:** ' & state.reviewFeedback.feedback & '\n**Issues:**\n- ' & $join(state.reviewFeedback.issues, '\n- ') : 'This is the first iteration. No previous feedback.' }}
 
         ## Instructions
         1. Implement this task completely
@@ -91,7 +74,8 @@ nodes:
         ## Output
         Provide the complete implementation with clear file paths and code blocks.
 
-  # Reviewer agent - reviews the coder's implementation
+  # Phase 3: Review
+  # Reviews implementation and provides structured feedback
   - id: reviewer
     type: claude.agent
     input:
@@ -119,27 +103,22 @@ nodes:
         - Provide specific, actionable feedback for any issues found
         - If the code is production-ready, approve it
       options:
-        # Use file-based schema for structured output
         outputSchemaFile: apps/horizon-agent/schemas/reviewer.json
 
 edges:
-  # Planner -> Coder (with forEach for task iteration)
+  # Planner -> Coder: fan out over tasks
   - from: planner
     to: coder
     forEach:
       in: "{{ planner.structuredOutput.tasks }}"
       as: task
 
-  # Coder -> Reviewer (sequential within each task)
+  # Coder -> Reviewer: sequential review
   - from: coder
     to: reviewer
 
-  # Loop: Reviewer -> Coder on failure
-  # This creates a controlled cycle for iterative improvement
-  # Note: maxIterations must be a static number (kernel doesn't support templates here)
-  # The CLI's --max-iterations option is for UI display only; this controls the actual limit
+  # Reviewer -> Coder: loop on failure (max 5 iterations)
   - from: reviewer
     to: coder
-    # JSONata expression: continue looping while reviewer hasn't passed
-    when: "$not(reviewer.structuredOutput.passed = true)"
+    when: "reviewer.structuredOutput.passed = false"
     maxIterations: 5

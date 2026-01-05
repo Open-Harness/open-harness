@@ -13,10 +13,15 @@ import type { FixtureFile } from "../src/testing/mock-query.js";
 const args = parseArgs(process.argv.slice(2));
 if (!args.flow || !args.outDir) {
 	console.error(
-		"Usage: bun scripts/record-fixtures.ts --flow <path> --out <dir>",
+		"Usage: bun scripts/record-fixtures.ts --flow <path> --out <dir> [--input <json>]",
 	);
 	process.exit(1);
 }
+
+// Parse flow input if provided
+const flowInput: Record<string, unknown> = args.input
+	? JSON.parse(args.input)
+	: {};
 
 const flowPath = resolve(process.cwd(), args.flow);
 const outDir = resolve(process.cwd(), args.outDir);
@@ -46,8 +51,31 @@ registry.register(constantNode);
 registry.register(echoNode);
 registry.register(claudeNode);
 
+console.log(`Recording fixtures for flow: ${flow.name}`);
+console.log(`Input: ${JSON.stringify(flowInput)}`);
+
 const runtime = createRuntime({ flow, registry });
-await runtime.run();
+
+// Log events during recording
+runtime.onEvent((event) => {
+	if (event.type === "node:start") {
+		console.log(`  → Starting node: ${(event as { nodeId: string }).nodeId}`);
+	}
+	if (event.type === "node:complete") {
+		console.log(`  ✓ Completed node: ${(event as { nodeId: string }).nodeId}`);
+	}
+	if (event.type === "agent:text:delta") {
+		process.stdout.write(".");
+	}
+	if (event.type === "node:error") {
+		console.error(`  ✗ Error in node:`, event);
+	}
+	if (event.type === "flow:error") {
+		console.error(`  ✗ Flow error:`, event);
+	}
+});
+
+await runtime.run(flowInput);
 
 await mkdir(outDir, { recursive: true });
 for (const [nodeId, fixture] of recordings.entries()) {
@@ -56,8 +84,12 @@ for (const [nodeId, fixture] of recordings.entries()) {
 	console.log(`wrote ${outPath}`);
 }
 
-function parseArgs(argv: string[]): { flow?: string; outDir?: string } {
-	const parsed: { flow?: string; outDir?: string } = {};
+function parseArgs(argv: string[]): {
+	flow?: string;
+	outDir?: string;
+	input?: string;
+} {
+	const parsed: { flow?: string; outDir?: string; input?: string } = {};
 	for (let i = 0; i < argv.length; i += 1) {
 		const arg = argv[i];
 		if (arg === "--flow") {
@@ -67,6 +99,11 @@ function parseArgs(argv: string[]): { flow?: string; outDir?: string } {
 		}
 		if (arg === "--out") {
 			parsed.outDir = argv[i + 1];
+			i += 1;
+			continue;
+		}
+		if (arg === "--input") {
+			parsed.input = argv[i + 1];
 			i += 1;
 		}
 	}
