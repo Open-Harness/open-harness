@@ -57,9 +57,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for changeset
-        uses: changesets/action@v1
-        with:
-          version: echo "Checking for changesets..."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check for changeset files
+        run: |
+          if [ -z "$(ls -A .changeset/*.md 2>/dev/null | grep -v README)" ]; then
+            echo "❌ No changeset found. Please add a changeset with: bun run changeset"
+            exit 1
+          else
+            echo "✅ Changeset found"
+            ls -la .changeset/*.md | grep -v README
+          fi
