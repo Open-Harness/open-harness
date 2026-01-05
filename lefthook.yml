@@ -29,8 +29,19 @@ pre-commit:
     #   stage_fixed: false
 
 pre-push:
+  parallel: true
   commands:
+    # Lint check (no auto-fix on push, just validation)
+    lint:
+      run: bun run lint
+      stage_fixed: false
+
     # Type check before push (catches type errors before CI)
     typecheck:
       run: bun run typecheck
+      stage_fixed: false
+
+    # Run unit and replay tests (excludes slow live/e2e tests)
+    test:
+      run: bun run test
       stage_fixed: false
