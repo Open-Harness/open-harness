@@ -12,7 +12,11 @@ pre-commit:
     # Run beads pre-commit hook first
     beads:
       priority: 1
-      run: bd hooks run pre-commit {staged_files}
+      run: |
+        if [ "$CI" = "true" ] || ! command -v bd >/dev/null 2>&1; then
+          exit 0
+        fi
+        bd hooks run pre-commit {staged_files}
       stage_fixed: false
 
     # Lint and format staged files with biome
