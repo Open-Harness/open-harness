@@ -45,3 +45,21 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  changeset-check:
+    name: Changeset Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changeset
+        uses: changesets/action@v1
+        with:
+          version: echo "Checking for changesets..."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
