@@ -1,93 +1,87 @@
 ---
 title: Architecture
-description: Understanding the Hub-Flow-Channel architecture
+description: Understanding the Hub, Runtime, and Channel layers
 ---
 
 # Architecture
 
-Open Harness uses a three-layer architecture for building agent systems.
+Open Harness is built around a simple event-driven architecture that separates
+coordination, execution, and external integration.
 
-## The Three Layers
+## Core Components
 
-```
-┌─────────────────────────────────────────┐
-│              Channels                   │
-│   (WebSocket, HTTP, Slack, Custom...)   │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│                Hub                       │
-│    (Event Bus + Coordination)            │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│               Flows                      │
-│    (Agent Orchestration Graphs)          │
-└─────────────────────────────────────────┘
-```
+### Hub
 
-## Hub
+The Hub coordinates runs and broadcasts events. It is the central meeting point
+for channels, runtimes, and external tooling.
 
-The **Hub** is the central nervous system:
+### Runtime
 
-- **Event Bus**: Routes events between components
-- **Coordination**: Manages flow execution
-- **Session State**: Tracks active runs
-- **Persistence**: Stores events for replay
+The Runtime executes a flow: it resolves bindings, evaluates conditions, runs
+nodes, and emits events as the flow progresses.
 
-```typescript
-const hub = createHub("session-id", {
-  store: sqliteStore,
-  registry: nodeRegistry,
-});
-```
+### Agents (Node Types)
 
-## Flows
+Agents are node types that perform work. They can be LLM-backed (for reasoning
+and natural language) or deterministic (for transforms, validation, routing).
 
-**Flows** define agent behavior as directed graphs:
+### Channels
 
-- **Nodes**: Individual processing steps (agents, API calls, transforms)
-- **Edges**: Connections with optional conditions
-- **Bindings**: JSONata expressions for data flow
+A **channel** is a protocol-level integration (e.g., WebSocket, HTTP, CLI). It
+defines how commands enter the system and how events leave it.
 
-```yaml
-id: my-flow
-nodes:
-  - id: analyze
-    type: claude.agent
-    input:
-      prompt: "{{ flow.input.text }}"
+### Transports (Adapters)
+
+A **transport** is the concrete adapter that implements a channel for a
+specific runtime or server environment.
+
+## System Diagram
+
+```mermaid
+flowchart TB
+  client[Client / External System]
+  channel[Channel Protocol]
+  transport[Transport Adapter]
+  hub[Hub]
+  runtime[Runtime]
+  agent[Agent Nodes]
+
+  client --> channel
+  channel --> transport
+  transport --> hub
+  hub --> runtime
+  runtime --> agent
+  runtime --> hub
+  hub --> transport
+  transport --> client
 ```
 
-## Channels
+## Message Flow
 
-**Channels** connect external systems:
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Channel
+  participant Hub
+  participant Runtime
+  participant Agent
 
-- **Observe**: React to Hub events
-- **Emit**: Send events into the Hub
-- **Bidirectional**: Two-way communication
-
-```typescript
-const wsChannel = new WebSocketChannel(wss);
-hub.registerChannel(wsChannel);
+  Client->>Channel: Send input / command
+  Channel->>Hub: Forward command
+  Hub->>Runtime: Start or dispatch run
+  Runtime->>Agent: Execute node
+  Agent-->>Runtime: Output + events
+  Runtime-->>Hub: Runtime events
+  Hub-->>Channel: Broadcast events
+  Channel-->>Client: Updates
 ```
 
-## Event Flow
+## Channel vs Transport
 
-1. **Input** arrives via Channel
-2. **Hub** routes to appropriate Flow
-3. **Flow** executes nodes, emitting events
-4. **Hub** broadcasts events to Channels
-5. **Channels** forward to external systems
-
-## Why This Architecture?
-
-- **Decoupled**: Components communicate via events
-- **Observable**: Every action produces events
-- **Replayable**: Events can reconstruct state
-- **Extensible**: Add channels without changing flows
+- **Channel**: the protocol contract (what messages look like, how to route them).
+- **Transport**: the implementation detail (WebSocket server, HTTP handler, CLI adapter).
 
 ## Next Steps
 
-- [Event System](/docs/concepts/event-system) — Event-driven communication
-- [Hub API](/docs/reference/api/hub) — Hub interface
+- [Event System](/docs/concepts/event-system) — How runtime events work
+- [Expressions](/docs/concepts/expressions) — JSONata in bindings and conditions

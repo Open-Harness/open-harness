@@ -114,6 +114,44 @@ Never claim a task is complete without:
 - Just run tests/harnesses directly - no env vars needed
 - The SDK uses Claude Code's built-in authentication
 
+## CRITICAL: Next.js Page/Route Params Type Definition
+
+**DO NOT define `params` as a direct object type in Next.js 15+ page/route components.**
+
+In Next.js 15+, the `params` prop is a Promise and MUST be typed as such. This has broken the docs site multiple times.
+
+### ❌ WRONG (breaks at runtime):
+```typescript
+type PageProps = {
+	params: { slug?: string[] };  // ❌ Wrong - params is NOT a direct object
+};
+
+export default async function Page(props: PageProps) {
+	const params = await props.params;  // This works, but TypeScript type is wrong
+	// ...
+}
+```
+
+### ✅ CORRECT:
+```typescript
+type PageParams = {
+	slug?: string[];
+};
+
+type PageProps = {
+	params: Promise<PageParams>;  // ✅ Correct - params is a Promise
+};
+
+export default async function Page(props: PageProps) {
+	const params = await props.params;
+	// ...
+}
+```
+
+**Why this matters**: Even though the code correctly awaits `params`, if the TypeScript type is wrong, Next.js will fail at runtime when trying to pass the Promise. This breaks all pages except the landing page.
+
+**Reference**: See `apps/docs/src/app/docs/[[...slug]]/page.tsx` and `apps/docs/src/app/og/docs/[...slug]/route.tsx` for correct examples.
+
 BEHAVIORAL DECORATORS:
 
 ## Think, Repete, and Give Options

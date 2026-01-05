@@ -1,114 +1,58 @@
 ---
-title: Channel API
-description: Channel definition and lifecycle interface
+title: Transport API
+description: Runtime transports and WebSocket adapter
 ---
 
-# Channel API
+# Transport API
 
-Channels connect external systems to the Hub.
+Transports connect runtimes to external systems.
 
-## ChannelDefinition
+## Transport Interface
 
 ```typescript
-interface ChannelDefinition {
-  name: string;
-  on?: Record<string, EventHandler>;
-  onStart?: (ctx: ChannelContext) => Promise<void>;
-  onStop?: (ctx: ChannelContext) => Promise<void>;
+interface Transport {
+  start(): Promise<void>;
+  stop(): Promise<void>;
 }
 ```
 
-## ChannelContext
+## WebSocketTransport
+
+The SDK includes a Bun-based WebSocket transport:
 
 ```typescript
-interface ChannelContext {
-  hub: Hub;
+import { WebSocketTransport } from "@open-harness/sdk";
+
+const transport = new WebSocketTransport(runtime, {
+  port: 8080,
+  path: "/ws",
+});
+
+await transport.start();
+```
+
+### WebSocketTransportOptions
+
+```typescript
+interface WebSocketTransportOptions {
+  port: number;
+  path?: string;
 }
 ```
 
-## EventHandler
+### Client Protocol
 
-```typescript
-type EventHandler = (ctx: EventHandlerContext) => void | Promise<void>;
+Clients send commands and receive events as JSON:
 
-interface EventHandlerContext {
-  event: RuntimeEvent;
-  hub: Hub;
-}
+```json
+{ "type": "command", "command": { "type": "send", "runId": "run-123", "message": "hi" } }
 ```
 
-## Event Subscription Patterns
-
-### Specific Event Type
-
-```typescript
-on: {
-  "agent:complete": ({ event, hub }) => {
-    console.log(event.output);
-  }
-}
-```
-
-### Wildcard Subscription
-
-```typescript
-on: {
-  "*": ({ event }) => {
-    console.log(`[${event.type}]`, event);
-  }
-}
-```
-
-### Pattern Matching
-
-```typescript
-on: {
-  "agent:*": ({ event }) => {
-    // Matches agent:start, agent:text, agent:complete
-  }
-}
-```
-
-## Lifecycle Hooks
-
-### onStart
-
-Called when the Hub starts:
-
-```typescript
-async onStart({ hub }) {
-  await this.connection.connect();
-  console.log("Channel connected");
-}
-```
-
-### onStop
-
-Called when the Hub stops:
-
-```typescript
-async onStop({ hub }) {
-  await this.connection.disconnect();
-  console.log("Channel disconnected");
-}
-```
-
-## Emitting Events
-
-Channels can emit events to the Hub:
-
-```typescript
-onStart({ hub }) {
-  externalService.on("message", (msg) => {
-    hub.emit({
-      type: "external:message",
-      content: msg.text,
-    });
-  });
-}
+```json
+{ "type": "event", "event": { "type": "node:complete", "nodeId": "echo", "runId": "run-123", "output": { "text": "Hi" }, "timestamp": 1710000000000 } }
 ```
 
 ## See Also
 
-- [Custom Channels Guide](/docs/guides/channels/custom-channels) — Building channels
-- [WebSocket Channel](/docs/guides/channels/websocket) — Built-in WebSocket
+- [Events API](/docs/reference/api/events) — Event payloads
+- [Runtime API](/docs/reference/api/hub) — Runtime usage

@@ -1,0 +1,55 @@
+---
+title: Why JSONata
+description: Why Open Harness uses JSONata for bindings and conditionals
+---
+
+# Why JSONata
+
+Open Harness uses JSONata to connect data between nodes, evaluate conditions,
+and transform payloads. It gives you a consistent, declarative way to express
+logic without embedding JavaScript in your flow files.
+
+## What JSONata Is
+
+JSONata is a lightweight query and transformation language for JSON data. It
+lets you select, filter, and shape data with a concise expression syntax.
+
+## Why We Chose It
+
+- **Declarative and safe**: no side effects, no `eval()`.
+- **Expressive**: filtering, mapping, and aggregation in a single line.
+- **Portable**: the same expressions work in YAML and runtime evaluation.
+- **Composable**: you can build small expressions into more complex ones.
+
+## Why Not Template Strings or JavaScript
+
+- **Template strings** are limited to simple interpolation and concatenation.
+- **JavaScript eval** is hard to secure, hard to optimize, and brittle to run
+  across environments.
+
+JSONata gives us rich data access without running arbitrary code.
+
+## When to Use JSONata
+
+- **Bindings**: populate node inputs from previous outputs or flow input.
+- **Conditionals**: decide whether a node or edge should run.
+- **Transforms**: build new objects from existing data.
+
+### Example Binding
+
+```yaml
+input:
+  summary: "{{ triage.summary }}"
+```
+
+### Example Conditional
+
+```yaml
+when: "triage.priority = 'urgent'"
+```
+
+## Next Steps
+
+- [Data Bindings](/docs/guides/expressions/bindings) — Practical examples
+- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Full language reference

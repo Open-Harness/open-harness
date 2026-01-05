@@ -31,7 +31,7 @@ Every expression has access to:
 | Variable | Description |
 |----------|-------------|
 | `flow.input` | Input passed to the flow |
-| `nodes.<id>.output` | Output from completed node |
+| `<nodeId>` | Output from completed node |
 | `$env` | Environment variables |
 | `$` | Current item in iterations |
 
@@ -41,7 +41,7 @@ Every expression has access to:
 
 ```yaml
 {{ flow.input.user.name }}
-{{ nodes.fetch.output.data[0] }}
+{{ fetch.data[0] }}
 ```
 
 ### Concatenation
@@ -108,7 +108,7 @@ JSONata includes many built-in functions:
 ### Optional Chaining
 
 ```yaml
-{{ nodes.optional.output ? nodes.optional.output.value : null }}
+{{ optional.value ? optional.value : null }}
 ```
 
 ### Transform and Filter
