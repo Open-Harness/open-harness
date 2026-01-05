@@ -152,14 +152,17 @@ describe("Horizon Agent E2E - Simple Flow", () => {
 		expect(call.events.length).toBeGreaterThan(5);
 
 		// Check for expected event types
-		const eventTypes = call.events.map((e) => e.type);
+		type EventWithType = { type: string; uuid?: string };
+		const eventTypes = call.events.map((e) => (e as EventWithType).type);
 		expect(eventTypes).toContain("system");
 		expect(eventTypes).toContain("stream_event");
 		expect(eventTypes).toContain("assistant");
 		expect(eventTypes).toContain("result");
 
 		// Check stream events have real UUIDs
-		const streamEvent = call.events.find((e) => e.type === "stream_event");
+		const streamEvent = call.events.find(
+			(e) => (e as EventWithType).type === "stream_event",
+		) as EventWithType | undefined;
 		expect(streamEvent?.uuid).toMatch(
 			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
 		);
