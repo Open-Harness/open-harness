@@ -1,8 +1,8 @@
-# Kernel V3 Architecture (Graph-First Runtime)
+# Kernel Architecture (Graph-First Runtime)
 
 Last updated: 2026-01-03
 
-This document describes the V3 architecture for the kernel. It is not a spec. It defines
+This document describes the architecture for the kernel. It is not a spec. It defines
 system boundaries, core abstractions, file layout, class shapes, public interfaces, and
 testing strategy. Implementation details are intentionally omitted.
 
@@ -267,7 +267,7 @@ export class WebSocketTransport implements Transport {
 ## 10. File Structure
 
 ```
-packages/kernel-v3/
+packages/kernel/
   src/
     core/
       types.ts

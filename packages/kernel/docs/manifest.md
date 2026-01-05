@@ -1,4 +1,4 @@
-# Kernel V3 Manifest (To-Do)
+# Kernel Manifest (To-Do)
 
 Last updated: 2026-01-03
 

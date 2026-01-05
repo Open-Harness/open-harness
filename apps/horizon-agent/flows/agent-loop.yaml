@@ -1,4 +1,4 @@
-# Horizon Agent Flow (Kernel V3)
+# Horizon Agent Flow (Kernel)
 # Multi-agent implementation system: planner → forEach(task) → coder ↔ reviewer loop
 #
 # This flow demonstrates:
@@ -136,7 +136,7 @@ edges:
 
   # Loop: Reviewer -> Coder on failure
   # This creates a controlled cycle for iterative improvement
-  # Note: maxIterations must be a static number (kernel-v3 doesn't support templates here)
+  # Note: maxIterations must be a static number (kernel doesn't support templates here)
   # The CLI's --max-iterations option is for UI display only; this controls the actual limit
   - from: reviewer
     to: coder

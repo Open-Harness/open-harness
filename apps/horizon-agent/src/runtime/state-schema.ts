@@ -118,7 +118,7 @@ export const INITIAL_STATE: HorizonState = {
 };
 
 /**
- * Kernel-v3 state schema definition.
+ * Kernel state schema definition.
  * Used in FlowDefinition.state
  */
 export const horizonStateDefinition: StateSchemaDefinition = {

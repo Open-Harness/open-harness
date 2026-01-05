@@ -12,6 +12,7 @@
  * Usage: bun scripts/live/capture-raw-sdk.ts
  */
 
+import { resolve } from "node:path";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
@@ -230,8 +231,10 @@ Then tell me what 15 * 17 equals.`;
 		}
 
 		// Write raw capture to file
-		const captureFile =
-			"/Users/abuusama/conductor/workspaces/open-harness/nashville/packages/kernel-v3/tests/fixtures/recordings/captured/raw-sdk-capture.json";
+		const captureFile = resolve(
+			import.meta.dir,
+			"../../tests/fixtures/recordings/captured/raw-sdk-capture.json",
+		);
 
 		await Bun.write(
 			captureFile,

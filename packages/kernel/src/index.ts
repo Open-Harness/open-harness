@@ -1,5 +1,5 @@
 /**
- * Kernel V3 public API exports.
+ * Kernel public API exports.
  */
 
 export * from "./core/cancel.js";

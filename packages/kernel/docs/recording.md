@@ -1,4 +1,4 @@
-# Recording & Fixtures (Kernel V3)
+# Recording & Fixtures (Kernel)
 
 This doc describes how to generate fixtures from live SDK runs and how E2E tests
 consume those fixtures.
