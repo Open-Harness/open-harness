@@ -1,0 +1,136 @@
+---
+title: How to Add Voice Integration
+description: Integrate voice I/O with rtv-channel
+---
+
+# How to Add Voice Integration
+
+Add real-time voice interaction using the rtv-channel package.
+
+## Install the Package
+
+```bash
+bun add @open-harness/rtv-channel
+```
+
+## Create Voice Channel
+
+```typescript
+import { createRTVChannel } from "@open-harness/rtv-channel";
+
+const voiceChannel = createRTVChannel({
+  // OpenAI Realtime configuration
+  model: "gpt-4o-realtime-preview",
+  voice: "alloy",
+
+  // Audio settings
+  inputAudioFormat: "pcm16",
+  outputAudioFormat: "pcm16"
+});
+```
+
+## Attach to Harness
+
+```typescript
+import { defineHarness } from "@open-harness/kernel";
+
+const harness = defineHarness({
+  channels: [voiceChannel],
+  agents: [myAgent]
+});
+
+const instance = harness.create();
+await instance.run({ prompt: "Start voice conversation" });
+```
+
+## Handle Voice Events
+
+```typescript
+import { createHub } from "@open-harness/kernel";
+
+const hub = createHub();
+
+// Voice input detected
+hub.subscribe("voice:input", (event) => {
+  console.log("User said:", event.event.transcript);
+});
+
+// Voice output playing
+hub.subscribe("voice:output", (event) => {
+  console.log("Speaking:", event.event.text);
+});
+
+// Voice error
+hub.subscribe("voice:error", (event) => {
+  console.error("Voice error:", event.event.error);
+});
+```
+
+## With Console Fallback
+
+```typescript
+import { createRTVChannel } from "@open-harness/rtv-channel";
+import { consoleChannel } from "./channels/console";
+
+const voiceChannel = createRTVChannel({
+  model: "gpt-4o-realtime-preview",
+  voice: "shimmer",
+  fallbackToText: true // Falls back to console if voice unavailable
+});
+
+const harness = defineHarness({
+  channels: [voiceChannel, consoleChannel],
+  agents: [myAgent]
+});
+```
+
+## Voice Configuration Options
+
+```typescript
+const voiceChannel = createRTVChannel({
+  // Model
+  model: "gpt-4o-realtime-preview",
+
+  // Voice selection: alloy, echo, shimmer, ash, ballad, coral, sage, verse
+  voice: "alloy",
+
+  // Audio formats
+  inputAudioFormat: "pcm16",
+  outputAudioFormat: "pcm16",
+
+  // Behavior
+  turnDetection: "server_vad",
+  silenceThresholdMs: 500,
+
+  // Session
+  maxDuration: 300 // 5 minutes
+});
+```
+
+## TUI Integration
+
+```typescript
+import { createRTVChannel } from "@open-harness/rtv-channel";
+import { createTUI } from "@open-harness/tui";
+
+const voiceChannel = createRTVChannel({
+  model: "gpt-4o-realtime-preview",
+  voice: "echo"
+});
+
+const tui = createTUI({
+  voiceIndicator: true, // Show voice activity
+  transcriptView: true  // Show live transcript
+});
+
+const harness = defineHarness({
+  channels: [voiceChannel, tui.channel],
+  agents: [myAgent]
+});
+```
+
+## Related
+
+- [Attach Channel](/docs/guides/channels/attach-channel) - Channel basics
+- [Bidirectional I/O](/docs/guides/channels/bidirectional-io) - Two-way patterns
+- [Console Channel](/docs/guides/channels/console-channel) - Text alternative

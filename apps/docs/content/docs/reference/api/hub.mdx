@@ -1,18 +1,203 @@
 ---
-title: Hub API
-description: Event bus API for subscribing to and sending events
+title: Hub / createHub
+description: Unified event bus for publishing events and receiving commands
 ---
 
-The Hub is the unified bidirectional event bus that connects all components in Open Harness.
+# Hub
 
-## Overview
+The Hub is the central event bus providing bidirectional communication: events out, commands in. It uses AsyncLocalStorage for automatic context propagation.
 
-The Hub provides:
-- Event subscription and observation
-- Command sending (`send`, `sendTo`, `sendToRun`, `reply`, `abort`)
-- Context propagation (`scoped`, `current`)
+## createHub
 
-## Learn More
+Creates a standalone Hub instance.
 
-- [Hub Spec](/docs/reference/kernel-spec/spec/hub) - Complete hub protocol specification
-- [Events API](/docs/reference/api/events) - Event types and interfaces
+### Signature
+
+```typescript
+function createHub(sessionId?: string): Hub
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `sessionId` | `string` | No | `session-{timestamp}` | Unique session identifier |
+
+### Returns
+
+`Hub` - Event bus instance.
+
+### Example
+
+```typescript
+import { createHub } from "@open-harness/kernel";
+
+const hub = createHub("my-session-123");
+
+// Subscribe to all events
+hub.subscribe((event) => {
+  console.log(event.event.type, event.context);
+});
+
+// Emit an event
+hub.emit({ type: "narrative", text: "Processing started" });
+```
+
+## Hub Interface
+
+```typescript
+interface Hub extends AsyncIterable<EnrichedEvent> {
+  // Events out
+  subscribe(listener: EventListener): Unsubscribe;
+  subscribe(filter: EventFilter, listener: EventListener): Unsubscribe;
+  emit(event: BaseEvent, override?: Partial<EventContext>): void;
+  scoped<T>(context: Partial<EventContext>, fn: () => T | Promise<T>): T | Promise<T>;
+  current(): EventContext;
+
+  // Commands in
+  send(message: string): void;
+  sendTo(agent: string, message: string): void;
+  sendToRun(runId: string, message: string): void;
+  reply(promptId: string, response: UserResponse): void;
+  abort(reason?: string): void;
+
+  // Status
+  readonly status: HubStatus;
+  readonly sessionActive: boolean;
+}
+```
+
+## Methods
+
+### subscribe
+
+Subscribe to events with optional filtering.
+
+```typescript
+// Subscribe to all events
+const unsubscribe = hub.subscribe((event) => {
+  console.log(event);
+});
+
+// Subscribe to specific event type
+hub.subscribe("agent:complete", (event) => {
+  console.log("Agent finished:", event.event);
+});
+
+// Subscribe to multiple types
+hub.subscribe(["agent:start", "agent:complete"], (event) => {
+  console.log("Agent lifecycle:", event.event.type);
+});
+
+// Unsubscribe
+unsubscribe();
+```
+
+### emit
+
+Emit an event to all matching subscribers.
+
+```typescript
+hub.emit({
+  type: "narrative",
+  text: "Step completed",
+  importance: "high",
+});
+
+// With context override
+hub.emit(
+  { type: "task:complete", taskId: "step-1", result: data },
+  { task: { id: "step-1" } }
+);
+```
+
+### scoped
+
+Execute a function with additional context that propagates to all events emitted within.
+
+```typescript
+await hub.scoped({ phase: { name: "Analysis" } }, async () => {
+  // All events emitted here include phase context
+  hub.emit({ type: "narrative", text: "Analyzing..." });
+  await doWork();
+});
+```
+
+### current
+
+Get the current event context (from AsyncLocalStorage).
+
+```typescript
+const ctx = hub.current();
+console.log(ctx.sessionId, ctx.phase?.name, ctx.task?.id);
+```
+
+### send / sendTo / sendToRun
+
+Send messages into the workflow (for interactive sessions).
+
+```typescript
+// Send to current session
+hub.send("User feedback here");
+
+// Send to specific agent
+hub.sendTo("writer", "Please revise");
+
+// Send to specific run
+hub.sendToRun("run-123", "Additional input");
+```
+
+### reply
+
+Reply to a prompt (for interactive sessions).
+
+```typescript
+hub.reply("prompt-456", {
+  content: "Yes, proceed",
+  choice: "confirm",
+  timestamp: new Date(),
+});
+```
+
+### abort
+
+Abort the current session.
+
+```typescript
+hub.abort("User cancelled");
+```
+
+## Async Iteration
+
+Hub implements `AsyncIterable` for streaming events:
+
+```typescript
+for await (const event of hub) {
+  console.log(event.event.type);
+  if (event.event.type === "harness:complete") break;
+}
+```
+
+## Event Filtering
+
+| Filter | Description |
+|--------|-------------|
+| `"*"` | All events |
+| `"agent:start"` | Exact type match |
+| `["agent:start", "agent:complete"]` | Multiple types |
+
+## Status
+
+| Status | Description |
+|--------|-------------|
+| `"idle"` | Not started or stopped |
+| `"running"` | Execution in progress |
+| `"complete"` | Finished successfully |
+| `"aborted"` | Cancelled by user |
+
+## See Also
+
+- [EventContext](/docs/reference/types/event-context) - Context structure
+- [BaseEvent](/docs/reference/types/base-event) - Event types
+- [EnrichedEvent](/docs/reference/types/enriched-event) - Event envelope
+- [Hub Spec](/docs/reference/kernel-spec/spec/hub) - Complete protocol specification

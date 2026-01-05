@@ -1,0 +1,119 @@
+---
+title: defineHarness
+description: Factory function to create harness instances for workflow execution
+---
+
+# defineHarness
+
+Creates a harness factory for building workflow instances with agents, state management, and execution logic.
+
+## Signature
+
+```typescript
+function defineHarness<
+  TInput,
+  TState,
+  TResult,
+  TAgentDefs extends Record<string, AgentDefinition>
+>(config: {
+  name: string;
+  agents: TAgentDefs;
+  state: (input: TInput) => TState;
+  run: (ctx: ExecuteContext<TAgentDefs, TState>) => Promise<TResult>;
+}): HarnessFactory<TInput, TState, TResult>
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `config.name` | `string` | Yes | Unique name for this harness type |
+| `config.agents` | `Record<string, AgentDefinition>` | Yes | Agent definitions available during execution |
+| `config.state` | `(input: TInput) => TState` | Yes | Function to initialize state from input |
+| `config.run` | `(ctx: ExecuteContext) => Promise<TResult>` | Yes | Main execution function |
+
+## Returns
+
+`HarnessFactory<TInput, TState, TResult>` - Factory with a `create(input)` method that returns a `HarnessInstance`.
+
+## Type Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `TInput` | Type of input passed to `create()` |
+| `TState` | Type of workflow state |
+| `TResult` | Type of result from `run()` |
+| `TAgentDefs` | Record type mapping agent names to definitions |
+
+## Example
+
+```typescript
+import { defineHarness, createAnthropicTextAgent } from "@open-harness/kernel";
+
+// Define agents
+const agents = {
+  writer: createAnthropicTextAgent({ model: "sonnet" }),
+};
+
+// Define the harness factory
+const myHarness = defineHarness({
+  name: "content-generator",
+  agents,
+  state: (input: { topic: string }) => ({
+    topic: input.topic,
+    drafts: [] as string[],
+  }),
+  run: async (ctx) => {
+    const result = await ctx.agents.writer.execute({
+      prompt: `Write about ${ctx.state.topic}`,
+    });
+    ctx.state.drafts.push(result.text);
+    return { content: result.text };
+  },
+});
+
+// Create and run an instance
+const instance = myHarness.create({ topic: "AI workflows" });
+const result = await instance.run();
+console.log(result.result.content);
+```
+
+## ExecuteContext
+
+The `run` function receives an `ExecuteContext` with:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `agents` | `ExecutableAgents<TAgentDefs>` | Wrapped agents ready to execute |
+| `state` | `TState` | Mutable workflow state |
+| `hub` | `Hub` | Event bus for pub/sub |
+| `phase` | `<T>(name, fn) => Promise<T>` | Wrap code in named phase |
+| `task` | `<T>(id, fn) => Promise<T>` | Wrap code in named task |
+| `emit` | `(event) => void` | Emit custom events |
+| `session` | `SessionContext?` | Optional interactive session |
+
+## Phases and Tasks
+
+Use `phase` and `task` for structured execution tracking:
+
+```typescript
+run: async (ctx) => {
+  return await ctx.phase("Processing", async () => {
+    const research = await ctx.task("research", async () => {
+      return ctx.agents.researcher.execute({ topic: ctx.state.topic });
+    });
+
+    const summary = await ctx.task("summarize", async () => {
+      return ctx.agents.writer.execute({ prompt: research.text });
+    });
+
+    return { summary: summary.text };
+  });
+}
+```
+
+## See Also
+
+- [HarnessFactory](/docs/reference/types/harness-factory) - Factory interface
+- [ExecuteContext](/docs/reference/types/execute-context) - Context interface
+- [Hub](/docs/reference/api/hub) - Event bus

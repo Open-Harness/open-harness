@@ -1,0 +1,253 @@
+---
+title: Conformance Testing
+description: Ensuring implementation matches specification
+---
+
+# Conformance Testing
+
+Conformance testing verifies that implementations match their specifications. This page covers the conformance testing process for contributors.
+
+## Conformance Philosophy
+
+### Implementation Matches Spec
+
+The kernel has internal specifications in `packages/kernel/docs/`. Conformance tests prove the code follows these specs.
+
+```
+Specification (docs/spec/hub.md)
+        ↓
+Test Specification (tests/spec/hub.test-spec.md)
+        ↓
+Test File (tests/unit/hub.test.ts)
+        ↓
+Implementation (src/engine/hub.ts)
+```
+
+### Tests Prove Correctness
+
+Tests are executable specifications:
+
+```typescript
+// From spec: "Hub MUST notify all matching listeners"
+test("notifies all matching listeners", () => {
+  const hub = createHub();
+  const calls: string[] = [];
+
+  hub.subscribe("test", () => calls.push("a"));
+  hub.subscribe("test", () => calls.push("b"));
+
+  hub.emit({ type: "test" });
+
+  expect(calls).toEqual(["a", "b"]);
+});
+```
+
+## Test Specs
+
+### Location
+
+```
+packages/kernel/tests/spec/
+├── hub.test-spec.md
+├── harness.test-spec.md
+└── flow.test-spec.md
+```
+
+### Format
+
+```markdown
+# Hub Test Specification
+
+## Requirements
+
+### HUB-001: Event Emission
+
+**Spec**: Hub MUST notify all matching listeners when an event is emitted.
+
+**Test Cases**:
+1. Single listener receives event
+2. Multiple listeners receive event
+3. Non-matching listeners don't receive event
+
+**File**: tests/unit/hub.test.ts
+```
+
+### Linking to Spec
+
+Test specs reference the source specification:
+
+```markdown
+## From: docs/spec/hub.md
+
+### Section 3.1: Emission
+
+> The Hub MUST notify all listeners whose filter matches the event type.
+
+**Tests**:
+- `test("notifies matching listeners")`
+- `test("skips non-matching listeners")`
+```
+
+## CI Gates
+
+### What Must Pass
+
+Before merge:
+
+| Gate | Description |
+|------|-------------|
+| Type Check | `bun run typecheck` |
+| Unit Tests | `bun run test` |
+| Lint | `bun run lint` |
+
+### How Gates Work
+
+CI runs on every PR:
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: oven-sh/setup-bun@v1
+      - run: bun install
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run lint
+```
+
+### Gate Failures
+
+If a gate fails:
+1. Check CI logs
+2. Reproduce locally
+3. Fix the issue
+4. Push update
+
+## Adding Conformance Tests
+
+### When Required
+
+Conformance tests are required when:
+- Adding new public API
+- Changing behavior
+- Implementing spec requirements
+
+### How to Write
+
+1. **Find the spec requirement**
+
+```markdown
+// From docs/spec/flow.md
+> Bindings MUST throw on missing paths unless marked optional.
+```
+
+2. **Create test spec entry**
+
+```markdown
+// tests/spec/flow.test-spec.md
+### BIND-003: Missing Path Error
+
+**Spec**: Bindings MUST throw on missing paths unless marked optional.
+
+**Test Cases**:
+1. Throws on missing required path
+2. Returns empty for optional path
+3. Returns default if default provided
+```
+
+3. **Write tests**
+
+```typescript
+describe("BIND-003: Missing Path Error", () => {
+  test("throws on missing required path", () => {
+    const context = { flow: { input: {} } };
+    expect(() => resolveBindings("{{flow.missing}}", context))
+      .toThrow("Missing binding path");
+  });
+
+  test("returns empty for optional path", () => {
+    const context = { flow: { input: {} } };
+    expect(resolveBindings("{{?flow.missing}}", context)).toBe("");
+  });
+
+  test("returns default if provided", () => {
+    const context = { flow: { input: {} } };
+    expect(resolveBindings("{{flow.missing | default:fallback}}", context))
+      .toBe("fallback");
+  });
+});
+```
+
+4. **Link test to spec**
+
+Add comment referencing spec:
+
+```typescript
+// Implements: docs/spec/flow.md Section 4.2
+// Test Spec: tests/spec/flow.test-spec.md BIND-003
+```
+
+## Traceability
+
+### Forward Tracing
+
+From spec to test:
+
+```
+docs/spec/hub.md Section 3.1
+    → tests/spec/hub.test-spec.md HUB-001
+        → tests/unit/hub.test.ts "notifies matching listeners"
+```
+
+### Backward Tracing
+
+From test to spec:
+
+```typescript
+// tests/unit/hub.test.ts
+// Spec: docs/spec/hub.md Section 3.1
+// Test Spec: tests/spec/hub.test-spec.md HUB-001
+test("notifies matching listeners", () => { ... });
+```
+
+### Coverage Mapping
+
+Track which spec requirements have tests:
+
+| Spec Section | Test Spec | Tests | Status |
+|--------------|-----------|-------|--------|
+| Hub 3.1 | HUB-001 | 3 | ✓ |
+| Hub 3.2 | HUB-002 | 2 | ✓ |
+| Hub 3.3 | HUB-003 | 0 | Missing |
+
+## Handling Gaps
+
+### When Spec is Unclear
+
+1. Check existing tests for behavior
+2. Check implementation
+3. Ask in issue/PR discussion
+4. Document decision in test spec
+
+### When Implementation Differs
+
+If implementation differs from spec:
+1. Determine which is correct
+2. Either fix implementation or update spec
+3. Document the decision
+
+### Creating New Specs
+
+For new features:
+1. Write spec first
+2. Write test spec
+3. Implement
+4. Verify tests pass
+
+## Next Steps
+
+- [Reading Specs](/docs/contributing/specifications/reading-specs) - How to read specs
+- [Spec to Code](/docs/contributing/specifications/spec-to-code) - Implementation process
+- [Testing Strategy](/docs/contributing/development/testing) - Overall testing

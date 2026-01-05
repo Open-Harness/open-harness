@@ -1,0 +1,198 @@
+---
+title: NodeTypeDefinition
+description: Contract for implementing custom flow node types
+---
+
+# NodeTypeDefinition
+
+Defines a custom node type that can be registered with NodeRegistry for flow execution.
+
+## Definition
+
+```typescript
+interface NodeTypeDefinition<TIn, TOut> {
+  type: string;
+  inputSchema: ZodSchema<TIn>;
+  outputSchema: ZodSchema<TOut>;
+  capabilities?: NodeCapabilities;
+  run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
+}
+```
+
+## Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `type` | `string` | Yes | Unique type identifier |
+| `inputSchema` | `ZodSchema<TIn>` | Yes | Zod schema for input validation |
+| `outputSchema` | `ZodSchema<TOut>` | Yes | Zod schema for output validation |
+| `capabilities` | `NodeCapabilities` | No | Optional capability flags |
+| `run` | `function` | Yes | Execution function |
+
+## NodeCapabilities
+
+```typescript
+interface NodeCapabilities {
+  isStreaming?: boolean;
+  supportsInbox?: boolean;
+  isLongLived?: boolean;
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `isStreaming` | `boolean` | `false` | Emits incremental output events |
+| `supportsInbox` | `boolean` | `false` | Can receive messages during execution |
+| `isLongLived` | `boolean` | `false` | May run indefinitely |
+
+## NodeRunContext
+
+```typescript
+interface NodeRunContext {
+  hub: Hub;
+  runId: string;
+  inbox?: AgentInbox;
+}
+```
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `hub` | `Hub` | Event bus for emitting events |
+| `runId` | `string` | Unique identifier for this execution |
+| `inbox` | `AgentInbox` | Message inbox (if `supportsInbox: true`) |
+
+## Example: Simple Node
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const uppercaseNode: NodeTypeDefinition<
+  { text: string },
+  { result: string }
+> = {
+  type: "uppercase",
+  inputSchema: z.object({ text: z.string() }),
+  outputSchema: z.object({ result: z.string() }),
+  run: async (ctx, input) => {
+    return { result: input.text.toUpperCase() };
+  },
+};
+```
+
+## Example: Streaming Node
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const streamingNode: NodeTypeDefinition<
+  { count: number },
+  { items: number[] }
+> = {
+  type: "counter",
+  inputSchema: z.object({ count: z.number() }),
+  outputSchema: z.object({ items: z.array(z.number()) }),
+  capabilities: {
+    isStreaming: true,
+  },
+  run: async (ctx, input) => {
+    const items: number[] = [];
+
+    for (let i = 0; i < input.count; i++) {
+      items.push(i);
+
+      // Emit progress
+      ctx.hub.emit({
+        type: "narrative",
+        text: `Processing item ${i + 1}/${input.count}`,
+        importance: "low",
+      });
+    }
+
+    return { items };
+  },
+};
+```
+
+## Example: Interactive Node
+
+```typescript
+import { z } from "zod";
+import type { NodeTypeDefinition } from "@open-harness/kernel";
+
+const interactiveNode: NodeTypeDefinition<
+  { prompt: string },
+  { response: string }
+> = {
+  type: "interactive",
+  inputSchema: z.object({ prompt: z.string() }),
+  outputSchema: z.object({ response: z.string() }),
+  capabilities: {
+    supportsInbox: true,
+    isLongLived: true,
+  },
+  run: async (ctx, input) => {
+    // Emit prompt
+    ctx.hub.emit({
+      type: "session:prompt",
+      promptId: ctx.runId,
+      prompt: input.prompt,
+      allowText: true,
+    });
+
+    // Wait for response via inbox
+    if (ctx.inbox) {
+      const message = await ctx.inbox.pop();
+      return { response: message.content };
+    }
+
+    return { response: "" };
+  },
+};
+```
+
+## Registration
+
+```typescript
+import { NodeRegistry } from "@open-harness/kernel";
+
+const registry = new NodeRegistry();
+
+registry.register(uppercaseNode);
+registry.register(streamingNode);
+registry.register(interactiveNode);
+
+// Use with executeFlow
+const result = await executeFlow(flow, registry, ctx);
+```
+
+## Schema Validation
+
+Input and output are validated at runtime:
+
+```typescript
+const strictNode: NodeTypeDefinition<
+  { email: string; age: number },
+  { valid: boolean }
+> = {
+  type: "validate-user",
+  inputSchema: z.object({
+    email: z.string().email(),
+    age: z.number().min(0).max(150),
+  }),
+  outputSchema: z.object({
+    valid: z.boolean(),
+  }),
+  run: async (ctx, input) => {
+    // Input is guaranteed to match schema
+    return { valid: input.age >= 18 };
+  },
+};
+```
+
+## See Also
+
+- [NodeRegistry](/docs/reference/api/node-registry) - Register node types
+- [NodeSpec](/docs/reference/types/node-spec) - Node specification in flows
+- [executeFlow](/docs/reference/api/execute-flow) - Execute flows with nodes

@@ -1,0 +1,252 @@
+---
+title: Harness Configuration
+description: Configuration options for HarnessFactory
+---
+
+# Harness Configuration
+
+Configuration options when creating a harness factory with `defineHarness()`.
+
+## Factory Options
+
+```typescript
+defineHarness<TInput, TState, TResult, TAgentDefs>({
+  name: string;
+  agents: TAgentDefs;
+  state: (input: TInput) => TState;
+  run: (ctx: ExecuteContext<TAgentDefs, TState>) => Promise<TResult>;
+})
+```
+
+### name
+
+**Type**: `string`
+**Required**: Yes
+
+Unique identifier for this harness type. Used in event context and session IDs.
+
+```typescript
+defineHarness({
+  name: "content-generator",  // Descriptive name
+  // ...
+});
+```
+
+### agents
+
+**Type**: `Record<string, AgentDefinition>`
+**Required**: Yes
+
+Map of agent definitions available during execution.
+
+```typescript
+defineHarness({
+  agents: {
+    writer: createAnthropicTextAgent({ model: "sonnet" }),
+    researcher: createAnthropicTextAgent({ model: "haiku" }),
+    // Custom agent
+    validator: {
+      name: "validator",
+      execute: async (input) => ({ valid: input.length > 0 }),
+    },
+  },
+  // ...
+});
+```
+
+### state
+
+**Type**: `(input: TInput) => TState`
+**Required**: Yes
+
+Factory function to create initial state from input.
+
+```typescript
+defineHarness({
+  state: (input: { topic: string; maxLength: number }) => ({
+    topic: input.topic,
+    maxLength: input.maxLength,
+    drafts: [] as string[],
+    attempts: 0,
+  }),
+  // ...
+});
+```
+
+### run
+
+**Type**: `(ctx: ExecuteContext<TAgentDefs, TState>) => Promise<TResult>`
+**Required**: Yes
+
+Main execution function. Receives context with agents, state, and helpers.
+
+```typescript
+defineHarness({
+  run: async (ctx) => {
+    const result = await ctx.agents.writer.execute({
+      prompt: ctx.state.topic,
+    });
+    ctx.state.drafts.push(result.text);
+    return { content: result.text };
+  },
+  // ...
+});
+```
+
+## Instance Options
+
+When creating an instance with `factory.create()`:
+
+```typescript
+const instance = factory.create(input, {
+  sessionIdOverride?: string,
+});
+```
+
+### sessionIdOverride
+
+**Type**: `string`
+**Optional**: Yes
+**Default**: `{name}-{timestamp}`
+
+Override the auto-generated session ID.
+
+```typescript
+const instance = factory.create(
+  { topic: "AI" },
+  { sessionIdOverride: "user-123-session-456" }
+);
+```
+
+## ExecuteContext
+
+The context provided to the `run` function:
+
+```typescript
+interface ExecuteContext<TAgentDefs, TState> {
+  agents: ExecutableAgents<TAgentDefs>;  // Wrapped agents
+  state: TState;                          // Mutable state
+  hub: Hub;                               // Event bus
+  phase: <T>(name, fn) => Promise<T>;     // Phase wrapper
+  task: <T>(id, fn) => Promise<T>;        // Task wrapper
+  emit: (event) => void;                  // Emit events
+  session?: SessionContext;               // Optional session
+}
+```
+
+### Using Phases
+
+Structure execution into named phases:
+
+```typescript
+run: async (ctx) => {
+  const research = await ctx.phase("Research", async () => {
+    return ctx.agents.researcher.execute({ query: ctx.state.topic });
+  });
+
+  const content = await ctx.phase("Writing", async () => {
+    return ctx.agents.writer.execute({ context: research.text });
+  });
+
+  return { content: content.text };
+}
+```
+
+### Using Tasks
+
+Structure work into named tasks (can be nested in phases):
+
+```typescript
+run: async (ctx) => {
+  return ctx.phase("Processing", async () => {
+    const data = await ctx.task("fetch", async () => {
+      return fetchData(ctx.state.source);
+    });
+
+    const processed = await ctx.task("transform", async () => {
+      return transform(data);
+    });
+
+    return processed;
+  });
+}
+```
+
+### Emitting Events
+
+Emit custom events during execution:
+
+```typescript
+run: async (ctx) => {
+  ctx.emit({
+    type: "narrative",
+    text: "Starting processing...",
+    importance: "normal",
+  });
+
+  // Custom extension event
+  ctx.emit({
+    type: "custom:progress",
+    step: 1,
+    total: 5,
+  });
+
+  // ...
+}
+```
+
+## Instance Methods
+
+After creating an instance:
+
+### attach
+
+Attach a channel for I/O:
+
+```typescript
+instance.attach(consoleChannel);
+instance.attach(websocketChannel);
+```
+
+Chainable:
+
+```typescript
+instance
+  .attach(consoleChannel)
+  .attach(loggerChannel);
+```
+
+### startSession
+
+Enable interactive session:
+
+```typescript
+instance.startSession();
+```
+
+### run
+
+Execute the harness:
+
+```typescript
+const result = await instance.run();
+// result: HarnessResult<TState, TResult>
+```
+
+## HarnessResult
+
+```typescript
+interface HarnessResult<TState, TResult> {
+  result: TResult;           // Run function return value
+  state: TState;             // Final state
+  events: EnrichedEvent[];   // All events emitted
+  durationMs: number;        // Execution time
+  status: HubStatus;         // Final status
+}
+```
+
+## See Also
+
+- [defineHarness](/docs/reference/api/define-harness) - API reference
+- [ExecuteContext](/docs/reference/types/execute-context) - Context type
+- [HarnessResult](/docs/reference/types/harness-result) - Result type

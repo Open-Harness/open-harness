@@ -1,0 +1,359 @@
+---
+title: Conditional Flows
+description: Add branching and conditional logic to your flows
+---
+
+# Conditional Flows
+
+Not every node should always run. In this tutorial, we'll add conditional logic using `when` expressions.
+
+## What You'll Learn
+
+- `when` expression syntax
+- Conditional node execution
+- Branching patterns
+- Edge-level conditions
+
+## When Expression Basics
+
+A `when` expression determines if a node runs:
+
+```yaml
+nodes:
+  - id: premium_feature
+    type: deep-analysis
+    input:
+      data: "{{flow.input.data}}"
+    when:
+      equals:
+        var: flow.input.tier
+        value: "premium"
+```
+
+If `flow.input.tier` is `"premium"`, the node runs. Otherwise, it's skipped.
+
+## Step 1: Simple Condition
+
+Let's build a flow that processes data differently based on input:
+
+```yaml
+flow:
+  name: conditional-processing
+  version: "1.0"
+  input:
+    text:
+      type: string
+    uppercase:
+      type: boolean
+
+nodes:
+  - id: transform
+    type: uppercase
+    input:
+      text: "{{flow.input.text}}"
+    when:
+      equals:
+        var: flow.input.uppercase
+        value: true
+
+  - id: passthrough
+    type: constant
+    input:
+      value: "{{flow.input.text}}"
+    when:
+      equals:
+        var: flow.input.uppercase
+        value: false
+
+edges: []
+```
+
+When `uppercase` is `true`, only `transform` runs.
+When `uppercase` is `false`, only `passthrough` runs.
+
+## Step 2: Available Operators
+
+Four operators are available:
+
+### equals
+
+Check exact equality:
+
+```yaml
+when:
+  equals:
+    var: flow.input.mode
+    value: "production"
+```
+
+### not
+
+Negate a condition:
+
+```yaml
+when:
+  not:
+    equals:
+      var: flow.input.disabled
+      value: true
+```
+
+### and
+
+All conditions must be true:
+
+```yaml
+when:
+  and:
+    - equals:
+        var: flow.input.enabled
+        value: true
+    - equals:
+        var: flow.input.ready
+        value: true
+```
+
+### or
+
+Any condition can be true:
+
+```yaml
+when:
+  or:
+    - equals:
+        var: flow.input.env
+        value: "staging"
+    - equals:
+        var: flow.input.env
+        value: "production"
+```
+
+## Step 3: Complex Conditions
+
+Combine operators for complex logic:
+
+```yaml
+nodes:
+  - id: premium_in_production
+    type: advanced-processor
+    input: {}
+    when:
+      and:
+        - equals:
+            var: flow.input.tier
+            value: "premium"
+        - or:
+            - equals:
+                var: flow.input.env
+                value: "staging"
+            - equals:
+                var: flow.input.env
+                value: "production"
+        - not:
+            equals:
+              var: flow.input.suspended
+              value: true
+```
+
+This node runs only when:
+- User is premium tier
+- AND environment is staging or production
+- AND account is not suspended
+
+## Step 4: Reference Node Outputs
+
+Conditions can reference previous node outputs:
+
+```yaml
+nodes:
+  - id: validate
+    type: validator
+    input:
+      data: "{{flow.input.data}}"
+
+  - id: process
+    type: processor
+    input:
+      data: "{{validate.output.cleanedData}}"
+    when:
+      equals:
+        var: validate.output.isValid
+        value: true
+
+  - id: reject
+    type: error-handler
+    input:
+      errors: "{{validate.output.errors}}"
+    when:
+      equals:
+        var: validate.output.isValid
+        value: false
+
+edges:
+  - from: validate
+    to: process
+  - from: validate
+    to: reject
+```
+
+Based on validation results, either `process` or `reject` runs - not both.
+
+## Step 5: Branching Patterns
+
+### If/Else Pattern
+
+```yaml
+nodes:
+  - id: check
+    type: condition-checker
+    input: {}
+
+  - id: if_true
+    type: true-handler
+    when:
+      equals:
+        var: check.output.result
+        value: true
+
+  - id: if_false
+    type: false-handler
+    when:
+      equals:
+        var: check.output.result
+        value: false
+
+edges:
+  - from: check
+    to: if_true
+  - from: check
+    to: if_false
+```
+
+### Multi-Way Branch
+
+```yaml
+nodes:
+  - id: router
+    type: route-selector
+    input:
+      category: "{{flow.input.category}}"
+
+  - id: path_a
+    type: handler-a
+    when:
+      equals:
+        var: router.output.route
+        value: "A"
+
+  - id: path_b
+    type: handler-b
+    when:
+      equals:
+        var: router.output.route
+        value: "B"
+
+  - id: path_c
+    type: handler-c
+    when:
+      equals:
+        var: router.output.route
+        value: "C"
+
+edges:
+  - from: router
+    to: path_a
+  - from: router
+    to: path_b
+  - from: router
+    to: path_c
+```
+
+## Step 6: Edge-Level Conditions
+
+Conditions can also apply to edges:
+
+```yaml
+edges:
+  - from: router
+    to: fast_path
+    when:
+      equals:
+        var: router.output.priority
+        value: "high"
+
+  - from: router
+    to: slow_path
+    when:
+      equals:
+        var: router.output.priority
+        value: "low"
+```
+
+### Node vs Edge Conditions
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Skip node entirely | Node-level `when` |
+| Route between paths | Edge-level `when` |
+| Feature flags | Node-level `when` |
+| Complex branching | Edge-level `when` |
+
+## Handling Skipped Nodes
+
+When a node is skipped, its output is `{ skipped: true }`:
+
+```yaml
+nodes:
+  - id: optional
+    type: maybe-run
+    when:
+      equals:
+        var: flow.input.runOptional
+        value: true
+
+  - id: use_result
+    type: processor
+    input:
+      # Use default if skipped
+      data: "{{optional.output.result | default:fallback}}"
+```
+
+Or check for skipped in conditions:
+
+```yaml
+when:
+  not:
+    equals:
+      var: optional.output.skipped
+      value: true
+```
+
+## Testing Conditionals
+
+Test both paths:
+
+```typescript
+describe("conditional flow", () => {
+  test("runs transform when uppercase is true", async () => {
+    const result = await executeFlow(flow, {
+      input: { text: "hello", uppercase: true }
+    });
+    expect(result.outputs.transform.result).toBe("HELLO");
+    expect(result.outputs.passthrough.skipped).toBe(true);
+  });
+
+  test("runs passthrough when uppercase is false", async () => {
+    const result = await executeFlow(flow, {
+      input: { text: "hello", uppercase: false }
+    });
+    expect(result.outputs.passthrough.value).toBe("hello");
+    expect(result.outputs.transform.skipped).toBe(true);
+  });
+});
+```
+
+## Next Steps
+
+- **[Bindings Deep Dive](/docs/learn/advanced/bindings-deep-dive)** - Master binding syntax
+- **[When Expressions Reference](/docs/reference/when/when-syntax)** - Full syntax
+- **[evaluateWhen API](/docs/reference/api/evaluate-when)** - Programmatic evaluation
