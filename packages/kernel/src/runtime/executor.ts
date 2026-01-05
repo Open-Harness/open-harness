@@ -10,10 +10,10 @@ import type { NodeRegistry, NodeRunContext } from "../registry/registry.js";
  * @property {string} [error] - Error string, if failed.
  */
 export interface NodeExecutionResult {
-	nodeId: string;
-	runId: string;
-	output?: unknown;
-	error?: string;
+  nodeId: string;
+  runId: string;
+  output?: unknown;
+  error?: string;
 }
 
 /**
@@ -25,84 +25,84 @@ export interface NodeExecutionResult {
  * @property {Record<string, unknown>} input - Resolved input payload.
  */
 export interface ExecutorContext {
-	registry: NodeRegistry;
-	node: NodeDefinition;
-	runContext: NodeRunContext;
-	input: Record<string, unknown>;
+  registry: NodeRegistry;
+  node: NodeDefinition;
+  runContext: NodeRunContext;
+  input: Record<string, unknown>;
 }
 
 /**
  * Node executor interface.
  */
 export interface Executor {
-	/**
-	 * Execute a node with the provided context.
-	 * @param context - Execution context.
-	 * @returns Execution result.
-	 */
-	runNode(context: ExecutorContext): Promise<NodeExecutionResult>;
+  /**
+   * Execute a node with the provided context.
+   * @param context - Execution context.
+   * @returns Execution result.
+   */
+  runNode(context: ExecutorContext): Promise<NodeExecutionResult>;
 }
 
 /** Default executor implementation. */
 export class DefaultExecutor implements Executor {
-	/**
-	 * Execute a node with the provided context.
-	 * @param context - Execution context.
-	 * @returns Execution result.
-	 */
-	async runNode(context: ExecutorContext): Promise<NodeExecutionResult> {
-		const { registry, node, runContext, input } = context;
-		const def = registry.get(node.type);
+  /**
+   * Execute a node with the provided context.
+   * @param context - Execution context.
+   * @returns Execution result.
+   */
+  async runNode(context: ExecutorContext): Promise<NodeExecutionResult> {
+    const { registry, node, runContext, input } = context;
+    const def = registry.get(node.type);
 
-		const maxAttempts = node.policy?.retry?.maxAttempts ?? 1;
-		const backoffMs = node.policy?.retry?.backoffMs ?? 0;
-		const timeoutMs = node.policy?.timeoutMs;
+    const maxAttempts = node.policy?.retry?.maxAttempts ?? 1;
+    const backoffMs = node.policy?.retry?.backoffMs ?? 0;
+    const timeoutMs = node.policy?.timeoutMs;
 
-		let attempt = 0;
-		let lastError: unknown = null;
+    let attempt = 0;
+    let lastError: unknown = null;
 
-		while (attempt < maxAttempts) {
-			attempt += 1;
-			if (runContext.cancel.cancelled) {
-				return {
-					nodeId: node.id,
-					runId: runContext.runId,
-					error: `Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
-				};
-			}
-			try {
-				const parsedInput = parseWithSchema(def.inputSchema, input);
-				const output = await withTimeout(
-					() => def.run(runContext, parsedInput),
-					timeoutMs,
-				);
-				const parsedOutput = parseWithSchema(def.outputSchema, output);
-				return {
-					nodeId: node.id,
-					runId: runContext.runId,
-					output: parsedOutput,
-				};
-			} catch (error) {
-				lastError = error;
-				if (attempt < maxAttempts) {
-					await delay(backoffMs);
-				}
-			}
-		}
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      if (runContext.cancel.cancelled) {
+        return {
+          nodeId: node.id,
+          runId: runContext.runId,
+          error: `Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
+        };
+      }
+      try {
+        const parsedInput = parseWithSchema(def.inputSchema, input);
+        const output = await withTimeout(
+          () => def.run(runContext, parsedInput),
+          timeoutMs,
+        );
+        const parsedOutput = parseWithSchema(def.outputSchema, output);
+        return {
+          nodeId: node.id,
+          runId: runContext.runId,
+          output: parsedOutput,
+        };
+      } catch (error) {
+        lastError = error;
+        if (attempt < maxAttempts) {
+          await delay(backoffMs);
+        }
+      }
+    }
 
-		return {
-			nodeId: node.id,
-			runId: runContext.runId,
-			error: errorMessage(lastError),
-		};
-	}
+    return {
+      nodeId: node.id,
+      runId: runContext.runId,
+      error: errorMessage(lastError),
+    };
+  }
 }
 
 function parseWithSchema<T>(schema: unknown, value: T): T {
-	if (schema && typeof schema === "object" && "parse" in schema) {
-		return (schema as { parse: (input: unknown) => T }).parse(value);
-	}
-	return value;
+  if (schema && typeof schema === "object" && "parse" in schema) {
+    return (schema as { parse: (input: unknown) => T }).parse(value);
+  }
+  return value;
 }
 
 /**
@@ -110,8 +110,8 @@ function parseWithSchema<T>(schema: unknown, value: T): T {
  * @param ms - Delay duration.
  */
 async function delay(ms: number): Promise<void> {
-	if (!ms || ms <= 0) return;
-	await new Promise<void>((resolve) => setTimeout(resolve, ms));
+  if (!ms || ms <= 0) return;
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -121,25 +121,25 @@ async function delay(ms: number): Promise<void> {
  * @returns Resolved value of the promise.
  */
 async function withTimeout<T>(
-	run: () => Promise<T>,
-	timeoutMs?: number,
+  run: () => Promise<T>,
+  timeoutMs?: number,
 ): Promise<T> {
-	if (!timeoutMs || timeoutMs <= 0) {
-		return await run();
-	}
+  if (!timeoutMs || timeoutMs <= 0) {
+    return await run();
+  }
 
-	let timeoutId: ReturnType<typeof setTimeout> | null = null;
-	const timeoutPromise = new Promise<T>((_, reject) => {
-		timeoutId = setTimeout(() => {
-			reject(new Error(`Node execution timed out after ${timeoutMs}ms`));
-		}, timeoutMs);
-	});
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Node execution timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
 
-	try {
-		return await Promise.race([run(), timeoutPromise]);
-	} finally {
-		if (timeoutId) clearTimeout(timeoutId);
-	}
+  try {
+    return await Promise.race([run(), timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 /**
@@ -148,6 +148,6 @@ async function withTimeout<T>(
  * @returns Error message.
  */
 function errorMessage(error: unknown): string {
-	if (error instanceof Error) return error.message;
-	return String(error);
+  if (error instanceof Error) return error.message;
+  return String(error);
 }

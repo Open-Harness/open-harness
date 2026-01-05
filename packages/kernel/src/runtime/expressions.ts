@@ -8,21 +8,21 @@ import jsonata from "jsonata";
  * Includes flow input, node outputs, state, and iteration context.
  */
 export interface ExpressionContext {
-	flow?: { input?: Record<string, unknown> };
-	state?: Record<string, unknown>;
-	$iteration?: number;
-	$first?: boolean;
-	$last?: boolean;
-	$maxIterations?: number;
-	[key: string]: unknown;
+  flow?: { input?: Record<string, unknown> };
+  state?: Record<string, unknown>;
+  $iteration?: number;
+  $first?: boolean;
+  $last?: boolean;
+  $maxIterations?: number;
+  [key: string]: unknown;
 }
 
 /**
  * A segment of a parsed template - either literal text or an expression.
  */
 export type TemplateSegment =
-	| { type: "text"; value: string }
-	| { type: "expression"; value: string };
+  | { type: "text"; value: string }
+  | { type: "expression"; value: string };
 
 // Cache compiled JSONata expressions for performance
 const expressionCache = new Map<string, jsonata.Expression>();
@@ -32,12 +32,12 @@ const expressionCache = new Map<string, jsonata.Expression>();
  * Throws on invalid syntax.
  */
 function getCompiledExpression(expr: string): jsonata.Expression {
-	let compiled = expressionCache.get(expr);
-	if (!compiled) {
-		compiled = jsonata(expr);
-		expressionCache.set(expr, compiled);
-	}
-	return compiled;
+  let compiled = expressionCache.get(expr);
+  if (!compiled) {
+    compiled = jsonata(expr);
+    expressionCache.set(expr, compiled);
+  }
+  return compiled;
 }
 
 /**
@@ -47,30 +47,30 @@ function getCompiledExpression(expr: string): jsonata.Expression {
  * Example: { iteration: 2 } allows access via $iteration in expressions.
  */
 function prepareBindings(
-	context: ExpressionContext,
+  context: ExpressionContext,
 ): Record<string, unknown> | undefined {
-	const bindings: Record<string, unknown> = {};
-	let hasBindings = false;
+  const bindings: Record<string, unknown> = {};
+  let hasBindings = false;
 
-	// Inject iteration context as $ variables (key without $, access with $)
-	if (context.$iteration !== undefined) {
-		bindings.iteration = context.$iteration;
-		hasBindings = true;
-	}
-	if (context.$first !== undefined) {
-		bindings.first = context.$first;
-		hasBindings = true;
-	}
-	if (context.$last !== undefined) {
-		bindings.last = context.$last;
-		hasBindings = true;
-	}
-	if (context.$maxIterations !== undefined) {
-		bindings.maxIterations = context.$maxIterations;
-		hasBindings = true;
-	}
+  // Inject iteration context as $ variables (key without $, access with $)
+  if (context.$iteration !== undefined) {
+    bindings.iteration = context.$iteration;
+    hasBindings = true;
+  }
+  if (context.$first !== undefined) {
+    bindings.first = context.$first;
+    hasBindings = true;
+  }
+  if (context.$last !== undefined) {
+    bindings.last = context.$last;
+    hasBindings = true;
+  }
+  if (context.$maxIterations !== undefined) {
+    bindings.maxIterations = context.$maxIterations;
+    hasBindings = true;
+  }
 
-	return hasBindings ? bindings : undefined;
+  return hasBindings ? bindings : undefined;
 }
 
 /**
@@ -91,22 +91,22 @@ function prepareBindings(
  * await evaluateExpression('condition ? "yes" : "no"', context) // Ternary
  */
 export async function evaluateExpression(
-	expr: string,
-	context: ExpressionContext,
+  expr: string,
+  context: ExpressionContext,
 ): Promise<unknown> {
-	try {
-		const compiled = getCompiledExpression(expr);
-		const bindings = prepareBindings(context);
-		return await compiled.evaluate(context, bindings);
-	} catch (err) {
-		// Check if this is a JSONata error for a missing path
-		// JSONata doesn't throw for missing paths, it returns undefined
-		// But it does throw for syntax errors
-		if (err instanceof Error && err.message.includes("Unknown")) {
-			return undefined;
-		}
-		throw err;
-	}
+  try {
+    const compiled = getCompiledExpression(expr);
+    const bindings = prepareBindings(context);
+    return await compiled.evaluate(context, bindings);
+  } catch (err) {
+    // Check if this is a JSONata error for a missing path
+    // JSONata doesn't throw for missing paths, it returns undefined
+    // But it does throw for syntax errors
+    if (err instanceof Error && err.message.includes("Unknown")) {
+      return undefined;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -118,40 +118,40 @@ export async function evaluateExpression(
  * parseTemplate('No bindings') // [text:'No bindings']
  */
 export function parseTemplate(template: string): TemplateSegment[] {
-	const segments: TemplateSegment[] = [];
-	const regex = /\{\{([^}]+)\}\}/g;
-	let lastIndex = 0;
-	let match: RegExpExecArray | null;
+  const segments: TemplateSegment[] = [];
+  const regex = /\{\{([^}]+)\}\}/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
 
-	match = regex.exec(template);
-	while (match !== null) {
-		// Add text before this match
-		if (match.index > lastIndex) {
-			segments.push({
-				type: "text",
-				value: template.slice(lastIndex, match.index),
-			});
-		}
+  match = regex.exec(template);
+  while (match !== null) {
+    // Add text before this match
+    if (match.index > lastIndex) {
+      segments.push({
+        type: "text",
+        value: template.slice(lastIndex, match.index),
+      });
+    }
 
-		// Add the expression (trimmed)
-		const expr = match[1]?.trim() ?? "";
-		if (expr) {
-			segments.push({ type: "expression", value: expr });
-		}
+    // Add the expression (trimmed)
+    const expr = match[1]?.trim() ?? "";
+    if (expr) {
+      segments.push({ type: "expression", value: expr });
+    }
 
-		lastIndex = regex.lastIndex;
-		match = regex.exec(template);
-	}
+    lastIndex = regex.lastIndex;
+    match = regex.exec(template);
+  }
 
-	// Add remaining text after last match
-	if (lastIndex < template.length) {
-		segments.push({
-			type: "text",
-			value: template.slice(lastIndex),
-		});
-	}
+  // Add remaining text after last match
+  if (lastIndex < template.length) {
+    segments.push({
+      type: "text",
+      value: template.slice(lastIndex),
+    });
+  }
 
-	return segments;
+  return segments;
 }
 
 /**
@@ -159,13 +159,13 @@ export function parseTemplate(template: string): TemplateSegment[] {
  * Pure bindings preserve their type (return object/array/number, not string).
  */
 export function isPureBinding(template: string): boolean {
-	const trimmed = template.trim();
-	if (!trimmed.startsWith("{{") || !trimmed.endsWith("}}")) {
-		return false;
-	}
-	// Check there's only one binding and it spans the whole string
-	const segments = parseTemplate(trimmed);
-	return segments.length === 1 && segments[0]?.type === "expression";
+  const trimmed = template.trim();
+  if (!trimmed.startsWith("{{") || !trimmed.endsWith("}}")) {
+    return false;
+  }
+  // Check there's only one binding and it spans the whole string
+  const segments = parseTemplate(trimmed);
+  return segments.length === 1 && segments[0]?.type === "expression";
 }
 
 /**
@@ -176,28 +176,28 @@ export function isPureBinding(template: string): boolean {
  * @returns String result with expressions interpolated
  */
 export async function evaluateTemplate(
-	segments: TemplateSegment[],
-	context: ExpressionContext,
+  segments: TemplateSegment[],
+  context: ExpressionContext,
 ): Promise<string> {
-	const parts = await Promise.all(
-		segments.map(async (segment) => {
-			if (segment.type === "text") {
-				return segment.value;
-			}
-			// Evaluate expression
-			const result = await evaluateExpression(segment.value, context);
-			// undefined becomes empty string in string interpolation
-			if (result === undefined || result === null) {
-				return "";
-			}
-			// Objects/arrays get JSON stringified
-			if (typeof result === "object") {
-				return JSON.stringify(result);
-			}
-			return String(result);
-		}),
-	);
-	return parts.join("");
+  const parts = await Promise.all(
+    segments.map(async (segment) => {
+      if (segment.type === "text") {
+        return segment.value;
+      }
+      // Evaluate expression
+      const result = await evaluateExpression(segment.value, context);
+      // undefined becomes empty string in string interpolation
+      if (result === undefined || result === null) {
+        return "";
+      }
+      // Objects/arrays get JSON stringified
+      if (typeof result === "object") {
+        return JSON.stringify(result);
+      }
+      return String(result);
+    }),
+  );
+  return parts.join("");
 }
 
 /**
@@ -215,21 +215,21 @@ export async function evaluateTemplate(
  * await resolveTemplate('Value: {{ missing }}', ctx) // Returns "Value: "
  */
 export async function resolveTemplate(
-	template: string,
-	context: ExpressionContext,
+  template: string,
+  context: ExpressionContext,
 ): Promise<unknown> {
-	// Fast path: pure binding preserves type
-	if (isPureBinding(template)) {
-		const segments = parseTemplate(template);
-		const expr = segments[0];
-		if (expr?.type === "expression") {
-			return evaluateExpression(expr.value, context);
-		}
-	}
+  // Fast path: pure binding preserves type
+  if (isPureBinding(template)) {
+    const segments = parseTemplate(template);
+    const expr = segments[0];
+    if (expr?.type === "expression") {
+      return evaluateExpression(expr.value, context);
+    }
+  }
 
-	// Mixed template: always returns string
-	const segments = parseTemplate(template);
-	return evaluateTemplate(segments, context);
+  // Mixed template: always returns string
+  const segments = parseTemplate(template);
+  return evaluateTemplate(segments, context);
 }
 
 /**
@@ -237,5 +237,5 @@ export async function resolveTemplate(
  * Useful for testing or when memory is a concern.
  */
 export function clearExpressionCache(): void {
-	expressionCache.clear();
+  expressionCache.clear();
 }

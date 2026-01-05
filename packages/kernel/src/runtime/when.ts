@@ -5,12 +5,12 @@ import type { BindingContext } from "./bindings.js";
 import { type ExpressionContext, evaluateExpression } from "./expressions.js";
 
 function isDeepEqual(left: unknown, right: unknown): boolean {
-	if (Object.is(left, right)) return true;
-	try {
-		return JSON.stringify(left) === JSON.stringify(right);
-	} catch {
-		return false;
-	}
+  if (Object.is(left, right)) return true;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -18,44 +18,44 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
  * Uses JSONata internally for path resolution.
  */
 async function evaluateWhenAST(
-	expr: WhenExprAST,
-	context: BindingContext,
+  expr: WhenExprAST,
+  context: BindingContext,
 ): Promise<boolean> {
-	if ("equals" in expr) {
-		// Use JSONata to resolve the variable path
-		const resolved = await evaluateExpression(
-			expr.equals.var,
-			context as ExpressionContext,
-		);
-		if (resolved === undefined) {
-			return false;
-		}
-		return isDeepEqual(resolved, expr.equals.value);
-	}
+  if ("equals" in expr) {
+    // Use JSONata to resolve the variable path
+    const resolved = await evaluateExpression(
+      expr.equals.var,
+      context as ExpressionContext,
+    );
+    if (resolved === undefined) {
+      return false;
+    }
+    return isDeepEqual(resolved, expr.equals.value);
+  }
 
-	if ("not" in expr) {
-		return !(await evaluateWhenAST(expr.not, context));
-	}
+  if ("not" in expr) {
+    return !(await evaluateWhenAST(expr.not, context));
+  }
 
-	if ("and" in expr) {
-		for (const item of expr.and) {
-			if (!(await evaluateWhenAST(item, context))) {
-				return false;
-			}
-		}
-		return true;
-	}
+  if ("and" in expr) {
+    for (const item of expr.and) {
+      if (!(await evaluateWhenAST(item, context))) {
+        return false;
+      }
+    }
+    return true;
+  }
 
-	if ("or" in expr) {
-		for (const item of expr.or) {
-			if (await evaluateWhenAST(item, context)) {
-				return true;
-			}
-		}
-		return false;
-	}
+  if ("or" in expr) {
+    for (const item of expr.or) {
+      if (await evaluateWhenAST(item, context)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
-	return false;
+  return false;
 }
 
 /**
@@ -83,23 +83,23 @@ async function evaluateWhenAST(
  * @returns true if the condition is satisfied, false otherwise
  */
 export async function evaluateWhen(
-	expr: WhenExpr | undefined,
-	context: BindingContext,
+  expr: WhenExpr | undefined,
+  context: BindingContext,
 ): Promise<boolean> {
-	// No condition = always true
-	if (expr === undefined || expr === null) {
-		return true;
-	}
+  // No condition = always true
+  if (expr === undefined || expr === null) {
+    return true;
+  }
 
-	// JSONata expression string
-	if (typeof expr === "string") {
-		const result = await evaluateExpression(expr, context as ExpressionContext);
-		// Coerce result to boolean
-		// undefined/null/false/"" -> false
-		// everything else -> truthy check
-		return Boolean(result);
-	}
+  // JSONata expression string
+  if (typeof expr === "string") {
+    const result = await evaluateExpression(expr, context as ExpressionContext);
+    // Coerce result to boolean
+    // undefined/null/false/"" -> false
+    // everything else -> truthy check
+    return Boolean(result);
+  }
 
-	// Structured AST format
-	return evaluateWhenAST(expr, context);
+  // Structured AST format
+  return evaluateWhenAST(expr, context);
 }

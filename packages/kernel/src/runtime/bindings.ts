@@ -2,11 +2,11 @@
 // All {{ }} templates are evaluated via JSONata
 
 import {
-	type ExpressionContext,
-	evaluateExpression,
-	evaluateTemplate,
-	isPureBinding,
-	parseTemplate,
+  type ExpressionContext,
+  evaluateExpression,
+  evaluateTemplate,
+  isPureBinding,
+  parseTemplate,
 } from "./expressions.js";
 
 /**
@@ -27,21 +27,21 @@ export type BindingContext = ExpressionContext;
  * @returns Resolved value
  */
 export async function resolveBindingString(
-	template: string,
-	context: BindingContext,
+  template: string,
+  context: BindingContext,
 ): Promise<unknown> {
-	// Fast path: pure binding preserves type
-	if (isPureBinding(template)) {
-		const segments = parseTemplate(template);
-		const expr = segments[0];
-		if (expr?.type === "expression") {
-			return evaluateExpression(expr.value, context);
-		}
-	}
+  // Fast path: pure binding preserves type
+  if (isPureBinding(template)) {
+    const segments = parseTemplate(template);
+    const expr = segments[0];
+    if (expr?.type === "expression") {
+      return evaluateExpression(expr.value, context);
+    }
+  }
 
-	// Mixed template: always returns string
-	const segments = parseTemplate(template);
-	return evaluateTemplate(segments, context);
+  // Mixed template: always returns string
+  const segments = parseTemplate(template);
+  return evaluateTemplate(segments, context);
 }
 
 /**
@@ -52,38 +52,38 @@ export async function resolveBindingString(
  * @returns Resolved value with all {{ }} templates evaluated
  */
 export async function resolveBindings<T extends Record<string, unknown>>(
-	input: T,
-	context: BindingContext,
+  input: T,
+  context: BindingContext,
 ): Promise<T> {
-	return resolveValue(input, context) as Promise<T>;
+  return resolveValue(input, context) as Promise<T>;
 }
 
 /**
  * Recursively resolve bindings in any value.
  */
 async function resolveValue(
-	value: unknown,
-	context: BindingContext,
+  value: unknown,
+  context: BindingContext,
 ): Promise<unknown> {
-	if (typeof value === "string") {
-		return resolveBindingString(value, context);
-	}
-	if (Array.isArray(value)) {
-		return Promise.all(value.map((item) => resolveValue(item, context)));
-	}
-	if (value && typeof value === "object") {
-		const result: Record<string, unknown> = {};
-		const entries = Object.entries(value);
-		const resolvedEntries = await Promise.all(
-			entries.map(
-				async ([key, entry]) =>
-					[key, await resolveValue(entry, context)] as const,
-			),
-		);
-		for (const [key, resolved] of resolvedEntries) {
-			result[key] = resolved;
-		}
-		return result;
-	}
-	return value;
+  if (typeof value === "string") {
+    return resolveBindingString(value, context);
+  }
+  if (Array.isArray(value)) {
+    return Promise.all(value.map((item) => resolveValue(item, context)));
+  }
+  if (value && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    const entries = Object.entries(value);
+    const resolvedEntries = await Promise.all(
+      entries.map(
+        async ([key, entry]) =>
+          [key, await resolveValue(entry, context)] as const,
+      ),
+    );
+    for (const [key, resolved] of resolvedEntries) {
+      result[key] = resolved;
+    }
+    return result;
+  }
+  return value;
 }

@@ -1,4 +1,4 @@
 {
-  "title": "Deployment",
-  "pages": ["production", "persistence"]
+	"title": "Deployment",
+	"pages": ["production", "persistence"]
 }

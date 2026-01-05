@@ -1,4 +1,4 @@
 {
-  "title": "Agents",
-  "pages": ["custom-agents", "claude-agent"]
+	"title": "Agents",
+	"pages": ["custom-agents", "claude-agent"]
 }
