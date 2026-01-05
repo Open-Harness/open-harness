@@ -1,0 +1,628 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2025-01-05T12:00:00.000Z",
+  "projectName": "acme-ecommerce",
+  
+  "codebaseContext": {
+    "services": [
+      {
+        "name": "api-gateway",
+        "type": "http",
+        "framework": "fastify",
+        "entryPoints": ["src/server.ts"],
+        "routes": [
+          "GET /api/health",
+          "GET /api/users/:id",
+          "POST /api/checkout",
+          "POST /api/payment",
+          "GET /api/orders"
+        ],
+        "dependencies": ["user-service", "payment-service", "inventory-service"]
+      },
+      {
+        "name": "worker-service",
+        "type": "worker",
+        "framework": "bullmq",
+        "entryPoints": ["src/workers/index.ts"],
+        "consumers": ["email-queue", "notification-queue", "analytics-queue"],
+        "dependencies": []
+      }
+    ],
+    "infrastructure": [
+      {
+        "type": "database",
+        "client": "prisma",
+        "configFile": "prisma/schema.prisma"
+      },
+      {
+        "type": "cache",
+        "client": "ioredis",
+        "configFile": "src/lib/redis.ts"
+      },
+      {
+        "type": "queue",
+        "client": "bullmq",
+        "configFile": "src/lib/queue.ts"
+      }
+    ],
+    "loggingAudit": {
+      "currentLogger": "mixed",
+      "statements": {
+        "console": { "log": 87, "warn": 23, "error": 15, "info": 0, "debug": 0 },
+        "structured": { "info": 12, "warn": 3, "error": 5, "debug": 8 }
+      },
+      "structuredPercent": 18,
+      "patterns": [
+        "console.log for debugging API calls",
+        "console.error for exception handling",
+        "Sparse pino usage in payment service only"
+      ],
+      "configLocation": "src/lib/logger.ts"
+    },
+    "businessDomain": {
+      "entities": [
+        {
+          "name": "User",
+          "idField": "id",
+          "modelLocation": "prisma/schema.prisma",
+          "highCardinality": true
+        },
+        {
+          "name": "Order",
+          "idField": "id",
+          "modelLocation": "prisma/schema.prisma",
+          "highCardinality": true
+        },
+        {
+          "name": "Product",
+          "idField": "sku",
+          "modelLocation": "prisma/schema.prisma",
+          "highCardinality": true
+        },
+        {
+          "name": "Cart",
+          "idField": "id",
+          "modelLocation": "prisma/schema.prisma",
+          "highCardinality": true
+        }
+      ],
+      "transactions": [
+        {
+          "name": "checkout",
+          "services": ["api-gateway", "payment-service", "inventory-service"],
+          "criticalPath": true,
+          "typicalDuration": "slow"
+        },
+        {
+          "name": "user-signup",
+          "services": ["api-gateway", "user-service"],
+          "criticalPath": true,
+          "typicalDuration": "fast"
+        },
+        {
+          "name": "order-fulfillment",
+          "services": ["worker-service", "inventory-service"],
+          "criticalPath": false,
+          "typicalDuration": "medium"
+        }
+      ],
+      "featureFlags": {
+        "provider": "launchdarkly",
+        "configLocation": "src/lib/flags.ts"
+      }
+    }
+  },
+  
+  "interviewAnswers": {
+    "debuggingPainPoints": [
+      "Failed checkouts are impossible to debug - we can't trace the request through payment gateway responses",
+      "When inventory sync fails, we have no idea which products were affected",
+      "Can't correlate user complaints to specific error events"
+    ],
+    "priorityUserSegments": [
+      "enterprise",
+      "premium",
+      "users with LTV > $1000"
+    ],
+    "criticalTransactions": [
+      "checkout",
+      "payment-refund",
+      "inventory-sync"
+    ],
+    "complianceRequirements": {
+      "piiFields": [
+        "email",
+        "phone",
+        "address",
+        "card_number",
+        "cvv"
+      ],
+      "retentionDays": 90,
+      "auditRequired": true,
+      "gdprCompliant": true,
+      "additionalRegulations": ["PCI-DSS"]
+    },
+    "queryPatterns": [
+      "Show all failed checkouts for user X in the last 24 hours",
+      "What's the error rate by payment provider?",
+      "Which deployment caused the latency spike?",
+      "What's the p99 latency for checkout by subscription tier?",
+      "How many users hit the new checkout flow today?"
+    ],
+    "constraints": {
+      "budgetLimited": true,
+      "maxEventsPerSecond": 5000,
+      "storageSystem": "datadog",
+      "retentionPolicy": "90 days hot, 1 year cold"
+    }
+  },
+  
+  "telemetryStrategy": {
+    "globalFields": [
+      {
+        "name": "request_id",
+        "path": "request_id",
+        "type": "string",
+        "required": true,
+        "source": "request",
+        "description": "Unique identifier for the request"
+      },
+      {
+        "name": "trace_id",
+        "path": "trace_id",
+        "type": "string",
+        "required": true,
+        "source": "context",
+        "description": "Distributed trace ID for cross-service correlation"
+      },
+      {
+        "name": "timestamp",
+        "path": "timestamp",
+        "type": "string",
+        "required": true,
+        "source": "computed",
+        "description": "ISO 8601 timestamp"
+      },
+      {
+        "name": "service",
+        "path": "service",
+        "type": "string",
+        "required": true,
+        "source": "config",
+        "description": "Service name"
+      },
+      {
+        "name": "version",
+        "path": "version",
+        "type": "string",
+        "required": true,
+        "source": "config",
+        "description": "Service version"
+      },
+      {
+        "name": "deployment_id",
+        "path": "deployment_id",
+        "type": "string",
+        "required": false,
+        "source": "config",
+        "description": "Deployment identifier for rollback correlation"
+      }
+    ],
+    "serviceSchemas": {
+      "api-gateway": {
+        "serviceName": "api-gateway",
+        "eventType": "request",
+        "fields": {
+          "required": [
+            "request_id",
+            "trace_id",
+            "timestamp",
+            "service",
+            "version"
+          ],
+          "standard": [
+            "method",
+            "path",
+            "route",
+            "status_code",
+            "duration_ms",
+            "outcome"
+          ],
+          "business": {
+            "user": ["id", "subscription", "account_age_days", "lifetime_value_cents"],
+            "cart": ["id", "item_count", "total_cents", "coupon_applied"],
+            "order": ["id", "status"],
+            "payment": ["method", "provider", "attempt"]
+          },
+          "infrastructure": {
+            "db": ["query_count", "duration_ms"],
+            "cache": ["hit", "miss"],
+            "external": ["service", "duration_ms", "status_code"]
+          },
+          "error": ["type", "code", "message", "retriable", "provider_code"]
+        },
+        "example": {
+          "request_id": "req_8bf7ec2d",
+          "trace_id": "abc123def456",
+          "timestamp": "2025-01-05T12:00:00.000Z",
+          "service": "api-gateway",
+          "version": "2.4.1",
+          "deployment_id": "deploy_xyz",
+          "method": "POST",
+          "path": "/api/checkout",
+          "route": "/api/checkout",
+          "status_code": 200,
+          "duration_ms": 1247,
+          "outcome": "success",
+          "user": {
+            "id": "user_456",
+            "subscription": "premium",
+            "account_age_days": 847,
+            "lifetime_value_cents": 284700
+          },
+          "cart": {
+            "id": "cart_xyz",
+            "item_count": 3,
+            "total_cents": 15999,
+            "coupon_applied": "SAVE20"
+          },
+          "payment": {
+            "method": "card",
+            "provider": "stripe",
+            "attempt": 1
+          },
+          "db": {
+            "query_count": 5,
+            "duration_ms": 234
+          },
+          "cache": {
+            "hit": true
+          },
+          "feature_flags": {
+            "new_checkout_flow": true,
+            "express_payment": false
+          }
+        }
+      },
+      "worker-service": {
+        "serviceName": "worker-service",
+        "eventType": "job",
+        "fields": {
+          "required": [
+            "request_id",
+            "trace_id",
+            "timestamp",
+            "service",
+            "version"
+          ],
+          "standard": [
+            "job_id",
+            "job_type",
+            "queue",
+            "duration_ms",
+            "outcome",
+            "attempt"
+          ],
+          "business": {
+            "target": ["user_id", "order_id", "entity_type", "entity_id"]
+          },
+          "infrastructure": {
+            "db": ["query_count", "duration_ms"]
+          },
+          "error": ["type", "code", "message", "retriable"]
+        },
+        "example": {
+          "request_id": "job_abc123",
+          "trace_id": "trace_xyz",
+          "timestamp": "2025-01-05T12:00:00.000Z",
+          "service": "worker-service",
+          "version": "1.2.0",
+          "job_id": "job_abc123",
+          "job_type": "send-order-confirmation",
+          "queue": "email-queue",
+          "duration_ms": 523,
+          "outcome": "success",
+          "attempt": 1,
+          "target": {
+            "user_id": "user_456",
+            "order_id": "order_789",
+            "entity_type": "order",
+            "entity_id": "order_789"
+          },
+          "db": {
+            "query_count": 2,
+            "duration_ms": 45
+          }
+        }
+      }
+    },
+    "samplingRules": [
+      {
+        "name": "keep-all-errors",
+        "condition": "status_code >= 500 || error != null",
+        "action": "keep",
+        "priority": 1,
+        "reason": "Never drop error events for debugging"
+      },
+      {
+        "name": "keep-slow-requests",
+        "condition": "duration_ms > 2000",
+        "action": "keep",
+        "priority": 2,
+        "reason": "Keep latency outliers for performance analysis"
+      },
+      {
+        "name": "keep-enterprise-users",
+        "condition": "user.subscription == 'enterprise'",
+        "action": "keep",
+        "priority": 3,
+        "reason": "VIP users get full logging"
+      },
+      {
+        "name": "keep-checkout-flow",
+        "condition": "path.startsWith('/api/checkout') || path.startsWith('/api/payment')",
+        "action": "keep",
+        "priority": 4,
+        "reason": "Critical path always logged"
+      },
+      {
+        "name": "sample-success",
+        "condition": "status_code < 400 && outcome == 'success'",
+        "action": "sample",
+        "rate": 0.1,
+        "priority": 100,
+        "reason": "Sample successful requests at 10% to manage volume"
+      }
+    ],
+    "redactionRules": [
+      {
+        "name": "credit-card",
+        "paths": ["*.card_number", "*.cvv", "payment.card.*"],
+        "strategy": "remove",
+        "reason": "PCI-DSS compliance"
+      },
+      {
+        "name": "auth-tokens",
+        "paths": [
+          "req.headers.authorization",
+          "req.headers.cookie",
+          "*.token",
+          "*.apiKey",
+          "*.secret"
+        ],
+        "strategy": "remove",
+        "reason": "Security - never log credentials"
+      },
+      {
+        "name": "email-mask",
+        "paths": ["user.email", "*.email"],
+        "strategy": "mask",
+        "maskPattern": "***@***.***",
+        "reason": "Privacy while allowing domain debugging"
+      },
+      {
+        "name": "address",
+        "paths": ["*.address", "*.street", "*.zip"],
+        "strategy": "remove",
+        "reason": "PII protection"
+      }
+    ],
+    "transportConfig": {
+      "development": {
+        "target": "pino-pretty",
+        "options": {
+          "colorize": true,
+          "translateTime": "HH:MM:ss",
+          "ignore": "pid,hostname"
+        }
+      },
+      "production": {
+        "target": "pino/file",
+        "options": {
+          "destination": 1
+        }
+      }
+    }
+  },
+  
+  "implementationTasks": [
+    {
+      "id": "TELE-F01",
+      "category": "foundation",
+      "priority": "P0",
+      "title": "Configure Pino logger with wide event defaults",
+      "description": "Set up the base Pino logger with proper formatting, redaction from manifest, and transport configuration.",
+      "files": ["src/lib/logger.ts"],
+      "estimatedEffort": "small",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Pino logger configured with JSON output",
+        "Base fields (service, version, deployment_id) included",
+        "All redaction paths from manifest configured",
+        "Development vs production transports working"
+      ]
+    },
+    {
+      "id": "TELE-F02",
+      "category": "foundation",
+      "priority": "P0",
+      "title": "Set up AsyncLocalStorage for request context",
+      "description": "Create context propagation system to carry request context through async operations.",
+      "files": ["src/lib/context.ts"],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F01"],
+      "acceptanceCriteria": [
+        "AsyncLocalStorage configured",
+        "Context includes request_id and trace_id",
+        "Helper functions for getting/setting context",
+        "Works across async boundaries"
+      ]
+    },
+    {
+      "id": "TELE-F03",
+      "category": "foundation",
+      "priority": "P0",
+      "title": "Create wide event middleware for api-gateway",
+      "description": "Implement Fastify middleware that initializes context, accumulates fields, and emits single wide event.",
+      "files": ["src/middleware/telemetry.ts", "src/plugins/telemetry.ts"],
+      "estimatedEffort": "medium",
+      "dependencies": ["TELE-F01", "TELE-F02"],
+      "acceptanceCriteria": [
+        "Context initialized on request entry",
+        "Wide event object built throughout request",
+        "Single event emitted on request completion",
+        "Error events captured correctly",
+        "Duration calculated accurately"
+      ]
+    },
+    {
+      "id": "TELE-M01",
+      "category": "migration",
+      "priority": "P1",
+      "title": "Replace console.log in checkout flow",
+      "description": "Remove console.log statements from checkout-related files and add context to wide event instead.",
+      "files": [
+        "src/routes/checkout.ts",
+        "src/services/checkout.ts",
+        "src/services/payment.ts"
+      ],
+      "estimatedEffort": "medium",
+      "dependencies": ["TELE-F03"],
+      "acceptanceCriteria": [
+        "All console.log statements removed from checkout flow",
+        "Relevant context added to wide event",
+        "No change in business logic",
+        "Tests pass"
+      ]
+    },
+    {
+      "id": "TELE-M02",
+      "category": "migration",
+      "priority": "P1",
+      "title": "Replace console.log in user service",
+      "description": "Migrate console.log statements in user-related files to wide event enrichment.",
+      "files": [
+        "src/routes/users.ts",
+        "src/services/user.ts"
+      ],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F03"],
+      "acceptanceCriteria": [
+        "All console.log statements removed",
+        "User context added to wide event after auth",
+        "Tests pass"
+      ]
+    },
+    {
+      "id": "TELE-E01",
+      "category": "enrichment",
+      "priority": "P1",
+      "title": "Add user context enrichment",
+      "description": "After authentication, enrich wide event with user details for debugging and analytics.",
+      "files": ["src/middleware/auth.ts"],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F03"],
+      "acceptanceCriteria": [
+        "User ID added after auth",
+        "Subscription tier included",
+        "Account age calculated",
+        "LTV included when available"
+      ]
+    },
+    {
+      "id": "TELE-E02",
+      "category": "enrichment",
+      "priority": "P1",
+      "title": "Add database query tracking",
+      "description": "Track database query counts and durations in wide events using Prisma middleware.",
+      "files": ["src/lib/prisma.ts"],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F02"],
+      "acceptanceCriteria": [
+        "Query count tracked per request",
+        "Total DB duration tracked",
+        "Works with Prisma middleware",
+        "No performance regression"
+      ]
+    },
+    {
+      "id": "TELE-E03",
+      "category": "enrichment",
+      "priority": "P2",
+      "title": "Add cache hit/miss tracking",
+      "description": "Track Redis cache interactions in wide events.",
+      "files": ["src/lib/redis.ts", "src/lib/cache.ts"],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F02"],
+      "acceptanceCriteria": [
+        "Cache hits tracked",
+        "Cache misses tracked",
+        "Key patterns logged (not full keys)"
+      ]
+    },
+    {
+      "id": "TELE-E04",
+      "category": "enrichment",
+      "priority": "P1",
+      "title": "Add feature flag context",
+      "description": "Include active feature flags in wide events for rollout debugging.",
+      "files": ["src/lib/flags.ts", "src/middleware/flags.ts"],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F03"],
+      "acceptanceCriteria": [
+        "Feature flags object added to events",
+        "Only flags relevant to request included",
+        "Works with LaunchDarkly"
+      ]
+    },
+    {
+      "id": "TELE-C01",
+      "category": "compliance",
+      "priority": "P0",
+      "title": "Configure PII redaction rules",
+      "description": "Ensure all PII fields identified in manifest are properly redacted before logging.",
+      "files": ["src/lib/logger.ts"],
+      "estimatedEffort": "small",
+      "dependencies": ["TELE-F01"],
+      "acceptanceCriteria": [
+        "All PII paths from manifest configured",
+        "Redaction verified in test logs",
+        "No PII visible in log output",
+        "Credit card data never logged"
+      ]
+    },
+    {
+      "id": "TELE-C02",
+      "category": "compliance",
+      "priority": "P2",
+      "title": "Implement tail-based sampling",
+      "description": "Keep all errors and slow requests, sample successful requests to manage volume.",
+      "files": ["src/lib/sampling.ts", "src/middleware/telemetry.ts"],
+      "estimatedEffort": "medium",
+      "dependencies": ["TELE-F03"],
+      "acceptanceCriteria": [
+        "100% of errors retained",
+        "100% of slow requests (>2s) retained",
+        "Enterprise users exempt from sampling",
+        "Checkout flow exempt from sampling",
+        "10% sample rate for success"
+      ]
+    },
+    {
+      "id": "TELE-W01",
+      "category": "foundation",
+      "priority": "P1",
+      "title": "Create wide event handler for worker-service",
+      "description": "Implement job-level wide events for BullMQ workers.",
+      "files": ["src/workers/telemetry.ts"],
+      "estimatedEffort": "medium",
+      "dependencies": ["TELE-F01", "TELE-F02"],
+      "acceptanceCriteria": [
+        "Wide event emitted per job",
+        "Job ID and type captured",
+        "Duration and outcome tracked",
+        "Error context captured on failure"
+      ]
+    }
+  ]
+}
