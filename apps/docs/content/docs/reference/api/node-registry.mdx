@@ -10,7 +10,7 @@ The NodeRegistry manages available node types for flows.
 ## Creating a Registry
 
 ```typescript
-import { DefaultNodeRegistry } from "@open-harness/kernel";
+import { DefaultNodeRegistry } from "@open-harness/sdk";
 
 const registry = new DefaultNodeRegistry();
 ```
@@ -68,7 +68,7 @@ The kernel includes these nodes:
 ## Registering Custom Nodes
 
 ```typescript
-import { defineAgent } from "@open-harness/kernel";
+import { defineAgent } from "@open-harness/sdk";
 
 const customAgent = defineAgent({
   name: "custom.processor",

@@ -12,7 +12,7 @@ Configure persistent storage for production deployments.
 The default persistent store:
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/kernel";
+import { SqliteRunStore } from "@open-harness/sdk";
 
 const store = new SqliteRunStore("./data/runs.db", {
   // Vacuum database on startup
@@ -27,7 +27,7 @@ const store = new SqliteRunStore("./data/runs.db", {
 Implement the `RunStore` interface:
 
 ```typescript
-import { RunStore, RuntimeEvent, RunMetadata } from "@open-harness/kernel";
+import { RunStore, RuntimeEvent, RunMetadata } from "@open-harness/sdk";
 
 class PostgresRunStore implements RunStore {
   async saveEvent(runId: string, event: RuntimeEvent): Promise<void> {

@@ -39,7 +39,7 @@ interface RunMetadata {
 In-memory storage (development only):
 
 ```typescript
-import { MemoryRunStore } from "@open-harness/kernel";
+import { MemoryRunStore } from "@open-harness/sdk";
 
 const store = new MemoryRunStore();
 ```
@@ -49,7 +49,7 @@ const store = new MemoryRunStore();
 Persistent SQLite storage:
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/kernel";
+import { SqliteRunStore } from "@open-harness/sdk";
 
 const store = new SqliteRunStore("./data/runs.db");
 ```
