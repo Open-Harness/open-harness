@@ -48,7 +48,16 @@ export default async function Page(props: PageProps) {
 }
 
 export async function generateStaticParams() {
-	return source.generateParams();
+	const params = source.generateParams();
+	// For optional catch-all route [[...slug]], Next.js requires all possible params
+	// including the root case (empty slug) for static export
+	// Check if we need to add the root case
+	const hasRootCase = params.some((p) => p.slug === undefined || (Array.isArray(p.slug) && p.slug.length === 0));
+	if (!hasRootCase) {
+		// Add root case for /docs route
+		return [{ slug: [] }, ...params];
+	}
+	return params;
 }
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
