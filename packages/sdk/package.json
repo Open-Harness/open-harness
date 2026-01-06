@@ -50,7 +50,7 @@
   },
   "scripts": {
     "build": "bun run build:types && bun run build:bundle",
-    "build:types": "tsc --project tsconfig.build.json",
+    "build:types": "tsc --project tsconfig.build.json --skipLibCheck",
     "build:bundle": "bun build src/index.ts --outdir dist --format esm --target=bun --sourcemap=external",
     "lint": "biome check . --write",
     "lint:fix": "biome check . --write",

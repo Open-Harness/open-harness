@@ -10,7 +10,17 @@
 
     // Standard module resolution for builds
     "moduleResolution": "node",
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    
+    // Don't check external workspace packages during build
+    "skipLibCheck": true,
+    
+    // Map workspace dependencies to empty module to avoid type checking them
+    "paths": {
+      "@open-harness/nodes-basic": ["./node_modules/@open-harness/nodes-basic"],
+      "@open-harness/provider-anthropic": ["./node_modules/@open-harness/provider-anthropic"],
+      "@open-harness/transport-websocket": ["./node_modules/@open-harness/transport-websocket"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": [
