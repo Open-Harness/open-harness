@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { RuntimeEvent } from "../../core/events.js";
+import type { RuntimeEvent } from "../../core/events";
 import {
   createPartTracker,
   transformErrorEvent,
@@ -10,7 +10,7 @@ import {
   transformStepEvent,
   transformTextEvent,
   transformToolEvent,
-} from "../../src/server/transports/transforms.js";
+} from "../../src/server/transports/transforms";
 
 describe("createPartTracker", () => {
   test("returns tracker with initial state", () => {
