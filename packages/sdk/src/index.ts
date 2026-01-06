@@ -10,7 +10,7 @@ export * from "./harness/harness.js";
 export * from "./nodes/index.js";
 export * from "./persistence/memory-run-store.js";
 export * from "./persistence/run-store.js";
-export * from "./persistence/sqlite-run-store.js";
+// sqlite-run-store moved to @open-harness/persistence-sqlite
 export * from "./registry/registry.js";
 export * from "./runtime/bindings.js";
 export * from "./runtime/compiler.js";

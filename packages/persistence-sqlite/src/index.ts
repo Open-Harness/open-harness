@@ -1,2 +1,5 @@
-// Placeholder - will be populated in Phase 2
-export {};
+/**
+ * SQLite persistence implementation for Open Harness.
+ */
+
+export { SqliteRunStore, type SqliteRunStoreOptions } from "./sqlite-run-store.js";

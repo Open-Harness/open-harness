@@ -108,6 +108,7 @@
       "version": "0.1.0-alpha.1",
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
+        "@open-harness/persistence-testing": "workspace:*",
         "@types/bun": "latest",
       },
       "peerDependencies": {
@@ -163,6 +164,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.10",
+        "@open-harness/persistence-testing": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^22",
         "vitest": "^4.0.16",

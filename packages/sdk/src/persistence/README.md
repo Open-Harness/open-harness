@@ -5,12 +5,13 @@ replay across process restarts.
 
 ## What's here
 - RunStore: interface for event and snapshot storage.
-- InMemoryRunStore: ephemeral store for tests and demos.
-- SqliteRunStore: SQLite-backed implementation for Bun.
+- InMemoryRunStore: ephemeral store for tests and demos (web-compatible).
 
 ## Structure
 - run-store.ts: RunStore interface.
-- sqlite-run-store.ts: SqliteRunStore declaration + options.
+- memory-run-store.ts: InMemoryRunStore implementation.
+
+Note: SqliteRunStore has been moved to `@open-harness/persistence-sqlite` package.
 
 ## Usage
 Pass a RunStore to the runtime so it can append events and save snapshots.
@@ -18,7 +19,6 @@ Pass a RunStore to the runtime so it can append events and save snapshots.
 ```ts
 import { createRuntime } from "../runtime/runtime.js";
 import { InMemoryRunStore } from "../persistence/memory-run-store.js";
-import { SqliteRunStore } from "../persistence/sqlite-run-store.js";
 
 const store = new InMemoryRunStore();
 const runtime = createRuntime({ flow, registry, store });
@@ -27,6 +27,8 @@ const runtime = createRuntime({ flow, registry, store });
 Use SQLite when you need durability across restarts:
 
 ```ts
+import { SqliteRunStore } from "@open-harness/persistence-sqlite";
+
 const store = new SqliteRunStore({ filename: "runs.db" });
 const runtime = createRuntime({ flow, registry, store });
 ```

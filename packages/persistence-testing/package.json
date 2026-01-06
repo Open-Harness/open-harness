@@ -3,6 +3,8 @@
 	"version": "0.1.0-alpha.1",
 	"type": "module",
 	"private": false,
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
 	"scripts": {
 		"lint": "biome check . --write",
 		"typecheck": "tsc --noEmit"

@@ -1,2 +1,9 @@
-// Placeholder - will be populated in Phase 2
-export {};
+/**
+ * Shared testing utilities for persistence implementations.
+ */
+
+export {
+	runStoreContract,
+	sampleRuntimeEvent,
+	sampleRunSnapshot,
+} from "./contracts/run-store-contract.js";
