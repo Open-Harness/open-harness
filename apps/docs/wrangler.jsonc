@@ -1,8 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
-	"name": "open-harness-docs",
+	"name": "open-harness",
 	"compatibility_date": "2026-01-02",
-	"assets": {
-		"directory": "./out"
-	}
+	"pages_build_output_dir": "./out"
 }
