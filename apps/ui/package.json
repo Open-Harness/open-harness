@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.11",
-    "@open-harness/ai-sdk": "workspace:*",
     "@open-harness/sdk": "workspace:*",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-slot": "^1.2.4",
