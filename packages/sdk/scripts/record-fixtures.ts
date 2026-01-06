@@ -9,7 +9,6 @@ import {
 import { constantNode, echoNode } from "../src/nodes/index.js";
 import {
   createClaudeNode,
-  createMockQuery,
   type FixtureFile,
 } from "../src/server/providers/index.js";
 

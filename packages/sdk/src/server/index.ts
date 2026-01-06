@@ -2,6 +2,19 @@
  * Open Harness SDK - Server Components
  */
 
+export type { EventsRouteOptions } from "./api-routes/index.js";
+// API Routes
+export {
+  createAPIRoutes,
+  createChatRoute,
+  createCommandsRoute,
+  createEventsRoute,
+  createHealthRoute,
+} from "./api-routes/index.js";
+
+// Middleware
+export { corsMiddleware } from "./middleware/cors.js";
+export { errorHandler } from "./middleware/error-handler.js";
 export type { SqliteRunStoreOptions } from "./persistence/sqlite-run-store.js";
 // Persistence
 export { SqliteRunStore } from "./persistence/sqlite-run-store.js";

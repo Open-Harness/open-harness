@@ -258,7 +258,7 @@ No generics for v1.
 
 1. Add Hono dependencies:
    ```bash
-   bun add hono @hono/cors
+   bun add hono
    ```
 
 2. Create API routes:
@@ -266,7 +266,6 @@ No generics for v1.
    **src/server/api-routes/chat.ts** (~80 lines)
    ```typescript
    import { Hono } from 'hono';
-   import { v4 as uuidv4 } from 'uuid';
 
    interface ChatRequest {
      messages: UIMessage[];
@@ -293,7 +292,7 @@ No generics for v1.
        }
 
        // Generate run ID
-       const runId = uuidv4();
+       const runId = crypto.randomUUID();
 
        // Dispatch to runtime
        const textPart = lastUser.parts.find(p => p.type === 'text') as { text: string };
@@ -313,67 +312,79 @@ No generics for v1.
 
    **src/server/api-routes/events.ts** (~60 lines)
    ```typescript
+   import { Hono } from 'hono';
    import { streamSSE } from 'hono/streaming';
+   import { createPartTracker, transformEvent } from '../transports/transforms';
 
    export function createEventsRoute(runtime: Runtime) {
      const app = new Hono();
 
-     app.get('/api/events/:runId', async (c) => {
+     app.get('/api/events/:runId', (c) => {
        const runId = c.req.param('runId');
-
-       // Set timeout for inactive connections
-       const timeout = setTimeout(() => {
-         // Close connection after 30 min inactivity
-         c.req.raw.end();
-       }, 30 * 60 * 1000);
-
-       // Track activity
-       let lastActivity = Date.now();
+       const timeoutMs = 30 * 60 * 1000;
+       const messageId = crypto.randomUUID();
 
        return streamSSE(c, async (stream) => {
-         const unsubscribe = runtime.onEvent((event) => {
-           // Only send events for this run
-           if ('runId' in event && event.runId !== runId) {
-             return;
-           }
+         const tracker = createPartTracker();
+         let unsubscribe: (() => void) | null = null;
+         let lastActivity = Date.now();
 
-           // Update activity timeout
-           lastActivity = Date.now();
-
-           // Transform event to UI part
-           const uiPart = transformEventToUIPart(event);
-           if (!uiPart) return;
-
-           stream.writeSSE({
-             data: uiPart,
-           });
-
-           // Close on terminal events
-           if (event.type === 'flow:complete' ||
-               event.type === 'flow:aborted' ||
-               event.type === 'flow:paused') {
-             setTimeout(() => {
-               unsubscribe();
-               c.req.raw.end();
-             }, 100);
-           }
+         // IMPORTANT: Hono closes the SSE stream when this callback resolves.
+         // Keep it open by awaiting a promise that resolves on terminal/timeout/abort.
+         let resolveDone!: () => void;
+         const done = new Promise<void>((resolve) => {
+           resolveDone = resolve;
          });
 
-         // Check for timeout
-         const timeoutCheck = setInterval(() => {
-           if (Date.now() - lastActivity > 30 * 60 * 1000) {
-             clearInterval(timeoutCheck);
+         const cleanup = () => {
+           if (unsubscribe) {
              unsubscribe();
-             c.req.raw.end();
+             unsubscribe = null;
+           }
+           resolveDone();
+         };
+
+         // Client disconnect
+         c.req.raw.signal.addEventListener('abort', cleanup, { once: true });
+
+         // Inactivity timeout (30 minutes)
+         const timeoutCheck = setInterval(() => {
+           if (Date.now() - lastActivity > timeoutMs) {
+             cleanup();
            }
          }, 60 * 1000);
 
-         // Cleanup on disconnect
-         c.req.raw.on('close', () => {
-           clearTimeout(timeout);
-           clearInterval(timeoutCheck);
-           unsubscribe();
+         unsubscribe = runtime.onEvent(async (event) => {
+           if ('runId' in event && event.runId !== runId) return;
+           lastActivity = Date.now();
+
+           const chunks = transformEvent(event, tracker, messageId, {
+             sendReasoning: true,
+             sendStepMarkers: true,
+             sendFlowMetadata: false,
+             sendNodeOutputs: false,
+             generateMessageId: () => messageId,
+           });
+
+           for (const chunk of chunks) {
+             // IMPORTANT: writeSSE expects string data; serialize chunks.
+             await stream.writeSSE({ data: JSON.stringify(chunk) });
+           }
+
+           // Close stream on terminal events
+           if (
+             event.type === 'agent:complete' ||
+             event.type === 'agent:paused' ||
+             event.type === 'agent:aborted' ||
+             event.type === 'flow:complete' ||
+             event.type === 'flow:aborted'
+           ) {
+             cleanup();
+           }
          });
+
+         await done;
+         clearInterval(timeoutCheck);
        });
      });
 
@@ -443,7 +454,7 @@ No generics for v1.
 
    **src/server/middleware/cors.ts** (~15 lines)
    ```typescript
-   import { cors } from '@hono/cors';
+   import { cors } from 'hono/cors';
 
    export const corsMiddleware = cors({
      // Not enabled by default - users opt-in
@@ -463,11 +474,12 @@ No generics for v1.
      try {
        const stream = c.get('sseStream');
        if (stream) {
-         stream.writeSSE({
-           data: {
+         // IMPORTANT: writeSSE expects string data
+         void stream.writeSSE({
+           data: JSON.stringify({
              type: 'error',
              errorText: err.message,
-           },
+           }),
          });
        }
      } catch {
@@ -488,7 +500,7 @@ No generics for v1.
 
 **Dependencies:**
 - `hono` (^4.x)
-- `@hono/cors`
+- `hono/cors` (built-in)
 - `@hono/streaming`
 - `uuid` (^10.x)
 
@@ -984,7 +996,7 @@ No generics for v1.
 
      "scripts": {
        "build": "bun run build:core && bun run build:server && bun run build:client && bun run build:types",
-       "build:core": "bun build src/index.ts --outdir dist --format esm --target=bun --external hono --external @hono/cors --external @hono/streaming",
+       "build:core": "bun build src/index.ts --outdir dist --format esm --target=bun --external hono --external @hono/streaming",
        "build:server": "bun build src/server/index.ts --outdir dist/server --format esm --target=bun",
        "build:client": "bun build src/client/index.ts --outdir dist/client --format esm --target=bun",
        "build:types": "tsc --project tsconfig.build.json",
@@ -1004,7 +1016,7 @@ No generics for v1.
        "zod": "^4.3.4",
        "uuid": "^10.0.0",
        "hono": "^4.0.0",
-       "@hono/cors": "^1.0.0",
+       // CORS is built into hono (import { cors } from 'hono/cors')
        "@hono/streaming": "^1.0.0"
      },
 
@@ -1349,7 +1361,7 @@ No generics for v1.
 ### Runtime Dependencies (new in v0.2.0)
 ```
 hono                 ^4.0.0      # HTTP framework
-@hono/cors          ^1.0.0      # CORS support
+hono/cors           (built-in)  # CORS support
 @hono/streaming      ^1.0.0      # SSE support
 uuid                 ^10.0.0      # Run ID generation
 ```
@@ -1454,7 +1466,7 @@ Phase is complete when:
 import { createRuntime, createDefaultRegistry } from '@open-harness/sdk';
 import { createAPIRoutes, createAnthropicProvider } from '@open-harness/sdk/server';
 import { Hono } from 'hono';
-import { cors } from '@hono/cors';
+import { cors } from 'hono/cors';
 
 // Setup runtime
 const provider = createAnthropicProvider();
