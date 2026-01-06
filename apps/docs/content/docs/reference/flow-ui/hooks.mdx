@@ -1,0 +1,273 @@
+---
+title: Flow-UI Hooks
+description: React hooks for flow state and WebSocket communication
+---
+
+# Hooks
+
+Custom React hooks for managing flow state and kernel communication.
+
+## useFlowState
+
+Manages flow nodes and edges with ReactFlow-compatible handlers.
+
+### Return Type
+
+```typescript
+interface FlowStateReturn {
+  /** Current nodes */
+  nodes: FlowNode[];
+  /** Current edges */
+  edges: FlowEdge[];
+  /** Handler for node changes (move, select, etc.) */
+  onNodesChange: OnNodesChange<FlowNode>;
+  /** Handler for edge changes */
+  onEdgesChange: OnEdgesChange<FlowEdge>;
+  /** Handler for new connections */
+  onConnect: OnConnect;
+  /** Add a node from palette */
+  addNode: (nodeType: NodeTypeMetadata, position: { x: number; y: number }) => void;
+  /** Remove a node by ID */
+  removeNode: (nodeId: string) => void;
+  /** Update node data */
+  updateNode: (nodeId: string, data: Partial<FlowNodeData>) => void;
+  /** Update node execution state */
+  setNodeExecutionState: (nodeId: string, state: NodeExecutionState) => void;
+  /** Load a flow definition */
+  loadFlow: (flow: FlowDefinition) => void;
+  /** Clear all nodes and edges */
+  clearFlow: () => void;
+  /** Export current flow as definition */
+  exportFlow: () => FlowDefinition;
+}
+```
+
+### Usage
+
+```tsx
+import { useFlowState, FlowCanvas, NodePalette } from "@open-harness/flow-ui";
+
+function FlowEditor() {
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    addNode,
+    setNodeExecutionState,
+    exportFlow,
+  } = useFlowState();
+
+  // Add node when dropped from palette
+  const handleNodeDrop = (nodeType, position) => {
+    addNode(nodeType, position);
+  };
+
+  // Save flow to YAML
+  const handleSave = () => {
+    const flow = exportFlow();
+    console.log(JSON.stringify(flow, null, 2));
+  };
+
+  return (
+    <>
+      <NodePalette nodeTypes={[...]} />
+      <FlowCanvas
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeDrop={handleNodeDrop}
+      />
+      <button onClick={handleSave}>Save</button>
+    </>
+  );
+}
+```
+
+### Updating Execution State
+
+During flow execution, update node states to show progress:
+
+```tsx
+// When execution starts
+setNodeExecutionState("node-1", "running");
+
+// When node completes
+setNodeExecutionState("node-1", "success");
+
+// On error
+setNodeExecutionState("node-1", "error");
+```
+
+---
+
+## useWebSocket
+
+Manages WebSocket connection to the kernel server.
+
+### Parameters
+
+```typescript
+function useWebSocket(
+  url: string,
+  options?: {
+    /** Auto-reconnect on disconnect */
+    reconnect?: boolean;
+    /** Reconnect interval in ms */
+    reconnectInterval?: number;
+    /** Maximum reconnect attempts */
+    maxReconnectAttempts?: number;
+  }
+): WebSocketReturn;
+```
+
+### Return Type
+
+```typescript
+interface WebSocketReturn {
+  /** Current connection status */
+  status: "connecting" | "connected" | "disconnected" | "error";
+  /** Send a command to the server */
+  sendCommand: (command: WSCommand) => void;
+  /** Subscribe to events */
+  subscribe: (callback: (event: HubEvent) => void) => () => void;
+  /** Last error message */
+  error?: string;
+  /** Manually disconnect */
+  disconnect: () => void;
+  /** Manually reconnect */
+  reconnect: () => void;
+}
+```
+
+### Command Types
+
+```typescript
+type WSCommand =
+  | { type: "execute"; flow?: FlowDefinition }
+  | { type: "abort" }
+  | { type: "ping" };
+```
+
+### Usage
+
+```tsx
+import { useWebSocket, ConnectionStatus, EventLog } from "@open-harness/flow-ui";
+import { useState } from "react";
+
+function FlowRunner() {
+  const [events, setEvents] = useState<HubEvent[]>([]);
+
+  const { status, sendCommand, subscribe } = useWebSocket("ws://localhost:3001", {
+    reconnect: true,
+    reconnectInterval: 3000,
+  });
+
+  // Subscribe to events
+  useEffect(() => {
+    const unsubscribe = subscribe((event) => {
+      setEvents((prev) => [...prev, event]);
+    });
+    return unsubscribe;
+  }, [subscribe]);
+
+  const handleRun = () => {
+    setEvents([]);
+    sendCommand({ type: "execute" });
+  };
+
+  return (
+    <>
+      <ConnectionStatus status={status} />
+      <button onClick={handleRun} disabled={status !== "connected"}>
+        Run Flow
+      </button>
+      <EventLog events={events} />
+    </>
+  );
+}
+```
+
+### Server Integration
+
+The WebSocket server is provided by `@open-harness/flow-ui/server`:
+
+```typescript
+import { createFlowServer } from "@open-harness/flow-ui/server";
+
+const server = createFlowServer({
+  port: 3001,
+  onExecute: async (flow, hub) => {
+    // Execute flow with kernel
+    await executeFlow(flow, registry, { hub, ... });
+  },
+});
+```
+
+---
+
+## Type Definitions
+
+### FlowNode
+
+```typescript
+interface FlowNode {
+  id: string;
+  type: "custom";
+  position: { x: number; y: number };
+  data: FlowNodeData;
+}
+```
+
+### FlowEdge
+
+```typescript
+interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+}
+```
+
+### FlowDefinition
+
+```typescript
+interface FlowDefinition {
+  flow: {
+    name: string;
+    version?: string;
+    input?: Record<string, unknown>;
+  };
+  nodes: Array<{
+    id: string;
+    type: string;
+    input?: Record<string, unknown>;
+  }>;
+  edges: Array<{
+    from: string;
+    to: string;
+    when?: string;
+  }>;
+}
+```
+
+### HubEvent
+
+```typescript
+interface HubEvent {
+  id: string;
+  timestamp: Date;
+  type: string;
+  context: {
+    sessionId: string;
+    phase?: { name: string };
+    task?: { id: string };
+  };
+  event: Record<string, unknown>;
+}
+```

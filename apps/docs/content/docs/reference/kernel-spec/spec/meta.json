@@ -5,7 +5,6 @@
     "channel",
     "events",
     "flow-runtime",
-    "harness",
     "hub"
   ]
 }

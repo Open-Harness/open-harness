@@ -5,18 +5,23 @@ description: Get your first Open Harness flow running in 5 minutes
 
 # Quickstart
 
-Let's build your first AI workflow. In five minutes, you'll have a working flow that processes input through an LLM.
+Let's build your first multi-step AI workflow. In five minutes, you'll see how Open Harness orchestrates agents through flows.
 
 ## What You'll Build
 
-A simple flow that:
-1. Takes a user's name as input
-2. Generates a personalized greeting using Claude
-3. Returns the formatted response
+A flow that demonstrates actual orchestration:
+1. **Template Node** — Generates a structured prompt from user input
+2. **Agent Node** — Claude processes the template and responds
+3. **Edge** — Data flows from template → agent
+
+```
+┌──────────────┐        ┌──────────────┐
+│   template   │───────▶│    agent     │
+│   (format)   │  edge  │   (Claude)   │
+└──────────────┘        └──────────────┘
+```
 
 ## Step 1: Create Project
-
-Create a new directory and initialize it:
 
 ```bash
 mkdir my-first-flow && cd my-first-flow
@@ -35,82 +40,106 @@ flow:
   input:
     name:
       type: string
+    style:
+      type: string
+      default: "friendly"
 
 nodes:
-  - id: greet
-    type: llm
+  - id: template
+    type: template
     input:
-      messages:
-        - role: user
-          content: "Say hello to {{flow.input.name}} in a friendly, creative way. Keep it brief."
+      template: |
+        Write a {{flow.input.style}} greeting for {{flow.input.name}}.
+        Keep it brief (1-2 sentences).
 
-edges: []
+  - id: greet
+    type: agent
+    input:
+      prompt: "{{template.output}}"
+
+edges:
+  - from: template
+    to: greet
 ```
 
 This flow:
-- Declares an input `name` of type string
-- Has one node that calls an LLM
-- Uses `{{flow.input.name}}` to inject the name into the prompt
+- Declares two inputs: `name` (required) and `style` (defaults to "friendly")
+- Has a **template node** that constructs the prompt
+- Has an **agent node** that calls Claude
+- Uses an **edge** to ensure template runs before agent
+- Uses `{{template.output}}` to pass data between nodes
 
 ## Step 3: Run It
 
 Create `run.ts`:
 
 ```typescript
-import { parseFlowYaml, executeFlow, NodeRegistry, createHub } from "@open-harness/kernel";
+import {
+  HubImpl,
+  NodeRegistry,
+  executeFlow,
+  parseFlowYaml,
+  createClaudeAgent,
+} from "@open-harness/kernel";
 import { readFileSync } from "fs";
+import { z } from "zod";
 
 // Load and parse the flow
 const yaml = readFileSync("flow.yaml", "utf-8");
 const flow = parseFlowYaml(yaml);
 
 // Create hub for events
-const hub = createHub();
+const hub = new HubImpl("quickstart-session");
 
-// Log events as they happen
-hub.subscribe("*", (event) => {
+// Subscribe to agent text events
+hub.subscribe("agent:*", (event) => {
   if (event.event.type === "agent:text") {
-    console.log(event.event.content);
+    process.stdout.write(event.event.content);
   }
 });
 
-// Create registry with LLM node
+// Create registry with node types
 const registry = new NodeRegistry();
+
+// Template node: simple string interpolation
 registry.register({
-  type: "llm",
-  async run(ctx, input) {
-    // This is a simplified example - real implementation uses createAnthropicTextAgent
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 256,
-        messages: input.messages
-      })
-    });
-
-    const data = await response.json();
-    const text = data.content[0].text;
-
-    ctx.hub.emit({ type: "agent:text", content: text });
-
-    return { response: text };
-  }
+  type: "template",
+  inputSchema: z.object({ template: z.string() }),
+  outputSchema: z.object({ output: z.string() }),
+  run: async (_ctx, input) => ({ output: input.template }),
 });
+
+// Agent node: uses Claude via SDK
+const claudeAgent = createClaudeAgent();
+registry.register({
+  type: "agent",
+  inputSchema: z.object({ prompt: z.string() }),
+  outputSchema: z.object({ text: z.string() }),
+  run: async (ctx, input) => {
+    const result = await claudeAgent.execute({ prompt: input.prompt }, {
+      hub: ctx.hub,
+      runId: ctx.runId,
+    });
+    ctx.hub.emit({ type: "agent:text", content: result.text });
+    return { text: result.text };
+  },
+});
+
+// Create execution context
+const ctx = {
+  hub,
+  phase: async <T>(_name: string, fn: () => Promise<T>) => fn(),
+  task: async <T>(_id: string, fn: () => Promise<T>) => fn(),
+};
 
 // Execute the flow
-const result = await executeFlow(flow, {
-  input: { name: "World" },
-  registry,
-  hub
+const result = await executeFlow(flow, registry, ctx, {
+  name: "World",
+  style: "enthusiastic",
 });
 
-console.log("\nFlow complete!");
+console.log("\n\nFlow complete!");
+console.log("Output:", result.outputs);
 ```
 
 Run it:
@@ -119,25 +148,37 @@ Run it:
 bun run run.ts
 ```
 
-You should see Claude's creative greeting appear!
+You should see Claude's enthusiastic greeting appear!
 
 ## What Just Happened?
 
-In just a few lines of code, you:
+In this example, you:
 
-1. **Defined a workflow** in YAML with input, nodes, and data flow
-2. **Parsed and executed** the flow using the kernel
-3. **Observed events** through the Hub as the flow ran
+1. **Defined a multi-node flow** with template → agent orchestration
+2. **Used edges** to control data flow between nodes
+3. **Used bindings** (`{{template.output}}`) to pass data
+4. **Used the SDK wrapper** (`createClaudeAgent`) for Claude
+5. **Observed events** through the Hub as the flow ran
 
 The flow automatically:
-- Resolved `{{flow.input.name}}` to the actual input
-- Called the LLM node with the constructed prompt
-- Emitted events you subscribed to
+- Ran nodes in topological order (template before agent)
+- Resolved bindings at runtime
+- Emitted events you could subscribe to
+
+## Key Concepts Demonstrated
+
+| Concept | In This Example |
+|---------|-----------------|
+| **Nodes** | `template` and `greet` |
+| **Edges** | `from: template, to: greet` |
+| **Bindings** | `{{flow.input.name}}`, `{{template.output}}` |
+| **Hub** | Event subscription for streaming output |
+| **Provider** | `createClaudeAgent()` SDK wrapper |
 
 ## Next Steps
 
 You've just scratched the surface. Continue learning:
 
-- **[First Flow Tutorial](/docs/learn/first-flow)** - Understand flow structure in depth
-- **[Concepts: Architecture](/docs/concepts/architecture/overview)** - How Open Harness works
-- **[Custom Nodes](/docs/learn/custom-node)** - Build your own node types
+- **[First Flow Tutorial](/docs/learn/first-flow)** — Understand flow structure in depth
+- **[Concepts: Architecture](/docs/concepts/architecture/overview)** — How Open Harness works
+- **[Custom Nodes](/docs/learn/custom-node)** — Build your own node types

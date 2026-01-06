@@ -2,10 +2,18 @@
   "title": "Guides",
   "pages": [
     "index",
+    "for-evaluators",
     "testing-workflow",
     "record-and-promote-fixtures",
     "write-replay-tests",
     "debugging",
-    "faq"
+    "faq",
+    "...agents",
+    "...channels",
+    "...debugging",
+    "...flows",
+    "...hub",
+    "...nodes",
+    "...testing"
   ]
 }
