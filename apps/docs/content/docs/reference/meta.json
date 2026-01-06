@@ -2,13 +2,14 @@
   "title": "Reference",
   "pages": [
     "index",
-    "api/...",
-    "flow-ui/...",
-    "kernel-spec/...",
+    "...nodes",
+    "...channels",
+    "...providers",
+    "...api",
+    "...kernel-spec",
     "...bindings",
     "...config",
     "...events",
-    "...flows",
     "...schemas",
     "...types",
     "...when"

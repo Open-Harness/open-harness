@@ -3,17 +3,13 @@
   "pages": [
     "index",
     "for-evaluators",
-    "testing-workflow",
-    "record-and-promote-fixtures",
-    "write-replay-tests",
-    "debugging",
-    "faq",
-    "...agents",
-    "...channels",
-    "...debugging",
     "...flows",
-    "...hub",
     "...nodes",
-    "...testing"
+    "...hub",
+    "...channels",
+    "...agents",
+    "...testing",
+    "...debugging",
+    "faq"
   ]
 }

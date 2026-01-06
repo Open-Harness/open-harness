@@ -1,4 +1,4 @@
 {
-  "title": "Hub",
-  "pages": ["emit-events", "event-context", "scoped-subscriptions", "subscribe-events"]
+  "title": "Hub Guides",
+  "pages": ["emit-events", "subscribe-events", "scoped-subscriptions", "event-context"]
 }

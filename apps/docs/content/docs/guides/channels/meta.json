@@ -1,4 +1,4 @@
 {
-  "title": "Channels",
-  "pages": ["attach-channel", "bidirectional-io", "console-channel", "voice-channel"]
+  "title": "Channel Guides",
+  "pages": ["github-channel", "voice-channel", "console-channel", "attach-channel", "bidirectional-io"]
 }

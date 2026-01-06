@@ -12,42 +12,42 @@ Providers integrate AI services with Open Harness. This guide covers adding a ne
 Providers create agents that wrap AI API calls:
 
 ```typescript
-// Current: Anthropic provider
-import { createAnthropicTextAgent } from "@open-harness/kernel";
+// Current: Claude provider
+import { createClaudeAgent } from "@open-harness/kernel";
 
-const agent = createAnthropicTextAgent({
+const agent = createClaudeAgent({
   model: "claude-sonnet-4-20250514",
   systemPrompt: "You are helpful."
 });
 ```
 
-## Current Provider: Anthropic
+## Current Provider: Claude
 
-The Anthropic provider is the reference implementation:
+The Claude provider is the reference implementation:
 
 ```typescript
-// src/providers/anthropic.ts
-import Anthropic from "@anthropic-ai/sdk";
+// src/providers/claude.ts
+import { Client } from "@anthropic-ai/claude-agent-sdk";
 import type { AgentDefinition } from "../protocol/agent";
 
-interface AnthropicConfig {
-  model: string;
+interface ClaudeConfig {
+  model?: string;
   systemPrompt?: string;
   maxTokens?: number;
 }
 
-export function createAnthropicTextAgent(
-  config: AnthropicConfig
-): AgentDefinition<ChatInput, ChatOutput> {
-  const client = new Anthropic();
+export function createClaudeAgent(
+  config: ClaudeConfig = {}
+): AgentDefinition<ClaudeAgentInput, ClaudeAgentOutput> {
+  const client = new Client();  // Uses Claude Code subscription auth
 
   return {
-    name: "anthropic-text",
+    name: "claude",
     async execute(input, ctx) {
       ctx.hub.emit({ type: "narrative", text: "Thinking..." });
 
       const response = await client.messages.create({
-        model: config.model,
+        model: config.model ?? "claude-sonnet-4-20250514",
         max_tokens: config.maxTokens ?? 4096,
         system: config.systemPrompt,
         messages: input.messages
@@ -59,7 +59,7 @@ export function createAnthropicTextAgent(
           type: "agent:text",
           content: content.text
         });
-        return { response: content.text };
+        return { content: content.text };
       }
 
       throw new Error("Unexpected response type");
@@ -143,7 +143,7 @@ export function createOpenAITextAgent(
 
 ```typescript
 // src/providers/index.ts
-export { createAnthropicTextAgent } from "./anthropic";
+export { createClaudeAgent } from "./claude";
 export { createOpenAITextAgent } from "./openai";
 ```
 
@@ -151,7 +151,7 @@ export { createOpenAITextAgent } from "./openai";
 
 ```typescript
 // src/index.ts
-export { createAnthropicTextAgent } from "./providers/anthropic";
+export { createClaudeAgent } from "./providers/claude";
 export { createOpenAITextAgent } from "./providers/openai";
 ```
 
@@ -159,7 +159,7 @@ export { createOpenAITextAgent } from "./providers/openai";
 
 ### Match API Surface
 
-New providers should match the Anthropic API surface:
+New providers should match the Claude API surface:
 
 ```typescript
 // All providers should accept similar config
@@ -285,7 +285,7 @@ test.skipIf(!process.env.OPENAI_API_KEY)("live OpenAI call", async () => {
 ### Required
 
 - [ ] Implements AgentDefinition
-- [ ] Matches Anthropic API surface
+- [ ] Matches Claude API surface
 - [ ] Emits standard events
 - [ ] Has unit tests
 - [ ] Has integration tests
@@ -307,5 +307,5 @@ test.skipIf(!process.env.OPENAI_API_KEY)("live OpenAI call", async () => {
 ## Next Steps
 
 - [Agent Definition](/docs/reference/types/agent-definition) - Type reference
-- [Anthropic Agent](/docs/reference/api/anthropic-agent) - Reference implementation
+- [Claude Agent](/docs/reference/api/anthropic-agent) - Reference implementation
 - [Testing](/docs/contributing/development/testing) - Test strategy

@@ -22,19 +22,6 @@ Alternatives considered:
 - "Broker" - implies message queue patterns
 - "Bus" - too generic
 
-### Harness
-
-The imperative runtime is called "Harness" because:
-- It "harnesses" agents together
-- Implies control and coordination
-- Evokes test harness patterns
-
-Alternatives considered:
-- "Runtime" - too generic
-- "Orchestrator" - too enterprise-y
-- "Runner" - too simple
-- "Engine" - conflicts with implementation detail
-
 ### Flow
 
 The declarative DAG runtime is called "Flow" because:
@@ -110,12 +97,12 @@ Functions use camelCase with verb prefixes:
 
 ```typescript
 createHub()         // Factory: creates a hub
-defineHarness()     // Factory: creates a harness definition
 executeFlow()       // Action: runs a flow
 parseFlowYaml()     // Parser: parses YAML
 compileFlow()       // Compiler: compiles flow
 resolveBindings()   // Resolver: resolves bindings
 evaluateWhen()      // Evaluator: evaluates conditions
+createClaudeAgent() // Factory: creates a Claude agent
 ```
 
 Verb meanings:
@@ -182,7 +169,6 @@ Why not symbols (`==`, `!`, `&&`, `||`)?
 
 ```
 flow.yaml       # Flow definition
-harness.ts      # Harness definition
 nodes/          # Custom node types
 channels/       # Custom channels
 ```

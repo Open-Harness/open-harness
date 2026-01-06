@@ -1,0 +1,165 @@
+---
+title: Session Messages
+description: How agents receive messages during execution via Hub events
+---
+
+# Session Messages
+
+Agents can receive messages during execution via the Hub's session event system. This enables interactive workflows where external code can inject input mid-execution.
+
+## The Pattern
+
+Instead of a dedicated inbox, agents subscribe to Hub events:
+
+```typescript
+// External code sends to a running agent
+hub.sendToRun(runId, "Please focus on recent data");
+
+// Agent receives via session:message event
+hub.subscribe("session:message", (event) => {
+  if (event.runId === myRunId) {
+    handleMessage(event.text);
+  }
+});
+```
+
+## Why Hub Events?
+
+The Hub-based pattern provides:
+
+- **Unified messaging**: All communication goes through Hub
+- **Event visibility**: Messages appear in event stream
+- **Testability**: Messages can be recorded and replayed
+- **Flexibility**: Any subscriber can observe messages
+
+## Sending Messages
+
+### To a Specific Run
+
+```typescript
+// Send to agent by runId
+hub.sendToRun("run-abc-123", "Update your approach");
+```
+
+### To a Node's Latest Run
+
+```typescript
+// Send to the most recent run of a node
+hub.sendTo("researcher", "Include 2024 papers");
+```
+
+### Broadcast
+
+```typescript
+// Send to all listening agents
+hub.send("Global configuration changed");
+```
+
+## Receiving in Agent Nodes
+
+Agent nodes automatically receive messages matching their `runId`:
+
+```yaml
+nodes:
+  - id: researcher
+    type: agent.claude
+    input:
+      prompt: "Research: {{flow.input.topic}}"
+    config:
+      maxTurns: 5  # Multiple turns allow message injection
+```
+
+The Claude provider builds an async prompt stream that:
+1. Yields initial messages from node input
+2. Yields new messages from `session:message` events
+
+## Interactive Workflows
+
+Combine with session prompts for structured interaction:
+
+```typescript
+// Agent asks for input
+hub.emit({
+  type: "session:prompt",
+  promptId: "confirm-delete",
+  question: "Delete these files?",
+  choices: ["Yes", "No"]
+});
+
+// External code responds
+hub.reply("confirm-delete", "Yes");
+
+// Agent receives via session:reply event
+hub.subscribe("session:reply", (event) => {
+  if (event.promptId === "confirm-delete") {
+    if (event.response === "Yes") {
+      performDeletion();
+    }
+  }
+});
+```
+
+## Session Lifecycle
+
+Session mode enables the full messaging system:
+
+```typescript
+const runner = createFlowRunner(flow, registry);
+runner.startSession();  // Enable session messaging
+await runner.run();
+```
+
+Without `startSession()`, session events still flow but interactive features are limited.
+
+## Event Types
+
+| Event | Direction | Purpose |
+|-------|-----------|---------|
+| `session:message` | In → Agent | Inject text to running agent |
+| `session:reply` | In → Flow | Response to a prompt |
+| `session:prompt` | Agent → Out | Request user input |
+| `session:abort` | In → Flow | Cancel execution |
+
+## Best Practices
+
+### Don't Block Unnecessarily
+
+Agents should poll for messages rather than blocking:
+
+```typescript
+// Check for messages between operations
+const messages = pendingMessages.splice(0);
+for (const msg of messages) {
+  handleMessage(msg);
+}
+```
+
+### Handle Empty Gracefully
+
+No messages is fine - continue with default behavior.
+
+### Use Structured Responses
+
+For important interactions, use prompts with choices rather than free-form text.
+
+## Migration from Inbox Pattern
+
+If you have code using the old `AgentInbox`, use Hub session events instead:
+
+```diff
+- const messages = ctx.inbox.drain();
++ // Subscribe to session messages via hub
++ hub.subscribe("session:message", (event) => {
++   // Handle incoming message
++ });
+
+- await ctx.inbox.pop();
++ // Use hub.reply() for prompt responses
++ hub.reply(promptId, { content: userInput });
+```
+
+## Related
+
+- [Event Bus](/docs/concepts/hub/event-bus) - Hub overview
+- [Commands vs Events](/docs/concepts/hub/commands-vs-events) - Message direction
+- [Agent Nodes](/docs/reference/nodes/agent) - Agent node reference

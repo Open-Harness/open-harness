@@ -1,4 +1,4 @@
 {
-  "title": "Debugging",
-  "pages": ["binding-resolution", "common-errors", "debug-flows", "inspect-events"]
+  "title": "Debugging Guides",
+  "pages": ["index", "debug-flows", "inspect-events", "binding-resolution", "common-errors"]
 }

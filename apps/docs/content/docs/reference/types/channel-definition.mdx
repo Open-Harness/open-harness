@@ -5,7 +5,7 @@ description: Bidirectional adapter contract for external I/O channels
 
 # ChannelDefinition
 
-Defines a channel adapter that can observe events and inject commands into a harness.
+Defines a channel adapter that can observe events and inject commands into a flow.
 
 ## Definition
 
@@ -25,8 +25,8 @@ interface ChannelDefinition<TState> {
 |----------|------|----------|-------------|
 | `name` | `string` | Yes | Unique channel identifier |
 | `state` | `() => TState` | No | Factory for channel-local state |
-| `onStart` | `function` | No | Called when harness starts |
-| `onComplete` | `function` | No | Called when harness completes |
+| `onStart` | `function` | No | Called when flow starts |
+| `onComplete` | `function` | No | Called when flow completes |
 | `on` | `Record<string, ChannelHandler>` | Yes | Event handlers by event type |
 
 ## ChannelHandler
@@ -168,20 +168,19 @@ const wsChannel: ChannelDefinition<WebSocketState> = {
 
 ## Attaching Channels
 
-Channels are attached using the `attach` method:
+Channels are attached to the Hub using `createChannelAttachment`:
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { createHub, createChannelAttachment } from "@open-harness/kernel";
 
-const harness = defineHarness({ /* ... */ });
-const instance = harness.create(input);
+const hub = createHub();
 
 // Attach channels
-instance
-  .attach(createChannelAttachment(consoleChannel))
-  .attach(createChannelAttachment(loggerChannel));
+hub.attach(createChannelAttachment(consoleChannel));
+hub.attach(createChannelAttachment(loggerChannel));
 
-await instance.run();
+// Execute flow with the hub
+await executeFlow(flow, { hub, registry, input });
 ```
 
 ## Attachment Type
@@ -191,7 +190,7 @@ type Cleanup = void | (() => void) | (() => Promise<void>);
 type Attachment = (hub: Hub) => Cleanup;
 ```
 
-Channels return a cleanup function that's called when the harness completes.
+Channels return a cleanup function that's called when the flow completes.
 
 ## Bidirectional Communication
 

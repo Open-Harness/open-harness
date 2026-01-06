@@ -1,4 +1,4 @@
 {
   "title": "Architecture",
-  "pages": ["event-driven", "harness-vs-flow", "kernel-primitives", "overview"]
+  "pages": ["overview", "event-driven", "kernel-primitives"]
 }

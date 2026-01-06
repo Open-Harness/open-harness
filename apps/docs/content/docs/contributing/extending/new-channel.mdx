@@ -263,23 +263,22 @@ describe("websocket channel", () => {
 import { test, expect } from "bun:test";
 import WebSocket from "ws";
 import { websocketChannel } from "../src";
-import { defineHarness } from "@open-harness/kernel";
+import { createHub, executeFlow, parseFlowYaml, createChannelAttachment } from "@open-harness/kernel";
+import { readFileSync } from "fs";
 
 test("full channel integration", async () => {
-  const harness = defineHarness({
-    channels: [websocketChannel],
-    agents: [testAgent]
-  });
+  const hub = createHub();
+  hub.attach(createChannelAttachment(websocketChannel));
 
-  const instance = harness.create();
+  const flow = parseFlowYaml(readFileSync("./test-flow.yaml", "utf-8"));
 
   // Connect client
   const ws = new WebSocket("ws://localhost:8080");
 
   await new Promise((resolve) => ws.on("open", resolve));
 
-  // Run harness
-  await instance.run({ prompt: "test" });
+  // Run flow
+  await executeFlow(flow, { hub, input: { prompt: "test" } });
 
   // Verify messages received
   // ...
@@ -306,15 +305,14 @@ bun add @open-harness/websocket-channel ws
 ## Usage
 
 ```typescript
-import { defineHarness } from "@open-harness/kernel";
+import { createHub, executeFlow, createChannelAttachment } from "@open-harness/kernel";
 import { createWebSocketChannel } from "@open-harness/websocket-channel";
 
-const harness = defineHarness({
-  channels: [
-    createWebSocketChannel({ port: 8080 })
-  ],
-  agents: [myAgent]
-});
+const hub = createHub();
+hub.attach(createChannelAttachment(createWebSocketChannel({ port: 8080 })));
+
+// Execute flow with the hub
+await executeFlow(flow, { hub, input: {} });
 ```
 
 ## Configuration
