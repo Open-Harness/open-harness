@@ -1,5 +1,14 @@
-import type { ClaudeMessageInput } from "@open-harness/provider-anthropic";
 import type { StatePatch } from "./state.js";
+
+export type ClaudeMessageInput =
+  | string
+  | {
+      message?: Record<string, unknown>;
+      content?: string;
+      parentToolUseId?: string | null;
+      isSynthetic?: boolean;
+      toolUseResult?: unknown;
+    };
 
 /** Runtime lifecycle status for a flow execution. */
 export type RuntimeStatus =

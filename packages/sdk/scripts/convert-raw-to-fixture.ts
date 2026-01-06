@@ -4,7 +4,7 @@ import type {
   SDKMessage,
   SDKResultMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { FixtureFile } from "@open-harness/provider-anthropic";
+import type { FixtureFile } from "../src/server/providers/testing/mock-query.js";
 
 /**
  * Converts raw SDK capture JSON to FixtureFile format for use with createMockQuery.

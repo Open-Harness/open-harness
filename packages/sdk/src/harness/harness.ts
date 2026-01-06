@@ -1,7 +1,10 @@
-import { WebSocketTransport } from "@open-harness/transport-websocket";
+import {
+  WebSocketTransport,
+  type Transport,
+} from "../server/transports/websocket.js";
 import type { RuntimeEvent } from "../core/events.js";
 import type { FlowDefinition } from "../core/types.js";
-import { createClaudeNode } from "@open-harness/provider-anthropic";
+import { createClaudeNode } from "../server/providers/claude.agent.js";
 import { constantNode, echoNode } from "../nodes/index.js";
 import type { RunStore } from "../persistence/run-store.js";
 import type { NodeRegistry, NodeTypeDefinition } from "../registry/registry.js";
@@ -9,7 +12,6 @@ import { DefaultNodeRegistry } from "../registry/registry.js";
 import type { Runtime } from "../runtime/runtime.js";
 import { createRuntime } from "../runtime/runtime.js";
 import type { RunSnapshot } from "../runtime/snapshot.js";
-import type { Transport } from "../transport/websocket.js";
 
 /**
  * Options for creating a harness.

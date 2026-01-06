@@ -17,7 +17,7 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../../src/index.js";
-import { createClaudeNode } from "@open-harness/provider-anthropic";
+import { createClaudeNode } from "../../src/server/providers/claude.agent.js";
 
 async function runLiveTest() {
   console.log("🧪 Running thinking events live test against REAL SDK...\n");

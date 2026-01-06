@@ -11,6 +11,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "import": "./dist/testing/index.js"
@@ -52,6 +60,7 @@
     "build": "bun run build:types && bun run build:bundle",
     "build:types": "tsc --project tsconfig.build.json --skipLibCheck",
     "build:bundle": "bun build src/index.ts --outdir dist --format esm --target=bun --sourcemap=external",
+    "build:server": "bun build src/server/index.ts --outdir dist/server --format esm --target=bun",
     "lint": "biome check . --write",
     "lint:fix": "biome check . --write",
     "typecheck": "tsc --noEmit",
@@ -59,6 +68,7 @@
     "test:unit": "bun test tests/unit",
     "test:e2e": "bun test tests/e2e",
     "test:replay": "bun test tests/replay",
+    "test:server": "bun test tests/server/",
     "test:live": "bun scripts/live/*.ts",
     "record:fixtures": "bun scripts/record-fixtures.ts",
     "test:watch": "bun test --watch"
@@ -75,8 +85,6 @@
   },
   "dependencies": {
     "@open-harness/nodes-basic": "workspace:*",
-    "@open-harness/provider-anthropic": "workspace:*",
-    "@open-harness/transport-websocket": "workspace:*",
     "jsonata": "^2.1.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.4"

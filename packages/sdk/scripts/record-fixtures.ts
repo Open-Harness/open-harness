@@ -7,9 +7,10 @@ import {
   parseFlowYaml,
 } from "../src/index.js";
 import {
-	createClaudeNode,
-	type FixtureFile,
-} from "@open-harness/provider-anthropic";
+  createClaudeNode,
+  type FixtureFile,
+  createMockQuery,
+} from "../src/server/providers/index.js";
 import { constantNode, echoNode } from "../src/nodes/index.js";
 
 const args = parseArgs(process.argv.slice(2));
