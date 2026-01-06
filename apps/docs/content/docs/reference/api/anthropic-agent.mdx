@@ -1,0 +1,206 @@
+---
+title: createClaudeAgent
+description: Create a Claude agent using the Claude Agent SDK
+---
+
+# createClaudeAgent
+
+Creates a Claude agent that uses the Claude Agent SDK for LLM interactions. Uses Claude Code subscription authentication (no API key required).
+
+## Signature
+
+```typescript
+function createClaudeAgent(
+  options?: ClaudeAgentAdapterOptions
+): AgentDefinition<ClaudeAgentInput, ClaudeAgentOutput>
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `options` | `ClaudeAgentAdapterOptions` | No | Configuration options |
+
+### ClaudeAgentAdapterOptions
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `replay` | `(input: ClaudeAgentInput) => ClaudeAgentOutput \| undefined` | `undefined` | Replay function for testing |
+
+## Returns
+
+`AgentDefinition<ClaudeAgentInput, ClaudeAgentOutput>` - Agent definition for use in flows.
+
+## Types
+
+### ClaudeAgentInput
+
+```typescript
+type ClaudeMessageInput =
+  | string
+  | {
+      message?: Record<string, unknown>;
+      content?: string;
+      parentToolUseId?: string | null;
+      isSynthetic?: boolean;
+      toolUseResult?: unknown;
+    };
+
+interface ClaudeAgentInput {
+  prompt?: string;              // Simple text prompt (mutually exclusive with messages)
+  messages?: ClaudeMessageInput[]; // Multi-turn messages (mutually exclusive with prompt)
+  options?: Options;            // SDK options override
+}
+```
+
+### ClaudeAgentOutput
+
+```typescript
+interface ClaudeAgentOutput {
+  text: string;                          // Response text
+  structuredOutput?: unknown;            // Parsed structured output
+  usage?: NonNullableUsage;              // Token usage
+  modelUsage?: Record<string, ModelUsage>; // Per-model usage
+  totalCostUsd?: number;                 // Estimated cost
+  durationMs?: number;                   // Execution time
+  sessionId?: string;                    // SDK session ID
+  numTurns?: number;                     // Number of turns
+  permissionDenials?: SDKPermissionDenial[]; // Permission denials
+}
+```
+
+## Example
+
+### Basic Usage
+
+```typescript
+import { createClaudeAgent, executeFlow, parseFlowYaml, NodeRegistry, createHub } from "@open-harness/kernel";
+
+// Create the agent
+const claudeAgent = createClaudeAgent();
+
+// Register it as a node type
+const registry = new NodeRegistry();
+registry.register({
+  type: "claude.agent",
+  ...claudeAgent,
+});
+
+// Define a flow that uses the agent
+const flow = parseFlowYaml(`
+name: simple-chat
+nodes:
+  - id: respond
+    type: claude.agent
+    input:
+      prompt: "{{flow.input.question}}"
+`);
+
+// Execute the flow
+const hub = createHub();
+const result = await executeFlow(flow, registry, { hub }, { question: "What is TypeScript?" });
+console.log(result.outputs.respond.text);
+```
+
+### Multi-turn Conversation
+
+```typescript
+const claudeAgent = createClaudeAgent();
+
+const result = await claudeAgent.execute({
+  messages: [
+    "You are a helpful coding assistant.",
+    { content: "What is a closure in JavaScript?" },
+    { content: "Can you show me an example?" },
+  ],
+}, { hub, runId: "conversation-1" });
+
+console.log(result.text);
+```
+
+### With SDK Options
+
+```typescript
+const result = await claudeAgent.execute({
+  prompt: "Analyze this code for security issues",
+  options: {
+    maxTurns: 5,
+    model: "claude-sonnet-4-20250514",
+  },
+}, ctx);
+```
+
+## Testing with Replay
+
+Use the `replay` option to return deterministic responses for testing:
+
+```typescript
+const testAgent = createClaudeAgent({
+  replay: (input) => {
+    if (input.prompt?.includes("What is 2+2")) {
+      return { text: "4", durationMs: 10 };
+    }
+    return undefined; // Fall through to real API
+  },
+});
+
+// In tests, matching prompts return fixed responses
+const result = await testAgent.execute(
+  { prompt: "What is 2+2?" },
+  { hub: createHub(), runId: "test" }
+);
+console.log(result.text); // "4"
+```
+
+This enables deterministic testing without network calls.
+
+## Authentication
+
+This agent uses Claude Code subscription authentication. No API key or environment variable is required. Authentication is handled automatically by the Claude Agent SDK.
+
+```typescript
+// No ANTHROPIC_API_KEY needed
+// Just run your flow and it works
+const result = await executeFlow(flow, registry, { hub }, inputs);
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await claudeAgent.execute({ prompt: "Generate content" }, ctx);
+} catch (error) {
+  if (error.message.includes("rate limit")) {
+    // Handle rate limiting
+  } else if (error.message.includes("failed")) {
+    // Handle API failure
+  }
+}
+```
+
+## Agent Events
+
+The agent emits standard lifecycle events via the Hub:
+
+- `agent:start` - Before execution begins
+- `agent:complete` - After successful completion
+- `agent:failed` - On error
+
+Subscribe via Hub:
+
+```typescript
+hub.subscribe("agent:start", (event) => {
+  console.log("Starting agent:", event.context.agent?.name);
+});
+
+hub.subscribe("agent:complete", (event) => {
+  console.log("Agent completed");
+});
+```
+
+## See Also
+
+- [AgentDefinition](/docs/reference/types/agent-definition) - Agent interface
+- [Hub](/docs/reference/api/hub) - Event subscription
+- [executeFlow](/docs/reference/api/execute-flow) - Flow execution
+- [Agent Spec](/docs/reference/kernel-spec/spec/agent) - Agent specification

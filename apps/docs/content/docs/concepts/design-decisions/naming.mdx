@@ -1,0 +1,225 @@
+---
+title: Naming Conventions
+description: Why things are named the way they are
+---
+
+# Naming Conventions
+
+Names matter. Good names make code self-documenting. This page explains the naming decisions in Open Harness and their rationale.
+
+## Core Concepts
+
+### Hub
+
+The central event bus is called "Hub" because:
+- It's the central connection point
+- Events radiate out, commands flow in
+- Short, memorable, distinct
+
+Alternatives considered:
+- "EventBus" - too generic, verbose
+- "Dispatcher" - implies one-way
+- "Broker" - implies message queue patterns
+- "Bus" - too generic
+
+### Flow
+
+The declarative DAG runtime is called "Flow" because:
+- Data flows through nodes
+- Execution flows from start to end
+- Common in workflow tools
+
+Alternatives considered:
+- "Pipeline" - implies linear-only
+- "Workflow" - too enterprise
+- "Graph" - too technical
+- "DAG" - too academic
+
+### Agent
+
+Executors are called "Agents" because:
+- Industry standard for AI executors
+- Implies autonomy
+- Matches SDK terminology
+
+### Channel
+
+I/O adapters are called "Channels" because:
+- Bidirectional communication path
+- Clear input/output metaphor
+- Familiar from Go, CSP
+
+Alternatives considered:
+- "Adapter" - too enterprise
+- "Port" - too low-level
+- "Bridge" - less clear direction
+- "Gateway" - implies external only
+
+## Naming Patterns
+
+### Events
+
+Events use `namespace:action` format:
+
+```typescript
+"agent:text"      // Agent produced text
+"task:start"      // Task started
+"task:complete"   // Task completed
+"session:prompt"  // Session prompting user
+```
+
+Benefits:
+- Easy to filter by namespace (`"agent:*"`)
+- Self-documenting
+- Consistent structure
+
+### Type Names
+
+Types use PascalCase with descriptive suffixes:
+
+```typescript
+AgentDefinition      // Defines an agent
+ChannelDefinition    // Defines a channel
+NodeTypeDefinition   // Defines a node type
+FlowYaml             // YAML flow structure
+CompiledFlow         // Compiled flow result
+```
+
+Suffix meanings:
+- `Definition` - Configuration/template
+- `Context` - Runtime context passed to handlers
+- `Schema` - Zod validation schema
+- `Spec` - Specification structure
+
+### Functions
+
+Functions use camelCase with verb prefixes:
+
+```typescript
+createHub()         // Factory: creates a hub
+executeFlow()       // Action: runs a flow
+parseFlowYaml()     // Parser: parses YAML
+compileFlow()       // Compiler: compiles flow
+resolveBindings()   // Resolver: resolves bindings
+evaluateWhen()      // Evaluator: evaluates conditions
+createClaudeAgent() // Factory: creates a Claude agent
+```
+
+Verb meanings:
+- `create` - Instantiate with minimal config
+- `define` - Create a definition/template
+- `execute` - Run something
+- `parse` - Convert from string
+- `compile` - Transform to executable form
+- `resolve` - Look up references
+- `evaluate` - Compute a value
+
+### Context Fields
+
+Context uses consistent field names:
+
+```typescript
+sessionId    // Session identifier
+runId        // Execution run identifier
+agentName    // Current agent name
+taskId       // Current task identifier
+nodeId       // Current flow node identifier
+```
+
+## A3 Bindings
+
+Bindings use the `{{path.to.value}}` syntax:
+
+```yaml
+input:
+  name: "{{flow.input.userName}}"
+  result: "{{step1.output.data}}"
+```
+
+The name "A3" comes from the pattern's structure. It's intentionally:
+- Not Mustache (different semantics)
+- Not Handlebars (no helpers)
+- Distinct enough to not confuse
+
+## When Expressions
+
+Conditional expressions use operator names:
+
+```yaml
+when:
+  equals:
+    var: flow.input.mode
+    value: "production"
+```
+
+Operators:
+- `equals` - Equality check
+- `not` - Negation
+- `and` - All true
+- `or` - Any true
+
+Why not symbols (`==`, `!`, `&&`, `||`)?
+- YAML-safe without quoting
+- Readable in config files
+- Clear intent
+
+## File Conventions
+
+### Configuration Files
+
+```
+flow.yaml       # Flow definition
+nodes/          # Custom node types
+channels/       # Custom channels
+```
+
+### Test Files
+
+```
+*.test.ts       # Test files
+fixtures/       # Test fixtures
+recordings/     # Event recordings
+  golden/       # Golden fixtures
+```
+
+## Consistency Principles
+
+### Be Predictable
+
+If `createHub()` creates a hub, then `createAgent()` should create an agent.
+
+### Be Specific
+
+`AgentExecuteContext` is better than `Context` because it says what kind of context.
+
+### Be Concise
+
+`hub.emit()` is better than `hub.emitEvent()` when the context is clear.
+
+### Match the Domain
+
+Use terms from AI/ML when appropriate:
+- Agent (not Worker)
+- Prompt (not Question)
+- Model (not AI)
+
+## Anti-Patterns
+
+### Avoid
+
+- Generic names: `data`, `info`, `obj`
+- Abbreviations: `ctx` (use `context` in APIs)
+- Verb/noun confusion: `process` (verb) vs `process` (noun)
+- Overloaded terms: `run` meaning different things
+
+### When Abbreviations OK
+
+- Internal implementation: `ctx` is fine
+- Well-known: `id`, `url`, `api`
+- Loop variables: `i`, `j`, `e` for events
+
+## Next Steps
+
+- [Edges Required](/docs/concepts/design-decisions/edges-required) - Why explicit edges
+- [A3 Bindings](/docs/concepts/design-decisions/bindings-a3) - Binding syntax design
+- [Architecture Overview](/docs/concepts/architecture/overview) - System design

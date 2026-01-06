@@ -1,0 +1,94 @@
+---
+title: Parallel Execution
+description: Concurrent node execution (planned)
+---
+
+# Parallel Execution
+
+> **Status**: Planned - See [GitHub Issue #35](https://github.com/Open-Harness/open-harness/issues/35)
+
+Parallel execution will enable concurrent node execution for performance.
+
+## The Problem
+
+In sequential execution, independent nodes run one after another:
+
+```
+A → B → C → D    (B and C are independent)
+    ↓   ↓
+   2s  3s        Total: 5s (sequential)
+```
+
+With parallel execution:
+
+```
+A → B ─┬→ D
+    ↓  │
+    C ─┘
+   2s 3s         Total: 3s (parallel)
+```
+
+## Planned Design
+
+### Super-Steps
+
+Execute all ready nodes in parallel batches:
+
+```typescript
+while (completed.size < flow.nodes.length) {
+  // Find nodes with all dependencies satisfied
+  const ready = nodes.filter(n =>
+    !completed.has(n.id) &&
+    deps(n).every(d => completed.has(d))
+  );
+
+  // Execute this "super-step" in parallel
+  const results = await Promise.all(
+    ready.map(n => executeNode(n, ctx))
+  );
+
+  // Collect results
+  for (const { nodeId, output } of results) {
+    outputs.set(nodeId, output);
+    completed.add(nodeId);
+  }
+}
+```
+
+### State Reducers
+
+When parallel nodes update the same state:
+
+```typescript
+const Reducers = {
+  append: (a, b) => [...a, ...b],
+  replace: (_, b) => b,
+  merge: (a, b) => ({ ...a, ...b }),
+};
+```
+
+### Merge Semantics
+
+`control.merge` behavior changes:
+
+- `mode: all` → Wait for all incoming edges
+- `mode: any` → Proceed when first edge fires
+
+## When to Use
+
+Parallel execution benefits:
+
+- Flows with independent branches
+- High-throughput scenarios
+- Latency-sensitive applications
+
+## Dependencies
+
+Parallel execution depends on:
+- [#33 Control nodes](https://github.com/Open-Harness/open-harness/issues/33) - `control.merge` implementation
+- [#34 UI integration](https://github.com/Open-Harness/open-harness/issues/34) - Execution state events
+
+## Related
+
+- [Sequential Execution](/docs/concepts/execution/sequential) - Current model
+- [GitHub Issue #35](https://github.com/Open-Harness/open-harness/issues/35) - Implementation tracking

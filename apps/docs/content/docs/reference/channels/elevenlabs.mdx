@@ -1,0 +1,55 @@
+---
+title: ElevenLabs Channel
+description: Voice I/O via ElevenLabs Conversational AI
+---
+
+# ElevenLabs Channel
+
+> **Status**: Planned - See [spec](/docs/reference/kernel-spec/spec/channel) for design
+
+The ElevenLabs channel provides bidirectional voice interaction for flows using ElevenLabs Conversational AI.
+
+## Planned Features
+
+- **Voice narration**: Speak flow progress and agent output
+- **Voice commands**: Control flows with voice ("pause", "resume", "status")
+- **Human-in-the-loop**: Voice prompts for user decisions
+- **Real-time streaming**: Low-latency voice synthesis
+
+## Planned Usage
+
+```typescript
+import { ElevenLabsChannel } from "@open-harness/elevenlabs";
+
+const runner = createFlowRunner(flow, registry);
+runner.attach(ElevenLabsChannel({
+  agentId: process.env.ELEVENLABS_AGENT_ID,
+  voice: "alloy",
+}));
+
+runner.startSession(); // Enable voice commands
+await runner.run();
+```
+
+## Voice Commands (Planned)
+
+| Command | Action |
+|---------|--------|
+| "pause" / "hold on" | Pause execution |
+| "resume" / "continue" | Resume execution |
+| "status" / "where are we" | Speak current state |
+| "abort" / "cancel" | Stop the flow |
+
+## Architecture
+
+ElevenLabs is a **channel** (I/O interface), not a provider. It:
+
+- Subscribes to Hub events → speaks them
+- Listens for user speech → emits commands to Hub
+- Manages WebSocket connection lifecycle
+
+## Related
+
+- [Voice Channel Guide](/docs/guides/channels/voice-channel) - Integration guide
+- [Bidirectional I/O](/docs/concepts/channels/bidirectional) - Two-way patterns
+- [Feature Spec](https://github.com/Open-Harness/open-harness/blob/dev/specs/ready/014-elevenlabs-channel/spec.md) - Full specification

@@ -1,0 +1,162 @@
+---
+title: How to Use the Claude Provider
+description: Create agents using Claude models via the Agent SDK
+---
+
+# How to Use the Claude Provider
+
+Use the built-in Claude provider for Claude-powered agents.
+
+## Create Claude Agent
+
+```typescript
+import { createClaudeAgent } from "@open-harness/kernel";
+
+const agent = createClaudeAgent();
+```
+
+## Use in Flow
+
+```typescript
+import {
+  createClaudeAgent,
+  NodeRegistry,
+  parseFlowYaml,
+  executeFlow,
+  createHub
+} from "@open-harness/kernel";
+
+// Create and register the agent
+const registry = new NodeRegistry();
+registry.register({
+  type: "claude.agent",
+  ...createClaudeAgent(),
+});
+
+// Define a flow that uses the agent
+const flow = parseFlowYaml(`
+name: chat-flow
+nodes:
+  - id: respond
+    type: claude.agent
+    input:
+      prompt: "{{flow.input.question}}"
+`);
+
+// Execute the flow
+const hub = createHub();
+const result = await executeFlow(flow, registry, { hub }, {
+  question: "What is TypeScript?"
+});
+console.log(result.outputs.respond.text);
+```
+
+## Input Options
+
+The Claude agent accepts either a simple prompt or multi-turn messages:
+
+```typescript
+// Simple prompt
+await agent.execute({
+  prompt: "Explain closures in JavaScript"
+}, ctx);
+
+// Multi-turn messages
+await agent.execute({
+  messages: [
+    "You are a coding assistant.",
+    { content: "What is a closure?" },
+    { content: "Show me an example." },
+  ],
+}, ctx);
+
+// With SDK options
+await agent.execute({
+  prompt: "Analyze this code",
+  options: {
+    maxTurns: 5,
+    model: "claude-sonnet-4-20250514",
+  },
+}, ctx);
+```
+
+## Testing with Replay
+
+Use the `replay` option for deterministic testing:
+
+```typescript
+const testAgent = createClaudeAgent({
+  replay: (input) => {
+    if (input.prompt?.includes("What is 2+2")) {
+      return { text: "4", durationMs: 10 };
+    }
+    return undefined; // Fall through to real API
+  },
+});
+
+// Tests get fixed responses, no network calls
+const result = await testAgent.execute(
+  { prompt: "What is 2+2?" },
+  { hub: createHub(), runId: "test" }
+);
+console.log(result.text); // "4"
+```
+
+## Authentication
+
+Open Harness uses Claude Code subscription authentication. No API key needed:
+
+```typescript
+// No ANTHROPIC_API_KEY required
+// Auth handled automatically via @anthropic-ai/claude-agent-sdk
+const agent = createClaudeAgent();
+```
+
+## Handle Streaming Output
+
+Subscribe to events via the Hub:
+
+```typescript
+hub.subscribe("agent:text", (event) => {
+  // Each chunk as it arrives
+  process.stdout.write(event.event.content);
+});
+
+hub.subscribe("agent:complete", (event) => {
+  // Agent execution finished
+  console.log("\nAgent completed");
+});
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await agent.execute({ prompt: "Hello" }, ctx);
+} catch (error) {
+  if (error.message.includes("rate limit")) {
+    console.log("Rate limited, retry later");
+  } else if (error.message.includes("failed")) {
+    console.log("API request failed");
+  }
+}
+```
+
+## Output Properties
+
+The `ClaudeAgentOutput` includes:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `text` | `string` | Response text |
+| `structuredOutput` | `unknown` | Parsed structured output |
+| `usage` | `NonNullableUsage` | Token usage |
+| `totalCostUsd` | `number` | Estimated cost |
+| `durationMs` | `number` | Execution time |
+| `numTurns` | `number` | Number of turns |
+
+## Related
+
+- [Define Agent](/docs/guides/agents/define-agent) - Agent basics
+- [Replay Tests](/docs/guides/testing/replay-tests) - Test with fixtures
+- [Hub Events](/docs/learn/hub-events) - Event subscription

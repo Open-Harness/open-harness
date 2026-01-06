@@ -1,0 +1,314 @@
+---
+title: Golden Fixtures
+description: Recording and using test fixtures
+---
+
+# Golden Fixtures
+
+Golden fixtures are recorded API responses used for deterministic testing. This page explains how to record and use them.
+
+## What Are Fixtures?
+
+Fixtures are snapshots of API interactions:
+
+```json
+{
+  "metadata": {
+    "recordedAt": "2024-01-15T10:30:00Z",
+    "version": "1.0.0",
+    "scenario": "happy-path"
+  },
+  "input": {
+    "prompt": "Summarize this document"
+  },
+  "events": [
+    {
+      "event": { "type": "task:start", "taskId": "t1" },
+      "context": { "sessionId": "s1" },
+      "timestamp": 1705312200000
+    },
+    {
+      "event": { "type": "agent:text", "content": "Here is the summary..." },
+      "context": { "sessionId": "s1", "agentName": "summarizer" },
+      "timestamp": 1705312201000
+    },
+    {
+      "event": { "type": "task:complete", "taskId": "t1" },
+      "context": { "sessionId": "s1" },
+      "timestamp": 1705312202000
+    }
+  ]
+}
+```
+
+When replayed, tests see these events without making API calls.
+
+## Fixture Location
+
+```
+packages/kernel/
+├── tests/
+│   └── fixtures/
+│       └── golden/
+│           ├── happy-path.json
+│           ├── error-handling.json
+│           ├── multi-step-flow.json
+│           └── edge-cases/
+│               ├── empty-response.json
+│               └── timeout.json
+```
+
+### Naming Conventions
+
+- Use kebab-case: `happy-path.json`
+- Be descriptive: `error-missing-input.json`
+- Group related: `edge-cases/empty-response.json`
+
+## Recording Fixtures
+
+### Enable Recording Mode
+
+```typescript
+import { createRecorder } from "../helpers/recorder";
+
+async function recordFixture() {
+  const recorder = createRecorder();
+
+  // Subscribe to all events
+  hub.subscribe("*", recorder.capture);
+
+  // Run with real API
+  const result = await executeFlow(flow, input);
+
+  // Save fixture
+  recorder.save("tests/fixtures/golden/my-scenario.json", {
+    input,
+    metadata: {
+      scenario: "my-scenario",
+      description: "Tests basic flow execution"
+    }
+  });
+}
+```
+
+### Recording Script
+
+```bash
+# Record all fixtures
+bun run scripts/record-fixtures.ts
+
+# Record specific scenario
+bun run scripts/record-fixtures.ts --scenario happy-path
+```
+
+### Recording Process
+
+1. Ensure clean environment
+2. Run with real API
+3. Review captured events
+4. Save if correct
+5. Commit fixture
+
+## Fixture Format
+
+### JSONL Format
+
+For large recordings, use JSONL (one event per line):
+
+```jsonl
+{"event":{"type":"task:start","taskId":"t1"},"timestamp":1705312200000}
+{"event":{"type":"agent:text","content":"..."},"timestamp":1705312201000}
+{"event":{"type":"task:complete","taskId":"t1"},"timestamp":1705312202000}
+```
+
+Benefits:
+- Streaming reads
+- Git-friendly diffs
+- Line-based processing
+
+### JSON Format
+
+For smaller fixtures, use full JSON:
+
+```json
+{
+  "metadata": { ... },
+  "input": { ... },
+  "events": [ ... ]
+}
+```
+
+Benefits:
+- Human readable
+- Standard tooling
+- Easy editing
+
+## Using Fixtures in Tests
+
+### Loading Fixtures
+
+```typescript
+import { loadFixture } from "../helpers";
+
+test("handles happy path", async () => {
+  const fixture = loadFixture("happy-path.json");
+
+  // Use fixture.input
+  // Replay fixture.events
+});
+```
+
+### Replaying Events
+
+```typescript
+import { createReplayHub } from "../helpers";
+
+test("replays recorded events", async () => {
+  const fixture = loadFixture("happy-path.json");
+  const hub = createReplayHub(fixture.events);
+
+  // Hub will emit fixture events in order
+  const collected = [];
+  hub.subscribe("*", (e) => collected.push(e));
+
+  await hub.replay();
+
+  expect(collected).toHaveLength(fixture.events.length);
+});
+```
+
+### Asserting on Events
+
+```typescript
+test("emits expected events", async () => {
+  const fixture = loadFixture("happy-path.json");
+  const events = await replay(fixture);
+
+  // Check event types
+  const types = events.map(e => e.event.type);
+  expect(types).toContain("task:complete");
+
+  // Check event content
+  const textEvents = events.filter(e => e.event.type === "agent:text");
+  expect(textEvents).toHaveLength(1);
+  expect(textEvents[0].event.content).toContain("summary");
+});
+```
+
+## Updating Fixtures
+
+### When to Update
+
+Update fixtures when:
+- API response format changes
+- Behavior intentionally changes
+- Fixture is broken/outdated
+
+Don't update when:
+- You're not sure why it changed
+- It was recording a bug
+
+### Update Process
+
+1. Delete old fixture
+2. Re-record with current code
+3. Review diff carefully
+4. Commit with explanation
+
+### Reviewing Changes
+
+```bash
+# See fixture diff
+git diff tests/fixtures/golden/happy-path.json
+
+# Check if events make sense
+# Verify timestamps are reasonable
+# Ensure content is correct
+```
+
+## Fixture Best Practices
+
+### Record Representative Cases
+
+- Happy path (normal operation)
+- Error cases (expected failures)
+- Edge cases (boundaries)
+- Multi-step flows
+
+### Keep Fixtures Minimal
+
+- Only capture necessary events
+- Remove sensitive data
+- Keep content concise
+
+### Document Fixtures
+
+Include metadata:
+
+```json
+{
+  "metadata": {
+    "recordedAt": "2024-01-15T10:30:00Z",
+    "version": "1.0.0",
+    "scenario": "happy-path",
+    "description": "Basic flow execution with single agent",
+    "recordedWith": "claude-sonnet-4-20250514"
+  }
+}
+```
+
+### Version Fixtures
+
+Track fixture versions:
+
+```json
+{
+  "metadata": {
+    "version": "2.0.0",
+    "previousVersion": "1.0.0",
+    "changeReason": "Updated for new event schema"
+  }
+}
+```
+
+## Troubleshooting
+
+### Fixture Not Found
+
+```
+Error: Cannot find fixture: missing.json
+```
+
+Check:
+- Path is correct
+- File exists
+- Extension is `.json`
+
+### Fixture Mismatch
+
+```
+Expected 3 events, got 2
+```
+
+Re-record or investigate:
+- API behavior changed?
+- Code behavior changed?
+- Fixture corrupted?
+
+### Timestamp Issues
+
+Timestamps should be deterministic in tests:
+
+```typescript
+// Mock Date in tests
+beforeEach(() => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+});
+```
+
+## Next Steps
+
+- [Testing Strategy](/docs/contributing/development/testing) - Overall strategy
+- [Conformance Testing](/docs/contributing/development/conformance) - Spec compliance
+- [Replay Testing](/docs/concepts/testing/replay-model) - Concept guide

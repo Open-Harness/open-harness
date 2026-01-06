@@ -1,0 +1,118 @@
+---
+title: Events Reference
+description: Complete reference for all event types in Open Harness
+---
+
+# Events Reference
+
+Open Harness uses a typed event system for communication between components. All events flow through the Hub.
+
+## Event Categories
+
+| Category | Purpose |
+|----------|---------|
+| [Workflow Events](/docs/reference/events/workflow-events) | Harness, phase, and task lifecycle |
+| [Agent Events](/docs/reference/events/agent-events) | Agent execution and output |
+| [Session Events](/docs/reference/events/session-events) | Interactive session communication |
+| [Narrative Events](/docs/reference/events/narrative-events) | Logging and progress updates |
+
+## Event Structure
+
+All events are wrapped in an [EnrichedEvent](/docs/reference/types/enriched-event) envelope:
+
+```typescript
+interface EnrichedEvent<T extends BaseEvent = BaseEvent> {
+  id: string;           // Unique event ID
+  timestamp: Date;      // When emitted
+  context: EventContext; // Execution context
+  event: T;             // The actual event
+}
+```
+
+## Subscribing to Events
+
+```typescript
+import { createHub } from "@open-harness/kernel";
+
+const hub = createHub();
+
+// Subscribe to all events
+hub.subscribe((event) => {
+  console.log(event.event.type);
+});
+
+// Subscribe to specific type
+hub.subscribe("agent:text", (event) => {
+  console.log(event.event.content);
+});
+
+// Subscribe to multiple types
+hub.subscribe(["agent:start", "agent:complete"], (event) => {
+  console.log("Agent lifecycle:", event.event.type);
+});
+```
+
+## Emitting Events
+
+```typescript
+// Emit built-in event
+hub.emit({
+  type: "narrative",
+  text: "Processing started",
+  importance: "normal",
+});
+
+// Emit custom extension event
+hub.emit({
+  type: "custom:metric",
+  name: "latency",
+  value: 123,
+});
+```
+
+## Event Type Reference
+
+### Workflow Events
+
+| Type | Payload |
+|------|---------|
+| `harness:start` | `{ name: string }` |
+| `harness:complete` | `{ success: boolean; durationMs: number }` |
+| `phase:start` | `{ name: string; phaseNumber?: number }` |
+| `phase:complete` | `{ name: string; phaseNumber?: number }` |
+| `phase:failed` | `{ name: string; error: string; stack?: string }` |
+| `task:start` | `{ taskId: string }` |
+| `task:complete` | `{ taskId: string; result?: unknown }` |
+| `task:failed` | `{ taskId: string; error: string; stack?: string }` |
+
+### Agent Events
+
+| Type | Payload |
+|------|---------|
+| `agent:start` | `{ agentName: string; runId: string }` |
+| `agent:thinking` | `{ content: string; runId?: string }` |
+| `agent:text` | `{ content: string; runId?: string }` |
+| `agent:tool:start` | `{ toolName: string; input?: unknown; runId?: string }` |
+| `agent:tool:complete` | `{ toolName: string; result?: unknown; isError?: boolean }` |
+| `agent:complete` | `{ agentName: string; success: boolean; runId: string }` |
+
+### Session Events
+
+| Type | Payload |
+|------|---------|
+| `session:message` | `{ content: string; agentName?: string; runId?: string }` |
+| `session:prompt` | `{ promptId: string; prompt: string; choices?: string[] }` |
+| `session:reply` | `{ promptId: string; content: string; choice?: string }` |
+| `session:abort` | `{ reason?: string }` |
+
+### Narrative Events
+
+| Type | Payload |
+|------|---------|
+| `narrative` | `{ text: string; importance?: "low" \| "normal" \| "high" }` |
+
+## See Also
+
+- [Hub](/docs/reference/api/hub) - Event bus API
+- [BaseEvent](/docs/reference/types/base-event) - Event union type
+- [EnrichedEvent](/docs/reference/types/enriched-event) - Event envelope

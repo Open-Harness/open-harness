@@ -1,0 +1,25 @@
+flow:
+  name: flow-edges
+  nodePacks: [core]
+
+nodes:
+  - id: start
+    type: echo
+    input:
+      text: "Start"
+
+  - id: middle
+    type: echo
+    input:
+      text: "Middle"
+
+  - id: end
+    type: echo
+    input:
+      text: "End"
+
+edges:
+  - from: start
+    to: middle
+  - from: middle
+    to: end

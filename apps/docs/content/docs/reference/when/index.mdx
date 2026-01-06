@@ -1,0 +1,68 @@
+---
+title: When Reference
+description: Conditional expression syntax for flow nodes
+---
+
+# When Reference
+
+The `when` expression syntax enables conditional node execution in flows.
+
+## Pages
+
+| Page | Description |
+|------|-------------|
+| [When Syntax](/docs/reference/when/when-syntax) | Complete expression syntax |
+| [Operators](/docs/reference/when/operators) | Available operators |
+
+## Quick Reference
+
+### Basic Condition
+
+```yaml
+when:
+  equals:
+    var: flow.input.mode
+    value: "production"
+```
+
+### Negation
+
+```yaml
+when:
+  not:
+    equals:
+      var: flow.input.disabled
+      value: true
+```
+
+### Logical AND
+
+```yaml
+when:
+  and:
+    - equals:
+        var: flow.input.enabled
+        value: true
+    - equals:
+        var: step1.output.valid
+        value: true
+```
+
+### Logical OR
+
+```yaml
+when:
+  or:
+    - equals:
+        var: flow.input.env
+        value: "staging"
+    - equals:
+        var: flow.input.env
+        value: "production"
+```
+
+## See Also
+
+- [evaluateWhen](/docs/reference/api/evaluate-when) - Evaluation API
+- [WhenExprSchema](/docs/reference/schemas/when-expr-schema) - Validation schema
+- [When Spec](/docs/reference/kernel-spec/flow/when) - Specification

@@ -1,0 +1,101 @@
+flow:
+  name: api-health-check
+  description: Health check pipeline demonstrating when conditions and policies
+  nodePacks: [core, tutorial]
+  input:
+    services:
+      auth:
+        enabled: true
+        url: "https://api.example.com/auth/health"
+      payments:
+        enabled: true
+        url: "https://api.example.com/payments/health"
+      legacy:
+        enabled: false
+        url: "https://legacy.example.com/ping"
+
+nodes:
+  # Check if auth service is enabled
+  - id: auth_enabled
+    type: condition.equals
+    input:
+      left: "{{ flow.input.services.auth.enabled }}"
+      right: true
+
+  # Ping auth service (simulated with retry - flaky network)
+  - id: ping_auth
+    type: tutorial.flaky
+    when:
+      equals:
+        var: "auth_enabled.value"
+        value: true
+    policy:
+      retry:
+        maxAttempts: 3
+        backoffMs: 100
+    input:
+      label: "auth-service"
+
+  # Check if payments service is enabled
+  - id: payments_enabled
+    type: condition.equals
+    input:
+      left: "{{ flow.input.services.payments.enabled }}"
+      right: true
+
+  # Ping payments service (slow - will timeout but continue)
+  - id: ping_payments
+    type: tutorial.delay
+    when:
+      equals:
+        var: "payments_enabled.value"
+        value: true
+    policy:
+      timeoutMs: 10
+      continueOnError: true
+    input:
+      ms: 50
+
+  # Check if legacy service is enabled (it's not)
+  - id: legacy_enabled
+    type: condition.equals
+    input:
+      left: "{{ flow.input.services.legacy.enabled }}"
+      right: true
+
+  # This won't run because legacy is disabled
+  - id: ping_legacy
+    type: echo
+    when:
+      equals:
+        var: "legacy_enabled.value"
+        value: true
+    input:
+      text: "Legacy system responded"
+
+  # Generate health report
+  - id: health_report
+    type: echo
+    input:
+      text: "Health Check Complete | Auth: OK (retry worked) | Payments: {{ ping_payments.failed | default: false }} (timeout expected) | Legacy: skipped (disabled)"
+
+edges:
+  - from: auth_enabled
+    to: ping_auth
+  - from: ping_auth
+    to: payments_enabled
+  - from: payments_enabled
+    to: ping_payments
+  - from: ping_payments
+    to: legacy_enabled
+  - from: legacy_enabled
+    to: ping_legacy
+  - from: ping_legacy
+    to: health_report
+  - from: legacy_enabled
+    to: health_report
+    when:
+      not:
+        equals:
+          var: "legacy_enabled.value"
+          value: true

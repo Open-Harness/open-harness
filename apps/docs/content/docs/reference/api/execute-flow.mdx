@@ -1,0 +1,176 @@
+---
+title: executeFlow
+description: Execute a YAML-defined flow DAG with registered node types
+---
+
+# executeFlow
+
+Executes a FlowYaml DAG using a NodeRegistry and execution context. Nodes are executed in topological order with binding resolution and conditional evaluation.
+
+## Signature
+
+```typescript
+function executeFlow(
+  flow: FlowYaml,
+  registry: NodeRegistry,
+  ctx: FlowExecutionContext,
+  inputOverrides?: Record<string, unknown>
+): Promise<FlowRunResult>
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `flow` | `FlowYaml` | Yes | Parsed and validated flow definition |
+| `registry` | `NodeRegistry` | Yes | Registry containing node type implementations |
+| `ctx` | `FlowExecutionContext` | Yes | Execution context with hub, phase, and task helpers |
+| `inputOverrides` | `Record<string, unknown>` | No | Override flow input values at runtime |
+
+## Returns
+
+`Promise<FlowRunResult>` - Result containing outputs from all executed nodes.
+
+```typescript
+interface FlowRunResult {
+  outputs: Record<string, unknown>;
+}
+```
+
+The `outputs` map contains each node's output keyed by node ID. Skipped nodes have `{ skipped: true }`.
+
+## FlowExecutionContext
+
+```typescript
+interface FlowExecutionContext {
+  hub: Hub;
+  phase: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
+  task: <T>(id: string, fn: () => Promise<T>) => Promise<T>;
+}
+```
+
+## Example
+
+```typescript
+import {
+  parseFlowYaml,
+  executeFlow,
+  NodeRegistry,
+  createHub,
+} from "@open-harness/kernel";
+
+// Define a custom node type
+const echoNode = {
+  type: "echo",
+  inputSchema: z.object({ message: z.string() }),
+  outputSchema: z.object({ echoed: z.string() }),
+  run: async (ctx, input) => ({ echoed: input.message }),
+};
+
+// Create registry and register nodes
+const registry = new NodeRegistry();
+registry.register(echoNode);
+
+// Parse flow YAML
+const flow = parseFlowYaml(`
+flow:
+  name: example
+  input:
+    greeting: "Hello"
+nodes:
+  - id: step1
+    type: echo
+    input:
+      message: "{{flow.input.greeting}}, World!"
+edges: []
+`);
+
+// Create execution context
+const hub = createHub();
+const ctx = {
+  hub,
+  phase: async (name, fn) => fn(),
+  task: async (id, fn) => fn(),
+};
+
+// Execute
+const result = await executeFlow(flow, registry, ctx);
+console.log(result.outputs.step1); // { echoed: "Hello, World!" }
+```
+
+## Execution Order
+
+1. Flow is compiled via `compileFlow()` to validate DAG and compute topological order
+2. For each node in order:
+   - Build binding context from `flow.input` and previous node outputs
+   - Evaluate `when` condition - skip node if false
+   - Resolve input bindings against context
+   - Validate input against node's `inputSchema`
+   - Execute node's `run` function
+   - Validate output against `outputSchema`
+   - Store output in results map
+
+## Input Overrides
+
+Override flow input values at runtime:
+
+```typescript
+const flow = parseFlowYaml(`
+flow:
+  name: test
+  input:
+    name: "default"
+nodes:
+  - id: greet
+    type: echo
+    input:
+      message: "Hello, {{flow.input.name}}"
+edges: []
+`);
+
+// Override at execution time
+const result = await executeFlow(flow, registry, ctx, {
+  name: "Alice"
+});
+// greet output: { echoed: "Hello, Alice" }
+```
+
+## Conditional Execution
+
+Nodes with `when` expressions are conditionally executed:
+
+```typescript
+const flow = parseFlowYaml(`
+flow:
+  name: conditional
+  input:
+    mode: "fast"
+nodes:
+  - id: slowPath
+    type: expensive
+    input: {}
+    when:
+      equals:
+        var: flow.input.mode
+        value: "thorough"
+edges: []
+`);
+
+// With mode: "fast", slowPath is skipped
+const result = await executeFlow(flow, registry, ctx);
+console.log(result.outputs.slowPath); // { skipped: true }
+```
+
+## Error Handling
+
+- Throws if flow contains cycles
+- Throws if node type not found in registry
+- Throws if input validation fails
+- Throws if binding path not found (unless optional)
+
+## See Also
+
+- [parseFlowYaml](/docs/reference/api/parse-flow) - Parse YAML to FlowYaml
+- [compileFlow](/docs/reference/api/compile-flow) - Compile and validate flow
+- [NodeRegistry](/docs/reference/api/node-registry) - Register node types
+- [FlowYaml](/docs/reference/types/flow-yaml) - Flow structure

@@ -1,0 +1,13 @@
+flow:
+  name: basic-flow
+  version: 1
+  input:
+    greeting: Hello
+
+nodes:
+  - id: greet
+    type: echo
+    input:
+      text: "{{flow.input.greeting}}"
+
+edges: []

@@ -1,0 +1,86 @@
+---
+title: Visual Editing
+description: n8n-style visual flow editing (planned)
+---
+
+# Visual Editing
+
+> **Status**: Planned - See [GitHub Issue #34](https://github.com/Open-Harness/open-harness/issues/34)
+
+Open Harness will support visual flow editing via React Flow integration.
+
+## Vision
+
+Build flows visually in an n8n-style editor:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Research   │────→│   Analyze   │────→│   Report    │
+│   (agent)   │     │  (agent)    │     │ (transform) │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+- Drag and drop nodes
+- Connect with edges
+- Configure node inputs
+- See live execution status
+
+## Architecture
+
+The integration layer consists of:
+
+### 1. WebSocket Channel
+
+Real-time sync between editor and runtime:
+
+```typescript
+runner.attach(WebSocketChannel({ port: 8080 }));
+```
+
+### 2. Node Registry Metadata
+
+Node definitions include UI metadata:
+
+```typescript
+interface NodeMetadata {
+  displayName: string;
+  description: string;
+  category: 'control' | 'agent' | 'io';
+  icon?: string;
+  ports: { inputs: PortDef[]; outputs: PortDef[] };
+}
+```
+
+### 3. Flow↔ReactFlow Adapter
+
+Convert between YAML and React Flow format:
+
+```typescript
+const reactFlowData = flowToReactFlow(yamlFlow);
+const yamlFlow = reactFlowToFlow(nodes, edges);
+```
+
+### 4. Execution State Events
+
+Track node status in real-time:
+
+- `node:pending` → Gray
+- `node:running` → Blue/Animated
+- `node:complete` → Green
+- `node:failed` → Red
+
+## Components Needed
+
+| Component | Lines | Description |
+|-----------|-------|-------------|
+| `defineChannel()` | ~20 | Channel runner |
+| `WebSocketChannel` | ~50 | Real-time sync |
+| Registry Metadata API | ~30 | Node UI info |
+| Flow↔ReactFlow Adapter | ~80 | Format conversion |
+| Execution State Events | ~40 | Node status |
+
+## Related
+
+- [WebSocket Channel](/docs/reference/channels/websocket) - Real-time communication
+- [Node Registry](/docs/reference/kernel-spec/flow/registry) - Node definitions
+- [GitHub Issue #34](https://github.com/Open-Harness/open-harness/issues/34) - Implementation tracking
