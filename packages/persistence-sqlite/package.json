@@ -1,0 +1,17 @@
+{
+  "name": "@internal/persistence-sqlite",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@internal/persistence": "workspace:*",
+    "@internal/runtime": "workspace:*",
+    "@internal/state": "workspace:*"
+  },
+  "peerDependencies": {
+    "bun": "*"
+  }
+}

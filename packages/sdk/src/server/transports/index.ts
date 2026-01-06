@@ -2,14 +2,13 @@
  * Server transports for Open Harness SDK.
  */
 
-// AI SDK local transport
 export {
   createLocalAIKitTransport,
+  createPartTracker,
   LocalAIKitTransport,
-} from "./ai-sdk-local-transport.js";
-// AI SDK transport utilities
-export { createPartTracker, transformEvent } from "./transforms.js";
-// AI SDK transport types
+  transformEvent,
+} from "@internal/transports-local";
+
 export type {
   FlowStatusData,
   NodeOutputData,
@@ -17,9 +16,9 @@ export type {
   OpenHarnessDataTypes,
   PartTracker,
   TransformFunction,
-} from "./types.js";
-// WebSocket transport
+} from "@internal/transports-shared";
+
 export {
   WebSocketTransport,
   type WebSocketTransportOptions,
-} from "./websocket.js";
+} from "@internal/transports-websocket";

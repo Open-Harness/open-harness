@@ -1,17 +1,19 @@
-import type { RuntimeEvent } from "../core/events.js";
-import type { FlowDefinition } from "../core/types.js";
-import { constantNode, echoNode } from "../nodes/index.js";
-import type { RunStore } from "../persistence/run-store.js";
-import type { NodeRegistry, NodeTypeDefinition } from "../registry/registry.js";
-import { DefaultNodeRegistry } from "../registry/registry.js";
-import type { Runtime } from "../runtime/runtime.js";
-import { createRuntime } from "../runtime/runtime.js";
-import type { RunSnapshot } from "../runtime/snapshot.js";
-import { createClaudeNode } from "../server/providers/claude.agent.js";
+import type { NodeRegistry, NodeTypeDefinition } from "@internal/nodes";
+import { DefaultNodeRegistry } from "@internal/nodes";
+import type { RunStore } from "@internal/persistence";
+import { createClaudeNode } from "@internal/providers-claude";
+import type { Runtime } from "@internal/runtime";
+import { createRuntime } from "@internal/runtime";
+import type {
+  FlowDefinition,
+  RunSnapshot,
+  RuntimeEvent,
+} from "@internal/state";
 import {
   type Transport,
   WebSocketTransport,
-} from "../server/transports/websocket.js";
+} from "@internal/transports-websocket";
+import { constantNode, echoNode } from "../nodes/index.js";
 
 /**
  * Options for creating a harness.

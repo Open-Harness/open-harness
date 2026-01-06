@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import {
   resolveBindingString,
   resolveBindings,
-} from "../../src/runtime/bindings.js";
+} from "../../src/index.js";
 
 describe("resolveBindingString", () => {
   test("interpolates multiple bindings", async () => {

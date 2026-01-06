@@ -14,6 +14,30 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
 
+    "baseUrl": ".",
+    "paths": {
+      "@internal/state": ["../state/src/index.ts"],
+      "@internal/runtime": ["../runtime/src/index.ts"],
+      "@internal/persistence": ["../persistence/src/index.ts"],
+      "@internal/persistence-sqlite": ["../persistence-sqlite/src/index.ts"],
+      "@internal/nodes": ["../nodes/src/index.ts"],
+      "@internal/nodes-basic": ["../nodes-basic/src/index.ts"],
+      "@internal/providers-shared": ["../providers/shared/src/index.ts"],
+      "@internal/providers-claude": ["../providers/claude/src/index.ts"],
+      "@internal/providers-testing": ["../providers/testing/src/index.ts"],
+      "@internal/transports-shared": ["../transports/shared/src/index.ts"],
+      "@internal/transports-local": ["../transports/local/src/index.ts"],
+      "@internal/transports-http-sse-client": [
+        "../transports/http-sse-client/src/index.ts"
+      ],
+      "@internal/transports-remote": ["../transports/remote/src/index.ts"],
+      "@internal/transports-websocket": [
+        "../transports/websocket/src/index.ts"
+      ],
+      "@internal/api-hono": ["../api/hono/src/index.ts"],
+      "@internal/api-middleware": ["../api/middleware/src/index.ts"]
+    },
+
     // Best practices
     "strict": true,
     "skipLibCheck": true,
@@ -27,7 +51,8 @@
     "noPropertyAccessFromIndexSignature": false,
 
     // Type checking
-    "types": []
+    "types": ["bun"]
   },
+  "include": ["src/**/*"],
   "exclude": ["src/shims/**/*"]
 }

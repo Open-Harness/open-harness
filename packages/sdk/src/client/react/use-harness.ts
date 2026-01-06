@@ -1,6 +1,6 @@
+import type { RuntimeCommand, RuntimeEvent } from "@internal/state";
+import { RemoteAIKitTransport } from "@internal/transports-remote";
 import { useEffect, useState } from "react";
-import type { RuntimeCommand, RuntimeEvent } from "../../core/events.js";
-import { RemoteAIKitTransport } from "../ai-sdk/remote-transport.js";
 
 export interface UseHarnessOptions {
   serverUrl?: string;

@@ -1,4 +1,4 @@
-import type { FlowDefinition } from "../../core/types.js";
+import type { FlowDefinition } from "@internal/state";
 
 /**
  * Create a simple test flow with basic nodes.

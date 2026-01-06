@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InMemoryStateStore } from "../../src/runtime/runtime.js";
+import { InMemoryStateStore } from "../../src/index.js";
 
 describe("state store", () => {
   test("get/set supports dot paths", () => {

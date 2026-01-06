@@ -1,8 +1,8 @@
 // Tests for when expression evaluation (async with JSONata support)
 
 import { describe, expect, test } from "bun:test";
-import type { WhenExpr } from "../../src/core/types.js";
-import { evaluateWhen } from "../../src/runtime/when.js";
+import type { WhenExpr } from "../../src/index.js";
+import { evaluateWhen } from "../../src/index.js";
 
 describe("when evaluation", () => {
   describe("undefined/null handling", () => {

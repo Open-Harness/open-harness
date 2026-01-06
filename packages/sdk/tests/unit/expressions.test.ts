@@ -9,7 +9,7 @@ import {
   isPureBinding,
   parseTemplate,
   resolveTemplate,
-} from "../../src/runtime/expressions.js";
+} from "../../src/index.js";
 
 beforeEach(() => {
   clearExpressionCache();

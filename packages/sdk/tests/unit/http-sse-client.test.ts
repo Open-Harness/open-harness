@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { UIMessage } from "ai";
-import { HTTPSSEClient } from "../../src/client/transports/http-sse-client.js";
+import { HTTPSSEClient } from "../../src/client/index.js";
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];

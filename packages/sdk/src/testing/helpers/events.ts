@@ -1,4 +1,4 @@
-import type { RuntimeEvent } from "../../core/events.js";
+import type { RuntimeEvent } from "@internal/state";
 
 /**
  * Create a sample runtime event for testing.

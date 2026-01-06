@@ -1,10 +1,10 @@
+import type { Runtime } from "@internal/runtime";
 import type {
+  RunSnapshot,
   RuntimeCommand,
   RuntimeEvent,
   RuntimeEventListener,
-} from "../../core/events.js";
-import type { Runtime } from "../../runtime/runtime.js";
-import type { RunSnapshot } from "../../runtime/snapshot.js";
+} from "@internal/state";
 
 /**
  * Mock runtime for testing transports and other runtime consumers.

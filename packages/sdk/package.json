@@ -103,7 +103,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@open-harness/nodes-basic": "workspace:*",
+    "@internal/nodes-basic": "workspace:*",
     "hono": "^4.0.1",
     "uuid": "^10.0.0",
     "jsonata": "^2.1.0",

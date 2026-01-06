@@ -1,0 +1,12 @@
+{
+  "name": "@internal/transports-http-sse-server",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@internal/transports-shared": "workspace:*"
+  }
+}

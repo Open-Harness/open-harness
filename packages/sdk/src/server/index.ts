@@ -2,7 +2,7 @@
  * Open Harness SDK - Server Components
  */
 
-export type { EventsRouteOptions } from "./api-routes/index.js";
+export type { EventsRouteOptions } from "@internal/api-hono";
 // API Routes
 export {
   createAPIRoutes,
@@ -10,39 +10,38 @@ export {
   createCommandsRoute,
   createEventsRoute,
   createHealthRoute,
-} from "./api-routes/index.js";
-
+} from "@internal/api-hono";
 // Middleware
-export { corsMiddleware } from "./middleware/cors.js";
-export { errorHandler } from "./middleware/error-handler.js";
-export type { SqliteRunStoreOptions } from "./persistence/sqlite-run-store.js";
+export { corsMiddleware, errorHandler } from "@internal/api-middleware";
+export type { SqliteRunStoreOptions } from "@internal/persistence-sqlite";
 // Persistence
-export { SqliteRunStore } from "./persistence/sqlite-run-store.js";
+export { SqliteRunStore } from "@internal/persistence-sqlite";
 export type {
   ClaudeAgentExtendedOptions,
   ClaudeAgentInput,
   ClaudeAgentOutput,
   ClaudeMessageInput,
   ClaudeNodeOptions,
-} from "./providers/claude.agent.js";
+} from "@internal/providers-claude";
 // Providers
 export {
   claudeNode,
   createClaudeNode,
   resolveOutputSchema,
-} from "./providers/claude.agent.js";
+} from "@internal/providers-claude";
 // Testing utilities
 export {
   createMockQuery,
   type FixtureCall,
   type FixtureFile,
   type FixtureSet,
-} from "./providers/testing/mock-query.js";
+} from "@internal/providers-testing";
 export {
   createLocalAIKitTransport,
+  createPartTracker,
   LocalAIKitTransport,
-} from "./transports/ai-sdk-local-transport.js";
-export { createPartTracker, transformEvent } from "./transports/transforms.js";
+  transformEvent,
+} from "@internal/transports-local";
 export type {
   FlowStatusData,
   NodeOutputData,
@@ -50,9 +49,9 @@ export type {
   OpenHarnessDataTypes,
   PartTracker,
   TransformFunction,
-} from "./transports/types.js";
+} from "@internal/transports-shared";
 // Transports
 export {
   WebSocketTransport,
   type WebSocketTransportOptions,
-} from "./transports/websocket.js";
+} from "@internal/transports-websocket";

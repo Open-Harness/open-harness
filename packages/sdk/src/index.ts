@@ -2,22 +2,12 @@
  * Kernel public API exports.
  */
 
-export * from "./core/cancel.js";
-export * from "./core/events.js";
-export * from "./core/state.js";
-export * from "./core/types.js";
+export * from "@internal/nodes";
+export * from "@internal/persistence";
+export * from "@internal/runtime";
+export * from "@internal/state";
 export * from "./harness/harness.js";
 export * from "./nodes/index.js";
-export * from "./persistence/memory-run-store.js";
-export * from "./persistence/run-store.js";
-export * from "./registry/registry.js";
-export * from "./runtime/bindings.js";
-export * from "./runtime/compiler.js";
-export * from "./runtime/executor.js";
-export * from "./runtime/runtime.js";
-export * from "./runtime/scheduler.js";
-export * from "./runtime/snapshot.js";
-export * from "./runtime/when.js";
 
 // Testing utilities (exported for other packages)
 export * from "./testing/index.js";

@@ -1,6 +1,6 @@
+import type { Runtime } from "@internal/runtime";
+import type { RuntimeEvent } from "@internal/state";
 import { useEffect, useState } from "react";
-import type { RuntimeEvent } from "../../core/events.js";
-import type { Runtime } from "../../runtime/runtime.js";
 
 export interface UseRuntimeReturn {
   events: RuntimeEvent[];
@@ -12,7 +12,7 @@ export function useRuntime(runtime: Runtime): UseRuntimeReturn {
   const [events, setEvents] = useState<RuntimeEvent[]>([]);
 
   useEffect(() => {
-    const unsubscribe = runtime.onEvent((event) => {
+    const unsubscribe = runtime.onEvent((event: RuntimeEvent) => {
       setEvents((prev) => [...prev, event]);
     });
 

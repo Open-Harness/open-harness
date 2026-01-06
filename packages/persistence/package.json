@@ -1,0 +1,13 @@
+{
+  "name": "@internal/persistence",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@internal/state": "workspace:*",
+    "zod": "^4.3.4"
+  }
+}

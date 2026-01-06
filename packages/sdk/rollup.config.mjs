@@ -3,12 +3,11 @@ import typescript from "@rollup/plugin-typescript";
 
 const external = [
   /^node:/,
-  "@open-harness/nodes-basic",
+  "@internal/nodes-basic",
   "ai",
   "bun:test",
   "bun:sqlite",
   "hono",
-  "@hono/streaming",
   "jsonata",
   "uuid",
   "yaml",

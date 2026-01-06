@@ -1,23 +1,14 @@
 {
-	"name": "@open-harness/nodes-basic",
-	"version": "0.1.0-alpha.1",
+	"name": "@internal/nodes-basic",
+	"version": "0.2.0",
 	"type": "module",
-	"private": false,
-	"main": "./src/index.ts",
-	"types": "./src/index.ts",
-	"scripts": {
-		"lint": "biome check . --write",
-		"typecheck": "tsc --noEmit"
+	"private": true,
+	"exports": {
+		".": "./src/index.ts"
 	},
 	"dependencies": {
+		"@internal/nodes": "workspace:*",
+		"@internal/state": "workspace:*",
 		"zod": "^4.3.4"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.3.11",
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
-		"@open-harness/sdk": "workspace:*",
-		"typescript": "^5"
 	}
 }

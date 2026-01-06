@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { RuntimeCommand, RuntimeEvent } from "../../core/events.js";
-import type { Runtime } from "../../runtime/runtime.js";
+import type { Runtime } from "@internal/runtime";
+import type { RuntimeCommand, RuntimeEvent } from "@internal/state";
 
 /**
  * Contract test function for Runtime implementations.

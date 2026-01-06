@@ -2,11 +2,11 @@
  * Open Harness SDK - Client Components
  */
 
-export type { RemoteAIKitTransportOptions } from "./ai-sdk/remote-transport.js";
+export type { HTTPSSEClientOptions } from "@internal/transports-http-sse-client";
+export { HTTPSSEClient } from "@internal/transports-http-sse-client";
+export type { RemoteAIKitTransportOptions } from "@internal/transports-remote";
 export {
   createRemoteAIKitTransport,
   RemoteAIKitTransport,
-} from "./ai-sdk/remote-transport.js";
+} from "@internal/transports-remote";
 export * as react from "./react/index.js";
-export type { HTTPSSEClientOptions } from "./transports/http-sse-client.js";
-export { HTTPSSEClient } from "./transports/http-sse-client.js";

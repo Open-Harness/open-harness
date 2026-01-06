@@ -11,7 +11,7 @@ export {
   claudeNode,
   createClaudeNode,
   resolveOutputSchema,
-} from "./claude.agent.js";
+} from "@internal/providers-claude";
 
 // Export testing utilities
 export {
@@ -19,4 +19,4 @@ export {
   type FixtureCall,
   type FixtureFile,
   type FixtureSet,
-} from "./testing/mock-query.js";
+} from "@internal/providers-testing";

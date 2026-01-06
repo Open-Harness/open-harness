@@ -16,7 +16,7 @@
     "skipLibCheck": true,
     // Map workspace dependencies to empty module to avoid type checking them
     "paths": {
-      "@open-harness/nodes-basic": ["./src/shims/nodes-basic.d.ts"]
+      "@internal/nodes-basic": ["./src/shims/nodes-basic.d.ts"]
     }
   },
   "include": ["src/**/*"],

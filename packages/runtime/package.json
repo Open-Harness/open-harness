@@ -1,0 +1,22 @@
+{
+  "name": "@internal/runtime",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+    "@internal/nodes": "workspace:*",
+    "@internal/persistence": "workspace:*",
+    "@internal/state": "workspace:*",
+    "jsonata": "^2.1.0",
+    "uuid": "^10.0.0",
+    "yaml": "^2.8.2",
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10.0.0"
+  }
+}

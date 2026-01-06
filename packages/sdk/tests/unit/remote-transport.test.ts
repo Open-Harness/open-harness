@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { UIMessageChunk } from "ai";
-import { RemoteAIKitTransport } from "../../src/client/ai-sdk/remote-transport.js";
+import { RemoteAIKitTransport } from "../../src/client/index.js";
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];

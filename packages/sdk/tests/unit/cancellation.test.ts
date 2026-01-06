@@ -10,8 +10,8 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../../src/index.js";
-import type { NodeTypeDefinition } from "../../src/registry/registry.js";
-import { createClaudeNode } from "../../src/server/providers/claude.agent.js";
+import type { NodeTypeDefinition } from "@internal/nodes";
+import { createClaudeNode } from "../../src/server/index.js";
 
 type QueryFactory = (params: {
   prompt: string | AsyncIterable<SDKUserMessage>;
