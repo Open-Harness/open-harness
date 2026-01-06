@@ -85,6 +85,8 @@
   },
   "dependencies": {
     "@open-harness/nodes-basic": "workspace:*",
+    "hono": "^4.0.1",
+    "uuid": "^10.0.0",
     "jsonata": "^2.1.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.4"
