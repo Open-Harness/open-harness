@@ -178,20 +178,33 @@ At the end of this work:
 - ✅ Multi-node flows emit events in execution order
 - ✅ All 93 kernel tests pass
 
-### Phase 4: WebSocket Channel
+### Phase 4: WebSocket Channel [COMPLETE ✅]
 
 **Goal**: Stream events to browser, receive commands.
 
 **Deliverables**:
-- [ ] WebSocket channel using Bun.serve()
-- [ ] Follows registered channel pattern
-- [ ] Streams all events to connected clients
-- [ ] Handles incoming commands (send, reply, abort)
-- [ ] Integration test with real flow
+- [x] WebSocket channel using Bun.serve()
+- [x] Follows registered channel pattern
+- [x] Streams all events to connected clients
+- [x] Handles incoming commands (send, sendTo, sendToRun, reply, abort)
+- [x] Integration tests with real WebSocket connections
 
 **Files**:
-- `packages/kernel/src/channels/websocket.ts`
-- `packages/kernel/tests/e2e/websocket-channel.test.ts`
+- `packages/kernel/src/channels/websocket.ts` - createWebSocketChannel()
+- `packages/kernel/src/channels/index.ts` - exports
+- `packages/kernel/tests/e2e/websocket-channel.test.ts` - 16 integration tests
+
+**Implementation Results** (2026-01-02):
+- ✅ **16 integration tests passing** - `tests/e2e/websocket-channel.test.ts`
+- ✅ WebSocket server using Bun.serve() on configurable port
+- ✅ Health endpoint at `/health` with client count
+- ✅ All hub events broadcast to connected clients as JSON
+- ✅ Client commands: send, sendTo, sendToRun, reply, abort
+- ✅ Acknowledgments sent for successful commands
+- ✅ Error messages for invalid commands/JSON
+- ✅ Lifecycle events: websocket:started, websocket:connected, websocket:disconnected, websocket:stopped
+- ✅ Multi-client support with proper cleanup on disconnect
+- ✅ All 109 kernel tests pass
 
 ### Phase 5: React Client (packages/flow-ui)
 
