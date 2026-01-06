@@ -5,8 +5,5 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: 'Open Harness',
     },
-    sidebar: {
-      tabs: false,
-    },
   };
 }

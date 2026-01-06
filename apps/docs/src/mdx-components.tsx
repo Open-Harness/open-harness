@@ -8,6 +8,7 @@ import { Mermaid } from '@/components/mdx/mermaid';
 import type { MDXComponents } from 'mdx/types';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
+  // Type assertion needed for React 19 compatibility with fumadocs
   return {
     ...defaultMdxComponents,
     Mermaid,
@@ -19,5 +20,5 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     GithubInfo,
     TypeTable,
     ...components,
-  };
+  } as MDXComponents;
 }
