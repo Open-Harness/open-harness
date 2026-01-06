@@ -1,1 +1,1 @@
-export * from "./remote-transport.js";
+export * from "./remote-transport";

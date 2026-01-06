@@ -1,2 +1,2 @@
-export * from "./cors.js";
-export * from "./error-handler.js";
+export * from "./cors";
+export * from "./error-handler";

@@ -1,2 +1,2 @@
-export * from "./ai-sdk-local-transport.js";
-export * from "./transforms.js";
+export * from "./ai-sdk-local-transport";
+export * from "./transforms";

@@ -1,1 +1,1 @@
-export * from "./sqlite-run-store.js";
+export * from "./sqlite-run-store";

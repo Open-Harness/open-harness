@@ -1,2 +1,2 @@
-export * from "./run-store.js";
-export * from "./memory-run-store.js";
+export * from "./run-store";
+export * from "./memory-run-store";

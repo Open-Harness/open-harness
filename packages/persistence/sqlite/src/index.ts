@@ -5,4 +5,4 @@
 export {
 	SqliteRunStore,
 	type SqliteRunStoreOptions,
-} from "./sqlite-run-store.js";
+} from "./sqlite-run-store";

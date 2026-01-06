@@ -7,12 +7,12 @@
 import { Hono } from "hono";
 import type { Runtime } from "@internal/runtime";
 
-import { createChatRoute } from "./chat.js";
-import { createCommandsRoute } from "./commands.js";
-import { createEventsRoute } from "./events.js";
-import { createHealthRoute } from "./health.js";
+import { createChatRoute } from "./chat";
+import { createCommandsRoute } from "./commands";
+import { createEventsRoute } from "./events";
+import { createHealthRoute } from "./health";
 
-export type { EventsRouteOptions } from "./events.js";
+export type { EventsRouteOptions } from "./events";
 export {
   createChatRoute,
   createCommandsRoute,

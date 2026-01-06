@@ -12,11 +12,12 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
+		"@open-harness/core": "workspace:*",
 		"@open-harness/persistence-testing": "workspace:*",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
-		"@open-harness/sdk": "workspace:*",
+		"@open-harness/core": "workspace:*",
 		"typescript": "^5"
 	}
 }

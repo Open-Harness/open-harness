@@ -1,1 +1,1 @@
-export * from "./mock-query.js";
+export * from "./mock-query";

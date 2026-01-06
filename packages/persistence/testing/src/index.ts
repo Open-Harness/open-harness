@@ -6,4 +6,4 @@ export {
 	runStoreContract,
 	sampleRunSnapshot,
 	sampleRuntimeEvent,
-} from "./contracts/run-store-contract.js";
+} from "./contracts/run-store-contract";

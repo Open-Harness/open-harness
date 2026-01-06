@@ -1,4 +1,4 @@
-import type { NodeTypeDefinition } from "@open-harness/sdk";
+import type { NodeTypeDefinition } from "@internal/nodes";
 import { z } from "zod";
 
 /**

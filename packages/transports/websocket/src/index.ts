@@ -1,1 +1,1 @@
-export * from "./websocket.js";
+export * from "./websocket";

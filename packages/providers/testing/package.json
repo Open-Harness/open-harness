@@ -10,6 +10,7 @@
     "@anthropic-ai/claude-agent-sdk": "^0.1.76",
     "@internal/providers-claude": "workspace:*",
     "@internal/providers-shared": "workspace:*",
+    "@internal/state": "workspace:*",
     "zod": "^4.3.4"
   }
 }

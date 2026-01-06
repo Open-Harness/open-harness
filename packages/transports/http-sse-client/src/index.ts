@@ -1,1 +1,1 @@
-export * from "./http-sse-client.js";
+export * from "./http-sse-client";

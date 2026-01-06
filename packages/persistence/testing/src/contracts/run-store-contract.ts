@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { RunSnapshot, RunStore, RuntimeEvent } from "@open-harness/sdk";
+import type { RunSnapshot, RunStore, RuntimeEvent } from "@open-harness/core";
 
 /**
  * Sample event for testing.
