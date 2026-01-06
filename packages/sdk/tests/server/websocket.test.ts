@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { WebSocketTransport } from "../../src/server/transports/websocket.js";
 
-describe("@open-harness/sdk/server: websocket transport", () => {
+describe("@open-harness/sdk/server: WebSocket transport", () => {
   test("smoke: package exports work", () => {
     expect(WebSocketTransport).toBeDefined();
     expect(typeof WebSocketTransport).toBe("function");

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createClaudeNode } from "../../src/server/providers/claude.agent.js";
 
-describe("@open-harness/provider-anthropic", () => {
+describe("@open-harness/sdk/server: Anthropic provider (smoke)", () => {
   test("smoke: package exports work", () => {
     expect(createClaudeNode).toBeDefined();
     expect(typeof createClaudeNode).toBe("function");
