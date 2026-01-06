@@ -55,6 +55,11 @@ export const NodePolicySchema = z.object({
 	continueOnError: z.boolean().optional(),
 });
 
+export const NodePositionSchema = z.object({
+	x: z.number(),
+	y: z.number(),
+});
+
 export const NodeSpecSchema = z.object({
 	id: NodeIdSchema,
 	type: NodeTypeIdSchema,
@@ -62,6 +67,7 @@ export const NodeSpecSchema = z.object({
 	config: z.record(z.string(), z.unknown()).optional(),
 	when: WhenExprSchema.optional(),
 	policy: NodePolicySchema.optional(),
+	position: NodePositionSchema.optional(),
 });
 
 export const EdgeSchema = z.object({

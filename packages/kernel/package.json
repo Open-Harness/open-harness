@@ -14,6 +14,7 @@
 		"lint:fix": "biome check . --write",
 		"check": "biome check .",
 		"check:fix": "biome check . --write",
+		"typecheck": "tsc --noEmit",
 		"test": "bun test tests/unit tests/replay",
 		"test:unit": "bun test tests/unit",
 		"test:replay": "bun test tests/replay",

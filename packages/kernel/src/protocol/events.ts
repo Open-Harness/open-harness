@@ -90,6 +90,26 @@ export type NarrativeEvent = {
 	text: string;
 	importance?: "low" | "normal" | "high";
 };
+
+export type ChannelEvents =
+	| { type: "channel:registered"; name: string }
+	| { type: "channel:started"; name: string }
+	| { type: "channel:stopped"; name: string }
+	| { type: "channel:unregistered"; name: string }
+	| { type: "channel:error"; name: string; error: string };
+
+/** Node-level execution events for visualization (ReactFlow) */
+export type NodeEvents =
+	| { type: "node:start"; nodeId: string; nodeType: string }
+	| {
+			type: "node:complete";
+			nodeId: string;
+			output: unknown;
+			durationMs: number;
+	  }
+	| { type: "node:error"; nodeId: string; error: string; stack?: string }
+	| { type: "node:skipped"; nodeId: string; reason: "when" | "edge" };
+
 export type ExtensionEvent = { type: string; [k: string]: unknown };
 
 export type BaseEvent =
@@ -102,6 +122,8 @@ export type BaseEvent =
 	| SessionStartEvent
 	| SessionEndEvent
 	| NarrativeEvent
+	| ChannelEvents
+	| NodeEvents
 	| ExtensionEvent;
 
 // Enriched envelope
