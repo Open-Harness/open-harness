@@ -119,13 +119,13 @@ Create the new `packages/ai-sdk/` package with basic configuration.
 ```
 
 **Acceptance Criteria**:
-- [ ] Package has correct name: `@open-harness/ai-sdk`
-- [ ] TypeScript strict mode enabled
-- [ ] Peer dependencies: `@open-harness/sdk`, `ai` (v6.0.9+)
-- [ ] Dev dependencies: `@biomejs/biome`, `@types/node`, `@types/bun`
-- [ ] Biome configuration matches monorepo standards
-- [ ] Scripts include: build, lint, typecheck, test
-- [ ] Package builds without errors: `bun run build`
+- [X] Package has correct name: `@open-harness/ai-sdk`
+- [X] TypeScript strict mode enabled
+- [X] Peer dependencies: `@open-harness/sdk`, `ai` (v6.0.9+)
+- [X] Dev dependencies: `@biomejs/biome`, `@types/node`, `@types/bun`
+- [X] Biome configuration matches monorepo standards
+- [X] Scripts include: build, lint, typecheck, test
+- [X] Package builds without errors: `bun run build`
 
 **Dependencies**: None
 
@@ -153,9 +153,9 @@ Set up test directories and configuration.
 - `packages/ai-sdk/package.json` - Add test scripts
 
 **Acceptance Criteria**:
-- [ ] `bun run test` command works (runs bun:test)
-- [ ] Test files are discovered by test runner
-- [ ] Can import from `src/` in test files
+- [X] `bun run test` command works (runs bun:test)
+- [X] Test files are discovered by test runner
+- [X] Can import from `src/` in test files
 
 **Dependencies**: Task 3.1
 
@@ -193,9 +193,9 @@ export function createPartTracker(): PartTracker {
 ```
 
 **Acceptance Criteria**:
-- [ ] `createPartTracker()` returns object with correct shape
-- [ ] Exported from `src/index.ts`
-- [ ] Type-checks without errors
+- [X] `createPartTracker()` returns object with correct shape
+- [X] Exported from `src/index.ts`
+- [X] Type-checks without errors
 
 **Dependencies**: Task 3.1
 
@@ -222,11 +222,11 @@ Transform `agent:text:delta` and `agent:text` events to text chunks.
 - On `agent:text` (complete): emit `[text-end]`
 
 **Acceptance Criteria**:
-- [ ] First delta emits both start and delta chunks
-- [ ] Subsequent deltas emit only delta chunks
-- [ ] Complete event emits end chunk
-- [ ] All chunks include correct message ID
-- [ ] Unit tests pass (see Task 5.1)
+- [X] First delta emits both start and delta chunks
+- [X] Subsequent deltas emit only delta chunks
+- [X] Complete event emits end chunk
+- [X] All chunks include correct message ID
+- [X] Unit tests pass (see Task 5.1)
 
 **Dependencies**: Task 4.1
 
@@ -275,11 +275,11 @@ Transform `agent:thinking:delta` and `agent:thinking` events to reasoning chunks
 - On `agent:thinking` (complete): emit `[reasoning-end]`
 
 **Acceptance Criteria**:
-- [ ] First delta emits both start and delta chunks
-- [ ] Subsequent deltas emit only delta chunks
-- [ ] Complete event emits end chunk
-- [ ] Returns empty array when `sendReasoning: false`
-- [ ] Unit tests pass
+- [X] First delta emits both start and delta chunks
+- [X] Subsequent deltas emit only delta chunks
+- [X] Complete event emits end chunk
+- [X] Returns empty array when `sendReasoning: false`
+- [X] Unit tests pass
 
 **Dependencies**: Task 4.1
 
@@ -302,10 +302,10 @@ Transform `agent:tool` events to tool invocation chunks.
 - If error field present, emit error state instead
 
 **Acceptance Criteria**:
-- [ ] Emits both input-available and output-available chunks
-- [ ] Tool call ID is unique and consistent
-- [ ] Handles tool errors correctly
-- [ ] Unit tests pass
+- [X] Emits both input-available and output-available chunks
+- [X] Tool call ID is unique and consistent
+- [X] Handles tool errors correctly
+- [X] Unit tests pass
 
 **Dependencies**: Task 4.1
 
@@ -352,9 +352,9 @@ Transform `node:start` events to step-start chunks.
 - On `node:start`: emit `[{ type: 'step-start' }]`
 
 **Acceptance Criteria**:
-- [ ] Emits step-start chunk for node:start events
-- [ ] Returns empty array when `sendStepMarkers: false`
-- [ ] Unit tests pass
+- [X] Emits step-start chunk for node:start events
+- [X] Returns empty array when `sendStepMarkers: false`
+- [X] Unit tests pass
 
 **Dependencies**: Task 4.1
 
@@ -375,9 +375,9 @@ Transform error events to error chunks.
 - Emit `[{ type: 'error', errorText: message }]`
 
 **Acceptance Criteria**:
-- [ ] Emits error chunk with user-friendly message
-- [ ] Handles missing error messages gracefully
-- [ ] Unit tests pass
+- [X] Emits error chunk with user-friendly message
+- [X] Handles missing error messages gracefully
+- [X] Unit tests pass
 
 **Dependencies**: Task 4.1
 
@@ -399,10 +399,10 @@ Create the main transform function that routes events to specific transforms.
 - Return empty array for unmapped events
 
 **Acceptance Criteria**:
-- [ ] Routes all event types correctly
-- [ ] Returns empty array for unknown events
-- [ ] Exported from `src/index.ts`
-- [ ] Type-checks without errors
+- [X] Routes all event types correctly
+- [X] Returns empty array for unknown events
+- [X] Exported from `src/index.ts`
+- [X] Type-checks without errors
 
 **Dependencies**: Tasks 4.2, 4.3, 4.4, 4.5, 4.6
 
@@ -591,11 +591,11 @@ export class OpenHarnessChatTransport implements ChatTransport<UIMessage> {
 ```
 
 **Acceptance Criteria**:
-- [ ] Class implements ChatTransport interface
-- [ ] Constructor accepts runtime and options
-- [ ] Options have correct defaults
-- [ ] Exported from `src/index.ts`
-- [ ] Type-checks without errors
+- [X] Class implements ChatTransport interface
+- [X] Constructor accepts runtime and options
+- [X] Options have correct defaults
+- [X] Exported from `src/index.ts`
+- [X] Type-checks without errors
 
 **Dependencies**: Task 3.1
 
@@ -616,10 +616,10 @@ Extract the last user message from messages array.
 - Handle case where no user message exists
 
 **Acceptance Criteria**:
-- [ ] Correctly extracts last user message
-- [ ] Handles empty messages array
-- [ ] Handles messages with no text parts
-- [ ] Returns appropriate error for invalid input
+- [X] Correctly extracts last user message
+- [X] Handles empty messages array
+- [X] Handles messages with no text parts
+- [X] Returns appropriate error for invalid input
 
 **Dependencies**: Task 6.1
 
@@ -690,12 +690,12 @@ async sendMessages(options: { ... }): Promise<ReadableStream<UIMessageChunk>> {
 ```
 
 **Acceptance Criteria**:
-- [ ] Creates ReadableStream correctly
-- [ ] Subscribes to runtime events
-- [ ] Transforms events to chunks
-- [ ] Closes stream on terminal events
-- [ ] Handles abort signal
-- [ ] Unsubscribes on close
+- [X] Creates ReadableStream correctly
+- [X] Subscribes to runtime events
+- [X] Transforms events to chunks
+- [X] Closes stream on terminal events
+- [X] Handles abort signal
+- [X] Unsubscribes on close
 
 **Dependencies**: Tasks 6.2, 4.7
 
@@ -717,10 +717,10 @@ Add robust error handling to transport.
 - Log errors for debugging
 
 **Acceptance Criteria**:
-- [ ] Dispatch errors emit error chunks
-- [ ] Stream closes gracefully on errors
-- [ ] Errors are logged for debugging
-- [ ] No unhandled promise rejections
+- [X] Dispatch errors emit error chunks
+- [X] Stream closes gracefully on errors
+- [X] Errors are logged for debugging
+- [X] No unhandled promise rejections
 
 **Dependencies**: Task 6.3
 

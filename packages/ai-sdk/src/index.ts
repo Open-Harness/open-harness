@@ -1,3 +1,14 @@
-// Public exports for @open-harness/ai-sdk will live here.
-// (Implementation follows specs/001-vercel-ai-adapter/*)
-export {};
+// Transport
+
+// Transforms
+export { createPartTracker, transformEvent } from "./transforms.js";
+export { createOpenHarnessChatTransport, OpenHarnessChatTransport } from "./transport.js";
+// Custom data types
+export type {
+	FlowStatusData,
+	NodeOutputData,
+	OpenHarnessChatTransportOptions,
+	OpenHarnessDataTypes,
+	PartTracker,
+	TransformFunction,
+} from "./types.js";
