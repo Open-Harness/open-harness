@@ -8,7 +8,7 @@ Event-driven workflow orchestration for multi-agent AI systems.
 bun add @open-harness/sdk
 ```
 
-## Quick Start
+## Quick Start (Core Runtime)
 
 Define a flow in YAML:
 
@@ -40,6 +40,34 @@ const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
 const snapshot = await runFlow({ flow, input: { topic: "quantum computing" } });
 
 console.log("Results:", snapshot.outputs);
+```
+
+## Client (Browser / Edge)
+
+Use the HTTP+SSE client to connect to a server-side runtime:
+
+```typescript
+import { RemoteAIKitTransport } from "@open-harness/sdk/client";
+
+const transport = new RemoteAIKitTransport({
+  serverUrl: "https://api.example.com",
+});
+```
+
+## React Hooks
+
+```typescript
+import { useRuntime, useHarness } from "@open-harness/sdk/react";
+```
+
+## Server Routes
+
+```typescript
+import { createAPIRoutes } from "@open-harness/sdk/server";
+import { Hono } from "hono";
+
+const app = new Hono();
+app.route("/", createAPIRoutes({ runtime }));
 ```
 
 ## Features

@@ -13,11 +13,19 @@
     },
     "./server": {
       "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js"
+      "import": "./dist/server/index.js",
+      "browser": false,
+      "edge-runtime": false
     },
     "./client": {
       "types": "./dist/client/index.d.ts",
       "import": "./dist/client/index.js"
+    },
+    "./react": {
+      "types": "./dist/client/react/index.d.ts",
+      "import": "./dist/client/react/index.js",
+      "browser": true,
+      "edge-runtime": true
     },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
@@ -59,12 +67,11 @@
   "scripts": {
     "build": "bun run build:types && bun run build:bundle",
     "build:types": "tsc --project tsconfig.build.json --skipLibCheck",
-    "build:bundle": "bun build src/index.ts --outdir dist --format esm --target=bun --sourcemap=external",
-    "build:server": "bun build src/server/index.ts --outdir dist/server --format esm --target=bun",
+    "build:bundle": "rollup -c rollup.config.mjs",
     "lint": "biome check . --write",
     "lint:fix": "biome check . --write",
     "typecheck": "tsc --noEmit",
-    "test": "bun test tests/unit tests/replay",
+    "test": "bun test tests/unit tests/replay tests/build",
     "test:unit": "bun test tests/unit",
     "test:e2e": "bun test tests/e2e",
     "test:replay": "bun test tests/replay",
@@ -78,6 +85,8 @@
     "@open-harness/persistence-testing": "workspace:*",
     "@types/bun": "latest",
     "@types/node": "^22",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/react-test-renderer": "^19.1.0",
@@ -85,6 +94,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-test-renderer": "^19.2.3",
+    "rollup": "^4.14.0",
     "vitest": "^4.0.16"
   },
   "peerDependencies": {
