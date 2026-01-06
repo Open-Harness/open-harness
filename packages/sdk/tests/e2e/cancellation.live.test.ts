@@ -15,7 +15,7 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../../src/index.js";
-import { createClaudeNode } from "../../src/nodes/claude.agent.js";
+import { createClaudeNode } from "@open-harness/provider-anthropic";
 
 describe("cancellation live e2e", () => {
   test("pause interrupts real claude agent mid-stream", async () => {

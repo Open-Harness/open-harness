@@ -6,9 +6,11 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../src/index.js";
-import { createClaudeNode } from "../src/nodes/claude.agent.js";
+import {
+	createClaudeNode,
+	type FixtureFile,
+} from "@open-harness/provider-anthropic";
 import { constantNode, echoNode } from "../src/nodes/index.js";
-import type { FixtureFile } from "../src/testing/mock-query.js";
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.flow || !args.outDir) {

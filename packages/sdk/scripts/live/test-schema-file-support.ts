@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { CancelContext } from "../../src/core/cancel.js";
 import type { RuntimeCommand } from "../../src/core/events.js";
-import { createClaudeNode } from "../../src/nodes/claude.agent.js";
+import { createClaudeNode } from "@open-harness/provider-anthropic";
 
 const SCHEMA_DIR = resolve(import.meta.dir, "../../tests/fixtures/schemas");
 

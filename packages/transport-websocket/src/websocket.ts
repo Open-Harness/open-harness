@@ -1,5 +1,10 @@
+import type {
+	Runtime,
+	RuntimeCommand,
+	RuntimeEvent,
+	Transport,
+} from "@open-harness/sdk";
 import type { ServerWebSocket } from "bun";
-import type { RuntimeCommand, RuntimeEvent, Runtime, Transport } from "@open-harness/sdk";
 
 /**
  * WebSocket transport options.

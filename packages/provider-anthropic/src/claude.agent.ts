@@ -1,19 +1,21 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type {
-  ModelUsage,
-  NonNullableUsage,
-  Options,
-  SDKMessage,
-  SDKPermissionDenial,
-  SDKResultMessage,
-  SDKUserMessage,
+	ModelUsage,
+	NonNullableUsage,
+	Options,
+	SDKMessage,
+	SDKPermissionDenial,
+	SDKResultMessage,
+	SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import type {
+	CancelContextInternal,
+	NodeTypeDefinition,
+	RuntimeCommand,
+} from "@open-harness/sdk";
 import { z } from "zod";
-import type { CancelContextInternal } from "../core/cancel.js";
-import type { RuntimeCommand } from "../core/events.js";
-import type { NodeTypeDefinition } from "../registry/registry.js";
 
 /**
  * Extended options that support file-based schema references.

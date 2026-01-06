@@ -20,7 +20,7 @@ export * from "./runtime/scheduler.js";
 export * from "./runtime/snapshot.js";
 export * from "./runtime/when.js";
 
-export * from "./testing/mock-query.js";
+// mock-query moved to @open-harness/provider-anthropic
 
 export * from "./transport/websocket.js";
 // WebSocketTransport moved to @open-harness/transport-websocket

@@ -1,4 +1,4 @@
-import type { ClaudeMessageInput } from "../nodes/claude.agent.js";
+import type { ClaudeMessageInput } from "@open-harness/provider-anthropic";
 import type { StatePatch } from "./state.js";
 
 /** Runtime lifecycle status for a flow execution. */

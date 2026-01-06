@@ -1,16 +1,15 @@
-import { randomUUID } from "node:crypto";
 import type {
-  ModelUsage,
-  NonNullableUsage,
-  Options,
-  Query,
-  SDKMessage,
-  SDKPermissionDenial,
-  SDKResultMessage,
-  SDKUserMessage,
+	ModelUsage,
+	NonNullableUsage,
+	Options,
+	Query,
+	SDKMessage,
+	SDKPermissionDenial,
+	SDKResultMessage,
+	SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import type { ClaudeAgentInput } from "../nodes/claude.agent.js";
+import type { ClaudeAgentInput } from "../claude.agent.js";
 
 type FixtureOutput = {
   text: string;
@@ -175,7 +174,7 @@ function buildResultMessage(output: FixtureOutput): SDKResultMessage {
     permission_denials: (output.permissionDenials ??
       []) as SDKPermissionDenial[],
     structured_output: output.structuredOutput,
-    uuid: randomUUID(),
+    uuid: globalThis.crypto.randomUUID(),
     session_id: output.sessionId ?? "fixture-session",
   };
 }

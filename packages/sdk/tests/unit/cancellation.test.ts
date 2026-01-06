@@ -10,7 +10,7 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../../src/index.js";
-import { createClaudeNode } from "../../src/nodes/claude.agent.js";
+import { createClaudeNode } from "@open-harness/provider-anthropic";
 import type { NodeTypeDefinition } from "../../src/registry/registry.js";
 
 type QueryFactory = (params: {

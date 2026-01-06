@@ -5,8 +5,8 @@
  * WebSocketTransport has been moved to @open-harness/transport-websocket package.
  */
 export interface Transport {
-	/** Start the transport. */
-	start(): Promise<void>;
-	/** Stop the transport. */
-	stop(): Promise<void>;
+  /** Start the transport. */
+  start(): Promise<void>;
+  /** Stop the transport. */
+  stop(): Promise<void>;
 }

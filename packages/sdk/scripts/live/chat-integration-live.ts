@@ -16,7 +16,7 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../../src/index.js";
-import { createClaudeNode } from "../../src/nodes/claude.agent.js";
+import { createClaudeNode } from "@open-harness/provider-anthropic";
 
 async function runIntegrationTest() {
   console.log(

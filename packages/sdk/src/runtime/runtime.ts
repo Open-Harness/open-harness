@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+// Using globalThis.crypto for web compatibility
 import type { Query } from "@anthropic-ai/claude-agent-sdk";
 import type { CancelContextInternal, CancelReason } from "../core/cancel.js";
 import type {
@@ -287,7 +287,7 @@ class InMemoryRuntime implements Runtime {
         options.flow.state?.initial ?? {},
       );
       this.snapshot = createInitialSnapshot(options.flow);
-      this.snapshot.runId = randomUUID();
+      this.snapshot.runId = globalThis.crypto.randomUUID();
     }
   }
 
@@ -378,7 +378,7 @@ class InMemoryRuntime implements Runtime {
 
       this.snapshot.nodeStatus[nodeId] = "running";
       const isResuming = this.resumingNodes.has(nodeId);
-      let runId: string = randomUUID();
+      let runId: string = globalThis.crypto.randomUUID();
       if (isResuming && this.resumeRunId) {
         runId = this.resumeRunId;
         this.resumeRunId = undefined;
@@ -640,7 +640,7 @@ class InMemoryRuntime implements Runtime {
         continue;
       }
 
-      const runId: string = randomUUID();
+      const runId: string = globalThis.crypto.randomUUID();
       const cancelContext = this.createCancelContext(runId);
       const runContext: NodeRunContext = {
         nodeId: node.id,
