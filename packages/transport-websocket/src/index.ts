@@ -1,2 +1,8 @@
-// Placeholder - will be populated in Phase 3
-export {};
+/**
+ * WebSocket transport implementation for Open Harness.
+ */
+
+export {
+	WebSocketTransport,
+	type WebSocketTransportOptions,
+} from "./websocket.js";

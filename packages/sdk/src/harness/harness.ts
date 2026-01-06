@@ -8,7 +8,7 @@ import type { Runtime } from "../runtime/runtime.js";
 import { createRuntime } from "../runtime/runtime.js";
 import type { RunSnapshot } from "../runtime/snapshot.js";
 import type { Transport } from "../transport/websocket.js";
-import { WebSocketTransport } from "../transport/websocket.js";
+import { WebSocketTransport } from "@open-harness/transport-websocket";
 
 /**
  * Options for creating a harness.

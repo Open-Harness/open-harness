@@ -5,17 +5,18 @@ Transports translate runtime events into outbound messages and feed inbound
 commands back into the runtime.
 
 ## What's here
-- Transport: start/stop lifecycle interface.
-- WebSocketTransport: runtime <-> WebSocket adapter.
+- Transport: start/stop lifecycle interface (shared contract).
 
 ## Structure
-- websocket.ts: Transport interface + WebSocketTransport declaration.
+- websocket.ts: Transport interface declaration.
+
+Note: WebSocketTransport has been moved to `@open-harness/transport-websocket` package.
 
 ## Usage
 Create a transport with a runtime instance and start it.
 
 ```ts
-import { WebSocketTransport } from "../transport/websocket.js";
+import { WebSocketTransport } from "@open-harness/transport-websocket";
 
 const transport = new WebSocketTransport(runtime, { port: 42069, path: "/ws" });
 await transport.start();

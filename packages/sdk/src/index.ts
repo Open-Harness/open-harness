@@ -23,3 +23,4 @@ export * from "./runtime/when.js";
 export * from "./testing/mock-query.js";
 
 export * from "./transport/websocket.js";
+// WebSocketTransport moved to @open-harness/transport-websocket

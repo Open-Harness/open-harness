@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { RuntimeEvent, RunSnapshot, RunStore } from "@open-harness/sdk";
+import type { RunSnapshot, RunStore, RuntimeEvent } from "@open-harness/sdk";
 
 /**
  * Options for SQLite-backed run store.
