@@ -1,5 +1,5 @@
-import type { Runtime, RuntimeCommand, RuntimeEvent } from "../../index.js";
 import type { ServerWebSocket } from "bun";
+import type { Runtime, RuntimeCommand, RuntimeEvent } from "../../index.js";
 
 /**
  * Transport interface for adapting runtime events/commands.

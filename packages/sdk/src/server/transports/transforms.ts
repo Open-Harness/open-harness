@@ -1,12 +1,12 @@
+import type { UIMessageChunk } from "ai";
 import type {
   AgentTextDeltaEventPayload,
   AgentTextEventPayload,
   AgentThinkingDeltaEventPayload,
   AgentThinkingEventPayload,
   AgentToolEventPayload,
+  RuntimeEvent,
 } from "../../core/events.js";
-import type { RuntimeEvent } from "../../core/events.js";
-import type { UIMessageChunk } from "ai";
 import type { PartTracker } from "./types.js";
 
 /**

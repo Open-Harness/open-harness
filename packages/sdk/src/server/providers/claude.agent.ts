@@ -10,12 +10,12 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
 import type {
   CancelContextInternal,
   NodeTypeDefinition,
   RuntimeCommand,
 } from "../../index.js";
-import { z } from "zod";
 
 /**
  * Extended options that support file-based schema references.

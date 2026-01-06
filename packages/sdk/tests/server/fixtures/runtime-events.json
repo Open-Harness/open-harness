@@ -1,383 +1,383 @@
 [
-	{
-		"type": "flow:start",
-		"flowName": "capture-events",
-		"timestamp": 1767687452019
-	},
-	{
-		"type": "node:start",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"timestamp": 1767687452021
-	},
-	{
-		"type": "agent:start",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"sessionId": "a467c7f9-08d9-4a53-a0c8-0da40a753aec",
-		"prompt": "ultrathink\n\nFirst, use the Read tool to read ./package.json (just show me the name field).\nThen tell me what 15 * 17 equals.\n",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "The user wants",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " me to:\n1. Read the",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " ./",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "package.json file an",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "d show them",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " the name field\n2. Calculate ",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "15 * 17\n\nLet",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " me start",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " by reading the package.json file.",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "The user wants me to:\n1. Read the ./package.json file and show them the name field\n2. Calculate 15 * 17\n\nLet me start by reading the package.json file.",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "I",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "'ll rea",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "d the package.json file and then calculate",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " that",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " for you.",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "I'll read the package.json file and then calculate that for you.",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:tool",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"toolName": "unknown",
-		"toolOutput": {
-			"type": "text",
-			"file": {
-				"filePath": "./package.json",
-				"content": "{\n\t\"name\": \"@open-harness/kernel-v3\",\n\t\"module\": \"src/index.ts\",\n\t\"type\": \"module\",\n\t\"private\": true,\n\t\"scripts\": {\n\t\t\"lint\": \"biome check .\",\n\t\t\"lint:fix\": \"biome check . --write\",\n\t\t\"check\": \"biome check .\",\n\t\t\"check:fix\": \"biome check . --write\",\n\t\t\"typecheck\": \"tsc --noEmit\",\n\t\t\"test\": \"bun test tests/unit tests/replay\",\n\t\t\"test:unit\": \"bun test tests/unit\",\n\t\t\"test:e2e\": \"bun test tests/e2e\",\n\t\t\"test:replay\": \"bun test tests/replay\",\n\t\t\"test:live\": \"bun scripts/live/*.ts\",\n\t\t\"record:fixtures\": \"bun scripts/record-fixtures.ts\",\n\t\t\"test:watch\": \"bun test --watch\"\n\t},\n\t\"devDependencies\": {\n\t\t\"@biomejs/biome\": \"2.3.10\",\n\t\t\"@types/bun\": \"latest\",\n\t\t\"@types/node\": \"^22\",\n\t\t\"vitest\": \"^4.0.16\"\n\t},\n\t\"peerDependencies\": {\n\t\t\"typescript\": \"^5\"\n\t},\n\t\"dependencies\": {\n\t\t\"@anthropic-ai/claude-agent-sdk\": \"^0.1.76\",\n\t\t\"yaml\": \"^2.8.2\",\n\t\t\"zod\": \"^4.3.4\"\n\t}\n}\n",
-				"numLines": 35,
-				"startLine": 1,
-				"totalLines": 35
-			}
-		},
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "Goo",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "d, I",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "'ve",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " read the package.json file. The",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " name field is \"@open-harness",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "/kernel-v3\".",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "\n\nNow I need to calculate 15",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " * 17:",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "\n15 * 17 =",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " 255",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:thinking",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "Good, I've read the package.json file. The name field is \"@open-harness/kernel-v3\".\n\nNow I need to calculate 15 * 17:\n15 * 17 = 255",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "The",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " name",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " field in",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " package.json is:",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " **",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "`",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "@open-harness/kernel-",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "v3`**\n\nAn",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "d 15 ×",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": " 17 = **",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text:delta",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "255**",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:text",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"content": "The name field in package.json is: **`@open-harness/kernel-v3`**\n\nAnd 15 × 17 = **255**",
-		"timestamp": 1767687452023
-	},
-	{
-		"type": "agent:complete",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"result": "The name field in package.json is: **`@open-harness/kernel-v3`**\n\nAnd 15 × 17 = **255**",
-		"usage": {
-			"inputTokens": 23,
-			"outputTokens": 220,
-			"cacheCreationInputTokens": 3394,
-			"cacheReadInputTokens": 28032
-		},
-		"modelUsage": {
-			"claude-haiku-4-5-20251001": {
-				"inputTokens": 948,
-				"outputTokens": 157
-			},
-			"claude-sonnet-4-5-20250929": {
-				"inputTokens": 26,
-				"outputTokens": 466
-			}
-		},
-		"totalCostUsd": 0.033969349999999995,
-		"durationMs": 8772,
-		"numTurns": 2,
-		"timestamp": 1767687452024
-	},
-	{
-		"type": "node:complete",
-		"nodeId": "agent",
-		"runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
-		"output": {
-			"text": "The name field in package.json is: **`@open-harness/kernel-v3`**\n\nAnd 15 × 17 = **255**",
-			"usage": {
-				"input_tokens": 23,
-				"output_tokens": 220,
-				"cache_creation_input_tokens": 3394,
-				"cache_read_input_tokens": 28032
-			},
-			"modelUsage": {
-				"claude-haiku-4-5-20251001": {
-					"inputTokens": 948,
-					"outputTokens": 157,
-					"cacheReadInputTokens": 0,
-					"cacheCreationInputTokens": 0,
-					"webSearchRequests": 0,
-					"costUSD": 0.001733,
-					"contextWindow": 200000
-				},
-				"claude-sonnet-4-5-20250929": {
-					"inputTokens": 26,
-					"outputTokens": 466,
-					"cacheReadInputTokens": 28032,
-					"cacheCreationInputTokens": 4469,
-					"webSearchRequests": 0,
-					"costUSD": 0.03223635,
-					"contextWindow": 200000
-				}
-			},
-			"totalCostUsd": 0.033969349999999995,
-			"durationMs": 8772,
-			"sessionId": "a467c7f9-08d9-4a53-a0c8-0da40a753aec",
-			"numTurns": 2,
-			"permissionDenials": []
-		},
-		"timestamp": 1767687452024
-	},
-	{
-		"type": "flow:complete",
-		"flowName": "capture-events",
-		"status": "complete",
-		"timestamp": 1767687452024
-	}
+  {
+    "type": "flow:start",
+    "flowName": "capture-events",
+    "timestamp": 1767687452019
+  },
+  {
+    "type": "node:start",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "timestamp": 1767687452021
+  },
+  {
+    "type": "agent:start",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "sessionId": "a467c7f9-08d9-4a53-a0c8-0da40a753aec",
+    "prompt": "ultrathink\n\nFirst, use the Read tool to read ./package.json (just show me the name field).\nThen tell me what 15 * 17 equals.\n",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "The user wants",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " me to:\n1. Read the",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " ./",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "package.json file an",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "d show them",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " the name field\n2. Calculate ",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "15 * 17\n\nLet",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " me start",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " by reading the package.json file.",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "The user wants me to:\n1. Read the ./package.json file and show them the name field\n2. Calculate 15 * 17\n\nLet me start by reading the package.json file.",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "I",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "'ll rea",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "d the package.json file and then calculate",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " that",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " for you.",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "I'll read the package.json file and then calculate that for you.",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:tool",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "toolName": "unknown",
+    "toolOutput": {
+      "type": "text",
+      "file": {
+        "filePath": "./package.json",
+        "content": "{\n\t\"name\": \"@open-harness/kernel-v3\",\n\t\"module\": \"src/index.ts\",\n\t\"type\": \"module\",\n\t\"private\": true,\n\t\"scripts\": {\n\t\t\"lint\": \"biome check .\",\n\t\t\"lint:fix\": \"biome check . --write\",\n\t\t\"check\": \"biome check .\",\n\t\t\"check:fix\": \"biome check . --write\",\n\t\t\"typecheck\": \"tsc --noEmit\",\n\t\t\"test\": \"bun test tests/unit tests/replay\",\n\t\t\"test:unit\": \"bun test tests/unit\",\n\t\t\"test:e2e\": \"bun test tests/e2e\",\n\t\t\"test:replay\": \"bun test tests/replay\",\n\t\t\"test:live\": \"bun scripts/live/*.ts\",\n\t\t\"record:fixtures\": \"bun scripts/record-fixtures.ts\",\n\t\t\"test:watch\": \"bun test --watch\"\n\t},\n\t\"devDependencies\": {\n\t\t\"@biomejs/biome\": \"2.3.10\",\n\t\t\"@types/bun\": \"latest\",\n\t\t\"@types/node\": \"^22\",\n\t\t\"vitest\": \"^4.0.16\"\n\t},\n\t\"peerDependencies\": {\n\t\t\"typescript\": \"^5\"\n\t},\n\t\"dependencies\": {\n\t\t\"@anthropic-ai/claude-agent-sdk\": \"^0.1.76\",\n\t\t\"yaml\": \"^2.8.2\",\n\t\t\"zod\": \"^4.3.4\"\n\t}\n}\n",
+        "numLines": 35,
+        "startLine": 1,
+        "totalLines": 35
+      }
+    },
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "Goo",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "d, I",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "'ve",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " read the package.json file. The",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " name field is \"@open-harness",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "/kernel-v3\".",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "\n\nNow I need to calculate 15",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " * 17:",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "\n15 * 17 =",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " 255",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:thinking",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "Good, I've read the package.json file. The name field is \"@open-harness/kernel-v3\".\n\nNow I need to calculate 15 * 17:\n15 * 17 = 255",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "The",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " name",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " field in",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " package.json is:",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " **",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "`",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "@open-harness/kernel-",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "v3`**\n\nAn",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "d 15 ×",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": " 17 = **",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text:delta",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "255**",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:text",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "content": "The name field in package.json is: **`@open-harness/kernel-v3`**\n\nAnd 15 × 17 = **255**",
+    "timestamp": 1767687452023
+  },
+  {
+    "type": "agent:complete",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "result": "The name field in package.json is: **`@open-harness/kernel-v3`**\n\nAnd 15 × 17 = **255**",
+    "usage": {
+      "inputTokens": 23,
+      "outputTokens": 220,
+      "cacheCreationInputTokens": 3394,
+      "cacheReadInputTokens": 28032
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 948,
+        "outputTokens": 157
+      },
+      "claude-sonnet-4-5-20250929": {
+        "inputTokens": 26,
+        "outputTokens": 466
+      }
+    },
+    "totalCostUsd": 0.033969349999999995,
+    "durationMs": 8772,
+    "numTurns": 2,
+    "timestamp": 1767687452024
+  },
+  {
+    "type": "node:complete",
+    "nodeId": "agent",
+    "runId": "7f79e8c6-6145-4eaa-aa43-23fbfab7d0f1",
+    "output": {
+      "text": "The name field in package.json is: **`@open-harness/kernel-v3`**\n\nAnd 15 × 17 = **255**",
+      "usage": {
+        "input_tokens": 23,
+        "output_tokens": 220,
+        "cache_creation_input_tokens": 3394,
+        "cache_read_input_tokens": 28032
+      },
+      "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 948,
+          "outputTokens": 157,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.001733,
+          "contextWindow": 200000
+        },
+        "claude-sonnet-4-5-20250929": {
+          "inputTokens": 26,
+          "outputTokens": 466,
+          "cacheReadInputTokens": 28032,
+          "cacheCreationInputTokens": 4469,
+          "webSearchRequests": 0,
+          "costUSD": 0.03223635,
+          "contextWindow": 200000
+        }
+      },
+      "totalCostUsd": 0.033969349999999995,
+      "durationMs": 8772,
+      "sessionId": "a467c7f9-08d9-4a53-a0c8-0da40a753aec",
+      "numTurns": 2,
+      "permissionDenials": []
+    },
+    "timestamp": 1767687452024
+  },
+  {
+    "type": "flow:complete",
+    "flowName": "capture-events",
+    "status": "complete",
+    "timestamp": 1767687452024
+  }
 ]

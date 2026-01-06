@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
-import type { RunSnapshot, RunStore } from "../../index.js";
 import type { RuntimeEvent } from "../../core/events.js";
+import type { RunSnapshot, RunStore } from "../../index.js";
 
 /**
  * Options for SQLite-backed run store.

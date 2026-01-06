@@ -1,5 +1,5 @@
-import type { RuntimeEvent } from "../../core/events.js";
 import type { UIMessageChunk } from "ai";
+import type { RuntimeEvent } from "../../core/events.js";
 
 /**
  * Configuration options for OpenHarnessChatTransport.

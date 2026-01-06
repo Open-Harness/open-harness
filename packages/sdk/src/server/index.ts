@@ -2,11 +2,29 @@
  * Open Harness SDK - Server Components
  */
 
-// Transports
+export type { SqliteRunStoreOptions } from "./persistence/sqlite-run-store.js";
+// Persistence
+export { SqliteRunStore } from "./persistence/sqlite-run-store.js";
+export type {
+  ClaudeAgentExtendedOptions,
+  ClaudeAgentInput,
+  ClaudeAgentOutput,
+  ClaudeMessageInput,
+  ClaudeNodeOptions,
+} from "./providers/claude.agent.js";
+// Providers
 export {
-  WebSocketTransport,
-  type WebSocketTransportOptions,
-} from "./transports/websocket.js";
+  claudeNode,
+  createClaudeNode,
+  resolveOutputSchema,
+} from "./providers/claude.agent.js";
+// Testing utilities
+export {
+  createMockQuery,
+  type FixtureCall,
+  type FixtureFile,
+  type FixtureSet,
+} from "./providers/testing/mock-query.js";
 export {
   createLocalAIKitTransport,
   LocalAIKitTransport,
@@ -20,29 +38,8 @@ export type {
   PartTracker,
   TransformFunction,
 } from "./transports/types.js";
-
-// Providers
+// Transports
 export {
-  claudeNode,
-  createClaudeNode,
-  resolveOutputSchema,
-} from "./providers/claude.agent.js";
-export type {
-  ClaudeAgentExtendedOptions,
-  ClaudeAgentInput,
-  ClaudeAgentOutput,
-  ClaudeMessageInput,
-  ClaudeNodeOptions,
-} from "./providers/claude.agent.js";
-
-// Testing utilities
-export {
-  createMockQuery,
-  type FixtureCall,
-  type FixtureFile,
-  type FixtureSet,
-} from "./providers/testing/mock-query.js";
-
-// Persistence
-export { SqliteRunStore } from "./persistence/sqlite-run-store.js";
-export type { SqliteRunStoreOptions } from "./persistence/sqlite-run-store.js";
+  WebSocketTransport,
+  type WebSocketTransportOptions,
+} from "./transports/websocket.js";

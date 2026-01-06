@@ -3,14 +3,14 @@
  */
 
 export {
-	claudeNode,
-	createClaudeNode,
-	resolveOutputSchema,
 	type ClaudeAgentExtendedOptions,
 	type ClaudeAgentInput,
 	type ClaudeAgentOutput,
 	type ClaudeMessageInput,
 	type ClaudeNodeOptions,
+	claudeNode,
+	createClaudeNode,
+	resolveOutputSchema,
 } from "./claude.agent.js";
 
 // Export testing utilities

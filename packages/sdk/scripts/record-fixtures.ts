@@ -6,12 +6,12 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
 } from "../src/index.js";
+import { constantNode, echoNode } from "../src/nodes/index.js";
 import {
   createClaudeNode,
-  type FixtureFile,
   createMockQuery,
+  type FixtureFile,
 } from "../src/server/providers/index.js";
-import { constantNode, echoNode } from "../src/nodes/index.js";
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.flow || !args.outDir) {
