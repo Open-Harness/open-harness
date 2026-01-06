@@ -2,6 +2,8 @@
  * Built-in node definitions.
  */
 
+// Re-export basic nodes from @open-harness/nodes-basic
+export { constantNode, echoNode } from "@open-harness/nodes-basic";
 export {
   type ClaudeAgentExtendedOptions,
   type ClaudeAgentInput,
@@ -12,5 +14,3 @@ export {
   createClaudeNode,
   resolveOutputSchema,
 } from "./claude.agent.js";
-export { constantNode } from "./constant.js";
-export { echoNode } from "./echo.js";
