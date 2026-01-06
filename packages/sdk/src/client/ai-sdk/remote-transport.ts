@@ -48,9 +48,21 @@ export class RemoteAIKitTransport implements ChatTransport<UIMessage> {
 
     return new ReadableStream<UIMessageChunk>({
       start: (controller) => {
+        type EventSourceMessageEvent = { data: string };
+
+        interface EventSourceLike {
+          onmessage: ((event: EventSourceMessageEvent) => void) | null;
+          onerror: ((event: unknown) => void) | null;
+          close(): void;
+        }
+
+        type EventSourceConstructor = new (url: string) => EventSourceLike;
+
         // Note: this package does not include DOM libs in tsconfig.
         // Treat EventSource as an optional runtime-global.
-        const ES = (globalThis as any).EventSource as any;
+        const ES = (
+          globalThis as unknown as { EventSource?: EventSourceConstructor }
+        ).EventSource;
         if (!ES) {
           controller.error(
             new Error(
@@ -62,7 +74,7 @@ export class RemoteAIKitTransport implements ChatTransport<UIMessage> {
 
         let isClosed = false;
         let timeout: ReturnType<typeof setTimeout> | undefined;
-        let es: any;
+        let es: EventSourceLike | undefined;
 
         const cleanup = (mode: "close" | "error", error?: Error) => {
           if (isClosed) return;
@@ -102,7 +114,7 @@ export class RemoteAIKitTransport implements ChatTransport<UIMessage> {
 
         // Connect SSE
         es = new ES(`${this.serverUrl}/api/events/${runId}`);
-        es.onmessage = (event: { data: string }) => {
+        es.onmessage = (event) => {
           if (isClosed) return;
 
           let chunk: UIMessageChunk;

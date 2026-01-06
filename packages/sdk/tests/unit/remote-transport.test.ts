@@ -61,7 +61,10 @@ describe("RemoteAIKitTransport", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(FakeEventSource.instances.length).toBe(1);
-    const es = FakeEventSource.instances[0]!;
+    const es = FakeEventSource.instances[0];
+    if (!es) {
+      throw new Error("Expected EventSource instance");
+    }
     expect(es.url).toBe("https://example.com/api/events/run-123");
 
     const reader = stream.getReader();
@@ -119,7 +122,10 @@ describe("RemoteAIKitTransport", () => {
     });
 
     await new Promise((r) => setTimeout(r, 0));
-    const es = FakeEventSource.instances[0]!;
+    const es = FakeEventSource.instances[0];
+    if (!es) {
+      throw new Error("Expected EventSource instance");
+    }
 
     const reader = stream.getReader();
     ac.abort();
