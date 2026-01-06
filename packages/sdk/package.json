@@ -78,7 +78,6 @@
     "@open-harness/persistence-testing": "workspace:*",
     "@types/bun": "latest",
     "@types/node": "^22",
-    "@types/uuid": "^11.0.0",
     "ai": "^6.0.9",
     "vitest": "^4.0.16"
   },
