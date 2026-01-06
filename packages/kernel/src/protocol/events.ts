@@ -98,6 +98,18 @@ export type ChannelEvents =
 	| { type: "channel:unregistered"; name: string }
 	| { type: "channel:error"; name: string; error: string };
 
+/** Node-level execution events for visualization (ReactFlow) */
+export type NodeEvents =
+	| { type: "node:start"; nodeId: string; nodeType: string }
+	| {
+			type: "node:complete";
+			nodeId: string;
+			output: unknown;
+			durationMs: number;
+	  }
+	| { type: "node:error"; nodeId: string; error: string; stack?: string }
+	| { type: "node:skipped"; nodeId: string; reason: "when" | "edge" };
+
 export type ExtensionEvent = { type: string; [k: string]: unknown };
 
 export type BaseEvent =
@@ -111,6 +123,7 @@ export type BaseEvent =
 	| SessionEndEvent
 	| NarrativeEvent
 	| ChannelEvents
+	| NodeEvents
 	| ExtensionEvent;
 
 // Enriched envelope
