@@ -87,7 +87,7 @@ edges: []
   const startTime = Date.now();
 
   try {
-    const snapshot = await runtime.run();
+    const _snapshot = await runtime.run();
     const duration = Date.now() - startTime;
 
     console.log(`\nFlow completed in ${duration}ms\n`);

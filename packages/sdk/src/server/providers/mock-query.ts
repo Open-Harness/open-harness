@@ -9,7 +9,7 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import type { ClaudeAgentInput } from "../claude.agent.js";
+import type { ClaudeAgentInput } from "./claude.agent.js";
 
 type FixtureOutput = {
   text: string;

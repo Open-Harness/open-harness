@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { RuntimeEvent } from "../../../core/events";
+import type { RuntimeEvent } from "../../../src/core/events.js";
 import {
   createPartTracker,
   transformErrorEvent,

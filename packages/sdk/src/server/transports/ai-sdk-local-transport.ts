@@ -43,9 +43,9 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
     }
 
     // Extract text from message parts
-    const textPart = lastUserMessage.parts.find((p) => p.type === "text") as
-      | { type: "text"; text: string }
-      | undefined;
+    const textPart = lastUserMessage.parts.find(
+      (p: { type: string }) => p.type === "text",
+    ) as { type: "text"; text: string } | undefined;
     if (!textPart) {
       throw new Error("User message has no text content");
     }
