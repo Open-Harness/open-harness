@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { join } from "path";
 import { createMockQuery, createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../../src/index.js";
-import { createClaudeNode } from "../../src/nodes/claude.agent.js";
+import { createClaudeNode, resolveOutputSchema } from "../../src/nodes/claude.agent.js";
 import type { FixtureFile } from "../../src/testing/mock-query.js";
 import { FixtureSchema } from "../../src/testing/mock-query.js";
 
@@ -163,6 +164,101 @@ describe("claude node event emission", () => {
 			expect(start?.sessionId).toBe("sess-fixture-1");
 			expect(start?.prompt).toBe("fixture:agent");
 			expect(typeof start?.timestamp).toBe("number");
+		});
+	});
+});
+
+describe("resolveOutputSchema", () => {
+	// Get the test fixtures directory path relative to cwd
+	const fixturesDir = join(import.meta.dir, "../fixtures/schemas");
+
+	describe("no options", () => {
+		test("returns undefined when options is undefined", () => {
+			expect(resolveOutputSchema(undefined)).toBeUndefined();
+		});
+
+		test("returns options as-is when no schema specified", () => {
+			const result = resolveOutputSchema({ model: "claude-sonnet-4-20250514" });
+			expect(result).toEqual({ model: "claude-sonnet-4-20250514" });
+		});
+	});
+
+	describe("inline outputFormat", () => {
+		test("passes through inline outputFormat directly", () => {
+			const schema = { type: "object", properties: { test: { type: "string" } } };
+			const result = resolveOutputSchema({
+				outputFormat: { type: "json_schema", schema },
+			});
+
+			expect(result).toEqual({
+				outputFormat: { type: "json_schema", schema },
+			});
+		});
+
+		test("inline outputFormat takes precedence over outputSchemaFile", () => {
+			const schema = { type: "object", properties: { inline: { type: "boolean" } } };
+			const result = resolveOutputSchema({
+				outputFormat: { type: "json_schema", schema },
+				outputSchemaFile: join(fixturesDir, "greeting-schema.json"),
+			});
+
+			// inline format should win
+			expect(result).toEqual({
+				outputFormat: { type: "json_schema", schema },
+			});
+		});
+	});
+
+	describe("file-based outputSchemaFile", () => {
+		test("loads schema from file and converts to outputFormat", () => {
+			const result = resolveOutputSchema({
+				outputSchemaFile: join(fixturesDir, "greeting-schema.json"),
+			});
+
+			expect(result).toEqual({
+				outputFormat: {
+					type: "json_schema",
+					schema: {
+						type: "object",
+						properties: { greeting: { type: "string" } },
+						required: ["greeting"],
+					},
+				},
+			});
+		});
+
+		test("throws for missing file", () => {
+			expect(() =>
+				resolveOutputSchema({
+					outputSchemaFile: "./nonexistent-schema.json",
+				}),
+			).toThrow("outputSchemaFile not found");
+		});
+
+		test("throws for invalid JSON", () => {
+			// Create a path that exists but isn't valid JSON (use the test file itself)
+			expect(() =>
+				resolveOutputSchema({
+					outputSchemaFile: join(fixturesDir, "../../../src/index.ts"),
+				}),
+			).toThrow("Failed to load outputSchemaFile");
+		});
+
+		test("preserves other SDK options when loading from file", () => {
+			const result = resolveOutputSchema({
+				outputSchemaFile: join(fixturesDir, "greeting-schema.json"),
+				model: "claude-sonnet-4-20250514",
+				maxTurns: 5,
+			});
+
+			expect(result).toMatchObject({
+				model: "claude-sonnet-4-20250514",
+				maxTurns: 5,
+				outputFormat: {
+					type: "json_schema",
+					schema: expect.any(Object),
+				},
+			});
 		});
 	});
 });
