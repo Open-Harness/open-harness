@@ -6,13 +6,13 @@ import { err, ok } from "neverthrow";
  * @internal
  */
 export type CompilationErrorCode =
-  | "INVALID_FLOW_DEFINITION"
-  | "INVALID_NODE_DEFINITION"
-  | "INVALID_EDGE_DEFINITION"
-  | "CYCLE_DETECTED"
-  | "SCHEDULING_ERROR"
-  | "SCHEMA_VALIDATION_ERROR"
-  | "MISSING_REQUIRED_FIELD";
+	| "INVALID_FLOW_DEFINITION"
+	| "INVALID_NODE_DEFINITION"
+	| "INVALID_EDGE_DEFINITION"
+	| "CYCLE_DETECTED"
+	| "SCHEDULING_ERROR"
+	| "SCHEMA_VALIDATION_ERROR"
+	| "MISSING_REQUIRED_FIELD";
 
 /**
  * Compilation error with structured error codes.
@@ -29,21 +29,21 @@ export type CompilationErrorCode =
  * ```
  */
 export class CompilationError extends Error {
-  /**
-   * @param code - Error category (INVALID_FLOW_DEFINITION, CYCLE_DETECTED, etc.)
-   * @param message - Human-readable error message
-   * @param originalError - The underlying error that caused this failure
-   * @param details - Optional additional context (node ID, edge info, etc.)
-   */
-  constructor(
-    public readonly code: CompilationErrorCode,
-    message: string,
-    public readonly originalError?: unknown,
-    public readonly details?: Record<string, unknown>,
-  ) {
-    super(message);
-    this.name = "CompilationError";
-  }
+	/**
+	 * @param code - Error category (INVALID_FLOW_DEFINITION, CYCLE_DETECTED, etc.)
+	 * @param message - Human-readable error message
+	 * @param originalError - The underlying error that caused this failure
+	 * @param details - Optional additional context (node ID, edge info, etc.)
+	 */
+	constructor(
+		public readonly code: CompilationErrorCode,
+		message: string,
+		public readonly originalError?: unknown,
+		public readonly details?: Record<string, unknown>,
+	) {
+		super(message);
+		this.name = "CompilationError";
+	}
 }
 
 /**
@@ -77,22 +77,15 @@ export type CompilationResult<T> = Result<T, CompilationError>;
  * @internal
  */
 export function wrapCompilationThrow<T>(
-  code: CompilationErrorCode,
-  fn: () => T,
-  details?: Record<string, unknown>,
+	code: CompilationErrorCode,
+	fn: () => T,
+	details?: Record<string, unknown>,
 ): CompilationResult<T> {
-  try {
-    return ok(fn());
-  } catch (error) {
-    return err(
-      new CompilationError(
-        code,
-        error instanceof Error ? error.message : String(error),
-        error,
-        details,
-      ),
-    );
-  }
+	try {
+		return ok(fn());
+	} catch (error) {
+		return err(new CompilationError(code, error instanceof Error ? error.message : String(error), error, details));
+	}
 }
 
 /**
@@ -112,21 +105,14 @@ export function wrapCompilationThrow<T>(
  * @internal
  */
 export async function wrapCompilationThrowAsync<T>(
-  code: CompilationErrorCode,
-  fn: () => Promise<T>,
-  details?: Record<string, unknown>,
+	code: CompilationErrorCode,
+	fn: () => Promise<T>,
+	details?: Record<string, unknown>,
 ): Promise<CompilationResult<T>> {
-  try {
-    const value = await fn();
-    return ok(value);
-  } catch (error) {
-    return err(
-      new CompilationError(
-        code,
-        error instanceof Error ? error.message : String(error),
-        error,
-        details,
-      ),
-    );
-  }
+	try {
+		const value = await fn();
+		return ok(value);
+	} catch (error) {
+		return err(new CompilationError(code, error instanceof Error ? error.message : String(error), error, details));
+	}
 }

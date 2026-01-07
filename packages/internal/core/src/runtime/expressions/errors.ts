@@ -6,11 +6,11 @@ import { err, ok } from "neverthrow";
  * @internal
  */
 export type ExpressionErrorCode =
-  | "PARSE_ERROR"
-  | "EVALUATION_ERROR"
-  | "VALIDATION_ERROR"
-  | "UNDEFINED_BINDING"
-  | "TYPE_ERROR";
+	| "PARSE_ERROR"
+	| "EVALUATION_ERROR"
+	| "VALIDATION_ERROR"
+	| "UNDEFINED_BINDING"
+	| "TYPE_ERROR";
 
 /**
  * Expression evaluation error with structured error codes.
@@ -27,19 +27,19 @@ export type ExpressionErrorCode =
  * ```
  */
 export class ExpressionError extends Error {
-  /**
-   * @param code - Error category (PARSE_ERROR, EVALUATION_ERROR, VALIDATION_ERROR, UNDEFINED_BINDING, TYPE_ERROR)
-   * @param message - Human-readable error message
-   * @param originalError - The underlying error that caused this failure
-   */
-  constructor(
-    public readonly code: ExpressionErrorCode,
-    message: string,
-    public readonly originalError?: unknown,
-  ) {
-    super(message);
-    this.name = "ExpressionError";
-  }
+	/**
+	 * @param code - Error category (PARSE_ERROR, EVALUATION_ERROR, VALIDATION_ERROR, UNDEFINED_BINDING, TYPE_ERROR)
+	 * @param message - Human-readable error message
+	 * @param originalError - The underlying error that caused this failure
+	 */
+	constructor(
+		public readonly code: ExpressionErrorCode,
+		message: string,
+		public readonly originalError?: unknown,
+	) {
+		super(message);
+		this.name = "ExpressionError";
+	}
 }
 
 /**
@@ -71,21 +71,12 @@ export type ExpressionResult<T> = Result<T, ExpressionError>;
  * ```
  * @internal
  */
-export function wrapThrow<T>(
-  code: ExpressionErrorCode,
-  fn: () => T,
-): ExpressionResult<T> {
-  try {
-    return ok(fn());
-  } catch (error) {
-    return err(
-      new ExpressionError(
-        code,
-        error instanceof Error ? error.message : String(error),
-        error,
-      ),
-    );
-  }
+export function wrapThrow<T>(code: ExpressionErrorCode, fn: () => T): ExpressionResult<T> {
+	try {
+		return ok(fn());
+	} catch (error) {
+		return err(new ExpressionError(code, error instanceof Error ? error.message : String(error), error));
+	}
 }
 
 /**
@@ -103,20 +94,11 @@ export function wrapThrow<T>(
  * ```
  * @internal
  */
-export async function wrapThrowAsync<T>(
-  code: ExpressionErrorCode,
-  fn: () => Promise<T>,
-): Promise<ExpressionResult<T>> {
-  try {
-    const value = await fn();
-    return ok(value);
-  } catch (error) {
-    return err(
-      new ExpressionError(
-        code,
-        error instanceof Error ? error.message : String(error),
-        error,
-      ),
-    );
-  }
+export async function wrapThrowAsync<T>(code: ExpressionErrorCode, fn: () => Promise<T>): Promise<ExpressionResult<T>> {
+	try {
+		const value = await fn();
+		return ok(value);
+	} catch (error) {
+		return err(new ExpressionError(code, error instanceof Error ? error.message : String(error), error));
+	}
 }

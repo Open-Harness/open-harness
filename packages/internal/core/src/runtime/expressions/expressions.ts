@@ -271,22 +271,17 @@ export async function evaluateTemplateResult(
 				if (segment.type === "text") {
 					return segment.value;
 				}
-				// Evaluate expression using Result-based variant
-				const result = await evaluateExpressionResult(segment.value, context);
-				// If error, throw so wrapThrowAsync can catch it
-				if (result.isErr()) {
-					throw result.error;
-				}
-				const value = result.value;
+				// Evaluate expression
+				const result = await evaluateExpression(segment.value, context);
 				// undefined becomes empty string in string interpolation
-				if (value === undefined || value === null) {
+				if (result === undefined || result === null) {
 					return "";
 				}
 				// Objects/arrays get JSON stringified
-				if (typeof value === "object") {
-					return JSON.stringify(value);
+				if (typeof result === "object") {
+					return JSON.stringify(result);
 				}
-				return String(value);
+				return String(result);
 			}),
 		);
 		return parts.join("");

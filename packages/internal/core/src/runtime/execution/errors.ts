@@ -6,13 +6,13 @@ import { err, ok } from "neverthrow";
  * @internal
  */
 export type ExecutionErrorCode =
-  | "NODE_NOT_FOUND"
-  | "EXECUTION_TIMEOUT"
-  | "EXECUTION_FAILED"
-  | "SCHEMA_VALIDATION_ERROR"
-  | "CANCELLED"
-  | "INPUT_VALIDATION_ERROR"
-  | "OUTPUT_VALIDATION_ERROR";
+	| "NODE_NOT_FOUND"
+	| "EXECUTION_TIMEOUT"
+	| "EXECUTION_FAILED"
+	| "SCHEMA_VALIDATION_ERROR"
+	| "CANCELLED"
+	| "INPUT_VALIDATION_ERROR"
+	| "OUTPUT_VALIDATION_ERROR";
 
 /**
  * Execution error with structured error codes.
@@ -29,23 +29,23 @@ export type ExecutionErrorCode =
  * ```
  */
 export class ExecutionError extends Error {
-  /**
-   * @param code - Error category (NODE_NOT_FOUND, EXECUTION_TIMEOUT, EXECUTION_FAILED, etc.)
-   * @param message - Human-readable error message
-   * @param originalError - The underlying error that caused this failure
-   * @param nodeId - Optional node ID involved in the error
-   * @param runId - Optional run ID for tracking
-   */
-  constructor(
-    public readonly code: ExecutionErrorCode,
-    message: string,
-    public readonly originalError?: unknown,
-    public readonly nodeId?: string,
-    public readonly runId?: string,
-  ) {
-    super(message);
-    this.name = "ExecutionError";
-  }
+	/**
+	 * @param code - Error category (NODE_NOT_FOUND, EXECUTION_TIMEOUT, EXECUTION_FAILED, etc.)
+	 * @param message - Human-readable error message
+	 * @param originalError - The underlying error that caused this failure
+	 * @param nodeId - Optional node ID involved in the error
+	 * @param runId - Optional run ID for tracking
+	 */
+	constructor(
+		public readonly code: ExecutionErrorCode,
+		message: string,
+		public readonly originalError?: unknown,
+		public readonly nodeId?: string,
+		public readonly runId?: string,
+	) {
+		super(message);
+		this.name = "ExecutionError";
+	}
 }
 
 /**
@@ -80,24 +80,16 @@ export type ExecutionResult<T> = Result<T, ExecutionError>;
  * @internal
  */
 export function wrapExecutionThrow<T>(
-  code: ExecutionErrorCode,
-  fn: () => T,
-  nodeId?: string,
-  runId?: string,
+	code: ExecutionErrorCode,
+	fn: () => T,
+	nodeId?: string,
+	runId?: string,
 ): ExecutionResult<T> {
-  try {
-    return ok(fn());
-  } catch (error) {
-    return err(
-      new ExecutionError(
-        code,
-        error instanceof Error ? error.message : String(error),
-        error,
-        nodeId,
-        runId,
-      ),
-    );
-  }
+	try {
+		return ok(fn());
+	} catch (error) {
+		return err(new ExecutionError(code, error instanceof Error ? error.message : String(error), error, nodeId, runId));
+	}
 }
 
 /**
@@ -118,23 +110,15 @@ export function wrapExecutionThrow<T>(
  * @internal
  */
 export async function wrapExecutionThrowAsync<T>(
-  code: ExecutionErrorCode,
-  fn: () => Promise<T>,
-  nodeId?: string,
-  runId?: string,
+	code: ExecutionErrorCode,
+	fn: () => Promise<T>,
+	nodeId?: string,
+	runId?: string,
 ): Promise<ExecutionResult<T>> {
-  try {
-    const value = await fn();
-    return ok(value);
-  } catch (error) {
-    return err(
-      new ExecutionError(
-        code,
-        error instanceof Error ? error.message : String(error),
-        error,
-        nodeId,
-        runId,
-      ),
-    );
-  }
+	try {
+		const value = await fn();
+		return ok(value);
+	} catch (error) {
+		return err(new ExecutionError(code, error instanceof Error ? error.message : String(error), error, nodeId, runId));
+	}
 }
