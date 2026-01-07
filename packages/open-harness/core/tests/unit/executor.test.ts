@@ -44,16 +44,20 @@ const mockCancelContext = {
 	onCancel: [] as Array<(reason: string) => void>,
 };
 
+const mockAbortController = new AbortController();
+
 const mockRunContext = {
 	runId: "run-123",
-	cancel: mockCancelContext,
+	signal: mockAbortController.signal,
 };
 
 describe("DefaultExecutor", () => {
 	let executor: DefaultExecutor;
+	let testAbortController: AbortController;
 
 	beforeEach(() => {
 		executor = new DefaultExecutor();
+		testAbortController = new AbortController();
 		mockCancelContext.cancelled = false;
 		mockCancelContext.reason = undefined;
 	});
@@ -63,7 +67,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNode({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "success", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: { text: "hello" },
 			});
 
@@ -75,7 +79,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNode({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 
@@ -84,17 +88,16 @@ describe("DefaultExecutor", () => {
 		});
 
 		test("cancellation returns cancelled error", async () => {
-			mockCancelContext.cancelled = true;
-			mockCancelContext.reason = "User abort";
+			testAbortController.abort("User abort");
 
 			const result = await executor.runNode({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "success", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: { text: "hello" },
 			});
 
-			expect(result.error).toContain("Cancelled: User abort");
+			expect(result.error).toContain("Execution cancelled");
 		});
 	});
 
@@ -103,7 +106,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "success", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: { text: "hello" },
 			});
 
@@ -120,7 +123,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "unknown", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 
@@ -136,7 +139,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 
@@ -150,20 +153,19 @@ describe("DefaultExecutor", () => {
 		});
 
 		test("cancellation returns err with CANCELLED code", async () => {
-			mockCancelContext.cancelled = true;
-			mockCancelContext.reason = "Flow paused";
+			testAbortController.abort("Flow paused");
 
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "success", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: { text: "hello" },
 			});
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error.code).toBe("CANCELLED");
-				expect(result.error.message).toContain("Flow paused");
+				expect(result.error.message).toContain("Execution cancelled");
 				expect(result.error.nodeId).toBe("test-node");
 			}
 		});
@@ -198,7 +200,7 @@ describe("DefaultExecutor", () => {
 						retry: { maxAttempts: 3, backoffMs: 0 },
 					},
 				},
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 
@@ -229,7 +231,7 @@ describe("DefaultExecutor", () => {
 						retry: { maxAttempts: 2, backoffMs: 0 },
 					},
 				},
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 
@@ -244,7 +246,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "success", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: { text: "hello" },
 			});
 
@@ -265,7 +267,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 
@@ -286,7 +288,7 @@ describe("DefaultExecutor", () => {
 			const result = await executor.runNodeResult({
 				registry: mockRegistry as any,
 				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: mockRunContext as any,
+				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
 				input: {},
 			});
 

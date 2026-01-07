@@ -4,7 +4,6 @@ import type { RunStore } from "../../persistence/index.js";
 import type {
 	CancelContextInternal,
 	CancelReason,
-	CommandInbox,
 	EdgeDefinition,
 	FlowDefinition,
 	RunSnapshot,
@@ -124,36 +123,8 @@ export class InMemoryEventBus implements EventBus {
 	}
 }
 
-/**
- * In-memory command inbox.
- */
-export class InMemoryCommandInbox implements CommandInbox {
-	private readonly queue: RuntimeCommand[] = [];
-
-	/**
-	 * Dequeue the next available command.
-	 * @returns Next command or undefined.
-	 */
-	next(): RuntimeCommand | undefined {
-		return this.queue.shift();
-	}
-
-	/**
-	 * Enqueue a new runtime command.
-	 * @param command - Command to enqueue.
-	 */
-	enqueue(command: RuntimeCommand): void {
-		this.queue.push(command);
-	}
-
-	/**
-	 * Return a shallow copy of queued commands.
-	 * @returns Current queued commands.
-	 */
-	snapshot(): RuntimeCommand[] {
-		return [...this.queue];
-	}
-}
+// InMemoryCommandInbox removed - no longer needed
+// Messages are passed directly in provider input, not via inbox
 
 /**
  * In-memory state store implementation using dot-path access.
@@ -263,7 +234,6 @@ class InMemoryRuntime implements Runtime {
 	private readonly registry: NodeRegistry;
 	private readonly store?: RunStore;
 	private readonly bus: EventBus;
-	private readonly inboxes = new Map<string, InMemoryCommandInbox>();
 	private readonly stateStore: InMemoryStateStore;
 	private readonly nodeControllers = new Map<string, CancelContextInternal>();
 	private snapshot: RunState;
@@ -287,19 +257,10 @@ class InMemoryRuntime implements Runtime {
 			this.snapshot = {
 				...resume.snapshot,
 				runId: resume.runId,
-				inbox: [],
+				inbox: [],  // Keep for backward compatibility (will be removed in snapshot later)
 				agentSessions: resume.snapshot.agentSessions ?? {},
 			};
-			for (const command of resume.snapshot.inbox ?? []) {
-				if (command.type === "send" || command.type === "reply") {
-					if (!command.runId) continue;
-					this.getInbox(command.runId).enqueue(command);
-				}
-			}
-			const inboxRunIds = [...this.inboxes.keys()];
-			if (inboxRunIds.length === 1) {
-				this.resumeRunId = inboxRunIds[0];
-			}
+			// Inbox initialization removed - messages passed in input now
 		} else {
 			this.stateStore = new InMemoryStateStore(options.flow.state?.initial ?? {});
 			this.snapshot = createInitialSnapshot(options.flow);
@@ -314,7 +275,13 @@ class InMemoryRuntime implements Runtime {
 	 */
 	async run(input: Record<string, unknown> = {}): Promise<RunSnapshot> {
 		if (this.snapshot.status === "complete" || this.snapshot.status === "aborted") {
-			throw new Error(`Run ${this.snapshot.runId ?? ""} is not resumable`);
+			throw new ExecutionError(
+				"EXECUTION_FAILED",
+				`Run ${this.snapshot.runId ?? ""} is not resumable`,
+				undefined,
+				undefined,
+				this.snapshot.runId,
+			);
 		}
 
 		const isResume = this.snapshot.status !== "idle";
@@ -419,8 +386,7 @@ class InMemoryRuntime implements Runtime {
 				this.resumeRunId = undefined;
 			}
 			const resumeMessage = isResuming ? (this.pendingResumeMessage ?? "continue") : undefined;
-			if (isResuming && resumeMessage) {
-				this.dispatch({ type: "send", runId, message: resumeMessage });
+			if (isResuming) {
 				this.resumingNodes.delete(nodeId);
 			}
 			const cancelContext = this.createCancelContext(runId);
@@ -428,12 +394,8 @@ class InMemoryRuntime implements Runtime {
 				nodeId,
 				runId,
 				emit: (event) => this.emit(event),
+				signal: cancelContext.__controller.signal,
 				state: this.stateStore,
-				inbox: this.getInbox(runId),
-				getAgentSession: () => this.snapshot.agentSessions[nodeId],
-				setAgentSession: (sessionId) => this.setAgentSession(nodeId, sessionId),
-				resumeMessage,
-				cancel: cancelContext,
 			};
 
 			this.emit({ type: "node:start", nodeId, runId: runContext.runId });
@@ -480,11 +442,17 @@ class InMemoryRuntime implements Runtime {
 				this.nodeControllers.delete(runId);
 			}
 			if (!result) {
-				throw new Error("Node execution returned no result");
+				throw new ExecutionError(
+					"EXECUTION_FAILED",
+					"Node execution returned no result",
+					undefined,
+					nodeId,
+					runId,
+				);
 			}
 
-			if (runContext.cancel.cancelled) {
-				if (runContext.cancel.reason === "pause" && result.output !== undefined) {
+			if (cancelContext.cancelled) {
+				if (cancelContext.reason === "pause" && result.output !== undefined) {
 					this.snapshot.outputs[nodeId] = result.output;
 				}
 				this.persistSnapshot();
@@ -531,7 +499,13 @@ class InMemoryRuntime implements Runtime {
 		}
 
 		if (hasPendingNodes(this.snapshot.nodeStatus)) {
-			throw new Error("Execution stalled: no ready nodes");
+			throw new ExecutionError(
+				"EXECUTION_FAILED",
+				"Execution stalled: no ready nodes. Check for missing edges or unmet conditions.",
+				undefined,
+				undefined,
+				this.snapshot.runId,
+			);
 		}
 
 		this.snapshot.status = "complete";
@@ -549,13 +523,17 @@ class InMemoryRuntime implements Runtime {
 	 * @param command - Command to dispatch.
 	 */
 	dispatch(command: RuntimeCommand): void {
-		if ((command.type === "send" || command.type === "reply") && !command.runId) {
-			this.emit({ type: "command:received", command });
-			throw new Error("Runtime command missing runId");
-		}
-
+		// Inbox removed - "send" and "reply" commands no longer supported
+		// Use runtime.resume() for continuing execution with new messages
 		if (command.type === "send" || command.type === "reply") {
-			this.getInbox(command.runId).enqueue(command);
+			this.emit({ type: "command:received", command });
+			throw new ExecutionError(
+				"DEPRECATED_API",
+				"dispatch({ type: 'send'/'reply' }) is deprecated. Use runtime.resume() instead. Messages should be passed directly in provider input.",
+				undefined,
+				undefined,
+				command.runId,
+			);
 		}
 		this.emit({ type: "command:received", command });
 
@@ -604,7 +582,7 @@ class InMemoryRuntime implements Runtime {
 			nodeStatus: { ...this.snapshot.nodeStatus },
 			edgeStatus: { ...this.snapshot.edgeStatus },
 			loopCounters: { ...this.snapshot.loopCounters },
-			inbox: [...this.snapshot.inbox, ...this.inboxQueue()],
+			inbox: [],  // Keep empty for backward compatibility
 			agentSessions: { ...this.snapshot.agentSessions },
 		};
 	}
@@ -688,7 +666,12 @@ class InMemoryRuntime implements Runtime {
 		const resolved = resolvedResult.value;
 		const list = resolved.value;
 		if (!Array.isArray(list)) {
-			throw new Error(`forEach expects array at ${forEach.in}`);
+			throw new ExecutionError(
+				"INPUT_VALIDATION_ERROR",
+				`forEach expects array at ${forEach.in}, got ${typeof list}`,
+				undefined,
+				node.id,
+			);
 		}
 
 		const iterations: ForEachIteration[] = [];
@@ -730,11 +713,8 @@ class InMemoryRuntime implements Runtime {
 				nodeId: node.id,
 				runId,
 				emit: (event) => this.emit(event),
+				signal: cancelContext.__controller.signal,
 				state: this.stateStore,
-				inbox: this.getInbox(runId),
-				getAgentSession: () => this.snapshot.agentSessions[node.id],
-				setAgentSession: (sessionId) => this.setAgentSession(node.id, sessionId),
-				cancel: cancelContext,
 			};
 
 			this.emit({
@@ -770,11 +750,17 @@ class InMemoryRuntime implements Runtime {
 				this.nodeControllers.delete(runId);
 			}
 			if (!result) {
-				throw new Error("Node execution returned no result");
+				throw new ExecutionError(
+					"EXECUTION_FAILED",
+					"Node execution returned no result",
+					undefined,
+					node.id,
+					runId,
+				);
 			}
 
-			if (runContext.cancel.cancelled) {
-				if (runContext.cancel.reason === "pause" && result.output !== undefined) {
+			if (cancelContext.cancelled) {
+				if (cancelContext.reason === "pause" && result.output !== undefined) {
 					this.snapshot.outputs[node.id] = result.output;
 				}
 				return iterations;
@@ -861,25 +847,9 @@ class InMemoryRuntime implements Runtime {
 		this.persistSnapshot();
 	}
 
-	private getInbox(runId: string): InMemoryCommandInbox {
-		const existing = this.inboxes.get(runId);
-		if (existing) return existing;
-		const inbox = new InMemoryCommandInbox();
-		this.inboxes.set(runId, inbox);
-		return inbox;
-	}
-
-	/**
-	 * Read the current inbox queue without dropping items.
-	 * @returns Current inbox commands.
-	 */
-	private inboxQueue(): RuntimeCommand[] {
-		const pending: RuntimeCommand[] = [];
-		for (const inbox of this.inboxes.values()) {
-			pending.push(...inbox.snapshot());
-		}
-		return pending;
-	}
+	// getInbox, inboxQueue, prepareNodeInput removed
+	// Resume is handled via runtime.resume() which passes sessionId + new message
+	// Provider SDKs are stateful - they maintain their own history
 
 	private createCancelContext(runId: string): CancelContextInternal {
 		const controller = new AbortController();

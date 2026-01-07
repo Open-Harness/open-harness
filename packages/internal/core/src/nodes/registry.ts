@@ -1,7 +1,13 @@
-import type { CancelContext, CommandInbox, RuntimeEventPayload, StateStore } from "../state";
+import type { RuntimeEventPayload, StateStore } from "../state";
 
 /**
  * Execution context passed to node implementations.
+ * 
+ * CLEAN ARCHITECTURE: This context is minimal by design.
+ * - Providers are pure functions (input → events → output)
+ * - Runtime manages session state (before/after execution)
+ * - No inbox (messages passed in input)
+ * - No session methods (runtime handles this)
  */
 export interface NodeRunContext {
 	/** Node identifier for this execution. */
@@ -10,18 +16,10 @@ export interface NodeRunContext {
 	runId: string;
 	/** Emit runtime events for observability/UI updates. */
 	emit: (event: RuntimeEventPayload) => void;
+	/** Abort signal for cancellation. */
+	signal: AbortSignal;
 	/** Access and mutate shared workflow state. */
 	state: StateStore;
-	/** Read commands sent to this run (e.g., user replies). */
-	inbox: CommandInbox;
-	/** Read the stored agent session id for this node, if any. */
-	getAgentSession: () => string | undefined;
-	/** Persist the agent session id for this node. */
-	setAgentSession: (sessionId: string) => void;
-	/** Optional resume prompt injected for resumed nodes. */
-	resumeMessage?: string;
-	/** Cancellation context for mid-stream interruption. */
-	cancel: CancelContext;
 }
 
 /**

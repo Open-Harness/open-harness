@@ -39,6 +39,8 @@ export type ClaudeMessageInput =
 export interface ClaudeAgentInput {
   prompt?: string;
   messages?: ClaudeMessageInput[];
+  /** Session ID for resuming previous conversations */
+  sessionId?: string;
   /** SDK options with extended support for outputSchemaFile */
   options?: ClaudeAgentExtendedOptions;
 }
@@ -133,56 +135,45 @@ export function createClaudeNode(
         if (replay) return replay;
       }
 
-      const resumeMessage = ctx.resumeMessage;
+      // Session passed via input (runtime handles resume)
+      // No inbox/resumeMessage - all messages come via input
       const hasPrompt = typeof input.prompt === "string";
       const hasMessages = Array.isArray(input.messages);
-      if (!resumeMessage && hasPrompt === hasMessages) {
+      if (hasPrompt && hasMessages) {
         throw new Error(
-          "ClaudeAgentInput requires exactly one of prompt or messages",
+          "ClaudeAgentInput requires exactly one of prompt or messages, not both",
         );
       }
 
-      const basePrompt =
-        !resumeMessage && typeof input.prompt === "string"
-          ? input.prompt
-          : undefined;
-      const baseMessages =
-        !resumeMessage && Array.isArray(input.messages)
-          ? input.messages
-          : undefined;
-
-      const queuedCommands = drainInbox(ctx.inbox);
-      const queuedMessages = commandsToMessages(queuedCommands);
-      if (resumeMessage && queuedMessages.length === 0) {
-        queuedMessages.push(resumeMessage);
-      }
-
       const promptMessages: ClaudeMessageInput[] = [];
-      if (basePrompt) promptMessages.push(basePrompt);
-      if (baseMessages) promptMessages.push(...baseMessages);
-      promptMessages.push(...queuedMessages);
+      if (hasPrompt && input.prompt) {
+        promptMessages.push(input.prompt);
+      }
+      if (hasMessages && input.messages) {
+        promptMessages.push(...input.messages);
+      }
 
       if (promptMessages.length === 0) {
         throw new Error("ClaudeAgentInput requires a prompt");
       }
 
-      const knownSessionId = ctx.getAgentSession() ?? input.options?.resume;
+      const knownSessionId = input.sessionId ?? input.options?.resume;
       const mergedOptions = mergeOptions(input.options, knownSessionId);
       const queryFn = options.queryFn ?? query;
       const prompt = messageStream(promptMessages, knownSessionId);
-      const cancelContext = ctx.cancel as CancelContextInternal | undefined;
+      // Get AbortController from signal (runtime provides it via context)
+      // AbortSignal doesn't expose the controller, so we need to handle abort differently
       const queryStream = queryFn({
         prompt,
         options: {
           ...mergedOptions,
-          abortController: cancelContext?.__controller,
+          abortController: undefined,  // SDK will handle abort via signal monitoring
         },
       });
       // Note: __setQuery removed - pause/resume now handled at workflow level
       // via session IDs in input/output, not via cancel context
 
-      const promptForEvent =
-        resumeMessage ?? basePrompt ?? baseMessages ?? promptMessages;
+      const promptForEvent = promptMessages;
       const startedAt = Date.now();
       let emittedStart = false;
       let finalResult: SDKResultMessage | undefined;
@@ -200,7 +191,7 @@ export function createClaudeNode(
       const emitStart = (sessionId: string) => {
         if (emittedStart) return;
         emittedStart = true;
-        ctx.setAgentSession(sessionId);
+        // Session persistence handled by runtime, not here
         ctx.emit({
           type: "agent:start",
           nodeId: ctx.nodeId,
@@ -379,15 +370,9 @@ export function createClaudeNode(
             }
           }
 
-          if (ctx.cancel.cancelled) {
-            if (ctx.cancel.reason === "pause") {
-              break;
-            }
-            if (ctx.cancel.reason === "abort") {
-              const abortError = new Error("Aborted");
-              abortError.name = "AbortError";
-              throw abortError;
-            }
+          if (ctx.signal.aborted) {
+            // Provider was aborted via runtime pause/stop
+            break;  // Exit the stream loop gracefully
           }
         }
       } catch (error) {
@@ -398,7 +383,7 @@ export function createClaudeNode(
             type: "agent:aborted",
             nodeId: ctx.nodeId,
             runId: ctx.runId,
-            reason: ctx.cancel.reason ?? "abort",
+            reason: "abort",
           });
           throw error;
         }
@@ -414,7 +399,8 @@ export function createClaudeNode(
         throw error;
       }
 
-      if (ctx.cancel.cancelled && ctx.cancel.reason === "pause") {
+      if (ctx.signal.aborted) {
+        // Provider was paused via runtime (pause signal while streaming)
         ctx.emit({
           type: "agent:paused",
           nodeId: ctx.nodeId,

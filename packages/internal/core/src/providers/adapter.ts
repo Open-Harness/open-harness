@@ -44,7 +44,7 @@ export function toNodeDefinition<I, O>(trait: ProviderTrait<I, O>): NodeTypeDefi
 
 			// Step 2: Create execution context
 			const execCtx: ExecutionContext = {
-				signal: ctx.cancel.signal,
+				signal: ctx.signal,
 				emit: (event: StreamEvent) => {
 					// Map StreamEvent to RuntimeEventPayload
 					emitRuntimeEvent(ctx, event);
@@ -60,7 +60,7 @@ export function toNodeDefinition<I, O>(trait: ProviderTrait<I, O>): NodeTypeDefi
 				for await (const event of generator) {
 					// Events are emitted via ctx.emit in the generator
 					// We just need to consume them
-					if (ctx.cancel.signal.aborted) {
+					if (ctx.signal.aborted) {
 						throw new Error("Aborted");
 					}
 				}
@@ -89,7 +89,7 @@ export function toNodeDefinition<I, O>(trait: ProviderTrait<I, O>): NodeTypeDefi
 					return err(new ProviderError("ABORT", "Operation was aborted"));
 				}
 
-				if (ctx.cancel.signal.aborted) {
+				if (ctx.signal.aborted) {
 					return err(new ProviderError("ABORT", "Operation was aborted"));
 				}
 

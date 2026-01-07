@@ -65,11 +65,11 @@ export class DefaultExecutor implements Executor {
 
 		while (attempt < maxAttempts) {
 			attempt += 1;
-			if (runContext.cancel.cancelled) {
+			if (runContext.signal.aborted) {
 				return {
 					nodeId: node.id,
 					runId: runContext.runId,
-					error: `Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
+					error: "Execution cancelled",
 				};
 			}
 			try {
@@ -129,11 +129,11 @@ export class DefaultExecutor implements Executor {
 
 		while (attempt < maxAttempts) {
 			attempt += 1;
-			if (runContext.cancel.cancelled) {
+			if (runContext.signal.aborted) {
 				return err(
 					new ExecutionError(
 						"CANCELLED",
-						`Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
+						"Execution cancelled",
 						undefined,
 						node.id,
 						runContext.runId,

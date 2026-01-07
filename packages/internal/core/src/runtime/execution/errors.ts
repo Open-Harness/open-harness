@@ -12,7 +12,8 @@ export type ExecutionErrorCode =
 	| "SCHEMA_VALIDATION_ERROR"
 	| "CANCELLED"
 	| "INPUT_VALIDATION_ERROR"
-	| "OUTPUT_VALIDATION_ERROR";
+	| "OUTPUT_VALIDATION_ERROR"
+	| "DEPRECATED_API";
 
 /**
  * Execution error with structured error codes.
