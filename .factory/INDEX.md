@@ -1,8 +1,28 @@
-# 📑 Complete Scrum Master Planning Index
+# 📑 Complete Planning Index
 
 **Date:** 2026-01-07  
-**Status:** ✅ Planning Phase Complete  
-**Next Step:** Choose parallelization strategy, create Epic 1 beads, begin execution
+**Status:** Multiple Initiatives  
+
+---
+
+## 🎯 Active Initiatives
+
+### 1. Provider Trait + Recording + Eval System (IN PROGRESS)
+**Branch:** `feat/provider-trait-recording-eval`  
+**Status:** Phase 1-2 Complete ✅, Phase 3 Ready  
+**Documents:**
+- `docs/PROVIDER_CLEAN_BREAK_IMPLEMENTATION_PLAN.md` - **START HERE** for provider work
+- `docs/PROVIDER_ARCHITECTURE.md` - Architectural decisions
+- `docs/2026-01-07-eval-architecture-options-provider-workflow-level.md` - Eval design
+
+**Progress:** 5/49 hours (10% complete)
+
+---
+
+### 2. Neverthrow 46-Bead Refactoring (PLANNING COMPLETE)
+**Branch:** `feat/neverthrow-all-epics`  
+**Status:** ✅ Planning Phase Complete, Ready for execution  
+**Documents:** (see below for full details)
 
 ---
 

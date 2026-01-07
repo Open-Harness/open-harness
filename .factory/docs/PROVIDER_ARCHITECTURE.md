@@ -1,8 +1,52 @@
 # Provider Architecture: Design Decisions
 
 **Date:** 2026-01-07  
-**Status:** APPROVED  
-**Decision:** Pause/Resume is a workflow-level concept, not provider-level
+**Status:** ✅ APPROVED + EXTENDED  
+**Decisions:**
+1. Pause/Resume is a workflow-level concept, not provider-level
+2. Remove inbox entirely - no mid-stream message injection
+3. Simplify NodeRunContext - pure providers with minimal context
+4. HITL is workflow-level (human.input node type)
+
+**Related Documents:**
+- `PROVIDER_CLEAN_BREAK_IMPLEMENTATION_PLAN.md` - Complete implementation plan (Phase 3 in progress)
+
+---
+
+## 🧹 Second Key Insight: Remove the Inbox Entirely
+
+**The Question:** Do providers need mid-stream message injection?
+
+**The Answer:** NO
+
+**Why the inbox existed:**
+- External messages via WebSocket/HTTP → inject into running agent
+- Tool replies for human-in-the-loop
+- Resume messages internally queued
+
+**Why we don't need it:**
+- Most providers (Claude SDK, OpenAI) don't support mid-stream injection
+- They're **function calls**, not chat UIs: Start → Stream → Complete → Done
+- Multi-turn = Multiple separate calls with session ID, not one long call
+
+**The Clean Pattern:**
+- Provider runs once: Input → Events → Output
+- For continuation: Call again with session ID + new message
+- For HITL: Use `human.input` node type (workflow-level)
+- For resume: Runtime prepares full input (original messages + resume message)
+
+**What gets removed:**
+- ❌ `CommandInbox` interface and implementation
+- ❌ `ctx.inbox` from NodeRunContext
+- ❌ `dispatch({ type: "send" })` - replaced with `runtime.resume()`
+- ❌ Mid-execution message queuing
+- ❌ Inbox draining logic in providers
+
+**What we gain:**
+- ✅ Providers are pure functions (no side effects)
+- ✅ Simpler testing (just input/output)
+- ✅ Universal pattern (works for ALL providers)
+- ✅ Clear responsibilities (runtime = orchestration, provider = execution)
 
 ---
 
