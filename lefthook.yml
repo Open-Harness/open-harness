@@ -19,6 +19,12 @@ pre-commit:
         bd hooks run pre-commit {staged_files}
       stage_fixed: false
 
+    # Update README metadata (git hash, timestamps)
+    update-docs-metadata:
+      priority: 1
+      run: bun scripts/update-readme-metadata.ts --changed-only
+      stage_fixed: true
+
     # Lint and format staged files with biome
     lint-staged:
       priority: 2

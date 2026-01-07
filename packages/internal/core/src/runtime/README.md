@@ -1,3 +1,15 @@
+---
+title: "Runtime Execution Pipeline"
+lastUpdated: "2026-01-07T00:00:00Z"
+lastCommit: "placeholder"
+lastCommitDate: "2026-01-07T00:00:00Z"
+scope:
+  - execution
+  - compilation
+  - scheduling
+  - state-management
+---
+
 # Runtime
 
 Execution pipeline for V3 flows. This folder owns compilation, scheduling,
