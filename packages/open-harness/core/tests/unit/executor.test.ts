@@ -1,55 +1,79 @@
 // Tests for node executor with retry, timeout, and cancellation support
 
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { DefaultExecutor, ExecutionError, type ExecutorContext, type NodeExecutionResult } from "../../src/index.js";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { NodeRegistry, NodeRunContext, NodeTypeDefinition, StateStore } from "../../src/index.js";
+import { DefaultExecutor, ExecutionError } from "../../src/index.js";
 
 // Mock node registry and types
-const mockRegistry = {
-	get: (type: string) => {
-		if (type === "success") {
-			return {
-				inputSchema: { parse: (x: any) => x },
-				outputSchema: { parse: (x: any) => x },
-				run: async (_: any, input: any) => ({
-					result: `Processed: ${input.text}`,
-				}),
-			};
-		}
-		if (type === "failure") {
-			return {
-				inputSchema: { parse: (x: any) => x },
-				outputSchema: { parse: (x: any) => x },
-				run: async () => {
-					throw new Error("Node failed");
-				},
-			};
-		}
-		if (type === "timeout-prone") {
-			return {
-				inputSchema: { parse: (x: any) => x },
-				outputSchema: { parse: (x: any) => x },
-				run: async () => {
-					await new Promise((resolve) => setTimeout(resolve, 5000));
-					return { result: "done" };
-				},
-			};
-		}
-		return null;
+const passThroughSchema = {
+	parse: <T>(value: T) => value,
+};
+
+type SuccessInput = { text: string };
+type SuccessOutput = { result: string };
+
+const successNode: NodeTypeDefinition<SuccessInput, SuccessOutput> = {
+	type: "success",
+	inputSchema: passThroughSchema,
+	outputSchema: passThroughSchema,
+	run: async (_ctx, input) => ({
+		result: `Processed: ${input.text}`,
+	}),
+};
+
+const failureNode: NodeTypeDefinition<Record<string, unknown>, Record<string, unknown>> = {
+	type: "failure",
+	inputSchema: passThroughSchema,
+	outputSchema: passThroughSchema,
+	run: async () => {
+		throw new Error("Node failed");
 	},
 };
 
-const mockCancelContext = {
-	cancelled: false,
-	reason: undefined,
-	onCancel: [] as Array<(reason: string) => void>,
+const timeoutNode: NodeTypeDefinition<Record<string, unknown>, { result: string }> = {
+	type: "timeout-prone",
+	inputSchema: passThroughSchema,
+	outputSchema: passThroughSchema,
+	run: async () => {
+		await new Promise((resolve) => setTimeout(resolve, 5000));
+		return { result: "done" };
+	},
 };
 
-const mockAbortController = new AbortController();
+const mockState: StateStore = {
+	get: () => undefined,
+	set: () => {},
+	patch: () => {},
+	snapshot: () => ({}),
+};
 
-const mockRunContext = {
+const createRunContext = (signal: AbortSignal): NodeRunContext => ({
+	nodeId: "test-node",
 	runId: "run-123",
-	signal: mockAbortController.signal,
+	emit: () => {},
+	signal,
+	state: mockState,
+});
+
+const createRegistry = (definitions: Array<NodeTypeDefinition<unknown, unknown>>): NodeRegistry => {
+	const registry = new Map<string, NodeTypeDefinition<unknown, unknown>>();
+	for (const def of definitions) {
+		registry.set(def.type, def);
+	}
+	return {
+		register: (def) => {
+			registry.set(def.type, def as NodeTypeDefinition<unknown, unknown>);
+		},
+		has: (type) => registry.has(type),
+		get: (type) => registry.get(type) ?? (undefined as unknown as NodeTypeDefinition<unknown, unknown>),
+	};
 };
+
+const mockRegistry = createRegistry([
+	successNode as NodeTypeDefinition<unknown, unknown>,
+	failureNode as NodeTypeDefinition<unknown, unknown>,
+	timeoutNode as NodeTypeDefinition<unknown, unknown>,
+]);
 
 describe("DefaultExecutor", () => {
 	let executor: DefaultExecutor;
@@ -58,16 +82,14 @@ describe("DefaultExecutor", () => {
 	beforeEach(() => {
 		executor = new DefaultExecutor();
 		testAbortController = new AbortController();
-		mockCancelContext.cancelled = false;
-		mockCancelContext.reason = undefined;
 	});
 
 	describe("runNode (public API - throws)", () => {
 		test("successful execution returns output", async () => {
 			const result = await executor.runNode({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "success", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "success", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: { text: "hello" },
 			});
 
@@ -77,9 +99,9 @@ describe("DefaultExecutor", () => {
 
 		test("node failure captured as error string", async () => {
 			const result = await executor.runNode({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "failure", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -91,9 +113,9 @@ describe("DefaultExecutor", () => {
 			testAbortController.abort("User abort");
 
 			const result = await executor.runNode({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "success", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "success", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: { text: "hello" },
 			});
 
@@ -104,9 +126,9 @@ describe("DefaultExecutor", () => {
 	describe("runNodeResult (Result-based API)", () => {
 		test("successful execution returns ok with output", async () => {
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "success", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "success", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: { text: "hello" },
 			});
 
@@ -121,9 +143,9 @@ describe("DefaultExecutor", () => {
 
 		test("node not found returns err", async () => {
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "unknown", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "unknown", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -137,9 +159,9 @@ describe("DefaultExecutor", () => {
 
 		test("execution failure returns err with code", async () => {
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "failure", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -156,9 +178,9 @@ describe("DefaultExecutor", () => {
 			testAbortController.abort("Flow paused");
 
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "success", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "success", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: { text: "hello" },
 			});
 
@@ -177,10 +199,11 @@ describe("DefaultExecutor", () => {
 
 		test("retry logic: retries on failure", async () => {
 			let attempts = 0;
-			const retryRegistry = {
-				get: () => ({
-					inputSchema: { parse: (x: any) => x },
-					outputSchema: { parse: (x: any) => x },
+			const retryRegistry = createRegistry([
+				{
+					type: "flaky",
+					inputSchema: passThroughSchema,
+					outputSchema: passThroughSchema,
 					run: async () => {
 						attempts++;
 						if (attempts < 3) {
@@ -188,19 +211,20 @@ describe("DefaultExecutor", () => {
 						}
 						return { result: "success" };
 					},
-				}),
-			};
+				},
+			]);
 
 			const result = await executor.runNodeResult({
-				registry: retryRegistry as any,
+				registry: retryRegistry,
 				node: {
 					id: "test-node",
 					type: "flaky",
+					input: {},
 					policy: {
 						retry: { maxAttempts: 3, backoffMs: 0 },
 					},
 				},
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -212,26 +236,28 @@ describe("DefaultExecutor", () => {
 		});
 
 		test("retry exhaustion: gives up after maxAttempts", async () => {
-			const retryRegistry = {
-				get: () => ({
-					inputSchema: { parse: (x: any) => x },
-					outputSchema: { parse: (x: any) => x },
+			const retryRegistry = createRegistry([
+				{
+					type: "always-fails",
+					inputSchema: passThroughSchema,
+					outputSchema: passThroughSchema,
 					run: async () => {
 						throw new Error("Always fails");
 					},
-				}),
-			};
+				},
+			]);
 
 			const result = await executor.runNodeResult({
-				registry: retryRegistry as any,
+				registry: retryRegistry,
 				node: {
 					id: "test-node",
 					type: "always-fails",
+					input: {},
 					policy: {
 						retry: { maxAttempts: 2, backoffMs: 0 },
 					},
 				},
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -244,9 +270,9 @@ describe("DefaultExecutor", () => {
 
 		test("match pattern for ok result", async () => {
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "success", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "success", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: { text: "hello" },
 			});
 
@@ -265,9 +291,9 @@ describe("DefaultExecutor", () => {
 
 		test("match pattern for err result", async () => {
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "failure", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -286,9 +312,9 @@ describe("DefaultExecutor", () => {
 
 		test("mapErr to transform errors", async () => {
 			const result = await executor.runNodeResult({
-				registry: mockRegistry as any,
-				node: { id: "test-node", type: "failure", policy: {} },
-				runContext: { ...mockRunContext, signal: testAbortController.signal } as any,
+				registry: mockRegistry,
+				node: { id: "test-node", type: "failure", input: {}, policy: {} },
+				runContext: createRunContext(testAbortController.signal),
 				input: {},
 			});
 
@@ -297,13 +323,23 @@ describe("DefaultExecutor", () => {
 				userMessage: `Node '${err.nodeId}' failed: ${err.message}`,
 			}));
 
+			const hasUserMessage = (value: unknown): value is { userMessage: string } => {
+				if (typeof value !== "object" || value === null || !("userMessage" in value)) {
+					return false;
+				}
+				return typeof (value as { userMessage?: unknown }).userMessage === "string";
+			};
+
 			transformed.match(
 				() => {
 					throw new Error("Should have error");
 				},
-				(err: any) => {
-					expect(err.userMessage).toContain("Node 'test-node'");
-					expect(err.userMessage).toContain("failed");
+				(err) => {
+					expect(hasUserMessage(err)).toBe(true);
+					if (hasUserMessage(err)) {
+						expect(err.userMessage).toContain("Node 'test-node'");
+						expect(err.userMessage).toContain("failed");
+					}
 				},
 			);
 		});

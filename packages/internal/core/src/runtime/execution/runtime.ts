@@ -475,6 +475,7 @@ class InMemoryRuntime implements Runtime {
 			if (cancelContext.cancelled) {
 				if (cancelContext.reason === "pause" && result.output !== undefined) {
 					this.snapshot.outputs[nodeId] = result.output;
+					this.saveSessionFromOutput(nodeId, result.output);
 				}
 				this.persistSnapshot();
 				return this.getSnapshot();
@@ -1013,6 +1014,7 @@ class InMemoryRuntime implements Runtime {
 				if (cancelled) return;
 				reason = "pause";
 				cancelled = true;
+				controller.abort("pause");
 				await notify();
 				// Note: Pause/resume is provider-specific (e.g., Claude SDK)
 				// Providers should handle this via their own mechanisms
@@ -1021,7 +1023,7 @@ class InMemoryRuntime implements Runtime {
 				if (cancelled) return;
 				reason = "abort";
 				cancelled = true;
-				controller.abort();
+				controller.abort("abort");
 				void notify();
 			},
 			throwIfCancelled: () => {

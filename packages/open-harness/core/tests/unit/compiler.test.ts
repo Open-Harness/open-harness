@@ -1,6 +1,7 @@
 // Tests for flow compiler and scheduler
 
 import { describe, expect, test } from "bun:test";
+import type { RunSnapshot } from "../../src/index.js";
 import { CompilationError, DefaultScheduler, GraphCompiler } from "../../src/index.js";
 
 describe("GraphCompiler", () => {
@@ -323,7 +324,7 @@ describe("DefaultScheduler", () => {
 				edges: [],
 			});
 
-			const result = scheduler.nextReadyNodesResult(undefined as any, compiled);
+			const result = scheduler.nextReadyNodesResult(undefined as unknown as RunSnapshot, compiled);
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
 				expect(result.error.code).toBe("SCHEDULING_ERROR");

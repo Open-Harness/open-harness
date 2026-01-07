@@ -39,13 +39,21 @@ export function createChatRoute(runtime: Runtime) {
       return c.json({ error: "User message has no text content" }, 400);
     }
 
-    const runId = crypto.randomUUID();
+    const snapshot = runtime.getSnapshot();
+    if (snapshot.status !== "paused") {
+      return c.json(
+        { error: `Runtime not paused (status: ${snapshot.status})` },
+        409,
+      );
+    }
 
-    runtime.dispatch({
-      type: "send",
-      runId,
-      message: textPart.text,
-    });
+    const runId = snapshot.runId ?? crypto.randomUUID();
+
+    runtime
+      .resume(textPart.text)
+      .catch((error) =>
+        console.error("[Chat] Failed to resume runtime:", error),
+      );
 
     return c.json<ChatResponse>({ runId }, 201);
   });

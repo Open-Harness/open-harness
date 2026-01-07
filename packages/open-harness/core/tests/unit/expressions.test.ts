@@ -6,7 +6,6 @@ import {
 	clearExpressionCache,
 	type ExpressionContext,
 	ExpressionError,
-	type ExpressionResult,
 	evaluateExpression,
 	evaluateExpressionResult,
 	evaluateTemplateResult,
@@ -578,7 +577,7 @@ describe("Result-based API in orchestration patterns", () => {
 	test("error handling in conditional template", async () => {
 		const ctx: ExpressionContext = {
 			task: { title: "Test" },
-			reviewer: undefined as any,
+			reviewer: undefined,
 		};
 		const template = `{{ $exists(reviewer) ? reviewer.text : "No feedback" }}`;
 		const result = await resolveTemplateResult(template, ctx);
@@ -627,12 +626,22 @@ describe("Result-based API in orchestration patterns", () => {
 			})),
 		);
 
+		const hasUserMessage = (value: unknown): value is { userMessage: string } => {
+			if (typeof value !== "object" || value === null || !("userMessage" in value)) {
+				return false;
+			}
+			return typeof (value as { userMessage?: unknown }).userMessage === "string";
+		};
+
 		result.match(
 			() => {
 				throw new Error("Should have error");
 			},
-			(err: any) => {
-				expect(err.userMessage).toContain("Expression failed");
+			(err) => {
+				expect(hasUserMessage(err)).toBe(true);
+				if (hasUserMessage(err)) {
+					expect(err.userMessage).toContain("Expression failed");
+				}
 			},
 		);
 	});

@@ -7,6 +7,10 @@ import type { RunSnapshot, Runtime, RuntimeCommand, RuntimeEvent, RuntimeEventLi
 export class MockRuntime implements Runtime {
 	private listeners: RuntimeEventListener[] = [];
 	private dispatchedCommands: RuntimeCommand[] = [];
+	private pauseCount = 0;
+	private stopCount = 0;
+	private resumeMessages: Array<string | undefined> = [];
+	private status: RunSnapshot["status"] = "idle";
 
 	onEvent(listener: RuntimeEventListener): () => void {
 		this.listeners.push(listener);
@@ -23,21 +27,25 @@ export class MockRuntime implements Runtime {
 	}
 
 	pause(): void {
-		// Mock implementation
+		this.pauseCount += 1;
+		this.status = "paused";
 	}
 
-	async resume(_message?: string): Promise<RunSnapshot> {
+	async resume(message?: string): Promise<RunSnapshot> {
+		this.resumeMessages.push(message);
+		this.status = "running";
 		return this.getSnapshot();
 	}
 
 	stop(): void {
-		// Mock implementation
+		this.stopCount += 1;
+		this.status = "aborted";
 	}
 
 	getSnapshot(): RunSnapshot {
 		return {
 			runId: "mock-run-id",
-			status: "idle",
+			status: this.status,
 			state: {},
 			outputs: {},
 			nodeStatus: {},
@@ -49,6 +57,7 @@ export class MockRuntime implements Runtime {
 	}
 
 	async run(): Promise<RunSnapshot> {
+		this.status = "complete";
 		return this.getSnapshot();
 	}
 
@@ -73,5 +82,17 @@ export class MockRuntime implements Runtime {
 	 */
 	clearDispatchedCommands(): void {
 		this.dispatchedCommands = [];
+	}
+
+	getPauseCount(): number {
+		return this.pauseCount;
+	}
+
+	getStopCount(): number {
+		return this.stopCount;
+	}
+
+	getResumeMessages(): Array<string | undefined> {
+		return [...this.resumeMessages];
 	}
 }

@@ -187,6 +187,7 @@ export function createClaudeNode(
         string,
         { toolName: string; toolInput: unknown; startedAt: number }
       >();
+      let cancelReason: "pause" | "abort" | "timeout" | undefined;
 
       const emitStart = (sessionId: string) => {
         if (emittedStart) return;
@@ -371,8 +372,8 @@ export function createClaudeNode(
           }
 
           if (ctx.signal.aborted) {
-            // Provider was aborted via runtime pause/stop
-            break;  // Exit the stream loop gracefully
+            cancelReason = getCancelReason(ctx.signal);
+            break; // Exit the stream loop gracefully
           }
         }
       } catch (error) {
@@ -400,7 +401,22 @@ export function createClaudeNode(
       }
 
       if (ctx.signal.aborted) {
-        // Provider was paused via runtime (pause signal while streaming)
+        const reason = cancelReason ?? getCancelReason(ctx.signal);
+        if (reason === "abort" || reason === "timeout") {
+          ctx.emit({
+            type: "agent:aborted",
+            nodeId: ctx.nodeId,
+            runId: ctx.runId,
+            reason: reason ?? "abort",
+          });
+
+          return {
+            sessionId: lastSessionId,
+            numTurns: finalResult?.num_turns,
+          };
+        }
+
+        // Treat all other aborts as pause
         ctx.emit({
           type: "agent:paused",
           nodeId: ctx.nodeId,
@@ -654,6 +670,19 @@ function getResultOrThrow(result?: SDKResultMessage): ClaudeAgentOutput {
     numTurns: result.num_turns,
     permissionDenials: result.permission_denials,
   };
+}
+
+function getCancelReason(signal: AbortSignal): "pause" | "abort" | "timeout" | undefined {
+  const reason = signal.reason;
+  if (reason === "pause" || reason === "abort" || reason === "timeout") {
+    return reason;
+  }
+  if (typeof reason === "string") {
+    if (reason === "pause" || reason === "abort" || reason === "timeout") {
+      return reason;
+    }
+  }
+  return undefined;
 }
 
 function errorMessage(error: unknown): string {

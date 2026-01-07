@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-07  
 **Branch:** `feat/provider-trait-recording-eval`  
-**Status:** 🟡 Phase 1-2 Complete, Phase 3 Ready to Start  
+**Status:** 🟡 Phase 1-2 Complete, Phase 3 In Progress (core/provider done, tests + gates pending)  
 **Decision:** Clean Break - Remove inbox, simplify NodeRunContext, pure providers
 
 ---
@@ -308,7 +308,7 @@ async resume(message: string = "continue") {
 ---
 
 ### 🔄 Phase 3: Clean Break Implementation (IN PROGRESS)
-**Status:** Ready to start  
+**Status:** Core + provider work complete, test updates + quality gates pending  
 **Time:** 8-12 hours  
 **Blockers:** None
 
@@ -468,7 +468,7 @@ bun run test       # All 26 tests should pass
 
 ---
 
-#### 3.4: Update Tests (~2-3 hours)
+#### 3.4: Update Tests (~2-3 hours) — IN PROGRESS
 
 **Files to change:**
 - `packages/open-harness/server/tests/unit/cancellation.test.ts`
@@ -496,7 +496,7 @@ const mockCtx: NodeRunContext = {
 
 **Validation:**
 ```bash
-bun run test  # All tests should pass
+bun run test  # All tests should pass (core + server)
 ```
 
 ---
@@ -616,7 +616,7 @@ All 139 tests passing."
 |-------|--------|---------------|-------------|---------|
 | 1: Core Abstractions | ✅ Complete | 3-4h | 3h | `ce77cbc` |
 | 2: State Cleanup | ✅ Complete | 2h | 2h | `1eca77a` |
-| 3: Clean Break | 🔄 Ready | 8-12h | - | - |
+| 3: Clean Break | 🔄 In Progress | 8-12h | - | `39cdfaf`, `326808c` |
 | 4: Recording | ⏳ Pending | 8-10h | - | - |
 | 5: Template | ⏳ Pending | 2h | - | - |
 | 6: Eval Types | ⏳ Pending | 2h | - | - |
@@ -624,8 +624,8 @@ All 139 tests passing."
 | 8: Integration | ⏳ Pending | 6-7h | - | - |
 
 **Total Estimated:** 39-49 hours  
-**Total Completed:** 5 hours (10-13%)  
-**Remaining:** 34-44 hours
+**Total Completed:** Phase 1-2 complete; Phase 3 in progress (core/provider done, tests pending)  
+**Remaining:** Phase 3 test updates + Phases 4-8
 
 ---
 
@@ -636,7 +636,7 @@ All 139 tests passing."
 - ✅ No CommandInbox anywhere in codebase
 - ✅ Runtime manages sessions (before/after node execution)
 - ✅ Claude provider uses input.sessionId
-- ✅ All 139 tests passing
+- 🔄 All server + core tests passing (update cancellation tests to new API)
 - ✅ 0 typecheck errors
 - ✅ 0 lint issues
 
@@ -662,12 +662,11 @@ All 139 tests passing."
 ## 📞 Next Actions
 
 **Immediate (Phase 3 - Clean Break):**
-1. Update core types (NodeRunContext, remove CommandInbox)
-2. Update runtime session management
-3. Refactor Claude provider
-4. Update tests
-5. Run quality gates
-6. Commit with detailed BREAKING CHANGES message
+1. Update server integration tests to use pause()/resume()/stop()
+2. Remove remaining dispatch({ type: "abort" }) test patterns
+3. Eliminate lingering `any` in tests (use type guards/unknown)
+4. Run quality gates (typecheck, lint, test + live cancellation)
+5. Commit with detailed BREAKING CHANGES message
 
 **After Phase 3:**
 1. Move to Phase 4 (Recording Infrastructure)

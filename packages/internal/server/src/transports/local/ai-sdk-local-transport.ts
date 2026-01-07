@@ -182,16 +182,25 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
         // Wait a tick to ensure subscription is fully set up
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        // Dispatch message to runtime AFTER subscription is ready
-        try {
-          const runId = crypto.randomUUID();
-          this.runtime.dispatch({
-            type: "send",
-            runId,
-            message: textPart.text,
-          });
-        } catch (error) {
-          console.error("Error dispatching message:", error);
+        // Resume runtime AFTER subscription is ready
+        const snapshot = this.runtime.getSnapshot();
+        if (snapshot.status !== "paused") {
+          if (!isClosed) {
+            isClosed = true;
+            controller.enqueue({
+              type: "error",
+              errorText: `Runtime not paused (status: ${snapshot.status})`,
+            });
+            controller.close();
+            if (unsubscribe) {
+              unsubscribe();
+            }
+          }
+          return;
+        }
+
+        this.runtime.resume(textPart.text).catch((error) => {
+          console.error("Error resuming runtime:", error);
           if (!isClosed) {
             isClosed = true;
             controller.enqueue({
@@ -199,14 +208,14 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
               errorText:
                 error instanceof Error
                   ? error.message
-                  : "Failed to dispatch message",
+                  : "Failed to resume runtime",
             });
             controller.close();
             if (unsubscribe) {
               unsubscribe();
             }
           }
-        }
+        });
       },
     });
   }
