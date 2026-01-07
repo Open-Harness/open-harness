@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-07  
 **Branch:** `feat/provider-trait-recording-eval`  
-**Status:** 🟢 Phase 1-4 Complete, Phase 5-8 Pending  
+**Status:** 🟢 Phase 1-5 Complete, Phase 6-8 Pending  
 **Decision:** Clean Break - Remove inbox, simplify NodeRunContext, pure providers
 
 ---
@@ -598,16 +598,22 @@ recording_events(recording_id, seq, timestamp, event)
 
 ---
 
-### ⏳ Phase 5: Template Provider + Docs (PENDING)
-**Status:** Not started  
+### ✅ Phase 5: Template Provider + Docs (COMPLETE)
+**Status:** Delivered  
 **Time:** 2 hours  
 **Blockers:** None  
 **Priority:** High (enables other providers)
 
 **Deliverables:**
-- template.trait.ts with extensive comments
-- README: How to create providers
-- Test examples
+- `template.trait.ts` with detailed schemas, a default responder, and streaming/tool events that mirror production providers.
+- `packages/internal/server/src/providers/template/README.md` documenting how to use the provider, how to customize the responder, and how to wrap it with `withRecording()`.
+- Unit tests in `packages/open-harness/server/tests/unit/template-provider.test.ts` that verify the emitted event sequence and session-aware structured output.
+- Re-exported provider trait from `@internal/server`/`@open-harness/server` so tooling and workflows can import it directly.
+
+**Notes:**
+- The default responder normalizes prompts, surfaces sentiment, and issues deterministic session IDs for pause/resume flows.
+- The provider emits a `thinking` delta, two `text` events (delta + final), and a structured `tool` completion event named `template.summary`.
+- The README highlights how to hook the provider into recording/replay flows and how to consume the structured summary event.
 
 ---
 
@@ -662,14 +668,14 @@ recording_events(recording_id, seq, timestamp, event)
 | 2: State Cleanup | ✅ Complete | 2h | 2h | `1eca77a` |
 | 3: Clean Break | ✅ Complete | 8-12h | - | `39cdfaf`, `326808c`, `c4e0a85` |
 | 4: Recording | ✅ Complete | 8-10h | - | `3658c94` (core) |
-| 5: Template | ⏳ Pending | 2h | - | - |
+| 5: Template | ✅ Complete | 2h | 2h | - |
 | 6: Eval Types | ⏳ Pending | 2h | - | - |
 | 7: Eval Engine | ⏳ Pending | 8-10h | - | - |
 | 8: Integration | ⏳ Pending | 6-7h | - | - |
 
 **Total Estimated:** 39-49 hours  
-**Total Completed:** Phase 1-4 complete  
-**Remaining:** Phases 5-8
+**Total Completed:** Phase 1-5 complete  
+**Remaining:** Phases 6-8
 
 ---
 
@@ -707,16 +713,16 @@ recording_events(recording_id, seq, timestamp, event)
 
 ## 📞 Next Actions
 
-**Immediate (Phase 5 - Template Provider + Docs):**
-1. Implement template provider (`template.trait.ts`)
-2. Update provider README with template guidance
-3. Add sample tests for template provider
-4. Run quality gates (typecheck, lint, test)
+**Immediate (Phase 6 - Eval Core Types):**
+1. Define assertion/result types, the scorer interface, and dataset/test-case contracts.
+2. Sketch built-in scorers (latency, cost, tokens) with documentation for their usage.
+3. Tie the new types back to the recording/template provider flow so evals can replay template runs.
+4. Run quality gates (typecheck, lint, test) before declaring Phase 6 ready.
 
-**After Phase 4:**
-1. Move to Phase 5 (Template Provider + Docs)
-2. Continue through phases 6-8
-3. Document migration path for other providers
+**After Phase 5:**
+1. Move through phases 6-8 (Eval Core → Eval Engine → Integration/Validation).
+2. Capture any additional documentation or fixtures required for Phase 6.
+3. Keep plan docs updated as each subsequent phase completes.
 
 ---
 
