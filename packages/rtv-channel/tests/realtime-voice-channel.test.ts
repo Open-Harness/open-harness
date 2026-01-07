@@ -37,14 +37,20 @@ describe("RealtimeVoiceChannel (ws integration)", () => {
 		await server.waitForMessage((msg) => msg.type === "session.update");
 
 		hub.emit({ type: "voice:input:start" });
-		await server.waitForMessage((msg) => msg.type === "input_audio_buffer.clear");
+		await server.waitForMessage(
+			(msg) => msg.type === "input_audio_buffer.clear",
+		);
 
 		const pcm = Buffer.from([1, 2, 3, 4]);
 		hub.emit({ type: "voice:input:audio", audio: pcm.toString("base64") });
-		await server.waitForMessage((msg) => msg.type === "input_audio_buffer.append");
+		await server.waitForMessage(
+			(msg) => msg.type === "input_audio_buffer.append",
+		);
 
 		hub.emit({ type: "voice:input:commit" });
-		await server.waitForMessage((msg) => msg.type === "input_audio_buffer.commit");
+		await server.waitForMessage(
+			(msg) => msg.type === "input_audio_buffer.commit",
+		);
 		await server.waitForMessage((msg) => msg.type === "response.create");
 
 		if (cleanup) await cleanup();

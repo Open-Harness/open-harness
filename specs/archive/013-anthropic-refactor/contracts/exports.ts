@@ -18,34 +18,34 @@
  * Framework primitives ONLY - no concrete agents.
  */
 export const MAIN_EXPORTS = {
-  // Factory function
-  defineAnthropicAgent: "function",
+	// Factory function
+	defineAnthropicAgent: "function",
 
-  // Template utilities
-  createPromptTemplate: "function",
+	// Template utilities
+	createPromptTemplate: "function",
 
-  // Types (re-exports)
-  // AnthropicAgentDefinition: "type",
-  // PromptTemplate: "type",
-  // AnthropicAgent: "type",
-  // ExecuteOptions: "type",
-  // StreamOptions: "type",
-  // AgentHandle: "type",
+	// Types (re-exports)
+	// AnthropicAgentDefinition: "type",
+	// PromptTemplate: "type",
+	// AnthropicAgent: "type",
+	// ExecuteOptions: "type",
+	// StreamOptions: "type",
+	// AgentHandle: "type",
 
-  // Infrastructure (for advanced usage)
-  AnthropicRunner: "class",
-  ReplayRunner: "class",
-  RecordingFactory: "class",
-  Vault: "class",
+	// Infrastructure (for advanced usage)
+	AnthropicRunner: "class",
+	ReplayRunner: "class",
+	RecordingFactory: "class",
+	Vault: "class",
 
-  // Models
-  zodToSdkSchema: "function",
-  CodingResultSchema: "const",
-  EventType: "enum",
-  EventTypeConst: "const",
+	// Models
+	zodToSdkSchema: "function",
+	CodingResultSchema: "const",
+	EventType: "enum",
+	EventTypeConst: "const",
 
-  // Monologue
-  AnthropicMonologueLLM: "class",
+	// Monologue
+	AnthropicMonologueLLM: "class",
 } as const;
 
 /**
@@ -69,23 +69,23 @@ export const MAIN_EXPORTS = {
  * Pre-configured agent instances ready to use.
  */
 export const PRESETS_EXPORTS = {
-  // Pre-configured agents
-  CodingAgent: "AnthropicAgent<CodingInput, CodingOutput>",
-  ReviewAgent: "AnthropicAgent<ReviewInput, ReviewOutput>",
-  PlannerAgent: "AnthropicAgent<PlannerInput, PlannerOutput>",
+	// Pre-configured agents
+	CodingAgent: "AnthropicAgent<CodingInput, CodingOutput>",
+	ReviewAgent: "AnthropicAgent<ReviewInput, ReviewOutput>",
+	PlannerAgent: "AnthropicAgent<PlannerInput, PlannerOutput>",
 
-  // Preset schemas (for customization)
-  CodingInputSchema: "ZodType",
-  CodingOutputSchema: "ZodType",
-  ReviewInputSchema: "ZodType",
-  ReviewOutputSchema: "ZodType",
-  PlannerInputSchema: "ZodType",
-  PlannerOutputSchema: "ZodType",
+	// Preset schemas (for customization)
+	CodingInputSchema: "ZodType",
+	CodingOutputSchema: "ZodType",
+	ReviewInputSchema: "ZodType",
+	ReviewOutputSchema: "ZodType",
+	PlannerInputSchema: "ZodType",
+	PlannerOutputSchema: "ZodType",
 
-  // Preset prompt templates (for override)
-  codingPromptTemplate: "PromptTemplate",
-  reviewPromptTemplate: "PromptTemplate",
-  plannerPromptTemplate: "PromptTemplate",
+	// Preset prompt templates (for override)
+	codingPromptTemplate: "PromptTemplate",
+	reviewPromptTemplate: "PromptTemplate",
+	plannerPromptTemplate: "PromptTemplate",
 } as const;
 
 // ============================================================================
@@ -96,27 +96,27 @@ export const PRESETS_EXPORTS = {
  * Required package.json exports configuration.
  */
 export const PACKAGE_EXPORTS = {
-  ".": {
-    import: "./dist/index.js",
-    types: "./dist/index.d.ts",
-  },
-  "./presets": {
-    import: "./dist/presets/index.js",
-    types: "./dist/presets/index.d.ts",
-  },
-  // Deprecated - kept for backward compatibility with warning
-  "./agents": {
-    import: "./dist/agents/index.js",
-    types: "./dist/agents/index.d.ts",
-  },
-  "./runner": {
-    import: "./dist/infra/runner/index.js",
-    types: "./dist/infra/runner/index.d.ts",
-  },
-  "./recording": {
-    import: "./dist/infra/recording/index.js",
-    types: "./dist/infra/recording/index.d.ts",
-  },
+	".": {
+		import: "./dist/index.js",
+		types: "./dist/index.d.ts",
+	},
+	"./presets": {
+		import: "./dist/presets/index.js",
+		types: "./dist/presets/index.d.ts",
+	},
+	// Deprecated - kept for backward compatibility with warning
+	"./agents": {
+		import: "./dist/agents/index.js",
+		types: "./dist/agents/index.d.ts",
+	},
+	"./runner": {
+		import: "./dist/infra/runner/index.js",
+		types: "./dist/infra/runner/index.d.ts",
+	},
+	"./recording": {
+		import: "./dist/infra/recording/index.js",
+		types: "./dist/infra/recording/index.d.ts",
+	},
 } as const;
 
 // ============================================================================
@@ -127,32 +127,29 @@ export const PACKAGE_EXPORTS = {
  * Deprecated exports with migration paths.
  */
 export const DEPRECATED_EXPORTS = {
-  BaseAnthropicAgent: {
-    deprecatedIn: "0.2.0",
-    removedIn: "2.0.0",
-    replacement: "defineAnthropicAgent()",
-    message:
-      "BaseAnthropicAgent is deprecated. Use defineAnthropicAgent() factory instead.",
-  },
-  IEventBus: {
-    deprecatedIn: "0.2.0",
-    removedIn: "2.0.0",
-    replacement: "IUnifiedEventBus",
-    message:
-      "IEventBus is deprecated. Use IUnifiedEventBus instead. See docs/deprecation-schedule.md.",
-  },
-  IEventBusToken: {
-    deprecatedIn: "0.2.0",
-    removedIn: "2.0.0",
-    replacement: "IUnifiedEventBusToken",
-    message:
-      "IEventBusToken is deprecated. Use IUnifiedEventBusToken instead.",
-  },
-  PromptRegistry: {
-    deprecatedIn: "0.2.0",
-    removedIn: "2.0.0",
-    replacement: "createPromptTemplate()",
-    message:
-      "PromptRegistry with Bun.file() is deprecated. Use TypeScript prompt templates with createPromptTemplate() instead.",
-  },
+	BaseAnthropicAgent: {
+		deprecatedIn: "0.2.0",
+		removedIn: "2.0.0",
+		replacement: "defineAnthropicAgent()",
+		message: "BaseAnthropicAgent is deprecated. Use defineAnthropicAgent() factory instead.",
+	},
+	IEventBus: {
+		deprecatedIn: "0.2.0",
+		removedIn: "2.0.0",
+		replacement: "IUnifiedEventBus",
+		message: "IEventBus is deprecated. Use IUnifiedEventBus instead. See docs/deprecation-schedule.md.",
+	},
+	IEventBusToken: {
+		deprecatedIn: "0.2.0",
+		removedIn: "2.0.0",
+		replacement: "IUnifiedEventBusToken",
+		message: "IEventBusToken is deprecated. Use IUnifiedEventBusToken instead.",
+	},
+	PromptRegistry: {
+		deprecatedIn: "0.2.0",
+		removedIn: "2.0.0",
+		replacement: "createPromptTemplate()",
+		message:
+			"PromptRegistry with Bun.file() is deprecated. Use TypeScript prompt templates with createPromptTemplate() instead.",
+	},
 } as const;

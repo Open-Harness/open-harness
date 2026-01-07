@@ -15,29 +15,29 @@ import type { PromptTemplate } from "./prompt-template";
  * @template TOutput - Output data type (inferred from outputSchema)
  */
 export interface AnthropicAgentDefinition<TInput, TOutput> {
-  /**
-   * Agent identifier (e.g., "PlannerAgent", "CodingAgent").
-   * Used for logging and event emission.
-   */
-  name: string;
+	/**
+	 * Agent identifier (e.g., "PlannerAgent", "CodingAgent").
+	 * Used for logging and event emission.
+	 */
+	name: string;
 
-  /**
-   * Prompt template with typed variables.
-   * Variables must match fields in TInput.
-   */
-  prompt: PromptTemplate<TInput>;
+	/**
+	 * Prompt template with typed variables.
+	 * Variables must match fields in TInput.
+	 */
+	prompt: PromptTemplate<TInput>;
 
-  /**
-   * Zod schema for validating input before execution.
-   * Throws ZodError if validation fails.
-   */
-  inputSchema: z.ZodSchema<TInput>;
+	/**
+	 * Zod schema for validating input before execution.
+	 * Throws ZodError if validation fails.
+	 */
+	inputSchema: z.ZodSchema<TInput>;
 
-  /**
-   * Zod schema for parsing LLM output.
-   * Uses structured output from LLM runner.
-   */
-  outputSchema: z.ZodSchema<TOutput>;
+	/**
+	 * Zod schema for parsing LLM output.
+	 * Uses structured output from LLM runner.
+	 */
+	outputSchema: z.ZodSchema<TOutput>;
 }
 
 /**
@@ -57,14 +57,12 @@ export interface AnthropicAgentDefinition<TInput, TOutput> {
  * // PlannerAgent is now a plain config object
  * ```
  */
-export declare function defineAnthropicAgent<TInput, TOutput>(
-  config: {
-    name: string;
-    prompt: PromptTemplate<TInput>;
-    inputSchema: z.ZodSchema<TInput>;
-    outputSchema: z.ZodSchema<TOutput>;
-  },
-): AnthropicAgentDefinition<TInput, TOutput>;
+export declare function defineAnthropicAgent<TInput, TOutput>(config: {
+	name: string;
+	prompt: PromptTemplate<TInput>;
+	inputSchema: z.ZodSchema<TInput>;
+	outputSchema: z.ZodSchema<TOutput>;
+}): AnthropicAgentDefinition<TInput, TOutput>;
 
 /**
  * Type guard for checking if value is an agent definition.
@@ -73,12 +71,12 @@ export declare function defineAnthropicAgent<TInput, TOutput>(
  * @returns True if value has required agent definition fields
  */
 export function isAgentDefinition(value: unknown): value is AnthropicAgentDefinition<any, any> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "name" in value &&
-    "prompt" in value &&
-    "inputSchema" in value &&
-    "outputSchema" in value
-  );
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"name" in value &&
+		"prompt" in value &&
+		"inputSchema" in value &&
+		"outputSchema" in value
+	);
 }

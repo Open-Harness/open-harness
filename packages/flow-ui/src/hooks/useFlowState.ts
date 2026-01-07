@@ -6,11 +6,11 @@
  */
 
 import {
+	addEdge,
 	type Connection,
 	type OnConnect,
 	type OnEdgesChange,
 	type OnNodesChange,
-	addEdge,
 	useEdgesState,
 	useNodesState,
 } from "@xyflow/react";

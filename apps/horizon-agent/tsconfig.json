@@ -8,7 +8,8 @@
 		"allowImportingTsExtensions": true,
 		"baseUrl": ".",
 		"paths": {
-			"@open-harness/kernel": ["../../packages/kernel/src/index.ts"]
+			"@open-harness/kernel": ["../../packages/kernel/src/index.ts"],
+			"@open-harness/kernel-v3": ["../../packages/kernel-v3/src/index.ts"]
 		},
 		"types": ["bun"],
 		"lib": ["ES2022"],

@@ -1,6 +1,6 @@
-import { WebSocketServer, type WebSocket } from "ws";
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
+import { type WebSocket, WebSocketServer } from "ws";
 
 type JsonValue = Record<string, unknown>;
 

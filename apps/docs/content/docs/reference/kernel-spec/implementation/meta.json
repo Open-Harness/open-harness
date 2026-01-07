@@ -1,9 +1,4 @@
 {
   "title": "Implementation",
-  "pages": [
-    "index",
-    "conformance",
-    "roadmap",
-    "traceability"
-  ]
+  "pages": ["index", "conformance", "roadmap", "traceability"]
 }

@@ -9,8 +9,8 @@
  * This is the pattern for extending the FlowRuntime with domain-specific nodes.
  */
 
-import { z } from "zod";
 import type { NodeTypeDefinition } from "@open-harness/kernel";
+import { z } from "zod";
 
 // Define input schema - what this node accepts
 const WordAnalyzerInputSchema = z.object({
@@ -37,10 +37,7 @@ type WordAnalyzerOutput = z.infer<typeof WordAnalyzerOutputSchema>;
  * Analyzes text content and produces statistics about word usage.
  * This is a stateless, pure function node - ideal for data transformation.
  */
-export const wordAnalyzerNode: NodeTypeDefinition<
-	WordAnalyzerInput,
-	WordAnalyzerOutput
-> = {
+export const wordAnalyzerNode: NodeTypeDefinition<WordAnalyzerInput, WordAnalyzerOutput> = {
 	// Unique type identifier - convention: "domain.action"
 	type: "text.word_analyzer",
 
@@ -60,9 +57,7 @@ export const wordAnalyzerNode: NodeTypeDefinition<
 		const wordCount = words.length;
 
 		// Count characters
-		const charCount = countWhitespace
-			? text.length
-			: text.replace(/\s/g, "").length;
+		const charCount = countWhitespace ? text.length : text.replace(/\s/g, "").length;
 
 		// Count lines
 		const lineCount = text.split("\n").length;
@@ -72,10 +67,7 @@ export const wordAnalyzerNode: NodeTypeDefinition<
 		const avgLength = wordCount > 0 ? totalWordChars / wordCount : 0;
 
 		// Find longest word
-		const longestWord = words.reduce(
-			(longest, word) => (word.length > longest.length ? word : longest),
-			"",
-		);
+		const longestWord = words.reduce((longest, word) => (word.length > longest.length ? word : longest), "");
 
 		return {
 			words: wordCount,

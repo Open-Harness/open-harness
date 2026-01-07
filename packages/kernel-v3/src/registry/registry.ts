@@ -71,10 +71,7 @@ export interface NodeRegistry {
  * Default in-memory registry implementation.
  */
 export class DefaultNodeRegistry implements NodeRegistry {
-	private readonly registry = new Map<
-		string,
-		NodeTypeDefinition<unknown, unknown>
-	>();
+	private readonly registry = new Map<string, NodeTypeDefinition<unknown, unknown>>();
 
 	/**
 	 * Register a node definition.

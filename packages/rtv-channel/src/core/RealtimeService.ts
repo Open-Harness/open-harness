@@ -395,7 +395,8 @@ export class RealtimeService extends EventEmitter {
 	}
 
 	async toggleMode(): Promise<void> {
-		const next = this.state.mode === "push-to-talk" ? "conversation" : "push-to-talk";
+		const next =
+			this.state.mode === "push-to-talk" ? "conversation" : "push-to-talk";
 		await this.setMode(next);
 	}
 

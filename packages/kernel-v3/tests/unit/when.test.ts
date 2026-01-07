@@ -27,10 +27,7 @@ describe("when evaluation", () => {
 			and: [
 				{ equals: { var: "a", value: 1 } },
 				{
-					or: [
-						{ equals: { var: "b", value: 2 } },
-						{ equals: { var: "c", value: 3 } },
-					],
+					or: [{ equals: { var: "b", value: 2 } }, { equals: { var: "c", value: 3 } }],
 				},
 			],
 		};

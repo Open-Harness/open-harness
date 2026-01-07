@@ -89,12 +89,7 @@ export interface AgentEvent {
 /**
  * Discriminated union of event payloads.
  */
-export type AgentEventPayload =
-	| ToolCallPayload
-	| ToolResultPayload
-	| TextPayload
-	| ThinkingPayload
-	| CompletionPayload;
+export type AgentEventPayload = ToolCallPayload | ToolResultPayload | TextPayload | ThinkingPayload | CompletionPayload;
 
 export interface ToolCallPayload {
 	type: "tool_call";

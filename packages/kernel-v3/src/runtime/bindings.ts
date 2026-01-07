@@ -19,10 +19,7 @@ export type BindingResolution = {
  * @param path - Dotted path string.
  * @returns Binding resolution result.
  */
-export function resolveBindingPath(
-	context: BindingContext,
-	path: string,
-): BindingResolution {
+export function resolveBindingPath(context: BindingContext, path: string): BindingResolution {
 	const segments = path.split(".").filter((segment) => segment.length > 0);
 	let current: unknown = context;
 
@@ -47,10 +44,7 @@ export function resolveBindingPath(
  * @param context - Binding context.
  * @returns Resolved string.
  */
-export function resolveBindingString(
-	template: string,
-	context: BindingContext,
-): string {
+export function resolveBindingString(template: string, context: BindingContext): string {
 	const regex = /{{\s*([^}]+?)\s*}}/g;
 	let result = "";
 	let lastIndex = 0;
@@ -79,10 +73,7 @@ export function resolveBindingString(
  * @param context - Binding context.
  * @returns Resolved object.
  */
-export function resolveBindings<T extends Record<string, unknown>>(
-	input: T,
-	context: BindingContext,
-): T {
+export function resolveBindings<T extends Record<string, unknown>>(input: T, context: BindingContext): T {
 	return resolveValue(input, context) as T;
 }
 
@@ -115,10 +106,7 @@ function isPureBinding(template: string): boolean {
 	return matches?.length === 1 && matches[0] === trimmed;
 }
 
-function resolvePureBinding(
-	template: string,
-	context: BindingContext,
-): unknown {
+function resolvePureBinding(template: string, context: BindingContext): unknown {
 	const match = template.match(/^{{\s*([^}]+?)\s*}}$/);
 	if (!match) {
 		throw new Error(`Invalid binding expression: ${template}`);

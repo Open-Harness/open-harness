@@ -71,15 +71,17 @@ async function main() {
 
 	console.log("\n--- Scan Results ---");
 
-	const scanResults = outputs["scan_files"] as {
-		iterations?: Array<{
-			item: { path: string; content: string };
-			sessionId: string;
-			outputs: {
-				scan_single_file?: { path: string; issues: string[]; severity: string };
-			};
-		}>;
-	} | undefined;
+	const scanResults = outputs["scan_files"] as
+		| {
+				iterations?: Array<{
+					item: { path: string; content: string };
+					sessionId: string;
+					outputs: {
+						scan_single_file?: { path: string; issues: string[]; severity: string };
+					};
+				}>;
+		  }
+		| undefined;
 
 	if (scanResults?.iterations) {
 		for (const iteration of scanResults.iterations) {

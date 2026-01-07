@@ -49,19 +49,15 @@ apps/horizon-agent/
 ### Direct Execution (CLI)
 
 ```bash
-# Simple run
+# Run with Terminal UI (default)
 bun run src/cli.ts run "Create a TypeScript function that validates email addresses" \
   --flow ./flows/simple-loop.yaml
 
-# With verbose output (shows Claude messages)
+# Run headless with verbose output (shows Claude messages)
 bun run src/cli.ts run "Create a utility function" \
   --flow ./flows/simple-loop.yaml \
+  --no-tui \
   --verbose
-
-# Interactive mode (pause/resume/inject while running)
-bun run src/cli.ts run "Create a utility function" \
-  --flow ./flows/simple-loop.yaml \
-  --interactive
 ```
 
 ### Server Mode (WebSocket)
@@ -82,12 +78,11 @@ wscat -c ws://localhost:3002/ws
 
 | Command | Description |
 |---------|-------------|
-| `run <feature>` | Execute flow directly (no server) |
+| `run <feature>` | Execute flow directly with TUI or headless |
 | `start` | Start WebSocket server |
 | `status` | Get server status |
-| `pause` | Pause running flow |
-| `resume` | Resume paused flow |
-| `inject <msg>` | Inject message into running flow |
+| `pause` | Pause running flow (server mode) |
+| `resume` | Resume paused flow (server mode) |
 
 ### Run Options
 
@@ -95,21 +90,20 @@ wscat -c ws://localhost:3002/ws
 |--------|---------|-------------|
 | `-f, --flow <path>` | `./flows/agent-loop.yaml` | Flow definition file |
 | `-m, --max-iterations <n>` | `5` | Max review loop iterations |
-| `-v, --verbose` | `false` | Show Claude messages |
-| `-i, --interactive` | `false` | Enable stdin commands |
+| `--no-tui` | `false` | Disable Terminal UI (headless mode) |
+| `-v, --verbose` | `false` | Show Claude messages (headless mode only) |
 
-### Interactive Commands
+### TUI Keybindings
 
-When running with `-i`:
+When running with the Terminal UI (default):
 
-```
-horizon> status     # Show current state
-horizon> pause      # Pause flow execution
-horizon> resume     # Resume paused flow
-horizon> inject <msg>  # Inject message
-horizon> quit       # Abort and exit
-horizon> help       # Show commands
-```
+| Key | Action |
+|-----|--------|
+| `q` | Quit and abort flow |
+| `p` | Pause flow execution |
+| `r` | Resume paused flow |
+| `i` | Inject message dialog |
+| `?` | Toggle help panel |
 
 ## Flow Definitions
 

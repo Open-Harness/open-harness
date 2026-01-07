@@ -1,13 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-	type Attachment,
-	loadFlowYamlFile,
-	NodeRegistry,
-	type NodePack,
-	type FlowYaml,
-} from "@open-harness/kernel";
+import { type Attachment, type FlowYaml, loadFlowYamlFile, type NodePack, NodeRegistry } from "@open-harness/kernel";
 import { runFlowRuntime } from "./runtime.js";
 
 export type NodePackMap = Record<string, NodePack>;
@@ -46,17 +40,12 @@ export async function loadNodePacks(configPath?: string): Promise<NodePackMap> {
 	}
 }
 
-export function buildRegistry(
-	requestedPacks: string[],
-	availablePacks: NodePackMap,
-): NodeRegistry {
+export function buildRegistry(requestedPacks: string[], availablePacks: NodePackMap): NodeRegistry {
 	const registry = new NodeRegistry();
 	for (const packName of requestedPacks) {
 		const pack = availablePacks[packName];
 		if (!pack) {
-			throw new Error(
-				`Unknown node pack: ${packName}. Allowed: ${Object.keys(availablePacks).join(", ")}`,
-			);
+			throw new Error(`Unknown node pack: ${packName}. Allowed: ${Object.keys(availablePacks).join(", ")}`);
 		}
 		pack.register(registry);
 	}
@@ -86,9 +75,7 @@ export async function runFlow(options: {
 }): Promise<Record<string, unknown>> {
 	const requestedPacks = options.flow.flow.nodePacks;
 	if (!requestedPacks || requestedPacks.length === 0) {
-		throw new Error(
-			"Flow YAML must declare flow.nodePacks (e.g. [core, claude])",
-		);
+		throw new Error("Flow YAML must declare flow.nodePacks (e.g. [core, claude])");
 	}
 
 	const availablePacks = await loadNodePacks(options.configPath);

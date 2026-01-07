@@ -1,20 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import {
-	createRuntime,
-	DefaultNodeRegistry,
-	parseFlowYaml,
-} from "../src/index.js";
+import { createRuntime, DefaultNodeRegistry, parseFlowYaml } from "../src/index.js";
 import { createClaudeNode } from "../src/nodes/claude.agent.js";
 import { constantNode, echoNode } from "../src/nodes/index.js";
 import type { FixtureFile } from "../src/testing/mock-query.js";
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.flow || !args.outDir) {
-	console.error(
-		"Usage: bun scripts/record-fixtures.ts --flow <path> --out <dir>",
-	);
+	console.error("Usage: bun scripts/record-fixtures.ts --flow <path> --out <dir>");
 	process.exit(1);
 }
 

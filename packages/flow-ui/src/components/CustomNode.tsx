@@ -33,9 +33,7 @@ function CustomNodeComponent({ data, selected }: CustomNodeProps) {
 	const displayIcon = icon || DEFAULT_ICONS[nodeType] || DEFAULT_ICONS.default;
 
 	// Build class name based on state
-	const className = ["custom-node", `state-${executionState}`, selected ? "selected" : ""]
-		.filter(Boolean)
-		.join(" ");
+	const className = ["custom-node", `state-${executionState}`, selected ? "selected" : ""].filter(Boolean).join(" ");
 
 	return (
 		<div className={className}>
@@ -54,9 +52,7 @@ function CustomNodeComponent({ data, selected }: CustomNodeProps) {
 
 				{executionState === "running" && <span>Running...</span>}
 
-				{executionState === "complete" && durationMs !== undefined && (
-					<span>Completed in {durationMs}ms</span>
-				)}
+				{executionState === "complete" && durationMs !== undefined && <span>Completed in {durationMs}ms</span>}
 
 				{executionState === "error" && (
 					<span className="error-text" title={lastError}>

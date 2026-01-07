@@ -17,46 +17,46 @@
  * Controls when and how narratives are generated from agent events.
  */
 export interface MonologueConfig {
-  /**
-   * Minimum number of events to buffer before considering generation.
-   * The system prompt may still decide to wait for more events.
-   * @default 1
-   */
-  minBufferSize?: number;
+	/**
+	 * Minimum number of events to buffer before considering generation.
+	 * The system prompt may still decide to wait for more events.
+	 * @default 1
+	 */
+	minBufferSize?: number;
 
-  /**
-   * Maximum number of events to buffer before forcing generation.
-   * @default 10
-   */
-  maxBufferSize?: number;
+	/**
+	 * Maximum number of events to buffer before forcing generation.
+	 * @default 10
+	 */
+	maxBufferSize?: number;
 
-  /**
-   * Maximum number of previous monologues to include in history.
-   * These get re-injected into the system prompt for context.
-   * @default 5
-   */
-  historySize?: number;
+	/**
+	 * Maximum number of previous monologues to include in history.
+	 * These get re-injected into the system prompt for context.
+	 * @default 5
+	 */
+	historySize?: number;
 
-  /**
-   * Model to use for monologue generation.
-   * @default "haiku"
-   */
-  model?: 'haiku' | 'sonnet' | 'opus';
+	/**
+	 * Model to use for monologue generation.
+	 * @default "haiku"
+	 */
+	model?: "haiku" | "sonnet" | "opus";
 
-  /**
-   * Custom system prompt for monologue generation.
-   * If provided, overrides the default prompt.
-   *
-   * The prompt receives:
-   * - {{events}} — Recent events to summarize
-   * - {{history}} — Previous monologues for context
-   * - {{agentName}} — Name of the agent
-   *
-   * The prompt can instruct the LLM to:
-   * - Generate immediately, or
-   * - Return empty string to wait for more events
-   */
-  systemPrompt?: string;
+	/**
+	 * Custom system prompt for monologue generation.
+	 * If provided, overrides the default prompt.
+	 *
+	 * The prompt receives:
+	 * - {{events}} — Recent events to summarize
+	 * - {{history}} — Previous monologues for context
+	 * - {{agentName}} — Name of the agent
+	 *
+	 * The prompt can instruct the LLM to:
+	 * - Generate immediately, or
+	 * - Return empty string to wait for more events
+	 */
+	systemPrompt?: string;
 }
 
 // ============================================================================
@@ -128,23 +128,23 @@ If not enough context, respond "..."`;
  * This extends IAgentCallbacks with the onMonologue callback.
  */
 export interface MonologueCallbacks {
-  /**
-   * Fired when the agent generates a narrative summary.
-   *
-   * @param text - The narrative text in first person
-   * @param metadata - Optional metadata about generation
-   */
-  onMonologue?: (text: string, metadata?: MonologueMetadata) => void;
+	/**
+	 * Fired when the agent generates a narrative summary.
+	 *
+	 * @param text - The narrative text in first person
+	 * @param metadata - Optional metadata about generation
+	 */
+	onMonologue?: (text: string, metadata?: MonologueMetadata) => void;
 }
 
 /**
  * Metadata about monologue generation.
  */
 export interface MonologueMetadata {
-  /** Number of events that were summarized */
-  eventCount: number;
-  /** Current length of monologue history */
-  historyLength: number;
-  /** True if this is the final flush at end of execution */
-  isFinal?: boolean;
+	/** Number of events that were summarized */
+	eventCount: number;
+	/** Current length of monologue history */
+	historyLength: number;
+	/** True if this is the final flush at end of execution */
+	isFinal?: boolean;
 }

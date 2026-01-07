@@ -33,7 +33,10 @@ export interface Hub extends AsyncIterable<EnrichedEvent> {
 	subscribe(listener: EventListener): Unsubscribe;
 	subscribe(filter: EventFilter, listener: EventListener): Unsubscribe;
 	emit(event: BaseEvent, override?: Partial<EventContext>): void;
-	scoped<T>(context: Partial<EventContext>, fn: () => T | Promise<T>): T | Promise<T>;
+	scoped<T>(
+		context: Partial<EventContext>,
+		fn: () => T | Promise<T>,
+	): T | Promise<T>;
 	current(): EventContext;
 
 	send(message: string): void;
