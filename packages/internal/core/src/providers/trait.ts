@@ -46,6 +46,13 @@ export interface ProviderTrait<TInput, TOutput> {
 /**
  * Capabilities that a provider may have.
  * These are optional features that affect how the runtime uses the provider.
+ * 
+ * NOTE: Pause/resume is NOT a capability.
+ * All providers support session-based restart via their input/output schemas.
+ * The workflow layer handles pause/resume by:
+ * 1. Aborting current call via AbortSignal
+ * 2. Saving provider's session ID from output
+ * 3. Resuming by passing session ID + message in input
  */
 export interface ProviderCapabilities {
 	/**
@@ -53,14 +60,6 @@ export interface ProviderCapabilities {
 	 * If true, execute() will yield StreamEvents as they occur.
 	 */
 	streaming: boolean;
-	
-	/**
-	 * Can the provider pause and resume?
-	 * 
-	 * Only Claude SDK supports this via sessionId.
-	 * Most providers should set this to false.
-	 */
-	pauseResume: boolean;
 	
 	/**
 	 * Can the provider return structured JSON output?

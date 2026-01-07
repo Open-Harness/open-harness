@@ -1,5 +1,4 @@
 // Using globalThis.crypto for web compatibility
-import type { Query } from "@anthropic-ai/claude-agent-sdk";
 import type { NodeRegistry, NodeRunContext } from "../../nodes/index.js";
 import type { RunStore } from "../../persistence/index.js";
 import type {
@@ -887,7 +886,6 @@ class InMemoryRuntime implements Runtime {
 		const callbacks = new Set<() => void | Promise<void>>();
 		let reason: CancelReason | undefined;
 		let cancelled = false;
-		let queryRef: Query | undefined;
 
 		const notify = async () => {
 			for (const callback of callbacks) {
@@ -917,9 +915,8 @@ class InMemoryRuntime implements Runtime {
 				reason = "pause";
 				cancelled = true;
 				await notify();
-				if (queryRef?.interrupt) {
-					await queryRef.interrupt();
-				}
+				// Note: Pause/resume is provider-specific (e.g., Claude SDK)
+				// Providers should handle this via their own mechanisms
 			},
 			abort: () => {
 				if (cancelled) return;
@@ -940,9 +937,6 @@ class InMemoryRuntime implements Runtime {
 				}
 				callbacks.add(callback);
 				return () => callbacks.delete(callback);
-			},
-			__setQuery: (query) => {
-				queryRef = query;
 			},
 			__controller: controller,
 		};

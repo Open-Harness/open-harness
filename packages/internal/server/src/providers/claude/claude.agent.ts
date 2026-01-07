@@ -178,7 +178,8 @@ export function createClaudeNode(
           abortController: cancelContext?.__controller,
         },
       });
-      cancelContext?.__setQuery(queryStream);
+      // Note: __setQuery removed - pause/resume now handled at workflow level
+      // via session IDs in input/output, not via cancel context
 
       const promptForEvent =
         resumeMessage ?? basePrompt ?? baseMessages ?? promptMessages;

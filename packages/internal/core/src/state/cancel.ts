@@ -1,5 +1,3 @@
-import type { Query } from "@anthropic-ai/claude-agent-sdk";
-
 export type CancelReason = "pause" | "abort" | "timeout";
 
 export interface CancelContext {
@@ -14,6 +12,5 @@ export interface CancelContext {
 }
 
 export interface CancelContextInternal extends CancelContext {
-	__setQuery(query: Query): void;
 	__controller: AbortController;
 }

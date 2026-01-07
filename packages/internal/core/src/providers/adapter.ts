@@ -29,7 +29,8 @@ export function toNodeDefinition<I, O>(trait: ProviderTrait<I, O>): NodeTypeDefi
 		outputSchema: trait.outputSchema,
 		capabilities: {
 			streaming: trait.capabilities.streaming,
-			multiTurn: trait.capabilities.pauseResume,
+			// Note: multiTurn/pause-resume is handled at workflow level
+			// via session IDs in provider input/output, not as a capability
 		},
 		run: async (ctx: NodeRunContext, input: I) => {
 			// Step 1: Validate input
