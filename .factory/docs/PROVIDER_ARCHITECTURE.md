@@ -2,11 +2,15 @@
 
 **Date:** 2026-01-07  
 **Status:** ✅ APPROVED + EXTENDED  
-**Decisions:**
+**Last Updated:** 2026-01-07 (Added stateful SDK clarification + API terminology)
+
+**Key Decisions:**
 1. Pause/Resume is a workflow-level concept, not provider-level
 2. Remove inbox entirely - no mid-stream message injection
 3. Simplify NodeRunContext - pure providers with minimal context
 4. HITL is workflow-level (human.input node type)
+5. **Provider SDKs are STATEFUL** - they maintain their own history
+6. **Clean Runtime API** - `pause()`, `resume()`, `stop()` (not overloaded "abort")
 
 **Related Documents:**
 - `PROVIDER_CLEAN_BREAK_IMPLEMENTATION_PLAN.md` - Complete implementation plan (Phase 3 in progress)
@@ -182,35 +186,71 @@ interface CodexOutput {
 
 ## 🔄 Workflow Pause/Resume Flow
 
+### Critical Understanding: Stateful SDKs
+
+**Provider SDKs (Claude, OpenAI, etc.) are STATEFUL:**
+- They maintain their own conversation history internally
+- They track all tool calls, messages, and context
+- On resume, you do NOT need to pass back previous messages
+- You only need: `sessionId` + `new message`
+
+```typescript
+// Resume is just this - SDK has full history for this session
+{
+  prompt: "continue with the deployment",
+  options: {
+    resume: "session-abc-123",  // SDK looks up its own history
+  }
+}
+```
+
+### Runtime API (Clean Terminology)
+
+```typescript
+interface Runtime {
+  run(input?: Record<string, unknown>): Promise<RunSnapshot>;
+  pause(): Promise<RunSnapshot>;   // Soft stop, saves state, resumable
+  resume(message?: string): Promise<RunSnapshot>;  // Continue with new message
+  stop(): void;                    // Hard stop, NOT resumable
+  getSnapshot(): RunSnapshot;
+}
+```
+
+**Note:** We use `pause()` and `stop()` instead of overloaded "abort" terminology.
+- `pause()` = User wants to stop temporarily, will resume later
+- `stop()` = User wants to cancel entirely, no resume
+
 ### Pause Flow
 ```
-1. User requests pause
-2. Workflow calls ctx.cancel.interrupt()
-3. Provider receives abort via ctx.signal.aborted
-4. Provider stops and returns partial result (if any)
-5. Workflow saves snapshot:
-   {
-     runId: "run-123",
-     nodeId: "coder",
-     sessionId: "claude-session-abc",  // From provider output
-     state: { code: "partial..." },
-     resumeMessage: null,  // Will be set on resume
-   }
+1. User calls runtime.pause()
+2. Runtime signals abort to provider (AbortSignal)
+3. Provider stops streaming, returns current sessionId
+4. Runtime saves snapshot (includes sessionId)
+5. runtime.pause() returns snapshot for external persistence
 ```
 
 ### Resume Flow
 ```
-1. User resumes with optional message (default: "continue")
-2. Workflow loads snapshot
-3. Workflow constructs provider input:
-   {
-     prompt: resumeMessage ?? "continue",
-     options: {
-       resume: snapshot.sessionId,  // Claude: uses this
-     }
-   }
-4. Provider continues from where it left off
-5. Provider returns new output with updated sessionId
+1. Caller loads snapshot from storage
+2. Caller creates runtime with snapshot: createRuntime({ flow, registry, snapshot })
+3. Caller calls runtime.resume("approved, continue")
+4. Runtime finds paused node, gets sessionId from snapshot
+5. Runtime calls provider with ONLY: sessionId + new message
+6. Provider SDK looks up its own history, continues conversation
+```
+
+### What Runtime Passes on Resume
+```typescript
+// Runtime constructs this for the provider:
+{
+  prompt: message,  // "approved, continue" or default "continue"
+  options: {
+    resume: sessionId,  // From snapshot.agentSessions[nodeId]
+  }
+}
+
+// That's ALL. No message history reconstruction.
+// The SDK maintains its own conversation state.
 ```
 
 ---

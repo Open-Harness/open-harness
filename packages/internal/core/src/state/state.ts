@@ -39,18 +39,7 @@ export interface StateStore {
 	snapshot(): Record<string, unknown>;
 }
 
-/**
- * Command inbox for multi-turn or interactive workflows.
- */
-export interface CommandInbox {
-	/**
-	 * Dequeue the next available command, if any.
-	 * @returns The next command or undefined.
-	 */
-	next(): RuntimeCommand | undefined;
-	/**
-	 * Enqueue a new runtime command.
-	 * @param command - Command to enqueue.
-	 */
-	enqueue(command: RuntimeCommand): void;
-}
+// CommandInbox removed - no longer needed
+// Messages are passed directly in provider input
+// For multi-turn: use session IDs and multiple calls
+// For HITL: use human.input node type (workflow-level)

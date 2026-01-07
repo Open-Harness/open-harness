@@ -69,31 +69,61 @@ interface NodeRunContext {
 
 ## 📊 Session Management (Runtime Responsibility)
 
-### Pattern
+### Critical Understanding: Stateful SDKs
+
+**Provider SDKs (Claude, OpenAI, etc.) are STATEFUL:**
+- They maintain their own conversation history internally
+- They track all tool calls, messages, and context
+- On resume, you do NOT need to pass back previous messages
+- You only need: `sessionId` + `new message`
+
+### Runtime API (Clean Terminology)
+
+```typescript
+interface Runtime {
+  run(input?: Record<string, unknown>): Promise<RunSnapshot>;
+  pause(): Promise<RunSnapshot>;   // Soft stop, saves state, resumable
+  resume(message?: string): Promise<RunSnapshot>;  // Continue with new message
+  stop(): void;                    // Hard stop, NOT resumable
+  getSnapshot(): RunSnapshot;
+}
+```
+
+**Note:** We use `pause()` and `stop()` instead of overloaded "abort" terminology.
+
+### Session Storage
 ```typescript
 // Runtime snapshot stores sessions
 interface RunSnapshot {
   status: "running" | "paused" | "complete";
-  sessions: Record<string, string>;  // { [nodeId]: sessionId }
+  agentSessions: Record<string, string>;  // { [nodeId]: sessionId }
   // ...
 }
+```
 
-// Runtime handles lifecycle
+### Runtime Session Lifecycle
+```typescript
 class Runtime {
+  // During normal execution
   async executeNode(node, input) {
-    // BEFORE: Prepare full input
-    const fullInput = {
-      ...input,
-      sessionId: this.snapshot.sessions[nodeId],  // From snapshot
-    };
+    const output = await node.run(ctx, input);
     
-    // RUN: Pure provider
-    const output = await node.run(ctx, fullInput);
-    
-    // AFTER: Save session
+    // AFTER: Save session from output
     if (output.sessionId) {
-      this.snapshot.sessions[nodeId] = output.sessionId;
+      this.snapshot.agentSessions[nodeId] = output.sessionId;
     }
+  }
+  
+  // On resume - simple!
+  async resume(message: string = "continue") {
+    const pausedNodeId = this.findPausedNode();
+    const sessionId = this.snapshot.agentSessions[pausedNodeId];
+    
+    // Provider input for resume is just:
+    // { prompt: message, options: { resume: sessionId } }
+    // SDK maintains its own history - we don't need to reconstruct messages
+    
+    return this.run();
   }
 }
 ```
@@ -196,31 +226,54 @@ const claudeTrait: ProviderTrait<ClaudeInput, ClaudeOutput> = {
 
 ## 📝 Resume Pattern (Replaces Inbox)
 
-### Old (with inbox)
+### Old (with inbox + dispatch)
 ```typescript
 runtime.dispatch({ type: "send", runId, message: "continue" });
+runtime.dispatch({ type: "abort", resumable: true });  // Confusing "abort" terminology
 ```
 
-### New (clean)
+### New (clean API)
 ```typescript
-runtime.resume({ 
-  runId: "run-123",
-  message: "continue"  // Optional - defaults to "continue"
-});
+// Pause execution
+const snapshot = await runtime.pause();
+await store.save(snapshot);  // Caller persists
 
-// How it works internally:
-function prepareResumeInput(snapshot, resumeData) {
-  const baseInput = snapshot.nodeInputs[resumeData.nodeId];
+// Later: Resume
+const savedSnapshot = await store.load(runId);
+const runtime = createRuntime({ flow, registry, snapshot: savedSnapshot });
+await runtime.resume("approved, continue");
+```
+
+### How Resume Works Internally
+
+**Key insight: Provider SDKs are stateful - they maintain their own history.**
+
+```typescript
+async resume(message: string = "continue") {
+  const pausedNodeId = this.findPausedNode();
+  const sessionId = this.snapshot.agentSessions[pausedNodeId];
   
-  return {
-    ...baseInput,
-    messages: [
-      ...(baseInput.messages ?? []),
-      resumeData.message ?? "continue",
-    ],
-    sessionId: snapshot.sessions[resumeData.nodeId],
-  };
+  // Set the resume prompt (will be used when node executes)
+  this.resumePrompt = message;
+  this.resumeSessionId = sessionId;
+  
+  // Just run - the provider will receive sessionId + new prompt
+  return this.run();
 }
+```
+
+**What provider receives on resume:**
+```typescript
+// That's ALL the provider needs:
+{
+  prompt: "approved, continue",  // New message
+  options: {
+    resume: "session-abc-123",   // SDK looks up its own history
+  }
+}
+
+// NO message array reconstruction needed!
+// The SDK maintains full conversation history internally.
 ```
 
 ---
