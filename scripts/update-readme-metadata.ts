@@ -14,8 +14,7 @@
  */
 
 import { execSync } from "child_process";
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { glob } from "bun";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "fs";
 import path from "path";
 
 interface FrontmatterData {
@@ -234,6 +233,29 @@ function getChangedFiles(): string[] {
   }
 }
 
+/**
+ * Recursively find all README.md files in a directory
+ */
+function findReadmes(dir: string, results: string[] = []): string[] {
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // Skip node_modules, .git, etc.
+        if (![".git", "node_modules", ".next", "dist", "build", ".turbo"].includes(entry.name)) {
+          findReadmes(fullPath, results);
+        }
+      } else if (entry.name === "README.md") {
+        results.push(fullPath);
+      }
+    }
+  } catch {
+    // Ignore permission errors
+  }
+  return results;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const changedOnly = args.includes("--changed-only");
@@ -253,8 +275,7 @@ async function main() {
     }
   } else {
     // Find all READMEs in packages/**
-    const globResults = await glob("packages/**/README.md");
-    files = Array.from(globResults);
+    files = findReadmes("packages");
   }
 
   let updated = 0;
