@@ -53,15 +53,15 @@ function createSessionId(): string {
 }
 
 function mergeOptions(options?: Options): Options | undefined {
-	// Note: Do NOT pass custom env to the SDK - it breaks stream iteration
-	// The SDK handles its own config directory automatically
-	return {
-		maxTurns: 1, // Default to single-turn unless specified
+	// Sensible defaults - agents can run as long as needed
+	// User options override via passthrough (spread at end)
+	const defaults: Partial<Options> = {
+		maxTurns: 100, // High default - agents can run as long as needed
 		persistSession: false,
 		permissionMode: "bypassPermissions",
 		allowDangerouslySkipPermissions: true,
-		...options,
 	};
+	return options ? { ...defaults, ...options } : defaults;
 }
 
 function toUserMessage(
@@ -106,14 +106,57 @@ async function* messageStream(
 	}
 }
 
+/**
+ * Extract relevant details from SDK message for logging/events
+ */
+function getMessageDetails(message: SDKMessage): Record<string, unknown> {
+	const details: Record<string, unknown> = {};
+	const msgType = message.type;
+
+	if (msgType === "assistant") {
+		// Assistant response - extract text content preview
+		if ("message" in message && message.message) {
+			const msg = message.message as { content?: unknown };
+			if (typeof msg.content === "string") {
+				details.contentPreview = msg.content.slice(0, 100);
+				details.contentLength = msg.content.length;
+			} else if (Array.isArray(msg.content)) {
+				details.contentBlocks = msg.content.length;
+			}
+		}
+	} else if (msgType === "result") {
+		// Final result
+		const resultMsg = message as SDKResultMessage;
+		details.subtype = resultMsg.subtype;
+		details.numTurns = resultMsg.num_turns;
+		if (resultMsg.subtype === "success") {
+			details.resultPreview = resultMsg.result?.slice(0, 100);
+		}
+	} else if (msgType === "tool_progress") {
+		// Tool progress update
+		if ("tool_name" in message) {
+			details.tool = (message as { tool_name?: string }).tool_name;
+		}
+	} else {
+		// Other message types (stream_event, auth_status, etc.)
+		details.raw = msgType;
+	}
+
+	return details;
+}
+
 function getResultOrThrow(result?: SDKResultMessage): ClaudeAgentOutput {
 	if (!result) {
 		throw new Error("Claude agent returned no result");
 	}
 
 	if (result.subtype !== "success") {
-		const errors = "errors" in result ? result.errors : undefined;
-		throw new Error(errors?.join("; ") ?? "Claude agent failed");
+		const errors = "errors" in result ? (result.errors as string[]) : [];
+		const errorMessage =
+			errors && errors.length > 0
+				? errors.join("; ")
+				: `Claude agent failed with subtype: ${result.subtype}`;
+		throw new Error(errorMessage);
 	}
 
 	return {
@@ -173,6 +216,8 @@ export function createClaudeAgent(
 			});
 
 			let finalResult: SDKResultMessage | undefined;
+			let messageCount = 0;
+
 			for await (const message of queryStream) {
 				// T021: Check abort signal during agent execution for pause/resume support
 				if (ctx.hub.getAbortSignal().aborted) {
@@ -180,10 +225,30 @@ export function createClaudeAgent(
 				}
 
 				const sdkMessage = message as SDKMessage;
+				messageCount++;
+
+				// Emit streaming event for observability
+				ctx.hub.emit({
+					type: "claude:message",
+					messageType: sdkMessage.type,
+					messageCount,
+					// Include relevant details based on message type
+					details: getMessageDetails(sdkMessage),
+				});
+
 				if (sdkMessage.type === "result") {
 					finalResult = sdkMessage as SDKResultMessage;
 				}
 			}
+
+			// Emit completion event
+			ctx.hub.emit({
+				type: "claude:complete",
+				messageCount,
+				success: finalResult?.subtype === "success",
+				durationMs: finalResult?.duration_ms,
+				numTurns: finalResult?.num_turns,
+			});
 
 			return getResultOrThrow(finalResult);
 		},

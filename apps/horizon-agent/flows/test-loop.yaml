@@ -1,0 +1,40 @@
+# Simple test flow to verify loop edge execution
+# Uses echo nodes instead of Claude agents
+
+flow:
+  name: test-loop
+  description: Test flow for loop edge verification
+  nodePacks: [core]
+  input:
+    targetCount: number
+
+nodes:
+  - id: start
+    type: echo
+    input:
+      text: "Starting loop test"
+
+  - id: counter
+    type: echo
+    input:
+      text: "Counter iteration"
+
+  - id: checker
+    type: echo
+    input:
+      text: "Checking condition"
+
+edges:
+  - from: start
+    to: counter
+  - from: counter
+    to: checker
+  - from: checker
+    to: counter
+    type: loop
+    maxIterations: 5
+    when:
+      not:
+        equals:
+          var: flow.input.targetCount
+          value: 0

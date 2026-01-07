@@ -9,6 +9,10 @@ export interface CompiledFlow {
 	order: NodeSpec[];
 	adjacency: Map<string, string[]>;
 	edges: Edge[];
+	/** Forward edges used for DAG traversal */
+	forwardEdges: Edge[];
+	/** Loop edges for controlled cycles, evaluated at runtime */
+	loopEdges: Edge[];
 }
 
 /**
@@ -51,12 +55,17 @@ export function compileFlow(flow: FlowYaml): CompiledFlow {
 		inDegree.set(node.id, 0);
 	}
 
-	// Only process edges between main nodes
+	// Partition edges: filter to main nodes and separate forward vs loop edges
 	const mainEdges = validated.edges.filter(
 		(edge) => !childNodeIds.has(edge.from) && !childNodeIds.has(edge.to),
 	);
 
-	for (const edge of mainEdges) {
+	// Separate forward edges (for DAG) from loop edges (for runtime cycles)
+	const forwardEdges = mainEdges.filter((edge) => edge.type !== "loop");
+	const loopEdges = mainEdges.filter((edge) => edge.type === "loop");
+
+	// Only forward edges contribute to the DAG structure
+	for (const edge of forwardEdges) {
 		const list = adjacency.get(edge.from);
 		if (list) {
 			list.push(edge.to);
@@ -97,5 +106,12 @@ export function compileFlow(flow: FlowYaml): CompiledFlow {
 	});
 
 	// Return all nodes (for child lookup) but only main nodes in order
-	return { nodes, order, adjacency, edges: validated.edges };
+	return {
+		nodes,
+		order,
+		adjacency,
+		edges: validated.edges,
+		forwardEdges,
+		loopEdges,
+	};
 }
