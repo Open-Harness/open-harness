@@ -52,8 +52,25 @@ export interface Runtime {
 	 */
 	run(input?: Record<string, unknown>): Promise<RunSnapshot>;
 	/**
+	 * Pause execution gracefully. Allows resuming later.
+	 * Interrupts currently running nodes and saves state.
+	 */
+	pause(): void;
+	/**
+	 * Resume execution from a paused state.
+	 * @param message - Optional message to pass to resumed provider node.
+	 * @returns Promise that resolves when execution completes or pauses again.
+	 */
+	resume(message?: string): Promise<RunSnapshot>;
+	/**
+	 * Stop execution immediately. NOT resumable.
+	 * Aborts all running nodes without saving resumable state.
+	 */
+	stop(): void;
+	/**
 	 * Dispatch a command into the runtime.
 	 * @param command - Command to dispatch.
+	 * @deprecated Use pause()/resume()/stop() instead.
 	 */
 	dispatch(command: RuntimeCommand): void;
 	/**
@@ -430,13 +447,17 @@ class InMemoryRuntime implements Runtime {
 				continue;
 			}
 			const resolvedInput = resolvedInputResult.value;
+			
+			// Augment input with session ID and resume message if applicable
+			const augmentedInput = this.augmentProviderInput(resolvedInput, nodeId) as Record<string, unknown>;
+			
 			let result: Awaited<ReturnType<DefaultExecutor["runNode"]>> | undefined;
 			try {
 				result = await executor.runNode({
 					registry: this.registry,
 					node,
 					runContext,
-					input: resolvedInput,
+					input: augmentedInput,
 				});
 			} finally {
 				this.nodeControllers.delete(runId);
@@ -481,6 +502,8 @@ class InMemoryRuntime implements Runtime {
 			} else {
 				this.snapshot.nodeStatus[nodeId] = "done";
 				this.snapshot.outputs[nodeId] = result.output;
+				// Save session ID from output if present
+				this.saveSessionFromOutput(nodeId, result.output);
 				this.emit({
 					type: "node:complete",
 					nodeId,
@@ -558,6 +581,56 @@ class InMemoryRuntime implements Runtime {
 			this.snapshot.status = "running";
 			this.emit({ type: "flow:resumed" });
 		}
+	}
+
+	/**
+	 * Pause execution gracefully. Allows resuming later.
+	 * Interrupts currently running nodes and saves state.
+	 */
+	pause(): void {
+		this.snapshot.status = "paused";
+		for (const cancelContext of this.nodeControllers.values()) {
+			cancelContext.interrupt().catch((error) => console.error("Cancel interrupt error:", error));
+		}
+		this.emit({ type: "flow:paused" });
+		this.persistSnapshot();
+	}
+
+	/**
+	 * Resume execution from a paused state.
+	 * @param message - Optional message to pass to resumed provider node.
+	 * @returns Promise that resolves when execution completes or pauses again.
+	 */
+	async resume(message?: string): Promise<RunSnapshot> {
+		if (this.snapshot.status !== "paused") {
+			throw new ExecutionError(
+				"EXECUTION_FAILED",
+				`Cannot resume: runtime status is '${this.snapshot.status}', expected 'paused'`,
+				undefined,
+				undefined,
+				this.snapshot.runId,
+			);
+		}
+
+		// Set resume message and run
+		this.pendingResumeMessage = message ?? "continue";
+		this.snapshot.status = "running";
+		this.emit({ type: "flow:resumed" });
+		
+		return this.run();
+	}
+
+	/**
+	 * Stop execution immediately. NOT resumable.
+	 * Aborts all running nodes without saving resumable state.
+	 */
+	stop(): void {
+		this.snapshot.status = "aborted";
+		for (const cancelContext of this.nodeControllers.values()) {
+			cancelContext.abort();
+		}
+		this.emit({ type: "flow:aborted" });
+		this.persistSnapshot();
 	}
 
 	/**
@@ -738,13 +811,17 @@ class InMemoryRuntime implements Runtime {
 				continue;
 			}
 			const resolvedInput = resolvedInputResult.value;
+			
+			// Augment input with session ID and resume message if applicable
+			const augmentedInput = this.augmentProviderInput(resolvedInput, node.id) as Record<string, unknown>;
+			
 			let result: Awaited<ReturnType<DefaultExecutor["runNode"]>> | undefined;
 			try {
 				result = await executor.runNode({
 					registry: this.registry,
 					node,
 					runContext,
-					input: resolvedInput,
+					input: augmentedInput,
 				});
 			} finally {
 				this.nodeControllers.delete(runId);
@@ -786,6 +863,8 @@ class InMemoryRuntime implements Runtime {
 				}
 			} else {
 				iterations.push({ item, output: result.output });
+				// Save session ID from output if present
+				this.saveSessionFromOutput(node.id, result.output);
 				this.emit({
 					type: "node:complete",
 					nodeId: node.id,
@@ -847,7 +926,57 @@ class InMemoryRuntime implements Runtime {
 		this.persistSnapshot();
 	}
 
-	// getInbox, inboxQueue, prepareNodeInput removed
+	/**
+	 * Augment provider input with sessionId and resume message.
+	 * Provider SDKs are stateful - they maintain their own history.
+	 * We only pass sessionId + new message on resume.
+	 */
+	private augmentProviderInput(resolvedInput: unknown, nodeId: string): unknown {
+		// If input is not an object, return as-is
+		if (!resolvedInput || typeof resolvedInput !== "object" || Array.isArray(resolvedInput)) {
+			return resolvedInput;
+		}
+
+		const input = resolvedInput as Record<string, unknown>;
+		const augmented: Record<string, unknown> = { ...input };
+
+		// Add session ID if available (for resuming)
+		const sessionId = this.snapshot.agentSessions[nodeId];
+		if (sessionId) {
+			augmented.sessionId = sessionId;
+		}
+
+		// Add resume message if this is a resume (only on first node execution after resume)
+		if (this.pendingResumeMessage && sessionId) {
+			// If input already has messages array, append resume message
+			if (Array.isArray(augmented.messages)) {
+				augmented.messages = [...augmented.messages, this.pendingResumeMessage];
+			}
+			// If input has a prompt string, replace with resume message
+			else if (typeof augmented.prompt === "string") {
+				augmented.prompt = this.pendingResumeMessage;
+			}
+			// Clear pending message after using it
+			this.pendingResumeMessage = undefined;
+		}
+
+		return augmented;
+	}
+
+	/**
+	 * Save session ID from node output.
+	 * Called after successful node execution.
+	 */
+	private saveSessionFromOutput(nodeId: string, output: unknown): void {
+		if (output && typeof output === "object" && !Array.isArray(output)) {
+			const outputObj = output as Record<string, unknown>;
+			if (typeof outputObj.sessionId === "string") {
+				this.setAgentSession(nodeId, outputObj.sessionId);
+			}
+		}
+	}
+
+	// getInbox, inboxQueue removed
 	// Resume is handled via runtime.resume() which passes sessionId + new message
 	// Provider SDKs are stateful - they maintain their own history
 

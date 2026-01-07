@@ -22,6 +22,18 @@ export class MockRuntime implements Runtime {
 		this.dispatchedCommands.push(command);
 	}
 
+	pause(): void {
+		// Mock implementation
+	}
+
+	async resume(_message?: string): Promise<RunSnapshot> {
+		return this.getSnapshot();
+	}
+
+	stop(): void {
+		// Mock implementation
+	}
+
 	getSnapshot(): RunSnapshot {
 		return {
 			runId: "mock-run-id",
