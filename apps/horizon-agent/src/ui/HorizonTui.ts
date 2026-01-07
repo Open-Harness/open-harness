@@ -169,12 +169,16 @@ export class HorizonTui {
 				break;
 			}
 
+			// Handle both delta (streaming) and complete events the same way
+			case "agent:text:delta":
 			case "agent:text": {
 				const content = event.content as string;
 				this.agentStream.appendText(content);
 				break;
 			}
 
+			// Handle both delta (streaming) and complete events the same way
+			case "agent:thinking:delta":
 			case "agent:thinking": {
 				const content = event.content as string;
 				this.agentStream.appendThinking(content);

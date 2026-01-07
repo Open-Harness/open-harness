@@ -1,0 +1,25 @@
+{
+	"calls": [
+		{
+			"input": { "prompt": "fixture:no-streaming" },
+			"output": {
+				"text": "complete text without streaming",
+				"usage": { "input_tokens": 2, "output_tokens": 5 },
+				"durationMs": 30,
+				"sessionId": "sess-no-stream-1",
+				"numTurns": 1,
+				"totalCostUsd": 0
+			},
+			"events": [
+				{
+					"type": "assistant",
+					"message": {
+						"role": "assistant",
+						"content": "complete text without streaming"
+					},
+					"session_id": "sess-no-stream-1"
+				}
+			]
+		}
+	]
+}

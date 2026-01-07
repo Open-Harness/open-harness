@@ -36,8 +36,23 @@ export type AgentThinkingEventPayload = {
 	tokenCount?: number;
 };
 
+export type AgentThinkingDeltaEventPayload = {
+	type: "agent:thinking:delta";
+	nodeId: string;
+	runId: string;
+	content: string;
+	tokenCount?: number;
+};
+
 export type AgentTextEventPayload = {
 	type: "agent:text";
+	nodeId: string;
+	runId: string;
+	content: string;
+};
+
+export type AgentTextDeltaEventPayload = {
+	type: "agent:text:delta";
 	nodeId: string;
 	runId: string;
 	content: string;
@@ -85,7 +100,13 @@ export type AgentStartEvent = AgentStartEventPayload & { timestamp: number };
 export type AgentThinkingEvent = AgentThinkingEventPayload & {
 	timestamp: number;
 };
+export type AgentThinkingDeltaEvent = AgentThinkingDeltaEventPayload & {
+	timestamp: number;
+};
 export type AgentTextEvent = AgentTextEventPayload & { timestamp: number };
+export type AgentTextDeltaEvent = AgentTextDeltaEventPayload & {
+	timestamp: number;
+};
 export type AgentToolEvent = AgentToolEventPayload & { timestamp: number };
 export type AgentErrorEvent = AgentErrorEventPayload & { timestamp: number };
 export type AgentCompleteEvent = AgentCompleteEventPayload & {
@@ -95,7 +116,9 @@ export type AgentCompleteEvent = AgentCompleteEventPayload & {
 export type AgentEventPayload =
 	| AgentStartEventPayload
 	| AgentThinkingEventPayload
+	| AgentThinkingDeltaEventPayload
 	| AgentTextEventPayload
+	| AgentTextDeltaEventPayload
 	| AgentToolEventPayload
 	| AgentErrorEventPayload
 	| AgentCompleteEventPayload;
@@ -122,7 +145,9 @@ export type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
 export type AgentEvent =
 	| AgentStartEvent
 	| AgentThinkingEvent
+	| AgentThinkingDeltaEvent
 	| AgentTextEvent
+	| AgentTextDeltaEvent
 	| AgentToolEvent
 	| AgentErrorEvent
 	| AgentCompleteEvent;
