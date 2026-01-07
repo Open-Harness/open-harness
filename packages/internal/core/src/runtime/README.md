@@ -1,8 +1,8 @@
 ---
 title: "Runtime System Hub"
-lastUpdated: "2026-01-07T10:33:43.219Z"
-lastCommit: "7dd3f50eceaf866d8379e1c40b63b5321da7313f"
-lastCommitDate: "2026-01-07T10:32:30Z"
+lastUpdated: "2026-01-07T16:37:37.893Z"
+lastCommit: "72a1693673d110e1b19885762e3ceaafec16c6da"
+lastCommitDate: "2026-01-07T16:12:52Z"
 scope:
   - runtime
   - flow-execution
@@ -41,7 +41,7 @@ User Input (YAML Flow Definition)
     ├─ Run ready nodes in parallel
     ├─ Resolve input bindings
     ├─ Enforce timeouts + retries
-    ├─ Handle cancellation
+    ├─ Handle pause/stop
     └─ Output: Node results
         │
         ▼
@@ -53,8 +53,8 @@ User Input (YAML Flow Definition)
         │
         ▼
     Event Bus
-    ├─ Emit flow:started
-    ├─ Emit node:completed/failed
+    ├─ Emit flow:start
+    ├─ Emit node:complete/node:error
     ├─ Emit snapshot:created
     └─ User receives events
 ```
@@ -94,7 +94,7 @@ const compiled = compiler.compile(flowDef);
 
 ### 2. Execution (`execution/`)
 
-**Purpose:** Run individual nodes with retry/timeout/cancellation
+**Purpose:** Run individual nodes with retry/timeout/interruption
 
 **Key Files:**
 - `executor.ts` — DefaultExecutor runs nodes
@@ -107,7 +107,7 @@ const compiled = compiler.compile(flowDef);
 
 **Outputs:**
 - NodeExecutionResult (output or error)
-- Or ExecutionError (timeout, failed, cancelled)
+- Or ExecutionError (timeout, failed, interrupted)
 
 **Example:**
 ```typescript
@@ -123,13 +123,13 @@ if (result.error) {
 **Error Handling:**
 - `EXECUTION_TIMEOUT` — Node exceeded timeoutMs
 - `EXECUTION_FAILED` — Node threw exception
-- `CANCELLED` — Flow was cancelled
+- `CANCELLED` — Flow was interrupted (pause/stop)
 - `NODE_NOT_FOUND` — Type not in registry
 
 **Features:**
 - Automatic retries with exponential backoff
 - Timeout enforcement
-- Cancellation interrupts execution
+- Pause/stop interrupts execution
 - Input/output schema validation
 
 ---
@@ -189,7 +189,7 @@ const template = await resolveTemplate("Task: {{ task.title }}", context);
 
 **Outputs:**
 - RunSnapshot (serializable state)
-- Events (flow:started, node:completed, etc.)
+- Events (flow:start, node:complete, etc.)
 
 **Example:**
 ```typescript
@@ -227,7 +227,7 @@ const resumed = await stateStore.loadSnapshot(runId);
 3. Loop until flow complete:
    ├─> Scheduler.nextReadyNodes(state, compiled)
    │   Determines which nodes can execute
-   │   Respects gate logic, edge completion, cancellation
+   │   Respects gate logic, edge completion, interruptions
    │   Output: Ready node IDs
    │
    ├─> For each ready node (in parallel):
@@ -235,7 +235,7 @@ const resumed = await stateStore.loadSnapshot(runId);
    │   │   Evaluates {{ bindings }} to real values
    │   │
    │   ├─> Executor.runNode(node, input, context)
-   │   │   - Checks cancellation
+   │   │   - Checks interruption (AbortSignal)
    │   │   - Enforces timeouts
    │   │   - Retries on failure
    │   │   - Validates schemas
@@ -246,14 +246,15 @@ const resumed = await stateStore.loadSnapshot(runId);
    │   │   - nodeOutput[id] = result
    │   │   - edgeStatus[key] = "done"
    │   │
-   │   └─> Emit event: node:completed / node:failed
+   │   └─> Emit event: node:complete / node:error
    │
    ├─> Create snapshot of current state
    │   └─> Emit event: snapshot:created
    │
-   └─> Check for flow completion or cancellation
-       If cancelled: emit flow:cancelled
-       If all nodes done: emit flow:completed
+   └─> Check for flow completion or interruption
+       If paused: emit flow:paused
+       If stopped: emit flow:aborted
+       If all nodes done: emit flow:complete
 ```
 
 ### Information Flow
@@ -342,9 +343,9 @@ const harness = createHarness({
   registry,
   persistenceBackend,
   eventHandler: (event) => {
-    if (event.type === 'flow:completed') {
+    if (event.type === 'flow:complete') {
       console.log('Flow succeeded:', event);
-    } else if (event.type === 'node:failed') {
+    } else if (event.type === 'node:error') {
       console.log('Node failed:', event);
     }
   },

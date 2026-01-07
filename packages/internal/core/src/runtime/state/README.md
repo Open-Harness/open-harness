@@ -1,8 +1,8 @@
 ---
 title: "Runtime State Management"
-lastUpdated: "2026-01-07T10:33:43.219Z"
-lastCommit: "7dd3f50eceaf866d8379e1c40b63b5321da7313f"
-lastCommitDate: "2026-01-07T10:32:30Z"
+lastUpdated: "2026-01-07T16:37:37.893Z"
+lastCommit: "72a1693673d110e1b19885762e3ceaafec16c6da"
+lastCommitDate: "2026-01-07T16:12:52Z"
 scope:
   - state-management
   - runtime-state
@@ -12,320 +12,130 @@ scope:
 
 # Runtime State Management
 
-Manages the state of flow execution, including node status, edge completion, snapshots, and persistence contracts.
+Defines the runtime state model, snapshot schema, and state-store contract used by node execution and persistence.
 
 ## What's here
 
-This directory contains type definitions and interfaces for:
-- **FlowDefinition** — YAML-based flow structure
-- **RunSnapshot** — Snapshot of execution state at a point in time
-- **RunState** — Mutable state during flow execution
-- **StateStore** — Contract for state storage implementations
-- **Event types** — Runtime events (flow:started, node:completed, etc.)
-- **Cancellation context** — Flow cancellation management
-
-All types are defined in `state/`, `types.ts`, `events.ts`, `cancel.ts`, and `snapshot.ts`.
+This directory and the `state/` module include:
+- **FlowDefinition** — YAML-based flow structure.
+- **RunSnapshot / RunState** — Snapshot schema for runtime state.
+- **StateStore** — Key-value state store available to node execution.
+- **Runtime events** — Flow/node/agent/state event shapes.
+- **CancelContext** — Internal cancellation context (runtime uses `AbortSignal` externally).
 
 ## State Architecture
 
 ```
 FlowDefinition (Input)
         │
-        ├─ validates against schema
-        ├─ converted to CompiledFlow
-        │
+        ▼
 RunState (Mutable)
-        ├─ nodeStatus: Map<nodeId -> "pending" | "running" | "done" | "failed">
-        ├─ edgeStatus: Map<edgeKey -> "pending" | "done">
-        ├─ nodeOutput: Map<nodeId -> output>
-        ├─ nodeError: Map<nodeId -> error>
+  ├─ status: "idle" | "running" | "paused" | "aborted" | "complete"
+  ├─ outputs: Record<nodeId, unknown>
+  ├─ state: Record<string, unknown>
+  ├─ nodeStatus: Record<nodeId, NodeStatus>
+  ├─ edgeStatus: Record<edgeId, EdgeStatus>
+  ├─ loopCounters: Record<edgeId, number>
+  ├─ inbox: RuntimeCommand[] (legacy, kept empty)
+  └─ agentSessions: Record<nodeId, sessionId>
         │
         └─ snapshots at intervals
                 │
-                └─ RunSnapshot (Immutable point-in-time)
-                        ├─ runId
-                        ├─ flowId
-                        ├─ nodeStatus
-                        ├─ edgeStatus
-                        ├─ nodeOutput / nodeError
-                        ├─ timestamp
-                        │
-                        └─ persisted to StateStore
+                └─ RunSnapshot (Serializable)
 ```
 
 ## Key Contracts
 
-### RunState (Mutable)
+### RunSnapshot / RunState
 
-Tracks current execution progress:
-
-```typescript
-interface RunState {
-  runId: string;
-  flowId: string;
-  nodeStatus: Record<string, NodeExecutionStatus>;
-  edgeStatus: Record<string, EdgeStatus>;
-  nodeOutput: Record<string, unknown>;
-  nodeError: Record<string, string>;
-  stateVariables: Record<string, unknown>;
-}
-
-type NodeExecutionStatus = "pending" | "running" | "done" | "failed";
-type EdgeStatus = "pending" | "done";
-```
-
-### RunSnapshot (Immutable)
-
-Point-in-time capture for persistence:
+`RunState` is an internal alias of `RunSnapshot` with optional runtime-only fields.
 
 ```typescript
-interface RunSnapshot {
-  runId: string;
-  flowId: string;
-  nodeStatus: Record<string, NodeExecutionStatus>;
+type NodeStatus = "pending" | "running" | "done" | "failed";
+type EdgeStatus = "pending" | "fired" | "skipped";
+
+type RunSnapshot = {
+  runId?: string;
+  status: "idle" | "running" | "paused" | "aborted" | "complete";
+  outputs: Record<string, unknown>;
+  state: Record<string, unknown>;
+  nodeStatus: Record<string, NodeStatus>;
   edgeStatus: Record<string, EdgeStatus>;
-  nodeOutput: Record<string, unknown>;
-  nodeError: Record<string, string>;
-  stateVariables: Record<string, unknown>;
-  timestamp: string;  // ISO 8601
-  completedAt?: string;
-  cancelledAt?: string;
-}
+  loopCounters: Record<string, number>;
+  inbox: RuntimeCommand[]; // legacy, kept empty
+  agentSessions: Record<string, string>;
+};
 ```
 
-### StateStore (Persistence)
+### StateStore
 
-Interface for storing and retrieving state:
+StateStore is a key-value store exposed to nodes via `NodeRunContext.state`.
 
 ```typescript
 interface StateStore {
-  // Save a snapshot
-  saveSnapshot(snapshot: RunSnapshot): Promise<void>;
-  
-  // Load latest snapshot for a run
-  loadSnapshot(runId: string): Promise<RunSnapshot | null>;
-  
-  // List all snapshots for a run (for resume/checkpoint)
-  listSnapshots(runId: string): Promise<RunSnapshot[]>;
-  
-  // Delete snapshots (cleanup)
-  deleteSnapshots(runId: string): Promise<void>;
+  get(path: string): unknown;
+  set(path: string, value: unknown): void;
+  patch(patch: StatePatch): void;
+  snapshot(): Record<string, unknown>;
 }
 ```
 
-## Node Execution Status
+## Interruption (Pause/Stop)
 
-```
-pending ──> running ──> done
-              ├──────> failed
-```
-
-- **pending** — Awaiting execution (prerequisites not met or not yet started)
-- **running** — Currently executing
-- **done** — Completed successfully
-- **failed** — Execution failed (error captured in nodeError)
-
-## Edge Status
-
-- **pending** — Source node not yet done
-- **done** — Source node completed; edge activated
-
-## State Updates During Execution
-
-### 1. Node Starts
+Nodes receive an `AbortSignal` via `NodeRunContext.signal`. The runtime triggers it
+for pause/stop/timeout. Nodes should listen and exit early when aborted.
 
 ```typescript
-nodeStatus[nodeId] = "running";
-```
-
-### 2. Node Completes (Success)
-
-```typescript
-nodeStatus[nodeId] = "done";
-nodeOutput[nodeId] = output;
-// All outgoing edges become "done"
-for (const edge of outgoing) {
-  edgeStatus[edgeKey(edge)] = "done";
+if (ctx.signal.aborted) {
+  // cleanup and return
 }
-```
-
-### 3. Node Completes (Failure)
-
-```typescript
-nodeStatus[nodeId] = "failed";
-nodeError[nodeId] = errorMessage;
-// Flow continues based on error handling (may stop or continue)
-```
-
-## Cancellation
-
-When flow is cancelled:
-
-```typescript
-cancelContext.cancelled = true;
-cancelContext.reason = "User requested";
-
-// All running nodes check cancellation and stop
-// No new nodes start
-// Flow emits cancellation event
 ```
 
 ## Events Emitted
 
-As state changes, events are emitted:
+As state changes, the runtime emits events:
 
-- `flow:started` — RunState created
-- `node:started` — nodeStatus[id] = "running"
-- `node:completed` — nodeStatus[id] = "done"
-- `node:failed` — nodeStatus[id] = "failed"
-- `flow:completed` — All nodes done/failed
-- `flow:cancelled` — Cancellation triggered
-- `snapshot:created` — RunSnapshot persisted
+- `flow:start` — Run begins
+- `flow:paused` — Pause requested
+- `flow:resumed` — Resume requested
+- `flow:aborted` — Hard stop requested
+- `flow:complete` — Flow finished
+- `node:start` — Node execution begins
+- `node:complete` — Node succeeded
+- `node:error` — Node failed
+- `node:skipped` — Node skipped by gate/when
+- `edge:fire`, `loop:iterate`, `state:patch`
+- `command:received` — Runtime command ingested
+- Agent events (`agent:*`) for provider streams
 
-## Snapshot Checkpointing
+## Snapshots and Resume
 
-Snapshots enable resuming interrupted flows:
+Snapshots are persisted via `RunStore` (see `../persistence/README.md`).
 
 ```typescript
-// Create snapshot periodically or after each node
-const snapshot = currentRunState.toSnapshot();
-await stateStore.saveSnapshot(snapshot);
+const store = new InMemoryRunStore();
+const runtime = createRuntime({ flow, registry, store });
 
-// Later: resume from checkpoint
-const checkpoint = await stateStore.loadSnapshot(runId);
-const resumedState = RunState.fromSnapshot(checkpoint);
-// Continue execution from pending nodes
+const snapshot = await runtime.pause();
+await store.saveSnapshot(snapshot);
+
+const resumed = createRuntime({ flow, registry, store, resume: { snapshot } });
+await resumed.resume("continue");
 ```
 
-## State Persistence Strategies
+## Testing
 
-### In-Memory (No Persistence)
-
-```typescript
-class InMemoryStateStore implements StateStore {
-  private snapshots = new Map<string, RunSnapshot[]>();
-  
-  async saveSnapshot(snapshot: RunSnapshot) {
-    if (!this.snapshots.has(snapshot.runId)) {
-      this.snapshots.set(snapshot.runId, []);
-    }
-    this.snapshots.get(snapshot.runId)!.push(snapshot);
-  }
-  
-  async loadSnapshot(runId: string) {
-    const snaps = this.snapshots.get(runId) ?? [];
-    return snaps.length > 0 ? snaps[snaps.length - 1] : null;
-  }
-}
-```
-
-### Database Persistence
+You can validate state transitions using runtime snapshots:
 
 ```typescript
-class DatabaseStateStore implements StateStore {
-  constructor(private db: Database) {}
-  
-  async saveSnapshot(snapshot: RunSnapshot) {
-    await this.db.insert('run_snapshots', {
-      run_id: snapshot.runId,
-      flow_id: snapshot.flowId,
-      data: JSON.stringify(snapshot),
-      timestamp: snapshot.timestamp,
-    });
-  }
-  
-  async loadSnapshot(runId: string) {
-    const row = await this.db.query(
-      'SELECT data FROM run_snapshots WHERE run_id = ? ORDER BY timestamp DESC LIMIT 1',
-      [runId]
-    );
-    return row ? JSON.parse(row.data) : null;
-  }
-}
-```
-
-## Error Handling in State
-
-Errors are stored alongside state:
-
-```typescript
-// On node failure
-nodeError[nodeId] = error.message;
-nodeStatus[nodeId] = "failed";
-
-// Flow can:
-// 1. Stop (if error is critical)
-// 2. Continue (if error is recoverable)
-// 3. Retry (based on policy)
-// 4. Skip (if optional)
-```
-
-## State Recovery and Resume
-
-Resume flows from checkpoint:
-
-```typescript
-// 1. Load last snapshot
-const snapshot = await stateStore.loadSnapshot(runId);
-
-// 2. Create RunState from snapshot
-const state = RunState.fromSnapshot(snapshot);
-
-// 3. Determine pending nodes
-const pending = state.nodeStatus
-  .filter(status => status === "pending")
-  .keys();
-
-// 4. Continue execution from pending nodes
-for (const nodeId of pending) {
-  await executor.runNode(nodeId, state);
-}
-```
-
-## Concurrency and Thread Safety
-
-State updates must be atomic:
-
-```typescript
-// ✓ Atomic: Update node AND edges together
-runState.update(() => {
-  nodeStatus[id] = "done";
-  for (const edge of outgoing) {
-    edgeStatus[edgeKey(edge)] = "done";
-  }
-});
-
-// ✗ Non-atomic: Separate updates can race
-nodeStatus[id] = "done";
-for (const edge of outgoing) {
-  edgeStatus[edgeKey(edge)] = "done";  // May be read in-between
-}
-```
-
-## Testing State
-
-Test state transitions with snapshots:
-
-```typescript
-const initialState = RunState.create(flowDef, runId);
-const initialSnapshot = initialState.toSnapshot();
-
-// Execute one node
-state.nodeStatus[nodeId] = "done";
-state.nodeOutput[nodeId] = { result: 42 };
-
-// Verify snapshot captures state
-const snapshot = state.toSnapshot();
-expect(snapshot.nodeOutput[nodeId]).toEqual({ result: 42 });
-
-// Verify resume from snapshot
-const resumed = RunState.fromSnapshot(snapshot);
-expect(resumed.nodeOutput).toEqual(initialState.nodeOutput);
+const runtime = createRuntime({ flow, registry });
+await runtime.run();
+const snapshot = runtime.getSnapshot();
+expect(snapshot.status).toBe("complete");
 ```
 
 ## See Also
 
-- `../compiler/README.md` — Flow compilation and scheduling
 - `../execution/README.md` — Node execution engine
-- `../expressions/README.md` — Expression evaluation for bindings
-- Type definitions: `types.ts`, `events.ts`, `cancel.ts`, `snapshot.ts`
+- `../persistence/README.md` — RunStore persistence
+- `../../state/` — Flow types, events, snapshot schema

@@ -1,8 +1,8 @@
 ---
 title: "Node Registry"
-lastUpdated: "2026-01-07T10:33:43.219Z"
-lastCommit: "7dd3f50eceaf866d8379e1c40b63b5321da7313f"
-lastCommitDate: "2026-01-07T10:32:30Z"
+lastUpdated: "2026-01-07T16:37:37.893Z"
+lastCommit: "72a1693673d110e1b19885762e3ceaafec16c6da"
+lastCommitDate: "2026-01-07T16:12:52Z"
 scope:
   - node-registry
   - contracts
@@ -37,5 +37,5 @@ registry.register({
 
 ## Extending
 - Add new node types by implementing NodeTypeDefinition.
-- Use NodeRunContext.emit/state/inbox to integrate with the runtime.
+- Use NodeRunContext.emit/state/signal to integrate with the runtime.
 - Provide your own NodeRegistry if you need lazy loading or remote resolution.

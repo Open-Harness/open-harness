@@ -1,8 +1,8 @@
 ---
 title: "Node Execution Engine"
-lastUpdated: "2026-01-07T10:33:43.219Z"
-lastCommit: "7dd3f50eceaf866d8379e1c40b63b5321da7313f"
-lastCommitDate: "2026-01-07T10:32:30Z"
+lastUpdated: "2026-01-07T16:37:37.893Z"
+lastCommit: "72a1693673d110e1b19885762e3ceaafec16c6da"
+lastCommitDate: "2026-01-07T16:12:52Z"
 scope:
   - execution
   - node-execution
@@ -97,7 +97,7 @@ result.match(
     if (err.code === 'EXECUTION_TIMEOUT') {
       console.error('Node timed out');
     } else if (err.code === 'CANCELLED') {
-      console.error('Node was cancelled');
+      console.error('Node was interrupted');
     } else if (err.code === 'NODE_NOT_FOUND') {
       console.error('Node type not registered');
     } else {
@@ -177,7 +177,7 @@ nodes:
 | `EXECUTION_TIMEOUT` | Node exceeded timeoutMs | Increase timeout or optimize node |
 | `EXECUTION_FAILED` | Node threw exception | Check node implementation; retry |
 | `SCHEMA_VALIDATION_ERROR` | Input/output validation failed | Correct input or schema |
-| `CANCELLED` | Flow was cancelled | Resume or restart flow |
+| `CANCELLED` | Flow was interrupted (pause/stop) | Resume or restart flow |
 | `INPUT_VALIDATION_ERROR` | Binding resolution failed | Check binding expressions |
 | `OUTPUT_VALIDATION_ERROR` | Output schema validation failed | Check node output |
 
@@ -196,21 +196,29 @@ result.match(
 );
 ```
 
-## Cancellation Handling
+## Pause/Stop Handling
 
-Cancel a running flow:
+Pause or stop a running flow:
 
 ```typescript
-const run = harness.startFlow(flow, { input });
+const runtime = createRuntime({ flow, registry });
+const runPromise = runtime.run();
 // ... flow is running ...
-harness.cancelFlow(run.runId, 'User requested cancellation');
-// Node execution immediately returns CANCELLED error
+runtime.pause(); // Soft stop, resumable
+await runPromise;
+
+// Later
+await runtime.resume("continue");
+
+// Hard stop (not resumable)
+runtime.stop();
 ```
 
-**Cancellation behavior:**
-- Runtime checks `runContext.cancel.cancelled` before each node
-- If true, execution returns immediately with CANCELLED error
-- Useful for pause/abort operations
+**Behavior:**
+- Runtime uses `AbortSignal` for interruptions
+- `pause()` aborts running nodes and returns a paused snapshot
+- `stop()` aborts running nodes and marks the run as aborted
+- Nodes should listen to `ctx.signal` to handle interruptions
 
 ## Input/Output Binding
 
@@ -249,11 +257,11 @@ The runtime emits events for every state change:
 const harness = createHarness({
   registry,
   eventHandler: (event) => {
-    if (event.type === 'node:started') {
+    if (event.type === 'node:start') {
       console.log(`Node ${event.nodeId} started`);
-    } else if (event.type === 'node:completed') {
+    } else if (event.type === 'node:complete') {
       console.log(`Node ${event.nodeId} output:`, event.output);
-    } else if (event.type === 'node:failed') {
+    } else if (event.type === 'node:error') {
       console.log(`Node ${event.nodeId} error:`, event.error);
     }
   },
@@ -261,12 +269,12 @@ const harness = createHarness({
 ```
 
 **Key events:**
-- `flow:started` — Flow execution began
-- `node:started` — Node execution began
-- `node:completed` — Node succeeded, output available
-- `node:failed` — Node failed with error
-- `flow:completed` — Flow finished (all nodes done)
-- `flow:aborted` — Flow was cancelled
+- `flow:start` — Flow execution began
+- `node:start` — Node execution began
+- `node:complete` — Node succeeded, output available
+- `node:error` — Node failed with error
+- `flow:complete` — Flow finished (all nodes done)
+- `flow:aborted` — Flow was stopped (hard abort)
 
 ## Performance Considerations
 
@@ -281,7 +289,7 @@ const harness = createHarness({
 See `tests/unit/executor.test.ts` and `tests/integration/runtime.test.ts` for:
 - Retry logic validation
 - Timeout enforcement
-- Cancellation handling
+- Pause/stop handling
 - Schema validation
 - Event emission
 - Multi-node DAG execution
