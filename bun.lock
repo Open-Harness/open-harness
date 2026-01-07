@@ -44,6 +44,47 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/adapters/recording-store/file": {
+      "name": "@open-harness/recording-store-file",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@open-harness/recording-store-testing": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/adapters/recording-store/sqlite": {
+      "name": "@open-harness/recording-store-sqlite",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@open-harness/recording-store-testing": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/adapters/recording-store/testing": {
+      "name": "@open-harness/recording-store-testing",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
     "packages/adapters/run-store/sqlite": {
       "name": "@open-harness/run-store-sqlite",
       "version": "0.2.0-alpha.1",
@@ -94,6 +135,7 @@
         "zod": "^4.3.4",
       },
       "devDependencies": {
+        "@types/bun": "latest",
         "@types/uuid": "^10.0.0",
       },
     },
@@ -498,6 +540,12 @@
     "@open-harness/core": ["@open-harness/core@workspace:packages/open-harness/core"],
 
     "@open-harness/react": ["@open-harness/react@workspace:packages/open-harness/react"],
+
+    "@open-harness/recording-store-file": ["@open-harness/recording-store-file@workspace:packages/adapters/recording-store/file"],
+
+    "@open-harness/recording-store-sqlite": ["@open-harness/recording-store-sqlite@workspace:packages/adapters/recording-store/sqlite"],
+
+    "@open-harness/recording-store-testing": ["@open-harness/recording-store-testing@workspace:packages/adapters/recording-store/testing"],
 
     "@open-harness/run-store-sqlite": ["@open-harness/run-store-sqlite@workspace:packages/adapters/run-store/sqlite"],
 

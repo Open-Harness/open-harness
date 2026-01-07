@@ -1,8 +1,8 @@
 ---
 title: "Open Harness Packages"
-lastUpdated: "2026-01-07T10:33:43.219Z"
-lastCommit: "7dd3f50eceaf866d8379e1c40b63b5321da7313f"
-lastCommitDate: "2026-01-07T10:32:30Z"
+lastUpdated: "2026-01-07T18:56:45.187Z"
+lastCommit: "73246e0e776d28d9da3c7dbc6ba8ba0d9ba93e7c"
+lastCommitDate: "2026-01-07T18:23:27Z"
 scope:
   - architecture
   - documentation
@@ -64,6 +64,15 @@ Public packages are published to npm and provide stable APIs for end users.
 
 #### **`@open-harness/run-store-sqlite`** — SQLite Persistence
 - Implements RunStore for durable run history
+
+#### **`@open-harness/recording-store-file`** — File Recording Store
+- Implements RecordingStore for JSON/JSONL filesystem recordings
+
+#### **`@open-harness/recording-store-sqlite`** — SQLite Recording Store
+- Implements RecordingStore for SQLite-backed recordings
+
+#### **`@open-harness/recording-store-testing`** — Recording Store Contracts
+- Contract tests for RecordingStore implementations
 
 ## Documentation Standards
 

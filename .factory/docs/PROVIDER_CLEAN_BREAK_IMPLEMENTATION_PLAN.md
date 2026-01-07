@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-07  
 **Branch:** `feat/provider-trait-recording-eval`  
-**Status:** 🟢 Phase 1-3 Complete, Phase 4 In Progress (core recording done, adapters + tests pending)  
+**Status:** 🟢 Phase 1-4 Complete, Phase 5-8 Pending  
 **Decision:** Clean Break - Remove inbox, simplify NodeRunContext, pure providers
 
 ---
@@ -540,8 +540,8 @@ All 139 tests passing."
 
 ---
 
-### 🔄 Phase 4: Recording Infrastructure (IN PROGRESS)
-**Status:** Core recording module complete; adapters + tests pending  
+### ✅ Phase 4: Recording Infrastructure (COMPLETE)
+**Status:** Core recording module, adapters, and tests complete  
 **Time:** 8-10 hours  
 **Blockers:** Phase 3 must complete  
 **Priority:** High (enables evals)
@@ -557,8 +557,8 @@ All 139 tests passing."
 - ✅ InMemoryRecordingStore implemented
 - ✅ withRecording wrapper implemented (live/record/replay/passthrough)
 - ✅ inputHash required for deterministic recording IDs
-- 🔄 Adapters (file/sqlite/testing) not yet implemented
-- 🔄 Recording tests not yet implemented
+- ✅ Adapters implemented (file/sqlite/testing)
+- ✅ Recording tests implemented (core + contract tests)
 
 **Decisions (2026-01-07):**
 - **Deterministic recording IDs** via input hash (required for replay)
@@ -601,7 +601,7 @@ recording_events(recording_id, seq, timestamp, event)
 ### ⏳ Phase 5: Template Provider + Docs (PENDING)
 **Status:** Not started  
 **Time:** 2 hours  
-**Blockers:** Phase 3 must complete  
+**Blockers:** None  
 **Priority:** High (enables other providers)
 
 **Deliverables:**
@@ -661,15 +661,15 @@ recording_events(recording_id, seq, timestamp, event)
 | 1: Core Abstractions | ✅ Complete | 3-4h | 3h | `ce77cbc` |
 | 2: State Cleanup | ✅ Complete | 2h | 2h | `1eca77a` |
 | 3: Clean Break | ✅ Complete | 8-12h | - | `39cdfaf`, `326808c`, `c4e0a85` |
-| 4: Recording | 🔄 In Progress | 8-10h | - | `3658c94` (core) |
+| 4: Recording | ✅ Complete | 8-10h | - | `3658c94` (core) |
 | 5: Template | ⏳ Pending | 2h | - | - |
 | 6: Eval Types | ⏳ Pending | 2h | - | - |
 | 7: Eval Engine | ⏳ Pending | 8-10h | - | - |
 | 8: Integration | ⏳ Pending | 6-7h | - | - |
 
 **Total Estimated:** 39-49 hours  
-**Total Completed:** Phase 1-3 complete; Phase 4 in progress (core done)  
-**Remaining:** Phase 4 adapters + tests, then Phases 5-8
+**Total Completed:** Phase 1-4 complete  
+**Remaining:** Phases 5-8
 
 ---
 
@@ -707,15 +707,15 @@ recording_events(recording_id, seq, timestamp, event)
 
 ## 📞 Next Actions
 
-**Immediate (Phase 4 - Recording):**
-1. Implement file + sqlite RecordingStore adapters
-2. Add recording-store contract tests (testing package)
-3. Add core unit tests for withRecording + InMemoryRecordingStore
+**Immediate (Phase 5 - Template Provider + Docs):**
+1. Implement template provider (`template.trait.ts`)
+2. Update provider README with template guidance
+3. Add sample tests for template provider
 4. Run quality gates (typecheck, lint, test)
 
-**After Phase 3:**
-1. Move to Phase 4 (Recording Infrastructure)
-2. Continue through phases 5-8
+**After Phase 4:**
+1. Move to Phase 5 (Template Provider + Docs)
+2. Continue through phases 6-8
 3. Document migration path for other providers
 
 ---

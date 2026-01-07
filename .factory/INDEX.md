@@ -9,13 +9,13 @@
 
 ### 1. Provider Trait + Recording + Eval System (IN PROGRESS)
 **Branch:** `feat/provider-trait-recording-eval`  
-**Status:** Phase 1-3 Complete ✅, Phase 4 In Progress (core recording done, adapters + tests pending)  
+**Status:** Phase 1-4 Complete ✅, Phase 5-8 Pending  
 **Documents:**
 - `docs/PROVIDER_CLEAN_BREAK_IMPLEMENTATION_PLAN.md` - **START HERE** for provider work
 - `docs/PROVIDER_ARCHITECTURE.md` - Architectural decisions
 - `docs/2026-01-07-eval-architecture-options-provider-workflow-level.md` - Eval design
 
-**Progress:** Phase 1-3 complete; Phase 4 in progress (core done; adapters + tests pending)
+**Progress:** Phase 1-4 complete; Phase 5-8 pending
 
 ---
 
