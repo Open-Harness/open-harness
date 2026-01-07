@@ -91,7 +91,8 @@ describe("HTTPSSEClient", () => {
 		}) as unknown as typeof fetch;
 
 		const client = new HTTPSSEClient({ serverUrl: "https://example.com" });
-		await client.sendCommand({ type: "abort" });
+		const result = await client.sendCommand({ type: "abort" });
+		expect(result.isOk()).toBe(true);
 	});
 
 	test("startChat posts to /api/chat and returns runId", async () => {
@@ -106,8 +107,12 @@ describe("HTTPSSEClient", () => {
 		const client = new HTTPSSEClient({ serverUrl: "https://example.com" });
 		const messages: UIMessage[] = [{ id: "u1", role: "user", parts: [{ type: "text", text: "hi" }] }];
 
-		await expect(client.startChat(messages)).resolves.toEqual({
-			runId: "run-123",
-		});
+		const result = await client.startChat(messages);
+		expect(result.isOk()).toBe(true);
+		if (result.isOk()) {
+			expect(result.value).toEqual({
+				runId: "run-123",
+			});
+		}
 	});
 });
