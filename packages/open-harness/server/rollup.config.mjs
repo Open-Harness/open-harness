@@ -1,0 +1,32 @@
+import commonjs from "@rollup/plugin-commonjs";
+import resolve from "@rollup/plugin-node-resolve";
+import typescript from "@rollup/plugin-typescript";
+import dts from "rollup-plugin-dts";
+
+const external = ["react", "react/jsx-runtime", "ai", "@open-harness/run-store-sqlite"];
+
+export default [
+	{
+		input: "src/index.ts",
+		output: { file: "dist/index.js", format: "esm" },
+		external,
+		plugins: [
+			commonjs(),
+			resolve({ extensions: [".mjs", ".js", ".ts", ".json"] }),
+			typescript({
+				tsconfig: "./tsconfig.json",
+				include: ["src/**/*", "../../internal/**/src/**/*"],
+				compilerOptions: {
+					allowImportingTsExtensions: false,
+					noEmit: false,
+				},
+			}),
+		],
+	},
+	{
+		input: "src/index.ts",
+		output: { file: "dist/index.d.ts", format: "esm" },
+		external,
+		plugins: [dts()],
+	},
+];
