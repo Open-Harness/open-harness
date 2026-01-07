@@ -6,6 +6,8 @@ const withMDX = createMDX();
 const config = {
   reactStrictMode: true,
   output: 'export',
+  basePath: '/open-harness',
+  assetPrefix: '/open-harness/',
   images: {
     unoptimized: true, // Required for static export
   },
