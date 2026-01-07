@@ -13,7 +13,6 @@ import type {
   SDKResultMessage,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import type { RuntimeCommand } from "@internal/core";
 import type {
   ClaudeAgentExtendedOptions,
   ClaudeAgentOutput,
@@ -133,41 +132,6 @@ export async function* messageStream(
   for (const message of messages) {
     yield toUserMessage(message, sessionId);
   }
-}
-
-/**
- * Drain inbox commands into array.
- */
-export function drainInbox(inbox: {
-  next: () => RuntimeCommand | undefined;
-}): RuntimeCommand[] {
-  const commands: RuntimeCommand[] = [];
-  let next = inbox.next();
-  while (next) {
-    commands.push(next);
-    next = inbox.next();
-  }
-  return commands;
-}
-
-/**
- * Convert runtime commands to Claude message inputs.
- */
-export function commandsToMessages(
-  commands: RuntimeCommand[],
-): ClaudeMessageInput[] {
-  const messages: ClaudeMessageInput[] = [];
-  for (const command of commands) {
-    if (command.type === "send") {
-      messages.push(command.message);
-    } else if (command.type === "reply") {
-      messages.push({
-        content: command.content,
-        parentToolUseId: command.promptId,
-      });
-    }
-  }
-  return messages;
 }
 
 /**

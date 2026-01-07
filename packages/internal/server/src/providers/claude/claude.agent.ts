@@ -11,7 +11,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import type { CancelContextInternal, NodeTypeDefinition, RuntimeCommand } from "@internal/core";
+import type { CancelContextInternal, NodeTypeDefinition } from "@internal/core";
 
 /**
  * Extended options that support file-based schema references.
@@ -579,33 +579,6 @@ async function* messageStream(
   for (const message of messages) {
     yield toUserMessage(message, sessionId);
   }
-}
-
-function drainInbox(inbox: {
-  next: () => RuntimeCommand | undefined;
-}): RuntimeCommand[] {
-  const commands: RuntimeCommand[] = [];
-  let next = inbox.next();
-  while (next) {
-    commands.push(next);
-    next = inbox.next();
-  }
-  return commands;
-}
-
-function commandsToMessages(commands: RuntimeCommand[]): ClaudeMessageInput[] {
-  const messages: ClaudeMessageInput[] = [];
-  for (const command of commands) {
-    if (command.type === "send") {
-      messages.push(command.message);
-    } else if (command.type === "reply") {
-      messages.push({
-        content: command.content,
-        parentToolUseId: command.promptId,
-      });
-    }
-  }
-  return messages;
 }
 
 function extractSessionId(message: SDKMessage): string | undefined {

@@ -91,7 +91,7 @@ describe("HTTPSSEClient", () => {
 		}) as unknown as typeof fetch;
 
 		const client = new HTTPSSEClient({ serverUrl: "https://example.com" });
-		const result = await client.sendCommand({ type: "abort" });
+		const result = await client.sendCommand({ type: "pause" });
 		expect(result.isOk()).toBe(true);
 	});
 

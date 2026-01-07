@@ -547,34 +547,14 @@ class InMemoryRuntime implements Runtime {
 	 * @param command - Command to dispatch.
 	 */
 	dispatch(command: RuntimeCommand): void {
-		// Inbox removed - "send" and "reply" commands no longer supported
-		// Use runtime.resume() for continuing execution with new messages
-		if (command.type === "send" || command.type === "reply") {
-			this.emit({ type: "command:received", command });
-			throw new ExecutionError(
-				"DEPRECATED_API",
-				"dispatch({ type: 'send'/'reply' }) is deprecated. Use runtime.resume() instead. Messages should be passed directly in provider input.",
-				undefined,
-				undefined,
-				command.runId,
-			);
-		}
 		this.emit({ type: "command:received", command });
 
-		if (command.type === "abort") {
-			const isPause = command.resumable === true;
-			this.snapshot.status = isPause ? "paused" : "aborted";
-			for (const cancelContext of this.nodeControllers.values()) {
-				if (isPause) {
-					cancelContext.interrupt().catch((error) => console.error("Cancel interrupt error:", error));
-				} else {
-					cancelContext.abort();
-				}
-			}
-			this.emit({
-				type: isPause ? "flow:paused" : "flow:aborted",
-			});
-			this.persistSnapshot();
+		if (command.type === "pause") {
+			this.pause();
+		}
+
+		if (command.type === "stop") {
+			this.stop();
 		}
 
 		if (command.type === "resume") {

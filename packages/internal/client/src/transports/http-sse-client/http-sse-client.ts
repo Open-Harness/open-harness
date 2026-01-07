@@ -140,14 +140,13 @@ export class HTTPSSEClient {
   /**
    * Send a runtime command to the server.
    *
-   * @param command - Runtime command to send (pause, resume, abort, etc.)
+   * @param command - Runtime command to send (pause, resume, stop)
    * @returns Promise resolving to Result succeeding on successful send, or TransportError on failure
    *
    * @example
    * ```ts
    * const result = await client.sendCommand({
    *   type: 'pause',
-   *   runId: '123',
    * });
    *
    * result.match(

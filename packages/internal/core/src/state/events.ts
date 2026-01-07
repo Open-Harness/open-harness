@@ -17,16 +17,14 @@ export type RuntimeStatus = "idle" | "running" | "paused" | "aborted" | "complet
  * Commands ingested by the runtime (from UI, CLI, or other adapters).
  *
  * Variants:
- * - send: deliver a message (optionally to a specific run)
- * - reply: answer a prompt
- * - abort: stop execution (optionally resumable)
- * - resume: resume a paused run with a message
+ * - pause: soft stop, resumable
+ * - resume: continue a paused run with an optional message
+ * - stop: hard stop, not resumable
  */
 export type RuntimeCommand =
-	| { type: "send"; message: string; runId: string }
-	| { type: "reply"; promptId: string; content: string; runId: string }
-	| { type: "abort"; resumable?: boolean; reason?: string }
-	| { type: "resume"; message?: string };
+	| { type: "pause" }
+	| { type: "resume"; message?: string }
+	| { type: "stop" };
 
 export type AgentStartEventPayload = {
 	type: "agent:start";
