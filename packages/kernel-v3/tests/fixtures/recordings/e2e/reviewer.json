@@ -1,0 +1,54 @@
+{
+	"calls": [
+		{
+			"input": { "prompt": "fixture:reviewer" },
+			"output": {
+				"text": "Needs changes",
+				"structuredOutput": { "passed": false, "feedback": "revise" },
+				"usage": { "input_tokens": 4, "output_tokens": 6 },
+				"durationMs": 18,
+				"sessionId": "sess-reviewer",
+				"numTurns": 1,
+				"totalCostUsd": 0
+			},
+			"events": [
+				{
+					"type": "stream_event",
+					"event": {
+						"type": "content_block_delta",
+						"index": 0,
+						"delta": { "type": "text_delta", "text": "Needs changes" }
+					},
+					"parent_tool_use_id": null,
+					"uuid": "reviewer-stream-1",
+					"session_id": "sess-reviewer"
+				}
+			]
+		},
+		{
+			"input": { "prompt": "fixture:reviewer" },
+			"output": {
+				"text": "Looks good",
+				"structuredOutput": { "passed": true },
+				"usage": { "input_tokens": 4, "output_tokens": 6 },
+				"durationMs": 16,
+				"sessionId": "sess-reviewer",
+				"numTurns": 2,
+				"totalCostUsd": 0
+			},
+			"events": [
+				{
+					"type": "stream_event",
+					"event": {
+						"type": "content_block_delta",
+						"index": 0,
+						"delta": { "type": "text_delta", "text": "Looks good" }
+					},
+					"parent_tool_use_id": null,
+					"uuid": "reviewer-stream-2",
+					"session_id": "sess-reviewer"
+				}
+			]
+		}
+	]
+}
