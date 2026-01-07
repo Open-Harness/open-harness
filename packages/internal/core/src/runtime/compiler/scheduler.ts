@@ -1,6 +1,6 @@
 import type { CompiledFlow } from "./compiler.js";
 import { edgeKey } from "./compiler.js";
-import type { RunSnapshot } from "../state";
+import type { RunSnapshot } from "../../state/index.js";
 
 /**
  * Scheduler determines which nodes are ready to execute next.

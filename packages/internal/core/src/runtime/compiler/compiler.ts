@@ -4,8 +4,8 @@ import type {
   EdgeGate,
   FlowDefinition,
   NodeDefinition,
-} from "../state";
-import { FlowDefinitionSchema } from "../state";
+} from "../../state/index.js";
+import { FlowDefinitionSchema } from "../../state/index.js";
 
 /**
  * Compiled representation of a flow.

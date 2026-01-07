@@ -13,15 +13,15 @@ import type {
   RuntimeStatus,
   StatePatch,
   StateStore,
-} from "../state";
-import type { RunStore } from "../persistence";
-import type { NodeRegistry, NodeRunContext } from "../nodes";
-import { resolveBindings } from "./bindings.js";
-import { edgeKey, GraphCompiler } from "./compiler.js";
+} from "../../state/index.js";
+import type { RunStore } from "../../persistence/index.js";
+import type { NodeRegistry, NodeRunContext } from "../../nodes/index.js";
+import { resolveBindings } from "../expressions/bindings.js";
+import { edgeKey, GraphCompiler } from "../compiler/compiler.js";
 import { DefaultExecutor } from "./executor.js";
-import { DefaultScheduler } from "./scheduler.js";
-import type { RunSnapshot, RunState } from "../state";
-import { evaluateWhen } from "./when.js";
+import { DefaultScheduler } from "../compiler/scheduler.js";
+import type { RunSnapshot, RunState } from "../../state/index.js";
+import { evaluateWhen } from "../expressions/when.js";
 
 /**
  * Event bus abstraction used by the runtime.

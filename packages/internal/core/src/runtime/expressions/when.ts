@@ -1,6 +1,6 @@
 // WhenExpr evaluation - supports both JSONata strings and structured AST format
 
-import type { WhenExpr, WhenExprAST } from "../state";
+import type { WhenExpr, WhenExprAST } from "../../state/index.js";
 import type { BindingContext } from "./bindings.js";
 import { type ExpressionContext, evaluateExpression } from "./expressions.js";
 

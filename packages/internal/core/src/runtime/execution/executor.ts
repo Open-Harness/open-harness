@@ -1,5 +1,5 @@
-import type { NodeDefinition } from "../state";
-import type { NodeRegistry, NodeRunContext } from "../nodes";
+import type { NodeDefinition } from "../../state/index.js";
+import type { NodeRegistry, NodeRunContext } from "../../nodes/index.js";
 
 /**
  * Result of a node execution.
