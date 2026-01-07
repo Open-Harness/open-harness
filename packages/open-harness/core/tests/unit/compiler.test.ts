@@ -1,7 +1,7 @@
 // Tests for flow compiler and scheduler
 
 import { describe, expect, test } from "bun:test";
-import { CompilationError, DefaultScheduler, GraphCompiler, parseFlowYaml } from "../../src/index.js";
+import { CompilationError, DefaultScheduler, GraphCompiler } from "../../src/index.js";
 
 describe("GraphCompiler", () => {
 	const compiler = new GraphCompiler();

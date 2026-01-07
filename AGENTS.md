@@ -36,12 +36,17 @@ tests/
 ## Commands
 
 ```bash
+# From repository root (uses turbo for monorepo with caching):
+bun run typecheck   # Type check entire monorepo
+bun run lint        # Lint entire monorepo
+bun run test        # Run tests across monorepo
+
 # In packages/sdk/:
 bun run test        # Safe tests only (unit + replay, no network)
 bun run test:live   # Integration tests (requires auth)
-bun run typecheck   # Type checking
-bun run lint        # Linting
 ```
+
+**Note**: Always use `bun x` (not `bunx`) for running executables. Use `bun run <script>` for package.json scripts.
 
 ## Code Style
 

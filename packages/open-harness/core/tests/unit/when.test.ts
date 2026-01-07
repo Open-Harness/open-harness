@@ -2,7 +2,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { WhenExpr } from "../../src/index.js";
-import { evaluateWhen } from "../../src/index.js";
+import { ExpressionError, evaluateWhen, evaluateWhenResult } from "../../src/index.js";
 
 describe("when evaluation", () => {
 	describe("undefined/null handling", () => {
@@ -117,6 +117,144 @@ describe("when evaluation", () => {
 			};
 			expect(await evaluateWhen(expr, { config: { enabled: true } })).toBe(true);
 			expect(await evaluateWhen(expr, { config: { enabled: false } })).toBe(false);
+		});
+	});
+});
+
+describe("evaluateWhenResult", () => {
+	describe("undefined/null handling", () => {
+		test("undefined when returns ok(true)", async () => {
+			const result = await evaluateWhenResult(undefined, {});
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toBe(true);
+			}
+		});
+
+		test("null when returns ok(true)", async () => {
+			const result = await evaluateWhenResult(null as unknown as WhenExpr, {});
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toBe(true);
+			}
+		});
+	});
+
+	describe("JSONata string expressions", () => {
+		test("successfully evaluates equality comparison", async () => {
+			const result1 = await evaluateWhenResult('status = "done"', { status: "done" });
+			expect(result1.isOk()).toBe(true);
+			if (result1.isOk()) {
+				expect(result1.value).toBe(true);
+			}
+
+			const result2 = await evaluateWhenResult('status = "done"', { status: "pending" });
+			expect(result2.isOk()).toBe(true);
+			if (result2.isOk()) {
+				expect(result2.value).toBe(false);
+			}
+		});
+
+		test("missing path returns false, not error", async () => {
+			const result = await evaluateWhenResult("missing.path", {});
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toBe(false);
+			}
+		});
+
+		test("syntax error returns ExpressionError", async () => {
+			const result = await evaluateWhenResult("x +++ y", {});
+			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toBeInstanceOf(ExpressionError);
+				expect(result.error.code).toBe("EVALUATION_ERROR");
+			}
+		});
+
+		test("complex expression succeeds", async () => {
+			const result = await evaluateWhenResult("$exists(reviewer) and reviewer.passed = true", {
+				reviewer: { passed: true },
+			});
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toBe(true);
+			}
+		});
+	});
+
+	describe("structured AST format", () => {
+		test("successfully evaluates equals", async () => {
+			const expr: WhenExpr = { equals: { var: "a", value: 1 } };
+			const result1 = await evaluateWhenResult(expr, { a: 1 });
+			expect(result1.isOk()).toBe(true);
+			if (result1.isOk()) {
+				expect(result1.value).toBe(true);
+			}
+
+			const result2 = await evaluateWhenResult(expr, { a: 2 });
+			expect(result2.isOk()).toBe(true);
+			if (result2.isOk()) {
+				expect(result2.value).toBe(false);
+			}
+		});
+
+		test("missing bindings return false, not error", async () => {
+			const expr: WhenExpr = { equals: { var: "missing", value: 1 } };
+			const result = await evaluateWhenResult(expr, {});
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toBe(false);
+			}
+		});
+
+		test("error propagates through not", async () => {
+			const expr: WhenExpr = {
+				not: { equals: { var: "x +++ y", value: 1 } },
+			};
+			const result = await evaluateWhenResult(expr, {});
+			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toBeInstanceOf(ExpressionError);
+			}
+		});
+
+		test("error propagates through and", async () => {
+			const expr: WhenExpr = {
+				and: [{ equals: { var: "a", value: 1 } }, { equals: { var: "x +++ y", value: 2 } }],
+			};
+			const result = await evaluateWhenResult(expr, { a: 1 });
+			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toBeInstanceOf(ExpressionError);
+			}
+		});
+
+		test("error propagates through or", async () => {
+			const expr: WhenExpr = {
+				or: [{ equals: { var: "x +++ y", value: 1 } }, { equals: { var: "b", value: 2 } }],
+			};
+			const result = await evaluateWhenResult(expr, { b: 2 });
+			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toBeInstanceOf(ExpressionError);
+			}
+		});
+
+		test("and/or aggregate conditions succeed", async () => {
+			const expr: WhenExpr = {
+				and: [
+					{ equals: { var: "a", value: 1 } },
+					{
+						or: [{ equals: { var: "b", value: 2 } }, { equals: { var: "c", value: 3 } }],
+					},
+				],
+			};
+			const result = await evaluateWhenResult(expr, { a: 1, b: 2 });
+			expect(result.isOk()).toBe(true);
+			if (result.isOk()) {
+				expect(result.value).toBe(true);
+			}
 		});
 	});
 });
