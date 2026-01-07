@@ -34,7 +34,7 @@ Commands are requests for action:
 // Commands request action
 hub.send("Please continue with the analysis");
 hub.reply(promptId, { content: "Yes, proceed" });
-hub.abort("User cancelled");
+hub.abort({ reason: "User cancelled" });
 ```
 
 Commands are:
@@ -98,7 +98,7 @@ Cancel execution:
 
 ```typescript
 // Stop everything
-hub.abort("User requested cancellation");
+hub.abort({ reason: "User requested cancellation" });
 ```
 
 ## Event Types
@@ -196,7 +196,7 @@ interface Hub {
   send(message: string): void;
   sendTo(agent: string, message: string): void;
   reply(promptId: string, response: UserResponse): void;
-  abort(reason?: string): void;
+  abort(options?: { reason?: string; resumable?: boolean }): void;
 }
 ```
 
@@ -242,7 +242,7 @@ hub.reply("confirm-1", { choice: "yes" });
 
 ```typescript
 // User cancels
-hub.abort("Changed my mind");
+hub.abort({ reason: "Changed my mind" });
 
 // Workflow receives abort event, cleans up
 hub.subscribe("session:abort", (e) => {

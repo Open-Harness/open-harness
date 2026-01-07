@@ -40,6 +40,8 @@ interface ClientCommand {
 	choice?: string;
 	/** For abort */
 	reason?: string;
+	/** For abort - if true, flow can be resumed later */
+	resumable?: boolean;
 }
 
 /** State for the WebSocket channel */
@@ -245,8 +247,8 @@ function handleClientMessage(
 				break;
 
 			case "abort":
-				hub.abort(command.reason);
-				sendAck(ws, "abort", "Abort requested");
+				hub.abort({ reason: command.reason, resumable: command.resumable });
+				sendAck(ws, "abort", command.resumable ? "Pause requested" : "Abort requested");
 				break;
 
 			default:

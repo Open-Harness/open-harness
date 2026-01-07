@@ -107,6 +107,46 @@ Rules:
 2. Agent nodes use V2 SDK session pattern for multi-turn.
 3. Control nodes define routing and structure only.
 4. Container nodes (control.foreach) create fresh sessions per iteration.
+5. **Cooperative pause**: Nodes should check `hub.getAbortSignal()` between operations to support pause/resume.
+
+## Cooperative Pause via AbortSignal
+
+All node implementations should periodically check the abort signal for cooperative pause support:
+
+```typescript
+// In node run() implementation
+async run(ctx: NodeRunContext, input: TIn): Promise&#60;TOut&#62; &#123;
+  const signal = ctx.hub.getAbortSignal();
+
+  // For long-running operations, check between steps
+  for (const item of items) &#123;
+    if (signal.aborted) &#123;
+      // Return partial results or current state
+      return currentResult;
+    &#125;
+    await processItem(item);
+  &#125;
+
+  return finalResult;
+&#125;
+```
+
+Agent nodes should check between streaming events:
+
+```typescript
+for await (const event of session.receive()) &#123;
+  if (ctx.hub.getAbortSignal().aborted) &#123;
+    break; // Stop processing, allow for pause/resume
+  &#125;
+  // Handle event...
+&#125;
+```
+
+When the flow is paused via `hub.abort({ resumable: true })`:
+- The AbortSignal is triggered
+- Nodes stop at their next check point
+- Session state is preserved for later resumption
+- Flow can be resumed with `hub.resume(sessionId, message)`
 
 ## control.foreach Details
 

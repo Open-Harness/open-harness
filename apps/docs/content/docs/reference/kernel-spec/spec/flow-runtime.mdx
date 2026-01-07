@@ -79,6 +79,78 @@ Session mode enables bidirectional interaction with a running flow:
 
 Session is **flow-scoped** and not tied to a specific agent run.
 
+## Pause/Resume Lifecycle
+
+Flows can be paused and resumed to allow external context injection:
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> running: run()
+    running --> paused: abort({resumable: true})
+    running --> aborted: abort()
+    running --> complete: flow completes
+    paused --> running: resume(sessionId, message)
+    paused --> aborted: abort()
+    complete --> [*]
+    aborted --> [*]
+```
+
+### Pause
+
+Call `hub.abort({ resumable: true })` to pause a running flow:
+
+1. Status changes to `"paused"`
+2. `flow:paused` event is emitted with sessionId and reason
+3. AbortSignal is triggered for cooperative cancellation
+4. SessionState is stored in `_pausedSessions` map
+5. Executor stops at next safe point (between nodes or agent iterations)
+
+### Resume
+
+Call `hub.resume(sessionId, message)` to resume a paused flow:
+
+1. Validates sessionId exists in paused sessions
+2. Message is emitted via `session:message` (agents receive injected context)
+3. `flow:resumed` event is emitted
+4. Status changes to `"running"`
+5. Fresh AbortSignal is created for resumed execution
+6. Executor continues from where it left off
+
+### Cooperative Cancellation
+
+Nodes check `hub.getAbortSignal()` for pause requests:
+
+```typescript
+// In executor loop - between nodes
+if (hub.getAbortSignal().aborted) {
+  return currentOutputs; // Stop gracefully
+}
+
+// In agent execution - between streaming chunks
+for await (const event of session.receive()) {
+  if (hub.getAbortSignal().aborted) {
+    break; // Stop processing
+  }
+  // Process event...
+}
+```
+
+### Events
+
+| Event | When | Payload |
+| --- | --- | --- |
+| `flow:paused` | After pause | `{ sessionId, reason? }` |
+| `flow:resumed` | After resume | `{ sessionId }` |
+
+### Error Handling
+
+| Error | When |
+| --- | --- |
+| `SessionNotFoundError` | resume() with invalid sessionId |
+| `SessionAlreadyRunningError` | resume() on already-running session |
+| `Error` | resume() with empty message |
+
 ## Channels (interfaces)
 
 Channels are **interfaces** to a flow (console, websocket, voice, etc.). They are not nodes and do not appear in the FlowSpec. They are attached at runtime:

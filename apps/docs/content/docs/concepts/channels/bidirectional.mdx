@@ -90,7 +90,7 @@ Use `hub.abort()` for cancellation:
 ```typescript
 onStart: (ctx) => {
   process.on("SIGINT", () => {
-    ctx.hub.abort("User interrupted");
+    ctx.hub.abort({ reason: "User interrupted" });
   });
 }
 ```
@@ -190,7 +190,7 @@ const wsChannel: ChannelDefinition<WsState> = {
           // Handle user message
           ctx.hub.send(msg.content);
         } else if (msg.type === "abort") {
-          ctx.hub.abort(msg.reason);
+          ctx.hub.abort({ reason: msg.reason });
         }
       });
 
@@ -256,7 +256,7 @@ const terminalChannel: ChannelDefinition = {
 
     // Handle interrupt
     process.on("SIGINT", () => {
-      ctx.hub.abort("Interrupted");
+      ctx.hub.abort({ reason: "Interrupted" });
     });
   },
 
@@ -316,7 +316,7 @@ Handle disconnections gracefully:
 ws.on("close", () => {
   ctx.state.clients.delete(ws);
   if (ctx.state.clients.size === 0) {
-    ctx.hub.abort("All clients disconnected");
+    ctx.hub.abort({ reason: "All clients disconnected" });
   }
 });
 ```
