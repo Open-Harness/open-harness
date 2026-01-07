@@ -5,10 +5,17 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import {
 	clearExpressionCache,
 	type ExpressionContext,
+	ExpressionError,
+	type ExpressionResult,
 	evaluateExpression,
+	evaluateExpressionResult,
+	evaluateTemplateResult,
 	isPureBinding,
 	parseTemplate,
 	resolveTemplate,
+	resolveTemplateResult,
+	wrapThrow,
+	wrapThrowAsync,
 } from "../../src/index.js";
 
 beforeEach(() => {
@@ -364,5 +371,269 @@ Write a blog post.`,
 			expect(await evaluateExpression("analyzer.structuredOutput.score > 80", ctx)).toBe(true);
 			expect(await evaluateExpression("analyzer.structuredOutput.issues[0]", ctx)).toBe("Missing tests");
 		});
+	});
+});
+
+// ============================================================================
+// Result-based API tests (neverthrow integration)
+// ============================================================================
+
+describe("ExpressionError", () => {
+	test("creates error with code and message", () => {
+		const err = new ExpressionError("EVALUATION_ERROR", "Invalid expression");
+		expect(err.code).toBe("EVALUATION_ERROR");
+		expect(err.message).toBe("Invalid expression");
+		expect(err.name).toBe("ExpressionError");
+	});
+
+	test("includes original error in chain", () => {
+		const cause = new SyntaxError("Bad syntax");
+		const err = new ExpressionError("PARSE_ERROR", "Failed to parse", cause);
+		expect(err.originalError).toBe(cause);
+	});
+
+	test("error codes are distinguishable", () => {
+		const codes: Array<"PARSE_ERROR" | "EVALUATION_ERROR" | "VALIDATION_ERROR" | "UNDEFINED_BINDING" | "TYPE_ERROR"> = [
+			"PARSE_ERROR",
+			"EVALUATION_ERROR",
+			"VALIDATION_ERROR",
+			"UNDEFINED_BINDING",
+			"TYPE_ERROR",
+		];
+		codes.forEach((code) => {
+			const err = new ExpressionError(code, `Error: ${code}`);
+			expect(err.code).toBe(code);
+		});
+	});
+});
+
+describe("wrapThrow", () => {
+	test("successful execution returns ok", () => {
+		const result = wrapThrow("EVALUATION_ERROR", () => {
+			return 42;
+		});
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe(42);
+	});
+
+	test("throws error returns err with code", () => {
+		const result = wrapThrow("EVALUATION_ERROR", () => {
+			throw new Error("Something broke");
+		});
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error.code).toBe("EVALUATION_ERROR");
+			expect(result.error.message).toBe("Something broke");
+		}
+	});
+
+	test("catches non-Error throws", () => {
+		const result = wrapThrow("PARSE_ERROR", () => {
+			throw "string error";
+		});
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error.message).toBe("string error");
+		}
+	});
+});
+
+describe("wrapThrowAsync", () => {
+	test("successful async execution returns ok", async () => {
+		const result = await wrapThrowAsync("EVALUATION_ERROR", async () => {
+			return "success";
+		});
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("success");
+	});
+
+	test("async error returns err with code", async () => {
+		const result = await wrapThrowAsync("EVALUATION_ERROR", async () => {
+			throw new Error("Async failed");
+		});
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error.code).toBe("EVALUATION_ERROR");
+			expect(result.error.message).toBe("Async failed");
+		}
+	});
+
+	test("catches async rejection", async () => {
+		const result = await wrapThrowAsync("EVALUATION_ERROR", async () => {
+			await Promise.reject(new Error("Promise rejected"));
+			return "never";
+		});
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error.message).toContain("Promise rejected");
+		}
+	});
+});
+
+describe("evaluateExpressionResult", () => {
+	test("successful evaluation returns ok", async () => {
+		const ctx: ExpressionContext = { task: { title: "Hello" } };
+		const result = await evaluateExpressionResult("task.title", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("Hello");
+	});
+
+	test("missing path returns ok with undefined", async () => {
+		const ctx: ExpressionContext = {};
+		const result = await evaluateExpressionResult("missing.path", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBeUndefined();
+	});
+
+	test("syntax error returns err", async () => {
+		const ctx: ExpressionContext = { x: 5 };
+		const result = await evaluateExpressionResult("x +++ y", ctx); // Invalid syntax
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error.code).toBe("EVALUATION_ERROR");
+		}
+	});
+
+	test("complex expression success", async () => {
+		const ctx: ExpressionContext = { a: 5, b: 3 };
+		const result = await evaluateExpressionResult("a > b", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe(true);
+	});
+});
+
+describe("evaluateTemplateResult", () => {
+	test("template evaluation returns ok string", async () => {
+		const ctx: ExpressionContext = { name: "World" };
+		const segments = parseTemplate("Hello {{ name }}!");
+		const result = await evaluateTemplateResult(segments, ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("Hello World!");
+	});
+
+	test("template with missing values returns ok", async () => {
+		const ctx: ExpressionContext = {};
+		const segments = parseTemplate("Value: {{ missing }}");
+		const result = await evaluateTemplateResult(segments, ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("Value: ");
+	});
+
+	test("multiple expressions in template", async () => {
+		const ctx: ExpressionContext = { first: "Hello", second: "World" };
+		const segments = parseTemplate("{{ first }} {{ second }}!");
+		const result = await evaluateTemplateResult(segments, ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("Hello World!");
+	});
+});
+
+describe("resolveTemplateResult", () => {
+	test("pure binding returns ok with object", async () => {
+		const ctx: ExpressionContext = { task: { title: "Test", done: false } };
+		const result = await resolveTemplateResult("{{ task }}", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toEqual({ title: "Test", done: false });
+	});
+
+	test("pure binding returns ok with array", async () => {
+		const ctx: ExpressionContext = { items: [1, 2, 3] };
+		const result = await resolveTemplateResult("{{ items }}", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toEqual([1, 2, 3]);
+	});
+
+	test("pure binding with missing returns ok undefined", async () => {
+		const ctx: ExpressionContext = {};
+		const result = await resolveTemplateResult("{{ missing }}", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBeUndefined();
+	});
+
+	test("mixed template returns ok string", async () => {
+		const ctx: ExpressionContext = { name: "Alice" };
+		const result = await resolveTemplateResult("Hello {{ name }}!", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("Hello Alice!");
+	});
+
+	test("mixed template with object stringifies", async () => {
+		const ctx: ExpressionContext = { data: { x: 1 } };
+		const result = await resolveTemplateResult("Data: {{ data }}", ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe('Data: {"x":1}');
+	});
+
+	test("error handling with invalid syntax", async () => {
+		const ctx: ExpressionContext = { x: 5 };
+		const result = await resolveTemplateResult("{{ x +++ }}", ctx);
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error.code).toBe("EVALUATION_ERROR");
+		}
+	});
+});
+
+describe("Result-based API in orchestration patterns", () => {
+	test("error handling in conditional template", async () => {
+		const ctx: ExpressionContext = {
+			task: { title: "Test" },
+			reviewer: undefined as any,
+		};
+		const template = `{{ $exists(reviewer) ? reviewer.text : "No feedback" }}`;
+		const result = await resolveTemplateResult(template, ctx);
+		expect(result.isOk()).toBe(true);
+		expect(result.value).toBe("No feedback");
+	});
+
+	test("match pattern for ok result", async () => {
+		const ctx: ExpressionContext = { value: 42 };
+		const result = await evaluateExpressionResult("value", ctx);
+		let matched = false;
+		result.match(
+			(val) => {
+				expect(val).toBe(42);
+				matched = true;
+			},
+			() => {
+				throw new Error("Should not hit error branch");
+			},
+		);
+		expect(matched).toBe(true);
+	});
+
+	test("match pattern for err result", async () => {
+		const ctx: ExpressionContext = {};
+		const result = await evaluateExpressionResult("x +++ y", ctx);
+		let matched = false;
+		result.match(
+			() => {
+				throw new Error("Should not hit ok branch");
+			},
+			(err) => {
+				expect(err.code).toBe("EVALUATION_ERROR");
+				matched = true;
+			},
+		);
+		expect(matched).toBe(true);
+	});
+
+	test("mapErr to transform errors", async () => {
+		const ctx: ExpressionContext = {};
+		const result = await evaluateExpressionResult("bad syntax", ctx).then((r) =>
+			r.mapErr((err) => ({
+				...err,
+				userMessage: `Expression failed: ${err.message}`,
+			})),
+		);
+
+		result.match(
+			() => {
+				throw new Error("Should have error");
+			},
+			(err: any) => {
+				expect(err.userMessage).toContain("Expression failed");
+			},
+		);
 	});
 });
