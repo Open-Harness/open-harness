@@ -1,3 +1,14 @@
+---
+title: "Node Registry"
+lastUpdated: "2026-01-07T00:00:00Z"
+lastCommit: "placeholder"
+lastCommitDate: "2026-01-07T00:00:00Z"
+scope:
+  - node-registry
+  - contracts
+  - extensibility
+---
+
 # Registry
 
 Node registry and node type contracts. This is how the runtime looks up the

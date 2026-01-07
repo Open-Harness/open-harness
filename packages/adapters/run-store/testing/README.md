@@ -1,3 +1,14 @@
+---
+title: "Run Store Testing Utilities"
+lastUpdated: "2026-01-07T00:00:00Z"
+lastCommit: "placeholder"
+lastCommitDate: "2026-01-07T00:00:00Z"
+scope:
+  - persistence
+  - testing
+  - run-store-adapter
+---
+
 # persistence-testing
 
 To install dependencies:

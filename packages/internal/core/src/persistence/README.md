@@ -1,3 +1,14 @@
+---
+title: "Persistence Layer"
+lastUpdated: "2026-01-07T00:00:00Z"
+lastCommit: "placeholder"
+lastCommitDate: "2026-01-07T00:00:00Z"
+scope:
+  - persistence
+  - run-store
+  - snapshots
+---
+
 # Persistence
 
 Optional storage layer for run events and snapshots. This enables resume and
