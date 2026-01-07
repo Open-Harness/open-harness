@@ -3,6 +3,7 @@
 
 import type {
 	ContainerNodeContext,
+	ControlNodeContext,
 	Edge,
 	FlowYaml,
 	NodeRunContext,
@@ -134,8 +135,19 @@ async function runNode(
 		runId,
 	};
 
+	// Build context based on node capabilities
+	let runCtx: NodeRunContext | ContainerNodeContext | ControlNodeContext =
+		baseContext;
+
+	// Control nodes that need binding context get it
+	if (def.capabilities?.needsBindingContext) {
+		runCtx = {
+			...runCtx,
+			bindingContext,
+		} as ControlNodeContext;
+	}
+
 	// Container nodes get executeChild for running child nodes
-	let runCtx: NodeRunContext | ContainerNodeContext = baseContext;
 	if (
 		def.capabilities?.isContainer &&
 		registry &&
@@ -192,9 +204,9 @@ async function runNode(
 			return validatedOutput as Record<string, unknown>;
 		};
 
-		// Create container context with executeChild
+		// Add executeChild to context (preserves bindingContext if already set)
 		runCtx = {
-			...baseContext,
+			...runCtx,
 			executeChild,
 		};
 	}
