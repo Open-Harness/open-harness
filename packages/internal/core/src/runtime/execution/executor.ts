@@ -1,5 +1,6 @@
 import type { NodeDefinition } from "../../state/index.js";
 import type { NodeRegistry, NodeRunContext } from "../../nodes/index.js";
+import { ok, err } from "neverthrow";
 import {
   ExecutionError,
   type ExecutionResult,
@@ -117,17 +118,15 @@ export class DefaultExecutor implements Executor {
     const def = registry.get(node.type);
 
     if (!def) {
-      return {
-        isOk: () => false,
-        isErr: () => true,
-        error: new ExecutionError(
+      return err(
+        new ExecutionError(
           "NODE_NOT_FOUND",
           `Node type "${node.type}" not found in registry`,
           undefined,
           node.id,
           runContext.runId,
         ),
-      } as ExecutionResult<NodeExecutionResult>;
+      );
     }
 
     const maxAttempts = node.policy?.retry?.maxAttempts ?? 1;
@@ -140,17 +139,15 @@ export class DefaultExecutor implements Executor {
     while (attempt < maxAttempts) {
       attempt += 1;
       if (runContext.cancel.cancelled) {
-        return {
-          isOk: () => false,
-          isErr: () => true,
-          error: new ExecutionError(
+        return err(
+          new ExecutionError(
             "CANCELLED",
             `Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
             undefined,
             node.id,
             runContext.runId,
           ),
-        } as ExecutionResult<NodeExecutionResult>;
+        );
       }
 
       const result = await wrapExecutionThrowAsync(
@@ -168,15 +165,11 @@ export class DefaultExecutor implements Executor {
       );
 
       if (result.isOk()) {
-        return {
-          isOk: () => true,
-          isErr: () => false,
-          value: {
-            nodeId: node.id,
-            runId: runContext.runId,
-            output: result.value,
-          },
-        } as ExecutionResult<NodeExecutionResult>;
+        return ok({
+          nodeId: node.id,
+          runId: runContext.runId,
+          output: result.value,
+        });
       }
 
       lastError = result.error;
@@ -185,11 +178,8 @@ export class DefaultExecutor implements Executor {
       }
     }
 
-    return {
-      isOk: () => false,
-      isErr: () => true,
-      error:
-        lastError ||
+    return err(
+      lastError ||
         new ExecutionError(
           "EXECUTION_FAILED",
           "Execution failed",
@@ -197,7 +187,7 @@ export class DefaultExecutor implements Executor {
           node.id,
           runContext.runId,
         ),
-    } as ExecutionResult<NodeExecutionResult>;
+    );
   }
 }
 

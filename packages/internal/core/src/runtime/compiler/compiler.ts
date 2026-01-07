@@ -1,4 +1,5 @@
 import { parse } from "yaml";
+import { ok, err } from "neverthrow";
 import type {
   EdgeDefinition,
   EdgeGate,
@@ -6,6 +7,11 @@ import type {
   NodeDefinition,
 } from "../../state/index.js";
 import { FlowDefinitionSchema } from "../../state/index.js";
+import {
+  CompilationError,
+  type CompilationResult,
+  wrapCompilationThrow,
+} from "./errors.js";
 
 /**
  * Compiled representation of a flow.
@@ -74,6 +80,22 @@ export class GraphCompiler implements Compiler {
     }
 
     return { nodes, edges, adjacency, incoming, gateByNode };
+  }
+
+  /**
+   * Internal Result-based compiler (returns Result<CompiledFlow, CompilationError>).
+   * Used internally for error handling patterns.
+   *
+   * @param definition - Flow definition
+   * @returns Result containing compiled flow or CompilationError
+   * @internal
+   */
+  compileResult(definition: FlowDefinition): CompilationResult<CompiledFlow> {
+    return wrapCompilationThrow(
+      "INVALID_FLOW_DEFINITION",
+      () => this.compile(definition),
+      { flowName: definition.name },
+    );
   }
 }
 

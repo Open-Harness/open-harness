@@ -1,6 +1,12 @@
+import { ok, err } from "neverthrow";
 import type { CompiledFlow } from "./compiler.js";
 import { edgeKey } from "./compiler.js";
 import type { RunSnapshot } from "../../state/index.js";
+import {
+  CompilationError,
+  type CompilationResult,
+  wrapCompilationThrow,
+} from "./errors.js";
 
 /**
  * Scheduler determines which nodes are ready to execute next.
@@ -55,6 +61,25 @@ export class DefaultScheduler implements Scheduler {
     }
 
     return ready;
+  }
+
+  /**
+   * Internal Result-based scheduler (returns Result<string[], CompilationError>).
+   * Used internally for error handling patterns.
+   *
+   * @param state - Current run snapshot
+   * @param graph - Compiled flow graph
+   * @returns Result containing ready node IDs or CompilationError
+   * @internal
+   */
+  nextReadyNodesResult(
+    state: RunSnapshot,
+    graph: CompiledFlow,
+  ): CompilationResult<string[]> {
+    return wrapCompilationThrow(
+      "SCHEDULING_ERROR",
+      () => this.nextReadyNodes(state, graph),
+    );
   }
 }
 
