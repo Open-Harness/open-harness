@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-07  
 **Branch:** `feat/provider-trait-recording-eval`  
-**Status:** 🟡 Phase 1-2 Complete, Phase 3 In Progress (core/provider done, tests + gates pending)  
+**Status:** 🟢 Phase 1-3 Complete, Phase 4 In Progress (core recording done, adapters + tests pending)  
 **Decision:** Clean Break - Remove inbox, simplify NodeRunContext, pure providers
 
 ---
@@ -307,8 +307,8 @@ async resume(message: string = "continue") {
 
 ---
 
-### 🔄 Phase 3: Clean Break Implementation (IN PROGRESS)
-**Status:** Core + provider work complete, test updates + quality gates pending  
+### ✅ Phase 3: Clean Break Implementation (COMPLETE)
+**Status:** Core + provider work complete, tests + quality gates done  
 **Time:** 8-12 hours  
 **Blockers:** None
 
@@ -540,8 +540,8 @@ All 139 tests passing."
 
 ---
 
-### ⏳ Phase 4: Recording Infrastructure (PENDING)
-**Status:** Not started  
+### 🔄 Phase 4: Recording Infrastructure (IN PROGRESS)
+**Status:** Core recording module complete; adapters + tests pending  
 **Time:** 8-10 hours  
 **Blockers:** Phase 3 must complete  
 **Priority:** High (enables evals)
@@ -551,6 +551,14 @@ All 139 tests passing."
 - RecordingStore interface + implementations (InMemory + adapters)
 - withRecording() wrapper (live, record, replay, passthrough)
 - Event normalization (StreamEvent → RecordedEvent)
+
+**Current State (2026-01-07):**
+- ✅ Core recording module added in `packages/internal/core/src/recording/`
+- ✅ InMemoryRecordingStore implemented
+- ✅ withRecording wrapper implemented (live/record/replay/passthrough)
+- ✅ inputHash required for deterministic recording IDs
+- 🔄 Adapters (file/sqlite/testing) not yet implemented
+- 🔄 Recording tests not yet implemented
 
 **Decisions (2026-01-07):**
 - **Deterministic recording IDs** via input hash (required for replay)
@@ -652,16 +660,16 @@ recording_events(recording_id, seq, timestamp, event)
 |-------|--------|---------------|-------------|---------|
 | 1: Core Abstractions | ✅ Complete | 3-4h | 3h | `ce77cbc` |
 | 2: State Cleanup | ✅ Complete | 2h | 2h | `1eca77a` |
-| 3: Clean Break | 🔄 In Progress | 8-12h | - | `39cdfaf`, `326808c` |
-| 4: Recording | ⏳ Pending | 8-10h | - | - |
+| 3: Clean Break | ✅ Complete | 8-12h | - | `39cdfaf`, `326808c`, `c4e0a85` |
+| 4: Recording | 🔄 In Progress | 8-10h | - | `3658c94` (core) |
 | 5: Template | ⏳ Pending | 2h | - | - |
 | 6: Eval Types | ⏳ Pending | 2h | - | - |
 | 7: Eval Engine | ⏳ Pending | 8-10h | - | - |
 | 8: Integration | ⏳ Pending | 6-7h | - | - |
 
 **Total Estimated:** 39-49 hours  
-**Total Completed:** Phase 1-2 complete; Phase 3 in progress (core/provider done, tests pending)  
-**Remaining:** Phase 3 test updates + Phases 4-8
+**Total Completed:** Phase 1-3 complete; Phase 4 in progress (core done)  
+**Remaining:** Phase 4 adapters + tests, then Phases 5-8
 
 ---
 
@@ -672,7 +680,7 @@ recording_events(recording_id, seq, timestamp, event)
 - ✅ No CommandInbox anywhere in codebase
 - ✅ Runtime manages sessions (before/after node execution)
 - ✅ Claude provider uses input.sessionId
-- 🔄 All server + core tests passing (update cancellation tests to new API)
+- ✅ All server + core tests passing (pause/resume/stop API applied)
 - ✅ 0 typecheck errors
 - ✅ 0 lint issues
 
@@ -692,17 +700,18 @@ recording_events(recording_id, seq, timestamp, event)
 2. **2026-01-07-eval-architecture-options-provider-workflow-level.md** - Eval design (Option E)
 3. **This document** - Complete implementation plan
 4. **EPIC_DEPENDENCY_MATRIX.md** - 46-bead neverthrow initiative (separate)
+5. **packages/internal/server/src/providers/codex/** - Codex provider prompt + context
+6. **packages/internal/server/src/providers/opencode/** - OpenCode provider prompt + context
 
 ---
 
 ## 📞 Next Actions
 
-**Immediate (Phase 3 - Clean Break):**
-1. Update server integration tests to use pause()/resume()/stop()
-2. Remove remaining dispatch({ type: "abort" }) test patterns
-3. Eliminate lingering `any` in tests (use type guards/unknown)
-4. Run quality gates (typecheck, lint, test + live cancellation)
-5. Commit with detailed BREAKING CHANGES message
+**Immediate (Phase 4 - Recording):**
+1. Implement file + sqlite RecordingStore adapters
+2. Add recording-store contract tests (testing package)
+3. Add core unit tests for withRecording + InMemoryRecordingStore
+4. Run quality gates (typecheck, lint, test)
 
 **After Phase 3:**
 1. Move to Phase 4 (Recording Infrastructure)
