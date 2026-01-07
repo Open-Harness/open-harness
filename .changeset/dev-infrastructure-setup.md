@@ -1,5 +1,5 @@
 ---
-"@open-harness/sdk": patch
+"@open-harness/core": patch
 ---
 
 Initial developer infrastructure setup including git hooks, CI/CD, and package configuration.

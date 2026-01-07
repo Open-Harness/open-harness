@@ -1,5 +1,11 @@
 ---
-"@open-harness/sdk": minor
+"@open-harness/core": minor
+"@open-harness/server": minor
+"@open-harness/client": minor
+"@open-harness/react": minor
+"@open-harness/testing": minor
+"@open-harness/run-store-sqlite": minor
+"@open-harness/run-store-testing": minor
 ---
 
 Initial alpha release of Open Harness SDK
