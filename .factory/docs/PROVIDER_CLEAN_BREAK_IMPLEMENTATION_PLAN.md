@@ -548,9 +548,45 @@ All 139 tests passing."
 
 **Deliverables:**
 - Recording types (Recording, RecordedEvent, RecordingMetadata)
-- RecordingStore interface + implementations (InMemory, File, SQLite)
+- RecordingStore interface + implementations (InMemory + adapters)
 - withRecording() wrapper (live, record, replay, passthrough)
 - Event normalization (StreamEvent → RecordedEvent)
+
+**Decisions (2026-01-07):**
+- **Deterministic recording IDs** via input hash (required for replay)
+- **inputHash is required** in RecordingMetadata
+- **Keep file store simple**: JSONL for events + JSON for metadata/output
+- **Naming consistency** with RunStore:
+  - `@open-harness/recording-store-sqlite`
+  - `@open-harness/recording-store-file`
+  - `@open-harness/recording-store-testing` (contract tests)
+
+**Structure (mirrors RunStore):**
+```
+packages/internal/core/src/recording/
+  types.ts
+  store.ts
+  memory-store.ts
+  with-recording.ts
+  normalize.ts
+  index.ts
+
+packages/adapters/recording-store/file/
+packages/adapters/recording-store/sqlite/
+packages/adapters/recording-store/testing/
+```
+
+**File store format (simple, appendable):**
+```
+recording-<id>.json    # metadata + output + error
+recording-<id>.jsonl   # stream events (one JSON per line)
+```
+
+**SQLite schema (minimal):**
+```
+recordings(id, metadata, output, error)
+recording_events(recording_id, seq, timestamp, event)
+```
 
 ---
 
