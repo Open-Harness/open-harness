@@ -1,10 +1,10 @@
-# @open-harness/persistence-testing
+# @open-harness/run-store-testing
 
 Shared testing utilities and contracts for persistence implementations.
 
 ## Purpose
 
-Provides contract tests and helper functions to ensure all `RunStore` implementations conform to the same interface and behavior. Used by persistence implementations (like `persistence-sqlite`) to validate correctness.
+Provides contract tests and helper functions to ensure all `RunStore` implementations conform to the same interface and behavior. Used by persistence implementations (like `run-store-sqlite`) to validate correctness.
 
 ## Key Files
 
@@ -26,8 +26,8 @@ The `runStoreContract` function validates:
 ## Usage
 
 ```typescript
-import { runStoreContract } from "@open-harness/persistence-testing";
-import { SqliteRunStore } from "@open-harness/persistence-sqlite";
+import { runStoreContract } from "@open-harness/run-store-testing";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 
 runStoreContract("SqliteRunStore", () => ({
   store: new SqliteRunStore({ filename: ":memory:" }),
@@ -37,5 +37,5 @@ runStoreContract("SqliteRunStore", () => ({
 
 ## Dependencies
 
-- `@open-harness/sdk` - For `RunStore` interface and types
+- `@open-harness/core` - For `RunStore` interface and types
 - `bun:test` - For test framework

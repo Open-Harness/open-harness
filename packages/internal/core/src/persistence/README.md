@@ -11,7 +11,7 @@ replay across process restarts.
 - run-store.ts: RunStore interface.
 - memory-run-store.ts: InMemoryRunStore implementation.
 
-Note: SqliteRunStore has been moved to `@open-harness/persistence-sqlite` package.
+Note: SqliteRunStore has been moved to `@open-harness/run-store-sqlite` package.
 
 ## Usage
 Pass a RunStore to the runtime so it can append events and save snapshots.
@@ -27,7 +27,7 @@ const runtime = createRuntime({ flow, registry, store });
 Use SQLite when you need durability across restarts:
 
 ```ts
-import { SqliteRunStore } from "@open-harness/persistence-sqlite";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 
 const store = new SqliteRunStore({ filename: "runs.db" });
 const runtime = createRuntime({ flow, registry, store });

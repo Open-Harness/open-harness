@@ -153,12 +153,22 @@ async function extractFirstText(
 }
 
 function buildResultMessage(output: FixtureOutput): SDKResultMessage {
-  const usage = (output.usage ?? {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-  }) as unknown as NonNullableUsage;
+  const usageInput = output.usage as Partial<NonNullableUsage> | undefined;
+  const usage: NonNullableUsage = {
+    input_tokens: usageInput?.input_tokens ?? 0,
+    output_tokens: usageInput?.output_tokens ?? 0,
+    cache_creation_input_tokens: usageInput?.cache_creation_input_tokens ?? 0,
+    cache_read_input_tokens: usageInput?.cache_read_input_tokens ?? 0,
+    cache_creation: usageInput?.cache_creation ?? {
+      ephemeral_1h_input_tokens: 0,
+      ephemeral_5m_input_tokens: 0,
+    },
+    server_tool_use: usageInput?.server_tool_use ?? {
+      web_fetch_requests: 0,
+      web_search_requests: 0,
+    },
+    service_tier: usageInput?.service_tier ?? "standard",
+  };
 
   return {
     type: "result",

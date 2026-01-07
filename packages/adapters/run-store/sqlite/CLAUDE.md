@@ -1,10 +1,10 @@
-# @open-harness/persistence-sqlite
+# @open-harness/run-store-sqlite
 
 SQLite-based persistence implementation for Open Harness run state storage.
 
 ## Purpose
 
-Implements the `RunStore` interface from `@open-harness/sdk` using Bun's built-in SQLite database. Provides persistent storage for:
+Implements the `RunStore` interface from `@open-harness/core` using Bun's built-in SQLite database. Provides persistent storage for:
 - Run snapshots (state, outputs, node status, edge status, loop counters, inbox, agent sessions)
 - Runtime events (for replay, debugging, and audit trails)
 - Event sequencing for ordered retrieval
@@ -17,12 +17,12 @@ Implements the `RunStore` interface from `@open-harness/sdk` using Bun's built-i
   - Implements `appendEvent()`, `loadEvents()`, `saveSnapshot()`, `getSnapshot()`
   - Handles event sequencing with auto-incrementing sequence numbers
 
-- **`tests/sqlite-store.test.ts`** - Tests using `runStoreContract` from `@open-harness/persistence-testing`
+- **`tests/sqlite-store.test.ts`** - Tests using `runStoreContract` from `@open-harness/run-store-testing`
 
 ## Usage
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/persistence-sqlite";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 
 // In-memory database for testing
 const store = new SqliteRunStore({ filename: ":memory:" });
@@ -45,6 +45,6 @@ const store = new SqliteRunStore({ db });
 
 ## Dependencies
 
-- `@open-harness/sdk` - For `RunStore` interface and types
-- `@open-harness/persistence-testing` - For contract tests (dev dependency)
+- `@open-harness/core` - For `RunStore` interface and types
+- `@open-harness/run-store-testing` - For contract tests (dev dependency)
 - `bun:sqlite` - Built-in SQLite support
