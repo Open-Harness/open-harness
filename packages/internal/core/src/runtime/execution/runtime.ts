@@ -22,6 +22,11 @@ import { DefaultExecutor } from "./executor.js";
 import { DefaultScheduler } from "../compiler/scheduler.js";
 import type { RunSnapshot, RunState } from "../../state/index.js";
 import { evaluateWhen } from "../expressions/when.js";
+import {
+  ExecutionError,
+  type ExecutionResult,
+  wrapExecutionThrowAsync,
+} from "./errors.js";
 
 /**
  * Event bus abstraction used by the runtime.

@@ -1,5 +1,10 @@
 import type { NodeDefinition } from "../../state/index.js";
 import type { NodeRegistry, NodeRunContext } from "../../nodes/index.js";
+import {
+  ExecutionError,
+  type ExecutionResult,
+  wrapExecutionThrowAsync,
+} from "./errors.js";
 
 /**
  * Result of a node execution.
@@ -95,6 +100,104 @@ export class DefaultExecutor implements Executor {
       runId: runContext.runId,
       error: errorMessage(lastError),
     };
+  }
+
+  /**
+   * Internal Result-based executor (returns Result<NodeExecutionResult, ExecutionError>).
+   * Used internally for error handling patterns.
+   *
+   * @param context - Execution context
+   * @returns Result containing execution result or ExecutionError
+   * @internal
+   */
+  async runNodeResult(
+    context: ExecutorContext,
+  ): Promise<ExecutionResult<NodeExecutionResult>> {
+    const { registry, node, runContext, input } = context;
+    const def = registry.get(node.type);
+
+    if (!def) {
+      return {
+        isOk: () => false,
+        isErr: () => true,
+        error: new ExecutionError(
+          "NODE_NOT_FOUND",
+          `Node type "${node.type}" not found in registry`,
+          undefined,
+          node.id,
+          runContext.runId,
+        ),
+      } as ExecutionResult<NodeExecutionResult>;
+    }
+
+    const maxAttempts = node.policy?.retry?.maxAttempts ?? 1;
+    const backoffMs = node.policy?.retry?.backoffMs ?? 0;
+    const timeoutMs = node.policy?.timeoutMs;
+
+    let attempt = 0;
+    let lastError: ExecutionError | undefined = undefined;
+
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      if (runContext.cancel.cancelled) {
+        return {
+          isOk: () => false,
+          isErr: () => true,
+          error: new ExecutionError(
+            "CANCELLED",
+            `Cancelled: ${runContext.cancel.reason ?? "unknown"}`,
+            undefined,
+            node.id,
+            runContext.runId,
+          ),
+        } as ExecutionResult<NodeExecutionResult>;
+      }
+
+      const result = await wrapExecutionThrowAsync(
+        "EXECUTION_FAILED",
+        async () => {
+          const parsedInput = parseWithSchema(def.inputSchema, input);
+          const output = await withTimeout(
+            () => def.run(runContext, parsedInput),
+            timeoutMs,
+          );
+          return parseWithSchema(def.outputSchema, output);
+        },
+        node.id,
+        runContext.runId,
+      );
+
+      if (result.isOk()) {
+        return {
+          isOk: () => true,
+          isErr: () => false,
+          value: {
+            nodeId: node.id,
+            runId: runContext.runId,
+            output: result.value,
+          },
+        } as ExecutionResult<NodeExecutionResult>;
+      }
+
+      lastError = result.error;
+      if (attempt < maxAttempts) {
+        await delay(backoffMs);
+      }
+    }
+
+    return {
+      isOk: () => false,
+      isErr: () => true,
+      error:
+        lastError ||
+        new ExecutionError(
+          "EXECUTION_FAILED",
+          "Execution failed",
+          undefined,
+          node.id,
+          runContext.runId,
+        ),
+    } as ExecutionResult<NodeExecutionResult>;
   }
 }
 
