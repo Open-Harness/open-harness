@@ -54,7 +54,7 @@ Next Phase (Planned, ready to execute):
   │  └─ @internal/client + @open-harness/client
   │
   ├─ Epic 2: Persistence Layer (8 beads, 30-40h) [CAN PARALLEL WITH E1]
-  │  └─ adapters/run-store/sqlite + adapters/run-store/testing
+  │  └─ stores/run-store/sqlite + stores/run-store/testing
   │
   ├─ Epic 3: Server Integration (12 beads, 50-70h) [AFTER E1+E2]
   │  └─ @internal/server + @open-harness/server

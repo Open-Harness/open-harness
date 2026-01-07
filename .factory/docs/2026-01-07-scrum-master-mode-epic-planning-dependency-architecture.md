@@ -20,8 +20,8 @@ I'm now functioning as **Scrum Master** for the runtime refactoring initiative. 
 - Timeline: 40-60 hours
 
 **Epic 2: Persistence Layer** (8 beads)  
-- adapters/run-store/sqlite
-- adapters/run-store/testing
+- stores/run-store/sqlite
+- stores/run-store/testing
 - Dependencies: open-harness-9mq ✅
 - Timeline: 30-40 hours
 

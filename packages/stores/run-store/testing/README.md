@@ -1,15 +1,15 @@
 ---
-title: "SQLite Run Store"
-lastUpdated: "2026-01-07T10:33:43.219Z"
-lastCommit: "7dd3f50eceaf866d8379e1c40b63b5321da7313f"
-lastCommitDate: "2026-01-07T10:32:30Z"
+title: "Run Store Testing Utilities"
+lastUpdated: "2026-01-07T19:33:33.732Z"
+lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
+lastCommitDate: "2026-01-07T18:56:43Z"
 scope:
   - persistence
-  - sqlite
+  - testing
   - run-store-adapter
 ---
 
-# persistence-sqlite
+# persistence-testing
 
 To install dependencies:
 

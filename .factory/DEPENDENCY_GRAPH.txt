@@ -51,14 +51,14 @@ EPIC 1: TRANSPORT LAYER (12 beads)
 EPIC 2: PERSISTENCE LAYER (8 beads)
 ═════════════════════════════════════════════════════════════════════════════
 
-    2.1: adapters/run-store/sqlite errors
-        └─ 2.2: adapters/run-store/sqlite Result methods
-            ├─ 2.3: adapters/run-store/sqlite docs
-            │   └─ 2.4: adapters/run-store/sqlite tests
+    2.1: stores/run-store/sqlite errors
+        └─ 2.2: stores/run-store/sqlite Result methods
+            ├─ 2.3: stores/run-store/sqlite docs
+            │   └─ 2.4: stores/run-store/sqlite tests
             │       └─ 2.5: Validate & commit ────────────┐
             │                                              │
-            └─ 2.6: adapters/run-store/testing errors ◄───┘
-                └─ 2.7: adapters/run-store/testing Result methods
+            └─ 2.6: stores/run-store/testing errors ◄───┘
+                └─ 2.7: stores/run-store/testing Result methods
                     └─ 2.8: Testing + validate + commit
 
 

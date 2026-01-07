@@ -22,8 +22,8 @@ open-harness-9mq (COMPLETE ✅)
     │  └─ @open-harness/client                        │ immediately
     │                                                  │
     ├─ Epic 2: Persistence Layer (8 beads) ──────────┤
-    │  ├─ adapters/run-store/sqlite                   │
-    │  └─ adapters/run-store/testing                  │
+    │  ├─ stores/run-store/sqlite                   │
+    │  └─ stores/run-store/testing                  │
     │                                                  │
     ├─ Epic 3: Server Integration (12 beads) ────────┐
     │  ├─ @internal/server (depends: E1 + E2)        │ Start after
@@ -98,16 +98,16 @@ bd-xxxxx.1: @internal/client errors
 ### Bead Dependencies Graph
 
 ```
-bd-xxxxx.13: adapters/run-store/sqlite errors
-  └─ bd-xxxxx.14: adapters/run-store/sqlite Result methods
-      ├─ bd-xxxxx.15: adapters/run-store/sqlite documentation
-      │   └─ bd-xxxxx.16: adapters/run-store/sqlite tests
-      │       └─ bd-xxxxx.17: adapters/run-store/sqlite validation
+bd-xxxxx.13: stores/run-store/sqlite errors
+  └─ bd-xxxxx.14: stores/run-store/sqlite Result methods
+      ├─ bd-xxxxx.15: stores/run-store/sqlite documentation
+      │   └─ bd-xxxxx.16: stores/run-store/sqlite tests
+      │       └─ bd-xxxxx.17: stores/run-store/sqlite validation
       │
-      └─ bd-xxxxx.18: adapters/run-store/testing errors
-          └─ bd-xxxxx.19: adapters/run-store/testing Result methods
-              ├─ bd-xxxxx.20: adapters/run-store/testing documentation
-              │   └─ bd-xxxxx.21: adapters/run-store/testing tests
+      └─ bd-xxxxx.18: stores/run-store/testing errors
+          └─ bd-xxxxx.19: stores/run-store/testing Result methods
+              ├─ bd-xxxxx.20: stores/run-store/testing documentation
+              │   └─ bd-xxxxx.21: stores/run-store/testing tests
               │       └─ bd-xxxxx.22: Epic 2 final validation
 ```
 

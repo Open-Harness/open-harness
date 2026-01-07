@@ -1,3 +1,8 @@
+---
+lastUpdated: "2026-01-07T19:33:33.732Z"
+lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
+lastCommitDate: "2026-01-07T18:56:43Z"
+---
 # @open-harness/run-store-sqlite
 
 SQLite-based persistence implementation for Open Harness run state storage.

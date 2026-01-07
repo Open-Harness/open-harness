@@ -1,12 +1,12 @@
 ---
 title: "Recording Store (SQLite)"
-lastUpdated: "2026-01-07T18:56:45.187Z"
-lastCommit: "73246e0e776d28d9da3c7dbc6ba8ba0d9ba93e7c"
-lastCommitDate: "2026-01-07T18:23:27Z"
+lastUpdated: "2026-01-07T19:33:33.732Z"
+lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
+lastCommitDate: "2026-01-07T18:56:43Z"
 scope:
   - recording
   - persistence
-  - adapters
+  - stores
 ---
 
 # @open-harness/recording-store-sqlite

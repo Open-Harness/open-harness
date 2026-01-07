@@ -579,9 +579,9 @@ packages/internal/core/src/recording/
   normalize.ts
   index.ts
 
-packages/adapters/recording-store/file/
-packages/adapters/recording-store/sqlite/
-packages/adapters/recording-store/testing/
+packages/stores/recording-store/file/
+packages/stores/recording-store/sqlite/
+packages/stores/recording-store/testing/
 ```
 
 **File store format (simple, appendable):**

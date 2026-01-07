@@ -44,74 +44,6 @@
         "typescript": "^5.9.3",
       },
     },
-    "packages/adapters/recording-store/file": {
-      "name": "@open-harness/recording-store-file",
-      "version": "0.2.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@open-harness/recording-store-testing": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
-    "packages/adapters/recording-store/sqlite": {
-      "name": "@open-harness/recording-store-sqlite",
-      "version": "0.2.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@open-harness/recording-store-testing": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
-    "packages/adapters/recording-store/testing": {
-      "name": "@open-harness/recording-store-testing",
-      "version": "0.2.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
-    "packages/adapters/run-store/sqlite": {
-      "name": "@open-harness/run-store-sqlite",
-      "version": "0.2.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@open-harness/run-store-testing": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
-    "packages/adapters/run-store/testing": {
-      "name": "@open-harness/run-store-testing",
-      "version": "0.2.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
     "packages/internal/client": {
       "name": "@internal/client",
       "version": "0.2.0",
@@ -249,6 +181,28 @@
         "typescript": "^5",
       },
     },
+    "packages/open-harness/stores": {
+      "name": "@open-harness/stores",
+      "version": "0.2.0-alpha.1",
+      "dependencies": {
+        "@open-harness/recording-store-file": "workspace:*",
+        "@open-harness/recording-store-sqlite": "workspace:*",
+        "@open-harness/run-store-sqlite": "workspace:*",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@rollup/plugin-node-resolve": "^15.3.0",
+        "@rollup/plugin-typescript": "^11.1.6",
+        "@types/bun": "latest",
+        "@types/node": "^22",
+        "rollup": "^4.14.0",
+        "rollup-plugin-dts": "^6.2.3",
+        "typescript": "^5",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/open-harness/testing": {
       "name": "@open-harness/testing",
       "version": "0.2.0-alpha.1",
@@ -266,6 +220,74 @@
         "typescript": "^5",
       },
       "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/stores/recording-store/file": {
+      "name": "@open-harness/recording-store-file",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@open-harness/recording-store-testing": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/stores/recording-store/sqlite": {
+      "name": "@open-harness/recording-store-sqlite",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@open-harness/recording-store-testing": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/stores/recording-store/testing": {
+      "name": "@open-harness/recording-store-testing",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/stores/run-store/sqlite": {
+      "name": "@open-harness/run-store-sqlite",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@open-harness/run-store-testing": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/stores/run-store/testing": {
+      "name": "@open-harness/run-store-testing",
+      "version": "0.2.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
         "typescript": "^5",
       },
     },
@@ -541,17 +563,19 @@
 
     "@open-harness/react": ["@open-harness/react@workspace:packages/open-harness/react"],
 
-    "@open-harness/recording-store-file": ["@open-harness/recording-store-file@workspace:packages/adapters/recording-store/file"],
+    "@open-harness/recording-store-file": ["@open-harness/recording-store-file@workspace:packages/stores/recording-store/file"],
 
-    "@open-harness/recording-store-sqlite": ["@open-harness/recording-store-sqlite@workspace:packages/adapters/recording-store/sqlite"],
+    "@open-harness/recording-store-sqlite": ["@open-harness/recording-store-sqlite@workspace:packages/stores/recording-store/sqlite"],
 
-    "@open-harness/recording-store-testing": ["@open-harness/recording-store-testing@workspace:packages/adapters/recording-store/testing"],
+    "@open-harness/recording-store-testing": ["@open-harness/recording-store-testing@workspace:packages/stores/recording-store/testing"],
 
-    "@open-harness/run-store-sqlite": ["@open-harness/run-store-sqlite@workspace:packages/adapters/run-store/sqlite"],
+    "@open-harness/run-store-sqlite": ["@open-harness/run-store-sqlite@workspace:packages/stores/run-store/sqlite"],
 
-    "@open-harness/run-store-testing": ["@open-harness/run-store-testing@workspace:packages/adapters/run-store/testing"],
+    "@open-harness/run-store-testing": ["@open-harness/run-store-testing@workspace:packages/stores/run-store/testing"],
 
     "@open-harness/server": ["@open-harness/server@workspace:packages/open-harness/server"],
+
+    "@open-harness/stores": ["@open-harness/stores@workspace:packages/open-harness/stores"],
 
     "@open-harness/testing": ["@open-harness/testing@workspace:packages/open-harness/testing"],
 

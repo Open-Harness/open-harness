@@ -1,8 +1,8 @@
 ---
 title: "Open Harness Packages"
-lastUpdated: "2026-01-07T18:56:45.187Z"
-lastCommit: "73246e0e776d28d9da3c7dbc6ba8ba0d9ba93e7c"
-lastCommitDate: "2026-01-07T18:23:27Z"
+lastUpdated: "2026-01-07T19:33:33.732Z"
+lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
+lastCommitDate: "2026-01-07T18:56:43Z"
 scope:
   - architecture
   - documentation
@@ -62,6 +62,9 @@ Public packages are published to npm and provide stable APIs for end users.
 #### **`@open-harness/react`** — React Hooks & Components
 - Built on top of `@open-harness/client`
 
+#### **`@open-harness/stores`** — Store Aggregator
+- Re-exports official RunStore + RecordingStore implementations
+
 #### **`@open-harness/run-store-sqlite`** — SQLite Persistence
 - Implements RunStore for durable run history
 
@@ -73,6 +76,8 @@ Public packages are published to npm and provide stable APIs for end users.
 
 #### **`@open-harness/recording-store-testing`** — Recording Store Contracts
 - Contract tests for RecordingStore implementations
+
+Optional store implementations live under `packages/stores/` (run-store + recording-store).
 
 ## Documentation Standards
 
