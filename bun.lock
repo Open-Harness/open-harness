@@ -44,30 +44,77 @@
         "typescript": "^5.9.3",
       },
     },
-    "packages/api/hono": {
-      "name": "@internal/api-hono",
+    "packages/adapters/run-store/sqlite": {
+      "name": "@open-harness/run-store-sqlite",
+      "version": "0.1.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@open-harness/run-store-testing": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/adapters/run-store/testing": {
+      "name": "@open-harness/run-store-testing",
+      "version": "0.1.0-alpha.1",
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@open-harness/core": "workspace:*",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@open-harness/core": "workspace:*",
+        "typescript": "^5",
+      },
+    },
+    "packages/internal/client": {
+      "name": "@internal/client",
       "version": "0.2.0",
       "dependencies": {
-        "@internal/runtime": "workspace:*",
-        "@internal/state": "workspace:*",
-        "@internal/transports-local": "workspace:*",
+        "@internal/core": "workspace:*",
+        "ai": "^6.0.9",
+        "zod": "^4.3.4",
+      },
+    },
+    "packages/internal/core": {
+      "name": "@internal/core",
+      "version": "0.2.0",
+      "dependencies": {
+        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+        "ai": "^6.0.9",
+        "jsonata": "^2.1.0",
+        "uuid": "^10.0.0",
+        "yaml": "^2.8.2",
+        "zod": "^4.3.4",
+      },
+      "devDependencies": {
+        "@types/uuid": "^10.0.0",
+      },
+    },
+    "packages/internal/server": {
+      "name": "@internal/server",
+      "version": "0.2.0",
+      "dependencies": {
+        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+        "@anthropic-ai/sdk": "^0.71.2",
+        "@internal/core": "workspace:*",
         "ai": "^6.0.9",
         "hono": "^4.11.3",
+        "zod": "^4.3.4",
+      },
+      "peerDependencies": {
+        "bun": "*",
       },
     },
-    "packages/api/middleware": {
-      "name": "@internal/api-middleware",
-      "version": "0.2.0",
-      "dependencies": {
-        "hono": "^4.11.3",
-      },
-    },
-    "packages/client": {
+    "packages/open-harness/client": {
       "name": "@open-harness/client",
       "version": "0.1.0-alpha.1",
       "dependencies": {
-        "@internal/transports-http-sse-client": "workspace:*",
-        "@internal/transports-remote": "workspace:*",
+        "@internal/client": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -84,15 +131,11 @@
         "typescript": "^5",
       },
     },
-    "packages/core": {
+    "packages/open-harness/core": {
       "name": "@open-harness/core",
       "version": "0.1.0-alpha.1",
       "dependencies": {
-        "@internal/nodes": "workspace:*",
-        "@internal/nodes-basic": "workspace:*",
-        "@internal/persistence": "workspace:*",
-        "@internal/runtime": "workspace:*",
-        "@internal/state": "workspace:*",
+        "@internal/core": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -109,101 +152,7 @@
         "typescript": "^5",
       },
     },
-    "packages/nodes": {
-      "name": "@internal/nodes",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/state": "workspace:*",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/nodes-basic": {
-      "name": "@internal/nodes-basic",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/nodes": "workspace:*",
-        "@internal/state": "workspace:*",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/persistence": {
-      "name": "@internal/persistence",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/state": "workspace:*",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/persistence-sqlite": {
-      "name": "@internal/persistence-sqlite",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/persistence": "workspace:*",
-        "@internal/runtime": "workspace:*",
-        "@internal/state": "workspace:*",
-      },
-      "peerDependencies": {
-        "bun": "*",
-      },
-    },
-    "packages/persistence/sqlite": {
-      "name": "@open-harness/persistence-sqlite",
-      "version": "0.1.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@open-harness/persistence-testing": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
-    "packages/persistence/testing": {
-      "name": "@open-harness/persistence-testing",
-      "version": "0.1.0-alpha.1",
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@open-harness/core": "workspace:*",
-        "@types/bun": "latest",
-      },
-      "peerDependencies": {
-        "@open-harness/core": "workspace:*",
-        "typescript": "^5",
-      },
-    },
-    "packages/providers/claude": {
-      "name": "@internal/providers-claude",
-      "version": "0.2.0",
-      "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "@anthropic-ai/sdk": "^0.71.2",
-        "@internal/nodes": "workspace:*",
-        "@internal/providers-shared": "workspace:*",
-        "@internal/state": "workspace:*",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/providers/shared": {
-      "name": "@internal/providers-shared",
-      "version": "0.2.0",
-      "dependencies": {
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/providers/testing": {
-      "name": "@internal/providers-testing",
-      "version": "0.2.0",
-      "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "@internal/providers-claude": "workspace:*",
-        "@internal/providers-shared": "workspace:*",
-        "@internal/state": "workspace:*",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/react": {
+    "packages/open-harness/react": {
       "name": "@open-harness/react",
       "version": "0.1.0-alpha.1",
       "dependencies": {
@@ -231,37 +180,13 @@
         "typescript": "^5",
       },
     },
-    "packages/runtime": {
-      "name": "@internal/runtime",
-      "version": "0.2.0",
-      "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "@internal/nodes": "workspace:*",
-        "@internal/persistence": "workspace:*",
-        "@internal/state": "workspace:*",
-        "jsonata": "^2.1.0",
-        "uuid": "^10.0.0",
-        "yaml": "^2.8.2",
-        "zod": "^4.3.4",
-      },
-      "devDependencies": {
-        "@types/uuid": "^10.0.0",
-      },
-    },
-    "packages/server": {
+    "packages/open-harness/server": {
       "name": "@open-harness/server",
       "version": "0.1.0-alpha.1",
       "dependencies": {
-        "@internal/api-hono": "workspace:*",
-        "@internal/api-middleware": "workspace:*",
-        "@internal/nodes-basic": "workspace:*",
-        "@internal/persistence-sqlite": "workspace:*",
-        "@internal/providers-claude": "workspace:*",
-        "@internal/providers-testing": "workspace:*",
-        "@internal/transports-local": "workspace:*",
-        "@internal/transports-shared": "workspace:*",
-        "@internal/transports-websocket": "workspace:*",
+        "@internal/server": "workspace:*",
         "@open-harness/core": "workspace:*",
+        "@open-harness/run-store-sqlite": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -279,21 +204,10 @@
         "typescript": "^5",
       },
     },
-    "packages/state": {
-      "name": "@internal/state",
-      "version": "0.2.0",
-      "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/testing": {
+    "packages/open-harness/testing": {
       "name": "@open-harness/testing",
       "version": "0.1.0-alpha.1",
       "dependencies": {
-        "@internal/providers-testing": "workspace:*",
-        "@internal/runtime": "workspace:*",
-        "@internal/state": "workspace:*",
         "@open-harness/core": "workspace:*",
       },
       "devDependencies": {
@@ -308,61 +222,6 @@
       },
       "peerDependencies": {
         "typescript": "^5",
-      },
-    },
-    "packages/transports/http-sse-client": {
-      "name": "@internal/transports-http-sse-client",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/state": "workspace:*",
-        "@internal/transports-shared": "workspace:*",
-        "ai": "^6.0.9",
-      },
-    },
-    "packages/transports/http-sse-server": {
-      "name": "@internal/transports-http-sse-server",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/transports-shared": "workspace:*",
-      },
-    },
-    "packages/transports/local": {
-      "name": "@internal/transports-local",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/runtime": "workspace:*",
-        "@internal/state": "workspace:*",
-        "@internal/transports-shared": "workspace:*",
-        "ai": "^6.0.9",
-      },
-    },
-    "packages/transports/remote": {
-      "name": "@internal/transports-remote",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/transports-shared": "workspace:*",
-        "ai": "^6.0.9",
-      },
-    },
-    "packages/transports/shared": {
-      "name": "@internal/transports-shared",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/state": "workspace:*",
-        "ai": "^6.0.9",
-        "zod": "^4.3.4",
-      },
-    },
-    "packages/transports/websocket": {
-      "name": "@internal/transports-websocket",
-      "version": "0.2.0",
-      "dependencies": {
-        "@internal/runtime": "workspace:*",
-        "@internal/state": "workspace:*",
-        "@internal/transports-shared": "workspace:*",
-      },
-      "peerDependencies": {
-        "bun": "*",
       },
     },
   },
@@ -579,39 +438,11 @@
 
     "@inquirer/external-editor": ["@inquirer/external-editor@1.0.3", "", { "dependencies": { "chardet": "^2.1.1", "iconv-lite": "^0.7.0" }, "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA=="],
 
-    "@internal/api-hono": ["@internal/api-hono@workspace:packages/api/hono"],
+    "@internal/client": ["@internal/client@workspace:packages/internal/client"],
 
-    "@internal/api-middleware": ["@internal/api-middleware@workspace:packages/api/middleware"],
+    "@internal/core": ["@internal/core@workspace:packages/internal/core"],
 
-    "@internal/nodes": ["@internal/nodes@workspace:packages/nodes"],
-
-    "@internal/nodes-basic": ["@internal/nodes-basic@workspace:packages/nodes-basic"],
-
-    "@internal/persistence": ["@internal/persistence@workspace:packages/persistence"],
-
-    "@internal/persistence-sqlite": ["@internal/persistence-sqlite@workspace:packages/persistence-sqlite"],
-
-    "@internal/providers-claude": ["@internal/providers-claude@workspace:packages/providers/claude"],
-
-    "@internal/providers-shared": ["@internal/providers-shared@workspace:packages/providers/shared"],
-
-    "@internal/providers-testing": ["@internal/providers-testing@workspace:packages/providers/testing"],
-
-    "@internal/runtime": ["@internal/runtime@workspace:packages/runtime"],
-
-    "@internal/state": ["@internal/state@workspace:packages/state"],
-
-    "@internal/transports-http-sse-client": ["@internal/transports-http-sse-client@workspace:packages/transports/http-sse-client"],
-
-    "@internal/transports-http-sse-server": ["@internal/transports-http-sse-server@workspace:packages/transports/http-sse-server"],
-
-    "@internal/transports-local": ["@internal/transports-local@workspace:packages/transports/local"],
-
-    "@internal/transports-remote": ["@internal/transports-remote@workspace:packages/transports/remote"],
-
-    "@internal/transports-shared": ["@internal/transports-shared@workspace:packages/transports/shared"],
-
-    "@internal/transports-websocket": ["@internal/transports-websocket@workspace:packages/transports/websocket"],
+    "@internal/server": ["@internal/server@workspace:packages/internal/server"],
 
     "@isaacs/balanced-match": ["@isaacs/balanced-match@4.0.1", "", {}, "sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ=="],
 
@@ -659,19 +490,19 @@
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
-    "@open-harness/client": ["@open-harness/client@workspace:packages/client"],
+    "@open-harness/client": ["@open-harness/client@workspace:packages/open-harness/client"],
 
-    "@open-harness/core": ["@open-harness/core@workspace:packages/core"],
+    "@open-harness/core": ["@open-harness/core@workspace:packages/open-harness/core"],
 
-    "@open-harness/persistence-sqlite": ["@open-harness/persistence-sqlite@workspace:packages/persistence/sqlite"],
+    "@open-harness/react": ["@open-harness/react@workspace:packages/open-harness/react"],
 
-    "@open-harness/persistence-testing": ["@open-harness/persistence-testing@workspace:packages/persistence/testing"],
+    "@open-harness/run-store-sqlite": ["@open-harness/run-store-sqlite@workspace:packages/adapters/run-store/sqlite"],
 
-    "@open-harness/react": ["@open-harness/react@workspace:packages/react"],
+    "@open-harness/run-store-testing": ["@open-harness/run-store-testing@workspace:packages/adapters/run-store/testing"],
 
-    "@open-harness/server": ["@open-harness/server@workspace:packages/server"],
+    "@open-harness/server": ["@open-harness/server@workspace:packages/open-harness/server"],
 
-    "@open-harness/testing": ["@open-harness/testing@workspace:packages/testing"],
+    "@open-harness/testing": ["@open-harness/testing@workspace:packages/open-harness/testing"],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
