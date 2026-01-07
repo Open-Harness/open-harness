@@ -2,13 +2,7 @@ import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 import dts from "rollup-plugin-dts";
 
-const external = [
-	"react",
-	"react/jsx-runtime",
-	"ai",
-	"@open-harness/client",
-	"@open-harness/core",
-];
+const external = ["react", "react/jsx-runtime", "ai", "@open-harness/client", "@open-harness/core"];
 
 export default [
 	{
