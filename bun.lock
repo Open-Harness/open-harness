@@ -88,6 +88,7 @@
         "@anthropic-ai/claude-agent-sdk": "^0.1.76",
         "ai": "^6.0.9",
         "jsonata": "^2.1.0",
+        "neverthrow": "^8.2.0",
         "uuid": "^10.0.0",
         "yaml": "^2.8.2",
         "zod": "^4.3.4",

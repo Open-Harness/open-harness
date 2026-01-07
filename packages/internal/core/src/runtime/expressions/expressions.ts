@@ -2,6 +2,12 @@
 // Full expression support: operators, functions, paths, arrays
 
 import jsonata from "jsonata";
+import {
+  ExpressionError,
+  type ExpressionResult,
+  wrapThrow,
+  wrapThrowAsync,
+} from "./errors.js";
 
 /**
  * Context available to expressions during evaluation.
@@ -74,7 +80,7 @@ function prepareBindings(
 }
 
 /**
- * Evaluate a JSONata expression against context.
+ * Evaluate a JSONata expression against context (public API - throws on error).
  *
  * Key behaviors:
  * - Missing paths return undefined (no throw)
@@ -83,12 +89,20 @@ function prepareBindings(
  * - Ternary: condition ? a : b
  * - String concat: 'prefix' & value
  *
+ * **For error handling, use {@link evaluateExpressionResult} instead.**
+ *
+ * @param expr - JSONata expression string
+ * @param context - Evaluation context with variables and data
+ * @returns Expression result value, or throws on syntax errors
+ *
  * @example
  * await evaluateExpression('task.title', context) // Simple path
  * await evaluateExpression('$exists(reviewer)', context) // Existence check
  * await evaluateExpression('reviewer.passed = true', context) // Comparison
  * await evaluateExpression('$not(reviewer.passed)', context) // Negation
  * await evaluateExpression('condition ? "yes" : "no"', context) // Ternary
+ *
+ * @throws Error on JSONata syntax errors
  */
 export async function evaluateExpression(
   expr: string,
@@ -230,6 +244,90 @@ export async function resolveTemplate(
   // Mixed template: always returns string
   const segments = parseTemplate(template);
   return evaluateTemplate(segments, context);
+}
+
+/**
+ * Internal Result-based expression evaluator (returns Result<T, ExpressionError>).
+ * Used internally for error handling patterns.
+ *
+ * @internal
+ */
+export async function evaluateExpressionResult(
+  expr: string,
+  context: ExpressionContext,
+): Promise<ExpressionResult<unknown>> {
+  return wrapThrowAsync("EVALUATION_ERROR", async () => {
+    try {
+      const compiled = getCompiledExpression(expr);
+      const bindings = prepareBindings(context);
+      return await compiled.evaluate(context, bindings);
+    } catch (err) {
+      // Check if this is a JSONata error for a missing path
+      // JSONata doesn't throw for missing paths, it returns undefined
+      // But it does throw for syntax errors
+      if (err instanceof Error && err.message.includes("Unknown")) {
+        return undefined;
+      }
+      throw err;
+    }
+  });
+}
+
+/**
+ * Internal Result-based template evaluator (returns Result<string, ExpressionError>).
+ * Used internally for error handling patterns.
+ *
+ * @internal
+ */
+export async function evaluateTemplateResult(
+  segments: TemplateSegment[],
+  context: ExpressionContext,
+): Promise<ExpressionResult<string>> {
+  return wrapThrowAsync("EVALUATION_ERROR", async () => {
+    const parts = await Promise.all(
+      segments.map(async (segment) => {
+        if (segment.type === "text") {
+          return segment.value;
+        }
+        // Evaluate expression
+        const result = await evaluateExpression(segment.value, context);
+        // undefined becomes empty string in string interpolation
+        if (result === undefined || result === null) {
+          return "";
+        }
+        // Objects/arrays get JSON stringified
+        if (typeof result === "object") {
+          return JSON.stringify(result);
+        }
+        return String(result);
+      }),
+    );
+    return parts.join("");
+  });
+}
+
+/**
+ * Internal Result-based template resolver (returns Result<unknown, ExpressionError>).
+ * Used internally for error handling patterns.
+ *
+ * @internal
+ */
+export async function resolveTemplateResult(
+  template: string,
+  context: ExpressionContext,
+): Promise<ExpressionResult<unknown>> {
+  // Fast path: pure binding preserves type
+  if (isPureBinding(template)) {
+    const segments = parseTemplate(template);
+    const expr = segments[0];
+    if (expr?.type === "expression") {
+      return evaluateExpressionResult(expr.value, context);
+    }
+  }
+
+  // Mixed template: always returns string
+  const segments = parseTemplate(template);
+  return evaluateTemplateResult(segments, context);
 }
 
 /**
