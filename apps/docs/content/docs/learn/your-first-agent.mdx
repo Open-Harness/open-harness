@@ -26,11 +26,11 @@ A flow that:
 └────────┘ └────────┘
 ```
 
-## Step 1: Define the Flow
+## Step 01: Define the Flow
 
 Create `flow.yaml`:
 
-```yaml
+```yaml title="flow.yaml"
 name: task-triage
 state:
   initial:
@@ -61,32 +61,27 @@ edges:
     when: "triage.priority = 'normal'"
 ```
 
-## Step 2: Create the Agent Node
+## Step 02: Create the Agent Node
 
 Create `run.ts`:
 
-```typescript
-import {
-  createHarness,
-  DefaultNodeRegistry,
-  parseFlowYaml,
-  type NodeTypeDefinition,
-  echoNode,
-} from "@open-harness/sdk";
+```typescript title="run.ts"
+import { createHarness, parseFlowYaml, echoNode } from "@open-harness/server";
 import { readFileSync } from "node:fs";
 
 type TriageInput = { text: string };
 type TriageOutput = { priority: "urgent" | "normal"; summary: string };
 
-const triageNode: NodeTypeDefinition<TriageInput, TriageOutput> = {
-  type: "task.triage",
-  run: async (ctx, input) => {
+const triageNode = {
+  type: "task.triage" as const,
+  run: async (ctx, input: TriageInput): Promise<TriageOutput> => {
     const normalized = input.text.toLowerCase();
     const priority =
       normalized.includes("urgent") || normalized.includes("asap")
         ? "urgent"
         : "normal";
 
+    // Track run count in state
     const runs = Number(ctx.state.get("runs") ?? 0) + 1;
     ctx.state.set("runs", runs);
 
@@ -98,13 +93,13 @@ const triageNode: NodeTypeDefinition<TriageInput, TriageOutput> = {
 };
 
 const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const registry = new DefaultNodeRegistry();
-registry.register(triageNode);
-registry.register(echoNode);
 
 const harness = createHarness({
   flow,
-  registry,
+  registry: {
+    [triageNode.type]: triageNode,
+    [echoNode.type]: echoNode,
+  },
   onEvent: (event) => {
     if (event.type === "node:complete") {
       console.log(`[${event.nodeId}]`, event.output);
@@ -125,28 +120,37 @@ Run it:
 bun run run.ts
 ```
 
-Expected output (trimmed):
+Expected output:
 
 ```
-[triage] { priority: "urgent", summary: "ASAP: reset production password for the admin user" }
-[urgent] { text: "URGENT: ASAP: reset production password for the admin user (run 1)" }
+[triage] { priority: "urgent", summary: "ASAP: reset production password..." }
+[urgent] { text: "URGENT: ASAP: reset production password... (run 1)" }
 Final outputs: { triage: { ... }, urgent: { ... } }
 ```
 
 ## How the Flow Works
 
-- **Conditional logic**: `when` on edges routes to `urgent` or `normal`.
-- **State management**: `ctx.state` tracks the total run count.
-- **Multi-node orchestration**: one node makes a decision, another responds.
+- **Conditional logic**: `when` on edges routes to `urgent` or `normal`
+- **State management**: `ctx.state` tracks the total run count
+- **Multi-node orchestration**: one node makes a decision, another responds
+
+<Callout type="stuck" title="Are you stuck?">
+**Error: Node type 'task.triage' not found**
+Make sure you pass the `triageNode` in the `registry` option.
+
+**Both urgent and normal run**
+Check your `when` conditions - they should be mutually exclusive.
+</Callout>
 
 ## When to Use Agents vs Simple Nodes
 
-- Use **agents** (LLM-backed nodes) when you need reasoning, natural language,
-  or multi-turn interaction.
-- Use **simple nodes** for deterministic transforms, validation, or routing.
+- Use **agents** (LLM-backed nodes like `claude.agent`) when you need reasoning,
+  natural language, or complex analysis
+- Use **simple nodes** for deterministic transforms, validation, or routing
 
 ## Next Steps
 
-- [Architecture](/docs/concepts/architecture) — Learn how runtime and transports fit
-- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
+- [Multi-Agent Flow](/docs/learn/multi-agent-flow) — Chain multiple Claude agents
 - [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
+- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
+

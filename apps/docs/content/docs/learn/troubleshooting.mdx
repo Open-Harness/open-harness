@@ -1,0 +1,259 @@
+---
+title: Troubleshooting
+description: Common errors and how to fix them
+---
+
+# Troubleshooting
+
+Common errors and their solutions.
+
+## Installation Errors
+
+### Cannot find module '@open-harness/server'
+
+```
+Error: Cannot find module '@open-harness/server'
+```
+
+**Cause:** Dependencies not installed.
+
+**Fix:** Run the install command:
+
+```bash
+bun install
+```
+
+### Cannot find module '@open-harness/core'
+
+```
+Error: Cannot find module '@open-harness/core'
+```
+
+**Cause:** Wrong package name in imports.
+
+**Fix:** Use the correct package names:
+
+```typescript
+// Core utilities (parsing, types, expressions)
+import { parseFlowYaml } from "@open-harness/core";
+
+// Server utilities (runFlow, createHarness, transports)
+import { runFlow, createHarness } from "@open-harness/server";
+```
+
+## Runtime Errors
+
+### Node type not found
+
+```
+Error: Node type 'my-agent' not found in registry
+```
+
+**Cause:** Custom node not registered.
+
+**Fix:** Register your node in the registry option:
+
+```typescript
+const myNode = {
+  type: "my-agent" as const,
+  run: async (ctx, input) => ({ result: "done" }),
+};
+
+const snapshot = await runFlow({
+  flow,
+  registry: { [myNode.type]: myNode },
+  input: { name: "World" },
+});
+```
+
+### Cannot read property of undefined (binding error)
+
+```
+TypeError: Cannot read properties of undefined (reading 'text')
+```
+
+**Cause:** Binding references a node output that doesn't exist yet.
+
+**Fix:** Check your edge definitions. Make sure nodes execute in the right order:
+
+```yaml
+edges:
+  - from: analyze    # analyze runs first
+    to: summarize    # then summarize can use analyze.text
+```
+
+### Expression evaluation failed
+
+```
+Error: Expression evaluation failed: Unknown function 'contains'
+```
+
+**Cause:** Using wrong function name in binding expression.
+
+**Fix:** Use JSONata function names with `$` prefix:
+
+```yaml
+# Wrong
+when: "contains(text, 'error')"
+
+# Correct
+when: "$contains(text, 'error')"
+```
+
+## Flow Definition Errors
+
+### Invalid YAML syntax
+
+```
+YAMLException: bad indentation of a mapping entry
+```
+
+**Cause:** YAML indentation is wrong.
+
+**Fix:** Use consistent 2-space indentation:
+
+```yaml
+# Correct
+nodes:
+  - id: greet
+    type: echo
+    input:
+      text: "Hello"
+```
+
+### Missing required field
+
+```
+Error: Node 'greet' is missing required field 'type'
+```
+
+**Cause:** Node definition is incomplete.
+
+**Fix:** Ensure every node has `id`, `type`, and `input`:
+
+```yaml
+nodes:
+  - id: greet        # required
+    type: echo       # required
+    input:           # required (can be empty object)
+      text: "Hello"
+```
+
+## Binding Syntax
+
+### Wrong binding path format
+
+```
+Error: Cannot resolve binding '{{ nodes.greet.output.text }}'
+```
+
+**Cause:** Using old binding syntax.
+
+**Fix:** Use the correct binding format `{{ nodeId.field }}`:
+
+```yaml
+# Wrong
+input:
+  message: "{{ nodes.greet.output.text }}"
+
+# Correct
+input:
+  message: "{{ greet.text }}"
+```
+
+### Flow input binding
+
+To access flow input, use `flow.input`:
+
+```yaml
+input:
+  name: "{{ flow.input.userName }}"
+```
+
+## Edge Condition Errors
+
+### Wrong condition field name
+
+```
+Error: Unknown field 'condition' on edge
+```
+
+**Cause:** Using `condition` instead of `when`.
+
+**Fix:** Use `when` for conditional edges:
+
+```yaml
+# Wrong
+edges:
+  - from: classify
+    to: handler
+    condition: "$contains(classify.text, 'urgent')"
+
+# Correct
+edges:
+  - from: classify
+    to: handler
+    when: "$contains(classify.text, 'urgent')"
+```
+
+## Claude Agent Errors
+
+### Authentication failed
+
+```
+Error: Claude API authentication failed
+```
+
+**Cause:** Running outside Claude Code environment.
+
+**Fix:** Open Harness uses Claude Code subscription authentication. Run your flow from within Claude Code:
+
+```bash
+# From Claude Code terminal
+bun run flow.ts
+```
+
+<Callout type="note" title="Authentication">
+Open Harness uses your Claude Code subscription for authentication. No API key is required when running from Claude Code.
+</Callout>
+
+### Rate limit exceeded
+
+```
+Error: Rate limit exceeded
+```
+
+**Cause:** Too many requests in a short period.
+
+**Fix:** Add delays between requests or reduce parallel agent execution.
+
+## Persistence Errors
+
+### SqliteRunStore constructor error
+
+```
+TypeError: SqliteRunStore is not a constructor
+```
+
+**Cause:** Wrong import or constructor syntax.
+
+**Fix:** Use the correct constructor syntax:
+
+```typescript
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
+
+// Wrong
+const store = new SqliteRunStore("./runs.db");
+
+// Correct
+const store = new SqliteRunStore({ filename: "./runs.db" });
+```
+
+## Still Stuck?
+
+If your error isn't listed here:
+
+1. Check the [API Reference](/docs/reference/api/flow-runtime) for correct function signatures
+2. Verify your YAML against the [Flow Schema](/docs/reference/schemas/flow-yaml)
+3. Look at the [Expressions Guide](/docs/guides/expressions/bindings) for binding syntax
+

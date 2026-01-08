@@ -1,87 +1,162 @@
 ---
 title: Architecture
-description: Understanding the Hub, Runtime, and Channel layers
+description: Understanding the Runtime, Nodes, and Transport layers
 ---
 
 # Architecture
 
 Open Harness is built around a simple event-driven architecture that separates
-coordination, execution, and external integration.
+execution, integration, and external communication.
 
 ## Core Components
 
-### Hub
-
-The Hub coordinates runs and broadcasts events. It is the central meeting point
-for channels, runtimes, and external tooling.
-
 ### Runtime
 
-The Runtime executes a flow: it resolves bindings, evaluates conditions, runs
-nodes, and emits events as the flow progresses.
+The **Runtime** is the execution engine. It:
+- Parses flow definitions
+- Resolves bindings and evaluates expressions
+- Executes nodes in the correct order
+- Emits events as the flow progresses
+- Manages workflow state
 
-### Agents (Node Types)
+### Nodes
 
-Agents are node types that perform work. They can be LLM-backed (for reasoning
-and natural language) or deterministic (for transforms, validation, routing).
+**Nodes** are the building blocks that perform work. They can be:
+- **LLM-backed** (like `claude.agent`) for reasoning and natural language
+- **Deterministic** (like `echo`, `constant`) for transforms and validation
 
-### Channels
+Every node implements the `NodeTypeDefinition` interface with a `run()` method.
 
-A **channel** is a protocol-level integration (e.g., WebSocket, HTTP, CLI). It
-defines how commands enter the system and how events leave it.
+### Transports
 
-### Transports (Adapters)
+**Transports** connect the runtime to external clients. They:
+- Broadcast runtime events to connected clients
+- Receive commands (pause, resume, stop) from clients
+- Examples: `WebSocketTransport` for browser clients
 
-A **transport** is the concrete adapter that implements a channel for a
-specific runtime or server environment.
+### Run Store
+
+**Run stores** provide persistence for workflow state:
+- `InMemoryRunStore` for development
+- `SqliteRunStore` for production persistence
 
 ## System Diagram
 
 ```mermaid
 flowchart TB
-  client[Client / External System]
-  channel[Channel Protocol]
-  transport[Transport Adapter]
-  hub[Hub]
+  client[Client / Browser]
+  transport[WebSocket Transport]
   runtime[Runtime]
-  agent[Agent Nodes]
+  nodes[Nodes]
+  store[Run Store]
 
-  client --> channel
-  channel --> transport
-  transport --> hub
-  hub --> runtime
-  runtime --> agent
-  runtime --> hub
-  hub --> transport
-  transport --> client
+  client <--> transport
+  transport --> runtime
+  runtime --> nodes
+  nodes --> runtime
+  runtime --> store
+  runtime --> transport
 ```
 
-## Message Flow
+## Execution Flow
 
 ```mermaid
 sequenceDiagram
   participant Client
-  participant Channel
-  participant Hub
+  participant Transport
   participant Runtime
-  participant Agent
+  participant Node
 
-  Client->>Channel: Send input / command
-  Channel->>Hub: Forward command
-  Hub->>Runtime: Start or dispatch run
-  Runtime->>Agent: Execute node
-  Agent-->>Runtime: Output + events
-  Runtime-->>Hub: Runtime events
-  Hub-->>Channel: Broadcast events
-  Channel-->>Client: Updates
+  Client->>Transport: Connect
+  Runtime->>Runtime: Parse flow
+  Runtime->>Node: Execute node
+  Node-->>Runtime: Output + events
+  Runtime-->>Transport: Broadcast events
+  Transport-->>Client: Stream updates
 ```
 
-## Channel vs Transport
+## Entry Points
 
-- **Channel**: the protocol contract (what messages look like, how to route them).
-- **Transport**: the implementation detail (WebSocket server, HTTP handler, CLI adapter).
+Open Harness provides three ways to run flows:
+
+| Function | Use Case |
+|----------|----------|
+| `runFlow()` | Simple one-shot execution |
+| `createHarness()` | Full control with transports |
+| `createRuntime()` | Low-level runtime access |
+
+### runFlow()
+
+Simplest option - runs a flow and returns the result:
+
+```typescript
+import { runFlow, parseFlowYaml } from "@open-harness/server";
+
+const snapshot = await runFlow({
+  flow: parseFlowYaml(yaml),
+  input: { name: "World" },
+});
+```
+
+### createHarness()
+
+Full control with transports and event handlers:
+
+```typescript
+import { createHarness, parseFlowYaml } from "@open-harness/server";
+
+const harness = createHarness({
+  flow: parseFlowYaml(yaml),
+  transport: { websocket: { port: 8080 } },
+  onEvent: (event) => console.log(event),
+});
+
+await harness.run({ name: "World" });
+await harness.stop();
+```
+
+### createRuntime()
+
+Low-level access to the runtime:
+
+```typescript
+import { createRuntime, parseFlowYaml } from "@open-harness/server";
+
+const runtime = createRuntime({
+  flow: parseFlowYaml(yaml),
+  registry,
+  store,
+});
+
+runtime.onEvent((event) => console.log(event));
+const snapshot = await runtime.run({ name: "World" });
+```
+
+## Event System
+
+The runtime emits events at each stage of execution:
+
+| Event | When |
+|-------|------|
+| `flow:start` | Flow execution begins |
+| `node:start` | Node execution begins |
+| `agent:text` | Streaming text from LLM |
+| `node:complete` | Node execution finishes |
+| `flow:complete` | Flow execution finishes |
+
+Subscribe to events with `runtime.onEvent()`:
+
+```typescript
+const unsubscribe = runtime.onEvent((event) => {
+  if (event.type === "agent:text") {
+    process.stdout.write(event.text);
+  }
+});
+```
 
 ## Next Steps
 
-- [Event System](/docs/concepts/event-system) — How runtime events work
+- [Event System](/docs/concepts/event-system) — Deep dive on events
 - [Expressions](/docs/concepts/expressions) — JSONata in bindings and conditions
+- [Persistence](/docs/concepts/persistence) — Storing workflow state
+

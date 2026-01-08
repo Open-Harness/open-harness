@@ -1,78 +1,153 @@
 ---
-title: WebSocket Channel
-description: Set up real-time communication with WebSocket
+title: WebSocket Transport
+description: Stream events to browser clients via WebSocket
 ---
 
-# WebSocket Channel
+# WebSocket Transport
 
-Connect browser clients to your flows via WebSocket.
+Connect browser clients to your flows via WebSocket for real-time streaming.
 
 ## Server Setup
 
-```typescript
-import { createHub, WebSocketChannel } from "@open-harness/sdk";
-import { WebSocketServer } from "ws";
+Use `createHarness()` with the `transport.websocket` option:
 
-const hub = createHub("session-1");
-const wss = new WebSocketServer({ port: 8080 });
+```typescript title="server.ts"
+import { createHarness, parseFlowYaml } from "@open-harness/server";
+import { readFileSync } from "node:fs";
 
-// Create WebSocket channel
-const wsChannel = new WebSocketChannel(wss);
-hub.registerChannel(wsChannel);
+const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
 
-// Start hub
-await hub.start();
+const harness = createHarness({
+  flow,
+  transport: {
+    websocket: { port: 8080, path: "/ws" }
+  }
+});
+
+// Start the harness (also starts WebSocket server)
+await harness.run({ code: "function foo() {}" });
 ```
+
+The WebSocket server listens on `ws://localhost:8080/ws`.
 
 ## Client Connection
 
-```typescript
-const ws = new WebSocket("ws://localhost:8080");
+Connect from a browser and listen for events:
+
+```typescript title="client.ts"
+const ws = new WebSocket("ws://localhost:8080/ws");
 
 ws.onmessage = (event) => {
-  const hubEvent = JSON.parse(event.data);
+  const envelope = JSON.parse(event.data);
 
-  if (hubEvent.type === "agent:text") {
-    console.log(hubEvent.content);
+  if (envelope.type === "event") {
+    const runtimeEvent = envelope.event;
+
+    switch (runtimeEvent.type) {
+      case "agent:text":
+        // Streaming text from Claude
+        process.stdout.write(runtimeEvent.text);
+        break;
+      case "node:complete":
+        console.log(`Node ${runtimeEvent.nodeId} finished`);
+        break;
+      case "flow:complete":
+        console.log("Flow completed");
+        break;
+    }
   }
 };
+```
 
-// Send commands
+## Sending Commands
+
+Send commands to control execution:
+
+```typescript title="client.ts"
+// Pause execution
 ws.send(JSON.stringify({
-  type: "flow:start",
-  flowId: "greeting-flow",
-  input: { name: "World" }
+  type: "command",
+  command: { type: "pause" }
+}));
+
+// Resume with a message
+ws.send(JSON.stringify({
+  type: "command",
+  command: { type: "resume", message: "continue" }
+}));
+
+// Stop execution
+ws.send(JSON.stringify({
+  type: "command",
+  command: { type: "stop" }
 }));
 ```
 
-## Event Filtering
+## Event Message Format
 
-Only broadcast specific events:
-
-```typescript
-const wsChannel = new WebSocketChannel(wss, {
-  filter: (event) => {
-    // Only send agent and node events
-    return event.type.startsWith("agent:") ||
-           event.type.startsWith("node:");
-  }
-});
-```
-
-## Authentication
+All messages are wrapped in an envelope:
 
 ```typescript
-wss.on("connection", (ws, req) => {
-  const token = req.headers.authorization;
+// Events from server
+type EventEnvelope = {
+  type: "event";
+  event: RuntimeEvent;
+};
 
-  if (!validateToken(token)) {
-    ws.close(1008, "Unauthorized");
-    return;
-  }
-});
+// Commands to server
+type CommandEnvelope = {
+  type: "command";
+  command: RuntimeCommand;
+};
 ```
+
+## Common Runtime Events
+
+| Event Type | Description |
+|------------|-------------|
+| `flow:start` | Flow execution started |
+| `node:start` | Node execution started |
+| `agent:text` | Streaming text from agent |
+| `node:complete` | Node execution finished |
+| `flow:complete` | Flow execution finished |
+
+## Manual Transport Setup
+
+For more control, create the transport directly:
+
+```typescript title="manual.ts"
+import { createRuntime, parseFlowYaml } from "@open-harness/server";
+import { WebSocketTransport } from "@open-harness/server";
+
+const runtime = createRuntime({
+  flow: parseFlowYaml(yaml),
+});
+
+const transport = new WebSocketTransport(runtime, {
+  port: 8080,
+  path: "/ws"
+});
+
+// Start transport before running
+await transport.start();
+
+// Run the flow
+await runtime.run({ code: "..." });
+
+// Cleanup
+await transport.stop();
+```
+
+<Callout type="stuck" title="Are you stuck?">
+**Connection refused on port 8080**
+Make sure the harness is started before connecting. The WebSocket server starts when you call `harness.run()`.
+
+**Not receiving events**
+Check that you're connecting to the correct path (default is `/ws`).
+</Callout>
 
 ## Next Steps
 
-- [Custom Channels](/docs/guides/channels/custom-channels) — Build your own channel
-- [Channel API](/docs/reference/api/channel) — Channel interface
+- [Events API](/docs/reference/api/events) — Full event type reference
+- [Runtime API](/docs/reference/api/flow-runtime) — Runtime control methods
+

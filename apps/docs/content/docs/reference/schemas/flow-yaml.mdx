@@ -10,72 +10,72 @@ Complete reference for flow.yaml files.
 ## Full Schema
 
 ```yaml
-# Required: Unique flow identifier
-id: my-flow
-
-# Optional: Human-readable name
-name: My Flow
+# Required: Flow name
+name: my-flow
 
 # Optional: Description
 description: What this flow does
+
+# Optional: Initial state values
+state:
+  initial:
+    key: value
 
 # Required: Array of nodes
 nodes:
   - id: node-id           # Required: Unique within flow
     type: node-type       # Required: Registered node type
-    input:                # Optional: Input bindings
+    input:                # Required: Input bindings
       key: value
       key2: "{{ expression }}"
-    config:               # Optional: Node configuration
-      option: value
 
 # Optional: Explicit edges
 edges:
   - from: source-node     # Required: Source node ID
     to: target-node       # Required: Target node ID
-    condition: "{{ expr }}" # Optional: JSONata condition
+    when: "expression"    # Optional: JSONata condition
 ```
 
 ## Minimal Example
 
 ```yaml
-id: hello
+name: hello
 nodes:
   - id: greet
     type: claude.agent
     input:
       prompt: "Say hello"
+edges: []
 ```
 
 ## Complete Example
 
 ```yaml
-id: code-review
-name: Code Review Pipeline
+name: code-review
 description: Analyzes and reviews code changes
 
 nodes:
   - id: analyze
     type: claude.agent
     input:
-      prompt: "Analyze this code for issues"
-      code: "{{ flow.input.code }}"
-    config:
-      model: claude-sonnet-4-20250514
-      maxTokens: 4096
+      prompt: |
+        Analyze this code for issues:
+        {{ flow.input.code }}
 
   - id: security-check
     type: claude.agent
     input:
-      prompt: "Check for security vulnerabilities"
-      code: "{{ flow.input.code }}"
+      prompt: |
+        Check for security vulnerabilities:
+        {{ flow.input.code }}
 
   - id: summarize
     type: claude.agent
     input:
-      analysis: "{{ nodes.analyze.output.text }}"
-      security: "{{ nodes.security-check.output.text }}"
-      prompt: "Summarize the review findings"
+      prompt: |
+        Summarize the review findings:
+        Analysis: {{ analyze.text }}
+        Security: {{ security-check.text }}
 
 edges:
   - from: analyze
@@ -84,72 +84,83 @@ edges:
     to: summarize
 ```
 
-## Node Types
+## Built-in Node Types
 
 ### claude.agent
+
+LLM-backed agent using Claude:
 
 ```yaml
 - id: assistant
   type: claude.agent
   input:
-    prompt: string          # Required
-    system: string          # Optional
-  config:
-    model: string           # Default: claude-sonnet-4-20250514
-    maxTokens: number       # Default: 4096
-    temperature: number     # Default: 1.0
+    prompt: string          # Required: The prompt
+    system: string          # Optional: System prompt
+    model: string           # Optional: Model name
+    maxTokens: number       # Optional: Max tokens
+    temperature: number     # Optional: Temperature
 ```
 
-### http.get / http.post
+### echo
+
+Returns the input unchanged (useful for debugging):
 
 ```yaml
-- id: fetch
-  type: http.get
+- id: debug
+  type: echo
   input:
-    url: string             # Required
-    headers: object         # Optional
-  config:
-    timeout: number         # Optional
+    text: "{{ analyze.text }}"
 ```
 
-### map
+### constant
+
+Returns a constant value:
 
 ```yaml
-- id: process-each
-  type: map
+- id: config
+  type: constant
   input:
-    items: array            # Required
-    node: string            # Node ID to run for each
-```
-
-### delay
-
-```yaml
-- id: wait
-  type: delay
-  input:
-    ms: number              # Milliseconds to wait
+    value: "default-value"
 ```
 
 ## Expression Syntax
 
-All string values support JSONata expressions:
+All string values support JSONata expressions in `{{ }}`:
 
 ```yaml
-# Simple reference
+# Flow input reference
 prompt: "{{ flow.input.message }}"
 
-# Node output
-data: "{{ nodes.fetch.output.body }}"
+# Node output reference
+data: "{{ analyze.text }}"
 
-# Transformation
+# String concatenation
 name: "{{ flow.input.first & ' ' & flow.input.last }}"
 
-# Conditional
+# Conditional expression
 value: "{{ flow.input.x > 0 ? 'positive' : 'negative' }}"
+
+# Array access
+first: "{{ items[0].name }}"
+```
+
+## Edge Conditions
+
+Use `when` to conditionally follow edges:
+
+```yaml
+edges:
+  - from: classify
+    to: urgent-handler
+    when: "$contains(classify.text, 'urgent')"
+
+  - from: classify
+    to: normal-handler
+    when: "$not($contains(classify.text, 'urgent'))"
 ```
 
 ## See Also
 
 - [FlowDefinition](/docs/reference/types/flow-definition) — TypeScript type
 - [JSONata Syntax](/docs/reference/expressions/syntax) — Expression reference
+

@@ -13,7 +13,7 @@ Edges define connections between nodes.
 interface EdgeDefinition {
   from: string;
   to: string;
-  condition?: string;
+  when?: string;
 }
 ```
 
@@ -39,19 +39,19 @@ edges:
     to: handle
 ```
 
-### condition
+### when
 
-Optional JSONata expression. Edge is followed only if condition evaluates to true:
+Optional JSONata expression. Edge is followed only if expression evaluates to true:
 
 ```yaml
 edges:
   - from: classify
     to: handle-bug
-    condition: "{{ nodes.classify.output.type = 'bug' }}"
+    when: "$contains(classify.text, 'bug')"
 
   - from: classify
     to: handle-feature
-    condition: "{{ nodes.classify.output.type = 'feature' }}"
+    when: "$contains(classify.text, 'feature')"
 ```
 
 ## Implicit vs Explicit Edges
@@ -63,15 +63,15 @@ Edges are inferred from data dependencies:
 ```yaml
 nodes:
   - id: fetch
-    type: http.get
+    type: claude.agent
     input:
-      url: "/api/data"
+      prompt: "Fetch the data"
 
   - id: process
     type: claude.agent
     input:
       # This reference creates an implicit edge from fetch to process
-      data: "{{ nodes.fetch.output.body }}"
+      data: "{{ fetch.text }}"
 ```
 
 ### Explicit Edges
@@ -85,8 +85,13 @@ Define edges explicitly for:
 nodes:
   - id: step1
     type: claude.agent
+    input:
+      prompt: "Step 1"
+
   - id: step2
     type: claude.agent
+    input:
+      prompt: "Step 2"
 
 edges:
   - from: step1
@@ -97,16 +102,17 @@ edges:
 
 ### Exclusive Branch
 
-Only one path taken:
+Only one path taken based on condition:
 
 ```yaml
 edges:
   - from: router
     to: path-a
-    condition: "{{ nodes.router.output.choice = 'A' }}"
+    when: "$contains(router.text, 'A')"
+
   - from: router
     to: path-b
-    condition: "{{ nodes.router.output.choice = 'B' }}"
+    when: "$contains(router.text, 'B')"
 ```
 
 ### Parallel Branch
@@ -141,3 +147,4 @@ edges:
 
 - [FlowDefinition](/docs/reference/types/flow-definition) — Flow structure
 - [Control Flow Guide](/docs/guides/flows/control-flow) — Flow patterns
+

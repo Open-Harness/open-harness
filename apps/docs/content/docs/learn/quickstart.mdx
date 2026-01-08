@@ -5,68 +5,72 @@ description: Run your first Open Harness flow in under 5 minutes
 
 # Quickstart
 
-Build and run a "Hello World" flow in under five minutes.
+Build and run a flow with Claude in under five minutes.
 
 ## What You'll Build
 
-A single-agent flow that takes a name and returns a greeting:
+A code review assistant that uses Claude to analyze code:
 
 ```
-┌────────────────┐
-│  hello.agent   │
-│  (custom node) │
-└────────────────┘
+┌─────────────────┐
+│  claude.agent   │
+│  (code review)  │
+└─────────────────┘
 ```
 
 ## Prerequisites
 
 - Bun 1.0+
-- A terminal with access to your project directory
+- Running inside Claude Code (for authentication)
 
-## Step 1: Create a Project
+## Step 01: Create a Project
 
 ```bash
-mkdir my-first-flow
-cd my-first-flow
+mkdir code-reviewer
+cd code-reviewer
 bun init -y
-bun add @open-harness/sdk
+bun add @open-harness/server
 ```
 
-## Step 2: Define the Flow
+## Step 02: Define the Flow
 
 Create `flow.yaml`:
 
-```yaml
-name: hello-world
+```yaml title="flow.yaml"
+name: code-reviewer
 nodes:
-  - id: hello
-    type: hello.agent
+  - id: review
+    type: claude.agent
     input:
-      name: "{{ flow.input.name }}"
+      prompt: |
+        Review this code for potential issues:
+        {{ flow.input.code }}
+
+        Provide a brief summary of any problems found.
 edges: []
 ```
 
-## Step 3: Run It
+## Step 03: Run It
 
 Create `run.ts`:
 
-```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/sdk";
+```typescript title="run.ts"
+import { runFlow, parseFlowYaml } from "@open-harness/server";
 import { readFileSync } from "node:fs";
 
-const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const helloAgent = {
-  type: "hello.agent" as const,
-  run: async (_ctx: any, input: { name: string }) => ({ message: `Hello, ${input.name}!` }),
-};
+const yaml = readFileSync("flow.yaml", "utf-8");
+const flow = parseFlowYaml(yaml);
 
 const snapshot = await runFlow({
   flow,
-  registry: { [helloAgent.type]: helloAgent },
-  input: { name: "World" },
+  input: {
+    code: `function divide(a, b) {
+  return a / b;
+}`
+  },
 });
 
-console.log("Output:", snapshot.outputs);
+console.log("Review:", snapshot.outputs.review.text);
 ```
 
 Run it:
@@ -75,20 +79,39 @@ Run it:
 bun run run.ts
 ```
 
-You should see output similar to:
+You should see output like:
 
 ```
-Output: { hello: { message: "Hello, World!" } }
+Review: This function has a potential division by zero issue.
+Consider adding a check for b === 0 before dividing.
 ```
 
 ## What Just Happened?
 
-1. You defined a flow with a single custom agent node.
-2. You passed that node directly to `runFlow()` (no need to create a registry).
-3. You ran the flow with input.
+1. You defined a **flow** with a single `claude.agent` node
+2. The `{{ flow.input.code }}` **binding** passed your input to the prompt
+3. `runFlow()` executed the flow and returned a **snapshot**
+4. Node outputs are available at `snapshot.outputs.{nodeId}`
+
+<Callout type="stuck" title="Are you stuck?">
+**Error: Cannot find module '@open-harness/server'**
+Run `bun install` to install dependencies.
+
+**Error: Claude API authentication failed**
+Make sure you're running from within Claude Code.
+</Callout>
+
+## What You Learned
+
+- Flows have `name` and `nodes`
+- Nodes have `id`, `type`, and `input`
+- `claude.agent` is the built-in Claude node
+- `{{ flow.input.field }}` passes input to nodes
+- `runFlow()` executes and returns a snapshot
 
 ## Next Steps
 
-- [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow
-- [Runtime API](/docs/reference/api/hub) — Full control with `createHarness()`
+- [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow with branching
 - [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
+- [Troubleshooting](/docs/learn/troubleshooting) — Common errors and fixes
+
