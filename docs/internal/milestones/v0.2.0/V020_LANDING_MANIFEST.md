@@ -103,16 +103,16 @@ bun run test         # All tests pass
 - [x] Test: agent creates correct type
 - [x] Test: agent preserves prompt
 
-#### Task 8.3: Implement harness()
+#### Task 8.3: Implement harness() ✅
 
 **File:** `packages/internal/core/src/api/harness.ts`
 
-- [ ] `harness(config: HarnessConfig): Harness`
-- [ ] Accepts `agents: Record<string, Agent>`
-- [ ] Accepts `edges: Edge[]`
-- [ ] Builds internal FlowDefinition
-- [ ] Test: harness creates correct type
-- [ ] Test: harness preserves agents and edges
+- [x] `harness(config: HarnessConfig): Harness`
+- [x] Accepts `agents: Record<string, Agent>`
+- [x] Accepts `edges: Edge[]`
+- [x] Builds internal FlowDefinition
+- [x] Test: harness creates correct type
+- [x] Test: harness preserves agents and edges
 
 #### Task 8.4: Implement run()
 
