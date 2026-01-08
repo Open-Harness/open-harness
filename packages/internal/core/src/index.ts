@@ -1,4 +1,5 @@
 export * from "./builtins";
+export * from "./eval";
 export * from "./nodes";
 export * from "./persistence";
 export * from "./recording";

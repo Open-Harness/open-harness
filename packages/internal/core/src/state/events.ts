@@ -120,6 +120,22 @@ export type AgentAbortedEventPayload = {
 	reason?: string;
 };
 
+/**
+ * Event payload for linking a provider recording to a runtime invocation.
+ *
+ * This event is emitted by the eval runner immediately before each provider
+ * call, establishing provenance between the runtime run and provider recordings.
+ */
+export type RecordingLinkedEventPayload = {
+	type: "recording:linked";
+	runId: string;
+	nodeId: string;
+	invocation: number;
+	providerType: string;
+	recordingId: string;
+	mode: "record" | "replay" | "live";
+};
+
 export type AgentStartEvent = AgentStartEventPayload & { timestamp: number };
 export type AgentThinkingEvent = AgentThinkingEventPayload & {
 	timestamp: number;
@@ -140,6 +156,9 @@ export type AgentPausedEvent = AgentPausedEventPayload & { timestamp: number };
 export type AgentAbortedEvent = AgentAbortedEventPayload & {
 	timestamp: number;
 };
+export type RecordingLinkedEvent = RecordingLinkedEventPayload & {
+	timestamp: number;
+};
 
 export type AgentEventPayload =
 	| AgentStartEventPayload
@@ -151,7 +170,8 @@ export type AgentEventPayload =
 	| AgentErrorEventPayload
 	| AgentCompleteEventPayload
 	| AgentPausedEventPayload
-	| AgentAbortedEventPayload;
+	| AgentAbortedEventPayload
+	| RecordingLinkedEventPayload;
 
 /**
  * Events emitted by the runtime for observability and UI rendering.
@@ -182,7 +202,8 @@ export type AgentEvent =
 	| AgentErrorEvent
 	| AgentCompleteEvent
 	| AgentPausedEvent
-	| AgentAbortedEvent;
+	| AgentAbortedEvent
+	| RecordingLinkedEvent;
 
 /** Callback invoked for each emitted runtime event. */
 export type RuntimeEventListener = (

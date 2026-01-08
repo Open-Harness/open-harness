@@ -1,0 +1,286 @@
+/**
+ * Eval system types for Open Harness v0.2.0
+ *
+ * This module defines the type system for evaluating workflows against datasets,
+ * including assertions, scorers, and artifacts.
+ */
+
+import type {
+	RuntimeEvent,
+	RecordingLinkedEventPayload,
+	RecordingLinkedEvent,
+} from "../state/events.js";
+import type { RunSnapshot } from "../state/snapshot.js";
+
+// Re-export recording event types for convenience
+export type { RecordingLinkedEventPayload, RecordingLinkedEvent };
+
+// ============================================================================
+// Dataset types
+// ============================================================================
+
+/**
+ * A dataset containing test cases for workflow evaluation.
+ *
+ * @property id - Unique identifier (e.g., "coder-reviewer.v1")
+ * @property workflowName - Maps to the workflow factory
+ * @property version - Dataset version, not model version
+ * @property cases - Array of test cases
+ */
+export type EvalDataset = {
+	id: string;
+	workflowName: string;
+	version: string;
+	cases: EvalCase[];
+};
+
+/**
+ * A single test case within a dataset.
+ *
+ * @property id - Stable, filesystem-safe identifier
+ * @property name - Optional human-readable name
+ * @property input - Input fed to the workflow factory
+ * @property assertions - Assertions to evaluate against the run
+ * @property tags - Optional tags for filtering (e.g., "smoke", "regression")
+ */
+export type EvalCase = {
+	id: string;
+	name?: string;
+	input: unknown;
+	assertions: Assertion[];
+	tags?: string[];
+};
+
+/**
+ * A variant configuration for running datasets across different providers/models.
+ *
+ * @property id - Variant identifier (e.g., "claude-default")
+ * @property providerTypeByNode - Provider type for each node
+ * @property modelByNode - Optional model for each node
+ * @property tags - Optional tags (e.g., "baseline", "candidate")
+ */
+export type EvalVariant = {
+	id: string;
+	providerTypeByNode: Record<string, string>;
+	modelByNode?: Record<string, string>;
+	tags?: string[];
+};
+
+// ============================================================================
+// Artifact types
+// ============================================================================
+
+/**
+ * An artifact produced by running a workflow for evaluation.
+ *
+ * Contains the run snapshot, all runtime events (including recording:linked),
+ * and provides the basis for assertion evaluation.
+ */
+export type EvalArtifact = {
+	runId: string;
+	snapshot: RunSnapshot;
+	events: RuntimeEvent[];
+};
+
+/**
+ * Normalized view of an artifact for assertion evaluation.
+ *
+ * This provides a consistent interface for evaluating assertions
+ * without requiring knowledge of internal snapshot structure.
+ */
+export type EvalArtifactView = {
+	runId: string;
+	outputs: Record<string, unknown>;
+	state: Record<string, unknown>;
+	primaryOutput?: unknown;
+	metrics: {
+		workflow: {
+			startedAt?: number;
+			endedAt?: number;
+			durationMs?: number;
+		};
+		byNode: Record<
+			string,
+			{
+				durationMs?: number;
+				totalCostUsd?: number;
+				inputTokens?: number;
+				outputTokens?: number;
+			}
+		>;
+	};
+	errors: {
+		nodeErrors: Record<string, string[]>;
+	};
+};
+
+// ============================================================================
+// Assertion types
+// ============================================================================
+
+/**
+ * Assertion types supported by the eval system.
+ *
+ * - output.*: Assertions against output values (paths evaluated against EvalArtifactView)
+ * - metric.*: Budget assertions derived from runtime events
+ * - behavior.*: Behavioral assertions about execution
+ */
+export type Assertion =
+	// Output assertions
+	| { type: "output.contains"; path: string; value: string }
+	| { type: "output.equals"; path: string; value: unknown }
+	// Metric budgets (from agent:complete events)
+	| { type: "metric.latency_ms.max"; value: number }
+	| { type: "metric.total_cost_usd.max"; value: number }
+	| { type: "metric.tokens.input.max"; value: number }
+	| { type: "metric.tokens.output.max"; value: number }
+	// Behavior assertions
+	| { type: "behavior.no_errors" }
+	| { type: "behavior.node_executed"; nodeId: string }
+	| { type: "behavior.node_invocations.max"; nodeId: string; value: number };
+
+/**
+ * Result of evaluating a single assertion.
+ */
+export type AssertionResult = {
+	assertion: Assertion;
+	passed: boolean;
+	actual?: unknown;
+	message?: string;
+};
+
+// ============================================================================
+// Scorer types
+// ============================================================================
+
+/**
+ * A score produced by a scorer.
+ *
+ * @property name - Scorer name (e.g., "latency", "cost")
+ * @property value - Normalized score (0-1)
+ * @property rawValue - Original value before normalization
+ * @property metadata - Additional scorer-specific metadata
+ */
+export type Score = {
+	name: string;
+	value: number;
+	rawValue?: unknown;
+	metadata?: Record<string, unknown>;
+};
+
+/**
+ * Breakdown of scores for a run.
+ *
+ * @property overall - Combined normalized score (0-1)
+ * @property scores - Individual scorer results
+ */
+export type ScoreBreakdown = {
+	overall: number;
+	scores: Score[];
+};
+
+/**
+ * Interface for scoring eval artifacts.
+ */
+export interface Scorer {
+	name: string;
+	score(artifact: EvalArtifact): Score;
+}
+
+// ============================================================================
+// Recording ID generation
+// ============================================================================
+
+/**
+ * Generate a deterministic recording ID for an eval invocation.
+ *
+ * Format: eval__<datasetId>__<caseId>__<variantId>__<nodeId>__inv<invocation>
+ */
+export function generateRecordingId(params: {
+	datasetId: string;
+	caseId: string;
+	variantId: string;
+	nodeId: string;
+	invocation: number;
+}): string {
+	return `eval__${params.datasetId}__${params.caseId}__${params.variantId}__${params.nodeId}__inv${params.invocation}`;
+}
+
+/**
+ * Parse a recording ID back into its components.
+ * Returns undefined if the ID doesn't match the expected format.
+ */
+export function parseRecordingId(recordingId: string):
+	| {
+			datasetId: string;
+			caseId: string;
+			variantId: string;
+			nodeId: string;
+			invocation: number;
+	  }
+	| undefined {
+	const match = recordingId.match(
+		/^eval__(.+)__(.+)__(.+)__(.+)__inv(\d+)$/,
+	);
+	if (!match) return undefined;
+
+	return {
+		datasetId: match[1]!,
+		caseId: match[2]!,
+		variantId: match[3]!,
+		nodeId: match[4]!,
+		invocation: parseInt(match[5]!, 10),
+	};
+}
+
+// ============================================================================
+// Metric extraction helpers
+// ============================================================================
+
+/**
+ * Metrics extracted from agent:complete events.
+ */
+export type ExtractedMetrics = {
+	totalDurationMs: number;
+	totalCostUsd: number;
+	totalInputTokens: number;
+	totalOutputTokens: number;
+	byNode: Record<
+		string,
+		{
+			durationMs: number;
+			totalCostUsd: number;
+			inputTokens: number;
+			outputTokens: number;
+			invocations: number;
+		}
+	>;
+};
+
+// ============================================================================
+// Validation result type
+// ============================================================================
+
+/**
+ * Result of validating a dataset.
+ */
+export type ValidationResult = {
+	valid: boolean;
+	errors: string[];
+	warnings: string[];
+};
+
+// ============================================================================
+// Engine options types (for future use in Phase 7)
+// ============================================================================
+
+/**
+ * Options for running an eval matrix.
+ */
+export type EvalMatrixRunOptions = {
+	dataset: EvalDataset;
+	variants: EvalVariant[];
+	mode: "record" | "replay" | "live";
+	baselineVariantId?: string;
+	tags?: string[];
+};
