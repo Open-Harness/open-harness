@@ -94,14 +94,14 @@ bun run test         # All tests pass
 - [x] Define `FixtureStore` type alias
 - [x] Export all types
 
-#### Task 8.2: Implement agent()
+#### Task 8.2: Implement agent() ✅
 
 **File:** `packages/internal/core/src/api/agent.ts`
 
-- [ ] `agent(config: AgentConfig): Agent`
-- [ ] Wraps prompt into Agent structure
-- [ ] Test: agent creates correct type
-- [ ] Test: agent preserves prompt
+- [x] `agent(config: AgentConfig): Agent`
+- [x] Wraps prompt into Agent structure
+- [x] Test: agent creates correct type
+- [x] Test: agent preserves prompt
 
 #### Task 8.3: Implement harness()
 
