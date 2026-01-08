@@ -1,17 +1,9 @@
 {
   "title": "Reference",
   "pages": [
-    "index",
-    "...nodes",
-    "...channels",
-    "...providers",
     "...api",
-    "...kernel-spec",
-    "...bindings",
-    "...config",
-    "...events",
-    "...schemas",
+    "...expressions",
     "...types",
-    "...when"
+    "...schemas"
   ]
 }

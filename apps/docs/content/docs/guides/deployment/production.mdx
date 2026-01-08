@@ -1,0 +1,75 @@
+---
+title: Production Deployment
+description: Checklist for deploying Open Harness to production
+---
+
+# Production Deployment
+
+A checklist for deploying Open Harness in production environments.
+
+## Pre-Deployment Checklist
+
+### 1. Configure Persistence
+
+```typescript
+import { SqliteRunStore } from "@open-harness/kernel";
+
+const store = new SqliteRunStore(process.env.DB_PATH || "./data/runs.db");
+```
+
+### 2. Set Up Error Handling
+
+```typescript
+hub.subscribe("node:error", (event) => {
+  logger.error("Node failed", {
+    nodeId: event.event.nodeId,
+    error: event.event.error
+  });
+  alerting.notify(event);
+});
+```
+
+### 3. Configure Timeouts
+
+```yaml
+nodes:
+  - id: agent
+    type: claude.agent
+    timeout: 120000  # 2 minutes
+    input:
+      prompt: "..."
+```
+
+### 4. Enable Metrics
+
+```typescript
+hub.subscribe("*", (event) => {
+  metrics.increment(`events.${event.event.type}`);
+  metrics.timing(`events.${event.event.type}.latency`, event.timestamp);
+});
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `ANTHROPIC_API_KEY` | Claude API key | Yes |
+| `DB_PATH` | SQLite database path | No |
+| `LOG_LEVEL` | Logging verbosity | No |
+
+## Health Checks
+
+```typescript
+app.get("/health", (req, res) => {
+  const status = {
+    hub: hub.isRunning(),
+    store: store.isConnected(),
+  };
+  res.json(status);
+});
+```
+
+## Next Steps
+
+- [Persistence Configuration](/docs/guides/deployment/persistence) — Advanced store options
+- [Run Store API](/docs/reference/api/run-store) — Full persistence API

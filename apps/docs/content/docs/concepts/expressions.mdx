@@ -1,0 +1,131 @@
+---
+title: Expressions
+description: Understanding JSONata expressions in flows
+---
+
+# Expressions
+
+Open Harness uses JSONata for all data binding and transformation.
+
+## Why JSONata?
+
+JSONata provides:
+
+- **Declarative**: Express transformations as queries
+- **Composable**: Build complex transforms from simple parts
+- **Familiar**: JSON-like syntax with SQL-like operators
+- **Safe**: No side effects, read-only operations
+
+## Expression Syntax
+
+Expressions are wrapped in double curly braces:
+
+```yaml
+prompt: "Hello, {{ flow.input.name }}!"
+```
+
+## Context
+
+Every expression has access to:
+
+| Variable | Description |
+|----------|-------------|
+| `flow.input` | Input passed to the flow |
+| `nodes.<id>.output` | Output from completed node |
+| `$env` | Environment variables |
+| `$` | Current item in iterations |
+
+## Basic Operations
+
+### Path Access
+
+```yaml
+{{ flow.input.user.name }}
+{{ nodes.fetch.output.data[0] }}
+```
+
+### Concatenation
+
+```yaml
+{{ flow.input.first & ' ' & flow.input.last }}
+```
+
+### Conditionals
+
+```yaml
+{{ flow.input.urgent ? 'URGENT: ' & message : message }}
+```
+
+### Filtering
+
+```yaml
+{{ users[status = 'active'] }}
+{{ items[price > 100 and inStock] }}
+```
+
+### Mapping
+
+```yaml
+{{ users.name }}  # Extract name from all users
+{{ users.(firstName & ' ' & lastName) }}
+```
+
+## Functions
+
+JSONata includes many built-in functions:
+
+### String Functions
+
+```yaml
+{{ $uppercase(name) }}
+{{ $substring(text, 0, 100) }}
+{{ $contains(email, '@') }}
+```
+
+### Array Functions
+
+```yaml
+{{ $count(items) }}
+{{ $sum(items.price) }}
+{{ $distinct(tags) }}
+```
+
+### Object Functions
+
+```yaml
+{{ $keys(config) }}
+{{ $merge([defaults, overrides]) }}
+```
+
+## Common Patterns
+
+### Default Values
+
+```yaml
+{{ name ? name : 'Anonymous' }}
+```
+
+### Optional Chaining
+
+```yaml
+{{ nodes.optional.output ? nodes.optional.output.value : null }}
+```
+
+### Transform and Filter
+
+```yaml
+{{ users[active].(name & ' <' & email & '>') }}
+```
+
+## When Expressions Run
+
+Expressions are evaluated:
+
+1. **At node start**: Input bindings are resolved
+2. **At edge evaluation**: Conditions are checked
+3. **Lazily**: Only when the value is needed
+
+## Next Steps
+
+- [Data Bindings Guide](/docs/guides/expressions/bindings) — Practical examples
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Full reference

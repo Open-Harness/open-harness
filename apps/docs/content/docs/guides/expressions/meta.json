@@ -1,9 +1,4 @@
 {
   "title": "Expressions",
-  "pages": [
-    "bindings",
-    "conditionals",
-    "iteration",
-    "migration"
-  ]
+  "pages": ["bindings", "conditionals", "iteration", "migration"]
 }
