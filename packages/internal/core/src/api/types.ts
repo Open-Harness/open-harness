@@ -10,7 +10,42 @@
  */
 
 import type { RecordingStore } from "../recording/store.js";
+import type { NodeTypeDefinition } from "../nodes/registry.js";
 import type { ZodType } from "zod";
+
+// ============================================================================
+// Provider type - for dependency injection
+// ============================================================================
+
+/**
+ * Provider for executing agents.
+ *
+ * This is an alias for NodeTypeDefinition with the standard agent input/output.
+ * Users can inject custom providers for testing or to use different AI backends.
+ */
+export type Provider<TInput = AgentInput, TOutput = AgentOutput> = NodeTypeDefinition<TInput, TOutput>;
+
+/**
+ * Standard agent input shape.
+ */
+export type AgentInput = {
+	prompt?: string;
+	messages?: unknown[];
+	sessionId?: string;
+	options?: Record<string, unknown>;
+};
+
+/**
+ * Standard agent output shape.
+ */
+export type AgentOutput = {
+	text?: string;
+	structuredOutput?: unknown;
+	usage?: { inputTokens: number; outputTokens: number };
+	totalCostUsd?: number;
+	durationMs?: number;
+	sessionId?: string;
+};
 
 // ============================================================================
 // FixtureStore - Public alias for RecordingStore
@@ -219,6 +254,21 @@ export type RunOptions = {
 	 * Passed through to provider for tagging.
 	 */
 	variant?: string;
+
+	/**
+	 * Provider for executing agents.
+	 *
+	 * If not specified, uses the default provider set via setDefaultProvider().
+	 * If no default is set, throws an error.
+	 *
+	 * @example
+	 * ```ts
+	 * import { createClaudeNode } from "@open-harness/server"
+	 *
+	 * await run(myAgent, input, { provider: createClaudeNode() })
+	 * ```
+	 */
+	provider?: Provider;
 };
 
 /**

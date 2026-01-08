@@ -21,6 +21,8 @@
 export type {
 	Agent,
 	AgentConfig,
+	AgentInput,
+	AgentOutput,
 	Harness,
 	HarnessConfig,
 	Edge,
@@ -29,6 +31,7 @@ export type {
 	RunMetrics,
 	FixtureStore,
 	FixtureMode,
+	Provider,
 } from "./types.js";
 
 // Type guards
@@ -47,5 +50,7 @@ export {
 	getDefaultStore,
 	setDefaultMode,
 	getDefaultMode,
+	setDefaultProvider,
+	getDefaultProvider,
 	resetDefaults,
 } from "./defaults.js";

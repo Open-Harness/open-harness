@@ -33,15 +33,20 @@ import type {
 	RunResult,
 	RunMetrics,
 	FixtureMode,
+	AgentInput,
+	AgentOutput,
+	Provider,
 } from "./types.js";
 import { isAgent, isHarness } from "./types.js";
+import { getDefaultProvider } from "./defaults.js";
 import type { HarnessWithFlow } from "./harness.js";
+import type { NodeRunContext } from "../nodes/registry.js";
+import type { RuntimeEventPayload, StateStore } from "../state/index.js";
 
 /**
  * Safely get environment variable (works in Node.js and browsers).
  */
 function getEnvVar(name: string): string | undefined {
-	// Check if we're in a Node.js environment
 	if (typeof globalThis !== "undefined" && "process" in globalThis) {
 		const proc = (globalThis as { process?: { env?: Record<string, string> } }).process;
 		return proc?.env?.[name];
@@ -86,13 +91,134 @@ export function generateFixtureId(
 }
 
 /**
- * Create empty metrics for placeholder implementations.
+ * Get provider from options or default.
+ * Throws if no provider available.
  */
-function createEmptyMetrics(): RunMetrics {
+function getProvider(options?: RunOptions): Provider {
+	const provider = options?.provider ?? getDefaultProvider();
+	if (!provider) {
+		throw new Error(
+			"No provider configured. Either pass a provider in run() options or call setDefaultProvider() first.",
+		);
+	}
+	return provider;
+}
+
+/**
+ * Create a minimal in-memory state store for single agent execution.
+ */
+function createMinimalStateStore(initial: Record<string, unknown> = {}): StateStore {
+	const state = { ...initial };
 	return {
-		latencyMs: 0,
-		cost: 0,
-		tokens: { input: 0, output: 0 },
+		get(path: string): unknown {
+			if (!path) return state;
+			const parts = path.split(".");
+			let current: unknown = state;
+			for (const part of parts) {
+				if (current && typeof current === "object" && part in current) {
+					current = (current as Record<string, unknown>)[part];
+				} else {
+					return undefined;
+				}
+			}
+			return current;
+		},
+		set(path: string, value: unknown): void {
+			if (!path) {
+				Object.assign(state, value);
+				return;
+			}
+			const parts = path.split(".");
+			let current: Record<string, unknown> = state;
+			for (let i = 0; i < parts.length - 1; i++) {
+				const part = parts[i];
+				if (part === undefined) continue;
+				if (!current[part] || typeof current[part] !== "object") {
+					current[part] = {};
+				}
+				current = current[part] as Record<string, unknown>;
+			}
+			const lastPart = parts[parts.length - 1];
+			if (lastPart) {
+				current[lastPart] = value;
+			}
+		},
+		patch(patch: { op: "set" | "merge"; path: string; value: unknown }): void {
+			if (patch.op === "set") {
+				this.set(patch.path, patch.value);
+			} else {
+				const existing = this.get(patch.path);
+				const merged = existing && typeof existing === "object"
+					? { ...(existing as Record<string, unknown>), ...(patch.value as Record<string, unknown>) }
+					: patch.value;
+				this.set(patch.path, merged);
+			}
+		},
+		snapshot(): Record<string, unknown> {
+			return { ...state };
+		},
+	};
+}
+
+/**
+ * Create execution context for provider.
+ */
+function createRunContext(agentId: string, state: StateStore): NodeRunContext {
+	const controller = new AbortController();
+	const runId = typeof globalThis.crypto?.randomUUID === "function"
+		? globalThis.crypto.randomUUID()
+		: `run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+	return {
+		nodeId: agentId,
+		runId,
+		emit: (_event: RuntimeEventPayload) => {
+			// Events are emitted but not stored for simple run()
+			// For full event handling, use harness with transport
+		},
+		signal: controller.signal,
+		state,
+	};
+}
+
+/**
+ * Build provider input from agent config and user input.
+ */
+function buildProviderInput(agent: Agent, userInput: unknown): AgentInput {
+	const input: AgentInput = {};
+
+	// Extract prompt from user input or use agent's system prompt
+	if (userInput && typeof userInput === "object" && "prompt" in userInput) {
+		const promptInput = (userInput as { prompt?: string }).prompt;
+		if (typeof promptInput === "string") {
+			// User provided a prompt - combine with system prompt
+			input.messages = [
+				{ role: "user", content: promptInput },
+			];
+			input.options = { systemPrompt: agent.config.prompt };
+		}
+	} else if (typeof userInput === "string") {
+		input.messages = [{ role: "user", content: userInput }];
+		input.options = { systemPrompt: agent.config.prompt };
+	} else {
+		// Just use agent's prompt as the message
+		input.prompt = agent.config.prompt;
+	}
+
+	return input;
+}
+
+/**
+ * Extract metrics from provider output.
+ */
+function extractMetrics(output: AgentOutput, durationMs: number): RunMetrics {
+	return {
+		latencyMs: output.durationMs ?? durationMs,
+		cost: output.totalCostUsd ?? 0,
+		tokens: {
+			input: output.usage?.inputTokens ?? 0,
+			output: output.usage?.outputTokens ?? 0,
+		},
 	};
 }
 
@@ -111,6 +237,7 @@ async function runAgent<TOutput>(
 ): Promise<RunResult<TOutput>> {
 	const mode = getFixtureMode(options);
 	const fixtures: string[] = [];
+	const provider = getProvider(options);
 
 	// Track fixture if recording
 	if (mode === "record" && options?.fixture) {
@@ -118,27 +245,26 @@ async function runAgent<TOutput>(
 		fixtures.push(fixtureId);
 	}
 
-	// Execute the agent
-	// For now, this is a placeholder that demonstrates the API shape.
-	// Real execution will use the provider infrastructure.
+	// Create execution context
+	const stateStore = createMinimalStateStore(agent.config.state as Record<string, unknown>);
+	const ctx = createRunContext("agent", stateStore);
+
+	// Build provider input
+	const providerInput = buildProviderInput(agent, input);
+
+	// Execute the provider
 	const startTime = Date.now();
-
-	// Placeholder: In real implementation, this would:
-	// 1. Create an execution context
-	// 2. Use withRecording() if fixture mode requires it
-	// 3. Execute the provider with the agent's prompt + input
-	// 4. Collect metrics from the execution
-
+	const providerOutput = await provider.run(ctx, providerInput) as AgentOutput;
 	const endTime = Date.now();
 
+	// Extract output - for TOutput, we try to use structuredOutput if available,
+	// otherwise fall back to text
+	const output = (providerOutput.structuredOutput ?? providerOutput.text ?? providerOutput) as TOutput;
+
 	return {
-		output: undefined as unknown as TOutput,
+		output,
 		state: agent.config.state as Record<string, unknown> | undefined,
-		metrics: {
-			latencyMs: endTime - startTime,
-			cost: 0,
-			tokens: { input: 0, output: 0 },
-		},
+		metrics: extractMetrics(providerOutput, endTime - startTime),
 		fixtures: fixtures.length > 0 ? fixtures : undefined,
 	};
 }
@@ -171,23 +297,65 @@ async function runHarness<TOutput>(
 		}
 	}
 
-	// Execute the harness
-	// For now, this is a placeholder that demonstrates the API shape.
-	// Real execution will:
-	// 1. Use the runtime to execute the flow
-	// 2. Coordinate agent recordings
-	// 3. Collect aggregate metrics
+	// For harness execution, we need the full runtime.
+	// Import dynamically to avoid circular dependencies.
+	const { createRuntime } = await import("../runtime/execution/runtime.js");
+	const { DefaultNodeRegistry } = await import("../nodes/registry.js");
+
+	// Build registry from harness agents
+	const registry = new DefaultNodeRegistry();
+	const provider = getProvider(options);
+
+	// Register the provider for each agent type
+	// Each agent in the harness uses the same provider
+	registry.register({
+		type: "agent",
+		run: async (ctx, nodeInput) => {
+			// Build input from agent config + node input
+			const agentId = ctx.nodeId;
+			const agentDef = harness.config.agents[agentId];
+			if (!agentDef) {
+				throw new Error(`Agent not found in harness: ${agentId}`);
+			}
+			const providerInput = buildProviderInput(agentDef, nodeInput);
+			return provider.run(ctx, providerInput);
+		},
+	});
+
+	// Create and run the runtime
+	const runtime = createRuntime({
+		flow,
+		registry,
+		store: undefined, // RunStore for persistence, not FixtureStore
+	});
 
 	const startTime = Date.now();
+	const snapshot = await runtime.run(input as Record<string, unknown>);
 	const endTime = Date.now();
 
+	// Extract output from the last completed node
+	let output: TOutput | undefined;
+	let totalCost = 0;
+	let totalInputTokens = 0;
+	let totalOutputTokens = 0;
+
+	for (const nodeId of Object.keys(snapshot.outputs)) {
+		const nodeOutput = snapshot.outputs[nodeId] as AgentOutput | undefined;
+		if (nodeOutput) {
+			output = (nodeOutput.structuredOutput ?? nodeOutput.text ?? nodeOutput) as TOutput;
+			totalCost += nodeOutput.totalCostUsd ?? 0;
+			totalInputTokens += nodeOutput.usage?.inputTokens ?? 0;
+			totalOutputTokens += nodeOutput.usage?.outputTokens ?? 0;
+		}
+	}
+
 	return {
-		output: undefined as unknown as TOutput,
-		state: harness.config.state as Record<string, unknown> | undefined,
+		output: output as TOutput,
+		state: snapshot.state as Record<string, unknown> | undefined,
 		metrics: {
 			latencyMs: endTime - startTime,
-			cost: 0,
-			tokens: { input: 0, output: 0 },
+			cost: totalCost,
+			tokens: { input: totalInputTokens, output: totalOutputTokens },
 		},
 		fixtures: fixtures.length > 0 ? fixtures : undefined,
 	};
@@ -202,7 +370,7 @@ async function runHarness<TOutput>(
  *
  * @param target - Agent or Harness to execute
  * @param input - Input to pass to the target
- * @param options - Optional run options (fixture, mode, store, variant)
+ * @param options - Optional run options (fixture, mode, store, variant, provider)
  * @returns Run result with output, state, metrics, and fixtures
  *
  * @example

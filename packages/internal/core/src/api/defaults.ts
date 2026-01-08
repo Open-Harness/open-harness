@@ -17,7 +17,7 @@
  * ```
  */
 
-import type { FixtureStore, FixtureMode } from "./types.js";
+import type { FixtureStore, FixtureMode, Provider } from "./types.js";
 
 // ============================================================================
 // Global state
@@ -25,6 +25,7 @@ import type { FixtureStore, FixtureMode } from "./types.js";
 
 let defaultStore: FixtureStore | undefined;
 let defaultMode: FixtureMode | undefined;
+let defaultProvider: Provider | undefined;
 
 // ============================================================================
 // Store defaults
@@ -118,6 +119,50 @@ export function getDefaultMode(): FixtureMode {
 }
 
 // ============================================================================
+// Provider defaults
+// ============================================================================
+
+/**
+ * Set the default provider for agent execution.
+ *
+ * When set, this provider will be used by run() when no provider is
+ * explicitly provided in options.
+ *
+ * @param provider - The provider to use as default, or undefined to clear
+ *
+ * @example
+ * ```ts
+ * import { createClaudeNode } from "@open-harness/server"
+ *
+ * // Set default provider
+ * setDefaultProvider(createClaudeNode())
+ *
+ * // Clear default provider
+ * setDefaultProvider(undefined)
+ * ```
+ */
+export function setDefaultProvider(provider: Provider | undefined): void {
+	defaultProvider = provider;
+}
+
+/**
+ * Get the current default provider.
+ *
+ * @returns The default provider, or undefined if not set
+ *
+ * @example
+ * ```ts
+ * const provider = getDefaultProvider()
+ * if (provider) {
+ *   console.log("Default provider is configured")
+ * }
+ * ```
+ */
+export function getDefaultProvider(): Provider | undefined {
+	return defaultProvider;
+}
+
+// ============================================================================
 // Reset (for testing)
 // ============================================================================
 
@@ -131,4 +176,5 @@ export function getDefaultMode(): FixtureMode {
 export function resetDefaults(): void {
 	defaultStore = undefined;
 	defaultMode = undefined;
+	defaultProvider = undefined;
 }
