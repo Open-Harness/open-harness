@@ -114,23 +114,23 @@ bun run test         # All tests pass
 - [x] Test: harness creates correct type
 - [x] Test: harness preserves agents and edges
 
-#### Task 8.4: Implement run()
+#### Task 8.4: Implement run() ✅
 
 **File:** `packages/internal/core/src/api/run.ts`
 
-- [ ] `run(target: Agent | Harness, input, options?): Promise<RunResult>`
-- [ ] Detect target type and dispatch
-- [ ] Handle `fixture` option — hierarchical IDs for multi-agent
-- [ ] Handle `mode` option — pass to withRecording
-- [ ] Handle `store` option
-- [ ] Handle `FIXTURE_MODE` env var as default
-- [ ] Return structured `RunResult`
-- [ ] Test: run executes agent
-- [ ] Test: run executes harness
-- [ ] Test: run with fixture records to store
-- [ ] Test: run with replay loads from store
-- [ ] Test: replay is deterministic
-- [ ] Test: multi-agent produces hierarchical fixture IDs
+- [x] `run(target: Agent | Harness, input, options?): Promise<RunResult>`
+- [x] Detect target type and dispatch
+- [x] Handle `fixture` option — hierarchical IDs for multi-agent
+- [x] Handle `mode` option — pass to withRecording
+- [x] Handle `store` option
+- [x] Handle `FIXTURE_MODE` env var as default
+- [x] Return structured `RunResult`
+- [x] Test: run executes agent
+- [x] Test: run executes harness
+- [x] Test: run with fixture records to store
+- [x] Test: run with replay loads from store
+- [x] Test: replay is deterministic
+- [x] Test: multi-agent produces hierarchical fixture IDs
 
 #### Task 8.5: Implement defaults
 
