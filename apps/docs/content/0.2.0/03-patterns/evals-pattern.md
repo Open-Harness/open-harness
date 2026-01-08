@@ -1,6 +1,6 @@
 # Evals Pattern
 
-**Status:** Draft  
+**Status:** v0.2.0
 **Purpose:** How evals make improvement automatic
 
 ---
@@ -125,7 +125,10 @@ import { defineSuite, variant, gates, runSuite } from "@open-harness/core";
 
 // Define your eval suite
 const suite = defineSuite({
-  // Your workflow to test
+  // Suite name (required)
+  name: "my-api-eval",
+
+  // Your workflow factory to test
   flow: myWorkflow,
 
   // Test cases with inputs and assertions
@@ -162,20 +165,21 @@ const suite = defineSuite({
   gates: [
     gates.noRegressions(),           // No assertion regressions vs baseline
     gates.passRate(0.9),             // At least 90% of cases pass
-    gates.latencyUnder(30000),       // Average latency under 30s
-    gates.costUnder(1.0),            // Total cost under $1
+    gates.latencyUnder(30000),       // Max latency under 30s
+    gates.costUnder(1.0),            // Max cost under $1
   ],
 });
 
 // Run the suite and get results
-const report = await runSuite(suite);
+const report = await runSuite(suite, { mode: "live" });
 
 // Check if all gates passed
-if (report.gatesPassed) {
+if (report.passed) {
   console.log("All gates passed!");
-  console.log(report.markdown);
+  console.log(`Pass rate: ${(report.summary.passRate * 100).toFixed(0)}%`);
 } else {
-  console.error("Gates failed:", report.failedGates);
+  const failedGates = report.gateResults.filter(g => !g.passed);
+  console.error("Gates failed:", failedGates.map(g => g.name).join(", "));
   process.exit(1);
 }
 ```
@@ -204,9 +208,136 @@ This is how a business ends up with “its own benchmark” without hand-curatin
 
 ---
 
-## See Also (Internal)
+## FAQ
 
-- `.factory/docs/2026-01-07-eval-architecture-options-provider-workflow-level.md` (provider + workflow eval options, grounded in current code)
+### What is a "workflow factory"?
+
+A workflow factory is a function that creates a workflow for a given test case and variant. It receives the case input and variant configuration, and returns a flow definition that the eval engine can execute.
+
+```ts
+const myWorkflow: SuiteWorkflowFactory = ({ caseInput, variant }) => ({
+  flow: {
+    name: "my-workflow",
+    nodes: [{ id: "main", type: "claude.agent", input: caseInput }],
+    edges: [],
+  },
+  register(registry, mode) {
+    registry.register(createClaudeNode({ model: variant.model }));
+  },
+  primaryOutputNodeId: "main",
+});
+```
+
+The factory pattern allows the same workflow structure to be parameterized by variant (different models, prompts, etc.) while keeping cases consistent.
+
+### What's the difference between assertions and gates?
+
+**Assertions** are per-case checks that validate individual outputs:
+- "Output contains 'function'"
+- "Latency under 30s"
+- "No runtime errors"
+
+**Gates** are suite-level decisions that determine overall pass/fail:
+- "90% of cases must pass"
+- "No regressions vs baseline"
+- "Max cost under $1 across all cases"
+
+Think of assertions as unit tests, gates as acceptance criteria.
+
+### How do I debug a failing eval?
+
+1. **Run with `--verbose`** to see per-case results:
+   ```bash
+   bun run eval --mode live --verbose
+   ```
+
+2. **Run a single case** to isolate the issue:
+   ```bash
+   bun run eval --cases failing-case-id --verbose
+   ```
+
+3. **Check the assertion results** in the report - each assertion shows actual vs expected values
+
+4. **Review the artifact** - the `caseResult.artifact` contains the full workflow output and events
+
+### What run modes are available?
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `live` | Real API calls | Development, initial recording |
+| `replay` | Use recorded fixtures | CI, fast iteration |
+| `record` | Live calls, save fixtures | Creating test fixtures |
+
+### How do I compare different prompts?
+
+Use variants with different `config` values:
+
+```ts
+variants: [
+  variant("prompt-a", {
+    model: "claude-sonnet-4-20250514",
+    config: { systemPrompt: "You are a helpful assistant." },
+  }),
+  variant("prompt-b", {
+    model: "claude-sonnet-4-20250514",
+    config: { systemPrompt: "You are a concise expert." },
+  }),
+],
+baseline: "prompt-a",
+```
+
+The `config` object is passed to your workflow factory, where you can use it to configure the prompt.
+
+### Why is LLM-as-judge disabled?
+
+In v0.2.0, the LLM-as-judge scorer is stubbed and disabled by default. It returns placeholder values when enabled. Full implementation is planned for a future release.
+
+For now, use:
+- Output assertions (`output.contains`, `output.equals`)
+- Metric assertions (`metric.latency_ms.max`, `metric.total_cost_usd.max`)
+- Behavior assertions (`behavior.no_errors`)
+
+### Can I use custom scorers?
+
+Yes. Implement the `Scorer` interface:
+
+```ts
+const myScorer: Scorer = {
+  name: "my-scorer",
+  score(artifact: EvalArtifact): Score {
+    const value = /* your scoring logic */;
+    return { name: "my-scorer", value, rawValue: artifact };
+  },
+};
+
+const suite = defineSuite({
+  // ...
+  scorers: [myScorer],
+});
+```
+
+### How do I run evals in CI?
+
+```bash
+# Run in replay mode (no API calls)
+bun run eval --mode replay
+
+# Exit code is 0 if all gates pass, 1 otherwise
+```
+
+For CI, you'll want pre-recorded fixtures. Record them locally first:
+```bash
+bun run record
+```
+
+Then commit the fixtures and run in replay mode in CI.
+
+---
+
+## See Also
+
+- [Eval System README](../../../../packages/internal/core/src/eval/README.md) - Full API reference
+- [Starter Kit](../../../../apps/starter-kit/) - Working example with CLI
 
 ---
 

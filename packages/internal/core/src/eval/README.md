@@ -1,11 +1,14 @@
 ---
-lastUpdated: "2026-01-08T10:44:23.678Z"
-lastCommit: "f62772a7a1f0406b02eb6646ab2531014102675f"
-lastCommitDate: "2026-01-08T10:03:32Z"
+lastUpdated: "2026-01-08T12:47:42.514Z"
+lastCommit: "699e07d37bc235afa15dbf595677e6e52162f38f"
+lastCommitDate: "2026-01-08T10:44:23Z"
 ---
 # Eval System (v0.2.0)
 
 The eval system provides types and utilities for evaluating workflows against datasets.
+
+> **See the Starter Kit for a complete working example:**
+> [`apps/starter-kit/`](../../../../../apps/starter-kit/) - Prompt comparison eval with CLI tools
 
 ## Quick Start
 
