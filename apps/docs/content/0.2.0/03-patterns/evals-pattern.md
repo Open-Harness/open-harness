@@ -118,38 +118,69 @@ This turns “record → compare → iterate” into an actual system.
 
 ---
 
-## What It Looks Like (Target API Sketch)
-
-This is a conceptual sketch of the intended experience (not implemented yet):
+## What It Looks Like (v0.2.0 API)
 
 ```ts
-import type { FlowDefinition } from "@open-harness/core";
+import { defineSuite, variant, gates, runSuite } from "@open-harness/core";
 
+// Define your eval suite
 const suite = defineSuite({
-  flow: myWorkflow as FlowDefinition,
+  // Your workflow to test
+  flow: myWorkflow,
+
+  // Test cases with inputs and assertions
   cases: [
-    { id: "hello-api", input: { task: "Build a hello world Express API" } },
-    { id: "auth-api", input: { task: "Build CRUD API with JWT auth" } },
+    {
+      id: "hello-api",
+      input: { task: "Build a hello world Express API" },
+      assertions: [
+        { type: "behavior.no_errors" },
+        { type: "output.contains", path: "outputs.main.code", value: "app.get" },
+        { type: "metric.latency_ms.max", value: 30000 },
+      ],
+    },
+    {
+      id: "auth-api",
+      input: { task: "Build CRUD API with JWT auth" },
+      assertions: [
+        { type: "behavior.no_errors" },
+        { type: "metric.latency_ms.max", value: 60000 },
+      ],
+    },
   ],
+
+  // Variants to compare (different models, providers, configs)
   variants: [
-    variant("claude/sonnet", (flow) =>
-      patchNodeInput(flow, "agent", { options: { model: "claude-3-5-sonnet-latest" } }),
-    ),
-    variant("claude/opus", (flow) =>
-      patchNodeInput(flow, "agent", { options: { model: "claude-3-opus-latest" } }),
-    ),
-    variant("opencode/default", (flow) => swapNodeType(flow, "agent", "opencode.agent")),
+    variant("claude/sonnet", { model: "claude-3-5-sonnet-latest" }),
+    variant("claude/opus", { model: "claude-3-opus-latest" }),
   ],
-  metrics: [metrics.latencyMs(), metrics.costUsd(), metrics.tokens()],
+
+  // Which variant is the baseline for comparison
   baseline: "claude/sonnet",
-  gates: [gates.noRegressions({ tolerance: 1 })],
+
+  // Gates that must pass for the eval to succeed
+  gates: [
+    gates.noRegressions(),           // No assertion regressions vs baseline
+    gates.passRate(0.9),             // At least 90% of cases pass
+    gates.latencyUnder(30000),       // Average latency under 30s
+    gates.costUnder(1.0),            // Total cost under $1
+  ],
 });
 
+// Run the suite and get results
 const report = await runSuite(suite);
-console.log(report.summary);
+
+// Check if all gates passed
+if (report.gatesPassed) {
+  console.log("All gates passed!");
+  console.log(report.markdown);
+} else {
+  console.error("Gates failed:", report.failedGates);
+  process.exit(1);
+}
 ```
 
-The important part is the shape: **cases are yours**, variants are small diffs, and the system defaults to baseline + gates.
+The important part is the shape: **cases are yours**, variants are configuration, and the system defaults to baseline + gates.
 
 ---
 

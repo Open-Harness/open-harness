@@ -162,10 +162,17 @@ packages/open-harness/server/tests/integration/eval/
 - [ ] 35+ unit + integration tests passing
 - [ ] No regressions vs main
 
-#### Phase 8: Fixtures + Landing (1-2 weeks)
+#### Phase 8: DX Layer + Fixtures + Landing (1-2 weeks)
 
 **Files to Create:**
 ```
+packages/internal/core/src/eval/
+├── dx-types.ts              # SuiteConfig, VariantDef, Gate types
+└── dx.ts                    # defineSuite, variant, gates, runSuite
+
+packages/internal/core/tests/eval/
+└── dx.test.ts               # DX layer tests
+
 packages/open-harness/core/tests/fixtures/evals/
 ├── datasets/
 │   └── coder-reviewer.v1.json
@@ -180,6 +187,8 @@ packages/open-harness/core/scripts/
 ```
 
 **Acceptance Criteria:**
+- [ ] DX layer implemented: `defineSuite()`, `variant()`, `gates.*`, `runSuite()`
+- [ ] DX layer tested with unit tests
 - [ ] At least one real dataset (coder-reviewer.v1) created + committed
 - [ ] Goldens recorded using live SDK (manual, one-time)
 - [ ] Provenance fixtures captured + committed
@@ -187,6 +196,24 @@ packages/open-harness/core/scripts/
 - [ ] CI runs eval in replay mode
 - [ ] User docs explain dataset authoring + eval running
 - [ ] Landing checklist from EVAL_COMPLETION_PLAN.md all ✅
+
+#### Phase 9: DX Audit (HARD GATE)
+
+**Reference:** `docs/internal/milestones/v0.2.0/DX_AUDIT_CHECKLIST.md`
+
+**Purpose:** Systematically verify eval DX before release. This is a **blocking gate**.
+
+**Process:**
+1. Self-audit against DX_AUDIT_CHECKLIST.md (5 dimensions)
+2. Fresh-eyes test: unfamiliar person uses eval with ONLY public docs
+3. Documentation sync: evals-pattern.md matches implementation
+
+**Acceptance Criteria:**
+- [ ] All "Critical" DX audit items pass
+- [ ] All "High" items pass OR have documented workarounds
+- [ ] Fresh-eyes test completes successfully
+- [ ] `apps/docs/content/0.2.0/03-patterns/evals-pattern.md` matches `defineSuite()` API
+- [ ] No broken examples in documentation
 
 ### Critical Path 2: Documentation Completeness
 
@@ -307,6 +334,7 @@ packages/open-harness/core/scripts/
 
 ### Code
 - [ ] Eval phases 6-8 complete per EVAL_COMPLETION_PLAN.md checklist
+- [ ] DX layer complete: `defineSuite()`, `variant()`, `gates.*`, `runSuite()`
 - [ ] At least one real dataset exists and runs in CI (replay mode)
 - [ ] Deterministic replay proven: same dataset × 2 = same results
 - [ ] LLM-as-judge scorer exists (disabled by default)
@@ -314,6 +342,11 @@ packages/open-harness/core/scripts/
 - [ ] All tests green: `bun run test` passes
 - [ ] Types clean: `bun run typecheck` passes
 - [ ] Lint clean: `bun run lint` passes
+
+### DX Audit (Phase 9 - HARD GATE)
+- [ ] All "Critical" items in DX_AUDIT_CHECKLIST.md pass
+- [ ] Fresh-eyes test: unfamiliar person can create + run eval using only public docs
+- [ ] No broken code examples in documentation
 
 ### Documentation
 - [ ] All apps/docs/content/0.2.0/ sections complete

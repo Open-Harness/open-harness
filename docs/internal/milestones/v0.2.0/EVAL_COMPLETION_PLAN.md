@@ -570,9 +570,74 @@ packages/open-harness/server/tests/integration/eval/
   eval-template.test.ts    # uses template provider + withRecording + RunStore/RecordingStore adapters
 ```
 
-### Phase 8 — Integration, fixtures, docs, and landing the plane
+### Phase 8 — DX Layer, fixtures, integration, and docs
 
-Phase 8 is what makes this “real” instead of a library nobody trusts.
+Phase 8 is what makes this "real" instead of a library nobody trusts. It includes the **high-level DX layer** that provides the ergonomic API users expect.
+
+**8.0 DX Layer (NEW — required for v0.2.0)**
+
+The Phase 7 primitives (`createEvalEngine`, `runMatrix`, etc.) are powerful but low-level. Users expect an ergonomic API like:
+
+```ts
+const suite = defineSuite({
+  flow: myWorkflow,
+  cases: [
+    { id: "simple-api", input: { task: "Build hello world API" } },
+  ],
+  variants: [
+    variant("claude/sonnet", { model: "claude-3-5-sonnet-latest" }),
+    variant("claude/opus", { model: "claude-3-opus-latest" }),
+  ],
+  baseline: "claude/sonnet",
+  gates: [
+    gates.noRegressions(),
+    gates.latencyUnder(30000),
+    gates.costUnder(1.0),
+  ],
+});
+
+const report = await runSuite(suite);
+```
+
+**Add exactly these files:**
+
+```
+packages/internal/core/src/eval/
+  dx.ts                    # defineSuite, variant, gates, runSuite
+  dx-types.ts              # SuiteConfig, VariantDef, Gate types
+```
+
+**What each file contains:**
+
+- `dx-types.ts`
+  - `SuiteConfig` — top-level suite definition shape
+  - `VariantDef` — variant helper return type
+  - `Gate` — gate abstraction for pass/fail conditions
+  - `SuiteReport` — enriched report with gate results
+
+- `dx.ts`
+  - `defineSuite(config: SuiteConfig)` — validates and builds suite
+  - `variant(name, patchOrConfig)` — creates variant definition
+  - `gates` object:
+    - `gates.noRegressions(opts?)` — assertion regression gate
+    - `gates.latencyUnder(ms)` — max latency gate
+    - `gates.costUnder(usd)` — max cost gate
+    - `gates.passRate(rate)` — minimum pass rate gate
+  - `runSuite(suite)` — orchestrates engine + gates + report
+
+**Implementation notes:**
+
+- `defineSuite()` builds `EvalDataset` + `EvalVariant[]` from the config
+- `runSuite()` wraps `createEvalEngine()` + `engine.runMatrix()` + gate evaluation
+- Gates are evaluated against `MatrixResult` and produce pass/fail + messages
+- This is a ~150-200 line convenience layer on top of Phase 7 primitives
+
+**Add tests:**
+
+```
+packages/internal/core/tests/eval/
+  dx.test.ts               # Tests for DX layer
+```
 
 **8.1 Fixtures**
 
@@ -613,14 +678,69 @@ From repo root:
 - `bun run lint`
 - `bun run test`
 
-**8.4 Landing checklist (0.2.0 release readiness)**
+**8.4 Landing checklist (Phase 8 completion)**
 
-- [ ] Phase 6: core types + unit tests merged and stable.
-- [ ] Phase 7: engine runs `cases x variants` and produces a report.
+- [ ] Phase 6: core types + unit tests merged and stable. ✅ DONE
+- [ ] Phase 7: engine runs `cases x variants` and produces a report. ✅ DONE
+- [ ] Phase 8.0: DX layer (`defineSuite`, `variant`, `gates`, `runSuite`) implemented and tested.
 - [ ] Deterministic replay proven by running the same dataset twice in replay mode with identical results.
 - [ ] At least one real dataset exists in-repo (not fabricated) and passes in CI replay mode.
 - [ ] LLM-as-judge scorer exists but is disabled by default and not required for CI; when enabled it uses an explicit flag and a cache.
 - [ ] Docs updated so new users can: add dataset → run matrix → read report.
+
+### Phase 9 — DX Audit and Documentation (REQUIRED GATE)
+
+Phase 9 is a **hard release gate**. v0.2.0 does not ship until this phase passes.
+
+**Purpose:** Systematically verify that the eval system delivers the DX we claim, not just that the code works.
+
+**9.1 DX Audit Checklist (5 dimensions)**
+
+See `docs/internal/milestones/v0.2.0/DX_AUDIT_CHECKLIST.md` for the full checklist.
+
+The 5 dimensions are:
+
+1. **API Ergonomics** — Is the happy path obvious? Are error messages helpful? Is naming consistent?
+2. **Progressive Disclosure** — Can users start simple and add complexity? Clear beginner → advanced path?
+3. **Documentation Completeness** — Does every public export have docs? Do examples work?
+4. **Consistency Check** — Do similar things work similarly? Are patterns reused?
+5. **First-Run Experience** — Can someone go 0→working eval in 15 min using only docs?
+
+**9.2 Documentation Sync**
+
+Update the canonical user-facing documentation to match final implementation:
+
+```
+apps/docs/content/0.2.0/
+  03-patterns/evals-pattern.md    # MUST match defineSuite/runSuite API
+  05-reference/eval-api.md        # NEW: API reference for eval exports
+```
+
+**Verification:**
+
+- [ ] All code examples in `evals-pattern.md` are copy-paste runnable
+- [ ] API reference covers all public exports from `@open-harness/core` eval
+- [ ] No references to deprecated or internal APIs
+- [ ] Progressive disclosure: pattern doc → API reference → internal README
+
+**9.3 Audit Process**
+
+1. **Self-audit**: Implementer runs through DX_AUDIT_CHECKLIST.md and fixes issues
+2. **Fresh-eyes test**: Someone unfamiliar with eval implementation tries to:
+   - Create a dataset from scratch
+   - Run it against two variants
+   - Understand the report
+   - Fix a failing assertion
+   - All using ONLY public documentation (no asking the implementer)
+3. **Document gaps**: Any remaining issues are documented with severity
+
+**9.4 Release Gate Criteria**
+
+- [ ] All "Critical" items in DX_AUDIT_CHECKLIST.md pass
+- [ ] All "High" items pass OR have documented workarounds
+- [ ] Fresh-eyes test completes successfully
+- [ ] `apps/docs/content/0.2.0/03-patterns/evals-pattern.md` matches implementation
+- [ ] No broken examples in documentation
 
 ---
 
@@ -635,7 +755,7 @@ packages/internal/core/
     persistence/               # existing
     runtime/                   # existing
     providers/                 # existing
-    eval/                      # NEW (Phase 6/7)
+    eval/                      # NEW (Phase 6/7/8)
       README.md
       index.ts
       types.ts
@@ -647,6 +767,8 @@ packages/internal/core/
       compare.ts
       report.ts
       hooks.ts
+      dx-types.ts              # NEW (Phase 8) - DX layer types
+      dx.ts                    # NEW (Phase 8) - defineSuite, variant, gates, runSuite
       scorers/
         index.ts
         latency.ts
@@ -663,6 +785,7 @@ packages/internal/core/
       runner.test.ts
       compare.test.ts
       report.test.ts
+      dx.test.ts               # NEW (Phase 8) - DX layer tests
 
 packages/open-harness/core/
   tests/
