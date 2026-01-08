@@ -102,10 +102,10 @@ specs/portable/
 - Progressive Disclosure
 - Creating Skills
 
-**03-patterns/scripts-pattern.md** - Scripts + bash optimization = universal access
+**03-patterns/scripts-pattern.md** - Scripts + shell optimization = universal access
 - What Are Scripts
-- Scripts vs. MCP (bash tool optimization)
-- Bash Optimization
+- Scripts vs. MCP (shell tool optimization)
+- Shell Optimization
 - Script Wrappers
 - Examples
 

@@ -284,7 +284,7 @@ This folder contains all Open Harness documentation, organized into numbered sec
 - ✅ Philosophy (outline)
 - ✅ Skills Pattern (outline)
 - ✅ Scripts Pattern (outline)
-- ✅ Evals Pattern (outline)
+- ✅ Evals Pattern (draft)
 - ✅ Quickstart (outline)
 - ✅ What Can I Build (outline)
 - ✅ Architecture (outline)
