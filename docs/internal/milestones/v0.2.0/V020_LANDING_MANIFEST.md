@@ -83,16 +83,16 @@ bun run test         # All tests pass
 **Depends on:** Phases 1-7 ✅
 **Blocks:** Phase 9, 10, 11, 12, 13, 14
 
-#### Task 8.1: Create API Types
+#### Task 8.1: Create API Types ✅
 
 **File:** `packages/internal/core/src/api/types.ts`
 
-- [ ] Define `Agent` type
-- [ ] Define `Harness` type
-- [ ] Define `RunOptions` type (fixture, mode, store, variant)
-- [ ] Define `RunResult` type (output, state, metrics, fixtures)
-- [ ] Define `FixtureStore` type alias
-- [ ] Export all types
+- [x] Define `Agent` type
+- [x] Define `Harness` type
+- [x] Define `RunOptions` type (fixture, mode, store, variant)
+- [x] Define `RunResult` type (output, state, metrics, fixtures)
+- [x] Define `FixtureStore` type alias
+- [x] Export all types
 
 #### Task 8.2: Implement agent()
 
