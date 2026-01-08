@@ -129,6 +129,48 @@ describe("compareToBaseline", () => {
 		expect(assertionImprovement).toBeDefined();
 		expect(assertionImprovement?.description).toContain("was failing but now passes");
 	});
+
+	it("uses custom thresholds when provided", () => {
+		// Create baseline with 1000ms latency
+		const baseline = createMockDatasetResult({
+			variantId: "baseline",
+			numCases: 1,
+		});
+		baseline.caseResults[0] = createMockCaseResult({
+			caseId: "case-1",
+			variantId: "baseline",
+			passed: true,
+			durationMs: 1000,
+		});
+
+		// Create candidate with 1150ms latency (15% increase)
+		const candidate = createMockDatasetResult({
+			variantId: "candidate",
+			numCases: 1,
+		});
+		candidate.caseResults[0] = createMockCaseResult({
+			caseId: "case-1",
+			variantId: "candidate",
+			passed: true,
+			durationMs: 1150,
+		});
+
+		// With default 20% threshold, no regression
+		const defaultResult = compareToBaseline(baseline, candidate);
+		const defaultLatencyRegression = defaultResult.regressions.find(
+			(r) => r.type === "metric" && r.description.includes("Latency"),
+		);
+		expect(defaultLatencyRegression).toBeUndefined();
+
+		// With custom 10% threshold, should detect regression
+		const customResult = compareToBaseline(baseline, candidate, {
+			latencyIncrease: 0.1,
+		});
+		const customLatencyRegression = customResult.regressions.find(
+			(r) => r.type === "metric" && r.description.includes("Latency"),
+		);
+		expect(customLatencyRegression).toBeDefined();
+	});
 });
 
 describe("compareAcross", () => {

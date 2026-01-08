@@ -425,3 +425,26 @@ export type Regression = {
  * Same shape as Regression but different semantics.
  */
 export type Improvement = Regression;
+
+/**
+ * Configurable thresholds for regression/improvement detection.
+ *
+ * All values are expressed as ratios (e.g., 0.2 = 20%).
+ */
+export type ComparisonThresholds = {
+	/** Latency increase threshold (default: 0.2 = 20%) */
+	latencyIncrease: number;
+	/** Cost increase threshold (default: 0.1 = 10%) */
+	costIncrease: number;
+	/** Score decrease threshold (default: 0.1 = 10%) */
+	scoreDecrease: number;
+};
+
+/**
+ * Default comparison thresholds.
+ */
+export const DEFAULT_COMPARISON_THRESHOLDS: ComparisonThresholds = {
+	latencyIncrease: 0.2,
+	costIncrease: 0.1,
+	scoreDecrease: 0.1,
+};

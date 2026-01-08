@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-08T09:35:22.593Z"
-lastCommit: "0c452aac44a8fd190c9d16a659e1174c966a4dcf"
-lastCommitDate: "2026-01-08T09:04:05Z"
+lastUpdated: "2026-01-08T09:45:02.838Z"
+lastCommit: "c959061ad2bf926d778d5b5f4af8eb2feb8ca799"
+lastCommitDate: "2026-01-08T09:35:22Z"
 ---
 # Eval System (v0.2.0)
 
@@ -350,10 +350,21 @@ const variants: EvalVariant[] = [
 ### Comparison and Reports
 
 ```typescript
-import { compareToBaseline, generateReport } from "@internal/core";
+import {
+  compareToBaseline,
+  generateReport,
+  DEFAULT_COMPARISON_THRESHOLDS,
+} from "@internal/core";
 
-// Compare candidate to baseline
+// Compare candidate to baseline (using default thresholds)
 const comparison = compareToBaseline(baselineResult, candidateResult);
+
+// Or with custom thresholds
+const strictComparison = compareToBaseline(baselineResult, candidateResult, {
+  latencyIncrease: 0.1,  // 10% (default: 20%)
+  costIncrease: 0.05,    // 5% (default: 10%)
+  scoreDecrease: 0.05,   // 5% (default: 10%)
+});
 
 console.log("Regressions:", comparison.regressions.length);
 console.log("Improvements:", comparison.improvements.length);

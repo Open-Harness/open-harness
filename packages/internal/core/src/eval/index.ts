@@ -53,7 +53,10 @@ export type {
 	ComparisonResult,
 	Regression,
 	Improvement,
+	ComparisonThresholds,
 } from "./types.js";
+
+export { DEFAULT_COMPARISON_THRESHOLDS } from "./types.js";
 
 // ============================================================================
 // Recording ID utilities

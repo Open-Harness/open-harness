@@ -6,7 +6,15 @@
  */
 
 import { extractMetrics } from "./assertions.js";
-import type { CaseResult, ComparisonResult, DatasetResult, Improvement, Regression } from "./types.js";
+import type {
+	CaseResult,
+	ComparisonResult,
+	ComparisonThresholds,
+	DatasetResult,
+	Improvement,
+	Regression,
+} from "./types.js";
+import { DEFAULT_COMPARISON_THRESHOLDS } from "./types.js";
 
 // ============================================================================
 // Baseline comparison
@@ -22,9 +30,15 @@ import type { CaseResult, ComparisonResult, DatasetResult, Improvement, Regressi
  *
  * @param baseline - Baseline dataset result
  * @param candidate - Candidate dataset result to compare
+ * @param thresholds - Optional thresholds for regression detection (defaults to DEFAULT_COMPARISON_THRESHOLDS)
  * @returns Comparison result with regressions and improvements
  */
-export function compareToBaseline(baseline: DatasetResult, candidate: DatasetResult): ComparisonResult {
+export function compareToBaseline(
+	baseline: DatasetResult,
+	candidate: DatasetResult,
+	thresholds: Partial<ComparisonThresholds> = {},
+): ComparisonResult {
+	const t = { ...DEFAULT_COMPARISON_THRESHOLDS, ...thresholds };
 	const regressions: Regression[] = [];
 	const improvements: Improvement[] = [];
 
@@ -74,11 +88,10 @@ export function compareToBaseline(baseline: DatasetResult, candidate: DatasetRes
 		const baselineMetrics = extractMetrics(baselineCase.artifact.events);
 		const candidateMetrics = extractMetrics(candidateCase.artifact.events);
 
-		// Latency regression threshold: 20% increase
-		const latencyThreshold = 0.2;
+		// Latency regression (configurable threshold)
 		if (baselineMetrics.totalDurationMs > 0) {
 			const latencyRatio = candidateMetrics.totalDurationMs / baselineMetrics.totalDurationMs;
-			if (latencyRatio > 1 + latencyThreshold) {
+			if (latencyRatio > 1 + t.latencyIncrease) {
 				regressions.push({
 					caseId: candidateCase.caseId,
 					variantId: candidate.variantId,
@@ -87,7 +100,7 @@ export function compareToBaseline(baseline: DatasetResult, candidate: DatasetRes
 					baseline: baselineMetrics.totalDurationMs,
 					current: candidateMetrics.totalDurationMs,
 				});
-			} else if (latencyRatio < 1 - latencyThreshold) {
+			} else if (latencyRatio < 1 - t.latencyIncrease) {
 				improvements.push({
 					caseId: candidateCase.caseId,
 					variantId: candidate.variantId,
@@ -99,11 +112,10 @@ export function compareToBaseline(baseline: DatasetResult, candidate: DatasetRes
 			}
 		}
 
-		// Cost regression threshold: 10% increase
-		const costThreshold = 0.1;
+		// Cost regression (configurable threshold)
 		if (baselineMetrics.totalCostUsd > 0) {
 			const costRatio = candidateMetrics.totalCostUsd / baselineMetrics.totalCostUsd;
-			if (costRatio > 1 + costThreshold) {
+			if (costRatio > 1 + t.costIncrease) {
 				regressions.push({
 					caseId: candidateCase.caseId,
 					variantId: candidate.variantId,
@@ -112,7 +124,7 @@ export function compareToBaseline(baseline: DatasetResult, candidate: DatasetRes
 					baseline: baselineMetrics.totalCostUsd,
 					current: candidateMetrics.totalCostUsd,
 				});
-			} else if (costRatio < 1 - costThreshold) {
+			} else if (costRatio < 1 - t.costIncrease) {
 				improvements.push({
 					caseId: candidateCase.caseId,
 					variantId: candidate.variantId,
@@ -124,11 +136,10 @@ export function compareToBaseline(baseline: DatasetResult, candidate: DatasetRes
 			}
 		}
 
-		// 3. Compare overall scores
-		const scoreThreshold = 0.1; // 10% change
+		// 3. Compare overall scores (configurable threshold)
 		if (baselineCase.scores.overall > 0) {
 			const scoreDiff = candidateCase.scores.overall - baselineCase.scores.overall;
-			if (scoreDiff < -scoreThreshold) {
+			if (scoreDiff < -t.scoreDecrease) {
 				regressions.push({
 					caseId: candidateCase.caseId,
 					variantId: candidate.variantId,
@@ -137,7 +148,7 @@ export function compareToBaseline(baseline: DatasetResult, candidate: DatasetRes
 					baseline: baselineCase.scores.overall,
 					current: candidateCase.scores.overall,
 				});
-			} else if (scoreDiff > scoreThreshold) {
+			} else if (scoreDiff > t.scoreDecrease) {
 				improvements.push({
 					caseId: candidateCase.caseId,
 					variantId: candidate.variantId,
