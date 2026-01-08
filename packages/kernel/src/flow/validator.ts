@@ -27,22 +27,31 @@ export const FlowSpecSchema = z.object({
 	policy: FlowPolicySchema.optional().default({ failFast: true }),
 });
 
-export const WhenExprSchema: z.ZodType<WhenExpr> = z.lazy(() =>
+// YAML AST-style when expression (legacy format)
+const WhenExprASTSchema: z.ZodType<import("../protocol/flow.js").WhenExprAST> = z.lazy(() =>
 	z.union([
 		z.object({
 			equals: z.object({ var: z.string(), value: z.unknown() }),
 		}),
 		z.object({
-			not: WhenExprSchema,
+			not: WhenExprASTSchema,
 		}),
 		z.object({
-			and: z.array(WhenExprSchema),
+			and: z.array(WhenExprASTSchema),
 		}),
 		z.object({
-			or: z.array(WhenExprSchema),
+			or: z.array(WhenExprASTSchema),
 		}),
 	]),
 );
+
+// When expression can be either:
+// - string: JSONata expression (preferred)
+// - object: YAML AST format (legacy)
+export const WhenExprSchema: z.ZodType<WhenExpr> = z.union([
+	z.string(), // JSONata expression
+	WhenExprASTSchema, // YAML AST format
+]);
 
 export const RetryPolicySchema = z.object({
 	maxAttempts: z.number().int().min(1),

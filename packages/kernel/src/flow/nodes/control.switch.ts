@@ -111,9 +111,9 @@ export const controlSwitchNode: NodeTypeDefinition<SwitchInput, SwitchOutput> =
 				);
 			}
 
-			// Evaluate cases in order, return first match
+			// Evaluate cases in order, return first match (async for JSONata support)
 			for (const switchCase of input.cases) {
-				const matches = evaluateWhen(
+				const matches = await evaluateWhen(
 					switchCase.when as WhenExpr,
 					controlCtx.bindingContext,
 				);

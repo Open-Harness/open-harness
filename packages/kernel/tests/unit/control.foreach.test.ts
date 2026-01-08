@@ -176,4 +176,99 @@ describe("control.foreach node", () => {
 		expect(controlForeachNode.capabilities?.isContainer).toBe(true);
 		expect(controlForeachNode.capabilities?.createsSession).toBe(true);
 	});
+
+	test("provides iteration context to child nodes", async () => {
+		const hub = createHub("test-session");
+		hub.startSession();
+		const iterationContexts: Array<{
+			$iteration: number;
+			$first: boolean;
+			$last: boolean;
+			$maxIterations: number;
+		}> = [];
+
+		const executeChild = async (
+			_nodeId: string,
+			input: Record<string, unknown>,
+		) => {
+			// Capture the iteration context passed to children
+			iterationContexts.push({
+				$iteration: input.$iteration as number,
+				$first: input.$first as boolean,
+				$last: input.$last as boolean,
+				$maxIterations: input.$maxIterations as number,
+			});
+			return { received: input.item };
+		};
+
+		const ctx: ContainerNodeContext = {
+			hub,
+			runId: "run-0",
+			executeChild,
+		};
+
+		await controlForeachNode.run(ctx, {
+			items: ["a", "b", "c"],
+			as: "item",
+			body: ["process"],
+		});
+
+		// Verify iteration context for each iteration
+		expect(iterationContexts).toHaveLength(3);
+
+		// First iteration
+		expect(iterationContexts[0]).toEqual({
+			$iteration: 0,
+			$first: true,
+			$last: false,
+			$maxIterations: 3,
+		});
+
+		// Middle iteration
+		expect(iterationContexts[1]).toEqual({
+			$iteration: 1,
+			$first: false,
+			$last: false,
+			$maxIterations: 3,
+		});
+
+		// Last iteration
+		expect(iterationContexts[2]).toEqual({
+			$iteration: 2,
+			$first: false,
+			$last: true,
+			$maxIterations: 3,
+		});
+	});
+
+	test("single item array has $first and $last both true", async () => {
+		const hub = createHub("test-session");
+		hub.startSession();
+		let capturedContext: Record<string, unknown> | undefined;
+
+		const executeChild = async (
+			_nodeId: string,
+			input: Record<string, unknown>,
+		) => {
+			capturedContext = input;
+			return {};
+		};
+
+		const ctx: ContainerNodeContext = {
+			hub,
+			runId: "run-0",
+			executeChild,
+		};
+
+		await controlForeachNode.run(ctx, {
+			items: ["only"],
+			as: "item",
+			body: ["process"],
+		});
+
+		expect(capturedContext?.$iteration).toBe(0);
+		expect(capturedContext?.$first).toBe(true);
+		expect(capturedContext?.$last).toBe(true);
+		expect(capturedContext?.$maxIterations).toBe(1);
+	});
 });

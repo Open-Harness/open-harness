@@ -61,7 +61,10 @@ export const controlForeachNode: NodeTypeDefinition<
 		const containerCtx = ctx as ContainerNodeContext;
 		const iterations: ForeachOutput["iterations"] = [];
 
-		for (const item of input.items) {
+		const totalItems = input.items.length;
+
+		for (let i = 0; i < totalItems; i++) {
+			const item = input.items[i];
 			// Create fresh session for this iteration
 			const sessionId = createSessionId();
 			const outputs: Record<string, unknown> = {};
@@ -75,12 +78,18 @@ export const controlForeachNode: NodeTypeDefinition<
 			});
 
 			try {
-				// Execute child nodes with session context
+				// Execute child nodes with session context and iteration context
 				for (const childId of input.body) {
-					// Build input for child with loop variable binding
+					// Build input for child with loop variable binding and iteration context
+					// The $-prefixed keys are used directly by the binding context
 					const childInput = {
 						[input.as]: item,
 						sessionId,
+						// Iteration context for JSONata expressions like $iteration, $first, $last
+						$iteration: i,
+						$first: i === 0,
+						$last: i === totalItems - 1,
+						$maxIterations: totalItems,
 					};
 
 					const childOutput = await containerCtx.executeChild(
