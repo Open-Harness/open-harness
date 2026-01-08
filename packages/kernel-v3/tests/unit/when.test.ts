@@ -49,18 +49,10 @@ describe("when evaluation", () => {
 		});
 
 		test("complex expression", async () => {
-			expect(
-				await evaluateWhen(
-					"$exists(reviewer) and reviewer.passed = true",
-					{ reviewer: { passed: true } }
-				)
-			).toBe(true);
-			expect(
-				await evaluateWhen(
-					"$exists(reviewer) and reviewer.passed = true",
-					{}
-				)
-			).toBe(false);
+			expect(await evaluateWhen("$exists(reviewer) and reviewer.passed = true", { reviewer: { passed: true } })).toBe(
+				true,
+			);
+			expect(await evaluateWhen("$exists(reviewer) and reviewer.passed = true", {})).toBe(false);
 		});
 
 		test("missing path evaluates to falsy", async () => {
@@ -72,7 +64,7 @@ describe("when evaluation", () => {
 			expect(
 				await evaluateWhen("reviewer.output.score > 80", {
 					reviewer: { output: { score: 85 } },
-				})
+				}),
 			).toBe(true);
 		});
 	});
