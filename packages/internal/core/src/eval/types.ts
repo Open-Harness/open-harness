@@ -11,6 +11,8 @@ import type {
 	RecordingLinkedEvent,
 } from "../state/events.js";
 import type { RunSnapshot } from "../state/snapshot.js";
+import type { NodeRegistry } from "../nodes/index.js";
+import type { FlowDefinition } from "../state/index.js";
 
 // Re-export recording event types for convenience
 export type { RecordingLinkedEventPayload, RecordingLinkedEvent };
@@ -284,3 +286,142 @@ export type EvalMatrixRunOptions = {
 	baselineVariantId?: string;
 	tags?: string[];
 };
+
+// ============================================================================
+// Phase 7: Workflow factory and result types
+// ============================================================================
+
+/**
+ * Factory function that creates a workflow for a given eval case.
+ *
+ * This abstraction allows the eval runner to execute different workflow
+ * configurations (variants) without knowing the internal workflow structure.
+ *
+ * @example
+ * ```ts
+ * const workflowFactory: WorkflowFactory = ({ caseInput, variantId }) => ({
+ *   flow: createCoderReviewerFlow(caseInput),
+ *   register(registry, mode) {
+ *     registry.register(createClaudeNode(mode === "replay" ? mockProvider : liveProvider));
+ *   },
+ *   primaryOutputNodeId: "reviewer",
+ * });
+ * ```
+ */
+export type WorkflowFactory = (args: {
+	datasetId: string;
+	caseId: string;
+	variantId: string;
+	caseInput: unknown;
+}) => {
+	/**
+	 * The flow definition to execute.
+	 */
+	flow: FlowDefinition;
+
+	/**
+	 * Register node types with the registry.
+	 * Called before each case execution.
+	 *
+	 * @param registry - The node registry to populate
+	 * @param mode - Current execution mode (record/replay/live)
+	 */
+	register(registry: NodeRegistry, mode: "record" | "replay" | "live"): void;
+
+	/**
+	 * Optional: The node ID whose output is considered the primary result.
+	 * Used for output.* assertions when path starts with "primaryOutput".
+	 */
+	primaryOutputNodeId?: string;
+};
+
+/**
+ * Result of running a single eval case against a variant.
+ */
+export type CaseResult = {
+	/** Case identifier from the dataset */
+	caseId: string;
+	/** Variant identifier used for this run */
+	variantId: string;
+	/** The artifact produced by the workflow execution */
+	artifact: EvalArtifact;
+	/** Results of evaluating each assertion */
+	assertionResults: AssertionResult[];
+	/** Score breakdown from all scorers */
+	scores: ScoreBreakdown;
+	/** Overall pass/fail based on assertion results */
+	passed: boolean;
+	/** Error message if the case failed to execute */
+	error?: string;
+};
+
+/**
+ * Result of running all cases in a dataset against a variant.
+ */
+export type DatasetResult = {
+	/** Dataset identifier */
+	datasetId: string;
+	/** Variant identifier used for all cases */
+	variantId: string;
+	/** Results for each case */
+	caseResults: CaseResult[];
+	/** Summary statistics */
+	summary: {
+		/** Total number of cases */
+		total: number;
+		/** Number of passing cases */
+		passed: number;
+		/** Number of failing cases */
+		failed: number;
+		/** Pass rate as a decimal (0-1) */
+		passRate: number;
+	};
+};
+
+/**
+ * Result of running a dataset against multiple variants (matrix execution).
+ */
+export type MatrixResult = {
+	/** Dataset identifier */
+	datasetId: string;
+	/** Results for each variant */
+	variantResults: DatasetResult[];
+	/** Optional comparison against a baseline variant */
+	comparison?: ComparisonResult;
+};
+
+/**
+ * Result of comparing a candidate variant against a baseline.
+ */
+export type ComparisonResult = {
+	/** The variant used as baseline */
+	baselineVariantId: string;
+	/** Cases that regressed (were passing, now failing or worse) */
+	regressions: Regression[];
+	/** Cases that improved (were failing, now passing or better) */
+	improvements: Improvement[];
+};
+
+/**
+ * A regression detected when comparing to baseline.
+ */
+export type Regression = {
+	/** Case that regressed */
+	caseId: string;
+	/** Variant with the regression */
+	variantId: string;
+	/** Type of regression */
+	type: "assertion" | "metric" | "score";
+	/** Human-readable description */
+	description: string;
+	/** Baseline value */
+	baseline: unknown;
+	/** Current (regressed) value */
+	current: unknown;
+};
+
+/**
+ * An improvement detected when comparing to baseline.
+ * Same shape as Regression but different semantics.
+ */
+export type Improvement = Regression;

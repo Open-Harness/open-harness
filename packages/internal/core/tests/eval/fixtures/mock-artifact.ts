@@ -225,3 +225,252 @@ export function createHighUsageArtifact(): EvalArtifact {
 		],
 	});
 }
+
+// ============================================================================
+// Phase 7: Workflow factory and recording store mocks
+// ============================================================================
+
+import type { NodeRegistry, NodeTypeDefinition } from "../../../src/nodes/index.js";
+import type { RecordingStore, RecordingListQuery } from "../../../src/recording/store.js";
+import type { Recording, RecordingMetadata } from "../../../src/recording/types.js";
+import type { FlowDefinition } from "../../../src/state/index.js";
+import type { WorkflowFactory, EvalDataset, EvalVariant, CaseResult, DatasetResult } from "../../../src/eval/types.js";
+
+/**
+ * Create a mock workflow factory for testing.
+ *
+ * Returns a simple flow with a single "mock" node that produces deterministic output.
+ */
+export function createMockWorkflowFactory(options?: {
+	primaryOutputNodeId?: string;
+	nodeOutput?: (input: unknown) => unknown;
+}): WorkflowFactory {
+	return ({ datasetId, caseId, variantId, caseInput }) => ({
+		flow: {
+			name: `mock-workflow-${datasetId}`,
+			nodes: [
+				{
+					id: options?.primaryOutputNodeId ?? "main",
+					type: "mock",
+					input: caseInput as Record<string, unknown>,
+				},
+			],
+			edges: [],
+		} satisfies FlowDefinition,
+		register(registry: NodeRegistry, mode: "record" | "replay" | "live") {
+			// Create a mock node type
+			const mockNodeDef: NodeTypeDefinition<Record<string, unknown>, Record<string, unknown>> = {
+				type: "mock",
+				async run(ctx, input) {
+					// Emit agent events for metrics
+					ctx.emit({
+						type: "agent:start",
+						nodeId: ctx.nodeId,
+						runId: ctx.runId,
+						sessionId: `session-${ctx.nodeId}`,
+						prompt: "test",
+					});
+
+					// Use custom output or default
+					let result: unknown;
+					try {
+						result = options?.nodeOutput?.(input) ?? { text: `Mock output for ${caseId}` };
+					} catch (error) {
+						// Emit agent:error event so behavior.no_errors assertion detects it
+						ctx.emit({
+							type: "agent:error",
+							nodeId: ctx.nodeId,
+							runId: ctx.runId,
+							errorType: "ExecutionError",
+							message: error instanceof Error ? error.message : String(error),
+						});
+						throw error;
+					}
+
+					ctx.emit({
+						type: "agent:complete",
+						nodeId: ctx.nodeId,
+						runId: ctx.runId,
+						result: typeof result === "string" ? result : JSON.stringify(result),
+						usage: { inputTokens: 100, outputTokens: 50 },
+						totalCostUsd: 0.001,
+						durationMs: 1000,
+						numTurns: 1,
+					});
+
+					return result as Record<string, unknown>;
+				},
+			};
+			registry.register(mockNodeDef);
+		},
+		primaryOutputNodeId: options?.primaryOutputNodeId ?? "main",
+	});
+}
+
+/**
+ * Create a mock recording store for testing.
+ */
+export function createMockRecordingStore(): RecordingStore {
+	const recordings = new Map<string, Recording<unknown>>();
+
+	return {
+		async save<T>(recording: Recording<T>): Promise<void> {
+			recordings.set(recording.id, recording as Recording<unknown>);
+		},
+
+		async load<T>(id: string): Promise<Recording<T> | null> {
+			const recording = recordings.get(id);
+			return (recording as Recording<T> | undefined) ?? null;
+		},
+
+		async list(query?: RecordingListQuery): Promise<RecordingMetadata[]> {
+			const results: RecordingMetadata[] = [];
+			for (const recording of recordings.values()) {
+				const metadata = recording.metadata;
+				if (query?.providerType && metadata.providerType !== query.providerType) {
+					continue;
+				}
+				if (query?.inputHash && metadata.inputHash !== query.inputHash) {
+					continue;
+				}
+				results.push(metadata);
+			}
+			return results;
+		},
+	};
+}
+
+/**
+ * Create a mock dataset for testing.
+ */
+export function createMockDataset(options?: {
+	id?: string;
+	numCases?: number;
+	workflowName?: string;
+}): EvalDataset {
+	const numCases = options?.numCases ?? 3;
+	const cases = [];
+
+	for (let i = 0; i < numCases; i++) {
+		cases.push({
+			id: `case-${i + 1}`,
+			name: `Test Case ${i + 1}`,
+			input: { prompt: `Test input ${i + 1}` },
+			assertions: [
+				{ type: "behavior.no_errors" as const },
+				{ type: "metric.latency_ms.max" as const, value: 30000 },
+			],
+			tags: i === 0 ? ["smoke"] : undefined,
+		});
+	}
+
+	return {
+		id: options?.id ?? "test-dataset",
+		workflowName: options?.workflowName ?? "mock-workflow",
+		version: "1.0.0",
+		cases,
+	};
+}
+
+/**
+ * Create a mock variant for testing.
+ */
+export function createMockVariant(options?: {
+	id?: string;
+	providerType?: string;
+	isBaseline?: boolean;
+}): EvalVariant {
+	return {
+		id: options?.id ?? "mock-variant",
+		providerTypeByNode: {
+			main: options?.providerType ?? "mock",
+		},
+		tags: options?.isBaseline ? ["baseline"] : undefined,
+	};
+}
+
+/**
+ * Create a mock CaseResult for testing compare functions.
+ */
+export function createMockCaseResult(options?: {
+	caseId?: string;
+	variantId?: string;
+	passed?: boolean;
+	overallScore?: number;
+	durationMs?: number;
+	costUsd?: number;
+	error?: string;
+}): CaseResult {
+	const artifact = createMockArtifact({
+		nodes: [
+			{
+				nodeId: "main",
+				result: options?.passed !== false ? "Success" : undefined,
+				error: options?.passed === false ? (options?.error ?? "Test failure") : undefined,
+				durationMs: options?.durationMs ?? 1000,
+				totalCostUsd: options?.costUsd ?? 0.001,
+				inputTokens: 100,
+				outputTokens: 50,
+			},
+		],
+	});
+
+	return {
+		caseId: options?.caseId ?? "test-case",
+		variantId: options?.variantId ?? "test-variant",
+		artifact,
+		assertionResults: [
+			{
+				assertion: { type: "behavior.no_errors" },
+				passed: options?.passed ?? true,
+				message: options?.passed === false ? "Errors found" : undefined,
+			},
+		],
+		scores: {
+			overall: options?.overallScore ?? (options?.passed !== false ? 0.8 : 0.2),
+			scores: [
+				{ name: "latency", value: 0.9, rawValue: options?.durationMs ?? 1000 },
+				{ name: "cost", value: 0.95, rawValue: options?.costUsd ?? 0.001 },
+			],
+		},
+		passed: options?.passed ?? true,
+		error: options?.error,
+	};
+}
+
+/**
+ * Create a mock DatasetResult for testing compare and report functions.
+ */
+export function createMockDatasetResult(options?: {
+	datasetId?: string;
+	variantId?: string;
+	numCases?: number;
+	passRate?: number;
+}): DatasetResult {
+	const numCases = options?.numCases ?? 3;
+	const passRate = options?.passRate ?? 1.0;
+	const numPassing = Math.round(numCases * passRate);
+
+	const caseResults: CaseResult[] = [];
+	for (let i = 0; i < numCases; i++) {
+		caseResults.push(
+			createMockCaseResult({
+				caseId: `case-${i + 1}`,
+				variantId: options?.variantId ?? "test-variant",
+				passed: i < numPassing,
+			}),
+		);
+	}
+
+	return {
+		datasetId: options?.datasetId ?? "test-dataset",
+		variantId: options?.variantId ?? "test-variant",
+		caseResults,
+		summary: {
+			total: numCases,
+			passed: numPassing,
+			failed: numCases - numPassing,
+			passRate,
+		},
+	};
+}

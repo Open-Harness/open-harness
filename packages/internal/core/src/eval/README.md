@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-08T09:04:06.145Z"
-lastCommit: "10d2ada2acd034ba27038d3f1de354460fe5f685"
-lastCommitDate: "2026-01-08T08:43:52Z"
+lastUpdated: "2026-01-08T09:35:22.593Z"
+lastCommit: "0c452aac44a8fd190c9d16a659e1174c966a4dcf"
+lastCommitDate: "2026-01-08T09:04:05Z"
 ---
 # Eval System (v0.2.0)
 
@@ -220,10 +220,15 @@ await cache.set(key, score);
 ```
 eval/
 ├── index.ts        # Re-exports public API
-├── types.ts        # Core types (EvalDataset, Assertion, etc.)
+├── types.ts        # Core types (EvalDataset, Assertion, WorkflowFactory, etc.)
 ├── dataset.ts      # Dataset loading and validation
 ├── assertions.ts   # Assertion evaluation
 ├── cache.ts        # Judge cache interface
+├── engine.ts       # EvalEngine - high-level orchestration (Phase 7)
+├── runner.ts       # runCase/runDataset/runMatrix (Phase 7)
+├── compare.ts      # Baseline comparison and flake detection (Phase 7)
+├── report.ts       # Markdown and JSON report generation (Phase 7)
+├── hooks.ts        # Lifecycle hooks for observability (Phase 7)
 ├── README.md       # This file
 └── scorers/
     ├── index.ts    # Re-exports all scorers
@@ -234,8 +239,179 @@ eval/
     └── llm-judge.ts  # LLM-as-judge scorer (stub)
 ```
 
+## Engine Usage (Phase 7)
+
+The eval engine provides a high-level API for running evaluations across datasets and variants.
+
+### Basic Usage
+
+```typescript
+import {
+  createEvalEngine,
+  createConsoleHooks,
+} from "@internal/core";
+import { InMemoryRecordingStore } from "@internal/core/recording";
+
+// Create the engine
+const engine = createEvalEngine({
+  recordingStore: new InMemoryRecordingStore(),
+  workflowFactory: ({ caseInput }) => ({
+    flow: createMyWorkflow(caseInput),
+    register(registry, mode) {
+      registry.register(createMyNodeTypes(mode));
+    },
+    primaryOutputNodeId: "main",
+  }),
+  hooks: createConsoleHooks(),
+});
+
+// Run a matrix evaluation
+const result = await engine.runMatrix({
+  dataset: myDataset,
+  variants: [baselineVariant, candidateVariant],
+  mode: "live",
+  baselineVariantId: "baseline",
+});
+
+// Generate a report
+const report = engine.report(result, { format: "markdown" });
+console.log(report);
+```
+
+### Workflow Factory
+
+The `workflowFactory` creates workflows for each case:
+
+```typescript
+const workflowFactory: WorkflowFactory = ({
+  datasetId,
+  caseId,
+  variantId,
+  caseInput,
+}) => ({
+  // The flow definition to execute
+  flow: {
+    name: "my-workflow",
+    nodes: [
+      { id: "main", type: "claude", input: caseInput },
+    ],
+    edges: [],
+  },
+
+  // Register node types with the registry
+  register(registry, mode) {
+    if (mode === "replay") {
+      // Use recordings in replay mode
+      registry.register(createMockClaudeNode());
+    } else {
+      // Use live provider
+      registry.register(createClaudeNode());
+    }
+  },
+
+  // Optional: primary output node for assertions
+  primaryOutputNodeId: "main",
+});
+```
+
+### Variants
+
+Define variants to test different configurations:
+
+```typescript
+const variants: EvalVariant[] = [
+  {
+    id: "claude-3-5-sonnet",
+    providerTypeByNode: {
+      coder: "claude",
+      reviewer: "claude",
+    },
+    modelByNode: {
+      coder: "claude-3-5-sonnet-20241022",
+      reviewer: "claude-3-5-sonnet-20241022",
+    },
+    tags: ["baseline"],
+  },
+  {
+    id: "claude-opus",
+    providerTypeByNode: {
+      coder: "claude",
+      reviewer: "claude",
+    },
+    modelByNode: {
+      coder: "claude-opus-4-20250514",
+      reviewer: "claude-opus-4-20250514",
+    },
+    tags: ["candidate"],
+  },
+];
+```
+
+### Comparison and Reports
+
+```typescript
+import { compareToBaseline, generateReport } from "@internal/core";
+
+// Compare candidate to baseline
+const comparison = compareToBaseline(baselineResult, candidateResult);
+
+console.log("Regressions:", comparison.regressions.length);
+console.log("Improvements:", comparison.improvements.length);
+
+// Generate Markdown report
+const markdown = generateReport(matrixResult, {
+  format: "markdown",
+  includeDetails: true,
+  maxRegressions: 10,
+});
+
+// Generate JSON report
+const json = generateReport(matrixResult, {
+  format: "json",
+  includeDetails: false,
+});
+```
+
+### Lifecycle Hooks
+
+Use hooks to observe evaluation progress:
+
+```typescript
+import { createCollectingHooks, composeHooks } from "@internal/core";
+
+// Console logging
+const consoleHooks = createConsoleHooks();
+
+// Collecting for testing
+const collectingHooks = createCollectingHooks();
+
+// Compose multiple hooks
+const hooks = composeHooks(consoleHooks, collectingHooks);
+
+// After evaluation, access collected data
+console.log("Cases started:", collectingHooks.casesStarted.length);
+console.log("Regressions:", collectingHooks.regressions.length);
+```
+
+### Runner Functions
+
+For fine-grained control, use runner functions directly:
+
+```typescript
+import { runCase, runDataset, runMatrix } from "@internal/core";
+
+// Run a single case
+const caseResult = await runCase(config, dataset, "case-1", variant, "live");
+
+// Run all cases in a dataset
+const datasetResult = await runDataset(config, dataset, variant, "live");
+
+// Run multiple variants
+const matrixResult = await runMatrix(config, dataset, variants, "live");
+```
+
 ## Limitations (v0.2.0)
 
 - **Similarity scorer**: Only `exact` and `contains` algorithms implemented. `levenshtein` and `semantic` return stub values.
 - **LLM judge**: Disabled by default and returns stub values when enabled. Full implementation planned for future versions.
-- **No engine**: Phase 7 will add the runner, comparison, and reporting capabilities.
+- **Replay mode**: Requires pre-recorded fixtures. See Phase 8 for fixture recording scripts.

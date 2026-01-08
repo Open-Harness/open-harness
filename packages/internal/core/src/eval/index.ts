@@ -1,15 +1,20 @@
 /**
  * Eval system for Open Harness v0.2.0
  *
- * This module provides the type system and utilities for evaluating
- * workflows against datasets, including:
+ * This module provides the complete evaluation system for workflows:
  *
+ * Phase 6 (foundation):
  * - Dataset loading and validation
  * - Assertion evaluation
  * - Scoring (latency, cost, tokens, similarity, LLM-as-judge)
  * - Judge caching
  *
- * Phase 7 (engine) builds on top of this foundation.
+ * Phase 7 (engine):
+ * - Eval engine for orchestrating matrix runs
+ * - Runner for executing cases/datasets/matrices
+ * - Comparison utilities for baseline analysis
+ * - Report generation (Markdown, JSON)
+ * - Lifecycle hooks for observability
  */
 
 // ============================================================================
@@ -40,6 +45,14 @@ export type {
 	// Recording event types (re-exported from state/events)
 	RecordingLinkedEventPayload,
 	RecordingLinkedEvent,
+	// Phase 7: Workflow factory and result types
+	WorkflowFactory,
+	CaseResult,
+	DatasetResult,
+	MatrixResult,
+	ComparisonResult,
+	Regression,
+	Improvement,
 } from "./types.js";
 
 // ============================================================================
@@ -108,3 +121,50 @@ export {
 	generateJudgeCacheKey,
 	type EvalJudgeCache,
 } from "./cache.js";
+
+// ============================================================================
+// Phase 7: Engine
+// ============================================================================
+
+export { createEvalEngine, type EvalEngine, type EvalEngineConfig } from "./engine.js";
+
+// ============================================================================
+// Phase 7: Runner
+// ============================================================================
+
+export {
+	runCase,
+	runDataset,
+	runMatrix,
+	type RunnerConfig,
+	type RunMode,
+} from "./runner.js";
+
+// ============================================================================
+// Phase 7: Compare
+// ============================================================================
+
+export { compareToBaseline, compareAcross, detectFlakes } from "./compare.js";
+
+// ============================================================================
+// Phase 7: Report
+// ============================================================================
+
+export {
+	generateReport,
+	summarizeDataset,
+	type ReportFormat,
+	type ReportOptions,
+} from "./report.js";
+
+// ============================================================================
+// Phase 7: Hooks
+// ============================================================================
+
+export {
+	createNoOpHooks,
+	createConsoleHooks,
+	composeHooks,
+	createCollectingHooks,
+	type EvalHooks,
+} from "./hooks.js";
