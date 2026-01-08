@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-08T12:47:42.514Z"
-lastCommit: "699e07d37bc235afa15dbf595677e6e52162f38f"
-lastCommitDate: "2026-01-08T10:44:23Z"
+lastUpdated: "2026-01-08T22:40:47.621Z"
+lastCommit: "a177d808bc81738def6053708d20536c5729de0d"
+lastCommitDate: "2026-01-08T22:28:28Z"
 ---
 # Eval System (v0.2.0)
 
@@ -232,8 +232,6 @@ eval/
 ├── compare.ts      # Baseline comparison and flake detection (Phase 7)
 ├── report.ts       # Markdown and JSON report generation (Phase 7)
 ├── hooks.ts        # Lifecycle hooks for observability (Phase 7)
-├── dx-types.ts     # DX layer types (Phase 8)
-├── dx.ts           # defineSuite, variant, gates, runSuite (Phase 8)
 ├── README.md       # This file
 └── scorers/
     ├── index.ts    # Re-exports all scorers
@@ -244,147 +242,9 @@ eval/
     └── llm-judge.ts  # LLM-as-judge scorer (stub)
 ```
 
-## DX Layer (Phase 8) - Recommended
-
-The DX layer provides an ergonomic API for defining and running eval suites. This is the recommended way to use the eval system.
-
-### Basic Usage
-
-```typescript
-import { defineSuite, variant, gates, runSuite } from "@internal/core";
-
-// Define a suite
-const suite = defineSuite({
-  name: "my-workflow-eval",
-  flow: myWorkflowFactory,
-  cases: [
-    { id: "test-1", input: { task: "Build hello API" } },
-    { id: "test-2", input: { task: "Fix bug in auth" } },
-  ],
-  variants: [
-    variant("claude/sonnet", { model: "claude-3-5-sonnet-latest" }),
-    variant("claude/opus", { model: "claude-3-opus-latest" }),
-  ],
-  baseline: "claude/sonnet",
-  gates: [
-    gates.noRegressions(),
-    gates.passRate(0.9),
-    gates.latencyUnder(30000),
-    gates.costUnder(1.0),
-  ],
-  defaultAssertions: [
-    { type: "behavior.no_errors" },
-    { type: "metric.latency_ms.max", value: 60000 },
-  ],
-});
-
-// Run the suite
-const report = await runSuite(suite, { mode: "live" });
-
-// Check results
-if (!report.passed) {
-  console.log("Suite failed!");
-  for (const gate of report.gateResults) {
-    if (!gate.passed) {
-      console.log(`Gate "${gate.name}" failed: ${gate.message}`);
-    }
-  }
-}
-```
-
-### Workflow Factory
-
-Define how to create workflows for each case:
-
-```typescript
-import type { SuiteWorkflowFactory } from "@internal/core";
-
-const myWorkflowFactory: SuiteWorkflowFactory = ({ caseId, caseInput, variant }) => ({
-  flow: {
-    name: "my-workflow",
-    nodes: [
-      { id: "main", type: "claude", input: caseInput },
-    ],
-    edges: [],
-  },
-  register(registry, mode) {
-    registry.register(createClaudeNode(variant.model));
-  },
-  primaryOutputNodeId: "main",
-});
-```
-
-### Variant Helper
-
-Create variant definitions easily:
-
-```typescript
-// Simple variant with model
-variant("claude/sonnet", { model: "claude-3-5-sonnet-latest" })
-
-// Variant with per-node model overrides
-variant("mixed", {
-  modelByNode: {
-    coder: "claude-3-5-sonnet-latest",
-    reviewer: "claude-3-opus-latest",
-  }
-})
-
-// Variant with tags and custom config
-variant("experimental", {
-  model: "claude-3-opus-latest",
-  tags: ["candidate", "expensive"],
-  config: { temperature: 0.7 },
-})
-```
-
-### Built-in Gates
-
-| Gate | Description |
-|------|-------------|
-| `gates.noRegressions()` | Fails if any cases regressed vs baseline |
-| `gates.passRate(threshold)` | Fails if pass rate is below threshold (0-1) |
-| `gates.latencyUnder(ms)` | Fails if any case exceeds max latency |
-| `gates.costUnder(usd)` | Fails if any case exceeds max cost |
-| `gates.requiredCases([...])` | Fails if specified cases don't pass |
-| `gates.custom(name, desc, fn)` | Custom gate with your own logic |
-
-### Run Options
-
-```typescript
-await runSuite(suite, {
-  mode: "live",              // "live", "record", or "replay"
-  filterCases: ["test-1"],   // Run only specific cases
-  filterTags: ["smoke"],     // Run only cases with these tags
-  baseline: "variant-b",     // Override baseline for this run
-});
-```
-
-### Suite Report
-
-The report includes:
-
-```typescript
-type SuiteReport = {
-  suiteName: string;
-  matrixResult: MatrixResult;  // Full matrix results
-  gateResults: GateResult[];   // Gate pass/fail
-  passed: boolean;             // Overall suite pass/fail
-  summary: {
-    totalCases: number;
-    passedCases: number;
-    failedCases: number;
-    passRate: number;
-    gatesPassed: number;
-    totalGates: number;
-    regressions: number;
-  };
-};
-```
-
 ## Engine Usage (Phase 7)
 
-The eval engine provides a lower-level API for running evaluations. Use this when you need more control than the DX layer provides.
+The eval engine provides a lower-level API for running evaluations.
 
 ### Basic Usage
 

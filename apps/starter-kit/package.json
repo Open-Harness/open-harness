@@ -5,8 +5,6 @@
 	"type": "module",
 	"description": "Starter kit demonstrating Open Harness eval system with prompt comparison",
 	"scripts": {
-		"eval": "bun run src/evals/run.ts",
-		"record": "bun run src/evals/record.ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check . --write"
 	},

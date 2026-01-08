@@ -1,20 +1,13 @@
 /**
  * Open Harness Starter Kit
  *
- * A demonstration of the Open Harness eval system for prompt comparison.
+ * Demonstration of the Open Harness eval system using Vitest.
  *
- * @example
- * ```bash
- * # Run eval in live mode
- * bun run eval --mode live
+ * This package will be rebuilt in Phase 5 of v0.2.0 to use the new
+ * `@open-harness/vitest` plugin for eval testing.
  *
- * # Record fixtures
- * bun run record
- *
- * # Run eval in replay mode
- * bun run eval --mode replay
- * ```
+ * @see packages/open-harness/vitest for the Vitest plugin
  */
 
-export { promptComparisonSuite } from "./evals/prompt-comparison.js";
-export { simpleCoderWorkflow } from "./workflows/simple-coder.js";
+// Placeholder - will export example agent and tests in Phase 5
+export {};

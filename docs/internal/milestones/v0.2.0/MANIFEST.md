@@ -16,11 +16,14 @@
 | API Types (`agent`, `harness`, `run`) | ✅ Done | Types and factories work |
 | **`run()` Execution** | ✅ **Done** | Provider injection, real metrics |
 | **Vitest Plugin** | ✅ **Done** | Matchers, reporter, types |
-| Documentation | ❌ Blocked | Blocked by Phase 3 cleanup |
+| **Old API Cleanup** | ✅ **Done** | Removed `defineSuite`/`runSuite` DX layer |
+| Documentation | 🟡 Ready | Unblocked by Phase 3 |
 
 **Phase 1 Complete (2026-01-08):** `run()` now executes providers via injection pattern. Tests verify real behavior.
 
 **Phase 2 Complete (2026-01-08):** `@open-harness/vitest` package with matchers (`toHaveLatencyUnder`, `toCostUnder`, `toHaveTokensUnder`), `OpenHarnessReporter` with quality gates, and TypeScript declarations.
+
+**Phase 3 Complete (2026-01-08):** Removed old DX layer (`defineSuite`, `runSuite`, `variant`, `gates`). Cleaned up starter-kit for Phase 5 rebuild.
 
 ---
 
@@ -426,42 +429,48 @@ test('agent responds quickly and cheaply', async () => {
 
 ---
 
-## Phase 3: Remove Old API
+## Phase 3: Remove Old API ✅ COMPLETE
 
-**Status:** 🔴 Not Started
-**Depends on:** Phase 2
+**Status:** ✅ COMPLETE (2026-01-08)
+**Depends on:** Phase 2 ✅
 **Effort:** Light (mechanical)
 
-### Task 3.1: Delete Old DX Files
+Removed the Phase 8 DX layer (`defineSuite`, `runSuite`, `variant`, `gates`) since it's replaced by the Vitest plugin. The old starter-kit demo code was also deleted; Phase 5 will rebuild it.
 
-- [ ] Delete `packages/internal/core/src/eval/dx.ts`
-- [ ] Delete `packages/internal/core/src/eval/dx-types.ts`
-- [ ] Remove from `packages/internal/core/src/eval/index.ts`
+### Task 3.1: Delete Old DX Files ✅
 
-### Task 3.2: Remove Old Exports
+- [x] Delete `packages/internal/core/src/eval/dx.ts`
+- [x] Delete `packages/internal/core/src/eval/dx-types.ts`
+- [x] Remove from `packages/internal/core/src/eval/index.ts`
+- [x] Delete `packages/internal/core/tests/eval/dx.test.ts`
+- [x] Update `packages/internal/core/src/eval/README.md` to remove DX documentation
 
-- [ ] Remove `runFlow` from public exports
-- [ ] Remove `createHarness` from public exports
-- [ ] Remove `createRuntime` from public exports
+### Task 3.2: Clean Up Starter Kit ✅
 
-### Task 3.3: Migrate Any Tests Using Old API
+- [x] Delete `apps/starter-kit/src/evals/` (used old DX API)
+- [x] Delete `apps/starter-kit/src/workflows/` (used old DX API)
+- [x] Update `apps/starter-kit/src/index.ts` (placeholder until Phase 5)
+- [x] Remove old scripts from `apps/starter-kit/package.json`
 
-- [ ] Find tests using old API (`grep -r "defineSuite\|runSuite"`)
-- [ ] Migrate to new API
-- [ ] Verify all pass
+**Note:** `runFlow`, `createHarness`, `createRuntime` are already internal-only (in `@internal/*` packages, not exposed in `@open-harness/*` public API). No changes needed.
 
-### Task 3.4: Phase 3 Quality Gate
+### Task 3.3: Verify Old API Removed ✅
 
-- [ ] `grep -r "defineSuite\|runSuite" packages/` — returns nothing
-- [ ] `bun run typecheck` — zero errors
-- [ ] `bun run test` — all pass
+- [x] `grep -r "defineSuite\|runSuite" packages/` — returns nothing
+- [x] All old API references cleaned up
+
+### Task 3.4: Phase 3 Quality Gate ✅
+
+- [x] `bun run typecheck` — zero errors (14 packages pass)
+- [x] `bun run lint` — zero warnings (14 packages pass)
+- [x] `bun run test` — all pass
 
 ---
 
 ## Phase 4: Documentation
 
-**Status:** 🔴 Blocked
-**Depends on:** Phase 3
+**Status:** 🟡 Ready to Start
+**Depends on:** Phase 3 ✅
 **Effort:** Light
 
 ### Task 4.1: Update evals-pattern.md
@@ -494,7 +503,9 @@ test('agent responds quickly and cheaply', async () => {
 **Depends on:** Phase 4
 **Effort:** Light
 
-### Task 5.1: Create Example
+**Note (Phase 3):** The old `apps/starter-kit/` eval code using `defineSuite`/`runSuite` was deleted in Phase 3. Phase 5 should rebuild it using the new Vitest-based API.
+
+### Task 5.1: Create Quickstart Example
 
 **Directory:** `examples/quickstart/`
 
@@ -503,7 +514,17 @@ test('agent responds quickly and cheaply', async () => {
 - [ ] `src/agent.ts`
 - [ ] `tests/agent.test.ts`
 
-### Task 5.2: Phase 5 Quality Gate
+### Task 5.2: Rebuild Starter Kit (Optional)
+
+**Directory:** `apps/starter-kit/`
+
+The starter-kit was cleared in Phase 3. Options:
+- Option A: Rebuild with new `@open-harness/vitest` API (prompt comparison example)
+- Option B: Remove the package entirely if examples/quickstart is sufficient
+- [ ] Decide approach (rebuild or remove)
+- [ ] Implement decision
+
+### Task 5.3: Phase 5 Quality Gate
 
 - [ ] `FIXTURE_MODE=record bun test` — creates fixtures
 - [ ] `FIXTURE_MODE=replay bun test` — uses fixtures, passes

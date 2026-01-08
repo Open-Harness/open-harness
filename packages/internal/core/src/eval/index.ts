@@ -172,26 +172,3 @@ export {
 	type EvalHooks,
 } from "./hooks.js";
 
-// ============================================================================
-// Phase 8: DX Layer
-// ============================================================================
-
-export { defineSuite, variant, gates, runSuite } from "./dx.js";
-
-export type {
-	// Suite types
-	Suite,
-	SuiteConfig,
-	SuiteCase,
-	SuiteRunOptions,
-	SuiteReport,
-	SuiteReportSummary,
-	// Variant types
-	VariantDef,
-	VariantOptions,
-	// Gate types
-	Gate,
-	GateResult,
-	// Workflow factory
-	SuiteWorkflowFactory,
-} from "./dx-types.js";
