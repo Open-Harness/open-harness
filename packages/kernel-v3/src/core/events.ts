@@ -100,7 +100,8 @@ export type AgentPausedEventPayload = {
 	type: "agent:paused";
 	nodeId: string;
 	runId: string;
-	partialText?: string;
+	// Note: partialText removed in favor of consumer-side accumulation from agent:text:delta events
+	// SDK maintains full conversation history via sessionId for resume - see issue #78
 	sessionId?: string;
 	numTurns?: number;
 };
