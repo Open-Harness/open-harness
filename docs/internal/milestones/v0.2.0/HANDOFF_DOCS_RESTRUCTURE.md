@@ -71,94 +71,208 @@ The v0.2.0 docs were a mistake - they created duplication instead of extension. 
 
 ---
 
+## Grading Rubric
+
+Use this rubric to assess EVERYTHING - docs, examples, SDK APIs. Be critical. If something sucks, say it sucks.
+
+### Documentation Quality (per page)
+
+| Criterion | 1 (Bad) | 3 (Okay) | 5 (Excellent) |
+|-----------|---------|----------|---------------|
+| **Clarity** | Confusing, jargon-heavy | Understandable with effort | Crystal clear, no re-reading needed |
+| **Completeness** | Major gaps, leaves questions | Covers basics, some gaps | Comprehensive, anticipates questions |
+| **Accuracy** | Outdated, broken examples | Mostly correct | 100% accurate, tested examples |
+| **Actionable** | Theory only, no "do this" | Some guidance | Clear steps, copy-paste works |
+| **Progressive** | Dumps everything at once | Some structure | Perfect layering, complexity builds |
+
+### Example Quality
+
+| Criterion | 1 (Bad) | 3 (Okay) | 5 (Excellent) |
+|-----------|---------|----------|---------------|
+| **Realistic** | Toy example, useless | Demonstrates concept | Something you'd actually build |
+| **Minimal** | Bloated, too much | Some noise | Only essential code shown |
+| **Runnable** | Broken, won't run | Works with tweaks | Copy-paste and it runs |
+| **Explained** | No context | Some comments | Every line purposeful and explained |
+| **Connected** | Standalone, isolated | Links to others | Builds on previous, threads through |
+
+### SDK/API DX (surfaced through docs)
+
+| Criterion | 1 (Bad) | 3 (Okay) | 5 (Excellent) |
+|-----------|---------|----------|---------------|
+| **Obviousness** | Need to read source | Need docs | Obvious from types/autocomplete |
+| **Defaults** | Must configure everything | Some defaults | Works with zero config |
+| **Error Messages** | Cryptic, unhelpful | Points to problem | Tells you exactly how to fix |
+| **Naming** | Confusing, inconsistent | Okay, some oddities | Self-documenting, consistent |
+| **Escape Hatches** | Locked in, can't customize | Some extensibility | Full control when needed |
+
+### Writing Quality
+
+| Criterion | 1 (Bad) | 3 (Okay) | 5 (Excellent) |
+|-----------|---------|----------|---------------|
+| **Concise** | Bloated, repetitive | Some filler | Every word earns its place |
+| **Voice** | Robotic, passive | Neutral | Active, direct, confident |
+| **Scannable** | Wall of text | Some headers | Headers, bullets, easy to scan |
+| **Tone** | Condescending or confusing | Professional | Friendly expert, respects reader |
+
+---
+
 ## Your Task: Multi-Spectrum Analysis + Restructure Plan
 
 ### Phase 1: Fan-Out Analysis (Parallel Agents)
 
-Launch these analysis agents in parallel:
+Launch these analysis agents in parallel. Each should be CRITICAL - we want to know what sucks, not just what exists.
 
-#### Agent 1: Content Audit
+#### Agent 1: Content Quality Audit
 ```
 Audit all existing documentation files in apps/docs/content/docs/
-For each file, assess:
-- Completeness (1-5 scale)
-- Accuracy vs current codebase
-- Code examples: do they work?
-- What's missing?
 
-Output: content-audit.yaml with per-file assessments
+For each file, grade against the Documentation Quality rubric above (1-5 per criterion).
+
+Also identify:
+- What's GOOD and should be kept
+- What SUCKS and needs rewriting
+- What's MISSING entirely
+- What's WRONG (outdated, broken)
+- What's CONFUSING (even if technically correct)
+
+Be harsh. If the writing is bad, say it's bad.
+
+Output: content-audit.yaml with:
+  - Per-file scores
+  - Specific issues quoted
+  - Recommendations (keep/rewrite/delete/merge)
 ```
 
-#### Agent 2: User Journey Analysis
+#### Agent 2: User Journey & Friction Analysis
 ```
-Map the ideal user journey for Open Harness:
-1. "What is this?" → First impression
-2. "Can I try it?" → Time to first success
-3. "How do I do X?" → Task completion
-4. "How does it work?" → Understanding
-5. "What's the API?" → Reference lookup
+Map the ACTUAL user journey (not ideal) through current docs:
+1. Land on docs site - what do they see?
+2. Try to get started - where do they go?
+3. Hit first problem - where do they get stuck?
+4. Try to understand - what confuses them?
+5. Look up reference - can they find it?
 
 For each stage, identify:
-- What questions users have
-- What content answers them
-- What's missing
+- FRICTION POINTS - where do users get stuck?
+- DEAD ENDS - where do docs fail to answer?
+- CONFUSION - where do docs make it worse?
+- GAPS - what questions have no answers?
 
-Output: user-journey.yaml with gaps identified
+Think like a frustrated user, not a fan.
+
+Output: user-journey.yaml with:
+  - Journey map with friction scores
+  - Specific pain points quoted
+  - Gap analysis
 ```
 
-#### Agent 3: Example Thread Analysis
+#### Agent 3: Example Quality Audit
 ```
-Design a SINGLE example that threads through all docs:
-- Starts minimal (hello world)
-- Adds complexity progressively
-- Covers all major features by the end
-- Each doc section builds on previous
+Audit ALL code examples in the docs:
 
-Consider: What workflow is:
-- Simple enough to start with
-- Rich enough to demonstrate all features
-- Realistic (something users would actually build)
+For each example:
+1. Does it actually run? (test it)
+2. Is it minimal or bloated?
+3. Is it realistic or toy?
+4. Does it connect to other examples?
+5. Grade against Example Quality rubric
 
-Output: example-thread.md with the progressive example design
-```
+Also design the SINGLE THREADED EXAMPLE:
+- What workflow threads through all docs?
+- How does it grow at each level?
+- What concepts does each level introduce?
 
-#### Agent 4: Competitive Analysis
-```
-Analyze documentation patterns from best-in-class projects:
-- Stripe (gold standard for DX)
-- Vercel/Next.js
-- Supabase
-- LangChain
-
-What do they do well?
-What patterns can we adopt?
-
-Output: competitive-analysis.md with recommendations
+Output: example-audit.yaml with:
+  - Per-example scores and issues
+  - Which examples are broken
+  - The threaded example specification
 ```
 
-#### Agent 5: v0.2.0 Integration Analysis
+#### Agent 4: SDK DX Audit (Through Documentation Lens)
 ```
-Analyze where v0.2.0 features fit in the existing structure:
-- Evals: where in the journey?
-- Providers: where in the journey?
-- Recording: where in the journey?
+This is crucial: BAD DOCS often mean BAD APIs.
 
-For each, determine:
-- Is it core (everyone needs) or advanced (some need)?
-- When should it be introduced?
-- What prerequisites does it have?
+As you analyze docs, identify SDK issues:
+- What's HARD TO EXPLAIN? → Probably hard to use
+- What needs EXCESSIVE CONTEXT? → API is confusing
+- What has LOTS OF CAVEATS? → Design smell
+- What do users NEED TO KNOW but shouldn't? → Leaky abstraction
 
-Output: v020-integration.yaml with placement recommendations
+Specific questions:
+- Is `createHarness()` vs `runFlow()` confusing?
+- Are the concepts (Hub, Runtime, Channel) necessary for users?
+- Is the YAML vs TypeScript story clear?
+- Are error messages helpful?
+- What would Stripe do differently?
+
+Output: sdk-dx-issues.yaml with:
+  - API pain points surfaced
+  - Naming issues
+  - Missing conveniences
+  - Recommendations for SDK improvements (for v0.3.0)
+```
+
+#### Agent 5: Competitive & Best Practices Analysis
+```
+Compare against gold standard docs:
+- Stripe Docs
+- Vercel/Next.js Docs
+- Supabase Docs
+- Tailwind Docs
+
+For each, identify:
+- What do they do that we don't?
+- What patterns should we steal?
+- What's their quickstart structure?
+- How do they handle progressive disclosure?
+- How do they thread examples?
+
+Also research:
+- Diátaxis framework - are we using it right?
+- Documentation best practices 2024-2025
+
+Output: competitive-analysis.md with:
+  - Specific patterns to adopt
+  - Structure recommendations
+  - Writing style recommendations
+```
+
+#### Agent 6: v0.2.0 Feature Integration
+```
+For each v0.2.0 feature, determine placement:
+
+EVALS:
+- Who needs this? (everyone vs power users)
+- Prerequisites to understand it?
+- Where in journey should it appear?
+- Current state of eval docs - grade it
+
+PROVIDERS:
+- Same questions
+- Is multi-provider a core or advanced concept?
+
+RECORDING:
+- Same questions
+- Is this for testing only or also debugging?
+
+Output: v020-integration.yaml with:
+  - Feature placement recommendations
+  - Prerequisites map
+  - Current state assessment
 ```
 
 ### Phase 2: Fan-In Synthesis
 
-After all agents complete, synthesize into:
+After all agents complete, synthesize into a CRITICAL report:
 
-1. **New Structure Proposal** - The merged documentation tree
-2. **Content Migration Plan** - What moves where, what gets written
-3. **Example Thread Specification** - The single example that builds throughout
-4. **Priority Order** - What to write first for v0.2.0 release
+1. **What Sucks** - Top 10 issues across all analyses
+2. **What's Good** - What to preserve
+3. **SDK Issues** - Problems surfaced that need SDK fixes (v0.3.0 backlog)
+4. **New Structure Proposal** - The merged documentation tree
+5. **Content Migration Plan** - What moves where, what gets written, what gets deleted
+6. **Example Thread Specification** - The single example that builds throughout
+7. **Writing Standards** - Voice, tone, style guide for new content
+8. **Priority Order** - What to write first for v0.2.0 release
 
 ---
 
@@ -251,38 +365,122 @@ apps/docs/content/0.2.0/03-patterns/evals-pattern.md    # Just updated, keep
 
 ## Success Criteria
 
-1. **Single structure** - No more parallel 0.2.0/ directory
-2. **Progressive example** - One workflow that builds throughout
-3. **Clear user journey** - Each section answers a specific question
-4. **v0.2.0 features integrated** - Evals, providers, recording in right places
-5. **Actionable plan** - Know exactly what to write and in what order
+1. **Brutal honesty** - We know exactly what sucks and why
+2. **SDK issues surfaced** - Problems that need fixing in code, not just docs
+3. **Single structure** - No more parallel 0.2.0/ directory
+4. **Progressive example** - One workflow that builds throughout
+5. **Clear user journey** - Each section answers a specific question
+6. **v0.2.0 features integrated** - Evals, providers, recording in right places
+7. **Actionable plan** - Know exactly what to write and in what order
+8. **Quality bar set** - Clear standards for new content
 
 ---
 
 ## Output Expected
 
-Create `docs/internal/milestones/v0.2.0/DOCS_RESTRUCTURE_PLAN.md` with:
+Create these files in `docs/internal/milestones/v0.2.0/docs-audit/`:
 
+### 1. `AUDIT_SUMMARY.md` - Executive summary
 ```markdown
-## New Documentation Structure
+## What Sucks (Top 10)
+[Ranked list of worst issues, with quotes]
 
-[Full tree with descriptions]
+## What's Good (Keep These)
+[What's working, don't break it]
 
-## Example Thread Specification
+## SDK Issues Surfaced
+[API problems that docs revealed - backlog for v0.3.0]
 
-[The progressive example at each level]
+## Overall Grade
+[Letter grade A-F with justification]
+```
 
-## Migration Plan
+### 2. `CONTENT_SCORES.yaml` - Per-file grades
+```yaml
+files:
+  - path: docs/learn/quickstart.mdx
+    scores:
+      clarity: 4
+      completeness: 2
+      accuracy: 3
+      actionable: 4
+      progressive: 3
+    issues:
+      - "Example on line 45 doesn't match current API"
+      - "Missing explanation of what `registry` is"
+    recommendation: rewrite
+```
 
-[What moves where, what gets deleted, what gets written]
+### 3. `EXAMPLE_THREAD.md` - The progressive example
+```markdown
+## The Coding Assistant Workflow
 
-## Writing Priority
+### Level 1: Hello World
+[Code + what it teaches]
 
-[Ordered list of what to write for v0.2.0 release]
+### Level 2: Multi-Node
+[Code + what it adds]
 
-## Estimated Effort
+### Level 3: Iteration
+[Code + what it adds]
 
-[Rough scope for each item]
+... etc
+```
+
+### 4. `NEW_STRUCTURE.md` - Documentation tree
+```markdown
+## Proposed Structure
+
+docs/
+├── index.mdx          # [description]
+├── learn/
+│   ├── quickstart.mdx # [description, status: rewrite]
+...
+```
+
+### 5. `MIGRATION_PLAN.md` - What to do
+```markdown
+## Delete
+- [file]: [reason]
+
+## Keep As-Is
+- [file]: [reason]
+
+## Rewrite
+- [file]: [what's wrong, what it should be]
+
+## New Content Needed
+- [file]: [what it covers, why it's needed]
+```
+
+### 6. `WRITING_GUIDE.md` - Standards for new content
+```markdown
+## Voice
+[How we write]
+
+## Structure
+[How pages are organized]
+
+## Examples
+[Standards for code examples]
+
+## Anti-patterns
+[What NOT to do, with examples from current docs]
+```
+
+### 7. `PRIORITY_ORDER.md` - What to write when
+```markdown
+## P0: Must have for v0.2.0
+1. [file] - [effort estimate] - [why critical]
+
+## P1: Should have
+...
+
+## P2: Nice to have
+...
+
+## Deferred to v0.3.0
+...
 ```
 
 ---
