@@ -12,7 +12,7 @@ The Runtime executes a single flow definition and emits events as it runs.
 **For most cases**, use the simplified APIs:
 
 ```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/sdk";
+import { runFlow, parseFlowYaml } from "@open-harness/server";
 
 // Simplest one-shot execution
 const snapshot = await runFlow({
@@ -22,7 +22,7 @@ const snapshot = await runFlow({
 ```
 
 ```typescript
-import { createHarness, parseFlowYaml } from "@open-harness/sdk";
+import { createHarness, parseFlowYaml } from "@open-harness/server";
 
 // Full control with event handling
 const harness = createHarness({
@@ -44,7 +44,7 @@ import {
   DefaultNodeRegistry,
   parseFlowYaml,
   createDefaultRegistry,
-} from "@open-harness/sdk";
+} from "@open-harness/server";
 
 const registry = createDefaultRegistry();
 

@@ -40,9 +40,9 @@ interface RunStore {
 In-memory storage for development:
 
 ```typescript
-import { MemoryRunStore } from "@open-harness/sdk";
+import { InMemoryRunStore } from "@open-harness/core";
 
-const store = new MemoryRunStore();
+const store = new InMemoryRunStore();
 ```
 
 - Fast, no setup
@@ -54,9 +54,9 @@ const store = new MemoryRunStore();
 File-based persistence:
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/sdk";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 
-const store = new SqliteRunStore("./data/runs.db");
+const store = new SqliteRunStore({ filename: "./data/runs.db" });
 ```
 
 - Single file

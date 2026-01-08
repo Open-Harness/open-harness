@@ -21,7 +21,7 @@ interface Transport {
 The SDK includes a Bun-based WebSocket transport:
 
 ```typescript
-import { WebSocketTransport } from "@open-harness/sdk";
+import { WebSocketTransport } from "@open-harness/server";
 
 const transport = new WebSocketTransport(runtime, {
   port: 8080,
@@ -55,4 +55,4 @@ Clients send commands and receive events as JSON:
 ## See Also
 
 - [Events API](/docs/reference/api/events) — Event payloads
-- [Runtime API](/docs/reference/api/hub) — Runtime usage
+- [Runtime API](/docs/reference/api/runtime) — Runtime usage

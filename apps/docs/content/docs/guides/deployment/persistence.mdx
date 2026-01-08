@@ -12,7 +12,7 @@ Open Harness can persist runtime events and snapshots through a `RunStore`.
 Use `InMemoryRunStore` for quick iteration:
 
 ```typescript
-import { InMemoryRunStore } from "@open-harness/sdk";
+import { InMemoryRunStore } from "@open-harness/core";
 
 const store = new InMemoryRunStore();
 ```
@@ -22,7 +22,7 @@ const store = new InMemoryRunStore();
 Use `SqliteRunStore` for durable storage:
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/sdk";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 
 const store = new SqliteRunStore({ filename: "./data/runs.db" });
 ```
@@ -32,9 +32,9 @@ const store = new SqliteRunStore({ filename: "./data/runs.db" });
 Implement the `RunStore` interface:
 
 ```typescript
-import type { RunStore } from "@open-harness/sdk";
-import type { RuntimeEvent } from "@open-harness/sdk";
-import type { RunSnapshot } from "@open-harness/sdk";
+import type { RunStore } from "@open-harness/core";
+import type { RuntimeEvent } from "@open-harness/core";
+import type { RunSnapshot } from "@open-harness/core";
 
 class PostgresRunStore implements RunStore {
   appendEvent(runId: string, event: RuntimeEvent): void {
