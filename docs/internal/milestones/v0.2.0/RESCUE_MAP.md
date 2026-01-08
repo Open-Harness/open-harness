@@ -96,11 +96,55 @@ OVERALL: ████████████░░░░░░░░░░░�
 | 6.T3 | `assertions.test.ts` | ⬜ |
 | 6.T4 | `scorers.test.ts` | ⬜ |
 
-**Phase 6 Done When:**
-- [ ] All types compile
-- [ ] Dataset loads from JSON
-- [ ] Assertions evaluate against artifact
-- [ ] 25+ tests passing
+---
+
+### 🚧 PHASE 6 QUALITY GATE
+
+**Gate Command (must pass before Phase 7):**
+```bash
+bun run typecheck && bun run lint && bun run test
+```
+
+**Mandatory Quality Checks:**
+- [ ] `bun run typecheck` — 0 errors
+- [ ] `bun run lint` — 0 errors
+- [ ] `bun run test` — 0 failures, no regressions vs baseline
+
+**Meaningful Test Requirements (what tests MUST prove):**
+
+| Test | What It Proves | Why It Matters |
+|------|----------------|----------------|
+| Load valid dataset JSON | `loadDataset()` parses real JSON without throwing | Can't run evals without loading datasets |
+| Reject invalid dataset | Missing required fields throw ValidationError | Catch malformed datasets before runtime |
+| Assertion: output.contains | Path resolution finds nested values in artifact | Core assertion logic works |
+| Assertion: output.equals | Equality comparison handles edge cases (null, undefined, nested) | Assertions don't silently pass |
+| Assertion: metric.latency_ms.max | Extracts latency from agent:complete events | Metric assertions work |
+| Assertion: behavior.no_errors | Detects errors in nodeErrors map | Error detection works |
+| Scorer: latency returns Score | Pure function input → Score output | Scorers are composable |
+| Scorer: cost returns Score | Extracts cost from events | Cost tracking works |
+| recording:linked event type | Event compiles and can be emitted | Hybrid model glue exists |
+
+**Phase 6 Exit Criteria (ALL must be true):**
+- [ ] Quality gate command passes
+- [ ] At least 20 tests covering the cases above
+- [ ] Can load a test dataset fixture (committed to repo)
+- [ ] Can evaluate assertions against a mock artifact
+- [ ] recording:linked event type exists in state/events.ts
+
+**Phase 6 Commit Message Template:**
+```
+feat(eval): phase 6 complete - types, dataset, assertions, scorers
+
+Quality gate: typecheck ✓ lint ✓ tests ✓ (X tests, 0 failures)
+
+- EvalDataset, EvalCase, EvalVariant, EvalArtifact types
+- loadDataset() with validation
+- evaluateAssertions() with path resolution
+- Scorers: latency, cost, tokens, similarity, llm-judge (stub)
+- recording:linked event type added
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
@@ -124,12 +168,67 @@ OVERALL: ████████████░░░░░░░░░░░�
 | 7.T3 | `report.test.ts` | ⬜ |
 | 7.T4 | `packages/open-harness/core/tests/eval/eval-matrix.test.ts` | ⬜ |
 
-**Phase 7 Done When:**
-- [ ] Engine runs a case
-- [ ] Engine runs a matrix (cases × variants)
-- [ ] recording:linked events emitted
-- [ ] Deterministic replay works
-- [ ] 35+ tests passing
+---
+
+### 🚧 PHASE 7 QUALITY GATE
+
+**Gate Command (must pass before Phase 8):**
+```bash
+bun run typecheck && bun run lint && bun run test
+```
+
+**Mandatory Quality Checks:**
+- [ ] `bun run typecheck` — 0 errors
+- [ ] `bun run lint` — 0 errors
+- [ ] `bun run test` — 0 failures, no regressions vs Phase 6 baseline
+
+**Meaningful Test Requirements (what tests MUST prove):**
+
+| Test | What It Proves | Why It Matters |
+|------|----------------|----------------|
+| runCase() executes and returns result | End-to-end case execution works | Core runner functionality |
+| runCase() emits recording:linked events | Provider calls are indexed | Hybrid model actually works |
+| runMatrix() handles multiple variants | Variant switching works | Can compare providers |
+| Deterministic replay test | Same input → same output (run twice, diff results) | Replay is trustworthy |
+| compare() finds assertion failures | Baseline comparison detects regressions | CI can catch regressions |
+| compare() finds metric regressions | Budget comparison works (latency > max) | Performance tracking works |
+| report() generates valid Markdown | Report is human-readable | Results are usable |
+| report() generates valid JSON | Report is machine-readable | Automation possible |
+
+**Determinism Verification Test (REQUIRED):**
+```typescript
+test('deterministic replay', async () => {
+  const result1 = await engine.runCase({ dataset, caseId, variant, mode: 'replay' });
+  const result2 = await engine.runCase({ dataset, caseId, variant, mode: 'replay' });
+
+  // Must be identical - if not, replay is broken
+  expect(result1.assertions).toEqual(result2.assertions);
+  expect(result1.metrics).toEqual(result2.metrics);
+});
+```
+
+**Phase 7 Exit Criteria (ALL must be true):**
+- [ ] Quality gate command passes
+- [ ] At least 15 new tests (35+ total)
+- [ ] Determinism test passes
+- [ ] Engine runs against a test fixture (not fabricated - real runtime events)
+- [ ] recording:linked events appear in event stream
+- [ ] Comparison identifies at least one intentional regression in test
+
+**Phase 7 Commit Message Template:**
+```
+feat(eval): phase 7 complete - engine, runner, compare, report
+
+Quality gate: typecheck ✓ lint ✓ tests ✓ (X tests, 0 failures)
+
+- createEvalEngine() with full API
+- runCase(), runDataset(), runMatrix()
+- Deterministic replay verified
+- Baseline comparison with regression detection
+- Markdown + JSON report generation
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
@@ -148,11 +247,65 @@ OVERALL: ████████████░░░░░░░░░░░�
 | 8.9 | Run codebase health audit | ⬜ |
 | 8.10 | Final test run, verify CI | ⬜ |
 
-**Phase 8 Done When:**
-- [ ] Real dataset exists in repo
-- [ ] CI runs eval in replay mode
-- [ ] User docs complete
-- [ ] Release announcement ready
+---
+
+### 🚧 PHASE 8 QUALITY GATE (RELEASE GATE)
+
+**Gate Command (must pass before release):**
+```bash
+bun run typecheck && bun run lint && bun run test
+```
+
+**Mandatory Quality Checks:**
+- [ ] `bun run typecheck` — 0 errors
+- [ ] `bun run lint` — 0 errors
+- [ ] `bun run test` — 0 failures, no regressions vs Phase 7 baseline
+
+**Meaningful Test/Verification Requirements:**
+
+| Verification | What It Proves | Why It Matters |
+|--------------|----------------|----------------|
+| Real dataset committed | `coder-reviewer.v1.json` exists with 2+ cases | Not fabricated test data |
+| Golden recordings committed | `goldens/recording-eval__*.json` files exist | Replay has real data |
+| Provenance fixtures committed | `provenance/*.events.json` with recording:linked | Hybrid index works |
+| CI eval runs in replay mode | `bun run eval --mode replay` passes | Automated regression detection |
+| Docs example compiles | Code blocks in evals-pattern.md are valid TS | Docs aren't stale |
+| No stale API references | Grep for old type names returns empty | Docs match code |
+
+**Documentation Verification (REQUIRED):**
+```bash
+# Verify evals-pattern.md code examples are valid
+grep -E "```(typescript|ts)" apps/docs/content/0.2.0/03-patterns/evals-pattern.md
+
+# Verify no references to old/removed types
+grep -rE "(OldTypeName|DeprecatedType)" apps/docs/content/0.2.0/
+# Should return empty
+```
+
+**Phase 8 Exit Criteria (ALL must be true):**
+- [ ] Quality gate command passes
+- [ ] Real dataset with 2+ cases committed
+- [ ] Golden recordings from live SDK committed
+- [ ] Provenance fixtures with recording:linked events committed
+- [ ] `scripts/eval.ts` runs successfully in replay mode
+- [ ] `apps/docs/content/0.2.0/03-patterns/evals-pattern.md` matches implementation
+- [ ] Release announcement draft exists
+- [ ] Codebase health audit complete (findings documented)
+
+**Phase 8 / Release Commit Message Template:**
+```
+feat(eval): phase 8 complete - fixtures, scripts, docs - v0.2.0 ready
+
+Quality gate: typecheck ✓ lint ✓ tests ✓ (X tests, 0 failures)
+
+- Real dataset: coder-reviewer.v1.json (N cases)
+- Golden recordings from live SDK
+- Provenance fixtures with recording:linked
+- scripts/eval.ts and record-eval-goldens.ts
+- Documentation updated to match implementation
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
 
 ---
 
