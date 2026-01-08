@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type { Query } from "@anthropic-ai/claude-agent-sdk";
+import type { CancelContextInternal, CancelReason } from "../core/cancel.js";
 import type {
 	RuntimeCommand,
 	RuntimeEvent,
@@ -243,6 +245,7 @@ class InMemoryRuntime implements Runtime {
 	private readonly bus: EventBus;
 	private readonly inboxes = new Map<string, InMemoryCommandInbox>();
 	private readonly stateStore: InMemoryStateStore;
+	private readonly nodeControllers = new Map<string, CancelContextInternal>();
 	private snapshot: RunState;
 	private resumingNodes = new Set<string>();
 	private pendingResumeMessage?: string;
@@ -371,6 +374,7 @@ class InMemoryRuntime implements Runtime {
 				this.dispatch({ type: "send", runId, message: resumeMessage });
 				this.resumingNodes.delete(nodeId);
 			}
+			const cancelContext = this.createCancelContext(runId);
 			const runContext: NodeRunContext = {
 				nodeId,
 				runId,
@@ -380,16 +384,33 @@ class InMemoryRuntime implements Runtime {
 				getAgentSession: () => this.snapshot.agentSessions[nodeId],
 				setAgentSession: (sessionId) => this.setAgentSession(nodeId, sessionId),
 				resumeMessage,
+				cancel: cancelContext,
 			};
 
 			this.emit({ type: "node:start", nodeId, runId: runContext.runId });
 			const resolvedInput = resolveBindings(node.input, bindingContext);
-			const result = await executor.runNode({
-				registry: this.registry,
-				node,
-				runContext,
-				input: resolvedInput,
-			});
+			let result: Awaited<ReturnType<DefaultExecutor["runNode"]>> | undefined;
+			try {
+				result = await executor.runNode({
+					registry: this.registry,
+					node,
+					runContext,
+					input: resolvedInput,
+				});
+			} finally {
+				this.nodeControllers.delete(runId);
+			}
+			if (!result) {
+				throw new Error("Node execution returned no result");
+			}
+
+			if (runContext.cancel.cancelled) {
+				if (runContext.cancel.reason === "pause" && result.output !== undefined) {
+					this.snapshot.outputs[nodeId] = result.output;
+				}
+				this.persistSnapshot();
+				return this.getSnapshot();
+			}
 
 			if (result.error) {
 				this.snapshot.nodeStatus[nodeId] = "failed";
@@ -460,9 +481,17 @@ class InMemoryRuntime implements Runtime {
 		this.emit({ type: "command:received", command });
 
 		if (command.type === "abort") {
-			this.snapshot.status = command.resumable ? "paused" : "aborted";
+			const isPause = command.resumable === true;
+			this.snapshot.status = isPause ? "paused" : "aborted";
+			for (const cancelContext of this.nodeControllers.values()) {
+				if (isPause) {
+					cancelContext.interrupt().catch((error) => console.error("Cancel interrupt error:", error));
+				} else {
+					cancelContext.abort();
+				}
+			}
 			this.emit({
-				type: command.resumable ? "flow:paused" : "flow:aborted",
+				type: isPause ? "flow:paused" : "flow:aborted",
 			});
 			this.persistSnapshot();
 		}
@@ -580,6 +609,7 @@ class InMemoryRuntime implements Runtime {
 			}
 
 			const runId: string = randomUUID();
+			const cancelContext = this.createCancelContext(runId);
 			const runContext: NodeRunContext = {
 				nodeId: node.id,
 				runId,
@@ -588,6 +618,7 @@ class InMemoryRuntime implements Runtime {
 				inbox: this.getInbox(runId),
 				getAgentSession: () => this.snapshot.agentSessions[node.id],
 				setAgentSession: (sessionId) => this.setAgentSession(node.id, sessionId),
+				cancel: cancelContext,
 			};
 
 			this.emit({
@@ -596,12 +627,27 @@ class InMemoryRuntime implements Runtime {
 				runId: runContext.runId,
 			});
 			const resolvedInput = resolveBindings(node.input, iterationContext);
-			const result = await executor.runNode({
-				registry: this.registry,
-				node,
-				runContext,
-				input: resolvedInput,
-			});
+			let result: Awaited<ReturnType<DefaultExecutor["runNode"]>> | undefined;
+			try {
+				result = await executor.runNode({
+					registry: this.registry,
+					node,
+					runContext,
+					input: resolvedInput,
+				});
+			} finally {
+				this.nodeControllers.delete(runId);
+			}
+			if (!result) {
+				throw new Error("Node execution returned no result");
+			}
+
+			if (runContext.cancel.cancelled) {
+				if (runContext.cancel.reason === "pause" && result.output !== undefined) {
+					this.snapshot.outputs[node.id] = result.output;
+				}
+				return iterations;
+			}
 
 			if (result.error) {
 				this.snapshot.nodeStatus[node.id] = "failed";
@@ -702,6 +748,75 @@ class InMemoryRuntime implements Runtime {
 			pending.push(...inbox.snapshot());
 		}
 		return pending;
+	}
+
+	private createCancelContext(runId: string): CancelContextInternal {
+		const controller = new AbortController();
+		const callbacks = new Set<() => void | Promise<void>>();
+		let reason: CancelReason | undefined;
+		let cancelled = false;
+		let queryRef: Query | undefined;
+
+		const notify = async () => {
+			for (const callback of callbacks) {
+				try {
+					await callback();
+				} catch (error) {
+					console.error("Cancel callback error:", error);
+				}
+			}
+		};
+		const safeInvoke = (callback: () => void | Promise<void>) => {
+			void Promise.resolve(callback()).catch((error) => {
+				console.error("Cancel callback error:", error);
+			});
+		};
+
+		const context: CancelContextInternal = {
+			signal: controller.signal,
+			get reason() {
+				return reason;
+			},
+			get cancelled() {
+				return cancelled;
+			},
+			interrupt: async () => {
+				if (cancelled) return;
+				reason = "pause";
+				cancelled = true;
+				await notify();
+				if (queryRef?.interrupt) {
+					await queryRef.interrupt();
+				}
+			},
+			abort: () => {
+				if (cancelled) return;
+				reason = "abort";
+				cancelled = true;
+				controller.abort();
+				void notify();
+			},
+			throwIfCancelled: () => {
+				if (cancelled) {
+					throw new Error(`Cancelled: ${reason ?? "unknown"}`);
+				}
+			},
+			onCancel: (callback) => {
+				if (cancelled) {
+					safeInvoke(callback);
+					return () => {};
+				}
+				callbacks.add(callback);
+				return () => callbacks.delete(callback);
+			},
+			__setQuery: (query) => {
+				queryRef = query;
+			},
+			__controller: controller,
+		};
+
+		this.nodeControllers.set(runId, context);
+		return context;
 	}
 }
 

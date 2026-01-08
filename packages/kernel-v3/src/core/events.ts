@@ -96,6 +96,22 @@ export type AgentCompleteEventPayload = {
 	numTurns: number;
 };
 
+export type AgentPausedEventPayload = {
+	type: "agent:paused";
+	nodeId: string;
+	runId: string;
+	partialText?: string;
+	sessionId?: string;
+	numTurns?: number;
+};
+
+export type AgentAbortedEventPayload = {
+	type: "agent:aborted";
+	nodeId: string;
+	runId: string;
+	reason?: string;
+};
+
 export type AgentStartEvent = AgentStartEventPayload & { timestamp: number };
 export type AgentThinkingEvent = AgentThinkingEventPayload & {
 	timestamp: number;
@@ -112,6 +128,8 @@ export type AgentErrorEvent = AgentErrorEventPayload & { timestamp: number };
 export type AgentCompleteEvent = AgentCompleteEventPayload & {
 	timestamp: number;
 };
+export type AgentPausedEvent = AgentPausedEventPayload & { timestamp: number };
+export type AgentAbortedEvent = AgentAbortedEventPayload & { timestamp: number };
 
 export type AgentEventPayload =
 	| AgentStartEventPayload
@@ -121,7 +139,9 @@ export type AgentEventPayload =
 	| AgentTextDeltaEventPayload
 	| AgentToolEventPayload
 	| AgentErrorEventPayload
-	| AgentCompleteEventPayload;
+	| AgentCompleteEventPayload
+	| AgentPausedEventPayload
+	| AgentAbortedEventPayload;
 
 /**
  * Events emitted by the runtime for observability and UI rendering.
@@ -150,7 +170,9 @@ export type AgentEvent =
 	| AgentTextDeltaEvent
 	| AgentToolEvent
 	| AgentErrorEvent
-	| AgentCompleteEvent;
+	| AgentCompleteEvent
+	| AgentPausedEvent
+	| AgentAbortedEvent;
 
 /** Callback invoked for each emitted runtime event. */
 export type RuntimeEventListener = (
