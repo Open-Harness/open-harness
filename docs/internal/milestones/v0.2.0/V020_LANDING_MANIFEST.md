@@ -132,15 +132,15 @@ bun run test         # All tests pass
 - [x] Test: replay is deterministic
 - [x] Test: multi-agent produces hierarchical fixture IDs
 
-#### Task 8.5: Implement defaults
+#### Task 8.5: Implement defaults ✅
 
 **File:** `packages/internal/core/src/api/defaults.ts`
 
-- [ ] `setDefaultStore(store): void`
-- [ ] `setDefaultMode(mode): void`
-- [ ] `getDefaultStore(): FixtureStore | undefined`
-- [ ] `getDefaultMode(): string`
-- [ ] Test: defaults are set and retrieved
+- [x] `setDefaultStore(store): void`
+- [x] `setDefaultMode(mode): void`
+- [x] `getDefaultStore(): FixtureStore | undefined`
+- [x] `getDefaultMode(): string`
+- [x] Test: defaults are set and retrieved
 
 #### Task 8.6: Create index and exports
 
