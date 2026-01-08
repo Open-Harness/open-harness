@@ -38,6 +38,18 @@ import { isAgent, isHarness } from "./types.js";
 import type { HarnessWithFlow } from "./harness.js";
 
 /**
+ * Safely get environment variable (works in Node.js and browsers).
+ */
+function getEnvVar(name: string): string | undefined {
+	// Check if we're in a Node.js environment
+	if (typeof globalThis !== "undefined" && "process" in globalThis) {
+		const proc = (globalThis as { process?: { env?: Record<string, string> } }).process;
+		return proc?.env?.[name];
+	}
+	return undefined;
+}
+
+/**
  * Get the fixture mode from options or environment variable.
  *
  * Priority: explicit option > FIXTURE_MODE env var > "live"
@@ -47,7 +59,7 @@ function getFixtureMode(options?: RunOptions): FixtureMode {
 		return options.mode;
 	}
 
-	const envMode = process.env.FIXTURE_MODE;
+	const envMode = getEnvVar("FIXTURE_MODE");
 	if (envMode === "record" || envMode === "replay" || envMode === "live") {
 		return envMode;
 	}

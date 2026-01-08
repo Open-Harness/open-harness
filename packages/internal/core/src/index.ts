@@ -1,3 +1,4 @@
+export * from "./api";
 export * from "./builtins";
 export * from "./eval";
 export * from "./nodes";

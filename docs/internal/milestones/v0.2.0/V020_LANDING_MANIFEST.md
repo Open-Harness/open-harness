@@ -142,16 +142,16 @@ bun run test         # All tests pass
 - [x] `getDefaultMode(): string`
 - [x] Test: defaults are set and retrieved
 
-#### Task 8.6: Create index and exports
+#### Task 8.6: Create index and exports ✅
 
 **File:** `packages/internal/core/src/api/index.ts`
 
-- [ ] Export all API functions
-- [ ] Export all types
+- [x] Export all API functions
+- [x] Export all types
 
 **File:** `packages/open-harness/core/src/index.ts`
 
-- [ ] Re-export API from `@internal/core/api`
+- [x] Re-export API from `@internal/core/api`
 
 #### Task 8.7: Phase 8 Quality Gate
 
