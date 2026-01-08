@@ -29,41 +29,9 @@ packages/kernel/
 - `NodeRegistry`, `resolveBindings`, `evaluateWhen`
 - `createClaudeAgent`
 
-### @open-harness/rtv-channel
-
-Real-time voice channel for audio I/O:
-
-```
-packages/rtv-channel/
-├── src/
-│   └── index.ts      # Voice channel definition
-└── package.json
-```
-
-**Exports**:
-- Voice channel definition
-- Audio processing utilities
-
-### @open-harness/config (Internal)
-
-Shared configuration and utilities:
-
-```
-packages/config/
-├── tsconfig.base.json
-└── eslint.config.js
-```
-
-Not published - used for monorepo consistency.
-
 ## Package Dependencies
 
 ```
-                    ┌─────────────────┐
-                    │  rtv-channel    │
-                    └────────┬────────┘
-                             │ depends on
-                             ▼
                     ┌─────────────────┐
                     │     kernel      │
                     └─────────────────┘
@@ -83,7 +51,7 @@ Not published - used for monorepo consistency.
    - Only external packages
    - Self-contained core
 
-2. **Channels depend on kernel**
+2. **Future channels will depend on kernel**
    - Import types and utilities
    - Implement ChannelDefinition
 
