@@ -1,77 +1,168 @@
 ---
 title: Runtime
-description: Execute flows and subscribe to runtime events
+description: Execute agents and harnesses with the run() API
 ---
 
 # Runtime
 
-The Runtime executes a single flow definition and emits events as it runs.
+The `run()` function is the primary way to execute agents and harnesses in Open Harness.
 
 ## Quick Start
 
-**For most cases**, use the simplified APIs:
+```typescript
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+// Set up the provider
+setDefaultProvider(createClaudeNode());
+
+// Define an agent
+const myAgent = agent({
+  prompt: "You are a helpful assistant.",
+});
+
+// Execute the agent
+const result = await run(myAgent, { prompt: "Hello, world!" });
+
+console.log(result.output);
+console.log(result.metrics);
+```
+
+## run() API
+
+### Basic Execution
+
+Execute an agent with input:
 
 ```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/server";
+const result = await run(myAgent, { prompt: "Hello" });
+```
 
-// Simplest one-shot execution
-const snapshot = await runFlow({
-  flow: parseFlowYaml(yamlString),
-  input: { name: "World" },
+### With Provider Override
+
+Pass a provider directly instead of using the default:
+
+```typescript
+import { createClaudeNode } from "@open-harness/server";
+
+const result = await run(myAgent, { prompt: "Hello" }, {
+  provider: createClaudeNode({ model: "claude-3-opus-latest" }),
 });
 ```
 
-```typescript
-import { createHarness, parseFlowYaml } from "@open-harness/server";
+### With Fixtures
 
-// Full control with event handling
-const harness = createHarness({
-  flow: parseFlowYaml(yamlString),
-  onEvent: (event) => console.log(event.type),
+Record and replay agent responses:
+
+```typescript
+import { FileFixtureStore } from "@open-harness/stores";
+
+const store = new FileFixtureStore("./fixtures");
+
+// Record mode
+const result = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "my-test",
+  mode: "record",
+  store,
 });
 
-await harness.run();
-harness.runtime.dispatch({ type: "pause" });
+// Replay mode
+const result = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "my-test",
+  mode: "replay",
+  store,
+});
 ```
 
-## Runtime API
+## Result Shape
 
-For advanced control over execution, use `createRuntime()`:
+The `run()` function returns a `RunResult`:
+
+```typescript
+interface RunResult<T = unknown> {
+  /** The agent's output */
+  output: T;
+
+  /** Optional state from stateful agents */
+  state?: Record<string, unknown>;
+
+  /** Execution metrics */
+  metrics: {
+    latencyMs: number;
+    cost: number;
+    tokens: {
+      input: number;
+      output: number;
+    };
+  };
+
+  /** Fixture IDs if recording was enabled */
+  fixtures?: string[];
+}
+```
+
+## Provider Configuration
+
+### setDefaultProvider()
+
+Set a global default provider:
+
+```typescript
+import { setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+setDefaultProvider(createClaudeNode());
+```
+
+### getDefaultProvider()
+
+Get the current default provider:
+
+```typescript
+import { getDefaultProvider } from "@open-harness/core";
+
+const provider = getDefaultProvider();
+```
+
+## Advanced: Internal Runtime
+
+For advanced use cases like building custom orchestrators, the internal runtime API is available:
 
 ```typescript
 import {
   createRuntime,
   DefaultNodeRegistry,
   parseFlowYaml,
-  createDefaultRegistry,
-} from "@open-harness/server";
+} from "@internal/core";
 
-const registry = createDefaultRegistry();
+const registry = new DefaultNodeRegistry();
+const flow = parseFlowYaml(yamlString);
 
 const runtime = createRuntime({ flow, registry });
-const snapshot = await runtime.run();
-```
-
-### `run(input?)`
-
-Execute the flow to completion:
-
-```typescript
 const snapshot = await runtime.run({ name: "World" });
 ```
 
-### `dispatch(command)`
+<Callout type="note" title="Internal API">
+The `createRuntime()` function is an internal API in `@internal/core`. For most use cases, use `run()` from `@open-harness/core` instead.
+</Callout>
 
-Send a command into a running flow:
+### Runtime Methods
+
+| Method | Description |
+|--------|-------------|
+| `run(input?)` | Execute the flow to completion |
+| `dispatch(command)` | Send a command to a running flow |
+| `onEvent(listener)` | Subscribe to runtime events |
+| `getSnapshot()` | Inspect current runtime state |
+
+### Runtime Commands
 
 ```typescript
 runtime.dispatch({ type: "send", runId: "run-123", message: "continue" });
 runtime.dispatch({ type: "abort", reason: "user_cancelled" });
 ```
 
-### `onEvent(listener)`
-
-Subscribe to runtime events:
+### Event Subscription
 
 ```typescript
 runtime.onEvent((event) => {
@@ -81,27 +172,8 @@ runtime.onEvent((event) => {
 });
 ```
 
-### `getSnapshot()`
-
-Inspect current runtime state:
-
-```typescript
-const snapshot = runtime.getSnapshot();
-```
-
-## Runtime Options
-
-```typescript
-const runtime = createRuntime({
-  flow,
-  registry,
-  store, // Optional RunStore for persistence
-  resume: { runId: "run-123" }, // Optional resume
-});
-```
-
 ## See Also
 
-- [Runtime Execution](/docs/reference/api/flow-runtime) — Snapshots and commands
+- [Custom Agents](/docs/guides/agents/custom-agents) — Build agent implementations
+- [Architecture](/docs/concepts/architecture) — Understand agents and harnesses
 - [Events API](/docs/reference/api/events) — Event types
-- [Node Registry](/docs/reference/api/node-registry) — Register node types

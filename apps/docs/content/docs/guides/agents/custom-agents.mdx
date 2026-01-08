@@ -1,186 +1,174 @@
 ---
-title: Custom Nodes
-description: Build your own node implementations
+title: Custom Agents
+description: Build your own agent implementations
 ---
 
-# Custom Nodes
+# Custom Agents
 
-Create custom nodes that integrate with any API or service.
+Create custom agents with specialized behaviors and configurations.
 
-## Node Interface
+## Basic Agent
 
-```typescript
-interface NodeTypeDefinition<TIn, TOut> {
-  type: string;
-  run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
-}
+Define an agent with a system prompt:
 
-interface NodeRunContext {
-  nodeId: string;
-  runId: string;
-  emit: (event: RuntimeEventPayload) => void;
-  signal: AbortSignal;
-  state: StateStore;
-}
+```typescript title="agent.ts"
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+setDefaultProvider(createClaudeNode());
+
+const codeReviewer = agent({
+  prompt: `You are a senior code reviewer. Analyze code for:
+- Bugs and logical errors
+- Security vulnerabilities
+- Performance issues
+- Style and readability`,
+});
+
+const result = await run(codeReviewer, {
+  prompt: `Review this function:
+function divide(a, b) {
+  return a / b;
+}`,
+});
+
+console.log(result.output);
 ```
 
-## Basic Node
+## Agent with Configuration
 
-Create a simple node that transforms input:
+Customize agent behavior with additional options:
 
-```typescript title="nodes.ts"
-const uppercaseNode = {
-  type: "uppercase" as const,
-  run: async (ctx, input: { text: string }) => {
-    return { text: input.text.toUpperCase() };
-  },
-};
-```
+```typescript title="configured-agent.ts"
+import { agent, run } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
 
-Register it and use in a flow:
+const technicalWriter = agent({
+  prompt: "Write clear, concise technical documentation.",
+  // Provider override (optional)
+  provider: createClaudeNode({ model: "claude-3-opus-latest" }),
+});
 
-```typescript title="run.ts"
-import { runFlow, parseFlowYaml } from "@open-harness/server";
-
-const snapshot = await runFlow({
-  flow: parseFlowYaml(yaml),
-  registry: { [uppercaseNode.type]: uppercaseNode },
-  input: { message: "hello" },
+const result = await run(technicalWriter, {
+  prompt: "Document this API endpoint: POST /users",
 });
 ```
 
-## Emitting Events
+## Streaming Output
 
-Use `ctx.emit()` to send streaming events:
+Handle streaming responses for real-time output:
 
-```typescript title="streaming-node.ts"
-const streamingNode = {
-  type: "stream.text" as const,
-  run: async (ctx, input: { text: string }) => {
-    // Stream each word
-    const words = input.text.split(" ");
-    for (const word of words) {
-      ctx.emit({
-        type: "agent:text",
-        text: word + " ",
-      });
-    }
+```typescript title="streaming.ts"
+import { agent, run, onEvent } from "@open-harness/core";
 
-    return { text: input.text };
+const chatAgent = agent({
+  prompt: "You are a helpful assistant.",
+});
+
+// Subscribe to streaming events
+onEvent((event) => {
+  if (event.type === "agent:text") {
+    process.stdout.write(event.text);
+  }
+});
+
+await run(chatAgent, { prompt: "Tell me a story." });
+```
+
+## Multi-Agent Harness
+
+Coordinate multiple agents with a harness:
+
+```typescript title="harness.ts"
+import { harness, agent, run } from "@open-harness/core";
+
+const classifier = agent({
+  prompt: "Classify input as 'question', 'statement', or 'command'.",
+});
+
+const responder = agent({
+  prompt: "Respond helpfully to the input.",
+});
+
+const myHarness = harness({
+  agents: { classifier, responder },
+  flow: async (agents, input) => {
+    const classification = await agents.classifier.run(input);
+    const response = await agents.responder.run({
+      ...input,
+      classification: classification.output,
+    });
+    return { classification: classification.output, response: response.output };
   },
-};
+});
+
+const result = await run(myHarness, {
+  prompt: "What is the capital of France?",
+});
+
+console.log(result.output);
+// { classification: "question", response: "The capital of France is Paris." }
 ```
 
-Events are broadcast to all connected clients via transports.
+## Testing Agents
 
-## Accessing State
+Write tests for your agents using Vitest:
 
-Use `ctx.state` to read and write workflow state:
+```typescript title="agent.test.ts"
+import { test, expect } from "vitest";
+import { run, agent } from "@open-harness/vitest";
 
-```typescript title="counter-node.ts"
-const counterNode = {
-  type: "counter" as const,
-  run: async (ctx, input: { action: "increment" | "get" }) => {
-    if (input.action === "increment") {
-      const count = ctx.state.get("count") ?? 0;
-      ctx.state.set("count", count + 1);
-      return { count: count + 1 };
-    }
-    return { count: ctx.state.get("count") ?? 0 };
-  },
-};
+const codeReviewer = agent({
+  prompt: "Review code for bugs.",
+});
+
+test("catches division by zero", async () => {
+  const result = await run(codeReviewer, {
+    prompt: "function divide(a, b) { return a / b; }",
+  });
+
+  expect(result.output).toContain("division");
+  expect(result).toHaveLatencyUnder(10000);
+  expect(result).toCostUnder(0.01);
+});
 ```
 
-Define initial state in your flow:
+## Recording and Replay
 
-```yaml title="flow.yaml"
-name: counter-flow
-state:
-  initial:
-    count: 0
-nodes:
-  - id: increment
-    type: counter
-    input:
-      action: increment
-```
+Record agent responses for deterministic testing:
 
-## Handling Cancellation
+```typescript title="fixture-recording.ts"
+import { agent, run } from "@open-harness/core";
+import { FileFixtureStore } from "@open-harness/stores";
 
-Check `ctx.signal` for cancellation:
+const store = new FileFixtureStore("./fixtures");
+const myAgent = agent({ prompt: "Answer questions." });
 
-```typescript title="long-running-node.ts"
-const longRunningNode = {
-  type: "long.process" as const,
-  run: async (ctx, input: { items: string[] }) => {
-    const results: string[] = [];
+// Record mode: saves response to fixture
+const recordResult = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "hello-test",
+  mode: "record",
+  store,
+});
 
-    for (const item of input.items) {
-      // Check for cancellation
-      if (ctx.signal.aborted) {
-        return { results, cancelled: true };
-      }
-
-      const result = await processItem(item);
-      results.push(result);
-    }
-
-    return { results, cancelled: false };
-  },
-};
-```
-
-## Calling External APIs
-
-Nodes can call any external service:
-
-```typescript title="api-node.ts"
-const weatherNode = {
-  type: "weather.fetch" as const,
-  run: async (ctx, input: { city: string }) => {
-    ctx.emit({ type: "node:start", nodeId: ctx.nodeId });
-
-    const response = await fetch(
-      `https://api.example.com/weather?city=${input.city}`,
-      { signal: ctx.signal }
-    );
-
-    const data = await response.json();
-
-    ctx.emit({ type: "node:complete", nodeId: ctx.nodeId });
-
-    return { temperature: data.temp, conditions: data.conditions };
-  },
-};
-```
-
-## Using with DefaultNodeRegistry
-
-For more control, use `DefaultNodeRegistry`:
-
-```typescript title="registry.ts"
-import { DefaultNodeRegistry, createRuntime } from "@open-harness/core";
-
-const registry = new DefaultNodeRegistry();
-registry.register(uppercaseNode);
-registry.register(weatherNode);
-
-const runtime = createRuntime({
-  flow,
-  registry,
+// Replay mode: uses saved fixture (no API call)
+const replayResult = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "hello-test",
+  mode: "replay",
+  store,
 });
 ```
 
 <Callout type="stuck" title="Are you stuck?">
-**Error: Node type 'mynode' not found in registry**
-Make sure you pass the node in the `registry` option to `runFlow()` or `createHarness()`.
+**Error: No provider configured**
+Make sure you call `setDefaultProvider()` before running agents, or pass a provider in `run()` options.
 
-**ctx.emit is not a function**
-Make sure your node's `run` function receives `ctx` as the first parameter.
+**Error: Cannot read property 'run' of undefined**
+Check that your harness's `agents` object has the correct keys.
 </Callout>
 
 ## Next Steps
 
 - [Claude Agent](/docs/guides/agents/claude-agent) — Configure the built-in Claude agent
-- [Events API](/docs/reference/api/events) — Event types for nodes
-
+- [Events API](/docs/reference/api/events) — Event types for agents
+- [Runtime API](/docs/reference/api/runtime) — Execute agents and harnesses

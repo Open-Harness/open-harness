@@ -16,7 +16,7 @@ Recording, replay, telemetry, and persistence matter because they produce **evid
 - whether a change is a regression
 - how to trade off cost vs quality
 
-If you don’t measure, you don’t improve—you just iterate blindly.
+If you don't measure, you don't improve—you just iterate blindly.
 
 ---
 
@@ -53,294 +53,345 @@ At minimum, evals produce:
 
 ---
 
-## Benchmarks: Cases × Variants
+## The v0.2.0 Approach: Native Vitest
 
-The core pattern for evals is:
-
-```
-cases × variants → results → compare → decide
-```
-
-### Cases (your benchmark)
-
-A **case** is an input you care about.
-
-- For a developer: “generate a REST route”, “refactor this function”, “write tests”
-- For a business: “refund request”, “fraud review”, “invoice dispute”, “support escalation”
-
-Cases are the portable asset that makes evals meaningful for *your* domain.
-
-### Variants (what you’re comparing)
-
-A **variant** is the same workflow, run under different configuration:
-
-- different provider (`claude.agent` vs `opencode.agent`)
-- different model (Sonnet vs Opus)
-- different prompt (prompt A vs prompt B)
-- different skill set / rules (later)
-
-In the target architecture, variants should be expressed as *small transformations* on a base workflow definition so comparison is apples-to-apples.
-
----
-
-## Recording and Replay (Evidence)
-
-Recording and replay exist so evals can be:
-
-- **repeatable** (re-run on the same evidence)
-- **comparable** (same input, different variants)
-- **regression-safe** (compare against a baseline)
-
-### Provider-level evidence (deterministic)
-
-Provider-level recording captures streaming events + final output for a single provider call.
-
-In the codebase today, this is the `withRecording()` wrapper around a provider trait.
-
-### Workflow-level evidence (complete execution)
-
-Workflow-level persistence captures runtime events + snapshots for the entire workflow run.
-
-In the codebase today, this is the `RunStore` passed into the runtime so it can persist events and snapshots.
-
----
-
-## “Default Good”: Baselines and Regression Gates
-
-Evals become “hard to do wrong” when the default workflow is:
-
-1. You run a suite (cases × variants)
-2. A **baseline** variant is chosen (explicit)
-3. Results are compared to baseline
-4. Regressions fail loudly (gates)
-
-This turns “record → compare → iterate” into an actual system.
-
----
-
-## What It Looks Like (v0.2.0 API)
+Open Harness v0.2.0 uses **native Vitest** for evals. Instead of a custom eval framework, you write standard tests with specialized matchers:
 
 ```ts
-import { defineSuite, variant, gates, runSuite } from "@open-harness/core";
+import { test, expect } from 'vitest'
+import { run, agent } from '@open-harness/vitest'
 
-// Define your eval suite
-const suite = defineSuite({
-  // Suite name (required)
-  name: "my-api-eval",
+const myAgent = agent({ prompt: 'You are a helpful coding assistant.' })
 
-  // Your workflow factory to test
-  flow: myWorkflow,
+test('agent responds quickly and cheaply', async () => {
+  const result = await run(myAgent, { prompt: 'Write a hello world function' })
 
-  // Test cases with inputs and assertions
-  cases: [
-    {
-      id: "hello-api",
-      input: { task: "Build a hello world Express API" },
-      assertions: [
-        { type: "behavior.no_errors" },
-        { type: "output.contains", path: "outputs.main.code", value: "app.get" },
-        { type: "metric.latency_ms.max", value: 30000 },
-      ],
-    },
-    {
-      id: "auth-api",
-      input: { task: "Build CRUD API with JWT auth" },
-      assertions: [
-        { type: "behavior.no_errors" },
-        { type: "metric.latency_ms.max", value: 60000 },
-      ],
-    },
-  ],
-
-  // Variants to compare (different models, providers, configs)
-  variants: [
-    variant("claude/sonnet", { model: "claude-3-5-sonnet-latest" }),
-    variant("claude/opus", { model: "claude-3-opus-latest" }),
-  ],
-
-  // Which variant is the baseline for comparison
-  baseline: "claude/sonnet",
-
-  // Gates that must pass for the eval to succeed
-  gates: [
-    gates.noRegressions(),           // No assertion regressions vs baseline
-    gates.passRate(0.9),             // At least 90% of cases pass
-    gates.latencyUnder(30000),       // Max latency under 30s
-    gates.costUnder(1.0),            // Max cost under $1
-  ],
-});
-
-// Run the suite and get results
-const report = await runSuite(suite, { mode: "live" });
-
-// Check if all gates passed
-if (report.passed) {
-  console.log("All gates passed!");
-  console.log(`Pass rate: ${(report.summary.passRate * 100).toFixed(0)}%`);
-} else {
-  const failedGates = report.gateResults.filter(g => !g.passed);
-  console.error("Gates failed:", failedGates.map(g => g.name).join(", "));
-  process.exit(1);
-}
+  expect(result.output).toBeDefined()
+  expect(result).toHaveLatencyUnder(5000)  // < 5 seconds
+  expect(result).toCostUnder(0.01)         // < $0.01
+  expect(result).toHaveTokensUnder(1000)   // < 1000 total tokens
+})
 ```
 
-The important part is the shape: **cases are yours**, variants are configuration, and the system defaults to baseline + gates.
+### Why Vitest?
+
+- **Familiar**: Standard testing patterns everyone knows
+- **Ecosystem**: Vitest reporters, coverage, watch mode, parallelization
+- **Maintainable**: No custom framework to learn or maintain
+- **Extensible**: Custom matchers for agent-specific assertions
 
 ---
 
-## Generating Eval Sets From Real Usage (Target Direction)
+## Core Pattern: Cases as Tests
 
-To make evals effortless for users, we want a capture path:
+Each test case is a standard Vitest test:
 
-- As you run workflows in development or production, representative inputs can be captured into a dataset.
-- Those captured cases become your benchmark over time.
+```ts
+import { describe, test, expect } from 'vitest'
+import { run, agent } from '@open-harness/vitest'
 
-This is how a business ends up with “its own benchmark” without hand-curating from scratch.
+const codeReviewer = agent({
+  prompt: 'Review code for bugs, security issues, and style problems.'
+})
+
+describe('code reviewer agent', () => {
+  test('catches division by zero', async () => {
+    const result = await run(codeReviewer, {
+      prompt: 'function divide(a, b) { return a / b; }'
+    })
+
+    expect(result.output).toContain('division')
+    expect(result).toHaveLatencyUnder(10000)
+  })
+
+  test('catches SQL injection', async () => {
+    const result = await run(codeReviewer, {
+      prompt: 'const query = `SELECT * FROM users WHERE id = ${userId}`'
+    })
+
+    expect(result.output).toContain('injection')
+    expect(result).toCostUnder(0.02)
+  })
+})
+```
+
+---
+
+## Vitest Configuration
+
+### Setup File (Auto-Register Matchers)
+
+```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config'
+import { OpenHarnessReporter } from '@open-harness/vitest'
+
+export default defineConfig({
+  test: {
+    setupFiles: ['@open-harness/vitest/setup'],
+    reporters: ['default', new OpenHarnessReporter({ passRate: 0.8 })],
+  }
+})
+```
+
+### Manual Setup
+
+```ts
+// vitest.setup.ts
+import { setupMatchers } from '@open-harness/vitest'
+
+setupMatchers()
+```
+
+---
+
+## Custom Matchers
+
+### toHaveLatencyUnder(ms)
+
+Asserts the run completed in under the specified milliseconds:
+
+```ts
+expect(result).toHaveLatencyUnder(5000)  // Must complete in < 5s
+```
+
+### toCostUnder(usd)
+
+Asserts the run cost less than the specified USD amount:
+
+```ts
+expect(result).toCostUnder(0.01)  // Must cost < $0.01
+```
+
+### toHaveTokensUnder(count)
+
+Asserts total tokens (input + output) are under the specified count:
+
+```ts
+expect(result).toHaveTokensUnder(1000)  // Must use < 1000 total tokens
+```
+
+---
+
+## Quality Gates with Reporter
+
+The `OpenHarnessReporter` enforces suite-level quality gates:
+
+```ts
+import { OpenHarnessReporter } from '@open-harness/vitest'
+
+new OpenHarnessReporter({
+  passRate: 0.9,        // At least 90% of tests must pass
+  maxLatencyMs: 30000,  // No test can exceed 30s (optional)
+  maxCostUsd: 1.0,      // Total cost under $1 (optional)
+})
+```
+
+If the pass rate drops below the threshold, the reporter sets `process.exitCode = 1`, failing the CI build.
+
+---
+
+## Recording and Replay (Fixtures)
+
+Use fixtures to record live responses and replay them in CI:
+
+```ts
+import { FileFixtureStore } from '@open-harness/stores'
+
+const store = new FileFixtureStore('./fixtures')
+
+// Record mode: saves responses to fixtures
+const result = await run(myAgent, { prompt: 'Hello' }, {
+  fixture: 'hello-test',
+  mode: 'record',
+  store,
+})
+
+// Replay mode: uses saved fixtures (no API calls)
+const result = await run(myAgent, { prompt: 'Hello' }, {
+  fixture: 'hello-test',
+  mode: 'replay',
+  store,
+})
+```
+
+### Environment Variable
+
+Control mode via environment variable:
+
+```bash
+# Record fixtures
+FIXTURE_MODE=record bun test
+
+# Replay fixtures (CI)
+FIXTURE_MODE=replay bun test
+
+# Live mode (default)
+bun test
+```
+
+---
+
+## Comparing Variants
+
+To compare different prompts or configurations, create separate agents:
+
+```ts
+const promptA = agent({
+  prompt: 'You are a helpful assistant. Be thorough and detailed.'
+})
+
+const promptB = agent({
+  prompt: 'You are a concise expert. Be brief and direct.'
+})
+
+describe('prompt comparison', () => {
+  const testCase = { prompt: 'Explain recursion' }
+
+  test('prompt A', async () => {
+    const result = await run(promptA, testCase)
+    expect(result).toHaveLatencyUnder(10000)
+    // Store result for manual comparison
+  })
+
+  test('prompt B', async () => {
+    const result = await run(promptB, testCase)
+    expect(result).toHaveLatencyUnder(10000)
+    // Store result for manual comparison
+  })
+})
+```
+
+---
+
+## Multi-Agent Harnesses
+
+For workflows with multiple agents, use `harness()`:
+
+```ts
+import { harness, agent, run } from '@open-harness/vitest'
+
+const classifier = agent({ prompt: 'Classify the input as question or statement.' })
+const responder = agent({ prompt: 'Respond helpfully to the input.' })
+
+const myHarness = harness({
+  agents: { classifier, responder },
+  flow: async (agents, input) => {
+    const classification = await agents.classifier.run(input)
+    const response = await agents.responder.run(input)
+    return { classification, response }
+  }
+})
+
+test('harness processes input', async () => {
+  const result = await run(myHarness, { prompt: 'What is the capital of France?' })
+  expect(result.output.classification).toContain('question')
+})
+```
 
 ---
 
 ## Regression Detection
 
-- Compare new runs to golden recordings
-- Detect breaking changes automatically
-- CI/CD integration (block bad deployments)
-- Pass rates, avg latency, avg cost
+Compare new runs against golden recordings:
+
+```bash
+# 1. Record baseline
+FIXTURE_MODE=record bun test
+
+# 2. Commit fixtures to git
+git add fixtures/
+git commit -m "Add test fixtures"
+
+# 3. Run in CI (replay mode)
+FIXTURE_MODE=replay bun test
+```
+
+If tests fail in replay mode, either:
+- The agent behavior changed (regression)
+- The test expectations need updating
+
+---
+
+## CI Integration
+
+```yaml
+# .github/workflows/evals.yml
+name: Evals
+on: [push, pull_request]
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - run: bun install
+      - run: FIXTURE_MODE=replay bun test
+```
+
+The reporter's exit code ensures CI fails on quality gate violations.
 
 ---
 
 ## FAQ
 
-### What is a "workflow factory"?
-
-A workflow factory is a function that creates a workflow for a given test case and variant. It receives the case input and variant configuration, and returns a flow definition that the eval engine can execute.
-
-```ts
-const myWorkflow: SuiteWorkflowFactory = ({ caseInput, variant }) => ({
-  flow: {
-    name: "my-workflow",
-    nodes: [{ id: "main", type: "claude.agent", input: caseInput }],
-    edges: [],
-  },
-  register(registry, mode) {
-    registry.register(createClaudeNode({ model: variant.model }));
-  },
-  primaryOutputNodeId: "main",
-});
-```
-
-The factory pattern allows the same workflow structure to be parameterized by variant (different models, prompts, etc.) while keeping cases consistent.
-
 ### What's the difference between assertions and gates?
 
-**Assertions** are per-case checks that validate individual outputs:
+**Assertions** are per-test checks that validate individual outputs:
 - "Output contains 'function'"
 - "Latency under 30s"
-- "No runtime errors"
 
-**Gates** are suite-level decisions that determine overall pass/fail:
-- "90% of cases must pass"
-- "No regressions vs baseline"
-- "Max cost under $1 across all cases"
+**Gates** are suite-level decisions via the reporter:
+- "90% of tests must pass"
+- "Total cost under $1"
 
-Think of assertions as unit tests, gates as acceptance criteria.
+### How do I debug a failing test?
 
-### How do I debug a failing eval?
-
-1. **Run with `--verbose`** to see per-case results:
+1. **Run with verbose output**:
    ```bash
-   bun run eval --mode live --verbose
+   bun test --reporter verbose
    ```
 
-2. **Run a single case** to isolate the issue:
+2. **Run a single test**:
    ```bash
-   bun run eval --cases failing-case-id --verbose
+   bun test -t "catches division by zero"
    ```
 
-3. **Check the assertion results** in the report - each assertion shows actual vs expected values
-
-4. **Review the artifact** - the `caseResult.artifact` contains the full workflow output and events
+3. **Check the result object** - log `result.output` and `result.metrics`
 
 ### What run modes are available?
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| `live` | Real API calls | Development, initial recording |
+| `live` (default) | Real API calls | Development |
 | `replay` | Use recorded fixtures | CI, fast iteration |
 | `record` | Live calls, save fixtures | Creating test fixtures |
 
-### How do I compare different prompts?
+### Can I use custom assertions?
 
-Use variants with different `config` values:
-
-```ts
-variants: [
-  variant("prompt-a", {
-    model: "claude-sonnet-4-20250514",
-    config: { systemPrompt: "You are a helpful assistant." },
-  }),
-  variant("prompt-b", {
-    model: "claude-sonnet-4-20250514",
-    config: { systemPrompt: "You are a concise expert." },
-  }),
-],
-baseline: "prompt-a",
-```
-
-The `config` object is passed to your workflow factory, where you can use it to configure the prompt.
-
-### Why is LLM-as-judge disabled?
-
-In v0.2.0, the LLM-as-judge scorer is stubbed and disabled by default. It returns placeholder values when enabled. Full implementation is planned for a future release.
-
-For now, use:
-- Output assertions (`output.contains`, `output.equals`)
-- Metric assertions (`metric.latency_ms.max`, `metric.total_cost_usd.max`)
-- Behavior assertions (`behavior.no_errors`)
-
-### Can I use custom scorers?
-
-Yes. Implement the `Scorer` interface:
+Yes. Use standard Vitest custom matchers or write helper functions:
 
 ```ts
-const myScorer: Scorer = {
-  name: "my-scorer",
-  score(artifact: EvalArtifact): Score {
-    const value = /* your scoring logic */;
-    return { name: "my-scorer", value, rawValue: artifact };
-  },
-};
+function expectContainsCode(result: RunResult) {
+  expect(result.output).toMatch(/```[\s\S]*```/)
+}
 
-const suite = defineSuite({
-  // ...
-  scorers: [myScorer],
-});
+test('generates code', async () => {
+  const result = await run(agent, { prompt: 'Write a function' })
+  expectContainsCode(result)
+})
 ```
-
-### How do I run evals in CI?
-
-```bash
-# Run in replay mode (no API calls)
-bun run eval --mode replay
-
-# Exit code is 0 if all gates pass, 1 otherwise
-```
-
-For CI, you'll want pre-recorded fixtures. Record them locally first:
-```bash
-bun run record
-```
-
-Then commit the fixtures and run in replay mode in CI.
 
 ---
 
 ## See Also
 
-- [Eval System README](../../../../packages/internal/core/src/eval/README.md) - Full API reference
-- [Starter Kit](../../../../apps/starter-kit/) - Working example with CLI
+- [@open-harness/vitest](../../../../packages/open-harness/vitest/) - Vitest plugin source
+- [Quickstart](../../docs/learn/quickstart.mdx) - Getting started guide
 
 ---
 
 ## Purpose
 
-Explain the evals pattern and how to use it.
+Explain the evals pattern and how to use it with native Vitest integration.

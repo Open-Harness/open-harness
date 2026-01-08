@@ -17,13 +17,15 @@
 | **`run()` Execution** | ✅ **Done** | Provider injection, real metrics |
 | **Vitest Plugin** | ✅ **Done** | Matchers, reporter, types |
 | **Old API Cleanup** | ✅ **Done** | Removed `defineSuite`/`runSuite` DX layer |
-| Documentation | 🟡 Ready | Unblocked by Phase 3 |
+| **Documentation** | ✅ **Done** | Updated all docs to new API |
 
 **Phase 1 Complete (2026-01-08):** `run()` now executes providers via injection pattern. Tests verify real behavior.
 
 **Phase 2 Complete (2026-01-08):** `@open-harness/vitest` package with matchers (`toHaveLatencyUnder`, `toCostUnder`, `toHaveTokensUnder`), `OpenHarnessReporter` with quality gates, and TypeScript declarations.
 
 **Phase 3 Complete (2026-01-08):** Removed old DX layer (`defineSuite`, `runSuite`, `variant`, `gates`). Cleaned up starter-kit for Phase 5 rebuild.
+
+**Phase 4 Complete (2026-01-08):** Updated all documentation to use new API (`agent`, `harness`, `run`) with Vitest integration. Removed all old API references.
 
 ---
 
@@ -467,40 +469,52 @@ Removed the Phase 8 DX layer (`defineSuite`, `runSuite`, `variant`, `gates`) sin
 
 ---
 
-## Phase 4: Documentation
+## Phase 4: Documentation ✅ COMPLETE
 
-**Status:** 🟡 Ready to Start
+**Status:** ✅ COMPLETE (2026-01-08)
 **Depends on:** Phase 3 ✅
 **Effort:** Light
 
-### Task 4.1: Update evals-pattern.md
+Documentation updated to remove all old API references (`defineSuite`, `runSuite`, `runFlow`) and showcase the new v0.2.0 API (`agent`, `harness`, `run`) with Vitest integration.
 
-- [ ] Remove `defineSuite`, `runSuite` examples
-- [ ] Add new API examples (`agent`, `harness`, `run`)
-- [ ] Add fixture examples
-- [ ] Add vitest examples
+### Task 4.1: Update evals-pattern.md ✅
 
-### Task 4.2: Update quickstart.md
+- [x] Remove `defineSuite`, `runSuite` examples
+- [x] Add new API examples (`agent`, `harness`, `run`)
+- [x] Add fixture examples
+- [x] Add vitest examples
 
-- [ ] Use new API throughout
-- [ ] Show fixture workflow
+### Task 4.2: Update quickstart.md ✅
 
-### Task 4.3: Update Other Docs
+- [x] Use new API throughout
+- [x] Show fixture workflow
 
-- [ ] Find all old API references
-- [ ] Update to new API
+### Task 4.3: Update Other Docs ✅
 
-### Task 4.4: Phase 4 Quality Gate
+- [x] Find all old API references
+- [x] Update to new API
 
-- [ ] `grep -r "defineSuite\|runSuite\|runFlow" apps/docs/` — returns nothing
-- [ ] `cd apps/docs && bun run build` — succeeds
+**Files Updated:**
+- `apps/docs/content/0.2.0/03-patterns/evals-pattern.md` — Complete rewrite for Vitest-based evals
+- `apps/docs/content/docs/learn/quickstart.mdx` — New agent-first API
+- `apps/docs/content/docs/reference/api/runtime.mdx` — Updated to run() API
+- `apps/docs/content/docs/concepts/architecture.mdx` — Agent/harness architecture
+- `apps/docs/content/docs/guides/agents/custom-agents.mdx` — New agent patterns
+- `apps/docs/content/docs/learn/troubleshooting.mdx` — Updated error references
+
+### Task 4.4: Phase 4 Quality Gate ✅
+
+- [x] `grep -r "defineSuite\|runSuite\|runFlow" apps/docs/` — returns nothing
+- [x] `cd apps/docs && bun run build` — succeeds
+- [x] `bun run typecheck` — zero errors
+- [x] `bun run lint` — zero warnings
 
 ---
 
 ## Phase 5: Integration Example
 
-**Status:** 🔴 Blocked
-**Depends on:** Phase 4
+**Status:** 🟡 Ready to Start
+**Depends on:** Phase 4 ✅
 **Effort:** Light
 
 **Note (Phase 3):** The old `apps/starter-kit/` eval code using `defineSuite`/`runSuite` was deleted in Phase 3. Phase 5 should rebuild it using the new Vitest-based API.

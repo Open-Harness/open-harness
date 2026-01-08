@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Run your first Open Harness flow in under 5 minutes
+description: Run your first Open Harness agent in under 5 minutes
 ---
 
 # Quickstart
 
-Build and run a flow with Claude in under five minutes.
+Build and run an agent with Claude in under five minutes.
 
 ## What You'll Build
 
@@ -13,7 +13,7 @@ A code review assistant that uses Claude to analyze code:
 
 ```
 ┌─────────────────┐
-│  claude.agent   │
+│     agent()     │
 │  (code review)  │
 └─────────────────┘
 ```
@@ -29,54 +29,46 @@ A code review assistant that uses Claude to analyze code:
 mkdir code-reviewer
 cd code-reviewer
 bun init -y
-bun add @open-harness/server
+bun add @open-harness/core
 ```
 
-## Step 02: Define the Flow
+## Step 02: Define the Agent
 
-Create `flow.yaml`:
+Create `agent.ts`:
 
-```yaml title="flow.yaml"
-name: code-reviewer
-nodes:
-  - id: review
-    type: claude.agent
-    input:
-      prompt: |
-        Review this code for potential issues:
-        {{ flow.input.code }}
+```typescript title="agent.ts"
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
 
-        Provide a brief summary of any problems found.
-edges: []
+// Set up the Claude provider
+setDefaultProvider(createClaudeNode());
+
+// Define a code review agent
+export const codeReviewer = agent({
+  prompt: `You are a code reviewer. Analyze code for:
+- Potential bugs
+- Security vulnerabilities
+- Style issues
+
+Provide a brief summary of any problems found.`,
+});
+
+// Run the agent
+const result = await run(codeReviewer, {
+  prompt: `Review this code:
+function divide(a, b) {
+  return a / b;
+}`,
+});
+
+console.log("Review:", result.output);
+console.log("Metrics:", result.metrics);
 ```
 
 ## Step 03: Run It
 
-Create `run.ts`:
-
-```typescript title="run.ts"
-import { runFlow, parseFlowYaml } from "@open-harness/server";
-import { readFileSync } from "node:fs";
-
-const yaml = readFileSync("flow.yaml", "utf-8");
-const flow = parseFlowYaml(yaml);
-
-const snapshot = await runFlow({
-  flow,
-  input: {
-    code: `function divide(a, b) {
-  return a / b;
-}`
-  },
-});
-
-console.log("Review:", snapshot.outputs.review.text);
-```
-
-Run it:
-
 ```bash
-bun run run.ts
+bun run agent.ts
 ```
 
 You should see output like:
@@ -84,17 +76,18 @@ You should see output like:
 ```
 Review: This function has a potential division by zero issue.
 Consider adding a check for b === 0 before dividing.
+Metrics: { latencyMs: 1234, cost: 0.001, tokens: { input: 45, output: 32 } }
 ```
 
 ## What Just Happened?
 
-1. You defined a **flow** with a single `claude.agent` node
-2. The `{{ flow.input.code }}` **binding** passed your input to the prompt
-3. `runFlow()` executed the flow and returned a **snapshot**
-4. Node outputs are available at `snapshot.outputs.{nodeId}`
+1. You defined an **agent** with a system prompt
+2. The `run()` function executed the agent with your input
+3. The result includes the output and real **metrics**
+4. Authentication happened automatically via Claude Code
 
 <Callout type="stuck" title="Are you stuck?">
-**Error: Cannot find module '@open-harness/server'**
+**Error: Cannot find module '@open-harness/core'**
 Run `bun install` to install dependencies.
 
 **Error: Claude API authentication failed**
@@ -103,15 +96,48 @@ Make sure you're running from within Claude Code.
 
 ## What You Learned
 
-- Flows have `name` and `nodes`
-- Nodes have `id`, `type`, and `input`
-- `claude.agent` is the built-in Claude node
-- `{{ flow.input.field }}` passes input to nodes
-- `runFlow()` executes and returns a snapshot
+- `agent()` defines an agent with a system prompt
+- `run()` executes the agent and returns a result
+- Results include `output` and `metrics` (latency, cost, tokens)
+- Authentication is handled automatically
+
+## Adding Tests with Vitest
+
+Create tests for your agent using `@open-harness/vitest`:
+
+```bash
+bun add -D vitest @open-harness/vitest
+```
+
+Create `agent.test.ts`:
+
+```typescript title="agent.test.ts"
+import { test, expect } from "vitest";
+import { run, agent } from "@open-harness/vitest";
+
+const codeReviewer = agent({
+  prompt: "Review code for bugs and security issues.",
+});
+
+test("catches division by zero", async () => {
+  const result = await run(codeReviewer, {
+    prompt: "function divide(a, b) { return a / b; }",
+  });
+
+  expect(result.output).toContain("division");
+  expect(result).toHaveLatencyUnder(10000); // < 10 seconds
+  expect(result).toCostUnder(0.01); // < $0.01
+});
+```
+
+Run tests:
+
+```bash
+bun test
+```
 
 ## Next Steps
 
-- [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow with branching
-- [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
+- [Custom Agents](/docs/guides/agents/custom-agents) — Build specialized agent implementations
+- [Architecture](/docs/concepts/architecture) — Understand how Open Harness works
 - [Troubleshooting](/docs/learn/troubleshooting) — Common errors and fixes
-

@@ -1,153 +1,194 @@
 ---
 title: Architecture
-description: Understanding the Runtime, Nodes, and Transport layers
+description: Understanding agents, harnesses, and the runtime
 ---
 
 # Architecture
 
-Open Harness is built around a simple event-driven architecture that separates
-execution, integration, and external communication.
+Open Harness is built around a simple agent-first architecture that separates
+definition, execution, and evaluation.
 
 ## Core Components
 
-### Runtime
+### Agents
 
-The **Runtime** is the execution engine. It:
-- Parses flow definitions
-- Resolves bindings and evaluates expressions
-- Executes nodes in the correct order
-- Emits events as the flow progresses
-- Manages workflow state
+An **agent** is the fundamental building block. It encapsulates:
+- A system prompt that defines behavior
+- Input/output types
+- Provider configuration (optional)
 
-### Nodes
+```typescript
+import { agent } from "@open-harness/core";
 
-**Nodes** are the building blocks that perform work. They can be:
-- **LLM-backed** (like `claude.agent`) for reasoning and natural language
-- **Deterministic** (like `echo`, `constant`) for transforms and validation
+const reviewer = agent({
+  prompt: "Review code for bugs and security issues.",
+});
+```
 
-Every node implements the `NodeTypeDefinition` interface with a `run()` method.
+### Harnesses
 
-### Transports
+A **harness** coordinates multiple agents. It:
+- Groups related agents together
+- Defines how agents interact
+- Manages shared state across agents
 
-**Transports** connect the runtime to external clients. They:
-- Broadcast runtime events to connected clients
-- Receive commands (pause, resume, stop) from clients
-- Examples: `WebSocketTransport` for browser clients
+```typescript
+import { harness, agent } from "@open-harness/core";
 
-### Run Store
+const classifier = agent({ prompt: "Classify the input type." });
+const responder = agent({ prompt: "Generate a response." });
 
-**Run stores** provide persistence for workflow state:
-- `InMemoryRunStore` for development
-- `SqliteRunStore` for production persistence
+const myHarness = harness({
+  agents: { classifier, responder },
+  flow: async (agents, input) => {
+    const type = await agents.classifier.run(input);
+    return agents.responder.run({ ...input, type });
+  },
+});
+```
+
+### Providers
+
+**Providers** are the execution backends that run agents. They:
+- Connect to LLM APIs (Claude, etc.)
+- Handle streaming responses
+- Report metrics (latency, cost, tokens)
+
+```typescript
+import { setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+setDefaultProvider(createClaudeNode());
+```
+
+### Fixture Stores
+
+**Fixture stores** enable recording and replay:
+- Record live responses for deterministic testing
+- Replay fixtures in CI without API calls
+- Support regression detection
+
+```typescript
+import { FileFixtureStore } from "@open-harness/stores";
+
+const store = new FileFixtureStore("./fixtures");
+```
 
 ## System Diagram
 
 ```mermaid
 flowchart TB
-  client[Client / Browser]
-  transport[WebSocket Transport]
-  runtime[Runtime]
-  nodes[Nodes]
-  store[Run Store]
+  agent[agent()]
+  harness[harness()]
+  run[run()]
+  provider[Provider]
+  store[Fixture Store]
 
-  client <--> transport
-  transport --> runtime
-  runtime --> nodes
-  nodes --> runtime
-  runtime --> store
-  runtime --> transport
+  agent --> run
+  harness --> run
+  run --> provider
+  run --> store
+  provider --> result[RunResult]
+  store --> result
 ```
 
 ## Execution Flow
 
 ```mermaid
 sequenceDiagram
-  participant Client
-  participant Transport
-  participant Runtime
-  participant Node
+  participant User
+  participant Run as run()
+  participant Provider
+  participant Store as Fixture Store
 
-  Client->>Transport: Connect
-  Runtime->>Runtime: Parse flow
-  Runtime->>Node: Execute node
-  Node-->>Runtime: Output + events
-  Runtime-->>Transport: Broadcast events
-  Transport-->>Client: Stream updates
+  User->>Run: run(agent, input)
+  Run->>Provider: Execute with input
+  Provider-->>Run: Output + metrics
+  Run->>Store: Save fixture (if recording)
+  Run-->>User: RunResult
 ```
 
 ## Entry Points
 
-Open Harness provides three ways to run flows:
+Open Harness provides a simple API:
 
 | Function | Use Case |
 |----------|----------|
-| `runFlow()` | Simple one-shot execution |
-| `createHarness()` | Full control with transports |
-| `createRuntime()` | Low-level runtime access |
+| `agent()` | Define a single agent |
+| `harness()` | Define a multi-agent workflow |
+| `run()` | Execute an agent or harness |
 
-### runFlow()
+### agent()
 
-Simplest option - runs a flow and returns the result:
+Define a single agent:
 
 ```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/server";
+import { agent } from "@open-harness/core";
 
-const snapshot = await runFlow({
-  flow: parseFlowYaml(yaml),
-  input: { name: "World" },
+const myAgent = agent({
+  prompt: "You are a helpful assistant.",
 });
 ```
 
-### createHarness()
+### harness()
 
-Full control with transports and event handlers:
+Coordinate multiple agents:
 
 ```typescript
-import { createHarness, parseFlowYaml } from "@open-harness/server";
+import { harness, agent } from "@open-harness/core";
 
-const harness = createHarness({
-  flow: parseFlowYaml(yaml),
-  transport: { websocket: { port: 8080 } },
-  onEvent: (event) => console.log(event),
+const myHarness = harness({
+  agents: { agent1, agent2 },
+  flow: async (agents, input) => {
+    // Custom orchestration logic
+  },
 });
-
-await harness.run({ name: "World" });
-await harness.stop();
 ```
 
-### createRuntime()
+### run()
 
-Low-level access to the runtime:
+Execute an agent or harness:
 
 ```typescript
-import { createRuntime, parseFlowYaml } from "@open-harness/server";
+import { run } from "@open-harness/core";
 
-const runtime = createRuntime({
-  flow: parseFlowYaml(yaml),
-  registry,
-  store,
-});
+const result = await run(myAgent, { prompt: "Hello" });
+```
 
-runtime.onEvent((event) => console.log(event));
-const snapshot = await runtime.run({ name: "World" });
+## Result Shape
+
+All executions return a consistent shape:
+
+```typescript
+{
+  output: T,                    // The agent's response
+  state?: Record<string, unknown>,  // Optional state
+  metrics: {
+    latencyMs: number,          // Execution time
+    cost: number,               // USD cost
+    tokens: { input, output },  // Token usage
+  },
+  fixtures?: string[],          // Fixture IDs if recording
+}
 ```
 
 ## Event System
 
-The runtime emits events at each stage of execution:
+The runtime emits events during execution:
 
 | Event | When |
 |-------|------|
-| `flow:start` | Flow execution begins |
-| `node:start` | Node execution begins |
+| `agent:start` | Agent execution begins |
 | `agent:text` | Streaming text from LLM |
-| `node:complete` | Node execution finishes |
-| `flow:complete` | Flow execution finishes |
+| `agent:complete` | Agent execution finishes |
+| `agent:error` | Error during execution |
 
-Subscribe to events with `runtime.onEvent()`:
+Subscribe to events for monitoring:
 
 ```typescript
-const unsubscribe = runtime.onEvent((event) => {
+import { onEvent } from "@open-harness/core";
+
+onEvent((event) => {
   if (event.type === "agent:text") {
     process.stdout.write(event.text);
   }
@@ -157,6 +198,5 @@ const unsubscribe = runtime.onEvent((event) => {
 ## Next Steps
 
 - [Event System](/docs/concepts/event-system) — Deep dive on events
-- [Expressions](/docs/concepts/expressions) — JSONata in bindings and conditions
+- [Expressions](/docs/concepts/expressions) — JSONata in bindings
 - [Persistence](/docs/concepts/persistence) — Storing workflow state
-
