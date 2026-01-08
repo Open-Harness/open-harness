@@ -288,45 +288,43 @@ After all agents complete, synthesize into a CRITICAL report:
 
 ### The Single Example Requirement
 
-The example should be a **coding assistant workflow** that:
+**CRITICAL**: Progressive disclosure is about CONCEPTS, not "more agents."
 
-**Level 1 (Quickstart):** Single node, takes a task, returns code
-```yaml
-nodes:
-  - id: coder
-    type: claude.agent
-    input:
-      prompt: "{{ flow.input.task }}"
-```
+Adding a second agent is NOT more important than understanding STATE. The progression should teach one CORE CONCEPT per level, in order of importance:
 
-**Level 2 (Multi-node):** Adds a reviewer node
-```yaml
-nodes:
-  - id: coder
-    type: claude.agent
-    input:
-      prompt: "{{ flow.input.task }}"
-  - id: reviewer
-    type: claude.agent
-    input:
-      prompt: "Review this code: {{ coder.text }}"
-edges:
-  - from: coder
-    to: reviewer
-```
+**Level 1: Hello World** - Just make something work
+- Single node, input → output
+- Concept: "Flows execute nodes"
 
-**Level 3 (Iteration):** Coder revises based on review
-```yaml
-# Add iteration logic
-```
+**Level 2: State** - The fundamental building block
+- Same node, but now it tracks state (counter, history, etc.)
+- Concept: "Workflows have memory"
+- This is MORE important than multi-agent!
 
-**Level 4 (Persistence):** Save and resume workflows
+**Level 3: Data Flow** - Passing data between nodes
+- NOW add a second node
+- Focus on bindings: `{{ previousNode.output }}`
+- Concept: "Nodes communicate through bindings"
 
-**Level 5 (Recording):** Record and replay for testing
+**Level 4: Conditions** - Branching logic
+- Add a `when` clause to an edge
+- Concept: "Flows can branch based on data"
 
-**Level 6 (Evals):** Measure and compare performance
+**Level 5: Persistence** - Save and resume
+- Add RunStore, show resume from saved state
+- Concept: "Workflows survive restarts"
 
-Each level introduces ONE new concept. Users can stop at any level and have something useful.
+**Level 6: Recording** - Deterministic replay
+- Record a run, replay it
+- Concept: "Test without hitting APIs"
+
+**Level 7: Evals** - Measure and compare
+- Define cases, variants, gates
+- Concept: "Data proves what's better"
+
+**Each level introduces ONE concept. The example BUILDS - level 7 is the same workflow as level 1, just with all the concepts added.**
+
+The audit should verify: Are these concepts covered? In this order? With a building example?
 
 ### What NOT to Include in v0.2.0 Docs
 
