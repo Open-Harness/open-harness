@@ -15,10 +15,12 @@
 | Eval Primitives (Phases 6-7) | ✅ Done | Types, engine, scorers |
 | API Types (`agent`, `harness`, `run`) | ✅ Done | Types and factories work |
 | **`run()` Execution** | ✅ **Done** | Provider injection, real metrics |
-| Vitest Plugin | ❌ Not Started | Ready to implement |
-| Documentation | ❌ Blocked | Blocked by Vitest Plugin |
+| **Vitest Plugin** | ✅ **Done** | Matchers, reporter, types |
+| Documentation | ❌ Blocked | Blocked by Phase 3 cleanup |
 
 **Phase 1 Complete (2026-01-08):** `run()` now executes providers via injection pattern. Tests verify real behavior.
+
+**Phase 2 Complete (2026-01-08):** `@open-harness/vitest` package with matchers (`toHaveLatencyUnder`, `toCostUnder`, `toHaveTokensUnder`), `OpenHarnessReporter` with quality gates, and TypeScript declarations.
 
 ---
 
@@ -127,11 +129,13 @@ const result = await run(myAgent, { prompt: "Hello" })
 
 ---
 
-## Phase 2: Vitest Plugin
+## Phase 2: Vitest Plugin ✅ COMPLETE
 
-**Status:** 🔴 Not Started
+**Status:** ✅ COMPLETE (2026-01-08)
 **Depends on:** Phase 1 ✅
 **Effort:** Medium
+
+Vitest plugin with custom matchers, reporter, and type declarations implemented. All quality gates pass.
 
 ### Package Structure
 
@@ -179,10 +183,10 @@ packages/open-harness/vitest/
 }
 ```
 
-- [ ] Create `package.json` with vitest ^2.0.0 peer dependency
-- [ ] Create `tsconfig.json` extending root config
-- [ ] Add to turbo pipeline in root `turbo.json`
-- [ ] Verify `bun install` resolves workspace
+- [x] Create `package.json` with vitest ^2.0.0 peer dependency
+- [x] Create `tsconfig.json` extending root config
+- [x] Add to turbo pipeline in root `turbo.json`
+- [x] Verify `bun install` resolves workspace
 
 ---
 
@@ -234,11 +238,11 @@ export function setupMatchers() {
 }
 ```
 
-- [ ] Implement `toHaveLatencyUnder(threshold: number)`
-- [ ] Implement `toCostUnder(maxUsd: number)`
-- [ ] Implement `toHaveTokensUnder(maxTokens: number)`
-- [ ] Create `setupMatchers()` function
-- [ ] Write tests for all matchers
+- [x] Implement `toHaveLatencyUnder(threshold: number)`
+- [x] Implement `toCostUnder(maxUsd: number)`
+- [x] Implement `toHaveTokensUnder(maxTokens: number)`
+- [x] Create `setupMatchers()` function
+- [x] Write tests for all matchers
 
 ---
 
@@ -259,9 +263,9 @@ declare module 'vitest' {
 }
 ```
 
-- [ ] Create type declarations augmenting vitest's `Assertion` interface
-- [ ] Export types from `index.ts`
-- [ ] Verify TypeScript autocomplete works
+- [x] Create type declarations augmenting vitest's `Assertion` interface
+- [x] Export types from `index.ts`
+- [x] Verify TypeScript autocomplete works
 
 ---
 
@@ -318,12 +322,12 @@ export class OpenHarnessReporter implements Reporter {
 }
 ```
 
-- [ ] Implement `Reporter` interface from `vitest/node`
-- [ ] Track pass/fail counts via `onTaskUpdate`
-- [ ] Output summary in `onFinished`
-- [ ] Evaluate pass rate gate (default: 80%)
-- [ ] Set `process.exitCode = 1` on gate failure
-- [ ] Write tests for reporter
+- [x] Implement `Reporter` interface from `vitest/node`
+- [x] Track pass/fail counts via `onTaskUpdate`
+- [x] Output summary in `onFinished`
+- [x] Evaluate pass rate gate (default: 80%)
+- [x] Set `process.exitCode = 1` on gate failure
+- [x] Write tests for reporter
 
 ---
 
@@ -338,9 +342,9 @@ import { setupMatchers } from './matchers.js'
 setupMatchers()
 ```
 
-- [ ] Create setup file that calls `setupMatchers()`
-- [ ] Export from package.json `"./setup"` path
-- [ ] Document auto vs manual setup options
+- [x] Create setup file that calls `setupMatchers()`
+- [x] Export from package.json `"./setup"` path
+- [x] Document auto vs manual setup options
 
 ---
 
@@ -363,28 +367,28 @@ export type { RunResult, RunMetrics } from '@open-harness/core'
 export { run, agent, harness } from '@open-harness/core'
 ```
 
-- [ ] Export matchers and setupMatchers
-- [ ] Export reporter and GateConfig
-- [ ] Re-export core functions for convenience
-- [ ] Ensure all types properly exported
+- [x] Export matchers and setupMatchers
+- [x] Export reporter and GateConfig
+- [x] Re-export core functions for convenience
+- [x] Ensure all types properly exported
 
 ---
 
-### Task 2.7: JSDoc Documentation
+### Task 2.7: JSDoc Documentation ✅
 
-- [ ] JSDoc on `OpenHarnessReporter` with vitest.config.ts example
-- [ ] JSDoc on all matchers with usage examples
-- [ ] JSDoc on `GateConfig` interface
+- [x] JSDoc on `OpenHarnessReporter` with vitest.config.ts example
+- [x] JSDoc on all matchers with usage examples
+- [x] JSDoc on `GateConfig` interface
 
 ---
 
-### Task 2.8: Phase 2 Quality Gate
+### Task 2.8: Phase 2 Quality Gate ✅
 
-- [ ] `bun run typecheck` — zero errors (all 14 packages)
-- [ ] `bun run lint` — zero warnings (all 14 packages)
-- [ ] `bun test packages/open-harness/vitest/` — all pass
-- [ ] Manual: matchers work in vitest test file
-- [ ] Manual: reporter outputs summary and fails on low pass rate
+- [x] `bun run typecheck` — zero errors (all 17 packages)
+- [x] `bun run lint` — zero warnings (all 17 packages)
+- [x] `bun test packages/open-harness/vitest/` — all 21 tests pass
+- [x] Manual: matchers work in vitest test file
+- [x] Manual: reporter outputs summary and fails on low pass rate
 
 ---
 
