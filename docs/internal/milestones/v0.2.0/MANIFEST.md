@@ -130,64 +130,295 @@ const result = await run(myAgent, { prompt: "Hello" })
 ## Phase 2: Vitest Plugin
 
 **Status:** 🔴 Not Started
-**Depends on:** Phase 1
-**Effort:** Light
+**Depends on:** Phase 1 ✅
+**Effort:** Medium
+
+### Package Structure
+
+**Directory:** `packages/open-harness/vitest/`
+**npm name:** `@open-harness/vitest`
+
+```
+packages/open-harness/vitest/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── index.ts          # Public exports
+│   ├── matchers.ts       # Custom vitest matchers
+│   ├── reporter.ts       # Aggregation + gates reporter
+│   ├── setup.ts          # Auto-setup file for setupFiles config
+│   └── types.ts          # TypeScript declarations
+└── tests/
+    ├── matchers.test.ts
+    └── reporter.test.ts
+```
+
+---
 
 ### Task 2.1: Create Package
 
-**Directory:** `packages/open-harness/vitest/`
+**File:** `packages/open-harness/vitest/package.json`
 
-- [ ] `package.json` with vitest peer dependency
-- [ ] `tsconfig.json`
-- [ ] `src/index.ts`
+```json
+{
+  "name": "@open-harness/vitest",
+  "version": "0.2.0-alpha.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./setup": "./src/setup.ts"
+  },
+  "peerDependencies": {
+    "vitest": "^2.0.0",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@open-harness/core": "workspace:*"
+  }
+}
+```
+
+- [ ] Create `package.json` with vitest ^2.0.0 peer dependency
+- [ ] Create `tsconfig.json` extending root config
+- [ ] Add to turbo pipeline in root `turbo.json`
+- [ ] Verify `bun install` resolves workspace
+
+---
 
 ### Task 2.2: Implement Matchers
 
 **File:** `packages/open-harness/vitest/src/matchers.ts`
 
 ```typescript
-expect.extend({
-  toHaveLatencyUnder(result: RunResult, threshold: number) {
-    const pass = result.metrics.latencyMs < threshold;
-    return { pass, message: () => `...` };
+import type { RunResult } from '@open-harness/core'
+
+export const matchers = {
+  toHaveLatencyUnder(received: RunResult, threshold: number) {
+    const latencyMs = received.metrics.latencyMs
+    const pass = latencyMs < threshold
+    return {
+      pass,
+      message: () => pass
+        ? `Expected latency >= ${threshold}ms, got ${latencyMs}ms`
+        : `Expected latency < ${threshold}ms, got ${latencyMs}ms`,
+    }
   },
-  toCostUnder(result: RunResult, threshold: number) {
-    const pass = result.metrics.cost < threshold;
-    return { pass, message: () => `...` };
+
+  toCostUnder(received: RunResult, maxUsd: number) {
+    const cost = received.metrics.cost
+    const pass = cost < maxUsd
+    return {
+      pass,
+      message: () => pass
+        ? `Expected cost >= $${maxUsd}, got $${cost}`
+        : `Expected cost < $${maxUsd}, got $${cost}`,
+    }
   },
-});
+
+  toHaveTokensUnder(received: RunResult, maxTokens: number) {
+    const total = received.metrics.tokens.input + received.metrics.tokens.output
+    const pass = total < maxTokens
+    return {
+      pass,
+      message: () => pass
+        ? `Expected tokens >= ${maxTokens}, got ${total}`
+        : `Expected tokens < ${maxTokens}, got ${total}`,
+    }
+  },
+}
+
+export function setupMatchers() {
+  // @ts-expect-error - vitest global
+  expect.extend(matchers)
+}
 ```
 
-- [ ] `toHaveLatencyUnder(threshold: number)`
-- [ ] `toCostUnder(threshold: number)`
-- [ ] TypeScript declarations for matchers
-- [ ] Tests for matchers
+- [ ] Implement `toHaveLatencyUnder(threshold: number)`
+- [ ] Implement `toCostUnder(maxUsd: number)`
+- [ ] Implement `toHaveTokensUnder(maxTokens: number)`
+- [ ] Create `setupMatchers()` function
+- [ ] Write tests for all matchers
 
-### Task 2.3: Implement Reporter
+---
+
+### Task 2.3: TypeScript Declarations
+
+**File:** `packages/open-harness/vitest/src/types.ts`
+
+```typescript
+interface OpenHarnessMatchers<R = unknown> {
+  toHaveLatencyUnder(threshold: number): R
+  toCostUnder(maxUsd: number): R
+  toHaveTokensUnder(maxTokens: number): R
+}
+
+declare module 'vitest' {
+  interface Assertion<T> extends OpenHarnessMatchers<T> {}
+  interface AsymmetricMatchersContaining extends OpenHarnessMatchers {}
+}
+```
+
+- [ ] Create type declarations augmenting vitest's `Assertion` interface
+- [ ] Export types from `index.ts`
+- [ ] Verify TypeScript autocomplete works
+
+---
+
+### Task 2.4: Implement Reporter
 
 **File:** `packages/open-harness/vitest/src/reporter.ts`
 
 ```typescript
-export class OpenHarnessReporter extends DefaultReporter {
-  constructor(config: { passRate?: number }) { ... }
+import type { Reporter, File, TaskResultPack } from 'vitest/node'
 
-  onFinished() {
-    // Calculate pass rate
-    // Fail if below threshold
+export interface GateConfig {
+  /** Minimum pass rate (0-1). Default: 0.8 (80%) */
+  passRate?: number
+  /** Maximum allowed latency in ms (optional) */
+  maxLatencyMs?: number
+  /** Maximum allowed cost in USD (optional) */
+  maxCostUsd?: number
+}
+
+export class OpenHarnessReporter implements Reporter {
+  private passed = 0
+  private failed = 0
+  private config: Required<Pick<GateConfig, 'passRate'>> & GateConfig
+
+  constructor(config: GateConfig = {}) {
+    this.config = { passRate: 0.8, ...config }
+  }
+
+  onTaskUpdate(packs: TaskResultPack[]) {
+    for (const [id, result] of packs) {
+      if (result?.state === 'pass') this.passed++
+      if (result?.state === 'fail') this.failed++
+    }
+  }
+
+  onFinished(files?: File[]) {
+    const total = this.passed + this.failed
+    if (total === 0) return
+
+    const passRate = this.passed / total
+
+    console.log('\n────────────────────────────────────')
+    console.log(`Open Harness: ${this.passed}/${total} passed (${(passRate * 100).toFixed(1)}%)`)
+
+    if (passRate < this.config.passRate) {
+      console.error(`❌ Gate FAILED: pass rate ${(passRate * 100).toFixed(1)}% < ${(this.config.passRate * 100).toFixed(1)}%`)
+      process.exitCode = 1
+      return
+    }
+
+    console.log('✅ All gates passed')
+    console.log('────────────────────────────────────\n')
   }
 }
 ```
 
-- [ ] Aggregates test results
-- [ ] Calculates pass rate
-- [ ] Fails CI if pass rate below threshold
-- [ ] Tests for reporter
+- [ ] Implement `Reporter` interface from `vitest/node`
+- [ ] Track pass/fail counts via `onTaskUpdate`
+- [ ] Output summary in `onFinished`
+- [ ] Evaluate pass rate gate (default: 80%)
+- [ ] Set `process.exitCode = 1` on gate failure
+- [ ] Write tests for reporter
 
-### Task 2.4: Phase 2 Quality Gate
+---
 
-- [ ] `bun run typecheck` — zero errors
-- [ ] `bun run lint` — zero warnings
+### Task 2.5: Setup File
+
+**File:** `packages/open-harness/vitest/src/setup.ts`
+
+```typescript
+import { setupMatchers } from './matchers.js'
+
+// Auto-register matchers when used as setupFile
+setupMatchers()
+```
+
+- [ ] Create setup file that calls `setupMatchers()`
+- [ ] Export from package.json `"./setup"` path
+- [ ] Document auto vs manual setup options
+
+---
+
+### Task 2.6: Public Exports
+
+**File:** `packages/open-harness/vitest/src/index.ts`
+
+```typescript
+// Matchers
+export { matchers, setupMatchers } from './matchers.js'
+
+// Reporter
+export { OpenHarnessReporter } from './reporter.js'
+export type { GateConfig } from './reporter.js'
+
+// Types (re-export for convenience)
+export type { RunResult, RunMetrics } from '@open-harness/core'
+
+// Convenience re-exports
+export { run, agent, harness } from '@open-harness/core'
+```
+
+- [ ] Export matchers and setupMatchers
+- [ ] Export reporter and GateConfig
+- [ ] Re-export core functions for convenience
+- [ ] Ensure all types properly exported
+
+---
+
+### Task 2.7: JSDoc Documentation
+
+- [ ] JSDoc on `OpenHarnessReporter` with vitest.config.ts example
+- [ ] JSDoc on all matchers with usage examples
+- [ ] JSDoc on `GateConfig` interface
+
+---
+
+### Task 2.8: Phase 2 Quality Gate
+
+- [ ] `bun run typecheck` — zero errors (all 14 packages)
+- [ ] `bun run lint` — zero warnings (all 14 packages)
 - [ ] `bun test packages/open-harness/vitest/` — all pass
+- [ ] Manual: matchers work in vitest test file
+- [ ] Manual: reporter outputs summary and fails on low pass rate
+
+---
+
+### Usage Example
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config'
+import { OpenHarnessReporter } from '@open-harness/vitest'
+
+export default defineConfig({
+  test: {
+    setupFiles: ['@open-harness/vitest/setup'],
+    reporters: ['default', new OpenHarnessReporter({ passRate: 0.8 })],
+  }
+})
+```
+
+```typescript
+// tests/my-agent.test.ts
+import { test, expect } from 'vitest'
+import { run, agent } from '@open-harness/vitest'
+
+const myAgent = agent({ prompt: 'You are helpful.' })
+
+test('agent responds quickly and cheaply', async () => {
+  const result = await run(myAgent, { prompt: 'Hello' })
+
+  expect(result.output).toBeDefined()
+  expect(result).toHaveLatencyUnder(5000)  // < 5 seconds
+  expect(result).toCostUnder(0.01)         // < $0.01
+  expect(result).toHaveTokensUnder(1000)   // < 1000 total tokens
+})
+```
 
 ---
 
