@@ -204,51 +204,104 @@ Harness (coordinator)
 
 ---
 
-## Open Questions
+## Locked Decisions (Added 2026-01-08)
 
-### Recording Architecture
+### 9. Fixtures as `run()` Option (Option B) ✅
 
-**Question:** How exactly does the harness coordinate recordings?
+**Decision:** Fixtures are a first-class option of `run()`, not a separate concept.
 
-Options discussed:
-1. Provider records with hierarchical IDs (`harness-1/triage/0`)
-2. Manifest file links separate agent recordings
-3. Recording context passed through execution
-4. Two systems (provider recording + execution trace)
+```typescript
+// Live execution (default)
+const result = await run(agent, { prompt: 'Hello' })
 
-**Status:** Not yet decided. Need to understand current implementation better.
+// Record a fixture
+const result = await run(agent, { prompt: 'Hello' }, {
+  fixture: 'my-test',
+  store,
+})
+
+// Replay a fixture
+const result = await run(agent, { prompt: 'Hello' }, {
+  fixture: 'my-test',
+  mode: 'replay',
+  store,
+})
+```
+
+**Mode control via env var:**
+```bash
+FIXTURE_MODE=record bun test  # Record new fixtures
+FIXTURE_MODE=replay bun test  # Replay fixtures (CI)
+bun test                       # Live mode (default)
+```
+
+**Rationale:**
+- Recording exists FOR replay. Replay exists FOR testing. They're the same thing.
+- Single unified API - works with vitest, jest, or any framework.
+- Makes it easy to do the right thing.
 
 ---
 
-### run() Return Shape
+### 10. Hierarchical Fixture IDs for Multi-Agent ✅
 
-**Question:** What does `run()` return?
+**Decision:** Use hierarchical IDs: `<fixture-name>/<nodeId>/inv<N>`
 
-Proposed:
+```
+fixtures/
+└── code-review/
+    └── hello-world/
+        ├── coder/
+        │   └── inv0.json
+        └── reviewer/
+            └── inv0.json
+```
+
+**Rationale:** No manifest needed. Query by prefix to find all fixtures for a run.
+
+---
+
+### 11. Recording → Fixture Rename ✅
+
+**Decision:** Public API uses "fixture", internals keep "recording".
+
+- Public: `fixture`, `FixtureStore`, `FIXTURE_MODE`
+- Internal: `withRecording()`, `RecordingStore` (unchanged)
+
+---
+
+### 12. run() Return Shape ✅
+
+**Decision:** Locked.
+
 ```typescript
-{
-  output: T,           // The result
-  state: State,        // Final state (if stateful)
-  latencyMs: number,   // Total latency
-  cost: number,        // Total cost
-  tokens: { input, output },
-  recording?: string,  // Recording ID if recorded
+interface RunResult<T = unknown> {
+  output: T;
+  state?: Record<string, unknown>;  // Harness workflow state (if applicable)
+  metrics: {
+    latencyMs: number;
+    cost: number;
+    tokens: { input: number; output: number };
+  };
+  fixtures?: string[];  // IDs of fixtures created (when recording)
 }
 ```
 
-**Status:** Not yet locked. Need to verify against implementation.
-
 ---
 
-### Deprecation Path
+### 13. Deprecation Path ✅
 
-**Question:** How do we deprecate existing APIs?
+**Decision:**
 
-- `runFlow()` → alias to `run()`?
-- `defineSuite()` → remove entirely?
-- `withRecording()` → internal only?
-
-**Status:** Not yet decided.
+| API | Action |
+|-----|--------|
+| `runFlow()` | Deprecation warning → alias to `run()` |
+| `createHarness()` | Deprecation warning → internal only |
+| `createRuntime()` | Deprecation warning → internal only |
+| `defineSuite()` | Remove or mark @deprecated |
+| `runSuite()` | Remove or mark @deprecated |
+| `variant()` | Remove (use vitest `describe.each`) |
+| `gates.*` | Remove (use vitest reporter) |
+| `withRecording()` | Keep internal, no public export |
 
 ---
 

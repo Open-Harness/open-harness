@@ -87,115 +87,71 @@ The key insight: **Complexity lives in the framework, simplicity lives in your c
 
 ## What's Pending
 
-### Critical Path 1: Eval System (Phases 6-8)
+### Critical Path 1: New DX API (Phase 8 REVISED)
 
-**Reference:** `docs/internal/milestones/v0.2.0/EVAL_COMPLETION_PLAN.md`
+**Reference:** `docs/internal/milestones/v0.2.0/SDK_DX_DECISIONS.md`, `DX_IMPLEMENTATION_RESEARCH.md`
 
-#### Phase 6: Eval Core Types (1 week)
+> **NOTE:** Phases 6-7 are COMPLETE. Phase 8 OLD (`defineSuite`, `runSuite`) is OBSOLETE.
+> This section describes Phase 8 REVISED: the new public API.
 
-**Files to Create:**
-```
-packages/internal/core/src/eval/
-├── index.ts
-├── README.md
-├── types.ts          # EvalDataset, EvalCase, EvalVariant, EvalArtifact, Assertion, Score
-├── dataset.ts        # loadDataset(), validateDataset()
-├── assertions.ts     # evaluateAssertions(), path resolution
-├── cache.ts          # Judge cache interface + in-memory impl
-└── scorers/
-    ├── index.ts
-    ├── latency.ts
-    ├── cost.ts
-    ├── tokens.ts
-    ├── similarity.ts
-    └── llm-judge.ts
+#### Phase 6: Eval Core Types ✅ DONE
 
-packages/internal/core/tests/eval/
-├── types.test.ts
-├── dataset.test.ts
-└── assertions.test.ts
-```
+All files exist: `types.ts`, `assertions.ts`, `scorers/*`, `dataset.ts`, `cache.ts`
 
-**Acceptance Criteria:**
-- [ ] EvalDataset loads from JSON without validation errors
-- [ ] EvalCase assertions can be evaluated against an artifact
-- [ ] All 6 scorers defined + signatures finalized
-- [ ] Metric extraction from agent:complete events working
-- [ ] Dataset discovery (fixtures/evals/datasets/*.json) working
-- [ ] README explains "add dataset", "add scorer"
-- [ ] recording:linked event type added to runtime event union
-- [ ] 25+ unit tests passing
-- [ ] No regressions vs current main
+#### Phase 7: Eval Engine ✅ DONE
 
-#### Phase 7: Eval Engine (1.5 weeks)
+All files exist: `runner.ts`, `engine.ts`, `compare.ts`, `report.ts`, `hooks.ts`
+
+#### Phase 8 REVISED: New DX API + Vitest Plugin
+
+**Locked Decisions (from SDK_DX_DECISIONS.md + DX_IMPLEMENTATION_RESEARCH.md):**
+- `agent()`, `harness()`, `run()` as public API
+- Fixtures as `run()` option (not separate concept)
+- `FIXTURE_MODE` env var for record/replay/live
+- `@open-harness/vitest` plugin for reporter + matchers
+- DEPRECATE: `defineSuite()`, `runSuite()`, `variant()`, `gates.*`
 
 **Files to Create:**
 ```
-packages/internal/core/src/eval/
-├── engine.ts         # createEvalEngine(), public API
-├── runner.ts         # runCase(), runDataset(), runMatrix()
-├── compare.ts        # Baseline comparison logic
-├── report.ts         # Markdown + JSON report generation
-└── hooks.ts          # EvalHooks interface
+packages/internal/core/src/api/
+├── index.ts              # Re-exports
+├── agent.ts              # agent() factory
+├── harness.ts            # harness() factory
+├── run.ts                # run() unified entry point
+├── types.ts              # Agent, Harness, RunOptions, RunResult
+└── defaults.ts           # setDefaultStore(), setDefaultMode()
 
-packages/internal/core/tests/eval/
-├── runner.test.ts
-├── compare.test.ts
-└── report.test.ts
-
-packages/open-harness/core/tests/eval/
-└── eval-matrix.test.ts
-
-packages/open-harness/server/tests/integration/eval/
-└── eval-template.test.ts
+packages/open-harness/vitest/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── index.ts          # Main exports
+│   ├── plugin.ts         # Vite plugin (minimal)
+│   ├── reporter.ts       # Aggregation + gates
+│   ├── matchers.ts       # toHaveLatencyUnder, toCostUnder
+│   └── setup.ts          # Auto-setup file
 ```
 
 **Acceptance Criteria:**
-- [ ] EvalEngine.runCase() executes and returns EvalCaseResult
-- [ ] EvalEngine.runDataset() handles all cases in a dataset
-- [ ] EvalEngine.runMatrix() executes cases × variants
-- [ ] recording:linked events emitted for every provider call
-- [ ] Recording IDs follow deterministic scheme (eval__...__inv<N>)
-- [ ] Baseline comparison identifies assertion failures + metric regressions
-- [ ] Report includes top regressions, top flakes, budget regressions
-- [ ] Deterministic replay: same dataset × 2 = identical results
-- [ ] 35+ unit + integration tests passing
-- [ ] No regressions vs main
+- [ ] `agent({ prompt })` creates Agent type
+- [ ] `harness({ agents, edges })` creates Harness type
+- [ ] `run(agent, input)` executes and returns RunResult
+- [ ] `run(agent, input, { fixture: 'name' })` records/replays via existing withRecording
+- [ ] `FIXTURE_MODE=record|replay|live` env var controls mode
+- [ ] `setDefaultStore()`, `setDefaultMode()` configure defaults
+- [ ] Multi-agent fixtures use hierarchical IDs: `<fixture>/<nodeId>/inv<N>`
+- [ ] `@open-harness/vitest` package exists and is installable
+- [ ] Reporter aggregates results, fails CI if pass rate < threshold
+- [ ] Custom matchers work: `expect(result).toHaveLatencyUnder(5000)`
+- [ ] Old APIs (`runFlow`, `createHarness`) have deprecation warnings
 
-#### Phase 8: DX Layer + Fixtures + Landing (1-2 weeks)
+**Files to Deprecate (add console.warn):**
+- `runFlow()` → alias to `run()`
+- `createHarness()` → internal only
+- `createRuntime()` → internal only
 
-**Files to Create:**
-```
-packages/internal/core/src/eval/
-├── dx-types.ts              # SuiteConfig, VariantDef, Gate types
-└── dx.ts                    # defineSuite, variant, gates, runSuite
-
-packages/internal/core/tests/eval/
-└── dx.test.ts               # DX layer tests
-
-packages/open-harness/core/tests/fixtures/evals/
-├── datasets/
-│   └── coder-reviewer.v1.json
-├── goldens/
-│   └── recording-eval__*.json + .jsonl (multiple)
-└── provenance/
-    └── *.events.json (multiple)
-
-packages/open-harness/core/scripts/
-├── eval.ts
-└── record-eval-goldens.ts
-```
-
-**Acceptance Criteria:**
-- [ ] DX layer implemented: `defineSuite()`, `variant()`, `gates.*`, `runSuite()`
-- [ ] DX layer tested with unit tests
-- [ ] At least one real dataset (coder-reviewer.v1) created + committed
-- [ ] Goldens recorded using live SDK (manual, one-time)
-- [ ] Provenance fixtures captured + committed
-- [ ] Scripts added: eval.ts + record-eval-goldens.ts
-- [ ] CI runs eval in replay mode
-- [ ] User docs explain dataset authoring + eval running
-- [ ] Landing checklist from EVAL_COMPLETION_PLAN.md all ✅
+**Files to Remove:**
+- `dx.ts`, `dx-types.ts` (or mark as deprecated/internal)
 
 #### Phase 9: DX Audit (HARD GATE)
 
@@ -288,7 +244,7 @@ packages/open-harness/core/scripts/
 
 ---
 
-## Critical Path Dependency Graph
+## Critical Path Dependency Graph (REVISED)
 
 ```
                     ┌─────────────────────────────────┐
@@ -300,25 +256,32 @@ packages/open-harness/core/scripts/
            │                        │                        │
            ▼                        ▼                        ▼
     ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-    │  Eval Code   │         │    Docs     │         │   Release   │
-    │ (Phases 6-8) │         │ Completeness│         │Announcement │
+    │  DX Audit    │         │    Docs     │         │   Release   │
+    │  (Phase 9)   │         │   (NEW DX)  │         │Announcement │
     └─────────────┘         └─────────────┘         └─────────────┘
            │                        │                        │
-           │                        │                        │
-           ▼                        ▼                        ▼
-    ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-    │  Neverthrow  │         │  Code-Docs  │         │  Codebase   │
-    │(Critical Path)│         │    Sync     │         │   Audit    │
-    └─────────────┘         └─────────────┘         └─────────────┘
-           │                        │
-           └────────────┬───────────┘
-                        │
-                        ▼
-              ┌─────────────────┐
-              │ Provider/Runtime │
-              │   (Done ✅)      │
-              └─────────────────┘
+           ▼                        │                        │
+    ┌─────────────┐                 │                        │
+    │Phase 8 NEW  │◄────────────────┘                        │
+    │agent/run/   │                                          │
+    │vitest plugin│◄─────────────────────────────────────────┘
+    └─────────────┘
+           │
+           ▼
+    ┌─────────────────────────────────────────────────────────┐
+    │              FOUNDATIONS (ALL DONE ✅)                   │
+    ├─────────────────────────────────────────────────────────┤
+    │  Provider/Runtime (1-5) ✅   │   Eval Primitives (6-7) ✅ │
+    │  Recording/withRecording ✅  │   Scorers/Assertions ✅    │
+    └─────────────────────────────────────────────────────────┘
 ```
+
+**THE CRITICAL PATH IS NOW PHASE 8 REVISED:**
+1. ✅ Foundations done (Provider, Runtime, Recording, Eval primitives)
+2. 🔴 **Phase 8 NEW** — `agent()`, `harness()`, `run()`, `@open-harness/vitest`
+3. ⏳ Documentation — Update for new DX (depends on Phase 8)
+4. ⏳ DX Audit — Verify new DX works (depends on Phase 8 + Docs)
+5. ⏳ Release — Announcement, CHANGELOG (depends on all above)
 
 **Sequencing:**
 1. **Parallel Track A:** Eval code (Phases 6→7→8) + Neverthrow for eval paths
@@ -332,20 +295,24 @@ packages/open-harness/core/scripts/
 
 **v0.2.0 ships when ALL of these are true:**
 
-### Code
-- [ ] Eval phases 6-8 complete per EVAL_COMPLETION_PLAN.md checklist
-- [ ] DX layer complete: `defineSuite()`, `variant()`, `gates.*`, `runSuite()`
-- [ ] At least one real dataset exists and runs in CI (replay mode)
-- [ ] Deterministic replay proven: same dataset × 2 = same results
-- [ ] LLM-as-judge scorer exists (disabled by default)
-- [ ] Neverthrow applied to eval critical paths
+### Code (REVISED for new DX)
+- [x] Eval phases 6-7 complete (types, engine, scorers) ✅ DONE
+- [ ] Phase 8 NEW complete: `agent()`, `harness()`, `run()` implemented
+- [ ] `run()` accepts `{ fixture, mode, store }` options
+- [ ] `FIXTURE_MODE` env var controls record/replay/live
+- [ ] Multi-agent fixtures use hierarchical IDs
+- [ ] `@open-harness/vitest` package exists with reporter + matchers
+- [ ] Old APIs deprecated with console.warn: `runFlow()`, `createHarness()`
+- [ ] Old Phase 8 (`defineSuite`, `runSuite`) marked deprecated or removed
+- [ ] At least one example test using new DX runs in CI
+- [ ] Deterministic replay proven: same fixture × 2 = same results
 - [ ] All tests green: `bun run test` passes
 - [ ] Types clean: `bun run typecheck` passes
 - [ ] Lint clean: `bun run lint` passes
 
 ### DX Audit (Phase 9 - HARD GATE)
-- [ ] All "Critical" items in DX_AUDIT_CHECKLIST.md pass
-- [ ] Fresh-eyes test: unfamiliar person can create + run eval using only public docs
+- [ ] All "Critical" items in DX_AUDIT_CHECKLIST.md pass (updated for new DX)
+- [ ] Fresh-eyes test: unfamiliar person can create + run test using only public docs
 - [ ] No broken code examples in documentation
 
 ### Documentation
