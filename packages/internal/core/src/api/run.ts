@@ -44,6 +44,7 @@ import type { HarnessWithFlow } from "./harness.js";
 import type { NodeRunContext } from "../nodes/registry.js";
 import type { RuntimeEventPayload, StateStore } from "../state/index.js";
 import type { Recording, RecordingMetadata } from "../recording/types.js";
+import { z } from "zod";
 
 /**
  * Safely get environment variable (works in Node.js and browsers).
@@ -208,6 +209,19 @@ function buildProviderInput(agent: Agent, userInput: unknown): AgentInput {
 	} else {
 		// Just use agent's prompt as the message
 		input.prompt = agent.config.prompt;
+	}
+
+	// Extract and convert output schema if present
+	if (agent.config.output?.schema) {
+		// Zod v4 has native JSON Schema support via z.toJSONSchema()
+		const jsonSchema = z.toJSONSchema(agent.config.output.schema);
+		input.options = {
+			...input.options,
+			outputFormat: {
+				type: "json_schema" as const,
+				schema: jsonSchema,
+			},
+		};
 	}
 
 	return input;
