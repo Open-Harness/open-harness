@@ -9,7 +9,11 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { createHarness, type ActivationContext } from "./create-harness.js";
+import {
+	createHarness,
+	TimeoutError,
+	type ActivationContext,
+} from "./create-harness.js";
 import { createSignal, type Signal, type Provider } from "@signals/core";
 
 // ============================================================================
@@ -601,5 +605,311 @@ describe("when guard edge cases", () => {
 		});
 
 		expect(result.metrics.activations).toBe(0);
+	});
+});
+
+// ============================================================================
+// E3: Parallel Execution & Timeout Tests
+// ============================================================================
+
+describe("parallel execution", () => {
+	it("executes multiple agents concurrently on same trigger", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		// Track execution times
+		const executionLog: Array<{ agent: string; event: string; time: number }> =
+			[];
+		const startTime = Date.now();
+
+		const createDelayedProvider = (
+			name: string,
+			delayMs: number,
+		): Provider => ({
+			run: async function* (_input, _ctx) {
+				executionLog.push({
+					agent: name,
+					event: "start",
+					time: Date.now() - startTime,
+				});
+				yield createSignal("provider:start", {});
+
+				await new Promise((r) => setTimeout(r, delayMs));
+
+				executionLog.push({
+					agent: name,
+					event: "end",
+					time: Date.now() - startTime,
+				});
+				yield createSignal("provider:end", { output: name });
+			},
+		});
+
+		// Two agents that each take 50ms
+		const agentA = agent({
+			prompt: "Agent A",
+			activateOn: ["harness:start"],
+			signalProvider: createDelayedProvider("A", 50),
+		});
+
+		const agentB = agent({
+			prompt: "Agent B",
+			activateOn: ["harness:start"],
+			signalProvider: createDelayedProvider("B", 50),
+		});
+
+		const result = await runReactive({
+			agents: { agentA, agentB },
+			state: { count: 0, enabled: true },
+		});
+
+		// Both should have activated
+		expect(result.metrics.activations).toBe(2);
+
+		// Verify parallel execution: total time should be ~50ms, not ~100ms
+		// If they ran sequentially, it would take 100ms+
+		// Give some buffer for test overhead (< 80ms means parallel)
+		expect(result.metrics.durationMs).toBeLessThan(80);
+
+		// Both should start before either ends (parallel execution)
+		const aStart = executionLog.find(
+			(e) => e.agent === "A" && e.event === "start",
+		);
+		const bStart = executionLog.find(
+			(e) => e.agent === "B" && e.event === "start",
+		);
+		const aEnd = executionLog.find((e) => e.agent === "A" && e.event === "end");
+		const bEnd = executionLog.find((e) => e.agent === "B" && e.event === "end");
+
+		expect(aStart).toBeDefined();
+		expect(bStart).toBeDefined();
+
+		// Both should start before the other ends
+		expect(aStart!.time).toBeLessThan(bEnd!.time);
+		expect(bStart!.time).toBeLessThan(aEnd!.time);
+	});
+
+	it("waits for all parallel agents before emitting harness:end", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		// Agent B takes longer than A
+		const createDelayedProvider = (delayMs: number): Provider => ({
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, delayMs));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		});
+
+		const fastAgent = agent({
+			prompt: "Fast",
+			activateOn: ["harness:start"],
+			signalProvider: createDelayedProvider(10),
+		});
+
+		const slowAgent = agent({
+			prompt: "Slow",
+			activateOn: ["harness:start"],
+			signalProvider: createDelayedProvider(50),
+		});
+
+		const result = await runReactive({
+			agents: { fastAgent, slowAgent },
+			state: { count: 0, enabled: true },
+		});
+
+		// Both should complete
+		expect(result.metrics.activations).toBe(2);
+
+		// harness:end should be the last signal (after all agent work)
+		const lastSignal = result.signals[result.signals.length - 1];
+		expect(lastSignal.name).toBe("harness:end");
+
+		// Duration should reflect the slowest agent
+		expect(result.metrics.durationMs).toBeGreaterThanOrEqual(50);
+	});
+
+	it("handles mixed parallel and sequential agents", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		const createDelayedProvider = (delayMs: number): Provider => ({
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, delayMs));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		});
+
+		// Two parallel agents on start
+		const parallel1 = agent({
+			prompt: "Parallel 1",
+			activateOn: ["harness:start"],
+			emits: ["phase1:done"],
+			signalProvider: createDelayedProvider(30),
+		});
+
+		const parallel2 = agent({
+			prompt: "Parallel 2",
+			activateOn: ["harness:start"],
+			emits: ["phase1:done"],
+			signalProvider: createDelayedProvider(30),
+		});
+
+		// Sequential agent triggered after phase 1
+		const sequential = agent({
+			prompt: "Sequential",
+			activateOn: ["phase1:done"],
+			signalProvider: createDelayedProvider(20),
+		});
+
+		const result = await runReactive({
+			agents: { parallel1, parallel2, sequential },
+			state: { count: 0, enabled: true },
+		});
+
+		// All three should activate
+		// parallel1 and parallel2 on start, sequential on phase1:done (2x)
+		// Sequential activates twice because both parallel agents emit phase1:done
+		expect(result.metrics.activations).toBe(4);
+	});
+});
+
+describe("timeout handling", () => {
+	it("throws TimeoutError when execution exceeds timeout", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		// Create a slow provider that takes 200ms
+		const slowProvider: Provider = {
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, 200));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		};
+
+		const slowAgent = agent({
+			prompt: "Slow agent",
+			activateOn: ["harness:start"],
+		});
+
+		await expect(
+			runReactive({
+				agents: { slowAgent },
+				state: { count: 0, enabled: true },
+				provider: slowProvider,
+				timeout: 50, // 50ms timeout, agent takes 200ms
+			}),
+		).rejects.toThrow(TimeoutError);
+	});
+
+	it("TimeoutError includes timeout duration", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		const slowProvider: Provider = {
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, 200));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		};
+
+		const slowAgent = agent({
+			prompt: "Slow agent",
+			activateOn: ["harness:start"],
+		});
+
+		try {
+			await runReactive({
+				agents: { slowAgent },
+				state: { count: 0, enabled: true },
+				provider: slowProvider,
+				timeout: 50,
+			});
+			expect.fail("Should have thrown TimeoutError");
+		} catch (error) {
+			expect(error).toBeInstanceOf(TimeoutError);
+			expect((error as TimeoutError).timeoutMs).toBe(50);
+			expect((error as TimeoutError).message).toContain("50ms");
+		}
+	});
+
+	it("completes successfully when within timeout", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		const fastProvider: Provider = {
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, 10));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		};
+
+		const fastAgent = agent({
+			prompt: "Fast agent",
+			activateOn: ["harness:start"],
+		});
+
+		// Should complete successfully with generous timeout
+		const result = await runReactive({
+			agents: { fastAgent },
+			state: { count: 0, enabled: true },
+			provider: fastProvider,
+			timeout: 5000,
+		});
+
+		expect(result.metrics.activations).toBe(1);
+	});
+
+	it("ignores timeout when not specified", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		const provider: Provider = {
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, 10));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		};
+
+		const handler = agent({
+			prompt: "Handler",
+			activateOn: ["harness:start"],
+		});
+
+		// No timeout specified - should complete normally
+		const result = await runReactive({
+			agents: { handler },
+			state: { count: 0, enabled: true },
+			provider,
+			// timeout: undefined
+		});
+
+		expect(result.metrics.activations).toBe(1);
+	});
+
+	it("ignores timeout of 0", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		const provider: Provider = {
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, 10));
+				yield createSignal("provider:end", { output: "done" });
+			},
+		};
+
+		const handler = agent({
+			prompt: "Handler",
+			activateOn: ["harness:start"],
+		});
+
+		// timeout: 0 means no timeout
+		const result = await runReactive({
+			agents: { handler },
+			state: { count: 0, enabled: true },
+			provider,
+			timeout: 0,
+		});
+
+		expect(result.metrics.activations).toBe(1);
 	});
 });

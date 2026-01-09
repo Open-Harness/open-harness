@@ -45,6 +45,23 @@ import type { Signal, Provider as SignalProvider } from "@signals/core";
 import type { SignalPattern } from "@signals/bus";
 
 // ============================================================================
+// Timeout Error
+// ============================================================================
+
+/**
+ * Error thrown when harness execution exceeds the configured timeout.
+ */
+export class TimeoutError extends Error {
+	override readonly name = "TimeoutError" as const;
+	readonly timeoutMs: number;
+
+	constructor(message: string, timeoutMs: number) {
+		super(message);
+		this.timeoutMs = timeoutMs;
+	}
+}
+
+// ============================================================================
 // Activation Context - what `when` guards receive
 // ============================================================================
 
@@ -161,6 +178,13 @@ export type ReactiveHarnessConfig<TState> = {
 	 * Abort signal for cancellation.
 	 */
 	signal?: AbortSignal;
+
+	/**
+	 * Timeout in milliseconds for the entire harness run.
+	 * If exceeded, throws a TimeoutError.
+	 * @default undefined (no timeout)
+	 */
+	timeout?: number;
 };
 
 /**
@@ -381,8 +405,28 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 
 		// Wait for quiescence: no pending activations
 		// This handles chained activations (agent A triggers agent B)
-		while (pending.size > 0) {
-			await Promise.all([...pending]);
+		const quiescence = async () => {
+			while (pending.size > 0) {
+				await Promise.all([...pending]);
+			}
+		};
+
+		// Apply timeout if specified
+		if (config.timeout !== undefined && config.timeout > 0) {
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => {
+					reject(
+						new TimeoutError(
+							`Harness execution exceeded timeout of ${config.timeout}ms`,
+							config.timeout!,
+						),
+					);
+				}, config.timeout);
+			});
+
+			await Promise.race([quiescence(), timeoutPromise]);
+		} else {
+			await quiescence();
 		}
 
 		// Emit harness:end

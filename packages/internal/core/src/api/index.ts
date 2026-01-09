@@ -80,6 +80,7 @@ export {
 // v0.3.0 Harness Factory (solves variance problem)
 export {
 	createHarness,
+	TimeoutError,
 	type ActivationContext,
 	type ReactiveAgentConfig,
 	type ScopedReactiveAgent,
