@@ -1,12 +1,18 @@
 /**
- * Public API for Open Harness v0.2.0
+ * Public API for Open Harness
  *
  * This module exports the primary user-facing API:
  *
+ * v0.2.0:
  * - `agent()` - Create an agent definition
  * - `harness()` - Create a multi-agent harness
  * - `run()` - Execute an agent or harness
  * - `setDefaultStore()`, `setDefaultMode()` - Configure defaults
+ *
+ * v0.3.0 (Reactive):
+ * - `runReactive()` - Execute a reactive agent in a signal-driven environment
+ * - `ReactiveAgent` - Agent with activateOn/emits/when
+ * - `ActivationContext` - Context passed to guard functions
  *
  * @example
  * ```ts
@@ -14,6 +20,14 @@
  *
  * const myAgent = agent({ prompt: "You are helpful." })
  * const result = await run(myAgent, { prompt: "Hello!" })
+ *
+ * // Reactive agent (v0.3.0)
+ * const reactive = agent({
+ *   prompt: "Analyze data.",
+ *   activateOn: ["harness:start"],
+ *   emits: ["analysis:complete"],
+ * })
+ * const result = await runReactive(reactive, { data: "..." })
  * ```
  */
 
@@ -32,17 +46,27 @@ export type {
 	FixtureStore,
 	FixtureMode,
 	Provider,
+	// v0.3.0 Reactive types
+	ReactiveAgent,
+	ActivationContext,
 } from "./types.js";
 
 // Type guards
-export { isAgent, isHarness } from "./types.js";
+export { isAgent, isHarness, isReactiveAgent } from "./types.js";
 
 // Factory functions
 export { agent } from "./agent.js";
 export { harness, type HarnessWithFlow } from "./harness.js";
 
-// Execution
+// Execution (v0.2.0)
 export { run, generateFixtureId } from "./run.js";
+
+// Execution (v0.3.0 Reactive)
+export {
+	runReactive,
+	type RunReactiveOptions,
+	type RunReactiveResult,
+} from "./run-reactive.js";
 
 // Defaults
 export {

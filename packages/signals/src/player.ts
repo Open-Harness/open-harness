@@ -146,7 +146,9 @@ export class Player {
 
 		this.currentIndex++;
 		const signal = this.signals[this.currentIndex];
-		this.currentSnapshot = applySignal(this.currentSnapshot, signal, this.currentIndex);
+		if (signal) {
+			this.currentSnapshot = applySignal(this.currentSnapshot, signal, this.currentIndex);
+		}
 
 		return signal;
 	}
@@ -208,9 +210,10 @@ export class Player {
 		const regex = patternToRegex(pattern);
 
 		for (let i = this.currentIndex + 1; i < this.signals.length; i++) {
-			if (regex.test(this.signals[i].name)) {
+			const signal = this.signals[i];
+			if (signal && regex.test(signal.name)) {
 				this.goto(i);
-				return this.signals[i];
+				return signal;
 			}
 		}
 
@@ -226,9 +229,10 @@ export class Player {
 		const regex = patternToRegex(pattern);
 
 		for (let i = this.currentIndex - 1; i >= 0; i--) {
-			if (regex.test(this.signals[i].name)) {
+			const signal = this.signals[i];
+			if (signal && regex.test(signal.name)) {
 				this.goto(i);
-				return this.signals[i];
+				return signal;
 			}
 		}
 
@@ -277,8 +281,9 @@ export class Player {
 		const matches: Array<{ index: number; signal: Signal }> = [];
 
 		for (let i = 0; i < this.signals.length; i++) {
-			if (regex.test(this.signals[i].name)) {
-				matches.push({ index: i, signal: this.signals[i] });
+			const signal = this.signals[i];
+			if (signal && regex.test(signal.name)) {
+				matches.push({ index: i, signal });
 			}
 		}
 

@@ -13,6 +13,10 @@ import type { RecordingStore } from "../recording/store.js";
 import type { NodeTypeDefinition } from "../nodes/registry.js";
 import type { ZodType } from "zod";
 
+// v0.3.0 Signal-based types
+import type { Signal, Provider as SignalProvider } from "@signals/core";
+import type { SignalPattern } from "@signals/bus";
+
 // ============================================================================
 // Provider type - for dependency injection
 // ============================================================================
@@ -64,11 +68,38 @@ export type FixtureStore = RecordingStore;
 // ============================================================================
 
 /**
+ * Context passed to agent's "when" guard function.
+ * Allows guard to make decisions based on triggering signal and current state.
+ */
+export type ActivationContext<TState = Record<string, unknown>> = {
+	/**
+	 * The signal that triggered this activation check.
+	 */
+	signal: Signal;
+
+	/**
+	 * Current state (input for single agent, harness state for multi-agent).
+	 */
+	state: TState;
+
+	/**
+	 * Original input passed to runReactive.
+	 */
+	input: unknown;
+};
+
+/**
  * Configuration for creating an agent.
  *
  * @property prompt - System prompt defining agent behavior
  * @property state - Optional initial state for stateful agents
  * @property output - Optional output configuration with schema
+ *
+ * v0.3.0 adds reactive properties:
+ * @property activateOn - Signal patterns that trigger this agent
+ * @property emits - Signals this agent declares it will emit
+ * @property when - Guard condition for activation
+ * @property signalProvider - Per-agent signal-based provider override
  */
 export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
 	/**
@@ -98,6 +129,62 @@ export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
 		 */
 		schema?: ZodType<TOutput>;
 	};
+
+	// ==========================================================================
+	// v0.3.0 Reactive Properties
+	// ==========================================================================
+
+	/**
+	 * Signal patterns that trigger this agent.
+	 * Uses glob syntax: "harness:start", "state:*:changed", "trade:**"
+	 *
+	 * When present, makes this a "reactive agent" that can be used with runReactive().
+	 *
+	 * @example
+	 * ```ts
+	 * activateOn: ["harness:start"]
+	 * activateOn: ["analysis:complete", "data:updated"]
+	 * activateOn: ["state:*:changed"]
+	 * ```
+	 */
+	activateOn?: SignalPattern[];
+
+	/**
+	 * Signals this agent declares it will emit.
+	 * Declarative metadata - helps with workflow visualization and debugging.
+	 * These signals are automatically emitted after agent completion.
+	 *
+	 * @example
+	 * ```ts
+	 * emits: ["analysis:complete"]
+	 * emits: ["trade:proposed", "trade:executed"]
+	 * ```
+	 */
+	emits?: string[];
+
+	/**
+	 * Guard condition - agent only activates if this returns true.
+	 * Receives the activation context (triggering signal + current state).
+	 *
+	 * @example
+	 * ```ts
+	 * when: (ctx) => ctx.input !== null
+	 * when: (ctx) => ctx.state.ready === true
+	 * ```
+	 */
+	when?: (ctx: ActivationContext<TState>) => boolean;
+
+	/**
+	 * Per-agent signal-based provider override (v0.3.0).
+	 * If not set, uses default provider from runReactive options.
+	 *
+	 * @example
+	 * ```ts
+	 * import { ClaudeProvider } from "@signals/provider-claude"
+	 * signalProvider: new ClaudeProvider()
+	 * ```
+	 */
+	signalProvider?: SignalProvider;
 };
 
 /**
@@ -117,6 +204,21 @@ export type Agent<TOutput = unknown, TState = Record<string, unknown>> = {
 	 */
 	readonly config: AgentConfig<TOutput, TState>;
 };
+
+/**
+ * A reactive agent is an agent with activation rules.
+ * Can be run in a reactive context via runReactive().
+ *
+ * An agent becomes reactive when it has `activateOn` defined.
+ */
+export type ReactiveAgent<TOutput = unknown, TState = Record<string, unknown>> =
+	Agent<TOutput, TState> & {
+		/**
+		 * Indicates this agent has reactive capabilities.
+		 * Set automatically when activateOn is present.
+		 */
+		readonly _reactive: true;
+	};
 
 // ============================================================================
 // Harness types
@@ -361,4 +463,12 @@ export function isHarness(value: unknown): value is Harness {
 		"_tag" in value &&
 		value._tag === "Harness"
 	);
+}
+
+/**
+ * Type guard to check if a value is a ReactiveAgent.
+ * An agent is reactive when it has activateOn defined.
+ */
+export function isReactiveAgent(value: unknown): value is ReactiveAgent {
+	return isAgent(value) && "_reactive" in value && value._reactive === true;
 }

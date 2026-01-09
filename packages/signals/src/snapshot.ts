@@ -262,7 +262,10 @@ export function snapshot(signals: readonly Signal[], atIndex?: number): Snapshot
 	let current = createEmptySnapshot();
 
 	for (let i = 0; i <= Math.min(targetIndex, signals.length - 1); i++) {
-		current = applySignal(current, signals[i], i);
+		const signal = signals[i];
+		if (signal) {
+			current = applySignal(current, signal, i);
+		}
 	}
 
 	return current;
@@ -279,8 +282,11 @@ export function snapshotAll(signals: readonly Signal[]): Snapshot[] {
 	let current = createEmptySnapshot();
 
 	for (let i = 0; i < signals.length; i++) {
-		current = applySignal(current, signals[i], i);
-		snapshots.push(current);
+		const signal = signals[i];
+		if (signal) {
+			current = applySignal(current, signal, i);
+			snapshots.push(current);
+		}
 	}
 
 	return snapshots;
