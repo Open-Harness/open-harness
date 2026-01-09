@@ -335,7 +335,8 @@ F1 (Signal Primitives)
 | P1 | Trading Agent Example | Polish | High | Planned |
 | P2 | External Documentation | Polish | Medium | Planned |
 | P3 | Internal Documentation | Polish | Medium | Planned |
-| P4 | Migration Guide | Polish | Medium | Planned |
+
+**Note:** No migration epic needed - clean break, pre-alpha.
 
 ---
 

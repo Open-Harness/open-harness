@@ -15,11 +15,11 @@ All must pass before v0.3.0 GA:
 - [ ] Architecture overview accessible to new users
 - [ ] Getting started guide works end-to-end
 - [ ] Internal READMEs in all major folders
-- [ ] Migration guide from v0.2.0 published
-- [ ] `harnessToReactive()` adapter works
 - [ ] All tests pass (unit, integration, E2E)
 - [ ] No known bugs or regressions
 - [ ] CHANGELOG updated
+
+**Note:** No migration artifacts needed - clean break.
 
 ---
 
@@ -30,7 +30,8 @@ All must pass before v0.3.0 GA:
 | P1 | Trading Agent Example | Flagship example, full workflow | High |
 | P2 | External Documentation | User-facing docs | Medium |
 | P3 | Internal Documentation | READMEs, architecture diagrams | Medium |
-| P4 | Migration Guide | v0.2.0 → v0.3.0 path | Medium |
+
+**Note:** No migration guide needed - clean break, pre-alpha.
 
 ---
 
@@ -41,16 +42,11 @@ At the end of Polish:
 1. **Examples:**
    - `examples/trading-agent/` - Complete flagship example
    - `examples/simple-reactive/` - Minimal getting started
-   - `examples/migration/` - Before/after migration
 
 2. **Documentation:**
    - `apps/docs/content/0.3.0/` - Full external docs
    - `packages/*/README.md` - Internal docs
    - `docs/internal/architecture.md` - Updated diagrams
-
-3. **Migration:**
-   - `src/compat/harnessToReactive.ts` - Adapter
-   - `docs/migration/v020-to-v030.md` - Guide
 
 ---
 
