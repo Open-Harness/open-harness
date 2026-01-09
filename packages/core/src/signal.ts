@@ -1,0 +1,65 @@
+/**
+ * Signal Source - tracks origin of a signal for causality/debugging
+ */
+export interface SignalSource {
+	/** Agent that emitted this signal */
+	readonly agent?: string;
+	/** Provider that emitted this signal (for provider events) */
+	readonly provider?: string;
+	/** Parent signal ID that caused this signal (for causality chains) */
+	readonly parent?: string;
+}
+
+/**
+ * Signal - the fundamental primitive in the reactive architecture
+ *
+ * Signals are immutable events that flow through the system.
+ * All state changes, agent activations, and provider responses are signals.
+ *
+ * @example
+ * ```ts
+ * const analysisComplete: Signal<AnalysisResult> = {
+ *   name: "analysis:complete",
+ *   payload: { sentiment: "bullish", confidence: 0.85 },
+ *   timestamp: new Date().toISOString(),
+ *   source: { agent: "analyst" }
+ * };
+ * ```
+ */
+export interface Signal<T = unknown> {
+	/** Signal name - uses colon-separated namespacing (e.g., "state:analysis:changed") */
+	readonly name: string;
+	/** Signal payload - the data carried by this signal */
+	readonly payload: T;
+	/** ISO timestamp when signal was emitted */
+	readonly timestamp: string;
+	/** Optional source tracking for debugging and causality */
+	readonly source?: SignalSource;
+}
+
+/**
+ * Helper to create a signal with auto-generated timestamp
+ */
+export function createSignal<T>(name: string, payload: T, source?: SignalSource): Signal<T> {
+	return {
+		name,
+		payload,
+		timestamp: new Date().toISOString(),
+		source,
+	};
+}
+
+/**
+ * Type guard to check if a value is a Signal
+ */
+export function isSignal(value: unknown): value is Signal {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"name" in value &&
+		"payload" in value &&
+		"timestamp" in value &&
+		typeof (value as Signal).name === "string" &&
+		typeof (value as Signal).timestamp === "string"
+	);
+}

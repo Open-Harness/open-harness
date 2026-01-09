@@ -5,6 +5,7 @@
     "": {
       "name": "dao",
       "dependencies": {
+        "@openai/codex-sdk": "^0.79.0",
         "dotenv": "^17.2.2",
       },
       "devDependencies": {
@@ -66,6 +67,17 @@
         "@open-harness/server": "workspace:*",
         "@open-harness/stores": "workspace:*",
         "zod": "^3.25.67",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
+    "packages/core": {
+      "name": "@signals/core",
+      "version": "0.3.0",
+      "dependencies": {
+        "zod": "^3.24.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -268,6 +280,43 @@
       "peerDependencies": {
         "typescript": "^5",
         "vitest": "^2.0.0",
+      },
+    },
+    "packages/providers/claude": {
+      "name": "@signals/provider-claude",
+      "version": "0.3.0",
+      "dependencies": {
+        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+        "@signals/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@signals/bus": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
+    "packages/providers/openai": {
+      "name": "@signals/provider-openai",
+      "version": "0.3.0",
+      "dependencies": {
+        "@openai/codex-sdk": "^0.79.0",
+        "@signals/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@signals/bus": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
+    "packages/signals": {
+      "name": "@signals/bus",
+      "version": "0.3.0",
+      "dependencies": {
+        "@signals/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5",
       },
     },
     "packages/stores/recording-store/file": {
@@ -632,6 +681,8 @@
 
     "@open-harness/vitest": ["@open-harness/vitest@workspace:packages/open-harness/vitest"],
 
+    "@openai/codex-sdk": ["@openai/codex-sdk@0.79.0", "", {}, "sha512-ymB/WbmZ/aEsQcHcFu5EBLAKQv6SdlFoizW2Bxf+Lni3oDHxmeeQDOCLitDOtl8yCLvf1maP/TUWcv+X2e4AKA=="],
+
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
     "@orama/orama": ["@orama/orama@3.1.18", "", {}, "sha512-a61ljmRVVyG5MC/698C8/FfFDw5a8LOIvyOLW5fztgUXqUpc1jOfQzOitSCbge657OgXXThmY3Tk8fpiDb4UcA=="],
@@ -797,6 +848,14 @@
     "@shikijs/types": ["@shikijs/types@3.20.0", "", { "dependencies": { "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4" } }, "sha512-lhYAATn10nkZcBQ0BlzSbJA3wcmL5MXUUF8d2Zzon6saZDlToKaiRX60n2+ZaHJCmXEcZRWNzn+k9vplr8Jhsw=="],
 
     "@shikijs/vscode-textmate": ["@shikijs/vscode-textmate@10.0.2", "", {}, "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg=="],
+
+    "@signals/bus": ["@signals/bus@workspace:packages/signals"],
+
+    "@signals/core": ["@signals/core@workspace:packages/core"],
+
+    "@signals/provider-claude": ["@signals/provider-claude@workspace:packages/providers/claude"],
+
+    "@signals/provider-openai": ["@signals/provider-openai@workspace:packages/providers/openai"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

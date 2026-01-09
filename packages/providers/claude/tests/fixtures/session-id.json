@@ -1,0 +1,69 @@
+{
+	"metadata": {
+		"id": "rec_1767982694135_1",
+		"createdAt": "2026-01-09T18:18:14.135Z",
+		"name": "session-id",
+		"providerType": "claude",
+		"signalCount": 4
+	},
+	"signals": [
+		{
+			"name": "provider:start",
+			"payload": {
+				"input": {
+					"messages": [
+						{
+							"role": "user",
+							"content": "What is 2+2? Answer with just the number."
+						}
+					]
+				}
+			},
+			"timestamp": "2026-01-09T18:18:14.135Z",
+			"source": {
+				"provider": "claude"
+			}
+		},
+		{
+			"name": "text:delta",
+			"payload": {
+				"content": "4"
+			},
+			"timestamp": "2026-01-09T18:18:18.131Z",
+			"source": {
+				"provider": "claude"
+			}
+		},
+		{
+			"name": "text:complete",
+			"payload": {
+				"content": "4"
+			},
+			"timestamp": "2026-01-09T18:18:21.016Z",
+			"source": {
+				"provider": "claude"
+			}
+		},
+		{
+			"name": "provider:end",
+			"payload": {
+				"output": {
+					"content": "4",
+					"sessionId": "28d7f48b-1454-47c8-be6a-9026ef06cad9",
+					"usage": {
+						"inputTokens": 3,
+						"outputTokens": 5,
+						"totalTokens": 8
+					},
+					"stopReason": "end",
+					"numTurns": 1
+				},
+				"durationMs": 6881
+			},
+			"timestamp": "2026-01-09T18:18:21.016Z",
+			"source": {
+				"provider": "claude"
+			}
+		}
+	]
+}
