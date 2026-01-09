@@ -185,6 +185,18 @@ export type ReactiveHarnessConfig<TState> = {
 	 * @default undefined (no timeout)
 	 */
 	timeout?: number;
+
+	/**
+	 * Termination condition that ends the harness early.
+	 * When this returns true, the harness stops accepting new signals
+	 * and waits for pending activations to complete.
+	 *
+	 * @example
+	 * ```ts
+	 * endWhen: (state) => state.position !== null
+	 * ```
+	 */
+	endWhen?: (state: Readonly<TState>) => boolean;
 };
 
 /**
@@ -208,6 +220,11 @@ export type ReactiveHarnessResult<TState> = {
 		durationMs: number;
 		activations: number;
 	};
+
+	/**
+	 * Whether the harness terminated early due to endWhen condition.
+	 */
+	terminatedEarly: boolean;
 };
 
 // ============================================================================
@@ -307,6 +324,7 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 		// Mutable state - will be updated by agents
 		let state = { ...config.state };
 		let activations = 0;
+		let terminated = false; // Set by endWhen condition
 
 		// Track pending activations for quiescence detection
 		// Use a Set to handle chained activations properly
@@ -318,6 +336,17 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 			const patterns = agentConfig.activateOn;
 
 			bus.subscribe(patterns, async (triggerSignal) => {
+				// Skip new activations if harness is terminated
+				if (terminated) {
+					bus.emit(
+						createSignal("agent:skipped", {
+							agent: name,
+							reason: "harness terminated by endWhen",
+							trigger: triggerSignal.name,
+						}),
+					);
+					return;
+				}
 				// Build activation context with current state
 				const ctx: ActivationContext<TState> = {
 					signal: triggerSignal,
@@ -374,7 +403,21 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 					createSignal,
 					activatedSignal.id, // Pass parent signal ID for causality
 				).then((result) => {
+					// Check endWhen termination condition BEFORE emitting signals
+					// This prevents new activations from starting
+					if (config.endWhen && !terminated && config.endWhen(state)) {
+						terminated = true;
+						bus.emit(
+							createSignal("harness:terminating", {
+								reason: "endWhen condition met",
+								agent: name,
+								state,
+							}),
+						);
+					}
+
 					// Emit declared signals with causality tracking
+					// These may be skipped by handlers if terminated is true
 					for (const signalName of agentConfig.emits ?? []) {
 						bus.emit(
 							createSignal(
@@ -446,6 +489,7 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 				durationMs,
 				activations,
 			},
+			terminatedEarly: terminated,
 		};
 	}
 

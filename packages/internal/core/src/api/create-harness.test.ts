@@ -913,3 +913,181 @@ describe("timeout handling", () => {
 		expect(result.metrics.activations).toBe(1);
 	});
 });
+
+// ============================================================================
+// E4: Harness API - endWhen Termination Tests
+// ============================================================================
+
+describe("endWhen termination", () => {
+	it("terminates harness when endWhen returns true immediately", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+		const provider = createMockProvider();
+
+		const first = agent({
+			prompt: "First agent",
+			activateOn: ["harness:start"],
+			emits: ["first:done"],
+		});
+
+		// This agent should NOT activate because endWhen triggers after first completes
+		const second = agent({
+			prompt: "Second agent (should be skipped)",
+			activateOn: ["first:done"],
+		});
+
+		const result = await runReactive({
+			agents: { first, second },
+			state: { count: 0, enabled: true },
+			provider,
+			endWhen: () => true, // Always true - terminates after first agent
+		});
+
+		// Should terminate early
+		expect(result.terminatedEarly).toBe(true);
+
+		// First agent should run, second should be skipped
+		expect(result.metrics.activations).toBe(1);
+
+		// Should see harness:terminating signal
+		const terminatingSignal = result.signals.find(
+			(s) => s.name === "harness:terminating",
+		);
+		expect(terminatingSignal).toBeDefined();
+		expect(
+			(terminatingSignal?.payload as { reason: string }).reason,
+		).toBe("endWhen condition met");
+	});
+
+	it("skips new activations after termination", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		// Track which agents actually ran
+		const agentsRun: string[] = [];
+
+		const createTrackingProvider = (name: string): Provider => ({
+			run: async function* (_input, _ctx) {
+				agentsRun.push(name);
+				yield createSignal("provider:start", {});
+				yield createSignal("provider:end", { output: name });
+			},
+		});
+
+		const step1 = agent({
+			prompt: "Step 1",
+			activateOn: ["harness:start"],
+			emits: ["step1:done"],
+			signalProvider: createTrackingProvider("step1"),
+		});
+
+		const step2 = agent({
+			prompt: "Step 2 (should be skipped)",
+			activateOn: ["step1:done"],
+			signalProvider: createTrackingProvider("step2"),
+		});
+
+		const result = await runReactive({
+			agents: { step1, step2 },
+			state: { count: 0, enabled: true },
+			endWhen: () => true, // Always true - terminates after step1
+		});
+
+		// Only step1 should run
+		expect(agentsRun).toContain("step1");
+		expect(agentsRun).not.toContain("step2");
+
+		// step2 should be skipped with the right reason
+		const skippedSignals = result.signals.filter(
+			(s) =>
+				s.name === "agent:skipped" &&
+				(s.payload as { reason: string }).reason ===
+					"harness terminated by endWhen",
+		);
+		expect(skippedSignals.length).toBeGreaterThan(0);
+
+		// The harness:terminating signal should be present
+		expect(result.terminatedEarly).toBe(true);
+	});
+
+	it("returns terminatedEarly: false when endWhen not triggered", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+		const provider = createMockProvider();
+
+		const handler = agent({
+			prompt: "Handler",
+			activateOn: ["harness:start"],
+		});
+
+		const result = await runReactive({
+			agents: { handler },
+			state: { count: 0, enabled: true },
+			provider,
+			endWhen: (state) => state.count > 100, // Never true
+		});
+
+		expect(result.terminatedEarly).toBe(false);
+		expect(result.metrics.activations).toBe(1);
+	});
+
+	it("returns terminatedEarly: false when no endWhen specified", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+		const provider = createMockProvider();
+
+		const handler = agent({
+			prompt: "Handler",
+			activateOn: ["harness:start"],
+		});
+
+		const result = await runReactive({
+			agents: { handler },
+			state: { count: 0, enabled: true },
+			provider,
+			// No endWhen
+		});
+
+		expect(result.terminatedEarly).toBe(false);
+	});
+
+	it("allows pending activations to complete before terminating", async () => {
+		type CompleteState = { done: boolean };
+
+		const { agent, runReactive } = createHarness<CompleteState>();
+
+		// Track completion
+		const completions: string[] = [];
+
+		// Slow provider that takes time
+		const createSlowProvider = (name: string, delayMs: number): Provider => ({
+			run: async function* (_input, _ctx) {
+				yield createSignal("provider:start", {});
+				await new Promise((r) => setTimeout(r, delayMs));
+				completions.push(name);
+				yield createSignal("provider:end", { output: name });
+			},
+		});
+
+		// Two parallel agents on start - one fast, one slow
+		const fast = agent({
+			prompt: "Fast agent",
+			activateOn: ["harness:start"],
+			signalProvider: createSlowProvider("fast", 10),
+		});
+
+		const slow = agent({
+			prompt: "Slow agent",
+			activateOn: ["harness:start"],
+			signalProvider: createSlowProvider("slow", 50),
+		});
+
+		const result = await runReactive({
+			agents: { fast, slow },
+			state: { done: false },
+			endWhen: () => true, // Always true - terminates immediately
+		});
+
+		// Both agents should still complete (pending activations finish)
+		expect(completions).toContain("fast");
+		expect(completions).toContain("slow");
+		expect(result.metrics.activations).toBe(2);
+		expect(result.terminatedEarly).toBe(true);
+	});
+});
