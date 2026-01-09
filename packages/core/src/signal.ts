@@ -19,14 +19,17 @@ export interface SignalSource {
  * @example
  * ```ts
  * const analysisComplete: Signal<AnalysisResult> = {
+ *   id: "sig_abc123",
  *   name: "analysis:complete",
  *   payload: { sentiment: "bullish", confidence: 0.85 },
  *   timestamp: new Date().toISOString(),
- *   source: { agent: "analyst" }
+ *   source: { agent: "analyst", parent: "sig_xyz789" }
  * };
  * ```
  */
 export interface Signal<T = unknown> {
+	/** Unique signal ID for causality tracking */
+	readonly id: string;
 	/** Signal name - uses colon-separated namespacing (e.g., "state:analysis:changed") */
 	readonly name: string;
 	/** Signal payload - the data carried by this signal */
@@ -38,10 +41,18 @@ export interface Signal<T = unknown> {
 }
 
 /**
- * Helper to create a signal with auto-generated timestamp
+ * Generate a unique signal ID
+ */
+function generateSignalId(): string {
+	return `sig_${crypto.randomUUID().slice(0, 12)}`;
+}
+
+/**
+ * Helper to create a signal with auto-generated ID and timestamp
  */
 export function createSignal<T>(name: string, payload: T, source?: SignalSource): Signal<T> {
 	return {
+		id: generateSignalId(),
 		name,
 		payload,
 		timestamp: new Date().toISOString(),
@@ -56,9 +67,11 @@ export function isSignal(value: unknown): value is Signal {
 	return (
 		typeof value === "object" &&
 		value !== null &&
+		"id" in value &&
 		"name" in value &&
 		"payload" in value &&
 		"timestamp" in value &&
+		typeof (value as Signal).id === "string" &&
 		typeof (value as Signal).name === "string" &&
 		typeof (value as Signal).timestamp === "string"
 	);

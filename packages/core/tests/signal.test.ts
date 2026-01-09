@@ -3,9 +3,10 @@ import { createSignal, isSignal, type Signal } from "../src/signal.js";
 
 describe("Signal", () => {
 	describe("createSignal", () => {
-		test("creates signal with name, payload, and auto-timestamp", () => {
+		test("creates signal with id, name, payload, and auto-timestamp", () => {
 			const signal = createSignal("test:event", { value: 42 });
 
+			expect(signal.id).toMatch(/^sig_/);
 			expect(signal.name).toBe("test:event");
 			expect(signal.payload).toEqual({ value: 42 });
 			expect(typeof signal.timestamp).toBe("string");
@@ -45,6 +46,7 @@ describe("Signal", () => {
 
 		test("returns true for manually constructed signals", () => {
 			const manual: Signal = {
+				id: "sig_test123",
 				name: "manual:signal",
 				payload: undefined,
 				timestamp: "2026-01-09T12:00:00.000Z",

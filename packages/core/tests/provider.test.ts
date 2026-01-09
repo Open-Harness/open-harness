@@ -204,6 +204,7 @@ describe("Provider schemas", () => {
 	describe("SignalSchema", () => {
 		test("validates signal with source", () => {
 			const signal = {
+				id: "sig_test123",
 				name: "text:delta",
 				payload: { content: "Hello" },
 				timestamp: new Date().toISOString(),
@@ -219,6 +220,7 @@ describe("Provider schemas", () => {
 
 		test("validates signal without source", () => {
 			const signal = {
+				id: "sig_abc456",
 				name: "harness:start",
 				payload: {},
 				timestamp: new Date().toISOString(),
@@ -230,6 +232,7 @@ describe("Provider schemas", () => {
 
 		test("rejects invalid timestamp", () => {
 			const signal = {
+				id: "sig_invalid",
 				name: "test",
 				payload: null,
 				timestamp: "not-a-date",

@@ -80,6 +80,7 @@ export const SignalSourceSchema = z.object({
 });
 
 export const SignalSchema = z.object({
+	id: z.string(),
 	name: z.string(),
 	payload: z.unknown(),
 	timestamp: z.string().datetime(),

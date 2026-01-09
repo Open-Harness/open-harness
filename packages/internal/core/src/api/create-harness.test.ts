@@ -399,6 +399,162 @@ describe("template expansion", () => {
 });
 
 // ============================================================================
+// E1: Multi-Agent Signals & Causality Tests
+// ============================================================================
+
+describe("multi-agent causality", () => {
+	it("tracks causality chain through signal passing", async () => {
+		const { agent, runReactive } = createHarness<TradingState>();
+		const provider = createMockProvider();
+
+		const analyst = agent({
+			prompt: "Analyze",
+			activateOn: ["harness:start"],
+			emits: ["analysis:complete"],
+		});
+
+		const executor = agent({
+			prompt: "Execute",
+			activateOn: ["analysis:complete"],
+			emits: ["trade:executed"],
+		});
+
+		const result = await runReactive({
+			agents: { analyst, executor },
+			state: { confidence: 0.9, position: null, balance: 5000, ready: true },
+			provider,
+		});
+
+		// Find the executor's activation signal
+		const executorActivated = result.signals.find(
+			(s) =>
+				s.name === "agent:activated" &&
+				(s.payload as { agent: string }).agent === "executor",
+		);
+
+		expect(executorActivated).toBeDefined();
+		expect(executorActivated?.source?.agent).toBe("executor");
+		expect(executorActivated?.source?.parent).toBeDefined();
+
+		// The parent should be analysis:complete
+		const parentSignal = result.signals.find(
+			(s) => s.id === executorActivated?.source?.parent,
+		);
+		expect(parentSignal?.name).toBe("analysis:complete");
+
+		// And analysis:complete's parent should trace back to analyst
+		expect(parentSignal?.source?.agent).toBe("analyst");
+	});
+
+	it("signals have unique IDs", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+		const provider = createMockProvider();
+
+		const handler = agent({
+			prompt: "Handle",
+			activateOn: ["harness:start"],
+		});
+
+		const result = await runReactive({
+			agents: { handler },
+			state: { count: 0, enabled: true },
+			provider,
+		});
+
+		const ids = result.signals.map((s) => s.id);
+		const uniqueIds = new Set(ids);
+
+		expect(uniqueIds.size).toBe(ids.length);
+		expect(ids.every((id) => id.startsWith("sig_"))).toBe(true);
+	});
+
+	it("three-agent chain maintains causality", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+		const provider = createMockProvider();
+
+		const first = agent({
+			prompt: "First",
+			activateOn: ["harness:start"],
+			emits: ["first:done"],
+		});
+
+		const second = agent({
+			prompt: "Second",
+			activateOn: ["first:done"],
+			emits: ["second:done"],
+		});
+
+		const third = agent({
+			prompt: "Third",
+			activateOn: ["second:done"],
+			emits: ["third:done"],
+		});
+
+		const result = await runReactive({
+			agents: { first, second, third },
+			state: { count: 0, enabled: true },
+			provider,
+		});
+
+		// All three agents should activate
+		expect(result.metrics.activations).toBe(3);
+
+		// All custom signals should be present
+		const signalNames = result.signals.map((s) => s.name);
+		expect(signalNames).toContain("first:done");
+		expect(signalNames).toContain("second:done");
+		expect(signalNames).toContain("third:done");
+
+		// Verify causality chain
+		const thirdDone = result.signals.find((s) => s.name === "third:done");
+		const thirdActivated = result.signals.find(
+			(s) => s.id === thirdDone?.source?.parent,
+		);
+		const secondDone = result.signals.find(
+			(s) => s.id === thirdActivated?.source?.parent,
+		);
+
+		expect(secondDone?.name).toBe("second:done");
+	});
+
+	it("parallel agents activated by same signal have same parent", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+		const provider = createMockProvider();
+
+		// Both agents activate on harness:start
+		const agentA = agent({
+			prompt: "Agent A",
+			activateOn: ["harness:start"],
+			emits: ["a:done"],
+		});
+
+		const agentB = agent({
+			prompt: "Agent B",
+			activateOn: ["harness:start"],
+			emits: ["b:done"],
+		});
+
+		const result = await runReactive({
+			agents: { agentA, agentB },
+			state: { count: 0, enabled: true },
+			provider,
+		});
+
+		// Both should activate
+		expect(result.metrics.activations).toBe(2);
+
+		// Find both activation signals
+		const activations = result.signals.filter((s) => s.name === "agent:activated");
+		expect(activations).toHaveLength(2);
+
+		// Both should have harness:start as parent
+		const harnessStart = result.signals.find((s) => s.name === "harness:start");
+		expect(activations[0].source?.parent).toBe(harnessStart?.id);
+		expect(activations[1].source?.parent).toBe(harnessStart?.id);
+	});
+});
+
+// ============================================================================
 // Type Guard Edge Cases
 // ============================================================================
 

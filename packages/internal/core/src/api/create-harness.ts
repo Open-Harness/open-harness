@@ -301,26 +301,36 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 					input: config.state, // Original input
 				};
 
+				// Source tracking: this agent, triggered by parent signal
+				const agentSource = { agent: name, parent: triggerSignal.id };
+
 				// Check `when` guard if present
 				if (agentConfig.when && !agentConfig.when(ctx)) {
 					bus.emit(
-						createSignal("agent:skipped", {
-							agent: name,
-							reason: "when guard returned false",
-							trigger: triggerSignal.name,
-						}),
+						createSignal(
+							"agent:skipped",
+							{
+								agent: name,
+								reason: "when guard returned false",
+								trigger: triggerSignal.name,
+							},
+							agentSource,
+						),
 					);
 					return;
 				}
 
-				// Mark activation
+				// Mark activation with causality tracking
 				activations++;
-				bus.emit(
-					createSignal("agent:activated", {
+				const activatedSignal = createSignal(
+					"agent:activated",
+					{
 						agent: name,
 						trigger: triggerSignal.name,
-					}),
+					},
+					agentSource,
 				);
+				bus.emit(activatedSignal);
 
 				// Get provider
 				const provider = agentConfig.signalProvider ?? config.provider;
@@ -338,14 +348,19 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 					name,
 					ctx,
 					createSignal,
+					activatedSignal.id, // Pass parent signal ID for causality
 				).then((result) => {
-					// Emit declared signals
+					// Emit declared signals with causality tracking
 					for (const signalName of agentConfig.emits ?? []) {
 						bus.emit(
-							createSignal(signalName, {
-								agent: name,
-								output: result,
-							}),
+							createSignal(
+								signalName,
+								{
+									agent: name,
+									output: result,
+								},
+								{ agent: name, parent: activatedSignal.id },
+							),
 						);
 					}
 				});
@@ -406,7 +421,12 @@ async function executeAgent<TOutput, TState>(
 	config: ReactiveAgentConfig<TOutput, TState>,
 	agentName: string,
 	ctx: ActivationContext<TState>,
-	createSignal: (name: string, payload: unknown) => Signal,
+	createSignal: (
+		name: string,
+		payload: unknown,
+		source?: { agent?: string; provider?: string; parent?: string },
+	) => Signal,
+	parentSignalId: string,
 ): Promise<unknown> {
 	// Import template engine
 	const { expandTemplate } = await import("./template.js");

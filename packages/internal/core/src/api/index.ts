@@ -95,3 +95,15 @@ export {
 	extractPaths,
 	type TemplateContext,
 } from "./template.js";
+
+// v0.3.0 Debug Utilities (E1)
+export {
+	getCausalityChain,
+	getAgentSignals,
+	getChildSignals,
+	buildSignalTree,
+	formatSignalTree,
+	getSignalSummary,
+	filterSignals,
+	type SignalNode,
+} from "./debug.js";
