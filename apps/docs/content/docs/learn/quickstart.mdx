@@ -1,21 +1,18 @@
 ---
 title: Quickstart
-description: Run your first Open Harness agent in under 5 minutes
+description: Build your first Open Harness agent in 5 minutes
 ---
 
 # Quickstart
 
-Build and run an agent with Claude in under five minutes.
+Build and run an agent with Claude in under five minutes, then add fixtures for free, instant test replay.
 
 ## What You'll Build
 
-A code review assistant that uses Claude to analyze code:
+A code review assistant with metrics tracking and fixture-based testing:
 
 ```
-┌─────────────────┐
-│     agent()     │
-│  (code review)  │
-└─────────────────┘
+Input → [Code Reviewer Agent] → Output + Metrics (latency, cost, tokens)
 ```
 
 ## Prerequisites
@@ -23,16 +20,15 @@ A code review assistant that uses Claude to analyze code:
 - Bun 1.0+
 - Running inside Claude Code (for authentication)
 
-## Step 01: Create a Project
+## Step 1: Create a Project
 
 ```bash
-mkdir code-reviewer
-cd code-reviewer
+mkdir code-reviewer && cd code-reviewer
 bun init -y
-bun add @open-harness/core
+bun add @open-harness/core @open-harness/server @open-harness/stores
 ```
 
-## Step 02: Define the Agent
+## Step 2: Define the Agent
 
 Create `agent.ts`:
 
@@ -40,17 +36,22 @@ Create `agent.ts`:
 import { agent, run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
 
-// Set up the Claude provider
+// Configure provider (auth handled by Claude Code subscription)
 setDefaultProvider(createClaudeNode());
 
-// Define a code review agent
-export const codeReviewer = agent({
-  prompt: `You are a code reviewer. Analyze code for:
-- Potential bugs
+// Define your agent with a system prompt
+const codeReviewer = agent({
+  prompt: `You are an expert code reviewer. Analyze code for:
+- Bugs and edge cases
 - Security vulnerabilities
-- Style issues
+- Performance issues
 
-Provide a brief summary of any problems found.`,
+Format your response as:
+## Issues
+[List issues with severity: HIGH/MEDIUM/LOW]
+
+## Verdict
+APPROVE or REQUEST_CHANGES`,
 });
 
 // Run the agent
@@ -62,48 +63,76 @@ function divide(a, b) {
 });
 
 console.log("Review:", result.output);
-console.log("Metrics:", result.metrics);
+console.log("Latency:", result.metrics.latencyMs, "ms");
+console.log("Cost: $", result.metrics.cost.toFixed(4));
 ```
 
-## Step 03: Run It
+## Step 3: Run It
 
 ```bash
 bun run agent.ts
 ```
 
-You should see output like:
+Expected output:
 
 ```
-Review: This function has a potential division by zero issue.
-Consider adding a check for b === 0 before dividing.
-Metrics: { latencyMs: 1234, cost: 0.001, tokens: { input: 45, output: 32 } }
+Review: ## Issues
+- **HIGH**: Division by zero - no check for b === 0
+
+## Verdict
+REQUEST_CHANGES
+
+Latency: 2341 ms
+Cost: $ 0.0023
 ```
 
-## What Just Happened?
+## Step 4: Add State
 
-1. You defined an **agent** with a system prompt
-2. The `run()` function executed the agent with your input
-3. The result includes the output and real **metrics**
-4. Authentication happened automatically via Claude Code
+Agents can track state across runs:
 
-<Callout type="stuck" title="Are you stuck?">
-**Error: Cannot find module '@open-harness/core'**
-Run `bun install` to install dependencies.
+```typescript title="agent-with-state.ts"
+interface ReviewerState {
+  reviewCount: number;
+  issuesFound: number;
+}
 
-**Error: Claude API authentication failed**
-Make sure you're running from within Claude Code.
-</Callout>
+const codeReviewer = agent({
+  prompt: "Review code for bugs and security issues.",
+  state: {
+    reviewCount: 0,
+    issuesFound: 0,
+  } as ReviewerState,
+});
 
-## What You Learned
+const result = await run(codeReviewer, { prompt: "..." });
+console.log("State:", result.state); // { reviewCount: 0, issuesFound: 0 }
+```
 
-- `agent()` defines an agent with a system prompt
-- `run()` executes the agent and returns a result
-- Results include `output` and `metrics` (latency, cost, tokens)
-- Authentication is handled automatically
+## Step 5: Add Fixtures for Testing
 
-## Adding Tests
+Fixtures record LLM responses so tests are **free and instant** on replay.
 
-Create tests for your agent using Bun's built-in test runner:
+Create `test-utils.ts`:
+
+```typescript title="test-utils.ts"
+import { FileRecordingStore } from "@open-harness/stores";
+import { setDefaultStore, setDefaultMode } from "@open-harness/core";
+
+export const fixtureStore = new FileRecordingStore({
+  directory: "./fixtures",
+});
+
+export function setupFixtures(): void {
+  setDefaultStore(fixtureStore);
+  if (!process.env.FIXTURE_MODE) {
+    setDefaultMode("replay"); // Default to replay (fast, free)
+  }
+}
+
+export function withFixture(name: string) {
+  return { fixture: name, store: fixtureStore };
+}
+```
 
 Create `agent.test.ts`:
 
@@ -111,10 +140,11 @@ Create `agent.test.ts`:
 import { describe, expect, it, beforeAll } from "bun:test";
 import { agent, run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
+import { setupFixtures, withFixture } from "./test-utils";
 
-// Set up provider before tests run
 beforeAll(() => {
   setDefaultProvider(createClaudeNode());
+  setupFixtures();
 });
 
 const codeReviewer = agent({
@@ -123,29 +153,74 @@ const codeReviewer = agent({
 
 describe("Code Reviewer", () => {
   it("catches division by zero", async () => {
-    const result = await run(codeReviewer, {
-      prompt: "function divide(a, b) { return a / b; }",
-    });
+    const result = await run(
+      codeReviewer,
+      { prompt: "function divide(a, b) { return a / b; }" },
+      withFixture("division-review"), // Name this fixture
+    );
 
-    expect(result.output).toBeDefined();
-    expect(typeof result.output).toBe("string");
-    expect(result.metrics.latencyMs).toBeGreaterThan(0);
-  }, { timeout: 180000 }); // 3 min timeout for LLM calls
+    expect(result.output).toContain("division");
+    expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
+  }, { timeout: 180000 });
 });
 ```
 
 Run tests:
 
 ```bash
+# First run: record fixtures (costs ~$0.01)
+FIXTURE_MODE=record bun test
+
+# Subsequent runs: replay fixtures (free, instant)
 bun test
 ```
 
-<Callout type="info" title="Test Timeouts">
-LLM calls can take 30-60 seconds. Always set appropriate timeouts for tests that call `run()`.
+## What You Learned
+
+| Concept | Description |
+|---------|-------------|
+| `agent()` | Creates an agent with a system prompt |
+| `run()` | Executes agent, returns `{ output, metrics, state }` |
+| `metrics` | Automatic tracking of latency, cost, tokens |
+| `state` | Optional typed state returned with each run |
+| `withFixture()` | Records LLM response for deterministic replay |
+
+## Fixture Modes
+
+| Mode | Behavior | When to Use |
+|------|----------|-------------|
+| `replay` | Load saved response | CI, normal development |
+| `record` | Execute live, save response | First run, after prompt changes |
+| `live` | Execute live, don't save | Debugging |
+
+## Troubleshooting
+
+<Callout type="stuck" title="Common Issues">
+**Cannot find module '@open-harness/core'**
+```bash
+bun install
+```
+
+**Authentication failed**
+Run from within Claude Code - authentication uses Claude Code subscription.
+
+**Test timeout**
+LLM calls take 30-60s. Use `{ timeout: 180000 }` or fixtures for instant replay.
+
+**Fixture not found**
+Run with `FIXTURE_MODE=record` first to create the fixture.
 </Callout>
 
 ## Next Steps
 
-- [Custom Agents](/docs/guides/agents/custom-agents) — Build specialized agent implementations
-- [Architecture](/docs/concepts/architecture) — Understand how Open Harness works
-- [Troubleshooting](/docs/learn/troubleshooting) — Common errors and fixes
+<Cards>
+  <Card title="SpecKit Tutorial" href="/docs/learn/speckit-tutorial">
+    7-level progressive tutorial from basic agents to CI quality gates
+  </Card>
+  <Card title="Multi-Agent Harness" href="/docs/learn/speckit-tutorial#level-4-multi-agent-harness">
+    Compose multiple agents with harness()
+  </Card>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Understand how Open Harness works internally
+  </Card>
+</Cards>
