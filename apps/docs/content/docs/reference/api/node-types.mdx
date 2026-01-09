@@ -1,0 +1,65 @@
+---
+title: Node Types
+description: Define custom node behavior and execution context
+---
+
+# Node Types
+
+Custom nodes implement `NodeTypeDefinition` and are registered with the runtime.
+
+## NodeTypeDefinition
+
+```typescript
+import type { NodeTypeDefinition } from "@open-harness/core";
+
+interface NodeTypeDefinition<TIn, TOut> {
+  type: string;
+  inputSchema?: unknown;
+  outputSchema?: unknown;
+  capabilities?: { streaming?: boolean; multiTurn?: boolean };
+  run(ctx: NodeRunContext, input: TIn): Promise<TOut>;
+}
+```
+
+## NodeRunContext
+
+The runtime passes execution context to each node:
+
+```typescript
+interface NodeRunContext {
+  nodeId: string;
+  runId: string;
+  emit: (event: RuntimeEventPayload) => void;
+  state: StateStore;
+  inbox: CommandInbox;
+  getAgentSession: () => string | undefined;
+  setAgentSession: (sessionId: string) => void;
+  resumeMessage?: string;
+  cancel: CancelContext;
+}
+```
+
+## Custom Node Example
+
+```typescript
+import type { NodeTypeDefinition } from "@open-harness/core";
+
+export const echoUpper: NodeTypeDefinition<{ text: string }, { text: string }> = {
+  type: "echo.upper",
+  run: async (_ctx, input) => ({ text: input.text.toUpperCase() }),
+};
+```
+
+## Emitting Events
+
+```typescript
+run: async (ctx, input) => {
+  ctx.emit({ type: "node:start", nodeId: ctx.nodeId, runId: ctx.runId });
+  return { text: input.text };
+}
+```
+
+## See Also
+
+- [Node Registry](/docs/reference/api/node-registry) — Register node types
+- [Custom Agents Guide](/docs/guides/agents/custom-agents) — Extended patterns

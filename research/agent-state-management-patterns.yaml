@@ -1,0 +1,855 @@
+# AI Agent Framework State Management Patterns Research
+# Generated: 2026-01-09
+# Research Question: How do major frameworks handle reactive/configurable state?
+
+framework_patterns:
+
+  # ============================================================================
+  # COMMON APPROACHES
+  # ============================================================================
+
+  common_approaches:
+
+    - pattern: Event-Sourced State with Checkpointing
+      used_by:
+        - LangGraph
+        - CrewAI (Flows)
+      description: |
+        State is represented as an immutable event log. Each state transition
+        is captured as an event, allowing for time-travel, replay, and fault
+        tolerance. Checkpoints capture full state snapshots at key points.
+
+      implementation_details:
+        langgraph: |
+          - Uses CheckpointerProtocol to save state at every "super-step"
+          - State organized in "threads" (conversation sessions)
+          - Supports MemorySaver, PostgreSQL, Redis checkpointers
+          - Enables human-in-the-loop, memory, time-travel
+          - State reconstructed by replaying from checkpoint + events
+
+        crewai: |
+          - @persist() decorator automates state persistence
+          - Can persist at class level (after every method) or method level
+          - State can be saved/loaded from checkpoints
+          - Stateful execution model with flow-level state object
+
+      pros:
+        - Complete audit trail of state changes
+        - Time-travel debugging capabilities
+        - Fault tolerance and recovery
+        - Enables human-in-the-loop workflows
+        - No race conditions (append-only log)
+
+      cons:
+        - Storage overhead for long-running sessions
+        - Complexity in managing checkpointer lifecycle
+        - Requires event replay for state reconstruction
+        - Can be overkill for simple stateless workflows
+
+      applicable_to_open_harness: yes
+      rationale: |
+        Open Harness needs session persistence for pause/resume and would
+        benefit from audit trails. However, full event sourcing may be
+        overkill for ephemeral tool/model configurations.
+
+    - pattern: TypedDict + Reducer Functions
+      used_by:
+        - LangGraph
+      description: |
+        State schema defined as TypedDict with type annotations. Reducers
+        (functions with signature (Value, Value) -> Value) control how
+        updates merge with existing state. Common pattern: operator.add
+        for list concatenation.
+
+      implementation_details:
+        langgraph: |
+          - TypedDict defines state structure (contract between nodes)
+          - Fields annotated with Annotated[Type, reducer_func]
+          - Without reducer, updates overwrite previous value
+          - With reducer, LangGraph calls reducer(old, new) -> merged
+          - operator.add commonly used for message history lists
+          - Compile-time schema validation via TypedDict
+
+      pros:
+        - Explicit state contracts (type safety)
+        - Granular control over merge semantics per field
+        - Built-in Python typing support (IDE autocomplete)
+        - Clear data flow between graph nodes
+        - Prevents accidental overwrites
+
+      cons:
+        - Requires understanding reducer function pattern
+        - More verbose than simple mutable state
+        - TypedDict limitations (no inheritance, methods)
+        - Reducer bugs can cause subtle state corruption
+
+      applicable_to_open_harness: yes
+      rationale: |
+        Excellent fit for Open Harness tool/model configuration. Could use
+        reducers to merge tool arrays, update model params, etc. Type safety
+        aligns with TypeScript/Zod usage.
+
+    - pattern: Declarative YAML + Imperative Runtime
+      used_by:
+        - CrewAI (Agents/Tasks)
+        - AutoGen (Component serialization)
+      description: |
+        Agent/task configuration defined in YAML files, automatically mapped
+        to runtime objects. Decouples configuration from code. Agents can
+        be defined declaratively but orchestration is imperative.
+
+      implementation_details:
+        crewai: |
+          - agents.yaml and tasks.yaml define agent roles, goals, tools
+          - Framework auto-maps YAML properties to Agent/Task objects
+          - Flows are imperative Python code with decorators
+          - State management via @start, @listen, @persist decorators
+
+        autogen: |
+          - Component interface makes configs serializable
+          - save_state()/load_state() methods on agents
+          - Configuration can be shared/saved as JSON
+
+      pros:
+        - Non-programmers can configure agents
+        - Easy to version control and diff configurations
+        - Clear separation of config vs orchestration logic
+        - Shareable configurations across teams
+
+      cons:
+        - Two sources of truth (YAML + code)
+        - Limited to what YAML can express
+        - Harder to compose configurations dynamically
+        - Tooling support (linting, validation) varies
+
+      applicable_to_open_harness: partial
+      rationale: |
+        Open Harness already uses decorator-based DX similar to CrewAI Flows.
+        YAML configs could work for pre-defined harnesses, but dynamic
+        tool/model configuration needs runtime flexibility.
+
+    - pattern: Builder Pattern with Fluent API
+      used_by:
+        - LangGraph (StateGraph)
+        - AutoGen (ConversableAgent builder)
+      description: |
+        Programmatic construction of agent/graph configuration through
+        chained method calls. Compile/build step creates immutable runtime.
+
+      implementation_details:
+        langgraph: |
+          - StateGraph builder: .add_node(), .add_edge(), .compile()
+          - Compile step validates graph structure, adds checkpointers
+          - Compiled graph is immutable, supports invoke/stream/astream
+          - Runtime config passed via configurable parameter
+
+        autogen: |
+          - ConversableAgent() with various config parameters
+          - Agents composed into group chats, sequential patterns
+
+      pros:
+        - Type-safe API (IDE autocomplete, compile-time checks)
+        - Flexible, composable configuration
+        - Clear separation: build-time vs runtime
+        - Easy to programmatically generate configurations
+
+      cons:
+        - More code than declarative alternatives
+        - Immutable compiled graphs can't be modified at runtime
+        - Requires recompilation for configuration changes
+        - Steeper learning curve for non-programmers
+
+      applicable_to_open_harness: yes
+      rationale: |
+        Open Harness already uses builder-like pattern with method chaining.
+        Key question: should compiled harness be immutable or allow runtime
+        tool/model updates?
+
+    - pattern: Structured vs Unstructured State
+      used_by:
+        - CrewAI (Flows)
+        - Semantic Kernel (ChatHistory vs Kernel Memory)
+      description: |
+        Frameworks offer both dictionary-like flexible state and schema-based
+        validated state (Pydantic, TypedDict, etc). Trade-off between
+        flexibility and safety.
+
+      implementation_details:
+        crewai: |
+          - Unstructured: dict-like state for flexibility
+          - Structured: Pydantic BaseModel for type safety, validation
+          - Choice depends on complexity and validation needs
+
+        semantic_kernel: |
+          - ChatHistory: simple list of messages
+          - Kernel Memory: multi-layer memory (short-term, long-term, semantic)
+          - ChatHistoryReducer for context window management
+
+      pros:
+        - Unstructured: fast prototyping, dynamic schemas
+        - Structured: type safety, validation, IDE support
+        - Can mix both approaches in same system
+
+      cons:
+        - Unstructured: runtime errors, harder to refactor
+        - Structured: more boilerplate, less flexibility
+        - Team must agree on which to use when
+
+      applicable_to_open_harness: yes
+      rationale: |
+        Open Harness could use structured state (Zod schemas) for core
+        config (tools, model) and unstructured for user-defined metadata.
+
+    - pattern: Centralized Client-Side State Store
+      used_by:
+        - Vercel AI SDK (useChat hook)
+      description: |
+        Single source of truth for chat session state on client. Multiple
+        components subscribe to same state via shared ID. Automatic
+        synchronization across subscribers.
+
+      implementation_details:
+        vercel_ai_sdk: |
+          - useChat(id) creates/subscribes to ChatStore for that ID
+          - Multiple useChat hooks with same ID share state
+          - Updates to one hook reflected in all subscribers
+          - State fully decoupled, integrates with Zustand/Redux
+          - UIMessage (app state) vs ModelMessage (LLM optimized)
+          - Flexible transports: fetch, WebSocket, client-only
+
+      pros:
+        - Automatic synchronization across components
+        - Clean separation: UI state vs model state
+        - Framework-agnostic (works with any state library)
+        - Multiple transport options
+
+      cons:
+        - Client-side only (server state separate problem)
+        - Requires unique ID management
+        - Can lead to stale closures if not careful
+        - Memory management for long sessions
+
+      applicable_to_open_harness: no
+      rationale: |
+        Open Harness is server-side (Node.js SDK), not browser-based.
+        However, the "state store with ID" pattern could work for session
+        management in a server context.
+
+  # ============================================================================
+  # NOVEL APPROACHES
+  # ============================================================================
+
+  novel_approaches:
+
+    - framework: LangGraph
+      innovation: Reducer-Based State Updates with Graph Topology Migration
+      description: |
+        LangGraph's reducer functions provide fine-grained control over how
+        each state field updates. Combined with its migration capabilities,
+        you can evolve graph topology and state schema while preserving
+        existing checkpoint data.
+
+      key_features:
+        - Per-field reducer functions control merge semantics
+        - Full backwards/forwards compatibility for adding/removing keys
+        - Graph topology can change even for interrupted threads
+        - Only constraint: can't rename/remove nodes for interrupted threads
+        - State keys that rename lose their saved state
+
+      applicable: yes
+      rationale: |
+        Extremely relevant for Open Harness. We need to evolve harness
+        configuration (add/remove tools, change model params) without
+        breaking existing sessions. Reducer pattern + migration support
+        provides this.
+
+      adoption_recommendation: |
+        Strongly consider this pattern. Use reducers for:
+        - Tool array: merge/dedupe tools
+        - Model config: deep merge parameters
+        - Metadata: append-only logs
+
+        Design state schema for forwards compatibility:
+        - Use optional fields for new features
+        - Never rename existing fields (add new + deprecate old)
+        - Write migration helpers for breaking changes
+
+    - framework: CrewAI
+      innovation: Decorator-Based State Persistence with Flow/Crew Duality
+      description: |
+        CrewAI separates autonomous agent collaboration (Crews) from
+        deterministic orchestration (Flows). Flows use decorators to manage
+        state lifecycle, while Crews focus on role-based agent coordination.
+
+      key_features:
+        - "@start" decorator marks entry point
+        - "@listen" decorator creates event-driven dependencies
+        - "@persist()" enables automatic state saving (class or method level)
+        - Flow manages state, branching, validation
+        - Crews handle autonomous agent collaboration
+
+      applicable: partial
+      rationale: |
+        Open Harness already uses decorators for DX (.use(), .task(), etc).
+        Could adopt "@persist" pattern for session state. However, we don't
+        have the Crew/Flow duality since we're not a multi-agent system.
+
+      adoption_recommendation: |
+        Consider decorator-based persistence markers:
+        - @harness.stateful() to mark harness that needs session persistence
+        - @harness.checkpoint() to mark steps that should save state
+        - Keep it lightweight; avoid over-engineering
+
+    - framework: Semantic Kernel
+      innovation: Thread-Based State + ChatHistoryReducer for Context Management
+      description: |
+        Semantic Kernel uses thread-based state (conversations) with automatic
+        context window management via ChatHistoryReducer. When approaching
+        token limits, reducers summarize/compress older messages while
+        preserving system prompts and recent context.
+
+      key_features:
+        - ChatHistory object stores conversation state
+        - ChatHistoryReducer manages context window limits
+        - Auto-compression of old messages when hitting limits
+        - Preserves system prompts + recent context
+        - Kernel Memory for multi-layer memory (short/long-term, semantic)
+
+      applicable: yes
+      rationale: |
+        Open Harness could benefit from context management, especially for
+        long-running harnesses. Could implement similar reducer pattern for
+        message history trimming.
+
+      adoption_recommendation: |
+        Lower priority. Implement only if users report context window issues.
+        For now, let users manage context via system prompts and tool
+        filtering. Consider later if demand arises.
+
+    - framework: Vercel AI SDK
+      innovation: Dual Message Types (UIMessage vs ModelMessage) with Flexible Transports
+      description: |
+        Vercel AI SDK separates application state (UIMessage) from LLM state
+        (ModelMessage). UIMessage is source of truth for app (includes
+        metadata, tool results). ModelMessage is optimized for LLM APIs.
+        Transport layer is pluggable (fetch, WebSocket, client-only).
+
+      key_features:
+        - UIMessage: full app state, persist this
+        - ModelMessage: streamlined for LLM APIs
+        - Flexible transports: fetch, WebSocket, direct LLM client
+        - Centralized client state store (useChat with shared ID)
+        - Framework-agnostic (integrates with Zustand, Redux, etc)
+
+      applicable: partial
+      rationale: |
+        Dual message types could be useful. Open Harness could separate:
+        - Runtime state (tools, model config, session data) - for persistence
+        - Execution state (streaming chunks, intermediate steps) - ephemeral
+
+        However, transport flexibility is less relevant since we're SDK-based,
+        not web-based.
+
+      adoption_recommendation: |
+        Consider dual state approach:
+        - HarnessState: configuration + session data (persist)
+        - ExecutionState: streaming chunks, current step (ephemeral)
+
+        This aligns with event system where events are ephemeral but state
+        is persisted.
+
+    - framework: AutoGen
+      innovation: Conversational Multi-Agent State with save_state()/load_state()
+      description: |
+        AutoGen frames everything as multi-agent conversations. Agents have
+        save_state()/load_state() methods for serialization. Enterprise
+        patterns suggest event sourcing + CQRS for production systems.
+
+      key_features:
+        - save_state() serializes agent state to dict/JSON
+        - load_state() restores agent from serialized state
+        - Component interface for declarative serialization
+        - Event sourcing + CQRS for enterprise deployments
+        - Consensus algorithms (Paxos, Raft) for distributed state
+
+      applicable: partial
+      rationale: |
+        save_state()/load_state() pattern is simple and effective. Open
+        Harness could adopt similar API for session persistence. Event
+        sourcing + CQRS is overkill for current scope.
+
+      adoption_recommendation: |
+        Adopt simple save/load API:
+        - harness.saveState() -> serializable JSON
+        - Harness.fromState(json) -> restore session
+
+        Keep it simple. Avoid enterprise patterns (CQRS, consensus algorithms)
+        unless we're building distributed multi-agent system.
+
+# ============================================================================
+# CROSS-CUTTING PATTERNS
+# ============================================================================
+
+cross_cutting_patterns:
+
+  compile_vs_runtime:
+    summary: |
+      Most frameworks separate build-time (immutable schema/graph) from
+      runtime (configurable parameters). LangGraph compiles graph + state
+      schema, then accepts runtime config. CrewAI compiles Flows, then
+      executes with runtime state.
+
+    implications_for_open_harness: |
+      Current Open Harness design has no compile step. Harness is built
+      and executed in one go. Should we introduce compilation?
+
+      Options:
+      1. No compilation - keep current DX, accept dynamic tool/model changes
+      2. Soft compilation - validate schema at build, allow runtime config
+      3. Hard compilation - immutable harness, runtime config via parameters
+
+      Recommendation: Soft compilation. Validate at build (.build() step),
+      but allow runtime updates via .updateConfig() or similar.
+
+  immutability:
+    summary: |
+      Strong trend toward immutability in state management:
+      - Event sourcing: append-only logs
+      - LangGraph: reducers return new state
+      - Checkpoints: immutable snapshots
+
+      Mutable state only for performance-critical paths or simple prototypes.
+
+    implications_for_open_harness: |
+      Open Harness state (tools, model config) should be immutable by
+      default. Updates create new state versions. Benefits:
+      - Time-travel debugging
+      - Safe concurrent access
+      - Easier to reason about
+
+      Recommendation: Make HarnessState immutable. Provide .withTools(),
+      .withModel() methods that return new state (copy-on-write).
+
+  context_propagation:
+    summary: |
+      Frameworks use various mechanisms to pass context:
+      - LangGraph: state flows through graph edges, runtime config via parameter
+      - CrewAI: state object passed between Flow methods
+      - Semantic Kernel: Kernel object holds context, passed to plugins
+      - Vercel AI: context via React hooks (client-side)
+
+    implications_for_open_harness: |
+      Open Harness uses DI (NeedleDI) for context propagation. This works
+      well but is invisible to users. Should we also expose explicit state
+      passing for tool/task callbacks?
+
+      Recommendation: Hybrid approach:
+      - DI for infrastructure (logger, event bus, session manager)
+      - Explicit state parameter for user-defined tools/tasks
+
+      Example:
+      ```typescript
+      harness.task(async (state: HarnessState, ctx: TaskContext) => {
+        const tools = state.tools; // explicit
+        const logger = ctx.logger; // DI
+      });
+      ```
+
+# ============================================================================
+# RECOMMENDED PATTERN FOR OPEN HARNESS
+# ============================================================================
+
+recommended_pattern:
+  name: "Immutable State with Reducers + Soft Compilation + Event Sourcing (Optional)"
+
+  core_principles:
+    - Immutable state with copy-on-write updates
+    - Per-field reducer functions for merge semantics
+    - Soft compilation validates schema but allows runtime config
+    - Event sourcing for audit trails (optional, for pause/resume)
+    - Dual state: HarnessState (persist) vs ExecutionState (ephemeral)
+
+  state_schema:
+    typescript_example: |
+      import { z } from 'zod';
+
+      // Core harness configuration (immutable)
+      const HarnessStateSchema = z.object({
+        tools: z.array(ToolSchema),
+        model: ModelConfigSchema,
+        metadata: z.record(z.unknown()),
+        version: z.number(), // for migration support
+      });
+
+      type HarnessState = z.infer<typeof HarnessStateSchema>;
+
+      // Execution state (ephemeral, not persisted)
+      const ExecutionStateSchema = z.object({
+        currentStep: z.string(),
+        streamingChunks: z.array(z.unknown()),
+        pendingEvents: z.array(EventSchema),
+      });
+
+      type ExecutionState = z.infer<typeof ExecutionStateSchema>;
+
+  reducer_example:
+    typescript_example: |
+      // Reducer for tool array: merge and dedupe
+      function toolsReducer(
+        existing: Tool[],
+        updates: Tool[]
+      ): Tool[] {
+        const merged = [...existing, ...updates];
+        return Array.from(
+          new Map(merged.map(t => [t.name, t])).values()
+        );
+      }
+
+      // Reducer for model config: deep merge
+      function modelConfigReducer(
+        existing: ModelConfig,
+        updates: Partial<ModelConfig>
+      ): ModelConfig {
+        return {
+          ...existing,
+          ...updates,
+          params: {
+            ...existing.params,
+            ...updates.params,
+          },
+        };
+      }
+
+      // Register reducers
+      const stateReducers = {
+        tools: toolsReducer,
+        model: modelConfigReducer,
+        metadata: (a, b) => ({ ...a, ...b }), // shallow merge
+      };
+
+  api_design:
+    build_and_compile: |
+      // Build harness (fluent API)
+      const harness = new Harness()
+        .use(toolA, toolB)
+        .model('claude-3-5-sonnet-20241022')
+        .task(async (state, ctx) => {
+          // user task
+        })
+        .build(); // <-- soft compilation step
+
+      // build() validates:
+      // - State schema matches
+      // - Tools are compatible with model
+      // - No circular dependencies
+      // - Returns immutable harness
+
+    runtime_updates: |
+      // Option 1: Copy-on-write (functional style)
+      const updated = harness.withTools([toolC, toolD]);
+      const result = await updated.execute();
+
+      // Option 2: Update session state (for pause/resume)
+      const session = await harness.createSession();
+      await session.updateState(state => ({
+        ...state,
+        tools: [...state.tools, toolC],
+      }));
+      await session.resume();
+
+    persistence: |
+      // Save session state
+      const sessionState = await session.saveState();
+      fs.writeFileSync('session.json', JSON.stringify(sessionState));
+
+      // Restore session
+      const restored = await harness.restoreSession(
+        JSON.parse(fs.readFileSync('session.json', 'utf-8'))
+      );
+      await restored.resume();
+
+  event_sourcing_integration:
+    description: |
+      For pause/resume, use event sourcing to capture state changes:
+      - StateUpdated event when state changes
+      - Checkpoint event at key points
+      - Replay events to reconstruct state
+
+    optional: true
+    when_to_use: |
+      - User requests pause/resume functionality
+      - Need audit trail of configuration changes
+      - Multi-session coordination required
+
+    typescript_example: |
+      // Event types
+      type StateEvent =
+        | { type: 'tools.added', tools: Tool[] }
+        | { type: 'model.updated', config: Partial<ModelConfig> }
+        | { type: 'checkpoint', state: HarnessState };
+
+      // Event log
+      class StateEventLog {
+        private events: StateEvent[] = [];
+
+        append(event: StateEvent) {
+          this.events.push(event);
+        }
+
+        replay(initialState: HarnessState): HarnessState {
+          return this.events.reduce((state, event) => {
+            switch (event.type) {
+              case 'tools.added':
+                return {
+                  ...state,
+                  tools: stateReducers.tools(state.tools, event.tools),
+                };
+              case 'model.updated':
+                return {
+                  ...state,
+                  model: stateReducers.model(state.model, event.config),
+                };
+              case 'checkpoint':
+                return event.state;
+            }
+          }, initialState);
+        }
+      }
+
+  migration_support:
+    description: |
+      Support schema evolution without breaking existing sessions:
+      - Version field in state
+      - Migration functions for each version bump
+      - Forwards/backwards compatibility rules
+
+    typescript_example: |
+      // Migration registry
+      const migrations = {
+        1: (state: any) => ({
+          ...state,
+          version: 1,
+          metadata: {}, // add metadata field
+        }),
+        2: (state: any) => ({
+          ...state,
+          version: 2,
+          model: {
+            ...state.model,
+            temperature: state.model.temperature ?? 0.7, // add default
+          },
+        }),
+      };
+
+      // Apply migrations
+      function migrateState(state: any): HarnessState {
+        let current = state;
+        const targetVersion = 2;
+
+        for (let v = current.version + 1; v <= targetVersion; v++) {
+          current = migrations[v](current);
+        }
+
+        return HarnessStateSchema.parse(current);
+      }
+
+rationale: |
+  This pattern combines the best aspects of all researched frameworks:
+
+  1. **From LangGraph**: TypedDict + reducers for type-safe, granular updates.
+     Migration support for schema evolution.
+
+  2. **From CrewAI**: Decorator-based persistence markers for DX. Separation
+     of configuration (state) from orchestration (flows).
+
+  3. **From Semantic Kernel**: Context management patterns (though we defer
+     implementation until needed).
+
+  4. **From Vercel AI SDK**: Dual state pattern (HarnessState vs ExecutionState)
+     separates what to persist from what's ephemeral.
+
+  5. **From AutoGen**: Simple save/load API for session persistence.
+
+  **Why immutability?** Prevents race conditions, enables time-travel debugging,
+  makes state changes explicit.
+
+  **Why reducers?** Gives users control over merge semantics (especially for
+  arrays, objects). Prevents accidental overwrites.
+
+  **Why soft compilation?** Validates schema early but allows runtime flexibility.
+  Avoids rigid "compiled graph" constraint from LangGraph.
+
+  **Why optional event sourcing?** Most users don't need full audit trail.
+  Provide it only for pause/resume or if users request it.
+
+  **Why dual state?** Execution state (streaming chunks, current step) is
+  ephemeral and high-volume. Don't pollute persisted state with it.
+
+  **Migration support?** Essential for production systems. State schemas evolve.
+  Need graceful migration path for existing sessions.
+
+dx_considerations:
+  learning_curve:
+    assessment: "Medium"
+    rationale: |
+      Reducers add cognitive load vs simple mutable state. But TypeScript
+      types and examples mitigate this. Users familiar with Redux will
+      recognize the pattern.
+
+  boilerplate:
+    assessment: "Low to Medium"
+    rationale: |
+      Immutable updates require more code than mutable state. But helper
+      methods (.withTools(), .withModel()) hide the boilerplate.
+
+  debugging:
+    assessment: "Excellent"
+    rationale: |
+      Immutable state + event sourcing gives complete audit trail. Time-travel
+      debugging becomes possible. Clear before/after for each update.
+
+  ide_support:
+    assessment: "Excellent"
+    rationale: |
+      TypeScript + Zod provides full autocomplete, type checking. Reducers
+      are just functions, easy to test.
+
+  testing:
+    assessment: "Excellent"
+    rationale: |
+      Pure functions (reducers) are trivial to test. Immutable state eliminates
+      flaky tests from shared mutable state.
+
+implementation_phases:
+  phase_1_foundation:
+    scope:
+      - Define HarnessState schema with Zod
+      - Implement immutable state with copy-on-write helpers
+      - Add version field for future migrations
+
+    success_criteria:
+      - State schema enforced at build time
+      - .withTools(), .withModel() methods work correctly
+      - All existing tests pass with new state model
+
+  phase_2_reducers:
+    scope:
+      - Implement reducer registry
+      - Add toolsReducer, modelConfigReducer, metadataReducer
+      - Allow user-defined reducers for custom state fields
+
+    success_criteria:
+      - Tool deduplication works via reducer
+      - Model config deep merge works via reducer
+      - Custom reducers can be registered
+
+  phase_3_compilation:
+    scope:
+      - Add .build() step that validates state schema
+      - Check tool/model compatibility
+      - Return immutable harness object
+
+    success_criteria:
+      - Invalid schemas caught at build time
+      - Incompatible tools rejected
+      - Built harness is immutable (frozen)
+
+  phase_4_persistence:
+    scope:
+      - Implement session.saveState() / restoreSession()
+      - Add state event log (optional, for audit trail)
+      - Support checkpoint events
+
+    success_criteria:
+      - Session can be saved to JSON and restored
+      - State event log reconstructs state correctly
+      - Checkpoints reduce replay overhead
+
+  phase_5_migration:
+    scope:
+      - Add migration registry
+      - Implement version checking on restore
+      - Auto-migrate old sessions to current schema
+
+    success_criteria:
+      - Old session state can be migrated to new schema
+      - Forward/backward compatible changes supported
+      - Breaking changes have migration path
+
+open_questions:
+  - question: "Should runtime state updates be allowed after .build()?"
+    options:
+      - "No (immutable, like LangGraph) - recompile for changes"
+      - "Yes (mutable) - update via session.updateState()"
+      - "Hybrid - copy-on-write returns new harness"
+    recommendation: "Hybrid - .withTools() returns new harness"
+
+  - question: "Should event sourcing be opt-in or always-on?"
+    options:
+      - "Always-on - every state change is logged"
+      - "Opt-in - users enable via .enableEventLog()"
+      - "Auto - enabled only if pause/resume is used"
+    recommendation: "Auto - enable when session persistence is used"
+
+  - question: "Should we support undo/redo?"
+    options:
+      - "Yes - event log makes this trivial"
+      - "No - not a user requirement yet"
+      - "Later - add if users request it"
+    recommendation: "Later - not urgent, but easy to add"
+
+  - question: "Should state updates be synchronous or async?"
+    options:
+      - "Synchronous - reducers are pure functions"
+      - "Async - allow async validation, persistence hooks"
+      - "Both - sync reducers, async persistence"
+    recommendation: "Both - reducers sync, persistence async"
+
+references:
+  langgraph:
+    - title: "Persistence - Docs by LangChain"
+      url: "https://docs.langchain.com/oss/python/langgraph/persistence"
+    - title: "Mastering LangGraph State Management in 2025"
+      url: "https://sparkco.ai/blog/mastering-langgraph-state-management-in-2025"
+    - title: "Mastering State Reducers in LangGraph: A Complete Guide"
+      url: "https://medium.com/data-science-collective/mastering-state-reducers-in-langgraph-a-complete-guide-b049af272817"
+    - title: "LangGraph: Dynamic Runtime Configuration"
+      url: "https://medium.com/fundamentals-of-artificial-intelligence/langgraph-dynamic-runtime-configuration-6799ddd357a3"
+    - title: "How to add runtime configuration to your graph"
+      url: "https://langchain-ai.github.io/langgraphjs/how-tos/configuration/"
+
+  crewai:
+    - title: "How to build Agentic Systems: The Missing Architecture for Production AI Agents"
+      url: "https://blog.crewai.com/agentic-systems-with-crewai/"
+    - title: "Mastering Flow State Management - CrewAI"
+      url: "https://docs.crewai.com/en/guides/flows/mastering-flow-state"
+    - title: "Agent Orchestration 2026: LangGraph, CrewAI & AutoGen Guide"
+      url: "https://iterathon.tech/blog/ai-agent-orchestration-frameworks-2026"
+
+  autogen:
+    - title: "Managing State — AutoGen"
+      url: "https://microsoft.github.io/autogen/stable//user-guide/agentchat-user-guide/tutorial/state.html"
+    - title: "AutoGen to Microsoft Agent Framework Migration Guide"
+      url: "https://learn.microsoft.com/en-us/agent-framework/migration-guide/from-autogen/"
+
+  semantic_kernel:
+    - title: "Keeping the Conversation Flowing: Managing Context with Semantic Kernel Python"
+      url: "https://devblogs.microsoft.com/semantic-kernel/semantic-kernel-python-context-management/"
+    - title: "Microsoft Agent Framework: The production-ready convergence of AutoGen and Semantic Kernel"
+      url: "https://cloudsummit.eu/blog/microsoft-agent-framework-production-ready-convergence-autogen-semantic-kernel"
+
+  vercel_ai_sdk:
+    - title: "AI SDK RSC: Streaming Values"
+      url: "https://ai-sdk.dev/docs/ai-sdk-rsc/streaming-values"
+    - title: "Vercel AI SDK v5 Internals - Part 4 — Decoupling Client & Server"
+      url: "https://dev.to/yigit-konur/vercel-ai-sdk-v5-internals-part-4-decoupling-client-server-state-management-and-message-1lb1"
+    - title: "AI SDK UI: useChat"
+      url: "https://ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat"
+
+  general:
+    - title: "Event Sourcing 101: When to Use and How to Avoid Pitfalls"
+      url: "https://dzone.com/articles/event-sourcing-guide-when-to-use-avoid-pitfalls"
+    - title: "AI Agents Need a Runtime With a Dynamic Lifecycle—Here's Why"
+      url: "https://www.daytona.io/dotfiles/ai-agents-need-a-runtime-with-a-dynamic-lifecycle-here-s-why"
+    - title: "Building AI Agents: Workflow-First vs. Code-First vs. Hybrid"
+      url: "https://techcommunity.microsoft.com/blog/azurearchitectureblog/building-ai-agents-workflow-first-vs-code-first-vs-hybrid/4466788"

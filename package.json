@@ -5,14 +5,16 @@
     "apps/*",
     "packages/*",
     "packages/**",
-    "spikes/*"
+    "spikes/*",
+    "examples/*"
   ],
   "type": "module",
   "scripts": {
     "lint": "turbo lint",
     "dev": "turbo dev",
     "build": "turbo build",
-    "test": "turbo test",
+    "test": "turbo test --filter='!@examples/*'",
+    "test:examples": "turbo test --filter='@examples/*'",
     "typecheck": "turbo typecheck",
     "prepare": "lefthook install",
     "hooks:install": "lefthook install",

@@ -1,0 +1,179 @@
+---
+title: Runtime
+description: Execute agents and harnesses with the run() API
+---
+
+# Runtime
+
+The `run()` function is the primary way to execute agents and harnesses in Open Harness.
+
+## Quick Start
+
+```typescript
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+// Set up the provider
+setDefaultProvider(createClaudeNode());
+
+// Define an agent
+const myAgent = agent({
+  prompt: "You are a helpful assistant.",
+});
+
+// Execute the agent
+const result = await run(myAgent, { prompt: "Hello, world!" });
+
+console.log(result.output);
+console.log(result.metrics);
+```
+
+## run() API
+
+### Basic Execution
+
+Execute an agent with input:
+
+```typescript
+const result = await run(myAgent, { prompt: "Hello" });
+```
+
+### With Provider Override
+
+Pass a provider directly instead of using the default:
+
+```typescript
+import { createClaudeNode } from "@open-harness/server";
+
+const result = await run(myAgent, { prompt: "Hello" }, {
+  provider: createClaudeNode({ model: "claude-3-opus-latest" }),
+});
+```
+
+### With Fixtures
+
+Record and replay agent responses:
+
+```typescript
+import { FileFixtureStore } from "@open-harness/stores";
+
+const store = new FileFixtureStore("./fixtures");
+
+// Record mode
+const result = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "my-test",
+  mode: "record",
+  store,
+});
+
+// Replay mode
+const result = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "my-test",
+  mode: "replay",
+  store,
+});
+```
+
+## Result Shape
+
+The `run()` function returns a `RunResult`:
+
+```typescript
+interface RunResult<T = unknown> {
+  /** The agent's output */
+  output: T;
+
+  /** Optional state from stateful agents */
+  state?: Record<string, unknown>;
+
+  /** Execution metrics */
+  metrics: {
+    latencyMs: number;
+    cost: number;
+    tokens: {
+      input: number;
+      output: number;
+    };
+  };
+
+  /** Fixture IDs if recording was enabled */
+  fixtures?: string[];
+}
+```
+
+## Provider Configuration
+
+### setDefaultProvider()
+
+Set a global default provider:
+
+```typescript
+import { setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+setDefaultProvider(createClaudeNode());
+```
+
+### getDefaultProvider()
+
+Get the current default provider:
+
+```typescript
+import { getDefaultProvider } from "@open-harness/core";
+
+const provider = getDefaultProvider();
+```
+
+## Advanced: Internal Runtime
+
+For advanced use cases like building custom orchestrators, the internal runtime API is available:
+
+```typescript
+import {
+  createRuntime,
+  DefaultNodeRegistry,
+  parseFlowYaml,
+} from "@internal/core";
+
+const registry = new DefaultNodeRegistry();
+const flow = parseFlowYaml(yamlString);
+
+const runtime = createRuntime({ flow, registry });
+const snapshot = await runtime.run({ name: "World" });
+```
+
+<Callout type="note" title="Internal API">
+The `createRuntime()` function is an internal API in `@internal/core`. For most use cases, use `run()` from `@open-harness/core` instead.
+</Callout>
+
+### Runtime Methods
+
+| Method | Description |
+|--------|-------------|
+| `run(input?)` | Execute the flow to completion |
+| `dispatch(command)` | Send a command to a running flow |
+| `onEvent(listener)` | Subscribe to runtime events |
+| `getSnapshot()` | Inspect current runtime state |
+
+### Runtime Commands
+
+```typescript
+runtime.dispatch({ type: "send", runId: "run-123", message: "continue" });
+runtime.dispatch({ type: "abort", reason: "user_cancelled" });
+```
+
+### Event Subscription
+
+```typescript
+runtime.onEvent((event) => {
+  if (event.type === "node:error") {
+    console.error(event.error);
+  }
+});
+```
+
+## See Also
+
+- [Custom Agents](/docs/guides/agents/custom-agents) — Build agent implementations
+- [Architecture](/docs/concepts/architecture) — Understand agents and harnesses
+- [Events API](/docs/reference/api/events) — Event types

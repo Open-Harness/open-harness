@@ -9,15 +9,13 @@ skip_output:
 pre-commit:
   parallel: true
   commands:
-    # Run beads pre-commit hook first
-    beads:
+    # NOTE: beads hooks removed - will reintroduce after v0.2.0 stabilization
+
+    # Update README metadata (git hash, timestamps)
+    update-docs-metadata:
       priority: 1
-      run: |
-        if [ "$CI" = "true" ] || ! command -v bd >/dev/null 2>&1; then
-          exit 0
-        fi
-        bd hooks run pre-commit {staged_files}
-      stage_fixed: false
+      run: bun scripts/update-readme-metadata.ts --changed-only
+      stage_fixed: true
 
     # Lint and format staged files with biome
     lint-staged:

@@ -11,32 +11,22 @@ The structure of a flow definition.
 
 ```typescript
 interface FlowDefinition {
-  id: string;
-  name?: string;
+  name: string;
   description?: string;
   nodes: NodeDefinition[];
   edges?: EdgeDefinition[];
-  input?: ZodSchema;
-  output?: ZodSchema;
+  state?: { initial: Record<string, unknown> };
 }
 ```
 
 ## Properties
 
-### id
+### name
 
 Unique identifier for the flow:
 
 ```yaml
-id: greeting-flow
-```
-
-### name
-
-Human-readable name (optional):
-
-```yaml
-name: Greeting Flow
+name: greeting-flow
 ```
 
 ### description
@@ -67,42 +57,28 @@ Connections between nodes (optional, inferred from data dependencies):
 edges:
   - from: classify
     to: handle-bug
-    condition: "{{ nodes.classify.output.type = 'bug' }}"
+    when: "$contains(classify.text, 'bug')"
 ```
 
-### input
+### state
 
-Zod schema for flow input validation:
+Initial state values for the flow:
 
-```typescript
-const flow: FlowDefinition = {
-  id: "my-flow",
-  input: z.object({
-    name: z.string(),
-    count: z.number().optional(),
-  }),
-  nodes: [...],
-};
+```yaml
+state:
+  initial:
+    count: 0
+    items: []
 ```
 
-### output
-
-Zod schema for flow output validation:
-
-```typescript
-output: z.object({
-  result: z.string(),
-  success: z.boolean(),
-})
-```
+Access state in nodes with `ctx.state.get()` and `ctx.state.set()`.
 
 ## YAML Format
 
 Flows are typically defined in YAML:
 
 ```yaml
-id: code-review
-name: Code Review Flow
+name: code-review
 description: Reviews code changes
 
 nodes:
@@ -114,8 +90,12 @@ nodes:
   - id: summarize
     type: claude.agent
     input:
-      analysis: "{{ nodes.analyze.output.text }}"
+      analysis: "{{ analyze.text }}"
       prompt: "Summarize the analysis"
+
+edges:
+  - from: analyze
+    to: summarize
 ```
 
 ## See Also
@@ -123,3 +103,4 @@ nodes:
 - [NodeDefinition](/docs/reference/types/node-definition) — Node structure
 - [EdgeDefinition](/docs/reference/types/edge-definition) — Edge structure
 - [Flow YAML Schema](/docs/reference/schemas/flow-yaml) — YAML schema
+

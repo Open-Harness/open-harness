@@ -4,8 +4,9 @@ import type { UIMessage } from "ai";
 import { createChatRoute } from "../../src/index.js";
 
 describe("createChatRoute", () => {
-	test("returns runId and dispatches send command", async () => {
+	test("returns runId and resumes runtime", async () => {
 		const runtime = new MockRuntime();
+		runtime.pause();
 		const app = createChatRoute(runtime);
 
 		const messages: UIMessage[] = [
@@ -29,13 +30,7 @@ describe("createChatRoute", () => {
 		expect(typeof json.runId).toBe("string");
 		expect(json.runId.length).toBeGreaterThan(0);
 
-		const dispatched = runtime.getDispatchedCommands();
-		expect(dispatched.length).toBe(1);
-		expect(dispatched[0]).toEqual({
-			type: "send",
-			runId: json.runId,
-			message: "hello",
-		});
+		expect(runtime.getResumeMessages()).toEqual(["hello"]);
 	});
 
 	test("returns 400 when messages are missing", async () => {
