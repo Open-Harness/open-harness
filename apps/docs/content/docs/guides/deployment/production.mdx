@@ -12,7 +12,7 @@ A checklist for deploying Open Harness in production environments.
 ### 1. Configure Persistence
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/kernel";
+import { SqliteRunStore } from "@open-harness/sdk";
 
 const store = new SqliteRunStore(process.env.DB_PATH || "./data/runs.db");
 ```

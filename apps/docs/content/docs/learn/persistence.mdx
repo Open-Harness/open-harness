@@ -20,7 +20,7 @@ import {
   createRuntime,
   SqliteRunStore,
   parseFlowYaml
-} from "@open-harness/kernel";
+} from "@open-harness/sdk";
 
 // Create persistent store
 const store = new SqliteRunStore("./runs.db");
@@ -64,7 +64,7 @@ interface RunStore {
 ## Replay for Testing
 
 ```typescript
-import { replayRun } from "@open-harness/kernel";
+import { replayRun } from "@open-harness/sdk";
 
 // Record a run
 const recording = await recordRun(flow, registry, input);

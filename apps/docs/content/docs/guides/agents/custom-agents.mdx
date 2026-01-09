@@ -25,7 +25,7 @@ interface AgentContext {
 ## Basic Agent
 
 ```typescript
-import { defineAgent } from "@open-harness/kernel";
+import { defineAgent } from "@open-harness/sdk";
 import { z } from "zod";
 
 export const echoAgent = defineAgent({
@@ -79,7 +79,7 @@ export const streamingAgent = defineAgent({
 ## Register and Use
 
 ```typescript
-import { DefaultNodeRegistry } from "@open-harness/kernel";
+import { DefaultNodeRegistry } from "@open-harness/sdk";
 
 const registry = new DefaultNodeRegistry();
 registry.register(echoAgent);

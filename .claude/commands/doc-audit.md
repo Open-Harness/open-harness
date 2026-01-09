@@ -5,7 +5,7 @@ description: Fan out sub-agents to audit documentation against codebase for accu
 
 # Documentation Audit
 
-You are auditing the Open Harness documentation against the actual codebase. The documentation lives in `apps/docs/content/docs/` and the kernel code is in `packages/kernel/src/`.
+You are auditing the Open Harness documentation against the actual codebase. The documentation lives in `apps/docs/content/docs/` and the kernel code is in `packages/sdk/src/`.
 
 ## Goal
 
@@ -40,20 +40,20 @@ apps/docs/content/docs/
     ├── nodes/       → Node catalog
     ├── channels/    → Channel reference
     ├── providers/   → Provider reference
-    └── kernel-spec/ → Protocol specification (synced from packages/kernel/docs/)
+    └── kernel-spec/ → Protocol specification (synced from packages/sdk/docs/)
 ```
 
 ## Codebase Mapping
 
 | Doc Section | Source Location | What to Check |
 |-------------|-----------------|---------------|
-| reference/api/ | packages/kernel/src/*.ts | Function signatures match exports |
-| reference/types/ | packages/kernel/src/types/*.ts | Type definitions current |
-| guides/flows/ | packages/kernel/src/flow/*.ts | Flow API usage examples work |
-| guides/hub/ | packages/kernel/src/hub/*.ts | Hub API examples accurate |
-| guides/channels/ | packages/kernel/src/channels/*.ts | Channel interfaces match |
-| guides/agents/ | packages/kernel/src/agent/*.ts | Agent patterns current |
-| concepts/ | packages/kernel/docs/*.md | Concepts align with spec |
+| reference/api/ | packages/sdk/src/*.ts | Function signatures match exports |
+| reference/types/ | packages/sdk/src/types/*.ts | Type definitions current |
+| guides/flows/ | packages/sdk/src/flow/*.ts | Flow API usage examples work |
+| guides/hub/ | packages/sdk/src/hub/*.ts | Hub API examples accurate |
+| guides/channels/ | packages/sdk/src/channels/*.ts | Channel interfaces match |
+| guides/agents/ | packages/sdk/src/agent/*.ts | Agent patterns current |
+| concepts/ | packages/sdk/docs/*.md | Concepts align with spec |
 
 ## Execution Plan
 
@@ -61,7 +61,7 @@ Launch these sub-agents IN PARALLEL to audit different sections:
 
 ### Agent 1: API Reference Audit
 ```
-Audit reference/api/ against packages/kernel/src/
+Audit reference/api/ against packages/sdk/src/
 
 1. List all exported functions from kernel
 2. Check each has documentation page
@@ -71,7 +71,7 @@ Audit reference/api/ against packages/kernel/src/
 
 ### Agent 2: Type Reference Audit
 ```
-Audit reference/types/ against packages/kernel/src/types/
+Audit reference/types/ against packages/sdk/src/types/
 
 1. List all exported types/interfaces
 2. Check documentation exists and is current
