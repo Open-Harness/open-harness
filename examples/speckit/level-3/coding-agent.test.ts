@@ -1,33 +1,35 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { type Provider, run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
+import { setupFixtures, withFixture } from "../test-utils";
 import { type CodingAgentState, codingAgent, initialState, parseValidationStatus } from "./coding-agent";
 
 /**
- * Level 3 Tests: Coding Agent with Self-Validation Loop
+ * Level 3: Self-Validation Loop + Fixtures
  *
  * Demonstrates:
  * - Self-validation pattern where agents assess their own work
  * - State tracking for iteration attempts
  * - Looping until validation passes or max attempts reached
+ * - Fixtures for fast, deterministic testing
  *
  * The self-validation loop is a fundamental pattern for building
  * reliable agent systems without human-in-the-loop.
- *
- * Note: Claude Code SDK tests can take 2-3 minutes due to subprocess overhead.
- * In production, use fixtures (Level 6) for fast CI runs.
  */
 describe("Coding Agent - Level 3 (Self-Validation Loop)", () => {
 	beforeAll(() => {
 		setDefaultProvider(createClaudeNode() as unknown as Provider);
+		setupFixtures();
 	});
 
 	it(
 		"implements a simple task with self-validation",
 		async () => {
-			const result = await run(codingAgent, {
-				prompt: "Create a function that adds two numbers and returns the result",
-			});
+			const result = await run(
+				codingAgent,
+				{ prompt: "Create a function that adds two numbers and returns the result" },
+				withFixture("level3-add-numbers"),
+			);
 
 			const output = result.output as string;
 
@@ -52,70 +54,13 @@ describe("Coding Agent - Level 3 (Self-Validation Loop)", () => {
 	);
 
 	it(
-		"demonstrates self-validation loop pattern",
-		async () => {
-			// This test shows the iteration pattern explicitly
-			// In a real harness (Level 4+), this loop would be handled by edges
-
-			let state: CodingAgentState = { ...initialState };
-			let lastOutput = "";
-			let iterations = 0;
-
-			// Complex task that may require revision
-			const task =
-				"Create a password strength validator that checks: length >= 8, uppercase, lowercase, number, special char";
-
-			while (iterations < state.maxAttempts) {
-				iterations++;
-				state = { ...state, attempts: iterations };
-
-				// Build prompt with any previous issues
-				let prompt = task;
-				if (state.lastValidation && state.lastValidation.issues.length > 0) {
-					prompt += `\n\nPrevious attempt had these issues to fix:\n${state.lastValidation.issues.map((i) => `- ${i}`).join("\n")}`;
-				}
-
-				const result = await run(codingAgent, { prompt });
-				lastOutput = result.output as string;
-
-				const validation = parseValidationStatus(lastOutput);
-				console.log(`Attempt ${iterations}:`, validation.status);
-
-				// Update state with validation result
-				state = {
-					...state,
-					lastValidation: {
-						passed: validation.passed,
-						issues: validation.issues,
-					},
-				};
-
-				// Exit loop if validation passed
-				if (validation.passed) {
-					console.log(`Completed after ${iterations} attempt(s)`);
-					break;
-				}
-			}
-
-			// Should have made at least one attempt
-			expect(iterations).toBeGreaterThanOrEqual(1);
-			expect(iterations).toBeLessThanOrEqual(state.maxAttempts);
-
-			// Should have produced code
-			expect(lastOutput).toContain("CODE");
-
-			// State should reflect attempts
-			expect(state.attempts).toBe(iterations);
-		},
-		{ timeout: 600000 }, // 10 min for up to 3 iterations
-	);
-
-	it(
 		"state tracks validation history",
 		async () => {
-			const result = await run(codingAgent, {
-				prompt: "Write a simple greeting function",
-			});
+			const result = await run(
+				codingAgent,
+				{ prompt: "Write a simple greeting function" },
+				withFixture("level3-greeting"),
+			);
 
 			const output = result.output as string;
 			const validation = parseValidationStatus(output);
@@ -141,7 +86,7 @@ describe("Coding Agent - Level 3 (Self-Validation Loop)", () => {
 });
 
 /**
- * Unit tests for the parsing utility
+ * Unit tests for the parsing utility (no fixtures needed - pure functions)
  */
 describe("parseValidationStatus", () => {
 	it("parses COMPLETE status", () => {

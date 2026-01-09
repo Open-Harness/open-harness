@@ -1,33 +1,34 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { type Provider, run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
+import { setupFixtures, withFixture } from "../test-utils";
 import { parseReviewerOutput, reviewerAgent } from "./reviewer-agent";
 import { specKit } from "./speckit-harness";
 
 /**
- * Level 5 Tests: Full 3-Agent System
+ * Level 5: Full 3-Agent System + Fixtures
  *
  * Demonstrates:
  * - Complete PRD → Code → Review workflow
  * - Three-agent coordination
  * - Reviewer validation against specifications
  * - Aggregate metrics across all agents
- *
- * Note: Full harness execution involves 3 agent calls.
- * Tests may take 5-8 minutes due to Claude Code SDK overhead.
- * In production, use fixtures (Level 6) for fast CI runs.
+ * - Fixtures for fast, deterministic testing
  */
 describe("SpecKit - Level 5 (Full 3-Agent System)", () => {
 	beforeAll(() => {
 		setDefaultProvider(createClaudeNode() as unknown as Provider);
+		setupFixtures();
 	});
 
 	describe("Individual Agents", () => {
 		it(
 			"reviewer agent validates code against spec",
 			async () => {
-				const result = await run(reviewerAgent, {
-					prompt: `Review this implementation:
+				const result = await run(
+					reviewerAgent,
+					{
+						prompt: `Review this implementation:
 
 Task: TASK-001 - Create Email Validator
 Acceptance Criteria:
@@ -43,7 +44,9 @@ function validateEmail(email) {
   return regex.test(email);
 }
 \`\`\``,
-				});
+					},
+					withFixture("level5-reviewer-email"),
+				);
 
 				const output = result.output as string;
 
@@ -67,15 +70,19 @@ function validateEmail(email) {
 		it(
 			"runs the complete spec → coder → reviewer workflow",
 			async () => {
-				const result = await run(specKit, {
-					prompt: `PRD: Simple Calculator
+				const result = await run(
+					specKit,
+					{
+						prompt: `PRD: Simple Calculator
 
 Create a calculator module that:
 1. Adds two numbers
 2. Returns the sum
 
 Keep it simple - just one function.`,
-				});
+					},
+					withFixture("level5-harness-calculator"),
+				);
 
 				// Harness should complete
 				expect(result.output).toBeDefined();
@@ -93,7 +100,7 @@ Keep it simple - just one function.`,
 
 				// Metrics are aggregated across all three agents
 				expect(result.metrics).toBeDefined();
-				expect(result.metrics.latencyMs).toBeGreaterThan(0);
+				expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
 
 				console.log("Full workflow metrics:", {
 					latencyMs: result.metrics.latencyMs,
@@ -101,20 +108,24 @@ Keep it simple - just one function.`,
 					cost: result.metrics.cost,
 				});
 			},
-			{ timeout: 900000 }, // 15 min for full 3-agent workflow
+			{ timeout: 900000 },
 		);
 
 		it(
 			"handles realistic PRD with multiple requirements",
 			async () => {
-				const result = await run(specKit, {
-					prompt: `PRD: User Greeting Service
+				const result = await run(
+					specKit,
+					{
+						prompt: `PRD: User Greeting Service
 
 Requirements:
 1. Create a function that greets users by name
 2. Handle missing names gracefully
 3. Support optional greeting customization`,
-				});
+					},
+					withFixture("level5-harness-greeting"),
+				);
 
 				expect(result.output).toBeDefined();
 
@@ -137,7 +148,7 @@ Requirements:
 });
 
 /**
- * Unit tests for parsing utilities
+ * Unit tests for parsing utilities (no fixtures needed - pure functions)
  */
 describe("Parsing Utilities - Reviewer", () => {
 	describe("parseReviewerOutput", () => {

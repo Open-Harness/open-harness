@@ -1,113 +1,82 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { type Provider, run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
-import { FileRecordingStore } from "@open-harness/stores";
+import { setupFixtures, withFixture } from "../test-utils";
 import { parseReviewerOutput } from "./agents/reviewer-agent";
 import { specKit } from "./speckit-harness";
 
 /**
- * Level 6 Tests: Fixtures + Replay
+ * Level 6: Advanced Fixture Patterns
  *
- * Demonstrates:
- * - Recording agent responses to fixtures
- * - Replaying fixtures for deterministic testing
- * - CI-friendly testing without API calls
+ * This level demonstrates more advanced fixture patterns:
+ * - Multiple fixtures for the same workflow
+ * - Deterministic replay for snapshot testing
+ * - Fixture naming conventions
  *
- * Fixture modes:
- * - 'record': Execute live and save responses
- * - 'replay': Load saved responses (no API calls)
- * - 'live': Execute live without recording (default)
- *
- * Usage:
- * - First run: FIXTURE_MODE=record bun test level-6/
- * - CI runs: FIXTURE_MODE=replay bun test level-6/
+ * By this point, fixtures are second nature - every test uses them.
  */
-
-// Fixture store for recordings
-const store = new FileRecordingStore({ directory: "./level-6/fixtures" });
-
-describe("SpecKit - Level 6 (Fixtures)", () => {
+describe("SpecKit - Level 6 (Advanced Fixtures)", () => {
 	beforeAll(() => {
 		setDefaultProvider(createClaudeNode() as unknown as Provider);
+		setupFixtures();
 	});
 
-	describe("Live Execution (Default)", () => {
-		it(
-			"runs workflow live when no fixture mode specified",
-			async () => {
-				// Default mode is 'live' - executes without recording
-				const result = await run(specKit, {
-					prompt: `PRD: Simple Math Utility
-Create a function that doubles a number.`,
-				});
-
-				expect(result.output).toBeDefined();
-				expect(result.metrics.latencyMs).toBeGreaterThan(0);
-			},
-			{ timeout: 900000 },
-		);
-	});
-
-	describe("Fixture Recording", () => {
+	describe("Fixture Patterns", () => {
 		it(
 			"demonstrates fixture recording pattern",
 			async () => {
-				// This shows how fixture recording WOULD work
-				// when run with FIXTURE_MODE=record
-				//
-				// In practice, you'd run:
-				// FIXTURE_MODE=record bun test level-6/
-				//
-				// Then commit the fixtures to git for CI
+				// Each test gets its own fixture, enabling:
+				// 1. Independent test isolation
+				// 2. Clear fixture naming
+				// 3. Easy re-recording of individual tests
 
-				const fixtureId = "simple-prd";
-
-				// When mode is 'record', the run saves fixtures
-				// When mode is 'replay', the run loads fixtures
-				// The mode is determined by FIXTURE_MODE env var
 				const result = await run(
 					specKit,
 					{
 						prompt: `PRD: Greeting Function
 Create a function that says hello to a user by name.`,
 					},
-					{
-						fixture: fixtureId,
-						store,
-						// mode determined by FIXTURE_MODE env var
-					},
+					withFixture("level6-greeting"),
 				);
 
 				expect(result.output).toBeDefined();
 
 				// Fixture IDs are returned when recording
-				// This helps track what was recorded
 				if (result.fixtures && result.fixtures.length > 0) {
 					console.log("Recorded fixtures:", result.fixtures);
 				}
 			},
 			{ timeout: 900000 },
 		);
-	});
 
-	describe("Deterministic Replay", () => {
 		it(
-			"demonstrates replay consistency pattern",
+			"demonstrates deterministic replay",
 			async () => {
 				// In replay mode, the same fixture produces identical results
 				// This enables deterministic CI testing
 
-				const input = {
-					prompt: `PRD: Number Checker
+				const result1 = await run(
+					specKit,
+					{
+						prompt: `PRD: Number Checker
 Create a function that checks if a number is positive.`,
-				};
+					},
+					withFixture("level6-number-checker"),
+				);
 
-				// First run
-				const result1 = await run(specKit, input);
+				const result2 = await run(
+					specKit,
+					{
+						prompt: `PRD: Number Checker
+Create a function that checks if a number is positive.`,
+					},
+					withFixture("level6-number-checker"),
+				);
 
-				// The results should be consistent for the same input
-				// (In actual replay mode, they would be byte-for-byte identical)
-				expect(result1.output).toBeDefined();
+				// In replay mode, outputs are identical (same fixture)
+				if (process.env.FIXTURE_MODE !== "record") {
+					expect(result1.output).toEqual(result2.output);
+				}
 
 				// Parse to verify structure
 				const parsed = parseReviewerOutput(result1.output as string);
@@ -115,40 +84,68 @@ Create a function that checks if a number is positive.`,
 			},
 			{ timeout: 900000 },
 		);
+
+		it(
+			"demonstrates fixture for complex workflow",
+			async () => {
+				// Harness fixtures capture the ENTIRE multi-agent conversation
+				// This is powerful for testing complex workflows
+
+				const result = await run(
+					specKit,
+					{
+						prompt: `PRD: String Utilities
+Create utilities for:
+1. Checking if a string is empty
+2. Trimming whitespace
+3. Converting to uppercase`,
+					},
+					withFixture("level6-string-utils"),
+				);
+
+				expect(result.output).toBeDefined();
+				expect(result.metrics).toBeDefined();
+
+				const parsed = parseReviewerOutput(result.output as string);
+				console.log("Complex workflow result:", {
+					approved: parsed.approved,
+					criteriaCount: parsed.criteriaResults.length,
+				});
+			},
+			{ timeout: 900000 },
+		);
 	});
 });
 
 /**
- * Fixture workflow documentation
+ * Advanced Fixture Patterns
+ * =========================
  *
- * 1. RECORDING FIXTURES
- *    Run tests with FIXTURE_MODE=record to capture API responses:
- *    ```bash
- *    FIXTURE_MODE=record bun test level-6/
- *    ```
- *    This creates files in fixtures/ directory.
+ * FIXTURE VARIANTS
+ * ----------------
+ * Use different fixture names for the same test to compare behavior:
  *
- * 2. REPLAYING FIXTURES
- *    Run tests with FIXTURE_MODE=replay in CI:
- *    ```bash
- *    FIXTURE_MODE=replay bun test level-6/
- *    ```
- *    Tests run instantly using saved responses.
+ *   // Record with opus
+ *   await run(agent, input, withFixture("test-opus"));
  *
- * 3. UPDATING FIXTURES
- *    When agent behavior changes, re-record:
- *    ```bash
- *    rm -rf fixtures/
- *    FIXTURE_MODE=record bun test level-6/
- *    git add fixtures/
- *    git commit -m "Update fixtures for new agent behavior"
- *    ```
+ *   // Record with sonnet
+ *   await run(agent, input, withFixture("test-sonnet"));
  *
- * 4. CI INTEGRATION
- *    ```yaml
- *    jobs:
- *      test:
- *        steps:
- *          - run: FIXTURE_MODE=replay bun test level-6/
- *    ```
+ *   // Compare outputs
+ *   expect(opusResult.output).not.toEqual(sonnetResult.output);
+ *
+ *
+ * FIXTURE INSPECTION
+ * ------------------
+ * Fixtures are plain JSON, so you can inspect them:
+ *
+ *   cat fixtures/my-test_agent_inv0.json | jq '.output'
+ *
+ *
+ * SELECTIVE RE-RECORDING
+ * ----------------------
+ * Delete a specific fixture and re-record:
+ *
+ *   rm fixtures/my-test_agent_inv0.json
+ *   bun test:record -- --test-name-pattern="my specific test"
  */

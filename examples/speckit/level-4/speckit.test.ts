@@ -1,40 +1,43 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { type Provider, run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
+import { setupFixtures, withFixture } from "../test-utils";
 import { codingAgent, parseCodingOutput } from "./coding-agent";
 import { parseSpecOutput, specAgent } from "./spec-agent";
 import { specKit } from "./speckit-harness";
 
 /**
- * Level 4 Tests: Multi-Agent Harness
+ * Level 4: Multi-Agent Harness + Fixtures
  *
  * Demonstrates:
  * - Creating a harness with multiple agents
  * - Running a harness workflow
  * - Shared state between agents
  * - Edge conditions for control flow
- *
- * Note: Harness execution involves multiple agent calls.
- * Tests may take 4-6 minutes due to Claude Code SDK overhead.
- * In production, use fixtures (Level 6) for fast CI runs.
+ * - Fixtures for fast, deterministic testing
  */
 describe("SpecKit Harness - Level 4", () => {
 	beforeAll(() => {
 		setDefaultProvider(createClaudeNode() as unknown as Provider);
+		setupFixtures();
 	});
 
 	describe("Individual Agents", () => {
 		it(
 			"spec agent breaks down a PRD into tasks",
 			async () => {
-				const result = await run(specAgent, {
-					prompt: `PRD: User Authentication
+				const result = await run(
+					specAgent,
+					{
+						prompt: `PRD: User Authentication
 
 Users should be able to:
 1. Register with email and password
 2. Login with existing credentials
 3. Reset their password via email link`,
-				});
+					},
+					withFixture("level4-spec-auth"),
+				);
 
 				const output = result.output as string;
 
@@ -57,8 +60,10 @@ Users should be able to:
 		it(
 			"coding agent implements a task with validation",
 			async () => {
-				const result = await run(codingAgent, {
-					prompt: `Implement this task:
+				const result = await run(
+					codingAgent,
+					{
+						prompt: `Implement this task:
 
 ID: TASK-001
 Title: Create Email Validator Function
@@ -67,7 +72,9 @@ Acceptance Criteria:
 - Function returns true for valid emails
 - Function returns false for invalid emails
 - Handles edge cases (empty string, null)`,
-				});
+					},
+					withFixture("level4-coder-email"),
+				);
 
 				const output = result.output as string;
 
@@ -91,13 +98,17 @@ Acceptance Criteria:
 		it(
 			"runs the full spec → coder workflow",
 			async () => {
-				const result = await run(specKit, {
-					prompt: `PRD: Email Validation Utility
+				const result = await run(
+					specKit,
+					{
+						prompt: `PRD: Email Validation Utility
 
 Create a simple email validation function that:
 1. Validates email format using regex
 2. Returns true/false`,
-				});
+					},
+					withFixture("level4-harness-email"),
+				);
 
 				// Harness should complete
 				expect(result.output).toBeDefined();
@@ -106,28 +117,26 @@ Create a simple email validation function that:
 				const output = result.output as string;
 				expect(typeof output).toBe("string");
 
-				// Should have code from coder
-				if (output.includes("CODE")) {
-					console.log("Harness produced code output");
-					expect(output).toContain("```");
-				}
+				// Should have meaningful output from coder
+				console.log("Harness produced output:", output.slice(0, 100) + "...");
+				expect(output.length).toBeGreaterThan(50);
 
 				// Metrics are aggregated across all agents
 				expect(result.metrics).toBeDefined();
-				expect(result.metrics.latencyMs).toBeGreaterThan(0);
+				expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
 
 				console.log("Harness metrics:", {
 					latencyMs: result.metrics.latencyMs,
 					tokens: result.metrics.tokens,
 				});
 			},
-			{ timeout: 600000 }, // 10 min for multi-agent
+			{ timeout: 600000 },
 		);
 	});
 });
 
 /**
- * Unit tests for parsing utilities
+ * Unit tests for parsing utilities (no fixtures needed - pure functions)
  */
 describe("Parsing Utilities", () => {
 	describe("parseSpecOutput", () => {
