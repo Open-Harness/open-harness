@@ -36,12 +36,14 @@ import type {
 	AgentInput,
 	AgentOutput,
 	Provider,
+	FixtureStore,
 } from "./types.js";
 import { isAgent, isHarness } from "./types.js";
 import { getDefaultProvider } from "./defaults.js";
 import type { HarnessWithFlow } from "./harness.js";
 import type { NodeRunContext } from "../nodes/registry.js";
 import type { RuntimeEventPayload, StateStore } from "../state/index.js";
+import type { Recording, RecordingMetadata } from "../recording/types.js";
 
 /**
  * Safely get environment variable (works in Node.js and browsers).
@@ -73,21 +75,24 @@ function getFixtureMode(options?: RunOptions): FixtureMode {
 }
 
 /**
- * Generate hierarchical fixture IDs for multi-agent harnesses.
+ * Generate fixture IDs for multi-agent harnesses.
  *
- * Format: `<fixture>/<agentId>/inv<invocationNumber>`
+ * Format: `<fixture>_<agentId>_inv<invocationNumber>`
+ *
+ * Uses underscores to create flat file-friendly IDs that work with
+ * FileRecordingStore's single-directory structure.
  *
  * @param baseFixture - Base fixture name
  * @param agentId - Agent identifier
  * @param invocation - Invocation number (0-indexed)
- * @returns Hierarchical fixture ID
+ * @returns Flat fixture ID
  */
 export function generateFixtureId(
 	baseFixture: string,
 	agentId: string,
 	invocation: number,
 ): string {
-	return `${baseFixture}/${agentId}/inv${invocation}`;
+	return `${baseFixture}_${agentId}_inv${invocation}`;
 }
 
 /**
@@ -223,6 +228,53 @@ function extractMetrics(output: AgentOutput, durationMs: number): RunMetrics {
 }
 
 /**
+ * Create a simple hash of the input for fixture identification.
+ */
+function hashInput(input: unknown): string {
+	const str = JSON.stringify(input);
+	let hash = 0;
+	for (let i = 0; i < str.length; i++) {
+		const char = str.charCodeAt(i);
+		hash = ((hash << 5) - hash) + char;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+	return Math.abs(hash).toString(16);
+}
+
+/**
+ * Save a recording to the fixture store.
+ */
+async function saveRecording<T>(
+	store: FixtureStore,
+	fixtureId: string,
+	input: unknown,
+	output: T,
+	metrics: RunMetrics,
+): Promise<void> {
+	const recording: Recording<T> = {
+		id: fixtureId,
+		metadata: {
+			providerType: "agent",
+			createdAt: new Date().toISOString(),
+			inputHash: hashInput(input),
+		},
+		events: [], // We store output directly, not events for simple recordings
+		output,
+	};
+	await store.save(recording);
+}
+
+/**
+ * Load a recording from the fixture store.
+ */
+async function loadRecording<T>(
+	store: FixtureStore,
+	fixtureId: string,
+): Promise<Recording<T> | null> {
+	return store.load<T>(fixtureId);
+}
+
+/**
  * Execute a single agent.
  *
  * @param agent - Agent to execute
@@ -237,13 +289,30 @@ async function runAgent<TOutput>(
 ): Promise<RunResult<TOutput>> {
 	const mode = getFixtureMode(options);
 	const fixtures: string[] = [];
-	const provider = getProvider(options);
+	const fixtureId = options?.fixture
+		? generateFixtureId(options.fixture, "agent", 0)
+		: null;
 
-	// Track fixture if recording
-	if (mode === "record" && options?.fixture) {
-		const fixtureId = generateFixtureId(options.fixture, "agent", 0);
-		fixtures.push(fixtureId);
+	// REPLAY MODE: Load from fixture store instead of calling provider
+	if (mode === "replay" && fixtureId && options?.store) {
+		const recording = await loadRecording<TOutput>(options.store, fixtureId);
+		if (!recording) {
+			throw new Error(`Fixture not found: ${fixtureId}. Run with FIXTURE_MODE=record first.`);
+		}
+		return {
+			output: recording.output as TOutput,
+			state: agent.config.state as Record<string, unknown> | undefined,
+			metrics: {
+				latencyMs: 0, // Replay is instant
+				cost: 0,
+				tokens: { input: 0, output: 0 },
+			},
+			fixtures: [fixtureId],
+		};
 	}
+
+	// LIVE or RECORD MODE: Execute the provider
+	const provider = getProvider(options);
 
 	// Create execution context
 	const stateStore = createMinimalStateStore(agent.config.state as Record<string, unknown>);
@@ -260,13 +329,29 @@ async function runAgent<TOutput>(
 	// Extract output - for TOutput, we try to use structuredOutput if available,
 	// otherwise fall back to text
 	const output = (providerOutput.structuredOutput ?? providerOutput.text ?? providerOutput) as TOutput;
+	const metrics = extractMetrics(providerOutput, endTime - startTime);
+
+	// RECORD MODE: Save to fixture store
+	if (mode === "record" && fixtureId && options?.store) {
+		await saveRecording(options.store, fixtureId, input, output, metrics);
+		fixtures.push(fixtureId);
+	}
 
 	return {
 		output,
 		state: agent.config.state as Record<string, unknown> | undefined,
-		metrics: extractMetrics(providerOutput, endTime - startTime),
+		metrics,
 		fixtures: fixtures.length > 0 ? fixtures : undefined,
 	};
+}
+
+/**
+ * Harness fixture data structure for recording/replay.
+ */
+interface HarnessFixtureData<TOutput> {
+	output: TOutput;
+	state: Record<string, unknown>;
+	metrics: RunMetrics;
 }
 
 /**
@@ -284,18 +369,34 @@ async function runHarness<TOutput>(
 ): Promise<RunResult<TOutput>> {
 	const mode = getFixtureMode(options);
 	const fixtures: string[] = [];
+	const fixtureId = options?.fixture
+		? generateFixtureId(options.fixture, "harness", 0)
+		: null;
 
 	// Access the internal flow definition
 	const harnessWithFlow = harness as HarnessWithFlow;
 	const flow = harnessWithFlow._flow;
 
-	// Track fixtures for each agent if recording
-	if (mode === "record" && options?.fixture) {
-		for (const node of flow.nodes) {
-			const fixtureId = generateFixtureId(options.fixture, node.id, 0);
-			fixtures.push(fixtureId);
+	// REPLAY MODE: Load from fixture store instead of executing
+	if (mode === "replay" && fixtureId && options?.store) {
+		const recording = await loadRecording<HarnessFixtureData<TOutput>>(options.store, fixtureId);
+		if (!recording) {
+			throw new Error(`Fixture not found: ${fixtureId}. Run with FIXTURE_MODE=record first.`);
 		}
+		const data = recording.output as HarnessFixtureData<TOutput>;
+		return {
+			output: data.output,
+			state: data.state,
+			metrics: {
+				latencyMs: 0, // Replay is instant
+				cost: 0,
+				tokens: { input: 0, output: 0 },
+			},
+			fixtures: [fixtureId],
+		};
 	}
+
+	// LIVE or RECORD MODE: Execute the harness
 
 	// For harness execution, we need the full runtime.
 	// Import dynamically to avoid circular dependencies.
@@ -349,14 +450,27 @@ async function runHarness<TOutput>(
 		}
 	}
 
+	const metrics: RunMetrics = {
+		latencyMs: endTime - startTime,
+		cost: totalCost,
+		tokens: { input: totalInputTokens, output: totalOutputTokens },
+	};
+
+	// RECORD MODE: Save the entire harness result to fixture store
+	if (mode === "record" && fixtureId && options?.store) {
+		const fixtureData: HarnessFixtureData<TOutput> = {
+			output: output as TOutput,
+			state: (snapshot.state as Record<string, unknown>) ?? {},
+			metrics,
+		};
+		await saveRecording(options.store, fixtureId, input, fixtureData, metrics);
+		fixtures.push(fixtureId);
+	}
+
 	return {
 		output: output as TOutput,
 		state: snapshot.state as Record<string, unknown> | undefined,
-		metrics: {
-			latencyMs: endTime - startTime,
-			cost: totalCost,
-			tokens: { input: totalInputTokens, output: totalOutputTokens },
-		},
+		metrics,
 		fixtures: fixtures.length > 0 ? fixtures : undefined,
 	};
 }

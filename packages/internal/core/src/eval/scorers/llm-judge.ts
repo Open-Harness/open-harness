@@ -91,10 +91,10 @@ export function createLLMJudgeScorer(config: LLMJudgeScorerConfig): Scorer {
 				};
 			}
 
-			// TODO: Implement actual LLM judgment
-			// For v0.2.0, return a stub value
+			// NOTE: Full LLM judgment is out-of-scope for v0.2.0
+			// Current behavior returns stub value 0.5
 			//
-			// Full implementation would:
+			// Future implementation would:
 			// 1. Generate a cache key from (outputPath, criteria, actual)
 			// 2. Check cache for existing judgment
 			// 3. If not cached, call LLM with criteria + actual output

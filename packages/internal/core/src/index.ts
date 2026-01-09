@@ -1,6 +1,7 @@
 export * from "./api";
 export * from "./builtins";
 export * from "./eval";
+export * from "./lib";
 export * from "./nodes";
 export * from "./persistence";
 export * from "./recording";

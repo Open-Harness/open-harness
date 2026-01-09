@@ -217,7 +217,7 @@ describe("api/run", () => {
 			);
 
 			expect(result.fixtures).toBeDefined();
-			expect(result.fixtures).toContain("my-test/agent/inv0");
+			expect(result.fixtures).toContain("my-test_agent_inv0");
 		});
 
 		it("should include fixture IDs for all agents when recording harness", async () => {
@@ -241,8 +241,7 @@ describe("api/run", () => {
 			);
 
 			expect(result.fixtures).toBeDefined();
-			expect(result.fixtures).toContain("workflow-test/alpha/inv0");
-			expect(result.fixtures).toContain("workflow-test/beta/inv0");
+			expect(result.fixtures).toContain("workflow-test_harness_inv0");
 		});
 
 		it("should not include fixtures when mode is live", async () => {
@@ -310,7 +309,7 @@ describe("api/run", () => {
 
 			// Should have fixtures because env says "record"
 			expect(result.fixtures).toBeDefined();
-			expect(result.fixtures).toContain("env-test/agent/inv0");
+			expect(result.fixtures).toContain("env-test_agent_inv0");
 		});
 
 		it("should prefer explicit mode over FIXTURE_MODE env", async () => {
@@ -352,20 +351,20 @@ describe("api/run", () => {
 	});
 
 	describe("generateFixtureId", () => {
-		it("should generate hierarchical fixture ID", () => {
+		it("should generate flat fixture ID with underscores", () => {
 			const id = generateFixtureId("my-test", "coder", 0);
-			expect(id).toBe("my-test/coder/inv0");
+			expect(id).toBe("my-test_coder_inv0");
 		});
 
 		it("should handle different invocation numbers", () => {
-			expect(generateFixtureId("test", "agent", 0)).toBe("test/agent/inv0");
-			expect(generateFixtureId("test", "agent", 1)).toBe("test/agent/inv1");
-			expect(generateFixtureId("test", "agent", 42)).toBe("test/agent/inv42");
+			expect(generateFixtureId("test", "agent", 0)).toBe("test_agent_inv0");
+			expect(generateFixtureId("test", "agent", 1)).toBe("test_agent_inv1");
+			expect(generateFixtureId("test", "agent", 42)).toBe("test_agent_inv42");
 		});
 
 		it("should handle complex fixture names", () => {
-			const id = generateFixtureId("integration/code-review", "reviewer", 0);
-			expect(id).toBe("integration/code-review/reviewer/inv0");
+			const id = generateFixtureId("integration-code-review", "reviewer", 0);
+			expect(id).toBe("integration-code-review_reviewer_inv0");
 		});
 	});
 

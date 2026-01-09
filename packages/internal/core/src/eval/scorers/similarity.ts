@@ -74,15 +74,13 @@ export function createSimilarityScorer(config: SimilarityScorerConfig): Scorer {
 					break;
 
 				case "levenshtein":
-					// TODO: Implement Levenshtein distance scoring
-					// For v0.2.0, return a stub value
+					// NOTE: Levenshtein distance scoring is out-of-scope for v0.2.0
 					value = 0.5;
 					details = { stub: true, reason: "Levenshtein not implemented in v0.2.0" };
 					break;
 
 				case "semantic":
-					// TODO: Implement semantic similarity (requires embeddings)
-					// For v0.2.0, return a stub value
+					// NOTE: Semantic similarity (requires embeddings) is out-of-scope for v0.2.0
 					value = 0.5;
 					details = { stub: true, reason: "Semantic similarity not implemented in v0.2.0" };
 					break;

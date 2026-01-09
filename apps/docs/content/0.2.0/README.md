@@ -81,11 +81,12 @@ This folder contains all Open Harness documentation, organized into numbered sec
 **Contents:**
 
 - [Quickstart](./04-getting-started/quickstart.md) - 5-minute tutorial (coding example)
+- [SpecKit Tutorial](./04-getting-started/speckit-tutorial.md) - Progressive 7-level tutorial (PRD-to-code workflow)
 - [What Can I Build](./04-getting-started/what-can-i-build.md) - Concrete examples (coding, trading, data, ops)
 - [Vision](./04-getting-started/vision.md) - Platform vision and long-term goals
 - [Why Open Harness](./04-getting-started/why-open-harness.md) - Why we built this, what problems it solves
 
-**Learn by doing:** Quickstart tutorial, explore what's possible.
+**Learn by doing:** Quickstart tutorial, SpecKit deep-dive, explore what's possible.
 
 ---
 
@@ -263,7 +264,8 @@ This folder contains all Open Harness documentation, organized into numbered sec
 1. [Zen of Open Harness](./01-foundations/zen.md) - Mental model foundation
 2. [Skills Pattern](./03-patterns/skills-pattern.md) - How to create skills
 3. [Quickstart](./04-getting-started/quickstart.md) - 5-minute tutorial
-4. [What Can I Build](./04-getting-started/what-can-i-build.md) - Concrete examples
+4. [SpecKit Tutorial](./04-getting-started/speckit-tutorial.md) - Comprehensive 7-level tutorial
+5. [What Can I Build](./04-getting-started/what-can-i-build.md) - Concrete examples
 
 ### For Deep Dives
 
@@ -276,7 +278,7 @@ This folder contains all Open Harness documentation, organized into numbered sec
 
 ## Manifest
 
-**Status:** Scaffolding Complete  
+**Status:** Scaffolding Complete
 **Completion:**
 
 - ✅ Zen of Open Harness (full content)
@@ -286,6 +288,7 @@ This folder contains all Open Harness documentation, organized into numbered sec
 - ✅ Scripts Pattern (outline)
 - ✅ Evals Pattern (draft)
 - ✅ Quickstart (outline)
+- ✅ SpecKit Tutorial (full content) - 7-level progressive tutorial
 - ✅ What Can I Build (outline)
 - ✅ Architecture (outline)
 - ✅ Providers (outline)

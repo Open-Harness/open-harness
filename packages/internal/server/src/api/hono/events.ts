@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import type { Runtime, RuntimeEvent } from "@internal/core";
+import { getLogger, type Runtime, type RuntimeEvent } from "@internal/core";
 import { createPartTracker, transformEvent } from "../../transports/local";
 
 export interface EventsRouteOptions {
@@ -97,9 +97,7 @@ export function createEventsRoute(
         const timeoutCheck = setInterval(() => {
           const inactiveTime = Date.now() - lastActivity;
           if (inactiveTime > opts.timeout) {
-            console.warn(
-              `[Events] Connection timeout after ${inactiveTime}ms for runId: ${runId}`,
-            );
+            getLogger().warn({ runId, inactiveTime, timeout: opts.timeout }, "Connection timeout");
             cleanup();
           }
         }, 60000); // Check every minute
@@ -151,7 +149,7 @@ export function createEventsRoute(
                 cleanup();
               }
             } catch (error) {
-              console.error("[Events] Error processing event:", error);
+              getLogger().error({ err: error, runId }, "Error processing event");
               try {
                 if (!isClosed) {
                   await stream.writeSSE({
@@ -171,10 +169,7 @@ export function createEventsRoute(
             }
           });
         } catch (listenerError) {
-          console.error(
-            "[Events] Error setting up event listener:",
-            listenerError,
-          );
+          getLogger().error({ err: listenerError, runId }, "Error setting up event listener");
           try {
             await stream.writeSSE({
               data: JSON.stringify({
@@ -195,7 +190,7 @@ export function createEventsRoute(
         clearInterval(timeoutCheck);
       });
     } catch (streamError) {
-      console.error("[Events] Failed to create SSE stream:", streamError);
+      getLogger().error({ err: streamError, runId }, "Failed to create SSE stream");
       return c.json(
         {
           error: "Failed to create SSE stream",

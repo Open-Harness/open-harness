@@ -1,6 +1,6 @@
 import type { UIMessage } from "ai";
 import { Hono } from "hono";
-import type { Runtime } from "@internal/core";
+import { getLogger, type Runtime } from "@internal/core";
 
 interface ChatRequest {
   messages: UIMessage[];
@@ -52,7 +52,7 @@ export function createChatRoute(runtime: Runtime) {
     runtime
       .resume(textPart.text)
       .catch((error) =>
-        console.error("[Chat] Failed to resume runtime:", error),
+        getLogger().error({ err: error, runId }, "Failed to resume runtime"),
       );
 
     return c.json<ChatResponse>({ runId }, 201);

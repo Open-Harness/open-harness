@@ -1,5 +1,5 @@
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
-import type { OpenHarnessChatTransportOptions, Runtime, RuntimeEvent } from "@internal/core";
+import { getLogger, type OpenHarnessChatTransportOptions, type Runtime, type RuntimeEvent } from "@internal/core";
 import { createPartTracker, transformEvent } from "./transforms.js";
 
 /**
@@ -82,7 +82,7 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
 
               // Validate chunk before enqueuing
               if (!chunk || typeof chunk !== "object" || !("type" in chunk)) {
-                console.warn("[Transport] Skipping invalid chunk:", chunk);
+                getLogger().warn({ chunk }, "Skipping invalid chunk");
                 continue;
               }
 
@@ -145,7 +145,7 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
           } catch (error) {
             // Only log if stream isn't already closed
             if (!isClosed) {
-              console.error("Error transforming event:", error);
+              getLogger().error({ err: error }, "Error transforming event");
               isClosed = true;
               try {
                 controller.enqueue({
@@ -200,7 +200,7 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
         }
 
         this.runtime.resume(textPart.text).catch((error) => {
-          console.error("Error resuming runtime:", error);
+          getLogger().error({ err: error }, "Error resuming runtime");
           if (!isClosed) {
             isClosed = true;
             controller.enqueue({

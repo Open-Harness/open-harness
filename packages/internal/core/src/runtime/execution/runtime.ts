@@ -23,6 +23,7 @@ import type { ExpressionError } from "../expressions/errors.js";
 import { evaluateWhenResult } from "../expressions/when.js";
 import { ExecutionError } from "./errors.js";
 import { DefaultExecutor } from "./executor.js";
+import { getLogger } from "../../lib/logger/index.js";
 
 /**
  * Event bus abstraction used by the runtime.
@@ -124,7 +125,7 @@ export class InMemoryEventBus implements EventBus {
 			try {
 				void listener(event);
 			} catch (error) {
-				console.error("Event listener error:", error);
+				getLogger().error({ err: error, eventType: event.type }, "Event listener error");
 			}
 		}
 	}
@@ -571,7 +572,7 @@ class InMemoryRuntime implements Runtime {
 	pause(): void {
 		this.snapshot.status = "paused";
 		for (const cancelContext of this.nodeControllers.values()) {
-			cancelContext.interrupt().catch((error) => console.error("Cancel interrupt error:", error));
+			cancelContext.interrupt().catch((error) => getLogger().error({ err: error }, "Cancel interrupt error"));
 		}
 		this.emit({ type: "flow:paused" });
 		this.persistSnapshot();
@@ -972,13 +973,13 @@ class InMemoryRuntime implements Runtime {
 				try {
 					await callback();
 				} catch (error) {
-					console.error("Cancel callback error:", error);
+					getLogger().error({ err: error }, "Cancel callback error");
 				}
 			}
 		};
 		const safeInvoke = (callback: () => void | Promise<void>) => {
 			void Promise.resolve(callback()).catch((error) => {
-				console.error("Cancel callback error:", error);
+				getLogger().error({ err: error }, "Cancel callback error");
 			});
 		};
 

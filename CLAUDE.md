@@ -111,6 +111,27 @@ Never claim a task is complete without:
   - Changing data flow patterns (who produces vs consumes)
 - When in doubt, ask. A quick question is better than an unauthorized refactor.
 
+## CRITICAL: Debugging with Logs
+
+**USE THE `harness-logs` SKILL PROACTIVELY** when debugging issues in this repository.
+
+Logs are written to `.open-harness/logs/harness.log` in JSONL format. Before asking the user "what went wrong?" - CHECK THE LOGS FIRST.
+
+**Quick error check:**
+```bash
+jq -c 'select(.level >= 50)' .open-harness/logs/harness.log 2>/dev/null | tail -10
+```
+
+**When to check logs:**
+- Test failures
+- Runtime errors
+- Unexpected behavior
+- Verifying what actually happened
+
+**Activate the skill:** Use `/harness-logs` or let it auto-activate during any debugging session.
+
+See `.claude/skills/harness-logs/SKILL.md` for full JQ patterns and debugging workflows.
+
 ## CRITICAL: Authentication
 
 **DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.

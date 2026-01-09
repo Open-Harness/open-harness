@@ -1,0 +1,23 @@
+{
+	"name": "@examples/speckit",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "echo 'Use test:live to run live tests against Claude API' && exit 0",
+		"test:live": "bun test --timeout 300000",
+		"test:record": "FIXTURE_MODE=record bun test --timeout 300000",
+		"test:replay": "FIXTURE_MODE=replay bun test --timeout 60000",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@open-harness/core": "workspace:*",
+		"@open-harness/server": "workspace:*",
+		"@open-harness/stores": "workspace:*",
+		"zod": "^3.25.67"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5"
+	}
+}
