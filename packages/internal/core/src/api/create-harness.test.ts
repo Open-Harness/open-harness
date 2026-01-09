@@ -254,6 +254,151 @@ describe("createHarness runtime", () => {
 });
 
 // ============================================================================
+// F2: Template Expansion Tests
+// ============================================================================
+
+describe("template expansion", () => {
+	it("expands state properties in prompt", async () => {
+		const { agent, runReactive } = createHarness<TradingState>();
+
+		// Track what prompt was sent to provider
+		let capturedPrompt = "";
+		const trackingProvider: Provider = {
+			run: async function* (input, _ctx) {
+				capturedPrompt = input.system ?? "";
+				yield createSignal("provider:start", {});
+				yield createSignal("provider:end", { output: "ok" });
+			},
+		};
+
+		const analyst = agent({
+			prompt: "Analyze {{ state.position }} position with confidence {{ state.confidence }}",
+			activateOn: ["harness:start"],
+		});
+
+		await runReactive({
+			agents: { analyst },
+			state: { confidence: 0.85, position: "long", balance: 5000, ready: true },
+			provider: trackingProvider,
+		});
+
+		// Prompt should have been expanded
+		expect(capturedPrompt).toBe("Analyze long position with confidence 0.85");
+	});
+
+	it("expands signal properties in prompt", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		let capturedPrompt = "";
+		const trackingProvider: Provider = {
+			run: async function* (input, _ctx) {
+				capturedPrompt = input.system ?? "";
+				yield createSignal("provider:start", {});
+				yield createSignal("provider:end", { output: "ok" });
+			},
+		};
+
+		const handler = agent({
+			prompt: "Handling signal {{ signal.name }}",
+			activateOn: ["harness:start"],
+		});
+
+		await runReactive({
+			agents: { handler },
+			state: { count: 0, enabled: true },
+			provider: trackingProvider,
+		});
+
+		expect(capturedPrompt).toBe("Handling signal harness:start");
+	});
+
+	it("expands nested state in prompt", async () => {
+		type NestedState = {
+			user: {
+				name: string;
+				settings: { theme: string };
+			};
+		};
+
+		const { agent, runReactive } = createHarness<NestedState>();
+
+		let capturedPrompt = "";
+		const trackingProvider: Provider = {
+			run: async function* (input, _ctx) {
+				capturedPrompt = input.system ?? "";
+				yield createSignal("provider:start", {});
+				yield createSignal("provider:end", { output: "ok" });
+			},
+		};
+
+		const greeter = agent({
+			prompt: "Hello {{ state.user.name }}, your theme is {{ state.user.settings.theme }}",
+			activateOn: ["harness:start"],
+		});
+
+		await runReactive({
+			agents: { greeter },
+			state: { user: { name: "Alice", settings: { theme: "dark" } } },
+			provider: trackingProvider,
+		});
+
+		expect(capturedPrompt).toBe("Hello Alice, your theme is dark");
+	});
+
+	it("leaves prompt unchanged when no templates", async () => {
+		const { agent, runReactive } = createHarness<SimpleState>();
+
+		let capturedPrompt = "";
+		const trackingProvider: Provider = {
+			run: async function* (input, _ctx) {
+				capturedPrompt = input.system ?? "";
+				yield createSignal("provider:start", {});
+				yield createSignal("provider:end", { output: "ok" });
+			},
+		};
+
+		const simple = agent({
+			prompt: "This is a plain prompt with no templates",
+			activateOn: ["harness:start"],
+		});
+
+		await runReactive({
+			agents: { simple },
+			state: { count: 0, enabled: true },
+			provider: trackingProvider,
+		});
+
+		expect(capturedPrompt).toBe("This is a plain prompt with no templates");
+	});
+
+	it("handles shorthand state access (without state. prefix)", async () => {
+		const { agent, runReactive } = createHarness<TradingState>();
+
+		let capturedPrompt = "";
+		const trackingProvider: Provider = {
+			run: async function* (input, _ctx) {
+				capturedPrompt = input.system ?? "";
+				yield createSignal("provider:start", {});
+				yield createSignal("provider:end", { output: "ok" });
+			},
+		};
+
+		const analyst = agent({
+			prompt: "Balance is {{ balance }}", // Shorthand for {{ state.balance }}
+			activateOn: ["harness:start"],
+		});
+
+		await runReactive({
+			agents: { analyst },
+			state: { confidence: 0.85, position: "long", balance: 5000, ready: true },
+			provider: trackingProvider,
+		});
+
+		expect(capturedPrompt).toBe("Balance is 5000");
+	});
+});
+
+// ============================================================================
 // Type Guard Edge Cases
 // ============================================================================
 

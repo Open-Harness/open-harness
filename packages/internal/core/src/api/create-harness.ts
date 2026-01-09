@@ -408,9 +408,22 @@ async function executeAgent<TOutput, TState>(
 	ctx: ActivationContext<TState>,
 	createSignal: (name: string, payload: unknown) => Signal,
 ): Promise<unknown> {
-	// Build provider input
+	// Import template engine
+	const { expandTemplate } = await import("./template.js");
+
+	// Expand template expressions in prompt
+	const expandedPrompt = expandTemplate(config.prompt, {
+		state: ctx.state as Record<string, unknown>,
+		signal: {
+			name: ctx.signal.name,
+			payload: ctx.signal.payload,
+		},
+		input: ctx.input,
+	});
+
+	// Build provider input with expanded prompt
 	const providerInput = {
-		system: config.prompt,
+		system: expandedPrompt,
 		messages: [
 			{
 				role: "user" as const,

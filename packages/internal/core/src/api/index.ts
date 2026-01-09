@@ -87,3 +87,11 @@ export {
 	type ReactiveHarnessResult,
 	type HarnessFactory,
 } from "./create-harness.js";
+
+// v0.3.0 Template Engine (F2)
+export {
+	expandTemplate,
+	hasTemplateExpressions,
+	extractPaths,
+	type TemplateContext,
+} from "./template.js";
