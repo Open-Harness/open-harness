@@ -293,9 +293,53 @@ packages/kernel-v3/
 
 ---
 
-## 11. Testing Strategy
+## 11. Expression System (JSONata)
+
+Bindings and conditions use JSONata for full expression support. All binding
+resolution is async.
+
+### Bindings
+
+Templates use `{{ expr }}` syntax with full JSONata support:
+- Path access: `{{ task.title }}`, `{{ items[0] }}`
+- Operators: `{{ count > 5 }}`, `{{ a and b }}`
+- Functions: `{{ $exists(reviewer) }}`, `{{ $not(passed) }}`
+- Ternary: `{{ condition ? "yes" : "no" }}`
+
+Pure bindings (just `{{ expr }}`) preserve type. Mixed templates return strings.
+
+### When Conditions
+
+Two formats are supported:
+
+**JSONata string (preferred):**
+```yaml
+when: "status = 'done'"
+when: "$exists(reviewer) and reviewer.passed"
+```
+
+**Structured AST (legacy):**
+```yaml
+when:
+  equals:
+    var: status
+    value: done
+```
+
+### Iteration Context
+
+In forEach loops, these variables are injected:
+- `$iteration`: Current index (0-based)
+- `$first`: True on first iteration
+- `$last`: True on last iteration
+- `$maxIterations`: Total count
+
+---
+
+## 12. Testing Strategy
 
 Unit Tests
+- JSONata expression evaluation
 - binding resolution
 - when evaluation
 - edge gating (any/all)
@@ -319,7 +363,7 @@ UI Tests (optional)
 
 ---
 
-## 12. V3 Build Checklist
+## 13. V3 Build Checklist
 
 - Parse and compile graph definitions
 - Execute nodes with when + policy
@@ -332,7 +376,7 @@ UI Tests (optional)
 
 ---
 
-## 13. Open Decisions
+## 14. Open Decisions
 
 - Default gate: "any" or "all"
 - Parallel execution or sequential only for V3.0

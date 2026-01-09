@@ -5,6 +5,7 @@
 # - State management for plan persistence
 # - forEach edges for task iteration
 # - Loop edges for coder/reviewer cycles
+# - JSONata expressions for bindings ({{ expr }}) and conditions (when)
 
 name: horizon-agent
 version: 1
@@ -139,9 +140,6 @@ edges:
   # The CLI's --max-iterations option is for UI display only; this controls the actual limit
   - from: reviewer
     to: coder
-    when:
-      not:
-        equals:
-          var: reviewer.structuredOutput.passed
-          value: true
+    # JSONata expression: continue looping while reviewer hasn't passed
+    when: "$not(reviewer.structuredOutput.passed = true)"
     maxIterations: 5
