@@ -1,4 +1,4 @@
-import { agent } from "@open-harness/core";
+import { agent, harness } from "@open-harness/core";
 
 /**
  * Coding Agent - Level 3
@@ -6,6 +6,9 @@ import { agent } from "@open-harness/core";
  * Implements tasks with self-validation. The key concept here is that
  * agents can validate their own output and iterate until quality thresholds
  * are met (or max attempts reached).
+ *
+ * In v0.3.0, agents are stateless - state lives on the harness.
+ * This example wraps the agent in a harness to demonstrate state tracking.
  *
  * Self-validation pattern:
  * 1. Produce implementation
@@ -39,14 +42,14 @@ export const initialState: CodingAgentState = {
 };
 
 /**
- * The coding agent implements a task and validates its own work.
+ * The underlying coding agent (stateless).
  *
  * Output format (text-based for now):
  * - CODE section with implementation
  * - VALIDATION section with self-assessment
  * - STATUS: COMPLETE, NEEDS_REVISION, or BLOCKED
  */
-export const codingAgent = agent({
+const codingAgentDef = agent({
 	prompt: `You are a coding agent that implements tasks and validates its own work.
 
 Given a task, you must:
@@ -77,7 +80,20 @@ One of:
 - BLOCKED: Cannot complete (explain why)
 
 Be critical of your own work. It's better to catch issues now than deploy broken code.`,
-	// Note: State lives on the harness, not the agent
+});
+
+/**
+ * Coding Agent Harness
+ *
+ * Wraps the coding agent with harness-level state for tracking
+ * attempts and validation history.
+ */
+export const codingAgent = harness({
+	agents: {
+		coder: codingAgentDef,
+	},
+	edges: [],
+	state: initialState,
 });
 
 /**

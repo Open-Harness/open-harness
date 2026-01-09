@@ -5,14 +5,15 @@ import { setupFixtures, withFixture } from "../test-utils";
 import { initialState, taskExecutor } from "./task-executor";
 
 /**
- * Level 2: Agent with State + Fixtures
+ * Level 2: Harness with State + Fixtures
  *
  * This level introduces TWO core concepts:
  *
- * 1. AGENT STATE
- *    Agents can have state defined in their config, returned with each result.
+ * 1. HARNESS-LEVEL STATE
+ *    State lives on the harness, not agents. Even for single-agent workflows,
+ *    wrap the agent in a harness when you need state tracking.
  *
- * 2. FIXTURE RECORDING (the important one!)
+ * 2. FIXTURE RECORDING
  *    Recording agent responses is a CORE feature, not an advanced one.
  *    It enables:
  *    - Fast CI (no LLM calls)
@@ -31,14 +32,14 @@ import { initialState, taskExecutor } from "./task-executor";
  * 3. CI runs: `bun test` (defaults to replay)
  * 4. Update fixtures: Delete + re-record when prompts change
  */
-describe("Task Executor - Level 2 (State + Fixtures)", () => {
+describe("Task Executor - Level 2 (Harness with State + Fixtures)", () => {
 	beforeAll(() => {
 		setDefaultProvider(createClaudeNode());
 		setupFixtures(); // Sets default store + replay mode
 	});
 
 	it(
-		"agent with state returns output and state",
+		"harness returns output and state",
 		async () => {
 			// withFixture() provides fixture name + store
 			// Mode comes from setupFixtures() or FIXTURE_MODE env var
@@ -52,7 +53,8 @@ describe("Task Executor - Level 2 (State + Fixtures)", () => {
 			expect(result.output).toBeDefined();
 			expect(typeof result.output).toBe("string");
 
-			// State should match initial state from agent config
+			// State comes from the harness (not the agent)
+			// Harness-level state is returned with the result
 			expect(result.state).toEqual(initialState);
 
 			// In replay mode, latency is ~0 (instant fixture load)

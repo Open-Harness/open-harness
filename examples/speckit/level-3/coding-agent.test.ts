@@ -9,14 +9,17 @@ import { type CodingAgentState, codingAgent, initialState, parseValidationStatus
  *
  * Demonstrates:
  * - Self-validation pattern where agents assess their own work
- * - State tracking for iteration attempts
+ * - Harness-level state tracking for iteration attempts
  * - Looping until validation passes or max attempts reached
  * - Fixtures for fast, deterministic testing
+ *
+ * In v0.3.0, agents are stateless - state lives on the harness.
+ * The coding agent is wrapped in a harness for state tracking.
  *
  * The self-validation loop is a fundamental pattern for building
  * reliable agent systems without human-in-the-loop.
  */
-describe("Coding Agent - Level 3 (Self-Validation Loop)", () => {
+describe("Coding Agent - Level 3 (Self-Validation Loop with Harness State)", () => {
 	beforeAll(() => {
 		setDefaultProvider(createClaudeNode());
 		setupFixtures();
@@ -65,7 +68,7 @@ describe("Coding Agent - Level 3 (Self-Validation Loop)", () => {
 			const output = result.output as string;
 			const validation = parseValidationStatus(output);
 
-			// State is returned from agent config
+			// State is returned from the harness (not the agent)
 			expect(result.state).toEqual(initialState);
 
 			// We can create updated state based on output
