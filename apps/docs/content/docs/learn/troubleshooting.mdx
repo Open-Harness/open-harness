@@ -1,0 +1,278 @@
+---
+title: Troubleshooting
+description: Common errors and how to fix them
+---
+
+# Troubleshooting
+
+Common errors and their solutions.
+
+## Installation Errors
+
+### Cannot find module '@open-harness/core'
+
+```
+Error: Cannot find module '@open-harness/core'
+```
+
+**Cause:** Dependencies not installed.
+
+**Fix:** Run the install command:
+
+```bash
+bun install
+```
+
+### Cannot find module '@open-harness/vitest'
+
+```
+Error: Cannot find module '@open-harness/vitest'
+```
+
+**Cause:** Vitest plugin not installed.
+
+**Fix:** Install the Vitest plugin:
+
+```bash
+bun add -D @open-harness/vitest vitest
+```
+
+## Runtime Errors
+
+### No provider configured
+
+```
+Error: No provider configured. Call setDefaultProvider() or pass provider in options.
+```
+
+**Cause:** No default provider set before running an agent.
+
+**Fix:** Set up a provider before running:
+
+```typescript
+import { setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+setDefaultProvider(createClaudeNode());
+```
+
+Or pass a provider directly:
+
+```typescript
+const result = await run(myAgent, { prompt: "Hello" }, {
+  provider: createClaudeNode(),
+});
+```
+
+### Agent output is undefined
+
+```
+TypeError: Cannot read properties of undefined (reading 'output')
+```
+
+**Cause:** The agent execution failed or returned nothing.
+
+**Fix:** Check that:
+1. Your agent has a valid prompt
+2. The provider is configured correctly
+3. You're running from within Claude Code (for authentication)
+
+```typescript
+const result = await run(myAgent, { prompt: "Hello" });
+if (result.output) {
+  console.log(result.output);
+} else {
+  console.error("No output received");
+}
+```
+
+### Matcher not recognized
+
+```
+TypeError: expect(...).toHaveLatencyUnder is not a function
+```
+
+**Cause:** Vitest matchers not registered.
+
+**Fix:** Add the setup file to your Vitest config:
+
+```typescript title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    setupFiles: ["@open-harness/vitest/setup"],
+  },
+});
+```
+
+Or manually register in your test:
+
+```typescript
+import { setupMatchers } from "@open-harness/vitest";
+
+setupMatchers();
+```
+
+## Agent Definition Errors
+
+### Invalid agent configuration
+
+```
+Error: Agent configuration is invalid
+```
+
+**Cause:** Agent definition is missing required fields.
+
+**Fix:** Ensure your agent has a valid prompt:
+
+```typescript
+// Correct
+const myAgent = agent({
+  prompt: "You are a helpful assistant.",
+});
+
+// Wrong - missing prompt
+const badAgent = agent({});
+```
+
+### Harness flow error
+
+```
+Error: Harness flow function threw an error
+```
+
+**Cause:** Your harness's flow function failed.
+
+**Fix:** Check your flow function for errors:
+
+```typescript
+const myHarness = harness({
+  agents: { classifier, responder },
+  flow: async (agents, input) => {
+    try {
+      const result = await agents.classifier.run(input);
+      return result;
+    } catch (error) {
+      console.error("Flow error:", error);
+      throw error;
+    }
+  },
+});
+```
+
+## Fixture Errors
+
+### Fixture not found
+
+```
+Error: Fixture 'my-test' not found
+```
+
+**Cause:** Trying to replay a fixture that doesn't exist.
+
+**Fix:** Record the fixture first:
+
+```bash
+# Record fixtures
+FIXTURE_MODE=record bun test
+
+# Then replay
+FIXTURE_MODE=replay bun test
+```
+
+### Fixture store path error
+
+```
+Error: Cannot write to fixture store
+```
+
+**Cause:** Invalid fixture store path or permissions.
+
+**Fix:** Ensure the fixture directory exists and is writable:
+
+```typescript
+import { FileFixtureStore } from "@open-harness/stores";
+
+// Make sure this directory exists
+const store = new FileFixtureStore("./fixtures");
+```
+
+## Authentication Errors
+
+### Authentication failed
+
+```
+Error: Claude API authentication failed
+```
+
+**Cause:** Running outside Claude Code environment.
+
+**Fix:** Open Harness uses Claude Code subscription authentication. Run your code from within Claude Code:
+
+```bash
+# From Claude Code terminal
+bun run agent.ts
+```
+
+<Callout type="note" title="Authentication">
+Open Harness uses your Claude Code subscription for authentication. No API key is required when running from Claude Code.
+</Callout>
+
+### Rate limit exceeded
+
+```
+Error: Rate limit exceeded
+```
+
+**Cause:** Too many requests in a short period.
+
+**Fix:** Add delays between requests or reduce parallel agent execution.
+
+## Test Errors
+
+### Test timeout
+
+```
+Error: Test timed out after 5000ms
+```
+
+**Cause:** Agent execution takes longer than the default timeout.
+
+**Fix:** Increase the test timeout:
+
+```typescript
+import { test, expect } from "vitest";
+
+test("slow agent test", async () => {
+  // Test code here
+}, 30000); // 30 second timeout
+```
+
+### Quality gate failed
+
+```
+❌ Gate FAILED: pass rate 75.0% < 80.0%
+```
+
+**Cause:** Too many tests failed based on the configured pass rate.
+
+**Fix:** Either fix the failing tests or adjust the pass rate threshold:
+
+```typescript title="vitest.config.ts"
+import { OpenHarnessReporter } from "@open-harness/vitest";
+
+export default defineConfig({
+  test: {
+    reporters: ["default", new OpenHarnessReporter({ passRate: 0.7 })],
+  },
+});
+```
+
+## Still Stuck?
+
+If your error isn't listed here:
+
+1. Check the [API Reference](/docs/reference/api/runtime) for correct function signatures
+2. Look at the [Quickstart](/docs/learn/quickstart) for working examples
+3. Review the [Custom Agents](/docs/guides/agents/custom-agents) guide for agent patterns

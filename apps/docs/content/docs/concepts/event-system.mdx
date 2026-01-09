@@ -58,42 +58,76 @@ Track LLM interactions:
 
 ```typescript
 { type: "agent:start", agentName }
-{ type: "agent:text", content }      // Streaming
+{ type: "agent:text", text }          // Streaming
 { type: "agent:tool_use", name, input }
 { type: "agent:complete", output }
 ```
 
 ## Subscribing to Events
 
-Components subscribe via the Hub:
+Use `runtime.onEvent()` to subscribe:
 
 ```typescript
-// Specific event type
-hub.subscribe("agent:text", (event) => {
-  process.stdout.write(event.event.content);
+import { createRuntime, parseFlowYaml } from "@open-harness/server";
+
+const runtime = createRuntime({
+  flow: parseFlowYaml(yaml),
 });
 
-// Wildcard pattern
-hub.subscribe("agent:*", (event) => {
-  console.log(event.type, event.event);
+// Subscribe to all events
+const unsubscribe = runtime.onEvent((event) => {
+  console.log(event.type, event);
 });
 
-// All events
-hub.subscribe("*", (event) => {
-  logger.log(event);
+// Run the flow
+await runtime.run({ question: "Hello" });
+
+// Cleanup
+unsubscribe();
+```
+
+### Filtering Events
+
+Filter by event type:
+
+```typescript
+runtime.onEvent((event) => {
+  if (event.type === "agent:text") {
+    process.stdout.write(event.text);
+  }
+});
+```
+
+### With createHarness
+
+Use the `onEvent` option:
+
+```typescript
+import { createHarness, parseFlowYaml } from "@open-harness/server";
+
+const harness = createHarness({
+  flow: parseFlowYaml(yaml),
+  onEvent: (event) => {
+    if (event.type === "agent:text") {
+      process.stdout.write(event.text);
+    }
+  },
 });
 ```
 
 ## Emitting Events
 
-Components emit via the Hub:
+Nodes emit events via the context:
 
 ```typescript
-hub.emit({
-  type: "custom:notification",
-  message: "Task completed",
-  priority: "high",
-});
+const myNode = {
+  type: "my.node" as const,
+  run: async (ctx, input) => {
+    ctx.emit({ type: "agent:text", text: "Processing..." });
+    // ... do work
+    return { result: "done" };
+  },
+};
 ```
 
 ## Event Persistence
@@ -101,8 +135,8 @@ hub.emit({
 Events are persisted to the RunStore:
 
 ```typescript
-// All events for a run
-const events = await store.getEvents(runId);
+// Load events for a run
+const events = await store.loadEvents(runId);
 
 // Replay events
 for (const event of events) {
@@ -117,7 +151,7 @@ for (const event of events) {
 See exactly what happened:
 
 ```typescript
-hub.subscribe("*", (e) => console.log(JSON.stringify(e)));
+runtime.onEvent((e) => console.log(JSON.stringify(e)));
 ```
 
 ### Testing
@@ -125,6 +159,11 @@ hub.subscribe("*", (e) => console.log(JSON.stringify(e)));
 Assert on event sequences:
 
 ```typescript
+const events: RuntimeEvent[] = [];
+runtime.onEvent((e) => events.push(e));
+
+await runtime.run({ input: "test" });
+
 expect(events).toContainEqual({
   type: "agent:complete",
   output: expect.any(Object),
@@ -133,11 +172,13 @@ expect(events).toContainEqual({
 
 ### Integration
 
-React to any event from any channel:
+React to events for external integrations:
 
 ```typescript
-hub.subscribe("agent:complete", async (e) => {
-  await notifySlack(e.event.output);
+runtime.onEvent(async (event) => {
+  if (event.type === "agent:complete") {
+    await notifySlack(event.output);
+  }
 });
 ```
 
@@ -145,3 +186,4 @@ hub.subscribe("agent:complete", async (e) => {
 
 - [Events API](/docs/reference/api/events) — Event type reference
 - [RuntimeEvent](/docs/reference/types/runtime-event) — Type definition
+

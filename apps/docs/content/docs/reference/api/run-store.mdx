@@ -10,8 +10,8 @@ description: Persistence interface for runtime events and snapshots
 ## Interface
 
 ```typescript
-import type { RunSnapshot } from "@open-harness/sdk";
-import type { RuntimeEvent } from "@open-harness/sdk";
+import type { RunSnapshot } from "@open-harness/core";
+import type { RuntimeEvent } from "@open-harness/core";
 
 interface RunStore {
   appendEvent(runId: string, event: RuntimeEvent): void;
@@ -26,7 +26,7 @@ interface RunStore {
 ### InMemoryRunStore
 
 ```typescript
-import { InMemoryRunStore } from "@open-harness/sdk";
+import { InMemoryRunStore } from "@open-harness/core";
 
 const store = new InMemoryRunStore();
 ```
@@ -34,7 +34,7 @@ const store = new InMemoryRunStore();
 ### SqliteRunStore
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/sdk";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 
 const store = new SqliteRunStore({ filename: "./data/runs.db" });
 ```
@@ -70,4 +70,4 @@ const runtime = createRuntime({ flow, registry, store });
 ## See Also
 
 - [Persistence Guide](/docs/guides/deployment/persistence) — Configuration guide
-- [Runtime API](/docs/reference/api/hub) — createRuntime usage
+- [Runtime API](/docs/reference/api/runtime) — createRuntime usage

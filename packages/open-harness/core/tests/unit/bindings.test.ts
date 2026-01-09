@@ -1,7 +1,7 @@
 // Tests for async binding resolution using JSONata
 
 import { describe, expect, test } from "bun:test";
-import { resolveBindingString, resolveBindings } from "../../src/index.js";
+import { ExpressionError, resolveBindingString, resolveBindings, resolveBindingsResult } from "../../src/index.js";
 
 describe("resolveBindingString", () => {
 	test("interpolates multiple bindings", async () => {
@@ -105,5 +105,83 @@ describe("resolveBindings", () => {
 		);
 		expect(resolved.exists).toBe(true);
 		expect(resolved.missing).toBe(false);
+	});
+});
+
+describe("resolveBindingsResult", () => {
+	test("successfully resolves nested paths", async () => {
+		const context = {
+			flow: { input: { name: "Ada" } },
+			user: { meta: { id: 42 } },
+		};
+		const input: Record<string, unknown> = {
+			name: "{{ flow.input.name }}",
+			id: "{{ user.meta.id }}",
+		};
+		const result = await resolveBindingsResult(input, context);
+		expect(result.isOk()).toBe(true);
+		if (result.isOk()) {
+			expect(result.value.name).toEqual("Ada");
+			expect(result.value.id).toEqual(42);
+		}
+	});
+
+	test("successfully resolves arrays and objects", async () => {
+		const context = { flow: { input: { name: "Ada" } }, count: 2 };
+		const result = await resolveBindingsResult(
+			{
+				items: ["{{ flow.input.name }}", "{{ count }}"],
+				nested: { title: "Hi {{ flow.input.name }}" },
+			} as Record<string, unknown>,
+			context,
+		);
+		expect(result.isOk()).toBe(true);
+		if (result.isOk()) {
+			expect(result.value.items as unknown[]).toEqual(["Ada", 2]);
+			expect(result.value.nested).toEqual({ title: "Hi Ada" });
+		}
+	});
+
+	test("missing path returns undefined, not error", async () => {
+		const result = await resolveBindingsResult({ value: "{{ missing.path }}" } as Record<string, unknown>, {});
+		expect(result.isOk()).toBe(true);
+		if (result.isOk()) {
+			expect(result.value.value).toBeUndefined();
+		}
+	});
+
+	test("syntax error returns ExpressionError", async () => {
+		const result = await resolveBindingsResult({ value: "{{ x +++ y }}" } as Record<string, unknown>, {});
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error).toBeInstanceOf(ExpressionError);
+			expect(result.error.code).toBe("EVALUATION_ERROR");
+		}
+	});
+
+	test("error propagates through nested structures", async () => {
+		const result = await resolveBindingsResult(
+			{
+				valid: "{{ valid }}",
+				nested: {
+					invalid: "{{ x +++ y }}",
+				},
+			} as Record<string, unknown>,
+			{ valid: "ok" },
+		);
+		expect(result.isErr()).toBe(true);
+		if (result.isErr()) {
+			expect(result.error).toBeInstanceOf(ExpressionError);
+		}
+	});
+
+	test("passes through non-string values unchanged", async () => {
+		const result = await resolveBindingsResult({ num: 42, bool: true, nil: null } as Record<string, unknown>, {});
+		expect(result.isOk()).toBe(true);
+		if (result.isOk()) {
+			expect(result.value.num).toBe(42);
+			expect(result.value.bool).toBe(true);
+			expect(result.value.nil).toBe(null);
+		}
 	});
 });

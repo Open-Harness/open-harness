@@ -9,6 +9,7 @@
 	"dependencies": {
 		"@internal/core": "workspace:*",
 		"ai": "^6.0.9",
+		"neverthrow": "^8.2.0",
 		"zod": "^4.3.4"
 	}
 }

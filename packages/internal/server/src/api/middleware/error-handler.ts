@@ -1,7 +1,8 @@
 import type { Context } from "hono";
+import { getLogger } from "@internal/core";
 
 export function errorHandler(err: Error, c: Context) {
-  console.error("API Error:", err);
+  getLogger().error({ err, path: c.req.path, method: c.req.method }, "API Error");
 
   // If an SSE stream was stashed in context by user code/middleware, try to emit an error.
   try {

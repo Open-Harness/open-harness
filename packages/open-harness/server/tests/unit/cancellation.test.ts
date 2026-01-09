@@ -101,7 +101,7 @@ edges: []
 			events.push(event);
 			// Trigger pause on streaming delta (not agent:text which requires assistant message)
 			if (event.type === "agent:text:delta") {
-				runtime.dispatch({ type: "abort", resumable: true });
+				runtime.pause();
 			}
 		});
 
@@ -111,8 +111,11 @@ edges: []
 
 		// Note: output.text is no longer set on pause - SDK maintains history via sessionId
 		// Consumers needing partial text should accumulate from agent:text:delta events
-		const output = snapshot.outputs.agent as { paused?: boolean; sessionId?: string } | undefined;
-		expect(output?.paused).toBe(true);
+		const output = snapshot.outputs.agent;
+		if (output && typeof output === "object" && !Array.isArray(output)) {
+			const typedOutput = output as { paused?: boolean; sessionId?: string };
+			expect(typedOutput.paused).toBe(true);
+		}
 		expect(events.some((event) => event.type === "agent:paused")).toBe(true);
 	});
 
@@ -134,9 +137,9 @@ edges: []
 		const events: Array<{ type: string }> = [];
 		runtime.onEvent((event) => {
 			events.push(event);
-			// Trigger abort on streaming delta (not agent:text which requires assistant message)
+			// Trigger stop on streaming delta (not agent:text which requires assistant message)
 			if (event.type === "agent:text:delta") {
-				runtime.dispatch({ type: "abort", resumable: false });
+				runtime.stop();
 			}
 		});
 
@@ -147,7 +150,7 @@ edges: []
 		expect(events.some((event) => event.type === "agent:aborted")).toBe(true);
 	});
 
-	test("cancel context fires onCancel callbacks", async () => {
+	test("abort signal triggers when paused", async () => {
 		const flow = parseFlowYaml(`
 name: "cancel"
 nodes:
@@ -157,7 +160,7 @@ nodes:
 edges: []
 `);
 
-		let cancelReason: string | undefined;
+		let signalAborted = false;
 		let markStarted: (() => void) | null = null;
 		const started = new Promise<void>((resolve) => {
 			markStarted = resolve;
@@ -169,12 +172,14 @@ edges: []
 				markStarted = null;
 				return await new Promise<{ done: boolean }>((resolve) => {
 					const done = () => resolve({ done: true });
-					ctx.cancel.onCancel(() => {
-						cancelReason = ctx.cancel.reason;
+					// Listen to abort signal
+					ctx.signal.addEventListener("abort", () => {
+						signalAborted = true;
 						done();
 					});
-					if (ctx.cancel.cancelled) {
-						cancelReason = ctx.cancel.reason;
+					// Check if already aborted
+					if (ctx.signal.aborted) {
+						signalAborted = true;
 						done();
 					}
 				});
@@ -187,9 +192,9 @@ edges: []
 		const runtime = createRuntime({ flow, registry });
 		const runPromise = runtime.run();
 		await started;
-		runtime.dispatch({ type: "abort", resumable: true });
+		runtime.pause();
 		const snapshot = await runPromise;
 		expect(snapshot.status).toBe("paused");
-		expect(cancelReason).toBe("pause");
+		expect(signalAborted).toBe(true);
 	});
 });

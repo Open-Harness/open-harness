@@ -31,14 +31,16 @@ edges: []
 		const runtime = createRuntime({ flow, registry });
 		const events: RuntimeEvent[] = [];
 		let textChunks = 0;
+		let pauseRequested = false;
 
 		runtime.onEvent((event) => {
 			events.push(event);
 			if (event.type === "agent:text:delta") {
 				textChunks++;
 				// After receiving some streaming deltas, trigger pause
-				if (textChunks >= 5) {
-					runtime.dispatch({ type: "abort", resumable: true });
+				if (!pauseRequested && textChunks >= 5) {
+					pauseRequested = true;
+					runtime.pause();
 				}
 			}
 		});
@@ -89,14 +91,16 @@ edges: []
 		const runtime = createRuntime({ flow, registry });
 		const events: RuntimeEvent[] = [];
 		let deltaCount = 0;
+		let stopRequested = false;
 
 		runtime.onEvent((event) => {
 			events.push(event);
 			if (event.type === "agent:text:delta") {
 				deltaCount++;
-				// After receiving some streaming deltas, trigger hard abort
-				if (deltaCount >= 3) {
-					runtime.dispatch({ type: "abort", resumable: false });
+				// After receiving some streaming deltas, trigger hard stop
+				if (!stopRequested && deltaCount >= 3) {
+					stopRequested = true;
+					runtime.stop();
 				}
 			}
 		});
@@ -145,7 +149,7 @@ edges: []
 			if (event.type === "agent:text:delta" && !sawDelta) {
 				sawDelta = true;
 				// Pause after first streaming delta
-				runtime.dispatch({ type: "abort", resumable: true });
+				runtime.pause();
 			}
 		});
 

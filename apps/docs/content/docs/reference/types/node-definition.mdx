@@ -13,8 +13,7 @@ The structure of a node within a flow.
 interface NodeDefinition {
   id: string;
   type: string;
-  input?: Record<string, unknown>;
-  config?: Record<string, unknown>;
+  input: Record<string, unknown>;
 }
 ```
 
@@ -31,7 +30,7 @@ Unique identifier within the flow:
 Must be unique among all nodes in the flow. Used to reference node outputs:
 
 ```yaml
-{{ nodes.greet.output.text }}
+{{ greet.text }}
 ```
 
 ### type
@@ -45,10 +44,8 @@ The registered node type:
 
 Built-in types:
 - `claude.agent` — Claude AI agent
-- `http.get` — HTTP GET request
-- `http.post` — HTTP POST request
-- `map` — Parallel array processing
-- `delay` — Wait for duration
+- `echo` — Returns input unchanged
+- `constant` — Returns a constant value
 
 ### input
 
@@ -67,21 +64,6 @@ Values can be:
 - JSONata expressions (in `{{ }}`)
 - Nested objects
 
-### config
-
-Node-specific configuration:
-
-```yaml
-- id: assistant
-  type: claude.agent
-  input:
-    prompt: "Hello"
-  config:
-    model: "claude-sonnet-4-20250514"
-    maxTokens: 4096
-    temperature: 0.7
-```
-
 ## Examples
 
 ### Simple Node
@@ -99,25 +81,24 @@ Node-specific configuration:
 - id: summarize
   type: claude.agent
   input:
-    text: "{{ nodes.fetch.output.content }}"
+    text: "{{ fetch.text }}"
     prompt: "Summarize this text"
 ```
 
-### Node with Config
+### Node with Model Configuration
 
 ```yaml
-- id: api-call
-  type: http.post
+- id: assistant
+  type: claude.agent
   input:
-    url: "https://api.example.com/data"
-    body: "{{ flow.input.data }}"
-  config:
-    headers:
-      Authorization: "Bearer {{ $env.API_KEY }}"
-    timeout: 30000
+    prompt: "Analyze this code"
+    model: "claude-sonnet-4-20250514"
+    maxTokens: 4096
+    temperature: 0.7
 ```
 
 ## See Also
 
 - [FlowDefinition](/docs/reference/types/flow-definition) — Flow structure
-- [Node Registry API](/docs/reference/api/node-registry) — Registering nodes
+- [Custom Nodes](/docs/guides/agents/custom-agents) — Building custom nodes
+

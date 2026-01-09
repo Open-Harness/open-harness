@@ -36,7 +36,7 @@ Select items matching criteria:
 users: "{{ flow.input.users[status = 'active'] }}"
 
 # Filter by multiple conditions
-items: "{{ nodes.list.output[priority > 5 and assigned] }}"
+items: "{{ list[priority > 5 and assigned] }}"
 
 # First matching item
 first: "{{ flow.input.items[type = 'primary'][0] }}"
@@ -48,13 +48,13 @@ Reduce arrays to single values:
 
 ```yaml
 # Sum values
-total: "{{ $sum(nodes.orders.output.items.price) }}"
+total: "{{ $sum(orders.items.price) }}"
 
 # Count items
 count: "{{ $count(flow.input.users) }}"
 
 # Average
-average: "{{ $average(nodes.scores.output.values) }}"
+average: "{{ $average(scores.values) }}"
 ```
 
 ## Array Construction
@@ -66,7 +66,7 @@ Build arrays from expressions:
 names: "{{ flow.input.users.name }}"
 
 # Unique values
-categories: "{{ $distinct(nodes.items.output.category) }}"
+categories: "{{ $distinct(items.category) }}"
 
 # Sorted array
 sorted: "{{ $sort(flow.input.items, function($a, $b) { $a.priority > $b.priority }) }}"

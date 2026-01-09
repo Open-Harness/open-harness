@@ -1,2 +1,7 @@
-// HTTP SSE server streaming will be extracted from Hono routes
-// TODO: Extract SSE streaming logic from api-hono
+/**
+ * HTTP SSE server transport.
+ *
+ * NOTE: SSE streaming logic is currently implemented inline in Hono routes.
+ * Extraction to this module is planned for a future release.
+ */
+export {};

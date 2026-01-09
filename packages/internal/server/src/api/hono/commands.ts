@@ -16,8 +16,22 @@ export function createCommandsRoute(runtime: Runtime) {
       return c.json({ error: "Missing command type" }, 400);
     }
 
-    runtime.dispatch(command);
-    return c.json({ success: true }, 202);
+    if (command.type === "pause") {
+      runtime.pause();
+      return c.json({ success: true }, 202);
+    }
+
+    if (command.type === "stop") {
+      runtime.stop();
+      return c.json({ success: true }, 202);
+    }
+
+    if (command.type === "resume") {
+      void runtime.resume(command.message);
+      return c.json({ success: true }, 202);
+    }
+
+    return c.json({ error: "Unsupported command type" }, 400);
   });
 
   return app;

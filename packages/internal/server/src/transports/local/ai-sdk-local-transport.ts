@@ -1,5 +1,5 @@
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
-import type { OpenHarnessChatTransportOptions, Runtime, RuntimeEvent } from "@internal/core";
+import { getLogger, type OpenHarnessChatTransportOptions, type Runtime, type RuntimeEvent } from "@internal/core";
 import { createPartTracker, transformEvent } from "./transforms.js";
 
 /**
@@ -82,7 +82,7 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
 
               // Validate chunk before enqueuing
               if (!chunk || typeof chunk !== "object" || !("type" in chunk)) {
-                console.warn("[Transport] Skipping invalid chunk:", chunk);
+                getLogger().warn({ chunk }, "Skipping invalid chunk");
                 continue;
               }
 
@@ -145,7 +145,7 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
           } catch (error) {
             // Only log if stream isn't already closed
             if (!isClosed) {
-              console.error("Error transforming event:", error);
+              getLogger().error({ err: error }, "Error transforming event");
               isClosed = true;
               try {
                 controller.enqueue({
@@ -182,16 +182,25 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
         // Wait a tick to ensure subscription is fully set up
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        // Dispatch message to runtime AFTER subscription is ready
-        try {
-          const runId = crypto.randomUUID();
-          this.runtime.dispatch({
-            type: "send",
-            runId,
-            message: textPart.text,
-          });
-        } catch (error) {
-          console.error("Error dispatching message:", error);
+        // Resume runtime AFTER subscription is ready
+        const snapshot = this.runtime.getSnapshot();
+        if (snapshot.status !== "paused") {
+          if (!isClosed) {
+            isClosed = true;
+            controller.enqueue({
+              type: "error",
+              errorText: `Runtime not paused (status: ${snapshot.status})`,
+            });
+            controller.close();
+            if (unsubscribe) {
+              unsubscribe();
+            }
+          }
+          return;
+        }
+
+        this.runtime.resume(textPart.text).catch((error) => {
+          getLogger().error({ err: error }, "Error resuming runtime");
           if (!isClosed) {
             isClosed = true;
             controller.enqueue({
@@ -199,14 +208,14 @@ export class LocalAIKitTransport implements ChatTransport<UIMessage> {
               errorText:
                 error instanceof Error
                   ? error.message
-                  : "Failed to dispatch message",
+                  : "Failed to resume runtime",
             });
             controller.close();
             if (unsubscribe) {
               unsubscribe();
             }
           }
-        }
+        });
       },
     });
   }

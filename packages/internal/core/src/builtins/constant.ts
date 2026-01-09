@@ -1,5 +1,5 @@
-import type { NodeTypeDefinition } from "../nodes";
 import { z } from "zod";
+import type { NodeTypeDefinition } from "../nodes";
 
 /**
  * Input schema for constant node.

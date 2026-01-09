@@ -17,12 +17,9 @@ A practical checklist for running Open Harness in production.
 
 ```typescript
 import express from "express";
-import {
-  createRuntime,
-  DefaultNodeRegistry,
-  parseFlowYaml,
-  SqliteRunStore,
-} from "@open-harness/sdk";
+import { createRuntime, parseFlowYaml } from "@open-harness/server";
+import { DefaultNodeRegistry } from "@open-harness/core";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
 import { readFileSync } from "node:fs";
 
 const app = express();

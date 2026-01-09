@@ -1,3 +1,8 @@
+---
+lastUpdated: "2026-01-07T19:33:33.732Z"
+lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
+lastCommitDate: "2026-01-07T18:56:43Z"
+---
 # Open Harness Packages
 
 This directory contains all Open Harness packages organized by category.
@@ -18,15 +23,18 @@ Packages intended to be published to npm:
 - **`react/`** - React hooks integrating with `@open-harness/client`
 - **`testing/`** - Shared test utilities for Open Harness packages
 
-### Adapters (`adapters/`)
-Optional implementations that depend on `@open-harness/core` interfaces:
+### Stores (`stores/`)
+Optional persistence implementations that depend on `@open-harness/core` interfaces:
 - **`run-store/sqlite/`** - SQLite `RunStore` implementation
 - **`run-store/testing/`** - `RunStore` contract tests/utilities
+- **`recording-store/file/`** - File-backed `RecordingStore` implementation
+- **`recording-store/sqlite/`** - SQLite `RecordingStore` implementation
+- **`recording-store/testing/`** - `RecordingStore` contract tests/utilities
 
 ## Package Dependencies
 
 - Published packages are under `packages/open-harness/*` and use `@internal/*` implementation packages.
-- Adapters implement interfaces from `@open-harness/core` (e.g. `RunStore`) and may use adapter-specific test utilities.
+- Stores implement interfaces from `@open-harness/core` (e.g. `RunStore`, `RecordingStore`) and may use store-specific test utilities.
 - `@internal/*` packages are private (not published).
 
 ## Development

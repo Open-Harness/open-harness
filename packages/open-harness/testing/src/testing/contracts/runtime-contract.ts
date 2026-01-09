@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Runtime, RuntimeCommand, RuntimeEvent } from "@open-harness/core";
+import type { Runtime, RuntimeEvent } from "@open-harness/core";
 
 /**
  * Contract test function for Runtime implementations.
@@ -16,7 +16,9 @@ export function runtimeContract(
 		test("implements Runtime interface", () => {
 			const { runtime, cleanup } = createRuntime();
 			expect(runtime.onEvent).toBeInstanceOf(Function);
-			expect(runtime.dispatch).toBeInstanceOf(Function);
+			expect(runtime.pause).toBeInstanceOf(Function);
+			expect(runtime.resume).toBeInstanceOf(Function);
+			expect(runtime.stop).toBeInstanceOf(Function);
 			expect(runtime.getSnapshot).toBeInstanceOf(Function);
 			expect(runtime.run).toBeInstanceOf(Function);
 			cleanup?.();
@@ -43,10 +45,10 @@ export function runtimeContract(
 			cleanup?.();
 		});
 
-		test("dispatch accepts commands", () => {
+		test("pause/stop do not throw", () => {
 			const { runtime, cleanup } = createRuntime();
-			const command: RuntimeCommand = { type: "abort", resumable: true };
-			expect(() => runtime.dispatch(command)).not.toThrow();
+			expect(() => runtime.pause()).not.toThrow();
+			expect(() => runtime.stop()).not.toThrow();
 			cleanup?.();
 		});
 

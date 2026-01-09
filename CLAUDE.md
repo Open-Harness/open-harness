@@ -36,12 +36,17 @@ tests/
 ## Commands
 
 ```bash
+# From repository root (uses turbo for monorepo with caching):
+bun run typecheck   # Type check entire monorepo
+bun run lint        # Lint entire monorepo
+bun run test        # Run tests across monorepo
+
 # In packages/sdk/:
 bun run test        # Safe tests only (unit + replay, no network)
 bun run test:live   # Integration tests (requires auth)
-bun run typecheck   # Type checking
-bun run lint        # Linting
 ```
+
+**Note**: Always use `bun x` (not `bunx`) for running executables. Use `bun run <script>` for package.json scripts.
 
 ## Code Style
 
@@ -105,6 +110,27 @@ Never claim a task is complete without:
   - Modifying the contract between components
   - Changing data flow patterns (who produces vs consumes)
 - When in doubt, ask. A quick question is better than an unauthorized refactor.
+
+## CRITICAL: Debugging with Logs
+
+**USE THE `harness-logs` SKILL PROACTIVELY** when debugging issues in this repository.
+
+Logs are written to `.open-harness/logs/harness.log` in JSONL format. Before asking the user "what went wrong?" - CHECK THE LOGS FIRST.
+
+**Quick error check:**
+```bash
+jq -c 'select(.level >= 50)' .open-harness/logs/harness.log 2>/dev/null | tail -10
+```
+
+**When to check logs:**
+- Test failures
+- Runtime errors
+- Unexpected behavior
+- Verifying what actually happened
+
+**Activate the skill:** Use `/harness-logs` or let it auto-activate during any debugging session.
+
+See `.claude/skills/harness-logs/SKILL.md` for full JQ patterns and debugging workflows.
 
 ## CRITICAL: Authentication
 

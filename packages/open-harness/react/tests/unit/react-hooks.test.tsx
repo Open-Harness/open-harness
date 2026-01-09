@@ -5,7 +5,7 @@ import { useHarness } from "../../src/react/use-harness.js";
 import { useRuntime } from "../../src/react/use-runtime.js";
 
 describe("react hooks", () => {
-	test("useRuntime collects events and dispatch forwards to runtime", async () => {
+	test("useRuntime collects events and forwards controls to runtime", async () => {
 		const runtime = new MockRuntime();
 
 		let latest: ReturnType<typeof useRuntime> | undefined;
@@ -39,9 +39,19 @@ describe("react hooks", () => {
 		expect(latest?.events[0]?.type).toBe("flow:start");
 
 		act(() => {
-			latest?.dispatch({ type: "abort" });
+			latest?.pause();
 		});
-		expect(runtime.getDispatchedCommands()).toEqual([{ type: "abort" }]);
+		expect(runtime.getPauseCount()).toBe(1);
+
+		await act(async () => {
+			await latest?.resume("resume-message");
+		});
+		expect(runtime.getResumeMessages()).toEqual(["resume-message"]);
+
+		act(() => {
+			latest?.stop();
+		});
+		expect(runtime.getStopCount()).toBe(1);
 
 		const beforeUnmountCount = latest?.events.length ?? 0;
 		act(() => {

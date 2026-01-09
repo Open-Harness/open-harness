@@ -10,7 +10,7 @@ The `NodeRegistry` stores node type definitions used by the runtime.
 ## Creating a Registry
 
 ```typescript
-import { DefaultNodeRegistry } from "@open-harness/sdk";
+import { DefaultNodeRegistry } from "@open-harness/core";
 
 const registry = new DefaultNodeRegistry();
 ```
@@ -50,7 +50,7 @@ The SDK ships with these node definitions:
 ## Registering Custom Nodes
 
 ```typescript
-import type { NodeTypeDefinition } from "@open-harness/sdk";
+import type { NodeTypeDefinition } from "@open-harness/core";
 
 const customNode: NodeTypeDefinition<{ input: string }, { output: string }> = {
   type: "custom.processor",
@@ -68,5 +68,5 @@ const runtime = createRuntime({ flow, registry });
 
 ## See Also
 
-- [Node Types](/docs/reference/api/agent) — Node definition details
+- [Node Types](/docs/reference/api/node-types) — Node definition details
 - [Custom Agents Guide](/docs/guides/agents/custom-agents) — Building nodes

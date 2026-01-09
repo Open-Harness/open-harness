@@ -37,7 +37,7 @@ edges:
 		runtime.onEvent((event) => {
 			if (!paused && event.type === "node:complete" && event.nodeId === "a") {
 				paused = true;
-				runtime.dispatch({ type: "abort", resumable: true });
+				runtime.pause();
 			}
 		});
 

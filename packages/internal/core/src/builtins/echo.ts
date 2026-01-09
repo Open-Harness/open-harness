@@ -1,5 +1,5 @@
-import type { NodeTypeDefinition } from "../nodes";
 import { z } from "zod";
+import type { NodeTypeDefinition } from "../nodes";
 
 /**
  * Input schema for echo node.
@@ -18,10 +18,7 @@ const EchoOutputSchema = z.object({
 /**
  * Echo node returns the provided text input.
  */
-export const echoNode: NodeTypeDefinition<
-	z.infer<typeof EchoInputSchema>,
-	z.infer<typeof EchoOutputSchema>
-> = {
+export const echoNode: NodeTypeDefinition<z.infer<typeof EchoInputSchema>, z.infer<typeof EchoOutputSchema>> = {
 	type: "echo",
 	inputSchema: EchoInputSchema,
 	outputSchema: EchoOutputSchema,

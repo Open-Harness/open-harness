@@ -19,15 +19,15 @@ export type EdgeStatus = "pending" | "fired" | "skipped";
  * @property {Record<string, string>} agentSessions - Agent session ids by node id.
  */
 export type RunSnapshot = {
-  runId?: string;
-  status: RuntimeStatus;
-  outputs: Record<string, unknown>;
-  state: Record<string, unknown>;
-  nodeStatus: Record<string, NodeStatus>;
-  edgeStatus: Record<string, EdgeStatus>;
-  loopCounters: Record<string, number>;
-  inbox: RuntimeCommand[];
-  agentSessions: Record<string, string>;
+	runId?: string;
+	status: RuntimeStatus;
+	outputs: Record<string, unknown>;
+	state: Record<string, unknown>;
+	nodeStatus: Record<string, NodeStatus>;
+	edgeStatus: Record<string, EdgeStatus>;
+	loopCounters: Record<string, number>;
+	inbox: RuntimeCommand[];
+	agentSessions: Record<string, string>;
 };
 
 /**
@@ -36,5 +36,5 @@ export type RunSnapshot = {
  * @property {string} [runId] - Optional runtime run id.
  */
 export type RunState = RunSnapshot & {
-  runId?: string;
+	runId?: string;
 };

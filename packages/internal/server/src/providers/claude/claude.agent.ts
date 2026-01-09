@@ -11,7 +11,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import type { CancelContextInternal, NodeTypeDefinition, RuntimeCommand } from "@internal/core";
+import type { CancelContextInternal, NodeTypeDefinition } from "@internal/core";
 
 /**
  * Extended options that support file-based schema references.
@@ -39,6 +39,8 @@ export type ClaudeMessageInput =
 export interface ClaudeAgentInput {
   prompt?: string;
   messages?: ClaudeMessageInput[];
+  /** Session ID for resuming previous conversations */
+  sessionId?: string;
   /** SDK options with extended support for outputSchemaFile */
   options?: ClaudeAgentExtendedOptions;
 }
@@ -133,55 +135,45 @@ export function createClaudeNode(
         if (replay) return replay;
       }
 
-      const resumeMessage = ctx.resumeMessage;
+      // Session passed via input (runtime handles resume)
+      // No inbox/resumeMessage - all messages come via input
       const hasPrompt = typeof input.prompt === "string";
       const hasMessages = Array.isArray(input.messages);
-      if (!resumeMessage && hasPrompt === hasMessages) {
+      if (hasPrompt && hasMessages) {
         throw new Error(
-          "ClaudeAgentInput requires exactly one of prompt or messages",
+          "ClaudeAgentInput requires exactly one of prompt or messages, not both",
         );
       }
 
-      const basePrompt =
-        !resumeMessage && typeof input.prompt === "string"
-          ? input.prompt
-          : undefined;
-      const baseMessages =
-        !resumeMessage && Array.isArray(input.messages)
-          ? input.messages
-          : undefined;
-
-      const queuedCommands = drainInbox(ctx.inbox);
-      const queuedMessages = commandsToMessages(queuedCommands);
-      if (resumeMessage && queuedMessages.length === 0) {
-        queuedMessages.push(resumeMessage);
-      }
-
       const promptMessages: ClaudeMessageInput[] = [];
-      if (basePrompt) promptMessages.push(basePrompt);
-      if (baseMessages) promptMessages.push(...baseMessages);
-      promptMessages.push(...queuedMessages);
+      if (hasPrompt && input.prompt) {
+        promptMessages.push(input.prompt);
+      }
+      if (hasMessages && input.messages) {
+        promptMessages.push(...input.messages);
+      }
 
       if (promptMessages.length === 0) {
         throw new Error("ClaudeAgentInput requires a prompt");
       }
 
-      const knownSessionId = ctx.getAgentSession() ?? input.options?.resume;
+      const knownSessionId = input.sessionId ?? input.options?.resume;
       const mergedOptions = mergeOptions(input.options, knownSessionId);
       const queryFn = options.queryFn ?? query;
       const prompt = messageStream(promptMessages, knownSessionId);
-      const cancelContext = ctx.cancel as CancelContextInternal | undefined;
+      // Get AbortController from signal (runtime provides it via context)
+      // AbortSignal doesn't expose the controller, so we need to handle abort differently
       const queryStream = queryFn({
         prompt,
         options: {
           ...mergedOptions,
-          abortController: cancelContext?.__controller,
+          abortController: undefined,  // SDK will handle abort via signal monitoring
         },
       });
-      cancelContext?.__setQuery(queryStream);
+      // Note: __setQuery removed - pause/resume now handled at workflow level
+      // via session IDs in input/output, not via cancel context
 
-      const promptForEvent =
-        resumeMessage ?? basePrompt ?? baseMessages ?? promptMessages;
+      const promptForEvent = promptMessages;
       const startedAt = Date.now();
       let emittedStart = false;
       let finalResult: SDKResultMessage | undefined;
@@ -195,11 +187,12 @@ export function createClaudeNode(
         string,
         { toolName: string; toolInput: unknown; startedAt: number }
       >();
+      let cancelReason: "pause" | "abort" | "timeout" | undefined;
 
       const emitStart = (sessionId: string) => {
         if (emittedStart) return;
         emittedStart = true;
-        ctx.setAgentSession(sessionId);
+        // Session persistence handled by runtime, not here
         ctx.emit({
           type: "agent:start",
           nodeId: ctx.nodeId,
@@ -378,15 +371,9 @@ export function createClaudeNode(
             }
           }
 
-          if (ctx.cancel.cancelled) {
-            if (ctx.cancel.reason === "pause") {
-              break;
-            }
-            if (ctx.cancel.reason === "abort") {
-              const abortError = new Error("Aborted");
-              abortError.name = "AbortError";
-              throw abortError;
-            }
+          if (ctx.signal.aborted) {
+            cancelReason = getCancelReason(ctx.signal);
+            break; // Exit the stream loop gracefully
           }
         }
       } catch (error) {
@@ -397,7 +384,7 @@ export function createClaudeNode(
             type: "agent:aborted",
             nodeId: ctx.nodeId,
             runId: ctx.runId,
-            reason: ctx.cancel.reason ?? "abort",
+            reason: "abort",
           });
           throw error;
         }
@@ -413,7 +400,23 @@ export function createClaudeNode(
         throw error;
       }
 
-      if (ctx.cancel.cancelled && ctx.cancel.reason === "pause") {
+      if (ctx.signal.aborted) {
+        const reason = cancelReason ?? getCancelReason(ctx.signal);
+        if (reason === "abort" || reason === "timeout") {
+          ctx.emit({
+            type: "agent:aborted",
+            nodeId: ctx.nodeId,
+            runId: ctx.runId,
+            reason: reason ?? "abort",
+          });
+
+          return {
+            sessionId: lastSessionId,
+            numTurns: finalResult?.num_turns,
+          };
+        }
+
+        // Treat all other aborts as pause
         ctx.emit({
           type: "agent:paused",
           nodeId: ctx.nodeId,
@@ -578,33 +581,6 @@ async function* messageStream(
   }
 }
 
-function drainInbox(inbox: {
-  next: () => RuntimeCommand | undefined;
-}): RuntimeCommand[] {
-  const commands: RuntimeCommand[] = [];
-  let next = inbox.next();
-  while (next) {
-    commands.push(next);
-    next = inbox.next();
-  }
-  return commands;
-}
-
-function commandsToMessages(commands: RuntimeCommand[]): ClaudeMessageInput[] {
-  const messages: ClaudeMessageInput[] = [];
-  for (const command of commands) {
-    if (command.type === "send") {
-      messages.push(command.message);
-    } else if (command.type === "reply") {
-      messages.push({
-        content: command.content,
-        parentToolUseId: command.promptId,
-      });
-    }
-  }
-  return messages;
-}
-
 function extractSessionId(message: SDKMessage): string | undefined {
   if (message && typeof message === "object" && "session_id" in message) {
     const sessionId = (message as { session_id?: string }).session_id;
@@ -667,6 +643,19 @@ function getResultOrThrow(result?: SDKResultMessage): ClaudeAgentOutput {
     numTurns: result.num_turns,
     permissionDenials: result.permission_denials,
   };
+}
+
+function getCancelReason(signal: AbortSignal): "pause" | "abort" | "timeout" | undefined {
+  const reason = signal.reason;
+  if (reason === "pause" || reason === "abort" || reason === "timeout") {
+    return reason;
+  }
+  if (typeof reason === "string") {
+    if (reason === "pause" || reason === "abort" || reason === "timeout") {
+      return reason;
+    }
+  }
+  return undefined;
 }
 
 function errorMessage(error: unknown): string {

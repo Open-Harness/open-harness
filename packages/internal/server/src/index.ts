@@ -3,6 +3,7 @@ export * from "./api/middleware";
 export * from "./providers/claude";
 export * from "./providers/shared";
 export * from "./providers/testing";
+export * from "./providers/template";
 export * from "./transports/http-sse-server";
 export * from "./transports/local";
 export * from "./transports/websocket";

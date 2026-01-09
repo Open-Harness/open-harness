@@ -1,9 +1,9 @@
 {
 	"title": "API",
 	"pages": [
-		"hub",
-		"agent",
-		"channel",
+		"runtime",
+		"node-types",
+		"transport",
 		"flow-runtime",
 		"events",
 		"node-registry",
