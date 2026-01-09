@@ -14,7 +14,7 @@
 	"scripts": {
 		"lint": "biome check . --write",
 		"typecheck": "tsc --noEmit",
-		"test": "bun test tests/"
+		"test": "vitest run"
 	},
 	"peerDependencies": {
 		"vitest": "^2.0.0",

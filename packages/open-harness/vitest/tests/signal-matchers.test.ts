@@ -1,13 +1,18 @@
 /**
  * Tests for signal matchers.
  *
- * Note: We test the signalMatchers object directly since bun:test
- * has a different expect API than vitest. setupMatchers is tested
- * separately in integration with actual vitest.
+ * These tests validate the signal matcher functions and the full
+ * integration with vitest's expect.extend().
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, it, beforeAll } from "vitest";
 import { createSignal, type Signal } from "@signals/core";
-import { signalMatchers } from "../src/matchers.js";
+import { signalMatchers, matchers } from "../src/matchers.js";
+
+// Set up matchers once before all tests using vitest's expect
+beforeAll(() => {
+	expect.extend(matchers);
+	expect.extend(signalMatchers);
+});
 
 // Helper to create test signals
 function createTestSignals(): Signal[] {
@@ -28,32 +33,32 @@ function createTestSignals(): Signal[] {
 
 describe("signalMatchers", () => {
 	describe("toContainSignal", () => {
-		test("matches exact signal name", () => {
+		it("matches exact signal name", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, "harness:start");
 			expect(result.pass).toBe(true);
 		});
 
-		test("matches signal with glob pattern", () => {
+		it("matches signal with glob pattern", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, "agent:*");
 			expect(result.pass).toBe(true);
 		});
 
-		test("matches signal with ** glob pattern", () => {
+		it("matches signal with ** glob pattern", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, "provider:**");
 			expect(result.pass).toBe(true);
 		});
 
-		test("returns false when signal not found", () => {
+		it("returns false when signal not found", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, "nonexistent:signal");
 			expect(result.pass).toBe(false);
 			expect(result.message()).toContain("no match found");
 		});
 
-		test("matches signal with name and partial payload", () => {
+		it("matches signal with name and partial payload", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, {
 				name: "analysis:complete",
@@ -62,7 +67,7 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(true);
 		});
 
-		test("matches signal with exact payload", () => {
+		it("matches signal with exact payload", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, {
 				name: "analysis:complete",
@@ -71,7 +76,7 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(true);
 		});
 
-		test("returns false when payload does not match", () => {
+		it("returns false when payload does not match", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, {
 				name: "analysis:complete",
@@ -80,7 +85,7 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(false);
 		});
 
-		test("returns false when payload value does not match", () => {
+		it("returns false when payload value does not match", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, {
 				name: "analysis:complete",
@@ -89,7 +94,7 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(false);
 		});
 
-		test("matches with regex pattern", () => {
+		it("matches with regex pattern", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toContainSignal(signals, /^provider:/);
 			expect(result.pass).toBe(true);
@@ -97,19 +102,19 @@ describe("signalMatchers", () => {
 	});
 
 	describe("toHaveSignalCount", () => {
-		test("counts matching signals correctly", () => {
+		it("counts matching signals correctly", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalCount(signals, "agent:activated", 2);
 			expect(result.pass).toBe(true);
 		});
 
-		test("counts provider signals with glob", () => {
+		it("counts provider signals with glob", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalCount(signals, "provider:*", 4);
 			expect(result.pass).toBe(true);
 		});
 
-		test("returns false when count does not match", () => {
+		it("returns false when count does not match", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalCount(signals, "agent:activated", 5);
 			expect(result.pass).toBe(false);
@@ -117,13 +122,13 @@ describe("signalMatchers", () => {
 			expect(result.message()).toContain("found 2");
 		});
 
-		test("counts zero when no matches", () => {
+		it("counts zero when no matches", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalCount(signals, "nonexistent", 0);
 			expect(result.pass).toBe(true);
 		});
 
-		test("counts with payload matcher", () => {
+		it("counts with payload matcher", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalCount(
 				signals,
@@ -135,7 +140,7 @@ describe("signalMatchers", () => {
 	});
 
 	describe("toHaveSignalsInOrder", () => {
-		test("verifies signals appear in order", () => {
+		it("verifies signals appear in order", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalsInOrder(signals, [
 				"harness:start",
@@ -147,7 +152,7 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(true);
 		});
 
-		test("detects missing signals", () => {
+		it("detects missing signals", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalsInOrder(signals, [
 				"harness:start",
@@ -158,7 +163,7 @@ describe("signalMatchers", () => {
 			expect(result.message()).toContain("missing");
 		});
 
-		test("works with glob patterns in order", () => {
+		it("works with glob patterns in order", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalsInOrder(signals, [
 				"harness:*",
@@ -169,7 +174,7 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(true);
 		});
 
-		test("handles repeated patterns finding next occurrence", () => {
+		it("handles repeated patterns finding next occurrence", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalsInOrder(signals, [
 				"provider:start",
@@ -183,7 +188,7 @@ describe("signalMatchers", () => {
 });
 
 describe("deep partial matching", () => {
-	test("matches nested objects", () => {
+	it("matches nested objects", () => {
 		const signals = [
 			createSignal("test:signal", {
 				outer: {
@@ -209,7 +214,7 @@ describe("deep partial matching", () => {
 		expect(result.pass).toBe(true);
 	});
 
-	test("matches arrays partially", () => {
+	it("matches arrays partially", () => {
 		const signals = [
 			createSignal("test:signal", {
 				items: ["a", "b", "c"],
@@ -223,5 +228,31 @@ describe("deep partial matching", () => {
 			},
 		});
 		expect(result.pass).toBe(true);
+	});
+});
+
+describe("vitest integration", () => {
+	it("works with expect().toContainSignal()", () => {
+		const signals = createTestSignals();
+		expect(signals).toContainSignal("harness:start");
+	});
+
+	it("works with expect().not.toContainSignal()", () => {
+		const signals = createTestSignals();
+		expect(signals).not.toContainSignal("nonexistent:signal");
+	});
+
+	it("works with expect().toHaveSignalCount()", () => {
+		const signals = createTestSignals();
+		expect(signals).toHaveSignalCount("agent:activated", 2);
+	});
+
+	it("works with expect().toHaveSignalsInOrder()", () => {
+		const signals = createTestSignals();
+		expect(signals).toHaveSignalsInOrder([
+			"harness:start",
+			"agent:activated",
+			"harness:end",
+		]);
 	});
 });

@@ -326,20 +326,23 @@ export const signalMatchers = {
  *
  * @example Manual setup:
  * ```ts
- * import { setupMatchers } from '@open-harness/vitest'
- * setupMatchers()
+ * import { expect } from 'vitest'
+ * import { matchers, signalMatchers } from '@open-harness/vitest'
+ * expect.extend(matchers)
+ * expect.extend(signalMatchers)
  * ```
  */
 export function setupMatchers(): void {
-	// Vitest/bun globals provide expect.extend
-	// Cast through unknown to access runtime global
+	// Try vitest's expect first (test environment)
+	// Then fall back to global expect (production environment)
 	const expectGlobal = (
 		globalThis as unknown as {
-			expect: { extend: (matchers: Record<string, unknown>) => void };
+			expect?: { extend?: (matchers: Record<string, unknown>) => void };
 		}
 	).expect;
 
-	// Extend with all matchers
-	expectGlobal.extend(matchers);
-	expectGlobal.extend(signalMatchers);
+	if (expectGlobal?.extend) {
+		expectGlobal.extend(matchers);
+		expectGlobal.extend(signalMatchers);
+	}
 }
