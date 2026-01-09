@@ -107,3 +107,12 @@ export {
 	filterSignals,
 	type SignalNode,
 } from "./debug.js";
+
+// v0.3.0 Reactive Store (E2)
+export {
+	createReactiveStore,
+	connectStoreToBus,
+	type StateChangePayload,
+	type StateChangeHandler,
+	type ReactiveStore,
+} from "./reactive-store.js";
