@@ -117,3 +117,20 @@ export {
 	type StateChangeHandler,
 	type ReactiveStore,
 } from "./reactive-store.js";
+
+// v0.3.0 Telemetry - Wide Events (E5)
+export {
+	createTelemetrySubscriber,
+	createWideEvent,
+	type TelemetryConfig,
+	type TelemetrySubscriber,
+	type TelemetryInput,
+	type HarnessWideEvent,
+	type HarnessStartEvent,
+	type HarnessErrorEvent,
+	type HarnessEvent,
+	type HarnessOutcome,
+	type TokenUsage,
+	type CostBreakdown,
+	type SamplingConfig,
+} from "./telemetry.js";
