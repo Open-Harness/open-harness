@@ -17,8 +17,8 @@
  */
 
 import type { Signal } from "@signals/core";
-import type { ReporterContext, SignalReporter } from "./reporter.js";
 import type { SignalPattern } from "./patterns.js";
+import type { ReporterContext, SignalReporter } from "./reporter.js";
 
 /**
  * Options for configuring the console reporter
@@ -74,13 +74,7 @@ export interface ConsoleReporterOptions {
  * ```
  */
 export function createConsoleReporter(options: ConsoleReporterOptions = {}): SignalReporter {
-	const {
-		patterns = ["**"],
-		verbose = false,
-		showTimestamp = false,
-		prefix = "[signal]",
-		log = console.log,
-	} = options;
+	const { patterns = ["**"], verbose = false, showTimestamp = false, prefix = "[signal]", log = console.log } = options;
 
 	return {
 		name: "console",

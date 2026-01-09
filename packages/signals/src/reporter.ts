@@ -108,11 +108,7 @@ export function attachReporter(bus: ISignalBus, reporter: SignalReporter, ctx: R
  * @param ctx - Optional context to pass to all reporters
  * @returns Unsubscribe function that detaches all reporters
  */
-export function attachReporters(
-	bus: ISignalBus,
-	reporters: SignalReporter[],
-	ctx: ReporterContext = {},
-): Unsubscribe {
+export function attachReporters(bus: ISignalBus, reporters: SignalReporter[], ctx: ReporterContext = {}): Unsubscribe {
 	const unsubscribes = reporters.map((reporter) => attachReporter(bus, reporter, ctx));
 
 	return () => {

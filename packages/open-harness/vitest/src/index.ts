@@ -39,7 +39,7 @@
  */
 
 // Matchers
-export { matchers, setupMatchers, signalMatchers, type SignalMatcher } from "./matchers.js";
+export { matchers, type SignalMatcher, setupMatchers, signalMatchers } from "./matchers.js";
 export type { GateConfig } from "./reporter.js";
 // Reporter
 export { OpenHarnessReporter } from "./reporter.js";

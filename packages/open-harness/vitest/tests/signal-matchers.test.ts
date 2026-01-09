@@ -4,9 +4,10 @@
  * These tests validate the signal matcher functions and the full
  * integration with vitest's expect.extend().
  */
-import { describe, expect, it, beforeAll } from "vitest";
+
 import { createSignal, type Signal } from "@signals/core";
-import { signalMatchers, matchers } from "../src/matchers.js";
+import { beforeAll, describe, expect, it } from "vitest";
+import { matchers, signalMatchers } from "../src/matchers.js";
 
 // Set up matchers once before all tests using vitest's expect
 beforeAll(() => {
@@ -154,23 +155,14 @@ describe("signalMatchers", () => {
 
 		it("detects missing signals", () => {
 			const signals = createTestSignals();
-			const result = signalMatchers.toHaveSignalsInOrder(signals, [
-				"harness:start",
-				"missing:signal",
-				"harness:end",
-			]);
+			const result = signalMatchers.toHaveSignalsInOrder(signals, ["harness:start", "missing:signal", "harness:end"]);
 			expect(result.pass).toBe(false);
 			expect(result.message()).toContain("missing");
 		});
 
 		it("works with glob patterns in order", () => {
 			const signals = createTestSignals();
-			const result = signalMatchers.toHaveSignalsInOrder(signals, [
-				"harness:*",
-				"agent:*",
-				"provider:*",
-				"harness:*",
-			]);
+			const result = signalMatchers.toHaveSignalsInOrder(signals, ["harness:*", "agent:*", "provider:*", "harness:*"]);
 			expect(result.pass).toBe(true);
 		});
 
@@ -249,10 +241,6 @@ describe("vitest integration", () => {
 
 	it("works with expect().toHaveSignalsInOrder()", () => {
 		const signals = createTestSignals();
-		expect(signals).toHaveSignalsInOrder([
-			"harness:start",
-			"agent:activated",
-			"harness:end",
-		]);
+		expect(signals).toHaveSignalsInOrder(["harness:start", "agent:activated", "harness:end"]);
 	});
 });

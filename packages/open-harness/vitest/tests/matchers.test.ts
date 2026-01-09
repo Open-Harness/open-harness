@@ -4,8 +4,9 @@
  * These tests validate the matcher functions directly.
  * Integration testing with expect.extend() requires vitest runtime.
  */
-import { describe, expect, it } from "vitest";
+
 import type { RunResult } from "@open-harness/core";
+import { describe, expect, it } from "vitest";
 import { matchers } from "../src/matchers.js";
 
 // Create a mock RunResult for testing

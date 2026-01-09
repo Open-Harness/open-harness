@@ -34,8 +34,8 @@
  * ```
  */
 import type { RunResult } from "@open-harness/core";
-import type { Signal } from "@signals/core";
 import { compilePattern, matchesPattern, type SignalPattern } from "@signals/bus";
+import type { Signal } from "@signals/core";
 
 // ============================================================================
 // Signal Matcher Types
@@ -280,9 +280,7 @@ export const signalMatchers = {
 		const outOfOrder: Array<{ matcher: SignalMatcher; foundAt: number; expectedAfter: number }> = [];
 
 		for (const matcher of orderedMatchers) {
-			const foundIndex = received.findIndex(
-				(signal, idx) => idx > lastIndex && signalMatches(signal, matcher),
-			);
+			const foundIndex = received.findIndex((signal, idx) => idx > lastIndex && signalMatches(signal, matcher));
 
 			if (foundIndex === -1) {
 				missing.push(matcher);
