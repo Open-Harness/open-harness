@@ -1,10 +1,10 @@
 {
-  "title": "Concepts",
-  "pages": [
-    "architecture",
-    "event-system",
-    "expressions",
-    "persistence",
-    "...design-decisions"
-  ]
+	"title": "Concepts",
+	"pages": [
+		"architecture",
+		"event-system",
+		"expressions",
+		"persistence",
+		"...design-decisions"
+	]
 }

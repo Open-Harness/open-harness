@@ -17,22 +17,26 @@ Add persistent storage so flows can be paused, resumed, and replayed.
 
 ```typescript
 import {
-  createHub,
+  createRuntime,
   SqliteRunStore,
-  executeFlow
+  parseFlowYaml
 } from "@open-harness/kernel";
 
 // Create persistent store
 const store = new SqliteRunStore("./runs.db");
 
-// Create hub with store
-const hub = createHub("session-1", { store });
+// Create runtime with store
+const runtime = createRuntime({
+  flow,
+  registry,
+  store
+});
 
 // Execute flow - events are persisted
-const result = await executeFlow(flow, registry, hub, input);
+const snapshot = await runtime.run(input);
 
-// Later: replay the run
-const events = await store.getEvents("session-1");
+// Later: retrieve the run
+const runData = await store.getRun(snapshot.runId);
 ```
 
 ## Run Store Interface

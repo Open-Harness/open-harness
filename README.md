@@ -6,7 +6,7 @@ A TypeScript monorepo for building AI agent systems using the Claude Agent SDK.
 
 Open Harness provides infrastructure for building, testing, and running multi-agent AI systems:
 
-- **kernel-v3** - Core agent execution engine with event streaming
+- **kernel** - Core agent execution engine with event streaming
 - **horizon-agent** - Multi-agent implementation system (planner, coder, reviewer)
 - **flow-ui** - Terminal UI components for agent interfaces
 
@@ -34,8 +34,7 @@ open-harness/
 │   ├── horizon-agent/    # Multi-agent TUI application
 │   └── docs/             # Documentation site
 ├── packages/
-│   ├── kernel-v3/        # Core agent execution engine
-│   ├── kernel/           # Legacy kernel (deprecated)
+│   ├── kernel/           # Core agent execution engine
 │   ├── flow-ui/          # Terminal UI components
 │   └── ...
 ├── specs/                # Feature specifications

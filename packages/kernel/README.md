@@ -1,14 +1,25 @@
-# Kernel + Flow (v2) - Spec-first Spike
+# kernel
 
-This is the **canonical, spec-first** spike for the unified kernel + flow system.
+Graph-first workflow runtime for Open Harness. This package contains only the
+runtime, compiler, and core types. UI, servers, and adapters live elsewhere.
 
-**Start here**: [docs/README.md](docs/README.md)
+## Docs
+- `src/core/README.md`
+- `src/registry/README.md`
+- `src/runtime/README.md`
+- `src/persistence/README.md`
+- `src/transport/README.md`
 
-This package contains:
-- **Canonical documentation** (`docs/`) - the source of truth
-- **Protocol types** (`src/protocol/`) - TypeScript interfaces derived from the docs
-- **Minimal examples** (to be added as needed)
+## Install
+```bash
+bun install
+```
 
-## Legacy reference
-
-The previous spike (`spikes/kernel/`) is kept as reference material. All canonical documentation and protocol definitions now live in this v2 package.
+## Scripts
+```bash
+bun run typecheck
+bun run lint
+bun run test
+bun run test:e2e
+bun run record:fixtures --flow path/to/flow.yaml --out tests/fixtures/recordings/my-flow
+```
