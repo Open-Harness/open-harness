@@ -101,32 +101,36 @@ Make sure you're running from within Claude Code.
 - Results include `output` and `metrics` (latency, cost, tokens)
 - Authentication is handled automatically
 
-## Adding Tests with Vitest
+## Adding Tests
 
-Create tests for your agent using `@open-harness/vitest`:
-
-```bash
-bun add -D vitest @open-harness/vitest
-```
+Create tests for your agent using Bun's built-in test runner:
 
 Create `agent.test.ts`:
 
 ```typescript title="agent.test.ts"
-import { test, expect } from "vitest";
-import { run, agent } from "@open-harness/vitest";
+import { describe, expect, it, beforeAll } from "bun:test";
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+// Set up provider before tests run
+beforeAll(() => {
+  setDefaultProvider(createClaudeNode());
+});
 
 const codeReviewer = agent({
   prompt: "Review code for bugs and security issues.",
 });
 
-test("catches division by zero", async () => {
-  const result = await run(codeReviewer, {
-    prompt: "function divide(a, b) { return a / b; }",
-  });
+describe("Code Reviewer", () => {
+  it("catches division by zero", async () => {
+    const result = await run(codeReviewer, {
+      prompt: "function divide(a, b) { return a / b; }",
+    });
 
-  expect(result.output).toContain("division");
-  expect(result).toHaveLatencyUnder(10000); // < 10 seconds
-  expect(result).toCostUnder(0.01); // < $0.01
+    expect(result.output).toBeDefined();
+    expect(typeof result.output).toBe("string");
+    expect(result.metrics.latencyMs).toBeGreaterThan(0);
+  }, { timeout: 180000 }); // 3 min timeout for LLM calls
 });
 ```
 
@@ -135,6 +139,10 @@ Run tests:
 ```bash
 bun test
 ```
+
+<Callout type="info" title="Test Timeouts">
+LLM calls can take 30-60 seconds. Always set appropriate timeouts for tests that call `run()`.
+</Callout>
 
 ## Next Steps
 

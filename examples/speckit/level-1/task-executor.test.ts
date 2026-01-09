@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { type Provider, run, setDefaultProvider } from "@open-harness/core";
+import { run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
 import { taskExecutor } from "./task-executor";
 
@@ -18,7 +18,7 @@ import { taskExecutor } from "./task-executor";
  */
 describe("Task Executor - Level 1", () => {
 	beforeAll(() => {
-		setDefaultProvider(createClaudeNode() as unknown as Provider);
+		setDefaultProvider(createClaudeNode());
 	});
 
 	it(

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import { type Provider, run, setDefaultProvider } from "@open-harness/core";
+import { run, setDefaultProvider } from "@open-harness/core";
 import { createClaudeNode } from "@open-harness/server";
 import { setupFixtures, withFixture } from "../test-utils";
 import { parseReviewerOutput, reviewerAgent } from "./reviewer-agent";
@@ -17,7 +17,7 @@ import { specKit } from "./speckit-harness";
  */
 describe("SpecKit - Level 5 (Full 3-Agent System)", () => {
 	beforeAll(() => {
-		setDefaultProvider(createClaudeNode() as unknown as Provider);
+		setDefaultProvider(createClaudeNode());
 		setupFixtures();
 	});
 

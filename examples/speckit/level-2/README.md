@@ -24,33 +24,40 @@ bun test:live
 
 ## How It Works
 
-```typescript
-import { run, setDefaultStore, setDefaultMode } from "@open-harness/core";
-import { FileRecordingStore } from "@open-harness/stores";
-
-// 1. Create a store
-const store = new FileRecordingStore({ directory: "./fixtures" });
-
-// 2. Set defaults (or pass to each run())
-setDefaultStore(store);
-setDefaultMode("replay");
-
-// 3. Run with fixture name
-const result = await run(myAgent, input, { fixture: "my-test" });
-```
-
-Or use the shared test utilities:
+The recommended approach is to use the shared test utilities, which handle all the setup:
 
 ```typescript
 import { setupFixtures, withFixture } from "../test-utils";
+import { run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
 
 beforeAll(() => {
-  setupFixtures();
+  setDefaultProvider(createClaudeNode());
+  setupFixtures();  // Configures the shared fixture store
 });
 
 it("runs with fixture", async () => {
   const result = await run(myAgent, input, withFixture("my-test"));
 });
+```
+
+**Note:** All fixtures in this example project are stored in the shared `examples/speckit/fixtures/` directory (not per-level directories). The `test-utils.ts` helper handles this automatically.
+
+For manual setup (if not using test-utils):
+
+```typescript
+import { run, setDefaultStore, setDefaultMode } from "@open-harness/core";
+import { FileRecordingStore } from "@open-harness/stores";
+
+// Create a store pointing to your fixtures directory
+const store = new FileRecordingStore({ directory: "./fixtures" });
+
+// Set defaults
+setDefaultStore(store);
+setDefaultMode("replay");
+
+// Run with fixture name
+const result = await run(myAgent, input, { fixture: "my-test" });
 ```
 
 ## Fixture Modes
