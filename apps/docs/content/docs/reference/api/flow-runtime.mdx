@@ -1,18 +1,98 @@
 ---
-title: Flow Runtime API
-description: Flow runtime lifecycle and inbox routing API
+title: Flow Runtime
+description: Flow execution engine API
 ---
 
-The FlowRuntime orchestrates flow execution, manages lifecycle, and routes commands to inboxes.
+# Flow Runtime
 
-## Overview
+The FlowRuntime executes flow definitions.
 
-The FlowRuntime provides:
-- Lifecycle management (start, complete, abort)
-- Phase and task helpers
-- Inbox routing for commands
+## Creating a Runtime
 
-## Learn More
+```typescript
+import { FlowRuntime } from "@open-harness/kernel";
 
-- [Flow Runtime Spec](/docs/reference/kernel-spec/spec/flow-runtime) - Complete flow runtime protocol specification
-- [Flow Execution](/docs/reference/kernel-spec/flow/execution) - Execution semantics
+const runtime = new FlowRuntime({
+  hub,
+  registry: nodeRegistry,
+  flows: [greetingFlow, analysisFlow],
+});
+```
+
+## Methods
+
+### `execute(flowId, input)`
+
+Execute a flow with input:
+
+```typescript
+const result = await runtime.execute("greeting-flow", {
+  name: "World",
+});
+```
+
+### `getFlow(flowId)`
+
+Get a flow definition:
+
+```typescript
+const flow = runtime.getFlow("greeting-flow");
+```
+
+### `listFlows()`
+
+List all registered flows:
+
+```typescript
+const flows = runtime.listFlows();
+// ["greeting-flow", "analysis-flow"]
+```
+
+## FlowRun
+
+Represents a running or completed flow:
+
+```typescript
+interface FlowRun {
+  id: string;
+  flowId: string;
+  status: "running" | "completed" | "failed";
+  input: unknown;
+  output?: unknown;
+  error?: Error;
+  startedAt: Date;
+  completedAt?: Date;
+}
+```
+
+## Execution Options
+
+```typescript
+const result = await runtime.execute("my-flow", input, {
+  // Timeout in milliseconds
+  timeout: 30000,
+
+  // Abort signal for cancellation
+  signal: abortController.signal,
+
+  // Run ID (auto-generated if not provided)
+  runId: "custom-run-id",
+});
+```
+
+## Events During Execution
+
+The runtime emits events through the Hub:
+
+| Event | When |
+|-------|------|
+| `flow:start` | Flow execution begins |
+| `node:start` | Node execution begins |
+| `node:complete` | Node execution completes |
+| `flow:complete` | Flow execution completes |
+| `flow:error` | Flow execution fails |
+
+## See Also
+
+- [Flow Definition](/docs/reference/types/flow-definition) — Flow structure
+- [Events API](/docs/reference/api/events) — Event types

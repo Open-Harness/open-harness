@@ -1,48 +1,153 @@
 ---
-title: Events API
-description: Event types and interfaces for Open Harness
+title: Events
+description: Runtime event types and structure
 ---
 
-The events API defines all event types emitted by the Open Harness kernel and flow runtime.
+# Events
 
-## Event Envelope
+All communication in Open Harness flows through typed events.
 
-All events are wrapped in an `EnrichedEvent` envelope that includes metadata and context:
+## Event Structure
 
-<TypeTable type={{
-  id: { type: "string", description: "Unique event identifier" },
-  timestamp: { type: "Date", description: "Event timestamp" },
-  context: { type: "EventContext", description: "Execution context" },
-  event: { type: "BaseEvent", description: "The event payload" }
-}} />
+```typescript
+interface RuntimeEvent {
+  type: string;
+  timestamp?: Date;
+  runId?: string;
+  nodeId?: string;
+  [key: string]: unknown;
+}
+```
 
-## Event Context
+## Flow Events
 
-The `EventContext` provides hierarchical context about where the event originated:
+### flow:start
 
-<TypeTable type={{
-  sessionId: { type: "string", description: "Session identifier" },
-  phase: { type: "{ name: string; number?: number }", description: "Optional phase context" },
-  task: { type: "{ id: string }", description: "Optional task context" },
-  agent: { type: "{ name: string; type?: string }", description: "Optional agent context" }
-}} />
+```typescript
+{
+  type: "flow:start",
+  flowId: "greeting-flow",
+  runId: "run-123",
+  input: { name: "World" }
+}
+```
 
-## Base Event Types
+### flow:complete
 
-Events are categorized into several groups:
+```typescript
+{
+  type: "flow:complete",
+  flowId: "greeting-flow",
+  runId: "run-123",
+  output: { text: "Hello, World!" }
+}
+```
 
-- **Workflow Events**: `harness:start`, `phase:start`, `task:complete`, etc.
-- **Agent Events**: `agent:start`, `agent:text`, `agent:tool:complete`, etc.
-- **Session Events**: `session:message`, `session:prompt`, `session:reply`, etc.
-- **Narrative Events**: `narrative` - Text output with importance levels
-- **Extension Events**: Custom event types
+### flow:error
 
-## TypeScript Types
+```typescript
+{
+  type: "flow:error",
+  flowId: "greeting-flow",
+  runId: "run-123",
+  error: { message: "Something went wrong" }
+}
+```
 
-For complete TypeScript type definitions, see the source file: [`packages/kernel/src/protocol/events.ts`](https://github.com/your-org/openharness/blob/main/packages/kernel/src/protocol/events.ts)
+## Node Events
 
-## Learn More
+### node:start
 
-- [Events Spec](/docs/reference/kernel-spec/spec/events) - Complete event protocol specification
-- [Event Model](/docs/concepts/event-model) - How events flow through the system
-- [Hub API](/docs/reference/api/hub) - Event bus interface
+```typescript
+{
+  type: "node:start",
+  nodeId: "greet",
+  runId: "run-123"
+}
+```
+
+### node:complete
+
+```typescript
+{
+  type: "node:complete",
+  nodeId: "greet",
+  runId: "run-123",
+  output: { text: "Hello!" }
+}
+```
+
+## Agent Events
+
+### agent:start
+
+```typescript
+{
+  type: "agent:start",
+  agentName: "claude",
+  runId: "run-123"
+}
+```
+
+### agent:text
+
+Streaming text chunks:
+
+```typescript
+{
+  type: "agent:text",
+  content: "Hello",
+  runId: "run-123"
+}
+```
+
+### agent:tool_use
+
+Tool invocation:
+
+```typescript
+{
+  type: "agent:tool_use",
+  name: "search",
+  input: { query: "..." },
+  runId: "run-123"
+}
+```
+
+### agent:complete
+
+```typescript
+{
+  type: "agent:complete",
+  output: { text: "Final response" },
+  runId: "run-123"
+}
+```
+
+### agent:error
+
+```typescript
+{
+  type: "agent:error",
+  error: { message: "Rate limited" },
+  runId: "run-123"
+}
+```
+
+## Subscribing to Events
+
+```typescript
+// Specific type
+hub.subscribe("agent:text", handler);
+
+// Wildcard
+hub.subscribe("agent:*", handler);
+
+// All events
+hub.subscribe("*", handler);
+```
+
+## See Also
+
+- [RuntimeEvent Type](/docs/reference/types/runtime-event) — Full type definition
+- [Hub API](/docs/reference/api/hub) — Event emission

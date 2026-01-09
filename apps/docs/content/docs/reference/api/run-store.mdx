@@ -1,0 +1,100 @@
+---
+title: Run Store
+description: Persistence interface for flow runs
+---
+
+# Run Store
+
+The RunStore interface defines persistence for flow execution.
+
+## Interface
+
+```typescript
+interface RunStore {
+  saveEvent(runId: string, event: RuntimeEvent): Promise<void>;
+  getEvents(runId: string): Promise<RuntimeEvent[]>;
+  getRun(runId: string): Promise<RunMetadata | null>;
+  listRuns(options?: ListOptions): Promise<RunMetadata[]>;
+}
+```
+
+## RunMetadata
+
+```typescript
+interface RunMetadata {
+  id: string;
+  flowId: string;
+  status: "running" | "completed" | "failed";
+  startedAt: Date;
+  completedAt?: Date;
+  input?: unknown;
+  output?: unknown;
+}
+```
+
+## Built-in Stores
+
+### MemoryRunStore
+
+In-memory storage (development only):
+
+```typescript
+import { MemoryRunStore } from "@open-harness/kernel";
+
+const store = new MemoryRunStore();
+```
+
+### SqliteRunStore
+
+Persistent SQLite storage:
+
+```typescript
+import { SqliteRunStore } from "@open-harness/kernel";
+
+const store = new SqliteRunStore("./data/runs.db");
+```
+
+## Custom Store
+
+Implement the interface for custom backends:
+
+```typescript
+class PostgresRunStore implements RunStore {
+  async saveEvent(runId: string, event: RuntimeEvent) {
+    await this.pool.query(
+      "INSERT INTO events (run_id, data) VALUES ($1, $2)",
+      [runId, JSON.stringify(event)]
+    );
+  }
+
+  async getEvents(runId: string) {
+    const result = await this.pool.query(
+      "SELECT data FROM events WHERE run_id = $1 ORDER BY id",
+      [runId]
+    );
+    return result.rows.map((r) => JSON.parse(r.data));
+  }
+
+  async getRun(runId: string) {
+    // Implementation
+  }
+
+  async listRuns(options?: ListOptions) {
+    // Implementation
+  }
+}
+```
+
+## Usage with Hub
+
+```typescript
+const hub = createHub("session", {
+  store: new SqliteRunStore("./runs.db"),
+  registry,
+});
+```
+
+## See Also
+
+- [Persistence Guide](/docs/guides/deployment/persistence) — Configuration guide
+- [Production Deployment](/docs/guides/deployment/production) — Deployment checklist

@@ -1,0 +1,86 @@
+---
+title: Conditional Expressions
+description: Control flow execution with JSONata conditions
+---
+
+# Conditional Expressions
+
+Use JSONata expressions to control which paths your flow takes.
+
+## Edge Conditions
+
+Add conditions to edges to create branching logic:
+
+```yaml
+nodes:
+  - id: classify
+    type: claude.agent
+    input:
+      prompt: "Classify as 'bug' or 'feature': {{ flow.input.text }}"
+
+  - id: handle-bug
+    type: claude.agent
+    input:
+      prompt: "Triage this bug report"
+
+  - id: handle-feature
+    type: claude.agent
+    input:
+      prompt: "Write a feature spec"
+
+edges:
+  - from: classify
+    to: handle-bug
+    condition: "{{ nodes.classify.output.text = 'bug' }}"
+
+  - from: classify
+    to: handle-feature
+    condition: "{{ nodes.classify.output.text = 'feature' }}"
+```
+
+## Comparison Operators
+
+```yaml
+# Equality
+condition: "{{ flow.input.type = 'premium' }}"
+
+# Numeric comparison
+condition: "{{ nodes.score.output.value > 0.8 }}"
+
+# Boolean logic
+condition: "{{ flow.input.urgent and flow.input.priority > 5 }}"
+
+# String contains
+condition: "{{ $contains(flow.input.text, 'error') }}"
+```
+
+## Ternary Expressions
+
+Use inline conditionals in bindings:
+
+```yaml
+input:
+  prompt: |
+    {{
+      flow.input.priority > 5
+        ? "URGENT: " & flow.input.message
+        : flow.input.message
+    }}
+```
+
+## Default Values
+
+Handle missing data gracefully:
+
+```yaml
+# Fallback if field is missing
+name: "{{ flow.input.name ? flow.input.name : 'Anonymous' }}"
+
+# Null coalescing pattern
+config: "{{ flow.input.config ? flow.input.config : {} }}"
+```
+
+## Next Steps
+
+- [Iteration](/docs/guides/expressions/iteration) — Loop over arrays
+- [JSONata Functions](/docs/reference/expressions/functions) — Built-in functions

@@ -1,258 +1,103 @@
 ---
-title: Hub / createHub
-description: Unified event bus for publishing events and receiving commands
+title: Hub
+description: Central event bus and coordination API
 ---
 
 # Hub
 
-The Hub is the central event bus providing bidirectional communication: events out, commands in. It uses AsyncLocalStorage for automatic context propagation.
+The Hub is the central nervous system of your flow runtime.
 
-## createHub
-
-Creates a standalone Hub instance.
-
-### Signature
-
-```typescript
-function createHub(sessionId?: string): Hub
-```
-
-### Parameters
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `sessionId` | `string` | No | `session-{timestamp}` | Unique session identifier |
-
-### Returns
-
-`Hub` - Event bus instance.
-
-### Example
+## Creating a Hub
 
 ```typescript
 import { createHub } from "@open-harness/kernel";
 
-const hub = createHub("my-session-123");
-
-// Subscribe to all events
-hub.subscribe((event) => {
-  console.log(event.event.type, event.context);
+const hub = createHub("session-123", {
+  store: sqliteStore,
+  registry: nodeRegistry,
 });
-
-// Emit an event
-hub.emit({ type: "narrative", text: "Processing started" });
-```
-
-## Hub Interface
-
-```typescript
-interface Hub extends AsyncIterable<EnrichedEvent> {
-  // Events out
-  subscribe(listener: EventListener): Unsubscribe;
-  subscribe(filter: EventFilter, listener: EventListener): Unsubscribe;
-  emit(event: BaseEvent, override?: Partial<EventContext>): void;
-  scoped<T>(context: Partial<EventContext>, fn: () => T | Promise<T>): T | Promise<T>;
-  current(): EventContext;
-
-  // Commands in
-  send(message: string): void;
-  sendTo(agent: string, message: string): void;
-  sendToRun(runId: string, message: string): void;
-  reply(promptId: string, response: UserResponse): void;
-  abort(options?: PauseOptions): void;
-  resume(sessionId: string, message: string): Promise<void>;
-
-  // Session state
-  getPausedSession(sessionId: string): SessionState | undefined;
-
-  // Status
-  readonly status: HubStatus;
-  readonly sessionActive: boolean;
-}
 ```
 
 ## Methods
 
-### subscribe
+### `start()`
 
-Subscribe to events with optional filtering.
+Start the hub and all registered channels.
 
 ```typescript
-// Subscribe to all events
-const unsubscribe = hub.subscribe((event) => {
-  console.log(event);
-});
-
-// Subscribe to specific event type
-hub.subscribe("agent:complete", (event) => {
-  console.log("Agent finished:", event.event);
-});
-
-// Subscribe to multiple types
-hub.subscribe(["agent:start", "agent:complete"], (event) => {
-  console.log("Agent lifecycle:", event.event.type);
-});
-
-// Unsubscribe
-unsubscribe();
+await hub.start();
 ```
 
-### emit
+### `stop()`
 
-Emit an event to all matching subscribers.
+Gracefully stop the hub.
+
+```typescript
+await hub.stop();
+```
+
+### `emit(event)`
+
+Emit an event to all subscribers.
 
 ```typescript
 hub.emit({
-  type: "narrative",
-  text: "Step completed",
-  importance: "high",
-});
-
-// With context override
-hub.emit(
-  { type: "task:complete", taskId: "step-1", result: data },
-  { task: { id: "step-1" } }
-);
-```
-
-### scoped
-
-Execute a function with additional context that propagates to all events emitted within.
-
-```typescript
-await hub.scoped({ phase: { name: "Analysis" } }, async () => {
-  // All events emitted here include phase context
-  hub.emit({ type: "narrative", text: "Analyzing..." });
-  await doWork();
+  type: "custom:event",
+  data: { message: "Hello" },
 });
 ```
 
-### current
+### `subscribe(type, handler)`
 
-Get the current event context (from AsyncLocalStorage).
+Subscribe to events by type. Returns unsubscribe function.
 
 ```typescript
-const ctx = hub.current();
-console.log(ctx.sessionId, ctx.phase?.name, ctx.task?.id);
+const unsubscribe = hub.subscribe("agent:text", (event) => {
+  console.log(event.event.content);
+});
+
+// Later
+unsubscribe();
 ```
 
-### send / sendTo / sendToRun
+### `registerChannel(channel)`
 
-Send messages into the workflow (for interactive sessions).
+Register a channel for bidirectional communication.
 
 ```typescript
-// Send to current session
-hub.send("User feedback here");
-
-// Send to specific agent
-hub.sendTo("writer", "Please revise");
-
-// Send to specific run
-hub.sendToRun("run-123", "Additional input");
+hub.registerChannel(wsChannel);
 ```
 
-### reply
+### `startFlow(flowId, input)`
 
-Reply to a prompt (for interactive sessions).
+Start a flow execution.
 
 ```typescript
-hub.reply("prompt-456", {
-  content: "Yes, proceed",
-  choice: "confirm",
-  timestamp: new Date(),
+const runId = await hub.startFlow("my-flow", {
+  name: "World",
 });
 ```
 
-### abort
+### `sendToRun(runId, message)`
 
-Abort or pause the current session.
-
-```typescript
-// Abort permanently
-hub.abort({ reason: "User cancelled" });
-
-// Pause for later resumption
-hub.abort({ reason: "User requested pause", resumable: true });
-```
-
-#### PauseOptions
+Send a message to a running flow.
 
 ```typescript
-interface PauseOptions {
-  reason?: string;      // Optional reason for abort/pause
-  resumable?: boolean;  // If true, session can be resumed later
-}
+hub.sendToRun(runId, {
+  type: "user_message",
+  content: "Continue with that",
+});
 ```
 
-### resume
+## Properties
 
-Resume a paused session with a user message.
-
-```typescript
-await hub.resume("session-123", "Continue with the analysis");
-```
-
-Throws `SessionNotFoundError` if session doesn't exist or `SessionAlreadyRunningError` if already running.
-
-### getPausedSession
-
-Get the state of a paused session.
-
-```typescript
-const state = hub.getPausedSession("session-123");
-if (state) {
-  console.log(`Paused at node: ${state.currentNodeId}`);
-  console.log(`Paused at: ${state.pausedAt}`);
-}
-```
-
-#### SessionState
-
-```typescript
-interface SessionState {
-  sessionId: string;
-  flowName: string;
-  currentNodeId: string;
-  currentNodeIndex: number;
-  outputs: Record<string, unknown>;
-  pendingMessages: string[];
-  pausedAt: Date;
-  pauseReason?: string;
-}
-```
-
-## Async Iteration
-
-Hub implements `AsyncIterable` for streaming events:
-
-```typescript
-for await (const event of hub) {
-  console.log(event.event.type);
-  if (event.event.type === "harness:complete") break;
-}
-```
-
-## Event Filtering
-
-| Filter | Description |
-|--------|-------------|
-| `"*"` | All events |
-| `"agent:start"` | Exact type match |
-| `["agent:start", "agent:complete"]` | Multiple types |
-
-## Status
-
-| Status | Description |
-|--------|-------------|
-| `"idle"` | Not started or stopped |
-| `"running"` | Execution in progress |
-| `"paused"` | Paused and resumable |
-| `"complete"` | Finished successfully |
-| `"aborted"` | Cancelled by user |
+| Property | Type | Description |
+|----------|------|-------------|
+| `sessionId` | `string` | Unique session identifier |
+| `store` | `RunStore` | Persistence layer |
+| `registry` | `NodeRegistry` | Registered node types |
 
 ## See Also
 
-- [EventContext](/docs/reference/types/event-context) - Context structure
-- [BaseEvent](/docs/reference/types/base-event) - Event types
-- [EnrichedEvent](/docs/reference/types/enriched-event) - Event envelope
-- [Hub Spec](/docs/reference/kernel-spec/spec/hub) - Complete protocol specification
+- [Events API](/docs/reference/api/events) — Event types
+- [Channel API](/docs/reference/api/channel) — Channel interface

@@ -1,0 +1,78 @@
+---
+title: WebSocket Channel
+description: Set up real-time communication with WebSocket
+---
+
+# WebSocket Channel
+
+Connect browser clients to your flows via WebSocket.
+
+## Server Setup
+
+```typescript
+import { createHub, WebSocketChannel } from "@open-harness/kernel";
+import { WebSocketServer } from "ws";
+
+const hub = createHub("session-1");
+const wss = new WebSocketServer({ port: 8080 });
+
+// Create WebSocket channel
+const wsChannel = new WebSocketChannel(wss);
+hub.registerChannel(wsChannel);
+
+// Start hub
+await hub.start();
+```
+
+## Client Connection
+
+```typescript
+const ws = new WebSocket("ws://localhost:8080");
+
+ws.onmessage = (event) => {
+  const hubEvent = JSON.parse(event.data);
+
+  if (hubEvent.type === "agent:text") {
+    console.log(hubEvent.content);
+  }
+};
+
+// Send commands
+ws.send(JSON.stringify({
+  type: "flow:start",
+  flowId: "greeting-flow",
+  input: { name: "World" }
+}));
+```
+
+## Event Filtering
+
+Only broadcast specific events:
+
+```typescript
+const wsChannel = new WebSocketChannel(wss, {
+  filter: (event) => {
+    // Only send agent and node events
+    return event.type.startsWith("agent:") ||
+           event.type.startsWith("node:");
+  }
+});
+```
+
+## Authentication
+
+```typescript
+wss.on("connection", (ws, req) => {
+  const token = req.headers.authorization;
+
+  if (!validateToken(token)) {
+    ws.close(1008, "Unauthorized");
+    return;
+  }
+});
+```
+
+## Next Steps
+
+- [Custom Channels](/docs/guides/channels/custom-channels) — Build your own channel
+- [Channel API](/docs/reference/api/channel) — Channel interface

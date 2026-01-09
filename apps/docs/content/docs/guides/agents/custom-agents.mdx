@@ -1,0 +1,95 @@
+---
+title: Custom Agents
+description: Build your own agent implementations
+---
+
+# Custom Agents
+
+Create custom agents that integrate with any LLM or service.
+
+## Agent Interface
+
+```typescript
+interface AgentDefinition<TIn = unknown, TOut = unknown> {
+  name: string;
+  execute(input: TIn, ctx: AgentContext): Promise<TOut>;
+}
+
+interface AgentContext {
+  hub: Hub;
+  runId: string;
+  abortSignal?: AbortSignal;
+}
+```
+
+## Basic Agent
+
+```typescript
+import { defineAgent } from "@open-harness/kernel";
+import { z } from "zod";
+
+export const echoAgent = defineAgent({
+  name: "echo",
+  inputSchema: z.object({ message: z.string() }),
+  outputSchema: z.object({ echoed: z.string() }),
+
+  async execute(input, ctx) {
+    ctx.hub.emit({ type: "agent:start", agentName: "echo" });
+
+    const result = { echoed: `Echo: ${input.message}` };
+
+    ctx.hub.emit({ type: "agent:complete", output: result });
+    return result;
+  }
+});
+```
+
+## Streaming Agent
+
+```typescript
+export const streamingAgent = defineAgent({
+  name: "streaming",
+
+  async execute(input, ctx) {
+    const response = await fetch("https://api.example.com/stream", {
+      method: "POST",
+      body: JSON.stringify(input),
+      signal: ctx.abortSignal,
+    });
+
+    const reader = response.body.getReader();
+    let fullText = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = new TextDecoder().decode(value);
+      fullText += text;
+
+      // Stream each chunk
+      ctx.hub.emit({ type: "agent:text", content: text });
+    }
+
+    return { text: fullText };
+  }
+});
+```
+
+## Register and Use
+
+```typescript
+const registry = new NodeRegistry();
+registry.register(echoAgent);
+
+// In flow.yaml
+// - id: echo
+//   type: echo
+//   input:
+//     message: "{{ flow.input.text }}"
+```
+
+## Next Steps
+
+- [Claude Agent](/docs/guides/agents/claude-agent) — Configure the built-in Claude agent
+- [Events API](/docs/reference/api/events) — Event types for agents
