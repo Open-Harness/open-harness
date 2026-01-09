@@ -1,0 +1,8 @@
+{
+  "metadata": {
+    "providerType": "agent",
+    "createdAt": "2026-01-09T11:39:39.155Z",
+    "inputHash": "467cb291"
+  },
+  "output": "To create a dashboard widget for you, I need some more information:\n\n1. **Widget Type**: What kind of widget do you need?\n   - Data visualization (chart/graph)\n   - Statistics/metrics card (KPIs, numbers)\n   - Activity feed/list\n   - Interactive control panel\n\n2. **Technology Stack**: What framework/technology should I use?\n   - React\n   - Vue.js\n   - Vanilla JavaScript/HTML/CSS\n   - Angular\n   - Other?\n\n3. **Data Source**: Should it use:\n   - Static/mock data\n   - API integration\n   - Real-time data\n\n4. **Specific Requirements**: Any particular features, styling, or data you want to display?\n\nPlease let me know your preferences, and I'll create the widget for you!"
+}

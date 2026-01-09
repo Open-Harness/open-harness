@@ -39,7 +39,7 @@ import type {
 	FixtureStore,
 } from "./types.js";
 import { isAgent, isHarness } from "./types.js";
-import { getDefaultProvider } from "./defaults.js";
+import { getDefaultProvider, getDefaultMode, getDefaultStore } from "./defaults.js";
 import type { HarnessWithFlow } from "./harness.js";
 import type { NodeRunContext } from "../nodes/registry.js";
 import type { RuntimeEventPayload, StateStore } from "../state/index.js";
@@ -60,7 +60,7 @@ function getEnvVar(name: string): string | undefined {
 /**
  * Get the fixture mode from options or environment variable.
  *
- * Priority: explicit option > FIXTURE_MODE env var > "live"
+ * Priority: explicit option > FIXTURE_MODE env var > default mode > "live"
  */
 function getFixtureMode(options?: RunOptions): FixtureMode {
 	if (options?.mode) {
@@ -72,7 +72,8 @@ function getFixtureMode(options?: RunOptions): FixtureMode {
 		return envMode;
 	}
 
-	return "live";
+	// Use default mode from setDefaultMode(), which returns "live" if not set
+	return getDefaultMode();
 }
 
 /**
@@ -526,18 +527,25 @@ export async function run<TOutput = unknown>(
 	input: unknown,
 	options?: RunOptions,
 ): Promise<RunResult<TOutput>> {
+	// Merge with defaults: use default store if not provided
+	const store = options?.store ?? getDefaultStore();
+	const effectiveOptions: RunOptions | undefined = store
+		? { ...options, store }
+		: options;
+
 	// Validate fixture options
-	if (options?.fixture && !options?.store && options?.mode !== "live") {
+	const mode = getFixtureMode(effectiveOptions);
+	if (effectiveOptions?.fixture && !effectiveOptions?.store && mode !== "live") {
 		throw new Error("Store is required when using fixture with record or replay mode");
 	}
 
 	// Dispatch based on target type
 	if (isAgent(target)) {
-		return runAgent(target as Agent<TOutput>, input, options);
+		return runAgent(target as Agent<TOutput>, input, effectiveOptions);
 	}
 
 	if (isHarness(target)) {
-		return runHarness(target, input, options);
+		return runHarness(target, input, effectiveOptions);
 	}
 
 	throw new Error("Target must be an Agent or Harness");

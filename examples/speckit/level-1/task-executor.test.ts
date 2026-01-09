@@ -4,15 +4,17 @@ import { createClaudeNode } from "@open-harness/server";
 import { taskExecutor } from "./task-executor";
 
 /**
- * Level 1 Tests: Basic Task Executor Agent
+ * Level 1: Basic Agent
+ *
+ * The simplest possible agent - just prompt + run.
+ * This level intentionally has no fixtures to keep the example minimal.
+ *
+ * See Level 2 for fixture recording/replay (the recommended pattern).
  *
  * Demonstrates:
  * - Creating an agent with agent()
  * - Running an agent with run()
  * - Getting text output and metrics
- *
- * Note: Claude Code SDK tests can take 1-2 minutes due to subprocess overhead.
- * In production, use fixtures (Level 6) for fast CI runs.
  */
 describe("Task Executor - Level 1", () => {
 	beforeAll(() => {

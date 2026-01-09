@@ -4,10 +4,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"test": "echo 'Use test:live to run live tests against Claude API' && exit 0",
-		"test:live": "bun test --timeout 300000",
+		"test": "bun test --timeout 60000",
+		"test:live": "FIXTURE_MODE=live bun test --timeout 300000",
 		"test:record": "FIXTURE_MODE=record bun test --timeout 300000",
-		"test:replay": "FIXTURE_MODE=replay bun test --timeout 60000",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

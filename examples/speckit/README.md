@@ -8,20 +8,35 @@ system that transforms PRDs into implemented code.
 ```bash
 cd examples/speckit
 bun install
-bun test level-1/
+
+# Record fixtures first (one-time)
+bun test:record
+
+# Run tests (uses fixtures, fast and free)
+bun test
 ```
+
+## Running Tests
+
+| Command | What it does | Cost |
+|---------|--------------|------|
+| `bun test` | Replay from fixtures | $0 |
+| `bun test:record` | Execute live, save fixtures | ~$0.14 |
+| `bun test:live` | Execute live, no fixtures | ~$0.14 |
+
+**Key insight:** Fixtures are introduced at Level 2 because they're a **core feature**, not an advanced one. Every production use of Open Harness should use fixture recording for testing.
 
 ## Levels
 
-| Level | Concept | Lines | Run |
-|-------|---------|-------|-----|
-| 1 | Basic agent + text output | ~15 | `bun test level-1/` |
-| 2 | Agent with state | ~25 | `bun test level-2/` |
-| 3 | Self-validation loop | ~80 | `bun test level-3/` |
-| 4 | Multi-agent harness | ~60 | `bun test level-4/` |
-| 5 | Full 3-agent system | ~80 | `bun test level-5/` |
-| 6 | Fixtures + replay | ~60 | `bun test level-6/` |
-| 7 | Model comparison + CI | ~80 | `bun test level-7/` |
+| Level | Concept | Uses Fixtures? |
+|-------|---------|----------------|
+| 1 | Basic agent | No (minimal example) |
+| 2 | **State + Fixtures** | Yes |
+| 3 | Self-validation loop | Yes |
+| 4 | Multi-agent harness | Yes |
+| 5 | Full 3-agent system | Yes |
+| 6 | Advanced fixture patterns | Yes |
+| 7 | Model comparison + CI | Yes |
 
 ## What You'll Learn
 
@@ -38,15 +53,22 @@ const taskExecutor = agent({
 const result = await run(taskExecutor, { prompt: "Implement email validation" })
 ```
 
-### Level 2: Agent with State
-Add state that persists across invocations.
+### Level 2: State + Fixtures
+Add state AND learn the fixture recording pattern.
 
 ```typescript
-const taskExecutor = agent({
-  prompt: `You are a task planning assistant...`,
-  state: { tasksProcessed: 0 }
+import { setupFixtures, withFixture } from "../test-utils"
+
+beforeAll(() => {
+  setupFixtures()  // Sets default store + replay mode
+})
+
+it("runs with fixture", async () => {
+  const result = await run(taskExecutor, input, withFixture("my-test"))
 })
 ```
+
+See [level-2/README.md](./level-2/README.md) for full fixture documentation.
 
 ### Level 3: Self-Validation Loop
 Agents can validate their own output and iterate until quality thresholds are met.
@@ -65,16 +87,8 @@ const specKit = harness({
 ### Level 5: Full 3-Agent System
 Complete PRD → Spec → Coder → Reviewer workflow.
 
-### Level 6: Fixtures + Replay
-Record and replay agent responses for deterministic testing.
-
-```bash
-# Record fixtures
-FIXTURE_MODE=record bun test level-6/
-
-# Replay in CI (no API calls)
-FIXTURE_MODE=replay bun test level-6/
-```
+### Level 6: Advanced Fixture Patterns
+More fixture patterns: variants, selective recording, fixture inspection.
 
 ### Level 7: CI Quality Gates
 Set thresholds for latency, cost, and quality in CI.
@@ -85,26 +99,30 @@ Set thresholds for latency, cost, and quality in CI.
 PRD → [Spec Agent] → tasks → [Coding Agent] → code → [Reviewer Agent] → approval
 ```
 
-## Important Notes
-
-- **Test Duration**: Claude Code SDK tests take 1-3 minutes due to subprocess overhead
-- **Timeouts**: All integration tests use 180s+ timeouts
-- **Fixtures**: Level 6+ shows how to record/replay for fast CI
-- **Token Counts**: Show 0 due to subscription auth (expected)
-- **Costs**: Are tracked per run for budget monitoring
-
-## Running All Tests
+## Fixture Workflow
 
 ```bash
-# Run all levels (takes ~15-20 minutes)
+# 1. Record fixtures (first time or after prompt changes)
+bun test:record
+
+# 2. Commit fixtures to git
+git add fixtures/
+git commit -m "Update test fixtures"
+
+# 3. Run tests (uses fixtures)
 bun test
 
-# Run specific level
-bun test level-3/
-
-# Run with fixture replay (fast, no API calls)
-FIXTURE_MODE=replay bun test level-6/
+# 4. In CI
+bun test  # Fast, free, deterministic
 ```
+
+## Important Notes
+
+- **Test Duration**: Live tests take 1-3 minutes due to Claude SDK overhead
+- **Fixtures**: Make tests instant and free after initial recording
+- **Timeouts**: Integration tests use 180s+ timeouts for live mode
+- **Token Counts**: Show 0 due to subscription auth (expected)
+- **Costs**: Are tracked per run for budget monitoring
 
 ## Learn More
 
