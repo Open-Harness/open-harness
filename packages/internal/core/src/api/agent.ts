@@ -2,19 +2,15 @@
  * Agent factory function.
  *
  * Creates an Agent from configuration. Agents are the fundamental building
- * blocks of Open Harness - they have identity, make decisions, and
- * optionally maintain state.
+ * blocks of Open Harness - they have identity and make decisions.
+ *
+ * Agents are stateless - state lives on the harness level.
+ * Agents are guard-less - use specific signal patterns or harness edges for control flow.
  *
  * @example
  * ```ts
  * // Simple agent
  * const helper = agent({ prompt: "You are a helpful assistant." })
- *
- * // Agent with state
- * const chatbot = agent({
- *   prompt: "You are a conversational assistant.",
- *   state: { history: [] },
- * })
  *
  * // Agent with structured output
  * const analyzer = agent({
@@ -44,7 +40,7 @@ import type { Agent, AgentConfig, ReactiveAgent } from "./types.js";
  * When `activateOn` is specified, the agent becomes a ReactiveAgent that can
  * respond to signals in a reactive workflow.
  *
- * @param config - Agent configuration including prompt and optional state/output
+ * @param config - Agent configuration including prompt and optional output
  * @returns An Agent or ReactiveAgent instance ready for execution
  *
  * @example
@@ -64,9 +60,9 @@ import type { Agent, AgentConfig, ReactiveAgent } from "./types.js";
  * const result = await runReactive(reactiveAgent, { data: "..." })
  * ```
  */
-export function agent<TOutput = unknown, TState = Record<string, unknown>>(
-	config: AgentConfig<TOutput, TState>,
-): Agent<TOutput, TState> | ReactiveAgent<TOutput, TState> {
+export function agent<TOutput = unknown>(
+	config: AgentConfig<TOutput>,
+): Agent<TOutput> | ReactiveAgent<TOutput> {
 	// Base agent structure
 	const base = {
 		_tag: "Agent" as const,

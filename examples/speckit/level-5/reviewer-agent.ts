@@ -96,8 +96,7 @@ One of:
 - REJECTED: Has blockers or multiple unmet criteria
 
 Be thorough but fair. Don't reject for minor issues if core functionality works.`,
-
-	state: initialReviewerState,
+	// Note: State lives on the harness, not the agent
 });
 
 /**

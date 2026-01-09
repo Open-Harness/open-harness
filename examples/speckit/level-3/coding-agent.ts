@@ -77,8 +77,7 @@ One of:
 - BLOCKED: Cannot complete (explain why)
 
 Be critical of your own work. It's better to catch issues now than deploy broken code.`,
-
-	state: initialState,
+	// Note: State lives on the harness, not the agent
 });
 
 /**

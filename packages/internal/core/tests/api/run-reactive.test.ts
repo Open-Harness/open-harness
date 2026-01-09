@@ -83,14 +83,12 @@ describe("agent() with reactive properties", () => {
 			prompt: "Analyze data",
 			activateOn: ["harness:start", "data:updated"],
 			emits: ["analysis:complete"],
-			when: (ctx) => ctx.input !== null,
 			signalProvider: provider,
 		});
 
 		expect(isReactiveAgent(myAgent)).toBe(true);
 		expect(myAgent.config.activateOn).toEqual(["harness:start", "data:updated"]);
 		expect(myAgent.config.emits).toEqual(["analysis:complete"]);
-		expect(myAgent.config.when).toBeDefined();
 		expect(myAgent.config.signalProvider).toBe(provider);
 	});
 });
@@ -158,47 +156,6 @@ describe("runReactive", () => {
 		expect(signalNames).toContain(PROVIDER_SIGNALS.TEXT_DELTA);
 		expect(signalNames).toContain(PROVIDER_SIGNALS.TEXT_COMPLETE);
 		expect(signalNames).toContain(PROVIDER_SIGNALS.END);
-	});
-
-	test("respects when guard - blocks activation", async () => {
-		const myAgent = agent({
-			prompt: "Only run with valid input",
-			activateOn: ["harness:start"],
-			when: (ctx) => ctx.input !== null,
-			signalProvider: createMockProvider("Should not run"),
-		});
-
-		if (!isReactiveAgent(myAgent)) {
-			throw new Error("Expected ReactiveAgent");
-		}
-
-		// Should NOT activate when input is null
-		const result = await runReactive(myAgent, null);
-
-		expect(result.metrics.activations).toBe(0);
-		const signalNames = result.signals.map((s) => s.name);
-		expect(signalNames).toContain("agent:blocked");
-		expect(signalNames).not.toContain("agent:activated");
-	});
-
-	test("respects when guard - allows activation", async () => {
-		const myAgent = agent({
-			prompt: "Only run with valid input",
-			activateOn: ["harness:start"],
-			when: (ctx) => ctx.input !== null,
-			signalProvider: createMockProvider("Running"),
-		});
-
-		if (!isReactiveAgent(myAgent)) {
-			throw new Error("Expected ReactiveAgent");
-		}
-
-		// Should activate when input is not null
-		const result = await runReactive(myAgent, "valid input");
-
-		expect(result.metrics.activations).toBe(1);
-		const signalNames = result.signals.map((s) => s.name);
-		expect(signalNames).toContain("agent:activated");
 	});
 
 	test("emits declared signals from emits array", async () => {

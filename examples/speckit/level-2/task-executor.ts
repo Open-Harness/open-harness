@@ -22,7 +22,5 @@ export const taskExecutor = agent({
 	prompt: `You are a task planning assistant.
 Given a task description, create a brief implementation plan.
 Format: numbered list of 3-5 steps.`,
-
-	// Simple state
-	state: initialState,
+	// Note: State lives on the harness, not the agent
 });

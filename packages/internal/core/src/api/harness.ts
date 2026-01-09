@@ -45,6 +45,7 @@ const AGENT_NODE_TYPE = "agent";
 
 /**
  * Build a NodeDefinition from an Agent and its key.
+ * Note: Agents are stateless. State lives on the harness level.
  */
 function buildNodeDefinition(agentId: string, agentDef: Agent): NodeDefinition {
 	return {
@@ -52,7 +53,6 @@ function buildNodeDefinition(agentId: string, agentDef: Agent): NodeDefinition {
 		type: AGENT_NODE_TYPE,
 		input: {
 			prompt: agentDef.config.prompt,
-			state: agentDef.config.state,
 			output: agentDef.config.output,
 		},
 	};

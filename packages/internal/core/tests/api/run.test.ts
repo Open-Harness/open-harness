@@ -130,18 +130,8 @@ describe("api/run", () => {
 			expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(150);
 		});
 
-		it("should preserve agent state in result", async () => {
-			const myAgent = agent({
-				prompt: "Stateful agent",
-				state: { counter: 0, history: [] },
-			});
-
-			const result = await run(myAgent, { prompt: "Test" });
-
-			expect(result.state).toEqual({ counter: 0, history: [] });
-		});
-
-		it("should return undefined state for stateless agent", async () => {
+		it("should return undefined state for agents (agents are stateless)", async () => {
+			// In v0.3.0, agents are stateless - state lives on the harness
 			const myAgent = agent({ prompt: "Stateless agent" });
 
 			const result = await run(myAgent, { prompt: "Test" });

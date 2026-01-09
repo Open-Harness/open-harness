@@ -11,8 +11,7 @@
  *
  * v0.3.0 (Reactive):
  * - `runReactive()` - Execute a reactive agent in a signal-driven environment
- * - `ReactiveAgent` - Agent with activateOn/emits/when
- * - `ActivationContext` - Context passed to guard functions
+ * - `ReactiveAgent` - Agent with activateOn/emits
  *
  * @example
  * ```ts
@@ -48,7 +47,6 @@ export type {
 	Provider,
 	// v0.3.0 Reactive types
 	ReactiveAgent,
-	ActivationContext,
 } from "./types.js";
 
 // Type guards

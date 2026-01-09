@@ -86,8 +86,7 @@ One of:
 - BLOCKED: Cannot complete (e.g., missing information)
 
 Be thorough in your validation. Missing a criterion is worse than admitting a failure.`,
-
-	state: initialCodingState,
+	// Note: State lives on the harness, not the agent
 });
 
 /**

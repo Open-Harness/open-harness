@@ -316,7 +316,8 @@ async function runAgent<TOutput>(
 		}
 		return {
 			output: recording.output as TOutput,
-			state: agent.config.state as Record<string, unknown> | undefined,
+			// Agents are stateless - state lives on harness level
+			state: undefined,
 			metrics: {
 				latencyMs: 0, // Replay is instant
 				cost: 0,
@@ -329,8 +330,8 @@ async function runAgent<TOutput>(
 	// LIVE or RECORD MODE: Execute the provider
 	const provider = getProvider(options);
 
-	// Create execution context
-	const stateStore = createMinimalStateStore(agent.config.state as Record<string, unknown>);
+	// Create execution context (agents are stateless, use empty state)
+	const stateStore = createMinimalStateStore({});
 	const ctx = createRunContext("agent", stateStore);
 
 	// Build provider input
@@ -354,7 +355,8 @@ async function runAgent<TOutput>(
 
 	return {
 		output,
-		state: agent.config.state as Record<string, unknown> | undefined,
+		// Agents are stateless - state lives on harness level
+		state: undefined,
 		metrics,
 		fixtures: fixtures.length > 0 ? fixtures : undefined,
 	};

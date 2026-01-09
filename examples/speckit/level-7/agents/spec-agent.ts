@@ -89,8 +89,7 @@ Important guidelines:
 - Order tasks by dependency (prerequisites first)
 - Be specific - vague tasks are useless
 - Don't create too many tiny tasks - group related work`,
-
-	state: initialSpecState,
+	// Note: State lives on the harness, not the agent
 });
 
 /**

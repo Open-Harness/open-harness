@@ -34,7 +34,7 @@ import {
 	type RunContext,
 	type Signal,
 } from "@signals/core";
-import type { ReactiveAgent, ActivationContext } from "./types.js";
+import type { ReactiveAgent } from "./types.js";
 
 // ============================================================================
 // Types
@@ -104,11 +104,10 @@ export type RunReactiveResult<T = unknown> = {
  * 1. Creates SignalBus for signal routing
  * 2. Subscribes agent based on activateOn patterns
  * 3. Emits harness:start to trigger subscribed agents
- * 4. Checks guard condition (when)
- * 5. Executes provider.run() and emits all signals
- * 6. Emits declared signals from `emits`
- * 7. Emits harness:end
- * 8. Returns result with full signal history
+ * 4. Executes provider.run() and emits all signals
+ * 5. Emits declared signals from `emits`
+ * 6. Emits harness:end
+ * 7. Returns result with full signal history
  *
  * @param agent - A reactive agent (must have activateOn defined)
  * @param input - Input to pass to the agent
@@ -117,8 +116,8 @@ export type RunReactiveResult<T = unknown> = {
  *
  * @throws Error if no provider is specified
  */
-export async function runReactive<TOutput, TState>(
-	agent: ReactiveAgent<TOutput, TState>,
+export async function runReactive<TOutput>(
+	agent: ReactiveAgent<TOutput>,
 	input: unknown,
 	options?: RunReactiveOptions,
 ): Promise<RunReactiveResult<TOutput>> {
@@ -144,25 +143,6 @@ export async function runReactive<TOutput, TState>(
 
 	// Subscribe agent to its activation patterns
 	bus.subscribe(patterns, async (triggerSignal) => {
-		// Build activation context for guard check
-		const ctx: ActivationContext<TState> = {
-			signal: triggerSignal,
-			state: (agent.config.state ?? {}) as TState,
-			input,
-		};
-
-		// Check guard condition
-		if (agent.config.when && !agent.config.when(ctx)) {
-			// Guard blocked activation - emit blocked signal for debugging
-			bus.emit(
-				createSignal("agent:blocked", {
-					reason: "guard",
-					trigger: triggerSignal.name,
-				}),
-			);
-			return;
-		}
-
 		// Mark activation
 		activations++;
 		bus.emit(

@@ -68,56 +68,25 @@ export type FixtureStore = RecordingStore;
 // ============================================================================
 
 /**
- * Context passed to agent's "when" guard function.
- * Allows guard to make decisions based on triggering signal and current state.
- */
-export type ActivationContext<TState = Record<string, unknown>> = {
-	/**
-	 * The signal that triggered this activation check.
-	 */
-	signal: Signal;
-
-	/**
-	 * Current state (input for single agent, harness state for multi-agent).
-	 */
-	state: TState;
-
-	/**
-	 * Original input passed to runReactive.
-	 */
-	input: unknown;
-};
-
-/**
  * Configuration for creating an agent.
  *
+ * Agents are stateless - state lives on the harness level.
+ * Agents are guard-less - use specific signal patterns or harness edges for control flow.
+ *
  * @property prompt - System prompt defining agent behavior
- * @property state - Optional initial state for stateful agents
  * @property output - Optional output configuration with schema
  *
  * v0.3.0 adds reactive properties:
  * @property activateOn - Signal patterns that trigger this agent
  * @property emits - Signals this agent declares it will emit
- * @property when - Guard condition for activation
  * @property signalProvider - Per-agent signal-based provider override
  */
-export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
+export type AgentConfig<TOutput = unknown> = {
 	/**
 	 * System prompt that defines the agent's behavior.
 	 * This is the core identity of the agent.
 	 */
 	prompt: string;
-
-	/**
-	 * Optional initial state for stateful agents.
-	 * State persists across invocations within a run.
-	 *
-	 * @example
-	 * ```ts
-	 * state: { conversationHistory: [], taskCount: 0 }
-	 * ```
-	 */
-	state?: TState;
 
 	/**
 	 * Optional output configuration.
@@ -163,18 +132,6 @@ export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
 	emits?: string[];
 
 	/**
-	 * Guard condition - agent only activates if this returns true.
-	 * Receives the activation context (triggering signal + current state).
-	 *
-	 * @example
-	 * ```ts
-	 * when: (ctx) => ctx.input !== null
-	 * when: (ctx) => ctx.state.ready === true
-	 * ```
-	 */
-	when?: (ctx: ActivationContext<TState>) => boolean;
-
-	/**
 	 * Per-agent signal-based provider override (v0.3.0).
 	 * If not set, uses default provider from runReactive options.
 	 *
@@ -190,10 +147,11 @@ export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
 /**
  * An agent definition created by the agent() function.
  *
- * Agents are the fundamental building blocks - they have identity,
- * make decisions, and optionally maintain state.
+ * Agents are stateless building blocks - they have identity,
+ * make decisions, but do not maintain state.
+ * State lives on the harness level.
  */
-export type Agent<TOutput = unknown, TState = Record<string, unknown>> = {
+export type Agent<TOutput = unknown> = {
 	/**
 	 * Discriminator for type checking at runtime.
 	 */
@@ -202,7 +160,7 @@ export type Agent<TOutput = unknown, TState = Record<string, unknown>> = {
 	/**
 	 * The configuration used to create this agent.
 	 */
-	readonly config: AgentConfig<TOutput, TState>;
+	readonly config: AgentConfig<TOutput>;
 };
 
 /**
@@ -211,14 +169,13 @@ export type Agent<TOutput = unknown, TState = Record<string, unknown>> = {
  *
  * An agent becomes reactive when it has `activateOn` defined.
  */
-export type ReactiveAgent<TOutput = unknown, TState = Record<string, unknown>> =
-	Agent<TOutput, TState> & {
-		/**
-		 * Indicates this agent has reactive capabilities.
-		 * Set automatically when activateOn is present.
-		 */
-		readonly _reactive: true;
-	};
+export type ReactiveAgent<TOutput = unknown> = Agent<TOutput> & {
+	/**
+	 * Indicates this agent has reactive capabilities.
+	 * Set automatically when activateOn is present.
+	 */
+	readonly _reactive: true;
+};
 
 // ============================================================================
 // Harness types
@@ -254,6 +211,8 @@ export type Edge = {
 /**
  * Configuration for creating a harness.
  *
+ * The harness owns all workflow state. Agents are stateless.
+ *
  * @property agents - Named agents that comprise this harness
  * @property edges - Connections between agents
  * @property state - Optional shared state accessible to all agents
@@ -279,6 +238,7 @@ export type HarnessConfig<TState = Record<string, unknown>> = {
 
 	/**
 	 * Optional shared state accessible to all agents.
+	 * This is the single source of truth for workflow state.
 	 */
 	state?: TState;
 };
@@ -418,8 +378,8 @@ export type RunResult<T = unknown> = {
 
 	/**
 	 * Harness workflow state (if applicable).
-	 * For single agents, this reflects agent state if configured.
 	 * For harnesses, this is the shared workflow state.
+	 * Single agents do not have state.
 	 */
 	state?: Record<string, unknown>;
 
