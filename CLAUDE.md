@@ -132,6 +132,46 @@ jq -c 'select(.level >= 50)' .open-harness/logs/harness.log 2>/dev/null | tail -
 
 See `.claude/skills/harness-logs/SKILL.md` for full JQ patterns and debugging workflows.
 
+## CRITICAL: No console.log/error/warn
+
+**DO NOT use `console.log`, `console.error`, `console.warn`, or `console.debug` in this codebase.**
+
+Use the structured Pino logger instead:
+
+```typescript
+import { getLogger } from "@internal/core";
+
+const logger = getLogger();
+
+// ❌ WRONG
+console.log("Starting process");
+console.error("Something failed:", error);
+
+// ✅ CORRECT
+logger.info({ processId }, "Starting process");
+logger.error({ err: error, context }, "Something failed");
+```
+
+**Why:**
+1. Structured logs are queryable with `jq`
+2. Automatic file output to `.open-harness/logs/harness.log`
+3. Log levels enable filtering (trace/debug/info/warn/error)
+4. Correlation IDs (runId, nodeId) for tracing
+5. Consistent format across the codebase
+
+**Logger API:**
+- `logger.trace()` - Very verbose (streaming deltas)
+- `logger.debug()` - Tool calls, state patches
+- `logger.info()` - Lifecycle events (default level)
+- `logger.warn()` - Interruptions, timeouts
+- `logger.error({ err: error }, "message")` - Failures (use `err` key for errors)
+
+**For event logging**, use the event subscriber instead of manual logging:
+```typescript
+import { subscribeLogger } from "@internal/core";
+const unsubscribe = subscribeLogger(runtime, logger);
+```
+
 ## CRITICAL: Authentication
 
 **DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.
