@@ -76,3 +76,14 @@ export {
 	getDefaultProvider,
 	resetDefaults,
 } from "./defaults.js";
+
+// v0.3.0 Harness Factory (solves variance problem)
+export {
+	createHarness,
+	type ActivationContext,
+	type ReactiveAgentConfig,
+	type ScopedReactiveAgent,
+	type ReactiveHarnessConfig,
+	type ReactiveHarnessResult,
+	type HarnessFactory,
+} from "./create-harness.js";
