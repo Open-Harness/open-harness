@@ -11,7 +11,10 @@
 		"lint": "turbo lint",
 		"dev": "turbo dev",
 		"build": "turbo build",
-		"typecheck": "turbo typecheck"
+		"typecheck": "turbo typecheck",
+		"prepare": "lefthook install",
+		"hooks:install": "lefthook install",
+		"hooks:uninstall": "lefthook uninstall"
 	},
 	"dependencies": {
 		"dotenv": "^17.2.2"
@@ -19,6 +22,8 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.0",
 		"@types/bun": "^1.3.4",
+		"lefthook": "^2.0.13",
+		"lint-staged": "^16.2.7",
 		"turbo": "^2.6.3",
 		"typescript": "^5"
 	},

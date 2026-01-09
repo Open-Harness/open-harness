@@ -1,0 +1,5 @@
+{
+	"*.{js,jsx,ts,tsx,json,jsonc,css,md}": [
+		"biome check --write --staged --no-errors-on-unmatched --files-ignore-unknown=true"
+	]
+}
