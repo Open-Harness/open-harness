@@ -45,3 +45,26 @@ export type {
 	RecordingQuery,
 	SignalStore,
 } from "./store.js";
+
+// Reporters - Signal-based reporting interface
+export {
+	attachReporter,
+	attachReporters,
+	type ReporterContext,
+	type SignalReporter,
+} from "./reporter.js";
+
+// Console Reporter - Debug logging
+export {
+	createConsoleReporter,
+	type ConsoleReporterOptions,
+	defaultConsoleReporter,
+} from "./console-reporter.js";
+
+// Metrics Reporter - Aggregated metrics collection
+export {
+	createMetricsReporter,
+	type AggregatedMetrics,
+	type MetricsReporterOptions,
+	type MetricsSignalReporter,
+} from "./metrics-reporter.js";
