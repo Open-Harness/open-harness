@@ -21,7 +21,9 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@open-harness/core": "workspace:*"
+		"@open-harness/core": "workspace:*",
+		"@signals/core": "workspace:*",
+		"@signals/bus": "workspace:*"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",

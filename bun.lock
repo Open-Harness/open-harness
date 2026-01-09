@@ -272,6 +272,8 @@
       "version": "0.2.0-alpha.1",
       "dependencies": {
         "@open-harness/core": "workspace:*",
+        "@signals/bus": "workspace:*",
+        "@signals/core": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",

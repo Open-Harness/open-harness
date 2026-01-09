@@ -5,6 +5,8 @@
  * type-safe autocomplete for custom matchers.
  */
 
+import type { SignalMatcher } from "./matchers.js";
+
 /**
  * Custom Open Harness matchers for RunResult assertions.
  */
@@ -46,7 +48,67 @@ interface OpenHarnessMatchers<R = unknown> {
 	toHaveTokensUnder(maxTokens: number): R;
 }
 
+/**
+ * Signal-based matchers for reactive harness results.
+ */
+interface SignalMatchers<R = unknown> {
+	/**
+	 * Assert that the signal array contains a signal matching the pattern.
+	 *
+	 * @param matcher - Signal name pattern (glob supported) or object with name and payload
+	 *
+	 * @example
+	 * ```ts
+	 * // Match by name pattern
+	 * expect(result.signals).toContainSignal('agent:activated')
+	 * expect(result.signals).toContainSignal('provider:*')
+	 *
+	 * // Match by name and payload
+	 * expect(result.signals).toContainSignal({
+	 *   name: 'analysis:complete',
+	 *   payload: { agent: 'analyst', confidence: 0.9 }
+	 * })
+	 * ```
+	 */
+	toContainSignal(matcher: SignalMatcher): R;
+
+	/**
+	 * Assert the exact count of signals matching a pattern.
+	 *
+	 * @param matcher - Signal name pattern (glob supported) or object with name and payload
+	 * @param expectedCount - Expected number of matching signals
+	 *
+	 * @example
+	 * ```ts
+	 * // Expect exactly 2 provider:end signals
+	 * expect(result.signals).toHaveSignalCount('provider:end', 2)
+	 *
+	 * // Expect exactly 3 agent activations
+	 * expect(result.signals).toHaveSignalCount('agent:activated', 3)
+	 * ```
+	 */
+	toHaveSignalCount(matcher: SignalMatcher, expectedCount: number): R;
+
+	/**
+	 * Assert that signals appear in a specific order.
+	 *
+	 * @param orderedMatchers - Array of matchers that should appear in order
+	 *
+	 * @example
+	 * ```ts
+	 * expect(result.signals).toHaveSignalsInOrder([
+	 *   'harness:start',
+	 *   'agent:activated',
+	 *   'provider:start',
+	 *   'provider:end',
+	 *   'harness:end'
+	 * ])
+	 * ```
+	 */
+	toHaveSignalsInOrder(orderedMatchers: SignalMatcher[]): R;
+}
+
 declare module "vitest" {
-	interface Assertion<T> extends OpenHarnessMatchers<T> {}
-	interface AsymmetricMatchersContaining extends OpenHarnessMatchers {}
+	interface Assertion<T> extends OpenHarnessMatchers<T>, SignalMatchers<T> {}
+	interface AsymmetricMatchersContaining extends OpenHarnessMatchers, SignalMatchers {}
 }
