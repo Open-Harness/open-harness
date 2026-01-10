@@ -17,7 +17,7 @@ Create a transport with a runtime instance and start it.
 ```ts
 import { WebSocketTransport } from "../transport/websocket.js";
 
-const transport = new WebSocketTransport(runtime, { port: 7777, path: "/ws" });
+const transport = new WebSocketTransport(runtime, { port: 42069, path: "/ws" });
 await transport.start();
 ```
 
