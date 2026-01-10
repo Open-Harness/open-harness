@@ -126,6 +126,80 @@ git checkout -b feat/your-feature-name
 - Link commits to beads issues: `fix: resolve bug (bd-abc123)`
 - Keep commits atomic and focused
 
+### Changesets (Versioning)
+
+This project uses [Changesets](https://github.com/changesets/changesets) for version management and changelog generation.
+
+#### When to Add a Changeset
+
+Add a changeset whenever your PR includes:
+- Bug fixes
+- New features
+- Breaking changes (API changes, renamed exports, removed features)
+- Any change that affects package consumers
+
+**How to add a changeset**:
+
+```bash
+# From your feature branch
+bun run changeset
+
+# Follow the interactive prompts:
+# 1. Select packages to version (usually @open-harness/sdk)
+# 2. Choose bump type (see guidelines below)
+# 3. Describe the change in user-facing terms
+```
+
+#### Version Bump Guidelines (0.x Pre-release)
+
+We're currently in **0.x** (pre-1.0) phase, where semver works differently:
+
+**0.x.0 (Minor)** - Breaking changes:
+- Changed exports or function signatures
+- Removed features or deprecated APIs
+- Architecture refactors affecting usage
+- Any change requiring code changes from consumers
+
+**0.x.y (Patch)** - Everything else:
+- Bug fixes
+- New features (even significant ones)
+- Documentation updates
+- Internal refactors (no API change)
+
+**When in doubt**: Choose patch (0.x.y). Breaking changes are obvious.
+
+#### Examples
+
+```bash
+# Bug fix → patch
+feat: fix pause/resume state persistence
+Type: patch
+Summary: Fixed issue where paused sessions lost state on restart
+
+# New feature → patch (in 0.x)
+feat: add streaming support to harness
+Type: patch
+Summary: Added real-time event streaming to HarnessRenderer
+
+# Breaking change → minor (in 0.x)
+BREAKING: rename executeHarness to runHarness
+Type: minor
+Summary: Renamed executeHarness() to runHarness() for consistency
+```
+
+#### Release Process
+
+Releases happen **manually** when `dev` is merged to `master`:
+
+1. Features accumulate on `dev` with changesets
+2. When ready to release, open PR: `dev` → `master`
+3. GitHub Actions creates a "Version Packages" PR
+4. Review changelog and version bumps
+5. Merge version PR to apply changes
+6. Publish happens manually: `bun run changeset:publish`
+
+**Note**: We'll graduate to **1.0.0** when the API is stable and production-ready.
+
 ### Pull Requests
 
 - Target `dev` branch (not `master`)
