@@ -253,6 +253,10 @@ bd start <issue-id>      # Marks issue in-progress
 # Add progress notes (do this frequently)
 bd comment <issue-id> "Implemented X, moving to Y"
 
+# Close issues and sync immediately (worktree-safe)
+bd close <issue-id>
+bd sync
+
 # Create issues for discovered work
 bd create                # Interactive creation
 
@@ -315,6 +319,7 @@ bd sync
 
 - Create issues on feature branches (use `bd create` which goes to `beads-sync`)
 - End sessions without `bd sync`
+- Close issues without running `bd sync` in the same session (worktree tabs export `BEADS_NO_DAEMON=1`)
 - Manually edit `.beads/issues.jsonl`
 - Ignore `bd doctor` warnings
 
