@@ -1,33 +1,23 @@
 /**
- * Public API types for Open Harness v0.2.0
+ * Public API types for Open Harness v0.3.0
  *
  * These types form the primary interface for users:
  * - agent() creates an Agent
  * - harness() creates a Harness
- * - run() executes either and returns RunResult
+ * - createHarness() creates a typed harness factory (v0.3.0)
+ * - runReactive() executes signal-based workflows (v0.3.0)
  *
  * Design decisions documented in SDK_DX_DECISIONS.md
  */
 
-import type { RecordingStore } from "../recording/store.js";
-import type { NodeTypeDefinition } from "../nodes/registry.js";
 import type { ZodType } from "zod";
 
 // v0.3.0 Signal-based types
-import type { Signal, Provider as SignalProvider } from "@signals/core";
-import type { SignalPattern } from "@signals/bus";
+import type { Signal, Provider } from "@signals/core";
+import type { SignalPattern, SignalStore } from "@signals/bus";
 
-// ============================================================================
-// Provider type - for dependency injection
-// ============================================================================
-
-/**
- * Provider for executing agents.
- *
- * This is an alias for NodeTypeDefinition with the standard agent input/output.
- * Users can inject custom providers for testing or to use different AI backends.
- */
-export type Provider<TInput = AgentInput, TOutput = AgentOutput> = NodeTypeDefinition<TInput, TOutput>;
+// Re-export Provider from @signals/core for convenience
+export type { Provider } from "@signals/core";
 
 /**
  * Standard agent input shape.
@@ -52,16 +42,17 @@ export type AgentOutput = {
 };
 
 // ============================================================================
-// FixtureStore - Public alias for RecordingStore
+// FixtureStore - Public alias for SignalStore
 // ============================================================================
 
 /**
- * Store for fixtures (recordings).
+ * Store for fixtures (signal recordings).
  *
- * Public API uses "fixture" terminology while internals use "recording".
+ * Public API uses "fixture" terminology while internals use SignalStore.
+ * v0.3.0: Migrated from old RecordingStore to signal-based SignalStore.
  * See SDK_DX_DECISIONS.md Decision #11.
  */
-export type FixtureStore = RecordingStore;
+export type FixtureStore = SignalStore;
 
 // ============================================================================
 // Agent types
@@ -141,7 +132,7 @@ export type AgentConfig<TOutput = unknown> = {
 	 * signalProvider: new ClaudeProvider()
 	 * ```
 	 */
-	signalProvider?: SignalProvider;
+	signalProvider?: Provider;
 };
 
 /**

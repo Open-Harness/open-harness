@@ -44,7 +44,6 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@open-harness/client": "workspace:*",
 		"@open-harness/core": "workspace:*",
 		"react": "^19.0.0"
 	}

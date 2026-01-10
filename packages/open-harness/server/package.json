@@ -42,7 +42,6 @@
 	},
 	"dependencies": {
 		"@open-harness/core": "workspace:*",
-		"@internal/server": "workspace:*",
-		"@open-harness/run-store-sqlite": "workspace:*"
+		"@internal/server": "workspace:*"
 	}
 }

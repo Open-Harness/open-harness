@@ -1,4 +1,4 @@
-import { agent, harness } from "@open-harness/core";
+import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
 
 /**
  * Task Executor - Level 2
@@ -10,36 +10,118 @@ import { agent, harness } from "@open-harness/core";
  * - Single agent wrapped in a harness
  * - State defined at harness level
  * - State returned with harness run result
+ * - Signal recording for fixture-based testing
+ *
+ * v0.3.0 Migration:
+ * - Uses createHarness() for typed agent factory
+ * - Uses runReactive() instead of run()
+ * - Uses MemorySignalStore for recording
  */
 
-/** State shape for the task executor harness */
+// =============================================================================
+// 1. Define state type
+// =============================================================================
+
 export interface TaskExecutorState {
+	/** User's task prompt */
+	prompt: string;
+	/** Generated plan */
+	plan: string | null;
+	/** Track how many tasks processed */
 	tasksProcessed: number;
-	[key: string]: unknown;
 }
 
 /** Initial state for new sessions */
 export const initialState: TaskExecutorState = {
+	prompt: "",
+	plan: null,
 	tasksProcessed: 0,
 };
 
-/** The underlying agent (stateless) */
+// =============================================================================
+// 2. Create typed harness factory
+// =============================================================================
+
+const { agent, runReactive } = createHarness<TaskExecutorState>();
+
+// =============================================================================
+// 3. Define the agent
+// =============================================================================
+
+/** The task executor agent (stateless) */
 export const taskExecutorAgent = agent({
 	prompt: `You are a task planning assistant.
 Given a task description, create a brief implementation plan.
-Format: numbered list of 3-5 steps.`,
+Format: numbered list of 3-5 steps.
+
+Task: {{ state.prompt }}`,
+
+	activateOn: ["harness:start"],
+	emits: ["plan:complete"],
+	updates: "plan",
 });
 
-/**
- * Task Executor Harness
- *
- * Wraps the single agent with harness-level state.
- * Even for single agents, use a harness when you need state tracking.
- */
-export const taskExecutor = harness({
-	agents: {
-		executor: taskExecutorAgent,
-	},
-	edges: [],
-	state: initialState,
+// =============================================================================
+// 4. Export runner function
+// =============================================================================
+
+const provider = new ClaudeProvider({
+	model: "claude-sonnet-4-20250514",
 });
+
+export type RecordingMode = "record" | "replay";
+
+export interface RunOptions {
+	/** Fixture name for recording/replay */
+	fixture?: string;
+	/** Recording mode */
+	mode?: RecordingMode;
+	/** Signal store for recording */
+	store?: MemorySignalStore;
+}
+
+/**
+ * Run the task executor with a prompt.
+ *
+ * @param prompt - The task description to plan
+ * @param options - Optional fixture configuration
+ * @returns Result with output, state, and metrics
+ */
+export async function runTaskExecutor(prompt: string, options: RunOptions = {}) {
+	const result = await runReactive({
+		agents: { taskExecutor: taskExecutorAgent },
+		state: {
+			...initialState,
+			prompt,
+		},
+		provider,
+		recording: options.fixture
+			? {
+					mode: options.mode ?? "replay",
+					store: options.store,
+					name: options.fixture,
+				}
+			: undefined,
+		endWhen: (state) => state.plan !== null,
+	});
+
+	// Extract text content from plan
+	const planOutput = result.state.plan as { content?: string } | string | null;
+	const output = typeof planOutput === "string" ? planOutput : planOutput?.content ?? "";
+
+	return {
+		output,
+		state: result.state,
+		metrics: {
+			latencyMs: result.metrics.durationMs,
+			activations: result.metrics.activations,
+		},
+		signals: result.signals,
+		recordingId: result.recordingId,
+	};
+}
+
+// Legacy export for backwards compatibility
+export const taskExecutor = {
+	run: runTaskExecutor,
+};

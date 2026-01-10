@@ -48,6 +48,8 @@ Keep it brief (one sentence). Just output the greeting, nothing else.`,
 
 	// Only activate if we have a name
 	when: (ctx) => ctx.state.name.length > 0,
+
+	// No updates here - greeter output is intermediate
 });
 
 /**
@@ -63,6 +65,10 @@ Output only the transformed text.`,
 
 	// Declare output
 	emits: ["greeting:transformed"],
+
+	// Update state.greeting with transformer output
+	// This enables the endWhen condition to trigger
+	updates: "greeting",
 });
 
 // =============================================================================
@@ -104,7 +110,17 @@ async function main() {
 	}
 
 	console.log("\n=== Final State ===\n");
-	console.log(JSON.stringify(result.state, null, 2));
+	console.log(`Name: ${result.state.name}`);
+	console.log(`Uppercase: ${result.state.uppercase}`);
+
+	// The greeting contains the full provider output
+	// Extract the text content for display
+	const greetingOutput = result.state.greeting as { content?: string } | string | null;
+	const greetingText =
+		typeof greetingOutput === "string"
+			? greetingOutput
+			: greetingOutput?.content ?? "(no greeting)";
+	console.log(`Greeting: ${greetingText}`);
 }
 
 main().catch(console.error);

@@ -1,17 +1,8 @@
-import { agent } from "@open-harness/core";
-
 /**
- * Spec Agent - Level 4
+ * Spec Agent Types & Utilities - Level 4
  *
- * Takes a PRD (Product Requirements Document) and breaks it down into
- * structured, actionable tasks. This is the first agent in the SpecKit
- * workflow.
- *
- * The Spec Agent's responsibilities:
- * 1. Parse and understand the PRD
- * 2. Identify discrete implementation tasks
- * 3. Prioritize tasks by dependency and importance
- * 4. Define clear acceptance criteria for each task
+ * Pure types and parsing utilities for spec agent output.
+ * The agent itself is defined in speckit-harness.ts.
  */
 
 /**
@@ -25,72 +16,6 @@ export interface Task {
 	complexity: "simple" | "medium" | "complex";
 	acceptanceCriteria: string[];
 }
-
-/**
- * State for the Spec Agent
- */
-export interface SpecAgentState {
-	prdReceived: boolean;
-	tasksGenerated: number;
-	[key: string]: unknown;
-}
-
-export const initialSpecState: SpecAgentState = {
-	prdReceived: false,
-	tasksGenerated: 0,
-};
-
-/**
- * The spec agent analyzes PRDs and produces task lists.
- *
- * Output format (text-based):
- * - TASKS section with numbered tasks
- * - Each task has: ID, Title, Description, Priority, Complexity, Criteria
- * - SUMMARY with total task count
- */
-export const specAgent = agent({
-	prompt: `You are a specification agent that analyzes PRDs (Product Requirements Documents).
-
-Your job is to break down a PRD into clear, actionable implementation tasks.
-
-For each task, provide:
-1. A unique ID (TASK-001, TASK-002, etc.)
-2. A concise title
-3. A detailed description of what needs to be done
-4. Priority (1-5, where 1 is highest)
-5. Complexity estimate (simple, medium, complex)
-6. Clear acceptance criteria (what must be true when done)
-
-Your response MUST follow this format:
-
-## TASKS
-
-### TASK-001: [Title]
-**Priority:** [1-5]
-**Complexity:** [simple|medium|complex]
-**Description:** [What needs to be done]
-**Acceptance Criteria:**
-- [Criterion 1]
-- [Criterion 2]
-
-### TASK-002: [Title]
-...
-
-## SUMMARY
-Total tasks: [N]
-By priority: [breakdown]
-By complexity: [breakdown]
-
-## STATUS
-COMPLETE or NEEDS_MORE_CONTEXT
-
-Important guidelines:
-- Each task should be independently implementable
-- Order tasks by dependency (prerequisites first)
-- Be specific - vague tasks are useless
-- Don't create too many tiny tasks - group related work`,
-	// Note: State lives on the harness, not the agent
-});
 
 /**
  * Parse the spec agent's output to extract tasks.

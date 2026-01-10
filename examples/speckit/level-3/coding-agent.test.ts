@@ -1,40 +1,42 @@
-import { beforeAll, describe, expect, it } from "bun:test";
-import { run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-import { setupFixtures, withFixture } from "../test-utils";
-import { type CodingAgentState, codingAgent, initialState, parseValidationStatus } from "./coding-agent";
+import { describe, expect, it } from "bun:test";
+import { MemorySignalStore } from "@open-harness/core";
+import { type CodingAgentState, runCodingAgent, initialState, parseValidationStatus } from "./coding-agent";
 
 /**
- * Level 3: Self-Validation Loop + Fixtures
+ * Level 3: Self-Validation Loop + Recording
  *
  * Demonstrates:
  * - Self-validation pattern where agents assess their own work
  * - Harness-level state tracking for iteration attempts
  * - Looping until validation passes or max attempts reached
- * - Fixtures for fast, deterministic testing
+ * - Signal recording for fast, deterministic testing
  *
  * In v0.3.0, agents are stateless - state lives on the harness.
  * The coding agent is wrapped in a harness for state tracking.
  *
- * The self-validation loop is a fundamental pattern for building
- * reliable agent systems without human-in-the-loop.
+ * v0.3.0 Migration:
+ * - Uses runCodingAgent() which wraps runReactive()
+ * - Uses MemorySignalStore for recording
+ * - Signal-based recording captures full execution trace
  */
-describe("Coding Agent - Level 3 (Self-Validation Loop with Harness State)", () => {
-	beforeAll(() => {
-		setDefaultProvider(createClaudeNode());
-		setupFixtures();
-	});
 
+// Shared store for recording/replay
+const store = new MemorySignalStore();
+
+// Get recording mode from environment
+const getMode = () => (process.env.FIXTURE_MODE === "record" ? "record" : "replay") as "record" | "replay";
+
+describe("Coding Agent - Level 3 (Self-Validation Loop with Harness State)", () => {
 	it(
 		"implements a simple task with self-validation",
 		async () => {
-			const result = await run(
-				codingAgent,
-				{ prompt: "Create a function that adds two numbers and returns the result" },
-				withFixture("level3-add-numbers"),
-			);
+			const result = await runCodingAgent("Create a function that adds two numbers and returns the result", {
+				fixture: "level3-add-numbers",
+				mode: getMode(),
+				store,
+			});
 
-			const output = result.output as string;
+			const output = result.output;
 
 			// Should have code section
 			expect(output).toContain("CODE");
@@ -59,21 +61,24 @@ describe("Coding Agent - Level 3 (Self-Validation Loop with Harness State)", () 
 	it(
 		"state tracks validation history",
 		async () => {
-			const result = await run(
-				codingAgent,
-				{ prompt: "Write a simple greeting function" },
-				withFixture("level3-greeting"),
-			);
+			const result = await runCodingAgent("Write a simple greeting function", {
+				fixture: "level3-greeting",
+				mode: getMode(),
+				store,
+			});
 
-			const output = result.output as string;
+			const output = result.output;
 			const validation = parseValidationStatus(output);
 
-			// State is returned from the harness (not the agent)
-			expect(result.state).toEqual(initialState);
+			// State includes the prompt we passed in
+			expect(result.state.prompt).toBe("Write a simple greeting function");
+
+			// Code should be populated
+			expect(result.state.code).not.toBeNull();
 
 			// We can create updated state based on output
 			const updatedState: CodingAgentState = {
-				...initialState,
+				...result.state,
 				attempts: 1,
 				lastValidation: {
 					passed: validation.passed,

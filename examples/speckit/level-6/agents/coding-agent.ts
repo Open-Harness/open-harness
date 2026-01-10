@@ -1,16 +1,8 @@
-import { agent } from "@open-harness/core";
-
 /**
- * Coding Agent - Level 4
+ * Coding Agent Types & Utilities - Level 6
  *
- * Implements tasks from the Spec Agent with self-validation.
- * Adapted from Level 3 to work within a harness context.
- *
- * The Coding Agent's responsibilities:
- * 1. Receive a task from the harness state
- * 2. Implement the task
- * 3. Self-validate the implementation
- * 4. Report status (complete, needs_revision, blocked)
+ * Pure types and parsing utilities for coding agent output.
+ * The agent itself is defined in speckit-harness.ts.
  */
 
 /**
@@ -20,74 +12,6 @@ export interface ValidationResult {
 	passed: boolean;
 	issues: string[];
 }
-
-/**
- * State for the Coding Agent
- */
-export interface CodingAgentState {
-	currentTaskId: string | null;
-	attempts: number;
-	lastValidation: ValidationResult | null;
-	maxAttempts: number;
-	[key: string]: unknown;
-}
-
-export const initialCodingState: CodingAgentState = {
-	currentTaskId: null,
-	attempts: 0,
-	lastValidation: null,
-	maxAttempts: 3,
-};
-
-/**
- * The coding agent implements tasks with self-validation.
- *
- * Output format (text-based):
- * - TASK_ID section identifying which task is being implemented
- * - CODE section with implementation
- * - VALIDATION section with self-assessment
- * - STATUS: COMPLETE, NEEDS_REVISION, or BLOCKED
- */
-export const codingAgent = agent({
-	prompt: `You are a coding agent that implements tasks from a specification.
-
-You receive a task with:
-- ID and title
-- Description of what to implement
-- Acceptance criteria to verify
-
-Your job is to:
-1. Implement the task
-2. Validate your implementation against all acceptance criteria
-3. Be honest about any issues
-
-Your response MUST include these sections:
-
-## TASK_ID
-[The ID of the task you're implementing]
-
-## CODE
-\`\`\`
-[Your implementation here]
-\`\`\`
-
-## VALIDATION
-Check each acceptance criterion:
-- [Criterion]: PASS or FAIL - [explanation]
-
-## ISSUES (if any)
-- [List specific problems]
-- [Suggest fixes]
-
-## STATUS
-One of:
-- COMPLETE: All acceptance criteria met
-- NEEDS_REVISION: Some criteria not met, can fix with another attempt
-- BLOCKED: Cannot complete (e.g., missing information)
-
-Be thorough in your validation. Missing a criterion is worse than admitting a failure.`,
-	// Note: State lives on the harness, not the agent
-});
 
 /**
  * Parse the coding agent's output.

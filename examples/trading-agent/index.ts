@@ -162,6 +162,7 @@ Only output the JSON, nothing else.`,
 	emits: ["trade:proposed"],
 
 	// Only propose if analysis shows sufficient confidence
+	// Note: state.analysis is populated by the reducer when analysis:complete fires
 	when: (ctx) => {
 		const analysis = ctx.state.analysis;
 		return analysis !== null && analysis.confidence >= ctx.state.confidenceThreshold;
@@ -230,8 +231,10 @@ Only output the JSON, nothing else.`,
 	emits: ["trade:executed"],
 
 	// GUARD: Only execute if trade was approved
+	// Note: state.review is populated by the reducer when trade:reviewed fires
 	when: (ctx) => {
-		return ctx.state.review?.approved === true;
+		const review = ctx.state.review;
+		return review?.approved === true;
 	},
 });
 
@@ -246,6 +249,19 @@ async function main() {
 	const provider = new ClaudeProvider({
 		model: "claude-sonnet-4-20250514",
 	});
+
+	// Helper to extract JSON from provider output
+	const extractJSON = (output: unknown): unknown => {
+		const raw = output as { content?: string } | string | null;
+		const text = typeof raw === "string" ? raw : raw?.content ?? "";
+		try {
+			// Find JSON in the text (may have markdown code blocks)
+			const jsonMatch = text.match(/\{[\s\S]*\}/);
+			return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+		} catch {
+			return null;
+		}
+	};
 
 	const result = await runReactive({
 		agents: {
@@ -266,6 +282,31 @@ async function main() {
 			balance: 10000,
 		},
 		provider,
+
+		// Reducers parse JSON output from agent signals
+		reducers: {
+			"analysis:complete": (state, signal) => {
+				const payload = signal.payload as { output?: unknown };
+				state.analysis = extractJSON(payload.output) as TradingState["analysis"];
+			},
+			"risk:assessed": (state, signal) => {
+				const payload = signal.payload as { output?: unknown };
+				state.risk = extractJSON(payload.output) as TradingState["risk"];
+			},
+			"trade:proposed": (state, signal) => {
+				const payload = signal.payload as { output?: unknown };
+				state.proposal = extractJSON(payload.output) as TradingState["proposal"];
+			},
+			"trade:reviewed": (state, signal) => {
+				const payload = signal.payload as { output?: unknown };
+				state.review = extractJSON(payload.output) as TradingState["review"];
+			},
+			"trade:executed": (state, signal) => {
+				const payload = signal.payload as { output?: unknown };
+				state.execution = extractJSON(payload.output) as TradingState["execution"];
+			},
+		},
+
 		// End when we have either:
 		// 1. An executed trade
 		// 2. A rejected trade (review.approved = false)

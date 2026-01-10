@@ -1,8 +1,9 @@
 export * from "@internal/core";
 
-export * from "./nodes/index";
+// v0.3.0: nodes module deleted - use Provider pattern from @signals/core instead
 
 // Re-export signal infrastructure for public API
+// v0.3.0: All signal types now exported - old recording types deleted
 export {
 	// SignalBus - Central event dispatcher
 	SignalBus,
@@ -10,13 +11,14 @@ export {
 	type SignalBusOptions,
 	type SignalHandler,
 	type Unsubscribe,
-	// Stores
+	// Stores - Signal recording/replay
 	MemorySignalStore,
 	type SignalStore,
 	type Recording,
 	type RecordingMetadata,
 	type RecordingQuery,
-	// Player - Navigate recordings
+	type Checkpoint,
+	// Player - Navigate recordings (VCR-style)
 	Player,
 	type PlayerPosition,
 	type PlayerState,
@@ -24,7 +26,7 @@ export {
 	type SignalPattern,
 	matchesPattern,
 	matchesAnyPattern,
-	// Snapshot
+	// Snapshot - State at any point
 	type Snapshot,
 	type ProviderState,
 	snapshot,

@@ -137,6 +137,24 @@ export type ReactiveAgentConfig<TOutput, TState> = {
 	 * Per-agent provider override.
 	 */
 	signalProvider?: SignalProvider;
+
+	/**
+	 * State field to update with agent output.
+	 *
+	 * Simple shorthand for common case where agent output
+	 * maps directly to a state field.
+	 *
+	 * @example
+	 * ```ts
+	 * const greeter = agent({
+	 *   prompt: "Create a greeting",
+	 *   activateOn: ["harness:start"],
+	 *   emits: ["greeting:created"],
+	 *   updates: "greeting",  // state.greeting = output
+	 * })
+	 * ```
+	 */
+	updates?: keyof TState & string;
 };
 
 /**
@@ -231,7 +249,45 @@ export type ReactiveHarnessConfig<TState> = {
 	 * ```
 	 */
 	recording?: SignalRecordingOptions;
+
+	/**
+	 * Signal reducers for complex state updates.
+	 *
+	 * Reducers are called when matching signals are emitted,
+	 * allowing state mutations based on signal payloads.
+	 *
+	 * Use for:
+	 * - Cross-cutting state updates
+	 * - Complex transformations
+	 * - Aggregating data from multiple agents
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await runReactive({
+	 *   agents: { greeter, transformer },
+	 *   state: { greeting: null, count: 0 },
+	 *   reducers: {
+	 *     "greeting:transformed": (state, signal) => {
+	 *       state.greeting = signal.payload.output as string;
+	 *       state.count++;
+	 *     }
+	 *   }
+	 * })
+	 * ```
+	 */
+	reducers?: SignalReducers<TState>;
 };
+
+/**
+ * Signal reducer function type.
+ * Receives mutable state and the triggering signal.
+ */
+export type SignalReducer<TState> = (state: TState, signal: Signal) => void;
+
+/**
+ * Map of signal patterns to reducer functions.
+ */
+export type SignalReducers<TState> = Record<string, SignalReducer<TState>>;
 
 /**
  * Result from running a reactive harness.
@@ -407,7 +463,7 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 			});
 		}
 
-		// Mutable state - will be updated by agents
+		// Mutable state - will be updated by agents and reducers
 		let state = { ...config.state };
 		let activations = 0;
 		let terminated = false; // Set by endWhen condition
@@ -415,6 +471,14 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 		// Track pending activations for quiescence detection
 		// Use a Set to handle chained activations properly
 		const pending = new Set<Promise<void>>();
+
+		// Subscribe reducers to apply state mutations on matching signals
+		const reducers = config.reducers ?? {};
+		for (const [signalPattern, reducer] of Object.entries(reducers)) {
+			bus.subscribe([signalPattern], (signal) => {
+				reducer(state, signal);
+			});
+		}
 
 		// Subscribe each agent to its activation patterns
 		for (const [name, scopedAgent] of Object.entries(config.agents)) {
@@ -516,8 +580,28 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 
 					return result;
 				})().then((result) => {
-					// Check endWhen termination condition BEFORE emitting signals
-					// This prevents new activations from starting
+					// Apply `updates` field - update state with agent output
+					if (agentConfig.updates && result !== undefined) {
+						const field = agentConfig.updates;
+						(state as Record<string, unknown>)[field] = result;
+
+						// Emit state change signal for reactive subscribers
+						bus.emit(
+							createSignal(
+								`state:${field}:changed`,
+								{
+									key: field,
+									oldValue: (config.state as Record<string, unknown>)[field],
+									newValue: result,
+									agent: name,
+								},
+								{ agent: name, parent: activatedSignal.id },
+							),
+						);
+					}
+
+					// Check endWhen termination condition AFTER state update
+					// This allows endWhen to see the updated state
 					if (config.endWhen && !terminated && config.endWhen(state)) {
 						terminated = true;
 						bus.emit(

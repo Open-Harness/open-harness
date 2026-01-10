@@ -39,7 +39,7 @@ const claudeProvider = new ClaudeProvider({
 
 // Codex for quick summarization - fast and cost-effective
 const codexProvider = new CodexProvider({
-	model: "gpt-4.1-nano",
+	model: "gpt-5-mini",
 });
 
 // =============================================================================
@@ -83,6 +83,9 @@ Only output the JSON, nothing else.`,
 
 	// Use Claude for this agent
 	signalProvider: claudeProvider,
+
+	// Update state.analysis with output
+	updates: "analysis",
 });
 
 /**
@@ -102,6 +105,9 @@ Output only the summary sentence, nothing else.`,
 
 	// Use Codex for this agent
 	signalProvider: codexProvider,
+
+	// Update state.summary with output
+	updates: "summary",
 });
 
 // =============================================================================

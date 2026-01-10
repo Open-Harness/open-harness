@@ -54,6 +54,9 @@ const analyzer = agent({
 	activateOn: ["harness:start"],
 	emits: ["analysis:complete"],
 	signalProvider: provider,
+
+	// Update state.result with output
+	updates: "result",
 });
 
 // =============================================================================

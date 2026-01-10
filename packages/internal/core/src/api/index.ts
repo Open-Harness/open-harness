@@ -1,32 +1,29 @@
 /**
- * Public API for Open Harness
+ * Public API for Open Harness v0.3.0
  *
  * This module exports the primary user-facing API:
  *
- * v0.2.0:
  * - `agent()` - Create an agent definition
- * - `harness()` - Create a multi-agent harness
- * - `run()` - Execute an agent or harness
- * - `setDefaultStore()`, `setDefaultMode()` - Configure defaults
- *
- * v0.3.0 (Reactive):
- * - `runReactive()` - Execute a reactive agent in a signal-driven environment
- * - `ReactiveAgent` - Agent with activateOn/emits
+ * - `createHarness()` - Create a typed harness factory
+ * - `runReactive()` - Execute signal-based workflows
  *
  * @example
  * ```ts
- * import { agent, harness, run } from "@open-harness/core"
+ * import { createHarness, ClaudeProvider } from "@open-harness/core"
  *
- * const myAgent = agent({ prompt: "You are helpful." })
- * const result = await run(myAgent, { prompt: "Hello!" })
+ * const { agent, runReactive } = createHarness<MyState>()
  *
- * // Reactive agent (v0.3.0)
- * const reactive = agent({
- *   prompt: "Analyze data.",
+ * const analyzer = agent({
+ *   prompt: "Analyze: {{ state.input }}",
  *   activateOn: ["harness:start"],
  *   emits: ["analysis:complete"],
  * })
- * const result = await runReactive(reactive, { data: "..." })
+ *
+ * const result = await runReactive({
+ *   agents: { analyzer },
+ *   state: initialState,
+ *   defaultProvider: new ClaudeProvider(),
+ * })
  * ```
  */
 
@@ -39,7 +36,7 @@ export type {
 	Harness,
 	HarnessConfig,
 	Edge,
-	RunOptions,
+	// RunOptions removed (v0.3.0) - use RunReactiveOptions instead
 	RunResult,
 	RunMetrics,
 	FixtureStore,
@@ -56,10 +53,7 @@ export { isAgent, isHarness, isReactiveAgent } from "./types.js";
 export { agent } from "./agent.js";
 export { harness, type HarnessWithFlow } from "./harness.js";
 
-// Execution (v0.2.0)
-export { run, generateFixtureId } from "./run.js";
-
-// Execution (v0.3.0 Reactive)
+// Execution (v0.3.0 - signal-based)
 export {
 	runReactive,
 	type RunReactiveOptions,
