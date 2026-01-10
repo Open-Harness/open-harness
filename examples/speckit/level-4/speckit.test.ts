@@ -1,134 +1,105 @@
-import { beforeAll, describe, expect, it } from "bun:test";
-import { run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-import { setupFixtures, withFixture } from "../test-utils";
-import { codingAgent, parseCodingOutput } from "./coding-agent";
-import { parseSpecOutput, specAgent } from "./spec-agent";
-import { specKit } from "./speckit-harness";
+import { describe, expect, it } from "bun:test";
+import { MemorySignalStore } from "@open-harness/core";
+import { parseCodingOutput } from "./coding-agent";
+import { parseSpecOutput } from "./spec-agent";
+import { runSpecKit } from "./speckit-harness";
 
 /**
- * Level 4: Multi-Agent Harness + Fixtures
+ * Level 4: Multi-Agent Harness
  *
  * Demonstrates:
  * - Creating a harness with multiple agents
- * - Running a harness workflow
+ * - Signal-based control flow (replaces edges)
  * - Shared state between agents
- * - Edge conditions for control flow
- * - Fixtures for fast, deterministic testing
+ * - Recording/replay for fast, deterministic testing
+ *
+ * v0.3.0 Reactive Pattern:
+ * - Old: edges: [{ from: "spec", to: "coder" }]
+ * - New: spec emits: ["spec:complete"], coder activateOn: ["spec:complete"]
  */
-describe("SpecKit Harness - Level 4", () => {
-	beforeAll(() => {
-		setDefaultProvider(createClaudeNode());
-		setupFixtures();
-	});
 
-	describe("Individual Agents", () => {
-		it(
-			"spec agent breaks down a PRD into tasks",
-			async () => {
-				const result = await run(
-					specAgent,
-					{
-						prompt: `PRD: User Authentication
+// Shared store for recording/replay
+const store = new MemorySignalStore();
 
-Users should be able to:
-1. Register with email and password
-2. Login with existing credentials
-3. Reset their password via email link`,
-					},
-					withFixture("level4-spec-auth"),
-				);
+// Get recording mode from environment
+const getMode = () => (process.env.FIXTURE_MODE === "record" ? "record" : "replay") as "record" | "replay";
 
-				const output = result.output as string;
-
-				// Should have task structure
-				expect(output).toContain("TASK-");
-				expect(output).toContain("Priority");
-				expect(output).toContain("Acceptance Criteria");
-
-				// Parse and verify
-				const parsed = parseSpecOutput(output);
-				console.log("Spec Agent produced", parsed.tasks.length, "tasks");
-
-				expect(parsed.tasks.length).toBeGreaterThan(0);
-				expect(parsed.tasks[0]?.id).toMatch(/TASK-\d+/);
-				expect(parsed.tasks[0]?.acceptanceCriteria.length).toBeGreaterThan(0);
-			},
-			{ timeout: 180000 },
-		);
-
-		it(
-			"coding agent implements a task with validation",
-			async () => {
-				const result = await run(
-					codingAgent,
-					{
-						prompt: `Implement this task:
-
-ID: TASK-001
-Title: Create Email Validator Function
-Description: Implement a function that validates email format
-Acceptance Criteria:
-- Function returns true for valid emails
-- Function returns false for invalid emails
-- Handles edge cases (empty string, null)`,
-					},
-					withFixture("level4-coder-email"),
-				);
-
-				const output = result.output as string;
-
-				// Should have expected sections
-				expect(output).toContain("CODE");
-				expect(output).toContain("VALIDATION");
-				expect(output.toUpperCase()).toContain("STATUS");
-
-				// Parse and verify
-				const parsed = parseCodingOutput(output);
-				console.log("Coding Agent status:", parsed.status);
-
-				expect(parsed.code.length).toBeGreaterThan(0);
-				expect(["complete", "needs_revision", "blocked"]).toContain(parsed.status);
-			},
-			{ timeout: 180000 },
-		);
-	});
-
+describe("SpecKit Harness - Level 4 (Multi-Agent with Signal Chaining)", () => {
 	describe("Harness Execution", () => {
 		it(
-			"runs the full spec → coder workflow",
+			"runs the full spec → coder workflow via signal chaining",
 			async () => {
-				const result = await run(
-					specKit,
-					{
-						prompt: `PRD: Email Validation Utility
+				const result = await runSpecKit(
+					`PRD: Email Validation Utility
 
 Create a simple email validation function that:
 1. Validates email format using regex
 2. Returns true/false`,
+					{
+						fixture: "level4-harness-email",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level4-harness-email"),
 				);
 
 				// Harness should complete
 				expect(result.output).toBeDefined();
 
 				// Output is from the last agent (coder)
-				const output = result.output as string;
+				const output = result.output;
 				expect(typeof output).toBe("string");
 
 				// Should have meaningful output from coder
 				console.log("Harness produced output:", output.slice(0, 100) + "...");
 				expect(output.length).toBeGreaterThan(50);
 
-				// Metrics are aggregated across all agents
+				// Metrics are available
 				expect(result.metrics).toBeDefined();
 				expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
 
 				console.log("Harness metrics:", {
 					latencyMs: result.metrics.latencyMs,
-					tokens: result.metrics.tokens,
+					activations: result.metrics.activations,
 				});
+
+				// Signals tracked the execution flow
+				expect(result.signals).toBeDefined();
+				console.log("Signals emitted:", result.signals.length);
+			},
+			{ timeout: 600000 },
+		);
+
+		it(
+			"spec agent produces tasks that coder agent processes",
+			async () => {
+				const result = await runSpecKit(
+					`PRD: User Authentication
+
+Users should be able to:
+1. Register with email and password
+2. Login with existing credentials`,
+					{
+						fixture: "level4-harness-auth",
+						mode: getMode(),
+						store,
+					},
+				);
+
+				// Spec agent output should have tasks
+				const specOutput = result.specOutput;
+				expect(specOutput).toContain("TASK-");
+
+				const parsedSpec = parseSpecOutput(specOutput);
+				console.log("Spec Agent produced", parsedSpec.tasks.length, "tasks");
+				expect(parsedSpec.tasks.length).toBeGreaterThan(0);
+
+				// Coder output should reference a task
+				const coderOutput = result.coderOutput;
+				expect(coderOutput).toContain("CODE");
+
+				const parsedCoder = parseCodingOutput(coderOutput);
+				console.log("Coder Agent status:", parsedCoder.status);
+				expect(["complete", "needs_revision", "blocked"]).toContain(parsedCoder.status);
 			},
 			{ timeout: 600000 },
 		);

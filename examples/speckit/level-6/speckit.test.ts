@@ -1,9 +1,7 @@
-import { beforeAll, describe, expect, it } from "bun:test";
-import { run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-import { setupFixtures, withFixture } from "../test-utils";
+import { describe, expect, it } from "bun:test";
+import { MemorySignalStore } from "@open-harness/core";
 import { parseReviewerOutput } from "./agents/reviewer-agent";
-import { specKit } from "./speckit-harness";
+import { runSpecKit } from "./speckit-harness";
 
 /**
  * Level 6: Advanced Fixture Patterns
@@ -13,14 +11,19 @@ import { specKit } from "./speckit-harness";
  * - Deterministic replay for snapshot testing
  * - Fixture naming conventions
  *
- * By this point, fixtures are second nature - every test uses them.
+ * v0.3.0 Reactive Pattern:
+ * - Recording config passed directly to runReactive()
+ * - MemorySignalStore for in-memory fixture management
+ * - By this point, fixtures are second nature - every test uses them
  */
-describe("SpecKit - Level 6 (Advanced Fixtures)", () => {
-	beforeAll(() => {
-		setDefaultProvider(createClaudeNode());
-		setupFixtures();
-	});
 
+// Shared store for recording/replay
+const store = new MemorySignalStore();
+
+// Get recording mode from environment
+const getMode = () => (process.env.FIXTURE_MODE === "record" ? "record" : "replay") as "record" | "replay";
+
+describe("SpecKit - Level 6 (Advanced Fixtures)", () => {
 	describe("Fixture Patterns", () => {
 		it(
 			"demonstrates fixture recording pattern",
@@ -30,21 +33,20 @@ describe("SpecKit - Level 6 (Advanced Fixtures)", () => {
 				// 2. Clear fixture naming
 				// 3. Easy re-recording of individual tests
 
-				const result = await run(
-					specKit,
-					{
-						prompt: `PRD: Greeting Function
+				const result = await runSpecKit(
+					`PRD: Greeting Function
 Create a function that says hello to a user by name.`,
+					{
+						fixture: "level6-greeting",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level6-greeting"),
 				);
 
 				expect(result.output).toBeDefined();
 
-				// Fixture IDs are returned when recording
-				if (result.fixtures && result.fixtures.length > 0) {
-					console.log("Recorded fixtures:", result.fixtures);
-				}
+				// Signals track the execution flow
+				console.log("Signals emitted:", result.signals.length);
 			},
 			{ timeout: 900000 },
 		);
@@ -55,22 +57,24 @@ Create a function that says hello to a user by name.`,
 				// In replay mode, the same fixture produces identical results
 				// This enables deterministic CI testing
 
-				const result1 = await run(
-					specKit,
-					{
-						prompt: `PRD: Number Checker
+				const result1 = await runSpecKit(
+					`PRD: Number Checker
 Create a function that checks if a number is positive.`,
+					{
+						fixture: "level6-number-checker",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level6-number-checker"),
 				);
 
-				const result2 = await run(
-					specKit,
-					{
-						prompt: `PRD: Number Checker
+				const result2 = await runSpecKit(
+					`PRD: Number Checker
 Create a function that checks if a number is positive.`,
+					{
+						fixture: "level6-number-checker",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level6-number-checker"),
 				);
 
 				// In replay mode, outputs are identical (same fixture)
@@ -79,7 +83,7 @@ Create a function that checks if a number is positive.`,
 				}
 
 				// Parse to verify structure
-				const parsed = parseReviewerOutput(result1.output as string);
+				const parsed = parseReviewerOutput(result1.output);
 				expect(typeof parsed.approved).toBe("boolean");
 			},
 			{ timeout: 900000 },
@@ -91,22 +95,23 @@ Create a function that checks if a number is positive.`,
 				// Harness fixtures capture the ENTIRE multi-agent conversation
 				// This is powerful for testing complex workflows
 
-				const result = await run(
-					specKit,
-					{
-						prompt: `PRD: String Utilities
+				const result = await runSpecKit(
+					`PRD: String Utilities
 Create utilities for:
 1. Checking if a string is empty
 2. Trimming whitespace
 3. Converting to uppercase`,
+					{
+						fixture: "level6-string-utils",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level6-string-utils"),
 				);
 
 				expect(result.output).toBeDefined();
 				expect(result.metrics).toBeDefined();
 
-				const parsed = parseReviewerOutput(result.output as string);
+				const parsed = parseReviewerOutput(result.output);
 				console.log("Complex workflow result:", {
 					approved: parsed.approved,
 					criteriaCount: parsed.criteriaResults.length,
@@ -126,26 +131,27 @@ Create utilities for:
  * Use different fixture names for the same test to compare behavior:
  *
  *   // Record with opus
- *   await run(agent, input, withFixture("test-opus"));
+ *   await runSpecKit(prompt, { fixture: "test-opus" });
  *
  *   // Record with sonnet
- *   await run(agent, input, withFixture("test-sonnet"));
+ *   await runSpecKit(prompt, { fixture: "test-sonnet" });
  *
  *   // Compare outputs
  *   expect(opusResult.output).not.toEqual(sonnetResult.output);
  *
  *
- * FIXTURE INSPECTION
- * ------------------
- * Fixtures are plain JSON, so you can inspect them:
- *
- *   cat fixtures/my-test_agent_inv0.json | jq '.output'
- *
- *
  * SELECTIVE RE-RECORDING
  * ----------------------
- * Delete a specific fixture and re-record:
+ * To re-record a specific test:
  *
- *   rm fixtures/my-test_agent_inv0.json
- *   bun test:record -- --test-name-pattern="my specific test"
+ *   FIXTURE_MODE=record bun test -- --test-name-pattern="my specific test"
+ *
+ *
+ * v0.3.0 SIGNAL RECORDING
+ * -----------------------
+ * The new signal-based recording captures:
+ * - All signals emitted during execution
+ * - Agent activation sequence
+ * - State transitions
+ * - Full execution trace for debugging
  */

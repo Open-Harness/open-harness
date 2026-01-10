@@ -25,6 +25,7 @@
     "changeset:publish": "changeset publish"
   },
   "dependencies": {
+    "@openai/codex-sdk": "^0.79.0",
     "dotenv": "^17.2.2"
   },
   "devDependencies": {

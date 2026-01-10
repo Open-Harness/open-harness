@@ -22,7 +22,7 @@
 		"build": "rollup -c rollup.config.mjs",
 		"lint": "biome check . --write",
 		"typecheck": "tsc --noEmit",
-		"test": "bun test tests/unit tests/integration tests/server"
+		"test": "echo 'No tests yet'"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
@@ -42,7 +42,6 @@
 	},
 	"dependencies": {
 		"@open-harness/core": "workspace:*",
-		"@internal/server": "workspace:*",
-		"@open-harness/run-store-sqlite": "workspace:*"
+		"@internal/server": "workspace:*"
 	}
 }

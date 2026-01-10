@@ -1,94 +1,56 @@
-import { beforeAll, describe, expect, it } from "bun:test";
-import { run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-import { setupFixtures, withFixture } from "../test-utils";
-import { parseReviewerOutput, reviewerAgent } from "./reviewer-agent";
-import { specKit } from "./speckit-harness";
+import { describe, expect, it } from "bun:test";
+import { MemorySignalStore } from "@open-harness/core";
+import { parseCodingOutput } from "./coding-agent";
+import { parseReviewerOutput } from "./reviewer-agent";
+import { parseSpecOutput } from "./spec-agent";
+import { runSpecKit } from "./speckit-harness";
 
 /**
- * Level 5: Full 3-Agent System + Fixtures
+ * Level 5: Full 3-Agent System
  *
  * Demonstrates:
  * - Complete PRD → Code → Review workflow
- * - Three-agent coordination
+ * - Three-agent coordination via signal chaining
  * - Reviewer validation against specifications
  * - Aggregate metrics across all agents
- * - Fixtures for fast, deterministic testing
+ * - Recording/replay for fast, deterministic testing
+ *
+ * v0.3.0 Reactive Pattern:
+ * - Old: edges: [{ from: "spec", to: "coder" }, { from: "coder", to: "reviewer" }]
+ * - New: Signal chaining - spec emits → coder activateOn → reviewer activateOn
  */
+
+// Shared store for recording/replay
+const store = new MemorySignalStore();
+
+// Get recording mode from environment
+const getMode = () => (process.env.FIXTURE_MODE === "record" ? "record" : "replay") as "record" | "replay";
+
 describe("SpecKit - Level 5 (Full 3-Agent System)", () => {
-	beforeAll(() => {
-		setDefaultProvider(createClaudeNode());
-		setupFixtures();
-	});
-
-	describe("Individual Agents", () => {
-		it(
-			"reviewer agent validates code against spec",
-			async () => {
-				const result = await run(
-					reviewerAgent,
-					{
-						prompt: `Review this implementation:
-
-Task: TASK-001 - Create Email Validator
-Acceptance Criteria:
-- Function returns true for valid emails
-- Function returns false for invalid emails
-- Handles edge cases (empty string, null)
-
-Implemented Code:
-\`\`\`javascript
-function validateEmail(email) {
-  if (!email) return false;
-  const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-  return regex.test(email);
-}
-\`\`\``,
-					},
-					withFixture("level5-reviewer-email"),
-				);
-
-				const output = result.output as string;
-
-				// Should have expected sections
-				expect(output).toContain("CRITERIA VERIFICATION");
-				expect(output.toUpperCase()).toContain("VERDICT");
-
-				// Parse and verify
-				const parsed = parseReviewerOutput(output);
-				console.log("Reviewer verdict:", parsed.approved ? "APPROVED" : "REJECTED");
-				console.log("Criteria checked:", parsed.criteriaResults.length);
-				console.log("Issues found:", parsed.issues.length);
-
-				expect(typeof parsed.approved).toBe("boolean");
-			},
-			{ timeout: 180000 },
-		);
-	});
-
 	describe("Full Harness Execution", () => {
 		it(
 			"runs the complete spec → coder → reviewer workflow",
 			async () => {
-				const result = await run(
-					specKit,
-					{
-						prompt: `PRD: Simple Calculator
+				const result = await runSpecKit(
+					`PRD: Simple Calculator
 
 Create a calculator module that:
 1. Adds two numbers
 2. Returns the sum
 
 Keep it simple - just one function.`,
+					{
+						fixture: "level5-harness-calculator",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level5-harness-calculator"),
 				);
 
 				// Harness should complete
 				expect(result.output).toBeDefined();
 
 				// Output is from the last agent (reviewer)
-				const output = result.output as string;
+				const output = result.output;
 				expect(typeof output).toBe("string");
 
 				// Should have reviewer output structure
@@ -104,9 +66,12 @@ Keep it simple - just one function.`,
 
 				console.log("Full workflow metrics:", {
 					latencyMs: result.metrics.latencyMs,
-					tokens: result.metrics.tokens,
-					cost: result.metrics.cost,
+					activations: result.metrics.activations,
 				});
+
+				// Signals tracked the execution flow
+				expect(result.signals).toBeDefined();
+				console.log("Signals emitted:", result.signals.length);
 			},
 			{ timeout: 900000 },
 		);
@@ -114,29 +79,39 @@ Keep it simple - just one function.`,
 		it(
 			"handles realistic PRD with multiple requirements",
 			async () => {
-				const result = await run(
-					specKit,
-					{
-						prompt: `PRD: User Greeting Service
+				const result = await runSpecKit(
+					`PRD: User Greeting Service
 
 Requirements:
 1. Create a function that greets users by name
 2. Handle missing names gracefully
 3. Support optional greeting customization`,
+					{
+						fixture: "level5-harness-greeting",
+						mode: getMode(),
+						store,
 					},
-					withFixture("level5-harness-greeting"),
 				);
 
 				expect(result.output).toBeDefined();
 
-				const output = result.output as string;
+				// All three agent outputs should be populated
+				expect(result.specOutput.length).toBeGreaterThan(0);
+				expect(result.coderOutput.length).toBeGreaterThan(0);
+				expect(result.reviewerOutput.length).toBeGreaterThan(0);
 
-				// Parse the reviewer output
-				const parsed = parseReviewerOutput(output);
-				console.log("Multi-requirement PRD result:", {
-					approved: parsed.approved,
-					criteriaCount: parsed.criteriaResults.length,
-					issueCount: parsed.issues.length,
+				// Parse each agent's output
+				const specParsed = parseSpecOutput(result.specOutput);
+				console.log("Spec produced", specParsed.tasks.length, "tasks");
+
+				const coderParsed = parseCodingOutput(result.coderOutput);
+				console.log("Coder status:", coderParsed.status);
+
+				const reviewerParsed = parseReviewerOutput(result.reviewerOutput);
+				console.log("Reviewer result:", {
+					approved: reviewerParsed.approved,
+					criteriaCount: reviewerParsed.criteriaResults.length,
+					issueCount: reviewerParsed.issues.length,
 				});
 
 				// State should be defined

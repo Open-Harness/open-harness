@@ -32,8 +32,6 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@open-harness/recording-store-file": "workspace:*",
-		"@open-harness/recording-store-sqlite": "workspace:*",
-		"@open-harness/run-store-sqlite": "workspace:*"
+		"@open-harness/core": "workspace:*"
 	}
 }

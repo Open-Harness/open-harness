@@ -11,6 +11,8 @@
 	},
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "^0.1.76",
+		"@signals/bus": "workspace:*",
+		"@signals/core": "workspace:*",
 		"ai": "^6.0.9",
 		"jsonata": "^2.1.0",
 		"neverthrow": "^8.2.0",

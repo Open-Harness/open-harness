@@ -1,83 +1,86 @@
 /**
  * Shared test utilities for SpecKit examples.
  *
- * Provides fixture configuration that works across all example levels.
- * Import this in any test file that uses fixtures.
+ * v0.3.0 Reactive Pattern - Recording Configuration
+ *
+ * In v0.3.0, recording config is passed directly to runReactive():
  *
  * @example
  * ```ts
- * import { setupFixtures, withFixture } from "../test-utils";
+ * import { MemorySignalStore } from "@open-harness/core";
  *
- * beforeAll(() => {
- *   setupFixtures();
- * });
+ * // Shared store for recording/replay
+ * const store = new MemorySignalStore();
  *
- * it("runs with fixture", async () => {
- *   const result = await run(myAgent, input, withFixture("my-test"));
+ * // Get mode from environment
+ * const getMode = () =>
+ *   (process.env.FIXTURE_MODE === "record" ? "record" : "replay");
+ *
+ * // In your test
+ * const result = await runSpecKit(prompt, {
+ *   fixture: "my-test",
+ *   mode: getMode(),
+ *   store,
  * });
  * ```
+ *
+ * Key differences from old API:
+ * - No global `setDefaultStore()` or `setDefaultMode()`
+ * - Recording config passed to each `runReactive()` call
+ * - `MemorySignalStore` for in-memory fixtures
+ * - Each test controls its own recording behavior
+ *
+ * Benefits:
+ * - Explicit over implicit - config visible at call site
+ * - No global state to manage
+ * - Tests can use different stores if needed
+ * - Clear signal-based recording semantics
  */
 
-import { FileRecordingStore } from "@open-harness/stores";
-import {
-	setDefaultStore,
-	setDefaultMode,
-	type FixtureMode,
-} from "@open-harness/core";
+import { MemorySignalStore } from "@open-harness/core";
 
 /**
- * Single fixture store for all examples.
- * Fixtures are stored in examples/speckit/fixtures/
- */
-export const fixtureStore = new FileRecordingStore({
-	directory: "./fixtures",
-});
-
-/**
- * Configure fixtures for testing.
- *
- * Call this in beforeAll() of any test file that uses fixtures.
- * Sets up the default store and mode so run() uses fixtures automatically.
- *
- * Mode priority:
- * 1. FIXTURE_MODE env var (for CI/scripts)
- * 2. "replay" (default when no env var)
+ * Create a fixture configuration helper.
  *
  * @example
  * ```ts
- * beforeAll(() => {
- *   setDefaultProvider(createClaudeNode());
- *   setupFixtures();
- * });
+ * const { fixture, getMode, store } = createFixtureHelper();
+ *
+ * const result = await runSpecKit(prompt, fixture("my-test"));
  * ```
  */
-export function setupFixtures(): void {
-	setDefaultStore(fixtureStore);
+export function createFixtureHelper() {
+	const store = new MemorySignalStore();
 
-	// Default to "replay" unless FIXTURE_MODE env var is set
-	// This makes tests fast and free by default
-	if (!process.env.FIXTURE_MODE) {
-		setDefaultMode("replay");
-	}
+	const getMode = () => (process.env.FIXTURE_MODE === "record" ? "record" : "replay") as "record" | "replay";
+
+	const fixture = (name: string) => ({
+		fixture: name,
+		mode: getMode(),
+		store,
+	});
+
+	return { fixture, getMode, store };
 }
 
 /**
- * Helper to create fixture options for a specific test.
- *
- * Use this when you want to explicitly specify a fixture name.
- * The store is automatically included from the shared fixtureStore.
- *
- * @param name - Unique fixture name for this test
- * @returns RunOptions with fixture and store configured
+ * Standard fixture options type for run functions.
+ */
+export interface FixtureOptions {
+	fixture?: string;
+	mode?: "record" | "replay";
+	store?: MemorySignalStore;
+}
+
+/**
+ * Helper to get recording mode from environment.
  *
  * @example
  * ```ts
- * const result = await run(myAgent, input, withFixture("email-validation"));
+ * const mode = getRecordingMode();
+ * // Returns "record" if FIXTURE_MODE=record, else "replay"
  * ```
  */
-export function withFixture(name: string): { fixture: string; store: typeof fixtureStore } {
-	return {
-		fixture: name,
-		store: fixtureStore,
-	};
+export function getRecordingMode(): "record" | "replay" {
+	return process.env.FIXTURE_MODE === "record" ? "record" : "replay";
 }

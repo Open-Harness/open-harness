@@ -183,19 +183,21 @@ describe("api/harness", () => {
 			expect(workflow._flow.state?.initial.maxIterations).toBe(3);
 		});
 
-		it("should preserve agent state in node input", () => {
-			const statefulAgent = agent({
-				prompt: "Stateful",
-				state: { memory: [] },
+		it("should not include state in node input (agents are stateless)", () => {
+			// In v0.3.0, agents are stateless - state lives on harness level only
+			const myAgent = agent({
+				prompt: "Agent prompt",
 			});
 
 			const myHarness = harness({
-				agents: { main: statefulAgent },
+				agents: { main: myAgent },
 				edges: [],
 			}) as HarnessWithFlow;
 
 			const mainNode = myHarness._flow.nodes.find((n) => n.id === "main");
-			expect(mainNode?.input.state).toEqual({ memory: [] });
+			// Node input should have prompt but no state
+			expect(mainNode?.input.prompt).toBe("Agent prompt");
+			expect(mainNode?.input.state).toBeUndefined();
 		});
 	});
 });

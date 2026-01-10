@@ -1,17 +1,8 @@
-import { agent } from "@open-harness/core";
-
 /**
- * Reviewer Agent - Level 5
+ * Reviewer Agent Types & Utilities - Level 5
  *
- * Validates completed code against the original task specification.
- * This is the third agent in the SpecKit workflow, providing quality
- * assurance before marking a task as complete.
- *
- * The Reviewer Agent's responsibilities:
- * 1. Compare code against acceptance criteria
- * 2. Check for common issues (TODOs, incomplete sections)
- * 3. Verify code quality and best practices
- * 4. Provide actionable feedback if issues found
+ * Pure types and parsing utilities for reviewer agent output.
+ * The agent itself is defined in speckit-harness.ts.
  */
 
 /**
@@ -31,74 +22,6 @@ export interface CriterionResult {
 	met: boolean;
 	notes?: string;
 }
-
-/**
- * State for the Reviewer Agent
- */
-export interface ReviewerAgentState {
-	reviewsCompleted: number;
-	issuesFound: number;
-	[key: string]: unknown;
-}
-
-export const initialReviewerState: ReviewerAgentState = {
-	reviewsCompleted: 0,
-	issuesFound: 0,
-};
-
-/**
- * The reviewer agent validates code against specifications.
- *
- * Output format (text-based):
- * - TASK_ID section identifying which task was reviewed
- * - CRITERIA section with pass/fail for each criterion
- * - ISSUES section with any problems found
- * - SUMMARY with overall assessment
- * - VERDICT: APPROVED or REJECTED
- */
-export const reviewerAgent = agent({
-	prompt: `You are a code reviewer agent that validates implementations against specifications.
-
-You receive:
-- A task specification with acceptance criteria
-- The implemented code
-
-Your job is to:
-1. Check each acceptance criterion - is it truly met by the code?
-2. Look for common issues (TODOs, incomplete sections, bugs)
-3. Verify code quality and best practices
-4. Provide constructive feedback
-
-Your response MUST include these sections:
-
-## TASK_ID
-[The ID of the task being reviewed]
-
-## CRITERIA VERIFICATION
-For each acceptance criterion:
-- [Criterion text]: MET or NOT_MET - [explanation]
-
-## ISSUES
-List any problems found:
-- **[blocker|major|minor]**: [Description] → [Suggestion]
-
-Issue severity guide:
-- blocker: Completely broken, must fix before approval
-- major: Significant problem, should fix
-- minor: Small improvement, nice to have
-
-## SUMMARY
-[1-2 sentences summarizing the review]
-
-## VERDICT
-One of:
-- APPROVED: All criteria met, no blockers
-- REJECTED: Has blockers or multiple unmet criteria
-
-Be thorough but fair. Don't reject for minor issues if core functionality works.`,
-
-	state: initialReviewerState,
-});
 
 /**
  * Parse the reviewer agent's output.

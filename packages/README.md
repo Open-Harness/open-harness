@@ -1,8 +1,8 @@
 ---
 title: "Open Harness Packages"
-lastUpdated: "2026-01-07T19:33:33.732Z"
-lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
-lastCommitDate: "2026-01-07T18:56:43Z"
+lastUpdated: "2026-01-10T09:45:31.811Z"
+lastCommit: "a9e5f66d3940822fd2e20996fc38318fe0aede14"
+lastCommitDate: "2026-01-10T05:58:49Z"
 scope:
   - architecture
   - documentation
@@ -13,169 +13,276 @@ scope:
 
 This directory contains the core Open Harness monorepo organized by internal and public packages.
 
+## v0.3.0 Architecture
+
+Open Harness v0.3.0 uses a **signal-based reactive architecture**:
+
+```
+┌─────────────────────────────────────────────┐
+│           Application Layer                  │
+│  (Horizon Agent, Examples, User Apps)        │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│        Public API (@open-harness/*)          │
+│  createHarness() → agent() → runReactive()   │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│           Signal Infrastructure              │
+│  SignalBus │ Providers │ MemorySignalStore   │
+└─────────────────────────────────────────────┘
+```
+
+### Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Signal** | Typed event with `source`, `type`, `payload`, `timestamp` |
+| **SignalBus** | Central dispatcher that routes signals to subscribers |
+| **Provider** | AI model wrapper (Claude, OpenAI/Codex) that emits/handles signals |
+| **Agent** | Configured provider with `activateOn` triggers and `emits` outputs |
+| **Harness** | Factory for creating typed agents with shared state |
+
+### Signal Flow
+
+```
+harness:start → agent activates → provider:complete → next agent → harness:complete
+     │                                    │                              │
+     └── activateOn: ["harness:start"] ───┘                              │
+                                          └── activateOn: ["X:complete"] ─┘
+```
+
+## Quick Start
+
+```typescript
+import { createHarness, ClaudeProvider } from "@open-harness/core";
+
+// 1. Define your state type
+interface MyState {
+  input: string;
+  analysis?: string;
+}
+
+// 2. Create a typed harness
+const { agent, runReactive } = createHarness<MyState>();
+
+// 3. Define agents with signal chaining
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["harness:start"],
+  emits: ["analysis:complete"],
+  updates: (output, state) => ({ analysis: output.text }),
+});
+
+// 4. Run the workflow
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello, world!" },
+  defaultProvider: new ClaudeProvider(),
+});
+
+console.log(result.state.analysis);
+```
+
 ## Package Organization
 
 ### Internal Packages (`packages/internal/`)
 
-Internal packages form the core architecture of Open Harness. They are not published to npm but are used across all applications and SDKs.
+Internal packages form the core implementation. They are not published to npm.
 
-#### **`@internal/core`** — Runtime Execution Engine
-- **Purpose**: Flow compilation, execution, scheduling, and state management
+#### **`@internal/core`** — Core API & Signal Infrastructure
 - **Location**: `packages/internal/core/src/`
-- **Key Concerns**:
-  - `runtime/` — Execution pipeline with 4 subsystems
-    - `compiler/` — Flow definition validation and graph compilation
-    - `execution/` — Node execution with retry/timeout logic
-    - `expressions/` — JSONata evaluation for bindings and conditions
-    - `state/` — Snapshots and persistence contracts
-  - `nodes/` — Node registry and definitions
-  - `persistence/` — Run store contracts and in-memory implementations
-- **Consumers**: All applications and SDKs depend on core
+- **Key Exports**:
+  - `api/` — `createHarness()`, `agent()`, `runReactive()`
+  - `lib/` — Logger, utilities
+  - `persistence/` — `RunStore` interface (optional persistence)
+  - `state/` — State types
 
 #### **`@internal/server`** — Server Runtime & HTTP API
-- **Purpose**: HTTP API, WebSocket transport, provider integrations
 - **Location**: `packages/internal/server/src/`
-- **Key Concerns**:
-  - `api/` — Hono HTTP endpoints (chat, events, commands)
-  - `transports/` — Transport adapters (local, WebSocket)
-  - `providers/` — AI provider integrations (Anthropic SDK)
+- **Key Exports**:
+  - `api/` — Hono HTTP endpoints
+  - `transports/` — WebSocket, SSE transports
 
-#### **`@internal/client`** — Browser Client & SSE Transport
-- **Purpose**: HTTP Server-Sent Events client, transport abstraction
+#### **`@internal/client`** — Browser Client
 - **Location**: `packages/internal/client/src/`
-- **Key Concerns**:
-  - `transports/` — HTTP-SSE client, remote transport adapter, error handling
+- **Key Exports**:
+  - `transports/` — HTTP-SSE client, remote transport
 
-### Public Packages (`packages/@open-harness/`)
+### Signal Packages (`packages/signals/`)
 
-Public packages are published to npm and provide stable APIs for end users.
+Core signal infrastructure that powers the reactive system:
 
-#### **`@open-harness/core`** — Public Core API
-- Re-exports and stabilizes `@internal/core`
+#### **`@signals/bus`** — Signal Dispatcher
+- `SignalBus` — Central event routing
+- `MemorySignalStore` — Recording/replay
+- `Player` — VCR-style navigation
+- Pattern matching, snapshots, reporters
 
-#### **`@open-harness/server`** — Public Server API
-- Re-exports and stabilizes `@open-harness/core` + `@internal/server`
+#### **`@signals/core`** — Signal Primitives
+- `createSignal()` — Signal factory
+- `Provider` interface
+- Type definitions
 
-#### **`@open-harness/client`** — Public Browser Client
-- Re-exports and stabilizes `@open-harness/core` + `@internal/client`
+#### **`@signals/provider-claude`** — Claude Integration
+- `ClaudeProvider` — Anthropic Claude via Agent SDK
 
-#### **`@open-harness/react`** — React Hooks & Components
-- Built on top of `@open-harness/client`
+#### **`@signals/provider-openai`** — OpenAI Integration
+- `CodexProvider` — OpenAI models
 
-#### **`@open-harness/stores`** — Store Aggregator
-- Re-exports official RunStore + RecordingStore implementations
+### Public Packages (`packages/open-harness/`)
 
-#### **`@open-harness/run-store-sqlite`** — SQLite Persistence
-- Implements RunStore for durable run history
+Published to npm with stable APIs:
 
-#### **`@open-harness/recording-store-file`** — File Recording Store
-- Implements RecordingStore for JSON/JSONL filesystem recordings
+| Package | Description |
+|---------|-------------|
+| `@open-harness/core` | Public core API (re-exports internal + signals) |
+| `@open-harness/server` | Server API |
+| `@open-harness/client` | Browser client |
+| `@open-harness/react` | React hooks |
+| `@open-harness/stores` | Store aggregator |
 
-#### **`@open-harness/recording-store-sqlite`** — SQLite Recording Store
-- Implements RecordingStore for SQLite-backed recordings
+### Store Packages (`packages/stores/`)
 
-#### **`@open-harness/recording-store-testing`** — Recording Store Contracts
-- Contract tests for RecordingStore implementations
+Optional persistence implementations:
 
-Optional store implementations live under `packages/stores/` (run-store + recording-store).
+| Package | Description |
+|---------|-------------|
+| `@open-harness/run-store-sqlite` | SQLite run persistence |
+| `@open-harness/recording-store-file` | File-based recordings |
+| `@open-harness/recording-store-sqlite` | SQLite recordings |
 
-## Documentation Standards
+## Key APIs
 
-Each package includes comprehensive documentation:
+### `createHarness<TState>()`
 
-- **`README.md`** — Package overview (what it does, key concepts, usage examples)
-- **YAML Frontmatter** — Metadata with timestamps and git information
-- **`src/*/README.md`** — Module-level documentation for complex subsystems
-- **JSDoc** — Inline documentation on all public exports
+Creates a factory for typed agents:
 
-### Frontmatter Format
-
-All READMEs include YAML frontmatter with:
-
-```yaml
----
-title: "Human-readable title"
-lastUpdated: "2026-01-07T09:37:15.032Z"  # ISO 8601 with seconds
-lastCommit: "d298dbb361550864ab20f8c8af1bfa5c62ec8737"  # Git commit hash
-lastCommitDate: "2026-01-07T09:05:41Z"  # Commit date
-scope:  # Tags describing package scope
-  - tag-1
-  - tag-2
----
+```typescript
+const { agent, runReactive } = createHarness<MyState>();
 ```
 
-Metadata is **automatically synced** on every commit via lefthook pre-commit hook (`scripts/update-readme-metadata.ts`).
+Returns:
+- `agent(config)` — Create agents bound to the state type
+- `runReactive(options)` — Execute workflows
 
-## Architecture Overview
+### `agent(config)`
 
-```
-┌─────────────────────────────────────────┐
-│  Applications (apps/)                   │
-│  - Horizon Agent (TUI)                  │
-│  - Docs Site (Next.js)                  │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│  Public Packages (@open-harness/*)     │
-│  - Stable, versioned, published         │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│  Internal Packages (@internal/*)        │
-│  - Core, Server, Client                 │
-│  - Tightly coupled, not published       │
-└──────────────┬──────────────────────────┘
-               │
-        ┌──────┼──────┐
-        │      │      │
-    ┌───▼──┐ ┌─▼──┐ ┌─▼────┐
-    │Core  │ │Srv │ │Client│
-    │      │ │    │ │      │
-    └──────┘ └────┘ └──────┘
+Define an agent with signal-based activation:
+
+```typescript
+const myAgent = agent({
+  // Required
+  prompt: "Your prompt with {{ state.field }} interpolation",
+  activateOn: ["harness:start"],  // When to activate
+  emits: ["my:complete"],         // What signals to emit
+
+  // Optional
+  updates: (output, state) => ({ /* partial state */ }),
+  provider: customProvider,
+  guard: (state) => state.shouldRun,
+  timeout: 30000,
+});
 ```
 
-## Development Workflow
+### `runReactive(options)`
 
-### Testing & Validation
+Execute a signal-based workflow:
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer, writer },
+  state: initialState,
+  defaultProvider: new ClaudeProvider(),
+
+  // Optional recording
+  fixture: "my-test",
+  mode: "replay",
+  store: new MemorySignalStore(),
+});
+```
+
+Returns:
+```typescript
+{
+  state: FinalState,
+  signals: Signal[],
+  metrics: { latencyMs, activations },
+  output: string,
+}
+```
+
+## Signal Types
+
+### Built-in Signals
+
+| Signal | Description |
+|--------|-------------|
+| `harness:start` | Workflow started |
+| `harness:complete` | Workflow finished |
+| `provider:start` | Provider invocation started |
+| `provider:complete` | Provider finished (with output) |
+| `provider:error` | Provider failed |
+
+### Custom Signals
+
+Agents emit custom signals via `emits`:
+
+```typescript
+const analyzer = agent({
+  emits: ["analysis:complete"],  // Emits "analysis:complete" on success
+});
+
+const writer = agent({
+  activateOn: ["analysis:complete"],  // Activates on that signal
+});
+```
+
+## Recording & Replay
+
+v0.3.0 uses signal-based recording:
+
+```typescript
+import { MemorySignalStore } from "@open-harness/core";
+
+const store = new MemorySignalStore();
+
+// Record
+await runReactive({
+  agents,
+  state,
+  defaultProvider: provider,
+  fixture: "my-test",
+  mode: "record",
+  store,
+});
+
+// Replay (no API calls)
+await runReactive({
+  agents,
+  state,
+  fixture: "my-test",
+  mode: "replay",
+  store,
+});
+```
+
+## Development
 
 ```bash
 # Test all packages
 bun run test
 
-# Type check all packages
+# Type check
 bun run typecheck
 
-# Lint all packages
+# Lint
 bun run lint
-
-# Build for distribution
-bun run build
 ```
-
-### Adding a New Package
-
-1. Create `packages/[scope]/[name]/`
-2. Add `package.json` with workspace declaration
-3. Create `src/index.ts` with exports
-4. Add `README.md` with YAML frontmatter (see Frontmatter Format above)
-5. Metadata will sync automatically on first commit
-
-## Key Concepts
-
-### Flow Definition
-A declarative specification of nodes (tasks) connected by edges (control flow). See `@internal/core` for the data model.
-
-### Node Registry
-Maps node type names to node definitions (execution logic, input/output schemas). Users register custom nodes via the registry.
-
-### Runtime
-Executes a flow: compiles the graph, schedules nodes, handles retries/timeouts, emits events, and persists state.
-
-### Transport
-Network layer abstraction. Implementations: HTTP-SSE (browser), WebSocket (TUI), local (Node.js).
 
 ## See Also
 
-- `packages/internal/core/src/runtime/README.md` — Runtime subsystem architecture
-- `packages/internal/server/src/README.md` — Server package details
-- `packages/internal/client/src/transports/README.md` — Transport layer details
+- `packages/signals/README.md` — Signal infrastructure details
+- `packages/internal/core/src/api/README.md` — API implementation details
+- `examples/` — Working examples (simple-reactive, trading-agent, speckit)

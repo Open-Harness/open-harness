@@ -1,20 +1,20 @@
 /**
  * Tests for OpenHarnessReporter.
  */
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenHarnessReporter } from "../src/reporter.js";
 
 // Minimal mock for TaskResultPack - just enough structure for our tests
 type MockTaskResultPack = [string, { state: string } | undefined, unknown];
 
 describe("OpenHarnessReporter", () => {
-	let consoleLogSpy: ReturnType<typeof spyOn>;
-	let consoleErrorSpy: ReturnType<typeof spyOn>;
+	let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+	let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
-		consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
-		// Reset to 0 - bun doesn't allow resetting to undefined
+		consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+		// Reset to 0
 		process.exitCode = 0;
 	});
 
@@ -26,13 +26,13 @@ describe("OpenHarnessReporter", () => {
 	});
 
 	describe("constructor", () => {
-		test("uses default passRate of 0.8", () => {
+		it("uses default passRate of 0.8", () => {
 			const reporter = new OpenHarnessReporter();
 			// @ts-expect-error - accessing private property for testing
 			expect(reporter.config.passRate).toBe(0.8);
 		});
 
-		test("allows custom passRate", () => {
+		it("allows custom passRate", () => {
 			const reporter = new OpenHarnessReporter({ passRate: 0.9 });
 			// @ts-expect-error - accessing private property for testing
 			expect(reporter.config.passRate).toBe(0.9);
@@ -40,7 +40,7 @@ describe("OpenHarnessReporter", () => {
 	});
 
 	describe("onTaskUpdate", () => {
-		test("counts passed tests", () => {
+		it("counts passed tests", () => {
 			const reporter = new OpenHarnessReporter();
 			const packs: MockTaskResultPack[] = [
 				["test-1", { state: "pass" }, undefined],
@@ -54,7 +54,7 @@ describe("OpenHarnessReporter", () => {
 			expect(reporter.passed).toBe(2);
 		});
 
-		test("counts failed tests", () => {
+		it("counts failed tests", () => {
 			const reporter = new OpenHarnessReporter();
 			const packs: MockTaskResultPack[] = [["test-1", { state: "fail" }, undefined]];
 
@@ -65,7 +65,7 @@ describe("OpenHarnessReporter", () => {
 			expect(reporter.failed).toBe(1);
 		});
 
-		test("accumulates across multiple calls", () => {
+		it("accumulates across multiple calls", () => {
 			const reporter = new OpenHarnessReporter();
 
 			// @ts-expect-error - using mock type
@@ -79,7 +79,7 @@ describe("OpenHarnessReporter", () => {
 			expect(reporter.failed).toBe(1);
 		});
 
-		test("ignores other states", () => {
+		it("ignores other states", () => {
 			const reporter = new OpenHarnessReporter();
 			const packs: MockTaskResultPack[] = [
 				["test-1", { state: "skip" }, undefined],
@@ -98,7 +98,7 @@ describe("OpenHarnessReporter", () => {
 	});
 
 	describe("onFinished", () => {
-		test("does nothing when no tests ran", () => {
+		it("does nothing when no tests ran", () => {
 			const reporter = new OpenHarnessReporter();
 
 			reporter.onFinished();
@@ -108,7 +108,7 @@ describe("OpenHarnessReporter", () => {
 			expect(process.exitCode).toBe(0);
 		});
 
-		test("passes when above threshold", () => {
+		it("passes when above threshold", () => {
 			const reporter = new OpenHarnessReporter({ passRate: 0.8 });
 
 			// 9/10 = 90% pass rate
@@ -128,7 +128,7 @@ describe("OpenHarnessReporter", () => {
 			expect(process.exitCode).toBe(0);
 		});
 
-		test("fails when below threshold", () => {
+		it("fails when below threshold", () => {
 			const reporter = new OpenHarnessReporter({ passRate: 0.8 });
 
 			// 7/10 = 70% pass rate
@@ -149,7 +149,7 @@ describe("OpenHarnessReporter", () => {
 			expect(process.exitCode).toBe(1);
 		});
 
-		test("passes when exactly at threshold", () => {
+		it("passes when exactly at threshold", () => {
 			const reporter = new OpenHarnessReporter({ passRate: 0.8 });
 
 			// 8/10 = 80% pass rate (exactly at threshold)
@@ -170,7 +170,7 @@ describe("OpenHarnessReporter", () => {
 			expect(process.exitCode).toBe(0);
 		});
 
-		test("uses custom passRate", () => {
+		it("uses custom passRate", () => {
 			const reporter = new OpenHarnessReporter({ passRate: 0.5 });
 
 			// 5/10 = 50% pass rate (exactly at custom threshold)

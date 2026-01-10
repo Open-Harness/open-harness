@@ -1,9 +1,16 @@
-export {
-	FileRecordingStore,
-	type FileRecordingStoreOptions,
-} from "@open-harness/recording-store-file";
-export {
-	SqliteRecordingStore,
-	type SqliteRecordingStoreOptions,
-} from "@open-harness/recording-store-sqlite";
-export { SqliteRunStore, type SqliteRunStoreOptions } from "@open-harness/run-store-sqlite";
+/**
+ * @open-harness/stores
+ *
+ * v0.3.0: All legacy stores deleted.
+ *
+ * For signal recording, use:
+ * - MemorySignalStore from @open-harness/core (in-memory)
+ * - Future: FileSignalStore, SqliteSignalStore
+ *
+ * For run persistence:
+ * - Use @open-harness/core persistence interfaces
+ * - Future: SqliteRunStore
+ */
+
+// Re-export signal stores from core for convenience
+export { MemorySignalStore, type SignalStore } from "@open-harness/core";

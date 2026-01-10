@@ -1,0 +1,14 @@
+{
+	"name": "@examples/testing-signals",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@open-harness/core": "workspace:*",
+		"@open-harness/vitest": "workspace:*",
+		"vitest": "^2.1.0"
+	}
+}

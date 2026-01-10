@@ -1,29 +1,23 @@
 /**
- * Public API types for Open Harness v0.2.0
+ * Public API types for Open Harness v0.3.0
  *
  * These types form the primary interface for users:
  * - agent() creates an Agent
  * - harness() creates a Harness
- * - run() executes either and returns RunResult
+ * - createHarness() creates a typed harness factory (v0.3.0)
+ * - runReactive() executes signal-based workflows (v0.3.0)
  *
  * Design decisions documented in SDK_DX_DECISIONS.md
  */
 
-import type { RecordingStore } from "../recording/store.js";
-import type { NodeTypeDefinition } from "../nodes/registry.js";
 import type { ZodType } from "zod";
 
-// ============================================================================
-// Provider type - for dependency injection
-// ============================================================================
+// v0.3.0 Signal-based types
+import type { Signal, Provider } from "@signals/core";
+import type { SignalPattern, SignalStore } from "@signals/bus";
 
-/**
- * Provider for executing agents.
- *
- * This is an alias for NodeTypeDefinition with the standard agent input/output.
- * Users can inject custom providers for testing or to use different AI backends.
- */
-export type Provider<TInput = AgentInput, TOutput = AgentOutput> = NodeTypeDefinition<TInput, TOutput>;
+// Re-export Provider from @signals/core for convenience
+export type { Provider } from "@signals/core";
 
 /**
  * Standard agent input shape.
@@ -48,16 +42,17 @@ export type AgentOutput = {
 };
 
 // ============================================================================
-// FixtureStore - Public alias for RecordingStore
+// FixtureStore - Public alias for SignalStore
 // ============================================================================
 
 /**
- * Store for fixtures (recordings).
+ * Store for fixtures (signal recordings).
  *
- * Public API uses "fixture" terminology while internals use "recording".
+ * Public API uses "fixture" terminology while internals use SignalStore.
+ * v0.3.0: Migrated from old RecordingStore to signal-based SignalStore.
  * See SDK_DX_DECISIONS.md Decision #11.
  */
-export type FixtureStore = RecordingStore;
+export type FixtureStore = SignalStore;
 
 // ============================================================================
 // Agent types
@@ -66,27 +61,23 @@ export type FixtureStore = RecordingStore;
 /**
  * Configuration for creating an agent.
  *
+ * Agents are stateless - state lives on the harness level.
+ * Agents are guard-less - use specific signal patterns or harness edges for control flow.
+ *
  * @property prompt - System prompt defining agent behavior
- * @property state - Optional initial state for stateful agents
  * @property output - Optional output configuration with schema
+ *
+ * v0.3.0 adds reactive properties:
+ * @property activateOn - Signal patterns that trigger this agent
+ * @property emits - Signals this agent declares it will emit
+ * @property signalProvider - Per-agent signal-based provider override
  */
-export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
+export type AgentConfig<TOutput = unknown> = {
 	/**
 	 * System prompt that defines the agent's behavior.
 	 * This is the core identity of the agent.
 	 */
 	prompt: string;
-
-	/**
-	 * Optional initial state for stateful agents.
-	 * State persists across invocations within a run.
-	 *
-	 * @example
-	 * ```ts
-	 * state: { conversationHistory: [], taskCount: 0 }
-	 * ```
-	 */
-	state?: TState;
 
 	/**
 	 * Optional output configuration.
@@ -98,15 +89,60 @@ export type AgentConfig<TOutput = unknown, TState = Record<string, unknown>> = {
 		 */
 		schema?: ZodType<TOutput>;
 	};
+
+	// ==========================================================================
+	// v0.3.0 Reactive Properties
+	// ==========================================================================
+
+	/**
+	 * Signal patterns that trigger this agent.
+	 * Uses glob syntax: "harness:start", "state:*:changed", "trade:**"
+	 *
+	 * When present, makes this a "reactive agent" that can be used with runReactive().
+	 *
+	 * @example
+	 * ```ts
+	 * activateOn: ["harness:start"]
+	 * activateOn: ["analysis:complete", "data:updated"]
+	 * activateOn: ["state:*:changed"]
+	 * ```
+	 */
+	activateOn?: SignalPattern[];
+
+	/**
+	 * Signals this agent declares it will emit.
+	 * Declarative metadata - helps with workflow visualization and debugging.
+	 * These signals are automatically emitted after agent completion.
+	 *
+	 * @example
+	 * ```ts
+	 * emits: ["analysis:complete"]
+	 * emits: ["trade:proposed", "trade:executed"]
+	 * ```
+	 */
+	emits?: string[];
+
+	/**
+	 * Per-agent signal-based provider override (v0.3.0).
+	 * If not set, uses default provider from runReactive options.
+	 *
+	 * @example
+	 * ```ts
+	 * import { ClaudeProvider } from "@signals/provider-claude"
+	 * signalProvider: new ClaudeProvider()
+	 * ```
+	 */
+	signalProvider?: Provider;
 };
 
 /**
  * An agent definition created by the agent() function.
  *
- * Agents are the fundamental building blocks - they have identity,
- * make decisions, and optionally maintain state.
+ * Agents are stateless building blocks - they have identity,
+ * make decisions, but do not maintain state.
+ * State lives on the harness level.
  */
-export type Agent<TOutput = unknown, TState = Record<string, unknown>> = {
+export type Agent<TOutput = unknown> = {
 	/**
 	 * Discriminator for type checking at runtime.
 	 */
@@ -115,7 +151,21 @@ export type Agent<TOutput = unknown, TState = Record<string, unknown>> = {
 	/**
 	 * The configuration used to create this agent.
 	 */
-	readonly config: AgentConfig<TOutput, TState>;
+	readonly config: AgentConfig<TOutput>;
+};
+
+/**
+ * A reactive agent is an agent with activation rules.
+ * Can be run in a reactive context via runReactive().
+ *
+ * An agent becomes reactive when it has `activateOn` defined.
+ */
+export type ReactiveAgent<TOutput = unknown> = Agent<TOutput> & {
+	/**
+	 * Indicates this agent has reactive capabilities.
+	 * Set automatically when activateOn is present.
+	 */
+	readonly _reactive: true;
 };
 
 // ============================================================================
@@ -152,6 +202,8 @@ export type Edge = {
 /**
  * Configuration for creating a harness.
  *
+ * The harness owns all workflow state. Agents are stateless.
+ *
  * @property agents - Named agents that comprise this harness
  * @property edges - Connections between agents
  * @property state - Optional shared state accessible to all agents
@@ -177,6 +229,7 @@ export type HarnessConfig<TState = Record<string, unknown>> = {
 
 	/**
 	 * Optional shared state accessible to all agents.
+	 * This is the single source of truth for workflow state.
 	 */
 	state?: TState;
 };
@@ -316,8 +369,8 @@ export type RunResult<T = unknown> = {
 
 	/**
 	 * Harness workflow state (if applicable).
-	 * For single agents, this reflects agent state if configured.
 	 * For harnesses, this is the shared workflow state.
+	 * Single agents do not have state.
 	 */
 	state?: Record<string, unknown>;
 
@@ -361,4 +414,12 @@ export function isHarness(value: unknown): value is Harness {
 		"_tag" in value &&
 		value._tag === "Harness"
 	);
+}
+
+/**
+ * Type guard to check if a value is a ReactiveAgent.
+ * An agent is reactive when it has activateOn defined.
+ */
+export function isReactiveAgent(value: unknown): value is ReactiveAgent {
+	return isAgent(value) && "_reactive" in value && value._reactive === true;
 }
