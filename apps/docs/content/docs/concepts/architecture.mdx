@@ -1,202 +1,256 @@
 ---
 title: Architecture
-description: Understanding agents, harnesses, and the runtime
+description: Understanding signals, agents, and reactive workflows
 ---
 
 # Architecture
 
-Open Harness is built around a simple agent-first architecture that separates
-definition, execution, and evaluation.
+Open Harness v0.3.0 is built around a **signal-based reactive architecture**. Instead of explicitly defining edges between agents, agents declare what signals they react to and what signals they emit. Workflow emerges from signal flow.
+
+## Core Principle
+
+**State changes emit signals. Agents subscribe to signals. Workflow is emergent.**
+
+```mermaid
+flowchart LR
+    Start([harness:start]) --> A[Agent A]
+    A --> |emits| S1[signal:a:done]
+    S1 --> B[Agent B]
+    B --> |emits| S2[signal:b:done]
+    S2 --> End([harness:end])
+```
 
 ## Core Components
 
-### Agents
+### Signals
 
-An **agent** is the fundamental building block. It encapsulates:
-- A system prompt that defines behavior
-- Input/output types
-- Provider configuration (optional)
+A **signal** is an immutable event that flows through the system:
 
 ```typescript
-import { agent } from "@open-harness/core";
+type Signal = {
+  id: string;           // "sig_abc123"
+  name: string;         // "analysis:complete"
+  payload: unknown;     // The data
+  timestamp: string;    // ISO timestamp
+  source?: {
+    agent?: string;     // Which agent emitted
+    parent?: string;    // Causality chain
+  };
+};
+```
 
-const reviewer = agent({
-  prompt: "Review code for bugs and security issues.",
+**Signal Categories:**
+
+| Category | Examples | Purpose |
+|----------|----------|---------|
+| Harness | `harness:start`, `harness:end` | Lifecycle events |
+| Agent | `agent:activated`, `agent:skipped` | Agent execution |
+| Provider | `provider:start`, `provider:end`, `text:delta` | LLM interaction |
+| State | `state:analysis:changed` | State mutations |
+| Custom | `analysis:complete`, `trade:proposed` | Your signals |
+
+### Agents
+
+An **agent** is a reactive unit that subscribes to signals and produces output:
+
+```typescript
+import { createHarness } from "@open-harness/core";
+
+const { agent } = createHarness<MyState>();
+
+const analyzer = agent({
+  // The prompt template ({{ state.x }} syntax)
+  prompt: "Analyze: {{ state.input }}",
+
+  // What signals trigger this agent
+  activateOn: ["harness:start"],
+
+  // What signals this agent emits when done
+  emits: ["analysis:complete"],
+
+  // Optional guard - only activate if true
+  when: (ctx) => ctx.state.input !== null,
+
+  // Automatically update state with output
+  updates: "result",
 });
 ```
 
-### Harnesses
+### Harness
 
-A **harness** coordinates multiple agents. It:
-- Groups related agents together
-- Defines how agents interact
-- Manages shared state across agents
+A **harness** coordinates multiple agents and manages state:
 
 ```typescript
-import { harness, agent } from "@open-harness/core";
+const { agent, runReactive } = createHarness<State>();
 
-const classifier = agent({ prompt: "Classify the input type." });
-const responder = agent({ prompt: "Generate a response." });
-
-const myHarness = harness({
-  agents: { classifier, responder },
-  flow: async (agents, input) => {
-    const type = await agents.classifier.run(input);
-    return agents.responder.run({ ...input, type });
-  },
+const result = await runReactive({
+  agents: { analyzer, reviewer },
+  state: initialState,
+  provider: new ClaudeProvider(),
+  endWhen: (state) => state.complete,
 });
 ```
 
 ### Providers
 
-**Providers** are the execution backends that run agents. They:
-- Connect to LLM APIs (Claude, etc.)
-- Handle streaming responses
-- Report metrics (latency, cost, tokens)
+**Providers** bridge AI SDKs to the signal architecture:
 
 ```typescript
-import { setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+import { ClaudeProvider } from "@open-harness/core";
 
-setDefaultProvider(createClaudeNode());
+const provider = new ClaudeProvider({
+  model: "claude-sonnet-4-20250514",
+});
+
+// Provider emits signals during execution:
+// provider:start → text:delta → text:delta → provider:end
 ```
 
-### Fixture Stores
+## Signal Flow
 
-**Fixture stores** enable recording and replay:
-- Record live responses for deterministic testing
-- Replay fixtures in CI without API calls
-- Support regression detection
-
-```typescript
-import { FileFixtureStore } from "@open-harness/stores";
-
-const store = new FileFixtureStore("./fixtures");
-```
-
-## System Diagram
-
-```mermaid
-flowchart TB
-  agent[agent()]
-  harness[harness()]
-  run[run()]
-  provider[Provider]
-  store[Fixture Store]
-
-  agent --> run
-  harness --> run
-  run --> provider
-  run --> store
-  provider --> result[RunResult]
-  store --> result
-```
-
-## Execution Flow
+Here's how signals flow through a typical workflow:
 
 ```mermaid
 sequenceDiagram
-  participant User
-  participant Run as run()
-  participant Provider
-  participant Store as Fixture Store
+    participant H as Harness
+    participant A as Agent A
+    participant B as Agent B
+    participant P as Provider
 
-  User->>Run: run(agent, input)
-  Run->>Provider: Execute with input
-  Provider-->>Run: Output + metrics
-  Run->>Store: Save fixture (if recording)
-  Run-->>User: RunResult
+    H->>H: emit harness:start
+    H->>A: activate (matches harness:start)
+    A->>P: run prompt
+    P-->>A: text:delta (streaming)
+    P-->>A: provider:end
+    A->>H: emit analysis:complete
+    A->>H: update state.result
+    H->>B: activate (matches analysis:complete)
+    B->>P: run prompt
+    P-->>B: provider:end
+    B->>H: emit review:done
+    H->>H: endWhen(state) → true
+    H->>H: emit harness:end
 ```
 
-## Entry Points
+## Parallel Execution
 
-Open Harness provides a simple API:
-
-| Function | Use Case |
-|----------|----------|
-| `agent()` | Define a single agent |
-| `harness()` | Define a multi-agent workflow |
-| `run()` | Execute an agent or harness |
-
-### agent()
-
-Define a single agent:
+When multiple agents subscribe to the same signal, they run **in parallel**:
 
 ```typescript
-import { agent } from "@open-harness/core";
+// Both react to harness:start → run concurrently
+const riskAnalyzer = agent({
+  activateOn: ["harness:start"],
+  emits: ["risk:assessed"],
+});
 
-const myAgent = agent({
-  prompt: "You are a helpful assistant.",
+const costEstimator = agent({
+  activateOn: ["harness:start"],
+  emits: ["cost:estimated"],
+});
+
+// Both complete → downstream agents can react
+const decider = agent({
+  activateOn: ["risk:assessed", "cost:estimated"],
+  // Activates when EITHER signal fires
 });
 ```
 
-### harness()
+## State Management
 
-Coordinate multiple agents:
+State updates emit signals automatically:
 
 ```typescript
-import { harness, agent } from "@open-harness/core";
+type State = {
+  analysis: string | null;
+  trades: Trade[];
+};
 
-const myHarness = harness({
-  agents: { agent1, agent2 },
-  flow: async (agents, input) => {
-    // Custom orchestration logic
+// When agent updates state.analysis:
+// → emits state:analysis:changed
+
+const trader = agent({
+  activateOn: ["state:analysis:changed"],
+  // Reacts to state changes
+});
+```
+
+## Recording & Replay
+
+The signal log **is** the recording:
+
+```typescript
+const result = await runReactive({
+  // ... agents, state, provider ...
+  recording: {
+    mode: "record",
+    store: new MemorySignalStore(),
+    name: "my-workflow",
   },
 });
+
+// Result contains full signal trace
+console.log(result.signals);
+// [
+//   { name: "harness:start", ... },
+//   { name: "agent:activated", payload: { agent: "analyzer" } },
+//   { name: "provider:start", ... },
+//   { name: "text:delta", payload: { content: "The " } },
+//   ...
+// ]
 ```
 
-### run()
-
-Execute an agent or harness:
+Replay without provider calls:
 
 ```typescript
-import { run } from "@open-harness/core";
-
-const result = await run(myAgent, { prompt: "Hello" });
+const result = await runReactive({
+  // ... same config ...
+  recording: {
+    mode: "replay",
+    store,
+    recordingId: "rec_abc123",
+  },
+});
+// Provider signals injected from recording
 ```
+
+## API Summary
+
+| Function | Purpose |
+|----------|---------|
+| `createHarness<TState>()` | Factory that returns typed `agent()` and `runReactive()` |
+| `agent(config)` | Define a reactive agent |
+| `runReactive(config)` | Execute the workflow |
+| `ClaudeProvider` | Claude model adapter |
+| `MemorySignalStore` | In-memory signal storage |
+| `Player` | VCR-style debugging for recordings |
 
 ## Result Shape
 
-All executions return a consistent shape:
+All executions return:
 
 ```typescript
-{
-  output: T,                    // The agent's response
-  state?: Record<string, unknown>,  // Optional state
+interface HarnessResult<TState> {
+  state: TState;                    // Final state
+  signals: Signal[];                // Full signal trace
   metrics: {
-    latencyMs: number,          // Execution time
-    cost: number,               // USD cost
-    tokens: { input, output },  // Token usage
-  },
-  fixtures?: string[],          // Fixture IDs if recording
+    durationMs: number;             // Total execution time
+    activations: number;            // Number of agent activations
+  };
+  terminatedEarly: boolean;         // endWhen triggered
+  recordingId?: string;             // If recording
 }
-```
-
-## Event System
-
-The runtime emits events during execution:
-
-| Event | When |
-|-------|------|
-| `agent:start` | Agent execution begins |
-| `agent:text` | Streaming text from LLM |
-| `agent:complete` | Agent execution finishes |
-| `agent:error` | Error during execution |
-
-Subscribe to events for monitoring:
-
-```typescript
-import { onEvent } from "@open-harness/core";
-
-onEvent((event) => {
-  if (event.type === "agent:text") {
-    process.stdout.write(event.text);
-  }
-});
 ```
 
 ## Next Steps
 
-- [Event System](/docs/concepts/event-system) — Deep dive on events
-- [Expressions](/docs/concepts/expressions) — JSONata in bindings
-- [Persistence](/docs/concepts/persistence) — Storing workflow state
+<Cards>
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Chain agents with signal subscriptions
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Test with recorded signals
+  </Card>
+  <Card title="API Reference" href="/docs/reference">
+    Full API documentation
+  </Card>
+</Cards>

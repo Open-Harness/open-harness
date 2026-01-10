@@ -1,151 +1,158 @@
 ---
 title: Quickstart
-description: Run your first Open Harness agent in under 5 minutes
+description: Run your first reactive agent in 5 minutes
 ---
 
 # Quickstart
 
-Build and run an agent with Claude in under five minutes.
-
-## What You'll Build
-
-A code review assistant that uses Claude to analyze code:
-
-```
-┌─────────────────┐
-│     agent()     │
-│  (code review)  │
-└─────────────────┘
-```
+This guide will get you running a reactive agent in under 5 minutes.
 
 ## Prerequisites
 
-- Bun 1.0+
-- Running inside Claude Code (for authentication)
+- [Bun](https://bun.sh) installed
+- Claude Code subscription (for auth) or Anthropic API key
 
-## Step 01: Create a Project
+## Installation
+
+Create a new project and install Open Harness:
 
 ```bash
-mkdir code-reviewer
-cd code-reviewer
+mkdir my-agent && cd my-agent
 bun init -y
 bun add @open-harness/core
 ```
 
-## Step 02: Define the Agent
+## Your First Agent
 
-Create `agent.ts`:
+Create `index.ts`:
 
-```typescript title="agent.ts"
-import { agent, run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+```typescript
+import { createHarness, ClaudeProvider } from "@open-harness/core";
 
-// Set up the Claude provider
-setDefaultProvider(createClaudeNode());
+// 1. Define your state type
+type State = {
+  topic: string;
+  summary: string | null;
+};
 
-// Define a code review agent
-export const codeReviewer = agent({
-  prompt: `You are a code reviewer. Analyze code for:
-- Potential bugs
-- Security vulnerabilities
-- Style issues
+// 2. Create a typed harness factory
+const { agent, runReactive } = createHarness<State>();
 
-Provide a brief summary of any problems found.`,
+// 3. Define a reactive agent
+const summarizer = agent({
+  prompt: `Summarize this topic in 2-3 sentences: {{ state.topic }}`,
+  activateOn: ["harness:start"],
+  emits: ["summary:complete"],
+  updates: "summary",
 });
 
-// Run the agent
-const result = await run(codeReviewer, {
-  prompt: `Review this code:
-function divide(a, b) {
-  return a / b;
-}`,
-});
+// 4. Run the workflow
+async function main() {
+  const provider = new ClaudeProvider({
+    model: "claude-sonnet-4-20250514",
+  });
 
-console.log("Review:", result.output);
-console.log("Metrics:", result.metrics);
+  const result = await runReactive({
+    agents: { summarizer },
+    state: {
+      topic: "The history of artificial intelligence",
+      summary: null,
+    },
+    provider,
+    endWhen: (s) => s.summary !== null,
+  });
+
+  console.log("Summary:", result.state.summary);
+  console.log("Duration:", result.metrics.durationMs, "ms");
+}
+
+main();
 ```
 
-## Step 03: Run It
+## Run It
 
 ```bash
-bun run agent.ts
+bun run index.ts
 ```
 
 You should see output like:
 
 ```
-Review: This function has a potential division by zero issue.
-Consider adding a check for b === 0 before dividing.
-Metrics: { latencyMs: 1234, cost: 0.001, tokens: { input: 45, output: 32 } }
+Summary: Artificial intelligence research began in the 1950s with pioneers like Alan Turing...
+Duration: 1234 ms
 ```
 
 ## What Just Happened?
 
-1. You defined an **agent** with a system prompt
-2. The `run()` function executed the agent with your input
-3. The result includes the output and real **metrics**
-4. Authentication happened automatically via Claude Code
+Let's break down the signal flow:
+
+```mermaid
+sequenceDiagram
+    participant H as Harness
+    participant S as Summarizer
+    participant P as Provider
+
+    H->>H: emit harness:start
+    H->>S: activate (matches activateOn)
+    S->>P: run prompt
+    P-->>S: response
+    S->>H: emit summary:complete
+    S->>H: update state.summary
+    H->>H: endWhen(state) → true
+    H->>H: emit harness:end
+```
+
+1. **`harness:start`** - The harness emits a start signal
+2. **Agent activates** - Summarizer subscribes to `harness:start`
+3. **Provider runs** - Claude generates the summary
+4. **State updates** - `updates: "summary"` writes the output to state
+5. **Workflow ends** - `endWhen` condition is satisfied
+
+## Key Concepts
+
+### Signal Subscription
+
+Agents declare what signals they react to:
+
+```typescript
+activateOn: ["harness:start"]  // React to harness lifecycle
+activateOn: ["analysis:done"]  // React to custom signals
+```
+
+### State Updates
+
+The `updates` field automatically writes agent output to state:
+
+```typescript
+updates: "summary"  // output → state.summary
+```
+
+### Termination
+
+`endWhen` defines when the workflow completes:
+
+```typescript
+endWhen: (state) => state.summary !== null
+```
 
 <Callout type="stuck" title="Are you stuck?">
 **Error: Cannot find module '@open-harness/core'**
 Run `bun install` to install dependencies.
 
-**Error: Claude API authentication failed**
-Make sure you're running from within Claude Code.
-</Callout>
-
-## What You Learned
-
-- `agent()` defines an agent with a system prompt
-- `run()` executes the agent and returns a result
-- Results include `output` and `metrics` (latency, cost, tokens)
-- Authentication is handled automatically
-
-## Adding Tests
-
-Create tests for your agent using Bun's built-in test runner:
-
-Create `agent.test.ts`:
-
-```typescript title="agent.test.ts"
-import { describe, expect, it, beforeAll } from "bun:test";
-import { agent, run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-
-// Set up provider before tests run
-beforeAll(() => {
-  setDefaultProvider(createClaudeNode());
-});
-
-const codeReviewer = agent({
-  prompt: "Review code for bugs and security issues.",
-});
-
-describe("Code Reviewer", () => {
-  it("catches division by zero", async () => {
-    const result = await run(codeReviewer, {
-      prompt: "function divide(a, b) { return a / b; }",
-    });
-
-    expect(result.output).toBeDefined();
-    expect(typeof result.output).toBe("string");
-    expect(result.metrics.latencyMs).toBeGreaterThan(0);
-  }, { timeout: 180000 }); // 3 min timeout for LLM calls
-});
-```
-
-Run tests:
-
-```bash
-bun test
-```
-
-<Callout type="info" title="Test Timeouts">
-LLM calls can take 30-60 seconds. Always set appropriate timeouts for tests that call `run()`.
+**Error: Authentication failed**
+Make sure you're running from within Claude Code, or set the `ANTHROPIC_API_KEY` environment variable.
 </Callout>
 
 ## Next Steps
 
-- [Custom Agents](/docs/guides/agents/custom-agents) — Build specialized agent implementations
-- [Architecture](/docs/concepts/architecture) — Understand how Open Harness works
-- [Troubleshooting](/docs/learn/troubleshooting) — Common errors and fixes
+<Cards>
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Chain multiple agents together
+  </Card>
+  <Card title="Signal Patterns" href="/docs/concepts/architecture">
+    Learn the signal system in depth
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Test agents with recorded signals
+  </Card>
+</Cards>
