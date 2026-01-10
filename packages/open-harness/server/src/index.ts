@@ -22,4 +22,4 @@
  * - Build custom Hono routes that consume Provider signals
  */
 
-export { createHealthRoute, corsMiddleware, errorHandler } from "@internal/server";
+export { corsMiddleware, createHealthRoute, errorHandler } from "@internal/server";

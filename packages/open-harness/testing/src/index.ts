@@ -15,4 +15,4 @@
  */
 
 // Re-export core testing types for convenience
-export { MemorySignalStore, type SignalStore, Player } from "@open-harness/core";
+export { MemorySignalStore, Player, type SignalStore } from "@open-harness/core";

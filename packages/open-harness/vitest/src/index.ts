@@ -57,11 +57,11 @@ import "./types.js";
 // Convenience re-exports from core (v0.3.0)
 export {
 	agent,
-	harness,
-	createHarness,
-	runReactive,
-	MemorySignalStore,
 	ClaudeProvider,
-	type RunReactiveResult,
+	createHarness,
+	harness,
+	MemorySignalStore,
 	type RunReactiveOptions,
+	type RunReactiveResult,
+	runReactive,
 } from "@open-harness/core";

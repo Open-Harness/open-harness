@@ -17,4 +17,4 @@
  */
 
 // Re-export core signal types for convenience
-export { SignalBus, type ISignalBus, type Signal } from "@open-harness/core";
+export { type ISignalBus, type Signal, SignalBus } from "@open-harness/core";
