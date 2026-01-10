@@ -195,13 +195,13 @@ master (production/stable)
 
 **Why this matters**: If you branch from `master`, your branch is missing all the work in `dev`. When you try to merge back to `dev`, you'll have ~100+ conflicting files from divergent history. This is what happened with the JSONata PR and required a full rebase to fix.
 
-## PR Workflow Policy (Graphite)
+## PR Workflow Policy (GitHub CLI)
 
-- Use Graphite stacks for all PRs; do not open PRs directly in GitHub.
-- Target all feature stacks to `dev`.
-- Keep the rolling `dev` → `master` PR open as the release train.
-- Review and merge stacks bottom → top.
-- When ready to release, merge the `dev` → `master` PR.
+- Open PRs with `gh pr create` (or GitHub UI if needed); do not use Graphite.
+- Target all feature PRs to `dev`.
+- Keep the rolling `dev` -> `master` PR open as the release train.
+- Keep PRs focused; link the bead/issue in the PR description.
+- When ready to release, merge the `dev` -> `master` PR.
 
 ## Beads Issue Tracking (Agent Workflow)
 

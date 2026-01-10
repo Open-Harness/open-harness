@@ -11,8 +11,10 @@
 		"lint": "turbo lint",
 		"dev": "turbo dev",
 		"build": "turbo build",
+		"test": "turbo test",
 		"typecheck": "turbo typecheck",
 		"prepare": "lefthook install",
+
 		"hooks:install": "lefthook install",
 		"hooks:uninstall": "lefthook uninstall"
 	},

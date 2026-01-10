@@ -19,7 +19,11 @@ export function getPageImage(page: InferPageType<typeof source>) {
 }
 
 export async function getLLMText(page: InferPageType<typeof source>) {
-	const processed = await page.data.getText("processed");
+	// Fumadocs types do not currently expose getText on PageData.
+	const data = page.data as typeof page.data & {
+		getText: (variant: string) => Promise<string>;
+	};
+	const processed = await data.getText("processed");
 
 	return `# ${page.data.title}
 
