@@ -676,19 +676,207 @@ P1 (Examples Update)
 - [x] P1: Examples Update ✅ **All 5 examples complete with READMEs**
 - [x] I2: Vitest Integration ✅ **All core matchers implemented**
 - [x] P4: Cleanup & Deletion ✅ **All legacy code deleted**
+- [x] P3: Internal Documentation ✅ **All package READMEs created**
 
 **Remaining Work (2 epics):**
 
-1. **P0-6: Signal-Native Eval** ❌ - Build eval system using SignalStore
-   - Design `SignalAssertion` types
-   - Implement `evaluateSignalAssertion()`
-   - Build `runSignalCase()`, `runSignalDataset()`
-   - This is the last major feature gap
-
+1. **P0-6: Signal-Native Eval** ❌ - See detailed spec below
 2. **P2: Documentation Cleanup** ❌ - Clean slate rewrite
-   - Delete old v0.2.0 docs
-   - Unified docs site
-   - Architecture overview, getting started, API reference
+
+---
+
+## P0-6: Signal-Native Eval System (Detailed)
+
+**Full Specification:** `specs/p0-6-signal-native-eval/spec.md`
+
+### Why Signal-Based Eval Changes Everything
+
+Traditional eval systems see: `Input → [black box] → Output`
+
+Open Harness sees: `Input → harness:start → agent:activated → provider:start → text:delta → provider:end → state:changed → agent:activated → ... → harness:end`
+
+This enables assertions competitors **cannot do**:
+- **Trajectory assertions** — Did agents execute in the right order?
+- **Snapshot assertions** — What was the state mid-execution?
+- **Causality assertions** — Which agent triggered which action?
+- **Tool assertions** — Did the coding agent use the right tools?
+
+### Core Design: Assertions as Data
+
+Instead of procedural tests, assertions are **declarative YAML**:
+
+```yaml
+# evals/code-review-agent.yaml
+cases:
+  - id: sql-injection
+    name: Detects SQL injection vulnerability
+    input:
+      code: |
+        const query = `SELECT * FROM users WHERE id = ${userId}`;
+    assertions:
+      # Trajectory: reviewer must complete before fixer activates
+      - type: signal.trajectory
+        patterns:
+          - harness:start
+          - { pattern: agent:activated, payload: { agent: reviewer } }
+          - review:complete
+          - { pattern: agent:activated, payload: { agent: fixer } }
+          - fix:proposed
+          - harness:end
+
+      # Snapshot: check state mid-execution
+      - type: snapshot.at
+        afterSignal: review:complete
+        path: severity
+        value: critical
+
+      # Tool usage (for coding agents)
+      - type: tool.called
+        name: Edit
+
+      # Output validation
+      - type: output.matches
+        regex: "SQL.*injection|parameterized"
+        flags: i
+```
+
+### Key Assertion Types
+
+| Category | Assertions | Use Case |
+|----------|------------|----------|
+| **Signal** | contains, not, count, trajectory, first, last | Verify execution flow |
+| **Snapshot** | at, final | Mid-execution state inspection |
+| **Agent** | activated, completed, causedBy, emitted, skipped | Agent behavior |
+| **Metric** | latency, cost, tokens, activations | Performance bounds |
+| **Output** | contains, matches, json, length | Final output validation |
+| **Tool** | called, notCalled, calledWith, sequence | Tool usage for coding agents |
+| **Compose** | all, any, not | Combine assertions |
+| **LLM** | judge | LLM-as-Judge quality scoring |
+
+### Example Domains
+
+**Code Review Agent** (two-agent: reviewer → fixer)
+- SQL injection detection
+- XSS vulnerability detection
+- Code quality issues
+- False positive prevention (clean code)
+
+**Code Generation Agent** (four-agent: planner → coder → tester → reviewer)
+- Algorithm implementation (fibonacci, binary search)
+- API endpoint generation
+- Error handling for impossible tasks
+- Tool usage validation
+
+**Refactoring Agent** (multi-file operations)
+- Rename function across files
+- Extract interface from class
+- Move code to separate file
+
+**Debugging Agent** (diagnose → fix)
+- Null pointer errors
+- Async test timeouts
+- Import/export mismatches
+
+### API Surface
+
+```typescript
+// Evaluate single assertion
+evaluateAssertion(assertion, signals, result): AssertionResult
+
+// Run single case
+runCase(factory, agents, evalCase, options): CaseResult
+
+// Run dataset (batch)
+runDataset(factory, agents, dataset, options): DatasetResult
+
+// Matrix evaluation (variants × cases)
+runMatrix(variants, dataset, options): MatrixResult
+
+// Compare runs (regression detection)
+compare(baseline, candidate, options): Comparison
+
+// Reports
+generateMarkdownReport(result): string
+generateJSONReport(result): object
+
+// Persistence
+loadDataset(path): EvalDataset
+saveResult(result, path): void
+```
+
+### Implementation Phases
+
+**Phase 1: Core (MVP)**
+- [ ] SignalAssertion types (all of them)
+- [ ] evaluateAssertion() function
+- [ ] runCase() and runDataset()
+- [ ] YAML loader with Zod validation
+- [ ] Basic markdown report
+- [ ] Unit tests for all assertion types
+
+**Phase 2: Advanced**
+- [ ] Tool assertions (for coding agents)
+- [ ] LLM-as-Judge assertion
+- [ ] runMatrix() function
+- [ ] compare() with regression detection
+- [ ] Enhanced markdown/JSON reports
+
+**Phase 3: Polish**
+- [ ] CLI tool (`bun run eval`)
+- [ ] CI integration guide
+- [ ] Example datasets (code review, code gen, refactoring, debugging)
+- [ ] Documentation
+
+### Package Structure
+
+```
+packages/eval/                    # @open-harness/eval
+├── src/
+│   ├── assertions/
+│   │   ├── types.ts             # SignalAssertion union
+│   │   ├── signal.ts            # contains, trajectory, etc.
+│   │   ├── snapshot.ts          # at, final
+│   │   ├── agent.ts             # activated, completed, etc.
+│   │   ├── metric.ts            # latency, cost, tokens
+│   │   ├── output.ts            # contains, matches, json
+│   │   ├── tool.ts              # called, sequence (coding agents)
+│   │   ├── llm.ts               # judge
+│   │   ├── compose.ts           # all, any, not
+│   │   └── evaluate.ts          # evaluateAssertion()
+│   ├── runners/
+│   │   ├── case.ts              # runCase()
+│   │   ├── dataset.ts           # runDataset()
+│   │   └── matrix.ts            # runMatrix()
+│   ├── comparison/
+│   │   └── compare.ts           # compare(), Regression types
+│   ├── reports/
+│   │   ├── markdown.ts
+│   │   └── json.ts
+│   ├── loader/
+│   │   └── yaml.ts              # loadDataset()
+│   └── index.ts
+└── package.json
+```
+
+---
+
+## P2: Documentation Cleanup
+
+**Status:** Not Started
+
+Clean slate rewrite of external documentation:
+
+- [ ] DELETE: All v0.2.0 docs (020, 030 content)
+- [ ] DELETE: Out-of-date API references
+- [ ] One unified docs site (not versioned sections)
+- [ ] Architecture overview (signal-based)
+- [ ] Getting started with createHarness
+- [ ] Signal reference
+- [ ] Provider implementation guide
+- [ ] Testing guide (@open-harness/vitest)
+- [ ] Eval guide (@open-harness/eval)
+- [ ] API reference (generated from code)
+- [ ] Migration guide from v0.2.0
 
 **Recently Completed (Audit 2025-01-10):**
 
