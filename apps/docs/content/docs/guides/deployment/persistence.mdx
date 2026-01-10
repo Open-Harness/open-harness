@@ -1,82 +1,128 @@
 ---
 title: Persistence Configuration
-description: Configure RunStore options for durable workflows
+description: Configure signal stores for durable workflows
 ---
 
 # Persistence Configuration
 
-Open Harness can persist runtime events and snapshots through a `RunStore`.
+Open Harness can persist signal traces for recording and replay.
 
 ## In-Memory Store (Development)
 
-Use `InMemoryRunStore` for quick iteration:
+Use `MemorySignalStore` for quick iteration:
 
 ```typescript
-import { InMemoryRunStore } from "@open-harness/core";
+import { MemorySignalStore } from "@open-harness/core";
 
-const store = new InMemoryRunStore();
+const store = new MemorySignalStore();
 ```
 
-## SQLite Store (Production)
+- Fast, no setup
+- Data lost on restart
+- Perfect for tests
 
-Use `SqliteRunStore` for durable storage:
+## Recording a Workflow
+
+Enable recording during execution:
 
 ```typescript
-import { SqliteRunStore } from "@open-harness/run-store-sqlite";
+import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
 
-const store = new SqliteRunStore({ filename: "./data/runs.db" });
+const store = new MemorySignalStore();
+
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  provider: new ClaudeProvider(),
+  recording: {
+    mode: "record",
+    store,
+    name: "my-workflow",
+    tags: ["production", "analyzer"],
+  },
+});
+
+console.log("Recording ID:", result.recordingId);
 ```
 
-## Custom Store
+## Replaying a Workflow
 
-Implement the `RunStore` interface:
+Replay without provider calls:
 
 ```typescript
-import type { RunStore } from "@open-harness/core";
-import type { RuntimeEvent } from "@open-harness/core";
-import type { RunSnapshot } from "@open-harness/core";
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  provider: new ClaudeProvider(), // Not called during replay
+  recording: {
+    mode: "replay",
+    store,
+    recordingId: "rec_abc123",
+  },
+});
+```
 
-class PostgresRunStore implements RunStore {
-  appendEvent(runId: string, event: RuntimeEvent): void {
-    // Persist event (use sequence ids in your storage)
+## Custom Signal Store
+
+Implement the `SignalStore` interface for other backends:
+
+```typescript
+import type { SignalStore, Recording, RecordingMetadata } from "@open-harness/core";
+
+class PostgresSignalStore implements SignalStore {
+  async saveRecording(recording: Recording): Promise<void> {
+    await this.pool.query(
+      "INSERT INTO recordings (id, data) VALUES ($1, $2)",
+      [recording.id, JSON.stringify(recording)]
+    );
   }
 
-  saveSnapshot(runId: string, snapshot: RunSnapshot): void {
-    // Persist snapshot
+  async loadRecording(id: string): Promise<Recording | null> {
+    const result = await this.pool.query(
+      "SELECT data FROM recordings WHERE id = $1",
+      [id]
+    );
+    return result.rows[0]?.data ?? null;
   }
 
-  loadSnapshot(runId: string): RunSnapshot | null {
-    // Load last snapshot
-    return null;
-  }
-
-  loadEvents(runId: string, afterSeq: number = 0): RuntimeEvent[] {
-    // Load events after the sequence cursor
+  async listRecordings(options?: ListOptions): Promise<RecordingMetadata[]> {
+    // Implement filtering and pagination
     return [];
+  }
+
+  async deleteRecording(id: string): Promise<void> {
+    await this.pool.query("DELETE FROM recordings WHERE id = $1", [id]);
   }
 }
 ```
 
 ## What Gets Persisted
 
-- **Events**: every runtime event (`node:start`, `node:complete`, etc.)
-- **Snapshots**: the latest run snapshot for replay or resume
+- **Signal Trace**: Every signal emitted during execution
+- **Metadata**: Recording name, tags, timestamps, metrics
+- **Final State**: The state at workflow completion
 
 ## Trade-offs
 
 | Store | Pros | Cons |
 |-------|------|------|
-| In-memory | Fast, zero setup | Lost on restart |
-| SQLite | Single file, easy ops | Single-process |
-| Custom DB | Scalable, shared | More ops work |
+| MemorySignalStore | Fast, zero setup | Lost on restart |
+| Custom DB | Scalable, durable | More ops work |
+| File-based (coming soon) | Simple persistence | Single-process |
 
 ## Migrating to Production
 
-1. Start with `InMemoryRunStore` locally.
-2. Switch to `SqliteRunStore` for staging.
-3. Move to a custom store if you need multi-process scaling.
+1. Start with `MemorySignalStore` locally
+2. Use recording/replay for deterministic tests
+3. Implement a custom store for production persistence
 
 ## Next Steps
 
-- [Production Deployment](/docs/guides/deployment/production) — Deployment guide
-- [Run Store API](/docs/reference/api/run-store) — Interface details
+<Cards>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Testing patterns with signals
+  </Card>
+  <Card title="Production Deployment" href="/docs/guides/deployment/production">
+    Deployment checklist
+  </Card>
+</Cards>

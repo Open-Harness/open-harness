@@ -1,101 +1,194 @@
 ---
-title: Multi-Agent Flow
-description: Connect multiple agents in a coordinated workflow
+title: Multi-Agent Workflows
+description: Chain multiple agents using signal subscriptions
 ---
 
-# Multi-Agent Flow
+# Multi-Agent Workflows
 
-Build a workflow where multiple agents collaborate: a planner, coder, and reviewer.
+Build workflows where multiple agents collaborate through signal-based coordination.
 
 ## What You'll Build
 
+A code review pipeline where agents communicate through signals:
+
+```mermaid
+flowchart LR
+    Start([harness:start]) --> P[Planner]
+    P --> |plan:complete| C[Coder]
+    C --> |code:complete| R[Reviewer]
+    R --> |review:complete| End([harness:end])
 ```
-┌──────────┐     ┌──────────┐     ┌──────────┐
-│ Planner  │────▶│  Coder   │────▶│ Reviewer │
-└──────────┘     └──────────┘     └──────────┘
-                       │                │
-                       └────── loop ────┘
+
+## Define the Agents
+
+```typescript
+import { createHarness, ClaudeProvider } from "@open-harness/core";
+
+type State = {
+  task: string;
+  plan: string | null;
+  code: string | null;
+  review: { passed: boolean; feedback: string } | null;
+};
+
+const { agent, runReactive } = createHarness<State>();
+
+// Planner: Reacts to harness:start
+const planner = agent({
+  prompt: `Create an implementation plan for: {{ state.task }}`,
+  activateOn: ["harness:start"],
+  emits: ["plan:complete"],
+  updates: "plan",
+});
+
+// Coder: Reacts to planner's signal
+const coder = agent({
+  prompt: `Implement this plan:
+{{ state.plan }}`,
+  activateOn: ["plan:complete"],
+  emits: ["code:complete"],
+  updates: "code",
+});
+
+// Reviewer: Reacts to coder's signal
+const reviewer = agent({
+  prompt: `Review this code:
+{{ state.code }}
+
+Respond with JSON: { "passed": boolean, "feedback": string }`,
+  activateOn: ["code:complete"],
+  emits: ["review:complete"],
+  updates: "review",
+});
 ```
 
-## The Flow
+## Run the Workflow
 
-```yaml
-flow:
-  name: code-with-review
+```typescript
+const result = await runReactive({
+  agents: { planner, coder, reviewer },
+  state: {
+    task: "Create a function to validate email addresses",
+    plan: null,
+    code: null,
+    review: null,
+  },
+  provider: new ClaudeProvider(),
+  endWhen: (s) => s.review !== null,
+});
 
-nodes:
-  - id: planner
-    type: claude.agent
-    input:
-      prompt: |
-        Plan the implementation for: {{ flow.input.task }}
-        Output a step-by-step plan.
+console.log("Plan:", result.state.plan);
+console.log("Code:", result.state.code);
+console.log("Review passed:", result.state.review?.passed);
+```
 
-  - id: coder
-    type: claude.agent
-    input:
-      prompt: |
-        Implement this plan:
-        {{ planner.text }}
+## Signal Flow
 
-        {{ $exists(reviewer) ? 'Address this feedback: ' & reviewer.feedback : '' }}
+Here's how signals coordinate the agents:
 
-  - id: reviewer
-    type: claude.agent
-    input:
-      prompt: |
-        Review this code:
-        {{ coder.text }}
+```mermaid
+sequenceDiagram
+    participant H as Harness
+    participant P as Planner
+    participant C as Coder
+    participant R as Reviewer
 
-        Respond with JSON: { "passed": boolean, "feedback": string }
+    H->>H: emit harness:start
+    H->>P: activate (matches harness:start)
+    P->>H: update state.plan
+    P->>H: emit plan:complete
+    H->>C: activate (matches plan:complete)
+    C->>H: update state.code
+    C->>H: emit code:complete
+    H->>R: activate (matches code:complete)
+    R->>H: update state.review
+    R->>H: emit review:complete
+    H->>H: endWhen(state) → true
+    H->>H: emit harness:end
+```
 
-edges:
-  - from: planner
-    to: coder
-  - from: coder
-    to: reviewer
-  - from: reviewer
-    to: coder
-    type: loop
-    maxIterations: 3
-    when: "reviewer.passed = false"
+## Parallel Agents
+
+When multiple agents subscribe to the same signal, they run **in parallel**:
+
+```typescript
+// Both react to harness:start → run concurrently
+const riskAnalyzer = agent({
+  prompt: "Analyze risk for: {{ state.proposal }}",
+  activateOn: ["harness:start"],
+  emits: ["risk:assessed"],
+  updates: "riskScore",
+});
+
+const costEstimator = agent({
+  prompt: "Estimate cost for: {{ state.proposal }}",
+  activateOn: ["harness:start"],
+  emits: ["cost:estimated"],
+  updates: "costEstimate",
+});
+
+// Decider waits for both to complete
+const decider = agent({
+  prompt: `Risk: {{ state.riskScore }}
+Cost: {{ state.costEstimate }}
+Make a decision.`,
+  activateOn: ["risk:assessed", "cost:estimated"],
+  when: (ctx) => ctx.state.riskScore !== null && ctx.state.costEstimate !== null,
+  emits: ["decision:made"],
+});
+```
+
+## Conditional Activation
+
+Use `when` guards to conditionally activate agents:
+
+```typescript
+const escalationAgent = agent({
+  prompt: "Escalate this high-priority issue: {{ state.issue }}",
+  activateOn: ["issue:created"],
+  when: (ctx) => ctx.state.priority === "high",
+  emits: ["escalation:sent"],
+});
 ```
 
 ## Key Concepts
 
-### Data Flow with Bindings
+### Signal Subscription
 
-Each node can access outputs from upstream nodes:
-- `{{ planner.text }}` — Planner's output
-- `{{ coder.text }}` — Coder's output
-- `{{ reviewer.feedback }}` — Reviewer's feedback
-
-### Conditional Expressions
-
-Use JSONata for dynamic content:
-```yaml
-{{ $exists(reviewer) ? 'Fix: ' & reviewer.feedback : '' }}
-```
-
-### Loop Edges
-
-The `reviewer → coder` edge is a loop that:
-- Runs up to 3 times
-- Continues while `reviewer.passed = false`
-
-## Run It
+Agents declare what signals they react to with `activateOn`:
 
 ```typescript
-const runtime = createRuntime({ flow, registry });
-const snapshot = await runtime.run({
-  task: "Create a function to validate email addresses"
-});
+activateOn: ["harness:start"]     // React to harness lifecycle
+activateOn: ["plan:complete"]      // React to custom signals
+activateOn: ["state:code:changed"] // React to state changes
+```
 
-console.log("Final code:", snapshot.outputs.coder.text);
-console.log("Review passed:", snapshot.outputs.reviewer.passed);
+### Signal Emission
+
+Agents declare what signals they emit with `emits`:
+
+```typescript
+emits: ["plan:complete"]  // Other agents can subscribe to this
+```
+
+### State Updates
+
+The `updates` field automatically writes agent output to state:
+
+```typescript
+updates: "plan"  // Agent output → state.plan
 ```
 
 ## Next Steps
 
-- [Persistence](/docs/learn/persistence) — Save state for long-running flows
-- [Loop Edges](/docs/guides/flows/control-flow) — Advanced loop patterns
+<Cards>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Test multi-agent workflows with recorded signals
+  </Card>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Deep dive into signal-based orchestration
+  </Card>
+  <Card title="API Reference" href="/docs/reference">
+    Full API documentation
+  </Card>
+</Cards>

@@ -6,12 +6,10 @@ export default function HomePage() {
 			{/* Hero */}
 			<div className="text-center max-w-3xl">
 				<h1 className="text-4xl md:text-5xl font-bold mb-4">Open Harness</h1>
-				<p className="text-xl md:text-2xl text-muted-foreground mb-2">
-					Signal-based reactive workflows for AI agents
-				</p>
+				<p className="text-xl md:text-2xl text-muted-foreground mb-2">Signal-based reactive workflows for AI agents</p>
 				<p className="text-base text-muted-foreground mb-8">
-					Define agents that react to signals. Workflow emerges from signal flow.
-					TypeScript-first with full type safety.
+					Define agents that react to signals. Workflow emerges from signal flow. TypeScript-first with full type
+					safety.
 				</p>
 				<div className="flex gap-4 justify-center mb-12">
 					<Link
@@ -42,9 +40,7 @@ export default function HomePage() {
 					<span>→</span>
 					<span className="px-3 py-1.5 bg-primary text-primary-foreground rounded">Result</span>
 				</div>
-				<p className="text-center text-xs text-muted-foreground mt-2">
-					Signals flow, agents react, workflow emerges
-				</p>
+				<p className="text-center text-xs text-muted-foreground mt-2">Signals flow, agents react, workflow emerges</p>
 			</div>
 
 			{/* Code Example */}
@@ -80,23 +76,22 @@ const result = await runReactive({
 					<h3 className="font-semibold mb-2">Signal-Based Orchestration</h3>
 					<p className="text-sm text-muted-foreground">
 						No explicit edges. Agents declare what signals they react to with{" "}
-						<code className="text-xs bg-muted px-1 rounded">activateOn</code> and what they emit.
-						Workflow emerges naturally.
+						<code className="text-xs bg-muted px-1 rounded">activateOn</code> and what they emit. Workflow emerges
+						naturally.
 					</p>
 				</div>
 				<div className="p-6 border border-border rounded-lg">
 					<h3 className="font-semibold mb-2">Typed State Guards</h3>
 					<p className="text-sm text-muted-foreground">
-						Full TypeScript autocomplete in{" "}
-						<code className="text-xs bg-muted px-1 rounded">when</code> guards. Conditional
-						activation with compile-time type safety.
+						Full TypeScript autocomplete in <code className="text-xs bg-muted px-1 rounded">when</code> guards.
+						Conditional activation with compile-time type safety.
 					</p>
 				</div>
 				<div className="p-6 border border-border rounded-lg">
 					<h3 className="font-semibold mb-2">Recording & Replay</h3>
 					<p className="text-sm text-muted-foreground">
-						Event-sourced signal log for deterministic testing. Record live runs, replay without
-						provider calls. Perfect for CI.
+						Event-sourced signal log for deterministic testing. Record live runs, replay without provider calls. Perfect
+						for CI.
 					</p>
 				</div>
 			</div>
@@ -106,17 +101,15 @@ const result = await runReactive({
 				<div className="p-6 border border-border rounded-lg">
 					<h3 className="font-semibold mb-2">Parallel Execution</h3>
 					<p className="text-sm text-muted-foreground">
-						Multiple agents subscribing to the same signal run in parallel automatically.
-						No manual concurrency management.
+						Multiple agents subscribing to the same signal run in parallel automatically. No manual concurrency
+						management.
 					</p>
 				</div>
 				<div className="p-6 border border-border rounded-lg">
 					<h3 className="font-semibold mb-2">Vitest Integration</h3>
 					<p className="text-sm text-muted-foreground">
-						Custom matchers like{" "}
-						<code className="text-xs bg-muted px-1 rounded">toContainSignal</code> and{" "}
-						<code className="text-xs bg-muted px-1 rounded">toHaveSignalsInOrder</code> for
-						testing agent behavior.
+						Custom matchers like <code className="text-xs bg-muted px-1 rounded">toContainSignal</code> and{" "}
+						<code className="text-xs bg-muted px-1 rounded">toHaveSignalsInOrder</code> for testing agent behavior.
 					</p>
 				</div>
 			</div>

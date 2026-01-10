@@ -1,156 +1,189 @@
 ---
 title: Your First Agent
-description: Build a multi-node flow with conditions and state
+description: Build a reactive agent with conditional activation
 ---
 
 # Your First Agent
 
-Build a task triage agent that routes work based on priority.
+Build a task classifier that routes work based on priority using reactive signals.
 
 ## What You'll Build
 
-A flow that:
+An agent that:
 - Classifies incoming tasks as `urgent` or `normal`
-- Branches based on that classification
-- Tracks how many runs have executed
+- Routes to different handlers based on classification
+- Demonstrates conditional activation with `when` guards
 
-```
-┌──────────────┐
-│  task.triage │
-└──────┬───────┘
-       │
-  ┌────┴─────┐
-  │          │
-┌─▼──────┐ ┌─▼──────┐
-│ urgent │ │ normal │
-└────────┘ └────────┘
+```mermaid
+flowchart LR
+    Start([harness:start]) --> C[Classifier]
+    C --> |classify:complete| U[Urgent Handler]
+    C --> |classify:complete| N[Normal Handler]
 ```
 
-## Step 01: Define the Flow
+## Step 1: Define State and Agents
 
-Create `flow.yaml`:
+```typescript
+import { createHarness, ClaudeProvider } from "@open-harness/core";
 
-```yaml title="flow.yaml"
-name: task-triage
-state:
-  initial:
-    runs: 0
-nodes:
-  - id: triage
-    type: task.triage
-    input:
-      text: "{{ flow.input.text }}"
-
-  - id: urgent
-    type: echo
-    input:
-      text: "URGENT: {{ triage.summary }} (run {{ state.runs }})"
-
-  - id: normal
-    type: echo
-    input:
-      text: "Next up: {{ triage.summary }} (run {{ state.runs }})"
-
-edges:
-  - from: triage
-    to: urgent
-    when: "triage.priority = 'urgent'"
-
-  - from: triage
-    to: normal
-    when: "triage.priority = 'normal'"
-```
-
-## Step 02: Create the Agent Node
-
-Create `run.ts`:
-
-```typescript title="run.ts"
-import { createHarness, parseFlowYaml, echoNode } from "@open-harness/server";
-import { readFileSync } from "node:fs";
-
-type TriageInput = { text: string };
-type TriageOutput = { priority: "urgent" | "normal"; summary: string };
-
-const triageNode = {
-  type: "task.triage" as const,
-  run: async (ctx, input: TriageInput): Promise<TriageOutput> => {
-    const normalized = input.text.toLowerCase();
-    const priority =
-      normalized.includes("urgent") || normalized.includes("asap")
-        ? "urgent"
-        : "normal";
-
-    // Track run count in state
-    const runs = Number(ctx.state.get("runs") ?? 0) + 1;
-    ctx.state.set("runs", runs);
-
-    return {
-      priority,
-      summary: input.text.slice(0, 80),
-    };
-  },
+// Define your state type
+type State = {
+  task: string;
+  classification: { priority: "urgent" | "normal"; reason: string } | null;
+  response: string | null;
 };
 
-const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
+// Create typed harness factory
+const { agent, runReactive } = createHarness<State>();
 
-const harness = createHarness({
-  flow,
-  registry: {
-    [triageNode.type]: triageNode,
-    [echoNode.type]: echoNode,
-  },
-  onEvent: (event) => {
-    if (event.type === "node:complete") {
-      console.log(`[${event.nodeId}]`, event.output);
-    }
-  },
+// Classifier agent: determines priority
+const classifier = agent({
+  prompt: `Classify this task as "urgent" or "normal":
+{{ state.task }}
+
+Respond with JSON: { "priority": "urgent" | "normal", "reason": string }`,
+  activateOn: ["harness:start"],
+  emits: ["classify:complete"],
+  updates: "classification",
 });
 
-const snapshot = await harness.run({
-  text: "ASAP: reset production password for the admin user",
+// Urgent handler: only activates for urgent tasks
+const urgentHandler = agent({
+  prompt: `Handle this URGENT task immediately:
+{{ state.task }}
+Reason for urgency: {{ state.classification.reason }}`,
+  activateOn: ["classify:complete"],
+  when: (ctx) => ctx.state.classification?.priority === "urgent",
+  emits: ["response:complete"],
+  updates: "response",
 });
 
-console.log("Final outputs:", snapshot.outputs);
+// Normal handler: only activates for normal tasks
+const normalHandler = agent({
+  prompt: `Process this normal priority task:
+{{ state.task }}`,
+  activateOn: ["classify:complete"],
+  when: (ctx) => ctx.state.classification?.priority === "normal",
+  emits: ["response:complete"],
+  updates: "response",
+});
+```
+
+## Step 2: Run the Workflow
+
+```typescript
+async function main() {
+  const provider = new ClaudeProvider({
+    model: "claude-sonnet-4-20250514",
+  });
+
+  const result = await runReactive({
+    agents: { classifier, urgentHandler, normalHandler },
+    state: {
+      task: "ASAP: Reset production password for admin user",
+      classification: null,
+      response: null,
+    },
+    provider,
+    endWhen: (s) => s.response !== null,
+  });
+
+  console.log("Classification:", result.state.classification);
+  console.log("Response:", result.state.response);
+  console.log("Duration:", result.metrics.durationMs, "ms");
+}
+
+main();
 ```
 
 Run it:
 
 ```bash
-bun run run.ts
+bun run index.ts
 ```
 
 Expected output:
 
 ```
-[triage] { priority: "urgent", summary: "ASAP: reset production password..." }
-[urgent] { text: "URGENT: ASAP: reset production password... (run 1)" }
-Final outputs: { triage: { ... }, urgent: { ... } }
+Classification: { priority: "urgent", reason: "Password reset for production admin..." }
+Response: "Immediately initiating password reset protocol..."
+Duration: 2345 ms
 ```
 
-## How the Flow Works
+## How It Works
 
-- **Conditional logic**: `when` on edges routes to `urgent` or `normal`
-- **State management**: `ctx.state` tracks the total run count
-- **Multi-node orchestration**: one node makes a decision, another responds
+1. **harness:start** triggers the classifier
+2. Classifier emits **classify:complete** with the classification
+3. Both handlers receive **classify:complete**, but only one passes its `when` guard
+4. The matching handler runs and emits **response:complete**
+5. **endWhen** condition is satisfied, workflow ends
+
+```mermaid
+sequenceDiagram
+    participant H as Harness
+    participant C as Classifier
+    participant U as Urgent
+    participant N as Normal
+
+    H->>H: emit harness:start
+    H->>C: activate
+    C->>H: update classification
+    C->>H: emit classify:complete
+    H->>U: check when guard → true
+    H->>N: check when guard → false (skip)
+    U->>H: update response
+    U->>H: emit response:complete
+    H->>H: endWhen → true
+```
+
+## Key Concepts
+
+### Conditional Activation with `when`
+
+The `when` guard runs before agent activation:
+
+```typescript
+when: (ctx) => ctx.state.classification?.priority === "urgent"
+```
+
+- Returns `true`: agent activates
+- Returns `false`: agent is skipped
+
+### Template Expressions
+
+Access state in prompts with `{{ state.x }}` syntax:
+
+```typescript
+prompt: `Task: {{ state.task }}
+Reason: {{ state.classification.reason }}`
+```
+
+### Automatic State Updates
+
+The `updates` field maps agent output to state:
+
+```typescript
+updates: "classification"  // Agent output → state.classification
+```
 
 <Callout type="stuck" title="Are you stuck?">
-**Error: Node type 'task.triage' not found**
-Make sure you pass the `triageNode` in the `registry` option.
+**Both handlers run**
+Check your `when` guards — they should be mutually exclusive (one checks `=== "urgent"`, the other `=== "normal"`).
 
-**Both urgent and normal run**
-Check your `when` conditions - they should be mutually exclusive.
+**Error: Cannot read property 'priority' of null**
+Use optional chaining: `ctx.state.classification?.priority === "urgent"`
 </Callout>
-
-## When to Use Agents vs Simple Nodes
-
-- Use **agents** (LLM-backed nodes like `claude.agent`) when you need reasoning,
-  natural language, or complex analysis
-- Use **simple nodes** for deterministic transforms, validation, or routing
 
 ## Next Steps
 
-- [Multi-Agent Flow](/docs/learn/multi-agent-flow) — Chain multiple Claude agents
-- [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
-- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
-
+<Cards>
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Chain multiple agents with signal subscriptions
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Test agents with recorded signals
+  </Card>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Learn the signal system in depth
+  </Card>
+</Cards>
