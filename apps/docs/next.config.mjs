@@ -10,7 +10,9 @@ const basePath = isProduction ? "/open-harness" : "";
 /** @type {import('next').NextConfig} */
 const config = {
 	reactStrictMode: true,
-	output: "export",
+	// Only use static export in production builds
+	// In dev mode, static export causes issues with generateStaticParams validation
+	...(isProduction && { output: "export" }),
 	...(basePath && {
 		basePath,
 		assetPrefix: `${basePath}/`,

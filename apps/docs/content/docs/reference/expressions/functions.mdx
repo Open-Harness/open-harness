@@ -97,7 +97,7 @@ Sum array values:
 Average of array:
 
 ```yaml
-{{ $average(nodes.scores.output.values) }}
+{{ $average(scores.values) }}
 ```
 
 ### $min(array) / $max(array)
@@ -114,7 +114,7 @@ Min/max values:
 Round number:
 
 ```yaml
-{{ $round(nodes.calc.output.value, 2) }}
+{{ $round(calc.value, 2) }}
 ```
 
 ## Array Functions
@@ -156,7 +156,7 @@ Reverse array:
 Concatenate arrays:
 
 ```yaml
-{{ $append(flow.input.items, nodes.more.output.items) }}
+{{ $append(flow.input.items, more.items) }}
 ```
 
 ## Object Functions
