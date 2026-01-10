@@ -34,6 +34,10 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@internal/core": "workspace:*"
+		"@internal/core": "workspace:*",
+		"@signals/bus": "workspace:*",
+		"@signals/core": "workspace:*",
+		"@signals/provider-claude": "workspace:*",
+		"@signals/provider-openai": "workspace:*"
 	}
 }

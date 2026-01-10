@@ -8,7 +8,7 @@
  */
 
 import { signalMatchers } from "@open-harness/vitest";
-import { createSignal, type Signal } from "@signals/core";
+import { createSignal, type Signal } from "@open-harness/core";
 import { beforeAll, describe, expect, it } from "vitest";
 
 // Set up signal matchers before all tests

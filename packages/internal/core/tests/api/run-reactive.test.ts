@@ -15,6 +15,7 @@ import {
 	type RunContext,
 	type Signal,
 } from "@signals/core";
+import { MemorySignalStore } from "@signals/bus";
 
 // ============================================================================
 // Mock Provider
@@ -282,5 +283,219 @@ describe("runReactive", () => {
 		};
 		expect(payload.durationMs).toBeGreaterThanOrEqual(0);
 		expect(payload.output).toBeDefined();
+	});
+});
+
+// ============================================================================
+// Recording/Replay Tests
+// ============================================================================
+
+describe("runReactive recording", () => {
+	test("record mode saves signals to store", async () => {
+		const store = new MemorySignalStore();
+		const myAgent = agent({
+			prompt: "Test recording",
+			activateOn: ["harness:start"],
+			emits: ["test:complete"],
+			signalProvider: createMockProvider("recorded output"),
+		});
+
+		if (!isReactiveAgent(myAgent)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		const result = await runReactive(myAgent, "test input", {
+			recording: {
+				mode: "record",
+				store,
+				name: "test-recording",
+				tags: ["test"],
+			},
+		});
+
+		// Should return recording ID
+		expect(result.recordingId).toBeDefined();
+		expect(result.recordingId).toMatch(/^rec_/);
+
+		// Recording should be in store
+		const recording = await store.load(result.recordingId!);
+		expect(recording).not.toBeNull();
+		expect(recording!.metadata.name).toBe("test-recording");
+		expect(recording!.metadata.tags).toContain("test");
+		expect(recording!.signals.length).toBeGreaterThan(0);
+
+		// Should contain all the signals from the run
+		const recordedNames = recording!.signals.map((s) => s.name);
+		expect(recordedNames).toContain("harness:start");
+		expect(recordedNames).toContain("agent:activated");
+		expect(recordedNames).toContain(PROVIDER_SIGNALS.START);
+		expect(recordedNames).toContain(PROVIDER_SIGNALS.END);
+		expect(recordedNames).toContain("test:complete");
+		expect(recordedNames).toContain("harness:end");
+	});
+
+	test("record mode throws without store", async () => {
+		const myAgent = agent({
+			prompt: "Test",
+			activateOn: ["harness:start"],
+			signalProvider: createMockProvider("test"),
+		});
+
+		if (!isReactiveAgent(myAgent)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		expect(
+			runReactive(myAgent, "test", {
+				recording: { mode: "record" },
+			}),
+		).rejects.toThrow(/requires a store/);
+	});
+});
+
+describe("runReactive replay", () => {
+	test("replay mode injects recorded signals", async () => {
+		const store = new MemorySignalStore();
+		const myAgent = agent({
+			prompt: "Test replay",
+			activateOn: ["harness:start"],
+			emits: ["analysis:complete"],
+			signalProvider: createMockProvider("original output"),
+		});
+
+		if (!isReactiveAgent(myAgent)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		// First, record
+		const recordResult = await runReactive(myAgent, "original input", {
+			recording: {
+				mode: "record",
+				store,
+				name: "replay-test",
+			},
+		});
+
+		const recordingId = recordResult.recordingId!;
+
+		// Now replay - should NOT call the provider
+		const replayResult = await runReactive(myAgent, "different input", {
+			recording: {
+				mode: "replay",
+				store,
+				recordingId,
+			},
+		});
+
+		// Replay should have signals
+		expect(replayResult.signals.length).toBeGreaterThan(0);
+
+		// Should contain provider signals (from replay)
+		const signalNames = replayResult.signals.map((s) => s.name);
+		expect(signalNames).toContain(PROVIDER_SIGNALS.START);
+		expect(signalNames).toContain(PROVIDER_SIGNALS.END);
+		expect(signalNames).toContain("analysis:complete");
+	});
+
+	test("replay mode throws without store", async () => {
+		const myAgent = agent({
+			prompt: "Test",
+			activateOn: ["harness:start"],
+			signalProvider: createMockProvider("test"),
+		});
+
+		if (!isReactiveAgent(myAgent)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		expect(
+			runReactive(myAgent, "test", {
+				recording: { mode: "replay", recordingId: "rec_123" },
+			}),
+		).rejects.toThrow(/requires a store/);
+	});
+
+	test("replay mode throws without recordingId", async () => {
+		const store = new MemorySignalStore();
+		const myAgent = agent({
+			prompt: "Test",
+			activateOn: ["harness:start"],
+			signalProvider: createMockProvider("test"),
+		});
+
+		if (!isReactiveAgent(myAgent)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		expect(
+			runReactive(myAgent, "test", {
+				recording: { mode: "replay", store },
+			}),
+		).rejects.toThrow(/requires a recordingId/);
+	});
+
+	test("replay mode throws if recording not found", async () => {
+		const store = new MemorySignalStore();
+		const myAgent = agent({
+			prompt: "Test",
+			activateOn: ["harness:start"],
+			signalProvider: createMockProvider("test"),
+		});
+
+		if (!isReactiveAgent(myAgent)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		expect(
+			runReactive(myAgent, "test", {
+				recording: {
+					mode: "replay",
+					store,
+					recordingId: "rec_nonexistent",
+				},
+			}),
+		).rejects.toThrow(/Recording not found/);
+	});
+
+	test("replay mode does not require provider", async () => {
+		const store = new MemorySignalStore();
+
+		// Create agent WITH provider for recording
+		const agentWithProvider = agent({
+			prompt: "Test",
+			activateOn: ["harness:start"],
+			signalProvider: createMockProvider("test output"),
+		});
+
+		if (!isReactiveAgent(agentWithProvider)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		// Record first
+		const recordResult = await runReactive(agentWithProvider, "test", {
+			recording: { mode: "record", store },
+		});
+
+		// Create agent WITHOUT provider for replay
+		const agentNoProvider = agent({
+			prompt: "Test",
+			activateOn: ["harness:start"],
+			// No signalProvider
+		});
+
+		if (!isReactiveAgent(agentNoProvider)) {
+			throw new Error("Expected ReactiveAgent");
+		}
+
+		// Replay should work without provider
+		const replayResult = await runReactive(agentNoProvider, "test", {
+			recording: {
+				mode: "replay",
+				store,
+				recordingId: recordResult.recordingId!,
+			},
+		});
+
+		expect(replayResult.signals.length).toBeGreaterThan(0);
 	});
 });

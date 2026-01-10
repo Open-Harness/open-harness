@@ -42,7 +42,8 @@
 
 import type { ZodType } from "zod";
 import type { Signal, Provider as SignalProvider } from "@signals/core";
-import type { SignalPattern } from "@signals/bus";
+import type { SignalPattern, SignalStore, Recording } from "@signals/bus";
+import type { SignalRecordingOptions } from "./run-reactive.js";
 
 // ============================================================================
 // Timeout Error
@@ -197,6 +198,39 @@ export type ReactiveHarnessConfig<TState> = {
 	 * ```
 	 */
 	endWhen?: (state: Readonly<TState>) => boolean;
+
+	/**
+	 * Recording options for signal capture and replay.
+	 *
+	 * @example Record mode - save signals to store
+	 * ```ts
+	 * const result = await runReactive({
+	 *   agents: { analyzer },
+	 *   state: initialState,
+	 *   recording: {
+	 *     mode: 'record',
+	 *     store: new MemorySignalStore(),
+	 *     name: 'my-test-001',
+	 *   }
+	 * })
+	 * // result.recordingId contains the ID for later replay
+	 * ```
+	 *
+	 * @example Replay mode - inject recorded signals
+	 * ```ts
+	 * const result = await runReactive({
+	 *   agents: { analyzer },
+	 *   state: initialState,
+	 *   recording: {
+	 *     mode: 'replay',
+	 *     store,
+	 *     recordingId: 'rec_xxx',
+	 *   }
+	 * })
+	 * // No provider calls made - signals injected from recording
+	 * ```
+	 */
+	recording?: SignalRecordingOptions;
 };
 
 /**
@@ -225,6 +259,12 @@ export type ReactiveHarnessResult<TState> = {
 	 * Whether the harness terminated early due to endWhen condition.
 	 */
 	terminatedEarly: boolean;
+
+	/**
+	 * Recording ID when recording mode was used.
+	 * Use this ID for later replay.
+	 */
+	recordingId?: string;
 };
 
 // ============================================================================
@@ -318,8 +358,54 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 		const { SignalBus } = await import("@signals/bus");
 		const { createSignal } = await import("@signals/core");
 
+		// ========================================================================
+		// Recording Setup
+		// ========================================================================
+		const recordingMode = config.recording?.mode ?? "live";
+		const store = config.recording?.store;
+
+		// Validate recording options
+		if (recordingMode === "record" && !store) {
+			throw new Error("Recording mode 'record' requires a store.");
+		}
+		if (recordingMode === "replay" && !store) {
+			throw new Error("Recording mode 'replay' requires a store.");
+		}
+		if (recordingMode === "replay" && !config.recording?.recordingId) {
+			throw new Error("Recording mode 'replay' requires a recordingId.");
+		}
+
+		// Load recording for replay mode
+		let replayRecording: Recording | null = null;
+		if (recordingMode === "replay" && store && config.recording?.recordingId) {
+			replayRecording = await store.load(config.recording.recordingId);
+			if (!replayRecording) {
+				throw new Error(`Recording not found: ${config.recording.recordingId}`);
+			}
+		}
+
+		// Create recording ID for record mode
+		let recordingId: string | undefined;
+		const recordedSignals: Signal[] = [];
+		if (recordingMode === "record" && store) {
+			recordingId = await store.create({
+				name: config.recording?.name,
+				tags: config.recording?.tags,
+			});
+		}
+
+		// Track position in replay recording
+		let replaySignalIndex = 0;
+
 		const startTime = Date.now();
 		const bus = new SignalBus();
+
+		// Subscribe to all signals for recording
+		if (recordingMode === "record") {
+			bus.subscribe(["**"], (signal) => {
+				recordedSignals.push(signal);
+			});
+		}
 
 		// Mutable state - will be updated by agents
 		let state = { ...config.state };
@@ -385,24 +471,51 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 				);
 				bus.emit(activatedSignal);
 
-				// Get provider
+				// Get provider (not required for replay mode)
 				const provider = agentConfig.signalProvider ?? config.provider;
-				if (!provider) {
+				if (recordingMode !== "replay" && !provider) {
 					throw new Error(
 						`No provider for agent "${name}". Set signalProvider on agent or provide default.`,
 					);
 				}
 
-				// Execute provider (simplified for prototype)
-				const activationPromise = executeAgent(
-					bus,
-					provider,
-					agentConfig,
-					name,
-					ctx,
-					createSignal,
-					activatedSignal.id, // Pass parent signal ID for causality
-				).then((result) => {
+				// Execute provider OR replay recorded signals
+				const activationPromise = (async () => {
+					let result: unknown;
+
+					if (recordingMode === "replay" && replayRecording) {
+						// Replay mode: inject recorded provider signals
+						result = await replayProviderSignals(
+							bus,
+							replayRecording.signals,
+							replaySignalIndex,
+						);
+						// Update index for next activation (find next provider:end)
+						for (
+							let i = replaySignalIndex;
+							i < replayRecording.signals.length;
+							i++
+						) {
+							if (replayRecording.signals[i]?.name === "provider:end") {
+								replaySignalIndex = i + 1;
+								break;
+							}
+						}
+					} else if (provider) {
+						// Live/record mode: execute provider
+						result = await executeAgent(
+							bus,
+							provider,
+							agentConfig,
+							name,
+							ctx,
+							createSignal,
+							activatedSignal.id,
+						);
+					}
+
+					return result;
+				})().then((result) => {
 					// Check endWhen termination condition BEFORE emitting signals
 					// This prevents new activations from starting
 					if (config.endWhen && !terminated && config.endWhen(state)) {
@@ -482,6 +595,14 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 			}),
 		);
 
+		// Finalize recording - batch append all collected signals
+		if (recordingMode === "record" && store && recordingId) {
+			if (recordedSignals.length > 0) {
+				await store.appendBatch(recordingId, recordedSignals);
+			}
+			await store.finalize(recordingId, durationMs);
+		}
+
 		return {
 			state,
 			signals: bus.history(),
@@ -490,6 +611,7 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 				activations,
 			},
 			terminatedEarly: terminated,
+			recordingId,
 		};
 	}
 
@@ -559,6 +681,57 @@ async function executeAgent<TOutput, TState>(
 		if (signal.name === "provider:end") {
 			const payload = signal.payload as { output?: unknown };
 			output = payload.output;
+		}
+	}
+
+	return output;
+}
+
+/**
+ * Replay recorded provider signals to the bus.
+ *
+ * Finds provider signals starting from the given index and emits them.
+ * Returns the output from the provider:end signal.
+ *
+ * @param bus - SignalBus to emit signals to
+ * @param signals - All recorded signals
+ * @param startIndex - Index to start searching from
+ * @returns Final output from the provider:end signal
+ */
+async function replayProviderSignals(
+	bus: { emit: (signal: Signal) => void },
+	signals: readonly Signal[],
+	startIndex: number,
+): Promise<unknown> {
+	let output: unknown;
+
+	// Provider signal prefixes to replay
+	const providerPrefixes = ["provider:", "text:", "tool:", "thinking:"];
+
+	// Find and emit provider signals from startIndex until provider:end
+	let foundStart = false;
+	for (let i = startIndex; i < signals.length; i++) {
+		const signal = signals[i];
+		if (!signal) continue;
+
+		const isProviderSignal = providerPrefixes.some((prefix) =>
+			signal.name.startsWith(prefix),
+		);
+
+		if (isProviderSignal) {
+			foundStart = true;
+			bus.emit(signal);
+
+			// Capture output from provider:end
+			if (signal.name === "provider:end") {
+				const payload = signal.payload as { output?: unknown };
+				output = payload.output;
+				break; // Stop at first provider:end
+			}
+		} else if (foundStart) {
+			// If we started seeing provider signals but hit a non-provider signal,
+			// we've moved past this provider sequence
+			break;
 		}
 	}
 

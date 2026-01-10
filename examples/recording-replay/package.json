@@ -1,5 +1,5 @@
 {
-	"name": "@examples/trading-agent",
+	"name": "@examples/recording-replay",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",

@@ -11,8 +11,7 @@
  * Run: bun run examples/trading-agent/index.ts
  */
 
-import { createHarness } from "@internal/core";
-import { ClaudeProvider } from "@signals/provider-claude";
+import { createHarness, ClaudeProvider } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define state type for trading workflow

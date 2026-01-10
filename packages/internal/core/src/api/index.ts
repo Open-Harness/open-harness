@@ -64,6 +64,8 @@ export {
 	runReactive,
 	type RunReactiveOptions,
 	type RunReactiveResult,
+	type SignalRecordingMode,
+	type SignalRecordingOptions,
 } from "./run-reactive.js";
 
 // Defaults

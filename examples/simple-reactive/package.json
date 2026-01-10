@@ -7,7 +7,6 @@
 		"start": "bun run index.ts"
 	},
 	"dependencies": {
-		"@internal/core": "workspace:*",
-		"@signals/provider-claude": "workspace:*"
+		"@open-harness/core": "workspace:*"
 	}
 }

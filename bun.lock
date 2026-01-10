@@ -59,6 +59,27 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples/multi-provider": {
+      "name": "@examples/multi-provider",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-harness/core": "workspace:*",
+      },
+    },
+    "examples/recording-replay": {
+      "name": "@examples/recording-replay",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-harness/core": "workspace:*",
+      },
+    },
+    "examples/simple-reactive": {
+      "name": "@examples/simple-reactive",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-harness/core": "workspace:*",
+      },
+    },
     "examples/speckit": {
       "name": "@examples/speckit",
       "version": "0.0.0",
@@ -77,9 +98,16 @@
       "name": "@examples/testing-signals",
       "version": "0.0.0",
       "devDependencies": {
+        "@open-harness/core": "workspace:*",
         "@open-harness/vitest": "workspace:*",
-        "@signals/core": "workspace:*",
         "vitest": "^2.1.0",
+      },
+    },
+    "examples/trading-agent": {
+      "name": "@examples/trading-agent",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-harness/core": "workspace:*",
       },
     },
     "packages/core": {
@@ -165,6 +193,10 @@
       "version": "0.2.0-alpha.1",
       "dependencies": {
         "@internal/core": "workspace:*",
+        "@signals/bus": "workspace:*",
+        "@signals/core": "workspace:*",
+        "@signals/provider-claude": "workspace:*",
+        "@signals/provider-openai": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -544,9 +576,17 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.27.2", "", { "os": "win32", "cpu": "x64" }, "sha512-sRdU18mcKf7F+YgheI/zGf5alZatMUTKj/jNS6l744f9u3WFu4v7twcUI9vu4mknF4Y9aDlblIie0IM+5xxaqQ=="],
 
+    "@examples/multi-provider": ["@examples/multi-provider@workspace:examples/multi-provider"],
+
+    "@examples/recording-replay": ["@examples/recording-replay@workspace:examples/recording-replay"],
+
+    "@examples/simple-reactive": ["@examples/simple-reactive@workspace:examples/simple-reactive"],
+
     "@examples/speckit": ["@examples/speckit@workspace:examples/speckit"],
 
     "@examples/testing-signals": ["@examples/testing-signals@workspace:examples/testing-signals"],
+
+    "@examples/trading-agent": ["@examples/trading-agent@workspace:examples/trading-agent"],
 
     "@floating-ui/core": ["@floating-ui/core@1.7.3", "", { "dependencies": { "@floating-ui/utils": "^0.2.10" } }, "sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w=="],
 
