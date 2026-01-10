@@ -521,19 +521,21 @@ bun run docs:build            # Docs site builds
 
 ---
 
-#### P3: Internal Documentation 🟡
+#### P3: Internal Documentation ✅
 **Scope:** README in every major folder, up-to-date.
-**Status:** Partial - Examples done, packages pending
+**Status:** Complete - All packages have READMEs, architecture diagrams added
 
 **Deliverables:**
-- [ ] `packages/core/README.md`
-- [ ] `packages/signals/README.md`
-- [ ] `packages/harness/README.md`
-- [ ] `packages/providers/*/README.md`
-- [ ] `packages/stores/*/README.md`
-- [ ] `packages/open-harness/vitest/README.md`
+- [x] `packages/core/README.md` (@signals/core primitives)
+- [x] `packages/signals/README.md` (already existed)
+- [x] `packages/providers/claude/README.md` (ClaudeProvider)
+- [x] `packages/providers/openai/README.md` (CodexProvider)
+- [x] `packages/open-harness/vitest/README.md` (matchers, reporter)
+- [x] `packages/open-harness/*/README.md` (stub READMEs for placeholders)
+- [x] `packages/internal/core/README.md` (API, debug, template, telemetry)
+- [x] `packages/internal/client/README.md` (HTTPSSEClient, transports)
 - [x] `examples/*/README.md` (all 5 examples have READMEs)
-- [ ] Architecture diagrams
+- [x] Architecture diagrams (5 Mermaid diagrams in ARCHITECTURE.md)
 
 **Complexity:** Medium
 **Dependencies:** P1
@@ -657,10 +659,10 @@ P1 (Examples Update)
 | I3 | Provider Signal Schema | Integration | Low | ✅ Done |
 | P1 | Examples Update | Polish | High | ✅ Done |
 | P2 | Documentation Cleanup | Polish | High | ❌ Not Started |
-| P3 | Internal Documentation | Polish | Medium | 🟡 Partial |
+| P3 | Internal Documentation | Polish | Medium | ✅ Done |
 | P4 | Cleanup & Deletion | Polish | Medium | ✅ Done |
 
-**Progress: 17/20 epics complete, 1 partial, 2 not started**
+**Progress: 18/20 epics complete, 0 partial, 2 not started**
 
 ---
 
@@ -675,7 +677,7 @@ P1 (Examples Update)
 - [x] I2: Vitest Integration ✅ **All core matchers implemented**
 - [x] P4: Cleanup & Deletion ✅ **All legacy code deleted**
 
-**Remaining Work (2 epics + 1 partial):**
+**Remaining Work (2 epics):**
 
 1. **P0-6: Signal-Native Eval** ❌ - Build eval system using SignalStore
    - Design `SignalAssertion` types
@@ -687,11 +689,6 @@ P1 (Examples Update)
    - Delete old v0.2.0 docs
    - Unified docs site
    - Architecture overview, getting started, API reference
-
-3. **P3: Internal Documentation** 🟡 - Package READMEs
-   - Examples are done ✓
-   - Package READMEs still needed (core, signals, providers, vitest)
-   - Architecture diagrams
 
 **Recently Completed (Audit 2025-01-10):**
 
