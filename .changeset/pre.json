@@ -1,0 +1,18 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "docs": "0.0.0",
+    "@open-harness/run-store-sqlite": "0.2.0-alpha.1",
+    "@open-harness/run-store-testing": "0.2.0-alpha.1",
+    "@internal/client": "0.2.0",
+    "@internal/core": "0.2.0",
+    "@internal/server": "0.2.0",
+    "@open-harness/client": "0.2.0-alpha.1",
+    "@open-harness/core": "0.2.0-alpha.1",
+    "@open-harness/react": "0.2.0-alpha.1",
+    "@open-harness/server": "0.2.0-alpha.1",
+    "@open-harness/testing": "0.2.0-alpha.1"
+  },
+  "changesets": []
+}
