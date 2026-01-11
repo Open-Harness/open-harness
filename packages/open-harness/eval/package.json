@@ -13,7 +13,7 @@
 	"scripts": {
 		"lint": "biome check . --write",
 		"typecheck": "tsc --noEmit",
-		"test": "echo 'No tests yet'"
+		"test": "vitest run"
 	},
 	"peerDependencies": {
 		"typescript": "^5"
