@@ -1,0 +1,575 @@
+---
+title: SpecKit Tutorial
+description: A 7-level progressive tutorial from basic agents to production-ready workflows
+---
+
+# SpecKit Tutorial
+
+Learn Open Harness by building **SpecKit**: a PRD-to-code workflow that transforms product requirements into reviewed implementations. This tutorial progresses through 7 levels, each building on the previous.
+
+## Overview
+
+| Level | Concept | What You Learn |
+|-------|---------|----------------|
+| 1 | Basic Agent | `agent()` + `run()` fundamentals |
+| 2 | State + Fixtures | Agent state and fixture recording |
+| 3 | Self-Validation | Agents that check their own work |
+| 4 | Multi-Agent Harness | `harness()` for agent composition |
+| 5 | Full 3-Agent System | Spec → Code → Review workflow |
+| 6 | Advanced Fixtures | Fixture patterns for testing |
+| 7 | CI Quality Gates | Production-ready quality gates |
+
+## Prerequisites
+
+```bash
+git clone https://github.com/open-harness/open-harness.git
+cd open-harness
+bun install
+cd examples/speckit
+```
+
+---
+
+## Level 1: Basic Agent
+
+**Goal:** Create and run a single agent.
+
+### The Code
+
+```typescript title="level-1/task-executor.ts"
+import { agent } from "@open-harness/core";
+
+export const taskExecutor = agent({
+  prompt: `You are a task planning assistant.
+Given a task description, create a clear implementation plan.
+Be specific and actionable.
+
+Format your response as a numbered list of steps.
+End with a confidence assessment: HIGH, MEDIUM, or LOW.`,
+});
+```
+
+### The Test
+
+```typescript title="level-1/task-executor.test.ts"
+import { beforeAll, describe, expect, it } from "bun:test";
+import { run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+import { taskExecutor } from "./task-executor";
+
+describe("Task Executor - Level 1", () => {
+  beforeAll(() => {
+    setDefaultProvider(createClaudeNode());
+  });
+
+  it("creates a plan for a task", async () => {
+    const result = await run(taskExecutor, {
+      prompt: "Implement a function that validates email addresses",
+    });
+
+    expect(result.output).toBeDefined();
+    expect(typeof result.output).toBe("string");
+    expect(result.metrics.latencyMs).toBeGreaterThan(0);
+  }, { timeout: 180000 });
+});
+```
+
+### Key Concepts
+
+- **`agent()`** creates an agent from a configuration object
+- **`run()`** executes an agent with input and returns `{ output, metrics, state }`
+- **`metrics`** includes `latencyMs`, `cost`, and `tokens` for every run
+
+### Run It
+
+```bash
+cd examples/speckit/level-1
+bun test
+```
+
+---
+
+## Level 2: State + Fixtures
+
+**Goal:** Add typed state and fixture recording.
+
+### Agent with State
+
+```typescript title="level-2/task-executor.ts"
+import { agent } from "@open-harness/core";
+
+export interface TaskExecutorState {
+  tasksProcessed: number;
+  [key: string]: unknown;
+}
+
+export const initialState: TaskExecutorState = {
+  tasksProcessed: 0,
+};
+
+export const taskExecutor = agent({
+  prompt: `You are a task planning assistant...`,
+  state: initialState, // State is returned with each run
+});
+```
+
+### Fixture Recording
+
+```typescript title="test-utils.ts"
+import { FileRecordingStore } from "@open-harness/stores";
+import { setDefaultStore, setDefaultMode } from "@open-harness/core";
+
+export const fixtureStore = new FileRecordingStore({
+  directory: "./fixtures",
+});
+
+export function setupFixtures(): void {
+  setDefaultStore(fixtureStore);
+  if (!process.env.FIXTURE_MODE) {
+    setDefaultMode("replay"); // Default to replay (fast, free)
+  }
+}
+
+export function withFixture(name: string) {
+  return { fixture: name, store: fixtureStore };
+}
+```
+
+### Test with Fixtures
+
+```typescript title="level-2/task-executor.test.ts"
+import { setupFixtures, withFixture } from "../test-utils";
+
+beforeAll(() => {
+  setDefaultProvider(createClaudeNode());
+  setupFixtures();
+});
+
+it("agent with state returns output and state", async () => {
+  const result = await run(
+    taskExecutor,
+    { prompt: "Add a login button" },
+    withFixture("task-executor-login"), // Name this fixture
+  );
+
+  expect(result.output).toBeDefined();
+  expect(result.state).toEqual(initialState);
+});
+```
+
+### Key Concepts
+
+- **State** is defined in the agent config and returned with each result
+- **Fixtures** record LLM responses for deterministic replay
+- **`withFixture("name")`** associates a test with a specific fixture file
+
+### Fixture Modes
+
+| Mode | Behavior | When to Use |
+|------|----------|-------------|
+| `replay` | Load saved response | CI, normal development |
+| `record` | Execute live, save response | First run, after prompt changes |
+| `live` | Execute live, don't save | Debugging |
+
+### Run It
+
+```bash
+# Record fixtures (first time)
+FIXTURE_MODE=record bun test
+
+# Replay fixtures (fast, free)
+bun test
+```
+
+---
+
+## Level 3: Self-Validation
+
+**Goal:** Create agents that validate their own output.
+
+### Self-Validating Agent
+
+```typescript title="level-3/coding-agent.ts"
+export const codingAgent = agent({
+  prompt: `You are a coding agent that implements tasks and validates its own work.
+
+Given a task, you must:
+1. Implement a solution
+2. Self-validate your implementation against quality criteria
+3. Be honest about issues
+
+Your response MUST include these sections:
+
+## CODE
+\`\`\`
+[Your implementation here]
+\`\`\`
+
+## VALIDATION
+- List each criterion you checked
+- Mark each as PASS or FAIL
+
+## STATUS
+One of:
+- COMPLETE: Implementation passes all validation
+- NEEDS_REVISION: Found issues, need another attempt
+- BLOCKED: Cannot complete`,
+
+  state: { attempts: 0, lastValidation: null, maxAttempts: 3 },
+});
+```
+
+### Output Parser
+
+```typescript title="level-3/coding-agent.ts"
+export function parseValidationStatus(output: string): {
+  passed: boolean;
+  status: "complete" | "needs_revision" | "blocked";
+  issues: string[];
+} {
+  const outputUpper = output.toUpperCase();
+  
+  let status: "complete" | "needs_revision" | "blocked" = "needs_revision";
+  if (outputUpper.includes("STATUS") && outputUpper.includes("COMPLETE")) {
+    if (!outputUpper.includes("NEEDS_REVISION")) {
+      status = "complete";
+    }
+  }
+  if (outputUpper.includes("BLOCKED")) {
+    status = "blocked";
+  }
+
+  // Extract issues from ## ISSUES section
+  const issues: string[] = [];
+  const issuesMatch = output.match(/## ISSUES[\s\S]*?(?=## |$)/i);
+  if (issuesMatch) {
+    const issueLines = issuesMatch[0]
+      .split("\n")
+      .filter((line) => line.trim().startsWith("-"));
+    issues.push(...issueLines.map((line) => line.replace(/^-\s*/, "").trim()));
+  }
+
+  return { passed: status === "complete", status, issues };
+}
+```
+
+### Key Concepts
+
+- **Structured output formats** enable reliable parsing
+- **Self-validation** catches issues before human review
+- **Status fields** (COMPLETE/NEEDS_REVISION/BLOCKED) enable workflow control
+
+---
+
+## Level 4: Multi-Agent Harness
+
+**Goal:** Compose multiple agents into a workflow.
+
+### Define Agents
+
+```typescript title="level-4/spec-agent.ts"
+export const specAgent = agent({
+  prompt: `You are a specification agent that analyzes PRDs.
+  
+Your job is to break down a PRD into actionable tasks.
+
+Your response MUST follow this format:
+
+## TASKS
+
+### TASK-001: [Title]
+**Priority:** [1-5]
+**Description:** [What needs to be done]
+**Acceptance Criteria:**
+- [Criterion 1]
+- [Criterion 2]
+
+## STATUS
+COMPLETE or NEEDS_MORE_CONTEXT`,
+});
+```
+
+### Compose with Harness
+
+```typescript title="level-4/speckit-harness.ts"
+import { harness } from "@open-harness/core";
+import { specAgent } from "./spec-agent";
+import { codingAgent } from "./coding-agent";
+
+export interface SpecKitState {
+  tasks: Task[];
+  currentTaskIndex: number;
+  coderOutput: CoderOutput | null;
+  metrics: {
+    tasksCompleted: number;
+    tasksFailed: number;
+  };
+  [key: string]: unknown;
+}
+
+export const specKit = harness({
+  agents: {
+    spec: specAgent,
+    coder: codingAgent,
+  },
+
+  edges: [
+    { from: "spec", to: "coder" }, // spec's output → coder's input
+  ],
+
+  state: initialState,
+});
+```
+
+### Run the Harness
+
+```typescript title="level-4/speckit.test.ts"
+it("runs the full spec → coder workflow", async () => {
+  const result = await run(
+    specKit,
+    { prompt: "PRD: Create an email validation function" },
+    withFixture("level4-harness-email"),
+  );
+
+  // Output is from the LAST agent (coder)
+  expect(result.output).toBeDefined();
+  
+  // Metrics are AGGREGATED across all agents
+  expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
+});
+```
+
+### Key Concepts
+
+- **`harness()`** composes agents into workflows
+- **Edges** define execution order: `{ from: "agentA", to: "agentB" }`
+- **Output flows** through the pipeline - each agent receives the previous agent's output
+- **Metrics aggregate** across all agents in the harness
+
+---
+
+## Level 5: Full 3-Agent System
+
+**Goal:** Build a complete Spec → Code → Review pipeline.
+
+### Add Reviewer Agent
+
+```typescript title="level-5/reviewer-agent.ts"
+export const reviewerAgent = agent({
+  prompt: `You are a code reviewer that validates implementations.
+
+You receive:
+- A task specification with acceptance criteria
+- The implemented code
+
+Your response MUST include:
+
+## TASK_ID
+[The ID of the task being reviewed]
+
+## CRITERIA VERIFICATION
+For each acceptance criterion:
+- [Criterion]: MET or NOT_MET - [explanation]
+
+## ISSUES
+- **[blocker|major|minor]**: [Description] → [Suggestion]
+
+## VERDICT
+APPROVED or REJECTED`,
+});
+```
+
+### Complete Harness
+
+```typescript title="level-5/speckit-harness.ts"
+export const specKit = harness({
+  agents: {
+    spec: specAgent,
+    coder: codingAgent,
+    reviewer: reviewerAgent,
+  },
+
+  edges: [
+    { from: "spec", to: "coder" },
+    { from: "coder", to: "reviewer" },
+  ],
+
+  state: initialState,
+});
+```
+
+### The Flow
+
+```
+PRD → [Spec Agent] → tasks → [Coder Agent] → code → [Reviewer Agent] → verdict
+```
+
+### Key Concepts
+
+- **Three-agent pipeline** mirrors real engineering workflow: PM → Dev → Review
+- **Each agent has specialized responsibilities**
+- **Final output** is from the last agent (reviewer)
+- **Quality gate** built into the workflow
+
+---
+
+## Level 6: Advanced Fixtures
+
+**Goal:** Master fixture patterns for testing.
+
+### Pattern 1: Test Isolation
+
+```typescript
+// Each test gets its own fixture
+it("test A", async () => {
+  await run(agent, input, withFixture("level6-test-a"));
+});
+
+it("test B", async () => {
+  await run(agent, input, withFixture("level6-test-b"));
+});
+```
+
+### Pattern 2: Deterministic Replay
+
+```typescript
+it("demonstrates deterministic replay", async () => {
+  const result1 = await run(specKit, input, withFixture("level6-check"));
+  const result2 = await run(specKit, input, withFixture("level6-check"));
+
+  // In replay mode, outputs are IDENTICAL
+  if (process.env.FIXTURE_MODE !== "record") {
+    expect(result1.output).toEqual(result2.output);
+  }
+});
+```
+
+### Pattern 3: Fixture Inspection
+
+```bash
+# View fixture content
+cat fixtures/my-test_harness_inv0.json | jq '.output'
+
+# View metrics
+cat fixtures/my-test_harness_inv0.json | jq '.output.metrics'
+```
+
+### Pattern 4: Selective Re-recording
+
+```bash
+# Delete specific fixture
+rm fixtures/my-test_harness_inv0.json
+
+# Re-record just that test
+FIXTURE_MODE=record bun test -- --test-name-pattern="my specific test"
+```
+
+---
+
+## Level 7: CI Quality Gates
+
+**Goal:** Add production-ready quality gates.
+
+### Quality Gate Assertions
+
+```typescript title="level-7/speckit.test.ts"
+it("workflow completes with acceptable metrics", async () => {
+  const result = await run(
+    specKit,
+    { prompt: "PRD: Simple Validator" },
+    withFixture("level7-validator"),
+  );
+
+  // Basic completion
+  expect(result.output).toBeDefined();
+
+  // Metrics gates
+  expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
+  expect(result.metrics.cost).toBeGreaterThanOrEqual(0);
+
+  // Quality gate: reviewer must approve
+  const parsed = parseReviewerOutput(result.output as string);
+  expect(parsed.approved).toBe(true);
+});
+
+it("collects comprehensive metrics", async () => {
+  const result = await run(specKit, input, withFixture("level7-metrics"));
+
+  expect(typeof result.metrics.latencyMs).toBe("number");
+  expect(typeof result.metrics.cost).toBe("number");
+  expect(typeof result.metrics.tokens.input).toBe("number");
+  expect(typeof result.metrics.tokens.output).toBe("number");
+});
+```
+
+### CI Integration
+
+```yaml title=".github/workflows/speckit.yml"
+name: SpecKit Quality Gates
+
+on:
+  pull_request:
+    paths:
+      - 'examples/speckit/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+      - run: bun install
+      - run: bun test  # Uses fixtures, fast and free
+```
+
+### Key Concepts
+
+- **Quality gates** prevent bad code from shipping
+- **Metric thresholds** catch performance regressions
+- **Fixtures make CI fast** - no API calls in replay mode
+- **Commit fixtures to git** for reproducible builds
+
+---
+
+## Running the Examples
+
+```bash
+cd examples/speckit
+
+# Run all tests (uses fixtures)
+bun test
+
+# Run specific level
+bun test level-1/
+
+# Record new fixtures
+bun test:record
+
+# Run live (skip fixtures)
+bun test:live
+```
+
+---
+
+## Summary
+
+| Level | Concept | Key API |
+|-------|---------|---------|
+| 1 | Basic Agent | `agent()`, `run()` |
+| 2 | State + Fixtures | `state`, `withFixture()` |
+| 3 | Self-Validation | Structured output, parsers |
+| 4 | Multi-Agent | `harness()`, edges |
+| 5 | Full Pipeline | 3-agent composition |
+| 6 | Advanced Fixtures | Patterns, inspection |
+| 7 | CI Gates | Quality assertions |
+
+## Next Steps
+
+<Cards>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Understand how Open Harness works internally
+  </Card>
+  <Card title="API Reference" href="/docs/reference">
+    Explore the complete API
+  </Card>
+</Cards>
