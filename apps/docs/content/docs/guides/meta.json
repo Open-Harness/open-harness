@@ -1,10 +1,4 @@
 {
 	"title": "Guides",
-	"pages": [
-		"...deployment",
-		"...agents",
-		"...channels",
-		"...expressions",
-		"...flows"
-	]
+	"pages": ["...agents", "...testing", "...deployment"]
 }

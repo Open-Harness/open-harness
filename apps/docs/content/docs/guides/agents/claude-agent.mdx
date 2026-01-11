@@ -1,92 +1,182 @@
 ---
-title: Claude Agent
-description: Configure the built-in Claude agent
+title: Claude Provider
+description: Configure the ClaudeProvider for Anthropic models
 ---
 
-# Claude Agent
+# Claude Provider
 
-Configure and use the built-in Claude agent powered by the Anthropic SDK.
+The `ClaudeProvider` connects Open Harness to Anthropic's Claude models.
 
 ## Basic Usage
 
-```yaml
-nodes:
-  - id: assistant
-    type: claude.agent
-    input:
-      prompt: "{{ flow.input.question }}"
+```typescript
+import { createHarness, ClaudeProvider } from "@open-harness/core";
+
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createHarness<State>();
+
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["harness:start"],
+  emits: ["analysis:complete"],
+  updates: "result",
+});
+
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello world", result: null },
+  provider: new ClaudeProvider(),
+  endWhen: (s) => s.result !== null,
+});
 ```
 
 ## Configuration Options
 
-```yaml
-nodes:
-  - id: assistant
-    type: claude.agent
-    input:
-      prompt: "Answer this question"
-      model: "claude-sonnet-4-20250514"
-      maxTokens: 4096
-      temperature: 0.7
-      system: "You are a helpful assistant."
+```typescript
+const provider = new ClaudeProvider({
+  model: "claude-sonnet-4-20250514",  // Model to use
+  maxTokens: 4096,                     // Max output tokens
+  temperature: 0.7,                    // Sampling temperature
+});
 ```
 
 ## Available Models
 
 | Model | Use Case |
 |-------|----------|
-| `claude-sonnet-4-20250514` | Balanced performance |
+| `claude-sonnet-4-20250514` | Balanced performance (default) |
 | `claude-opus-4-20250514` | Complex reasoning |
 | `claude-haiku-3-20250307` | Fast, simple tasks |
 
-## Streaming Events
+## Per-Agent Provider
 
-The Claude agent emits these events:
-
-```typescript
-// Text chunks
-{ type: "agent:text", text: "Hello..." }
-
-// Tool use
-{ type: "agent:tool_use", name: "search", input: {...} }
-
-// Completion
-{ type: "agent:complete", output: { text: "..." } }
-```
-
-## Subscribe to Events
-
-Use `runtime.onEvent()` or the `onEvent` option:
+Override the provider for specific agents:
 
 ```typescript
-import { createHarness, parseFlowYaml } from "@open-harness/server";
-
-const harness = createHarness({
-  flow: parseFlowYaml(yaml),
-  onEvent: (event) => {
-    if (event.type === "agent:text") {
-      process.stdout.write(event.text);
-    }
-  },
+const complexAgent = agent({
+  prompt: "Solve this complex problem: {{ state.problem }}",
+  activateOn: ["harness:start"],
+  provider: new ClaudeProvider({ model: "claude-opus-4-20250514" }),
 });
 
-await harness.run({ question: "What is AI?" });
+const quickAgent = agent({
+  prompt: "Quick classification: {{ state.input }}",
+  activateOn: ["harness:start"],
+  provider: new ClaudeProvider({ model: "claude-haiku-3-20250307" }),
+});
+```
+
+## Signals Emitted
+
+The ClaudeProvider emits standard provider signals:
+
+### Lifecycle
+
+```typescript
+{ name: "provider:start", payload: { model: "claude-sonnet-4-20250514" } }
+{ name: "provider:end", payload: { usage: { inputTokens, outputTokens }, cost } }
+{ name: "provider:error", payload: { error: "..." } }
+```
+
+### Text Streaming
+
+```typescript
+{ name: "text:delta", payload: { content: "The " } }
+{ name: "text:complete", payload: { content: "The analysis shows..." } }
+```
+
+### Extended Thinking
+
+When using models with extended thinking:
+
+```typescript
+{ name: "thinking:delta", payload: { content: "Let me consider..." } }
+{ name: "thinking:complete", payload: { content: "..." } }
+```
+
+### Tool Usage
+
+```typescript
+{ name: "tool:call", payload: { name: "Read", input: { path: "/file.ts" } } }
+{ name: "tool:result", payload: { name: "Read", output: "..." } }
+```
+
+## Authentication
+
+The provider uses Claude Code subscription authentication by default. No API key is required when running from within Claude Code.
+
+For standalone usage, set the `ANTHROPIC_API_KEY` environment variable:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Session Support
+
+The ClaudeProvider supports session persistence for multi-turn conversations:
+
+```typescript
+// First run - creates a session
+const result1 = await runReactive({
+  agents: { assistant },
+  state: { messages: ["Hello"], response: null },
+  provider,
+});
+
+// Session ID is captured in provider:end signal
+const sessionId = result1.signals
+  .find(s => s.name === "provider:end")
+  ?.payload.sessionId;
+
+// Resume the session later
+// (Implementation depends on your session storage strategy)
 ```
 
 ## Error Handling
 
-Handle errors in the event stream:
+The provider emits `provider:error` signals on failure:
 
 ```typescript
-runtime.onEvent((event) => {
-  if (event.type === "flow:error") {
-    console.error("Flow failed:", event.error);
-  }
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  provider,
 });
+
+const errors = result.signals.filter(s => s.name === "provider:error");
+if (errors.length > 0) {
+  console.error("Provider errors:", errors);
+}
+```
+
+## Usage Metrics
+
+Extract usage from `provider:end` signals:
+
+```typescript
+const providerEnds = result.signals.filter(s => s.name === "provider:end");
+
+const totalTokens = providerEnds.reduce((sum, s) => {
+  return sum + (s.payload.usage?.inputTokens || 0) + (s.payload.usage?.outputTokens || 0);
+}, 0);
+
+const totalCost = providerEnds.reduce((sum, s) => {
+  return sum + (s.payload.cost || 0);
+}, 0);
+
+console.log(`Tokens: ${totalTokens}, Cost: $${totalCost.toFixed(4)}`);
 ```
 
 ## Next Steps
 
-- [Custom Nodes](/docs/guides/agents/custom-agents) — Build your own nodes
-- [Events API](/docs/reference/api/events) — Full event reference
-
+<Cards>
+  <Card title="Custom Providers" href="/docs/guides/agents/custom-agents">
+    Implement your own provider
+  </Card>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Understanding provider signals
+  </Card>
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Coordinate multiple agents
+  </Card>
+</Cards>

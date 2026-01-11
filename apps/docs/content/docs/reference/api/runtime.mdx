@@ -1,179 +1,277 @@
 ---
-title: Runtime
-description: Execute agents and harnesses with the run() API
+title: runReactive
+description: Execute signal-based agent workflows
 ---
 
-# Runtime
+# runReactive
 
-The `run()` function is the primary way to execute agents and harnesses in Open Harness.
+The `runReactive()` function executes signal-based agent workflows.
 
-## Quick Start
+## Basic Usage
 
 ```typescript
-import { agent, run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+import { createHarness, ClaudeProvider } from "@open-harness/core";
 
-// Set up the provider
-setDefaultProvider(createClaudeNode());
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createHarness<State>();
 
-// Define an agent
-const myAgent = agent({
-  prompt: "You are a helpful assistant.",
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["harness:start"],
+  emits: ["analysis:complete"],
+  updates: "result",
 });
 
-// Execute the agent
-const result = await run(myAgent, { prompt: "Hello, world!" });
-
-console.log(result.output);
-console.log(result.metrics);
-```
-
-## run() API
-
-### Basic Execution
-
-Execute an agent with input:
-
-```typescript
-const result = await run(myAgent, { prompt: "Hello" });
-```
-
-### With Provider Override
-
-Pass a provider directly instead of using the default:
-
-```typescript
-import { createClaudeNode } from "@open-harness/server";
-
-const result = await run(myAgent, { prompt: "Hello" }, {
-  provider: createClaudeNode({ model: "claude-3-opus-latest" }),
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  provider: new ClaudeProvider(),
+  endWhen: (s) => s.result !== null,
 });
 ```
 
-### With Fixtures
-
-Record and replay agent responses:
+## Configuration
 
 ```typescript
-import { FileFixtureStore } from "@open-harness/stores";
+interface RunReactiveConfig<TState> {
+  // Required
+  agents: Record<string, Agent>;
+  state: TState;
+  provider: Provider;
 
-const store = new FileFixtureStore("./fixtures");
-
-// Record mode
-const result = await run(myAgent, { prompt: "Hello" }, {
-  fixture: "my-test",
-  mode: "record",
-  store,
-});
-
-// Replay mode
-const result = await run(myAgent, { prompt: "Hello" }, {
-  fixture: "my-test",
-  mode: "replay",
-  store,
-});
-```
-
-## Result Shape
-
-The `run()` function returns a `RunResult`:
-
-```typescript
-interface RunResult<T = unknown> {
-  /** The agent's output */
-  output: T;
-
-  /** Optional state from stateful agents */
-  state?: Record<string, unknown>;
-
-  /** Execution metrics */
-  metrics: {
-    latencyMs: number;
-    cost: number;
-    tokens: {
-      input: number;
-      output: number;
-    };
-  };
-
-  /** Fixture IDs if recording was enabled */
-  fixtures?: string[];
+  // Optional
+  endWhen?: (state: TState) => boolean;
+  recording?: RecordingConfig;
+  reducers?: Record<string, SignalReducer<TState>>;
+  timeout?: number;
 }
 ```
 
-## Provider Configuration
+### agents
 
-### setDefaultProvider()
-
-Set a global default provider:
+Record of named agents to include in the workflow:
 
 ```typescript
-import { setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-
-setDefaultProvider(createClaudeNode());
+agents: {
+  analyzer,
+  reviewer,
+  fixer,
+}
 ```
 
-### getDefaultProvider()
+### state
 
-Get the current default provider:
+Initial state object. Must match the `TState` type parameter:
 
 ```typescript
-import { getDefaultProvider } from "@open-harness/core";
-
-const provider = getDefaultProvider();
+state: {
+  input: "data to analyze",
+  analysis: null,
+  review: null,
+}
 ```
 
-## Advanced: Internal Runtime
+### provider
 
-For advanced use cases like building custom orchestrators, the internal runtime API is available:
+Default provider for agents without per-agent override:
 
 ```typescript
-import {
-  createRuntime,
-  DefaultNodeRegistry,
-  parseFlowYaml,
-} from "@internal/core";
-
-const registry = new DefaultNodeRegistry();
-const flow = parseFlowYaml(yamlString);
-
-const runtime = createRuntime({ flow, registry });
-const snapshot = await runtime.run({ name: "World" });
+provider: new ClaudeProvider({ model: "claude-sonnet-4-20250514" })
 ```
 
-<Callout type="note" title="Internal API">
-The `createRuntime()` function is an internal API in `@internal/core`. For most use cases, use `run()` from `@open-harness/core` instead.
-</Callout>
+### endWhen
 
-### Runtime Methods
-
-| Method | Description |
-|--------|-------------|
-| `run(input?)` | Execute the flow to completion |
-| `dispatch(command)` | Send a command to a running flow |
-| `onEvent(listener)` | Subscribe to runtime events |
-| `getSnapshot()` | Inspect current runtime state |
-
-### Runtime Commands
+Termination condition. Workflow ends when this returns `true`:
 
 ```typescript
-runtime.dispatch({ type: "send", runId: "run-123", message: "continue" });
-runtime.dispatch({ type: "abort", reason: "user_cancelled" });
+endWhen: (state) => state.result !== null
 ```
 
-### Event Subscription
+If not provided, workflow runs until quiescence (no pending signals).
+
+### recording
+
+Recording/replay configuration:
 
 ```typescript
-runtime.onEvent((event) => {
-  if (event.type === "node:error") {
-    console.error(event.error);
-  }
+recording: {
+  mode: "record",           // "record" | "replay"
+  store: new MemorySignalStore(),
+  recordingId?: "rec_123",  // Required for replay
+  name?: "my-workflow",     // Recording name
+  tags?: ["test"],          // Recording tags
+}
+```
+
+### reducers
+
+Custom state reducers for complex signal→state updates:
+
+```typescript
+reducers: {
+  "trade:proposed": (state, signal) => ({
+    ...state,
+    trades: [...state.trades, signal.payload],
+  }),
+}
+```
+
+### timeout
+
+Maximum execution time in milliseconds:
+
+```typescript
+timeout: 30000  // 30 seconds
+```
+
+## Return Value
+
+```typescript
+interface HarnessResult<TState> {
+  state: TState;              // Final state
+  signals: Signal[];          // Full signal trace
+  metrics: {
+    durationMs: number;       // Execution time
+    activations: number;      // Agent activation count
+  };
+  terminatedEarly: boolean;   // endWhen triggered
+  recordingId?: string;       // If recording
+}
+```
+
+### state
+
+The final state after all agents have completed:
+
+```typescript
+console.log(result.state.analysis);
+```
+
+### signals
+
+Complete signal trace for debugging and testing:
+
+```typescript
+result.signals.forEach(s => {
+  console.log(`[${s.timestamp}] ${s.name}`, s.payload);
 });
+```
+
+### metrics
+
+Execution metrics:
+
+```typescript
+console.log(`Duration: ${result.metrics.durationMs}ms`);
+console.log(`Activations: ${result.metrics.activations}`);
+```
+
+### terminatedEarly
+
+`true` if `endWhen` condition triggered termination:
+
+```typescript
+if (result.terminatedEarly) {
+  console.log("Workflow completed via endWhen condition");
+}
+```
+
+### recordingId
+
+Recording ID if recording was enabled:
+
+```typescript
+if (result.recordingId) {
+  console.log(`Saved recording: ${result.recordingId}`);
+}
+```
+
+## Examples
+
+### Basic Workflow
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  provider: new ClaudeProvider(),
+  endWhen: (s) => s.result !== null,
+});
+```
+
+### Multi-Agent Workflow
+
+```typescript
+const result = await runReactive({
+  agents: { planner, coder, reviewer },
+  state: { task: "Build a TODO app", plan: null, code: null, review: null },
+  provider: new ClaudeProvider(),
+  endWhen: (s) => s.review?.passed === true,
+});
+```
+
+### With Recording
+
+```typescript
+const store = new MemorySignalStore();
+
+// Record
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  provider: new ClaudeProvider(),
+  recording: { mode: "record", store, name: "test-run" },
+});
+
+// Replay
+const replay = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  provider: new ClaudeProvider(), // Not called
+  recording: { mode: "replay", store, recordingId: result.recordingId! },
+});
+```
+
+### With Custom Reducers
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer, trader },
+  state: { analysis: null, trades: [] },
+  provider,
+  reducers: {
+    "trade:proposed": (state, signal) => ({
+      ...state,
+      trades: [...state.trades, signal.payload.trade],
+    }),
+  },
+});
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await runReactive({ /* ... */ });
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error("Workflow timed out");
+  } else if (error instanceof ProviderError) {
+    console.error("Provider failed:", error.message);
+  }
+}
 ```
 
 ## See Also
 
-- [Custom Agents](/docs/guides/agents/custom-agents) — Build agent implementations
-- [Architecture](/docs/concepts/architecture) — Understand agents and harnesses
-- [Events API](/docs/reference/api/events) — Event types
+<Cards>
+  <Card title="createHarness" href="/docs/reference">
+    Factory function for typed agents
+  </Card>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Signal types and flow
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Persist and replay workflows
+  </Card>
+</Cards>

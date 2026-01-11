@@ -1,0 +1,214 @@
+---
+title: Vitest Setup
+description: Configure Vitest for Open Harness testing
+---
+
+# Vitest Setup
+
+Configure Vitest to use Open Harness signal matchers.
+
+## Installation
+
+```bash
+bun add -D @open-harness/vitest vitest
+```
+
+## Configuration
+
+### Option 1: Setup File (Recommended)
+
+Add the setup file to your Vitest config:
+
+```typescript title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    setupFiles: ["@open-harness/vitest/setup"],
+  },
+});
+```
+
+This automatically registers all matchers globally.
+
+### Option 2: Manual Registration
+
+Register matchers in individual test files:
+
+```typescript
+import { expect } from "vitest";
+import { toContainSignal, toHaveSignalsInOrder } from "@open-harness/vitest";
+
+expect.extend({ toContainSignal, toHaveSignalsInOrder });
+```
+
+Or create your own setup file:
+
+```typescript title="test/setup.ts"
+import { expect } from "vitest";
+import {
+  toContainSignal,
+  toHaveSignalsInOrder,
+  toHaveSignalWithPayload,
+} from "@open-harness/vitest";
+
+expect.extend({
+  toContainSignal,
+  toHaveSignalsInOrder,
+  toHaveSignalWithPayload,
+});
+```
+
+```typescript title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    setupFiles: ["./test/setup.ts"],
+  },
+});
+```
+
+## TypeScript Support
+
+For TypeScript autocomplete, add the matcher types:
+
+```typescript title="test/vitest.d.ts"
+import "@open-harness/vitest";
+```
+
+This extends Vitest's `expect` with Open Harness matchers.
+
+## Test Timeouts
+
+Agent tests can be slow. Configure appropriate timeouts:
+
+```typescript title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    setupFiles: ["@open-harness/vitest/setup"],
+    testTimeout: 30000, // 30 seconds for agent tests
+  },
+});
+```
+
+Or per-test:
+
+```typescript
+it("slow agent test", async () => {
+  // ...
+}, 60000); // 60 second timeout
+```
+
+## Environment Variables
+
+For live tests, ensure Claude Code authentication is available:
+
+```bash
+# Run tests from Claude Code terminal
+bun test
+```
+
+For CI environments, you may need to set up authentication differently or use recording/replay.
+
+## Example Test Structure
+
+```text
+my-project/
+├── src/
+│   └── agents/
+│       ├── analyzer.ts
+│       └── reviewer.ts
+├── test/
+│   ├── setup.ts
+│   ├── analyzer.test.ts
+│   └── reviewer.test.ts
+├── vitest.config.ts
+└── package.json
+```
+
+### Example Test File
+
+```typescript title="test/analyzer.test.ts"
+import { describe, it, expect } from "vitest";
+import { createHarness, ClaudeProvider } from "@open-harness/core";
+
+type State = {
+  input: string;
+  analysis: string | null;
+};
+
+describe("Analyzer Agent", () => {
+  const { agent, runReactive } = createHarness<State>();
+
+  const analyzer = agent({
+    prompt: "Analyze: {{ state.input }}",
+    activateOn: ["harness:start"],
+    emits: ["analysis:complete"],
+    updates: "analysis",
+  });
+
+  it("activates on harness:start", async () => {
+    const result = await runReactive({
+      agents: { analyzer },
+      state: { input: "Test input", analysis: null },
+      provider: new ClaudeProvider(),
+      endWhen: (s) => s.analysis !== null,
+    });
+
+    expect(result.signals).toContainSignal("agent:activated");
+  });
+
+  it("emits analysis:complete signal", async () => {
+    const result = await runReactive({
+      agents: { analyzer },
+      state: { input: "Test input", analysis: null },
+      provider: new ClaudeProvider(),
+      endWhen: (s) => s.analysis !== null,
+    });
+
+    expect(result.signals).toContainSignal("analysis:complete");
+  });
+
+  it("updates state.analysis", async () => {
+    const result = await runReactive({
+      agents: { analyzer },
+      state: { input: "Test input", analysis: null },
+      provider: new ClaudeProvider(),
+      endWhen: (s) => s.analysis !== null,
+    });
+
+    expect(result.state.analysis).toBeDefined();
+    expect(result.state.analysis).not.toBeNull();
+  });
+});
+```
+
+## Running Tests
+
+```bash
+# Run all tests
+bun test
+
+# Run specific test file
+bun test analyzer.test.ts
+
+# Run in watch mode
+bun test --watch
+
+# Run with coverage
+bun test --coverage
+```
+
+## Next Steps
+
+<Cards>
+  <Card title="Signal Assertions" href="/docs/guides/testing/signal-assertions">
+    Learn the available matchers
+  </Card>
+  <Card title="Recording & Replay" href="/docs/guides/testing/recording-replay">
+    Deterministic testing
+  </Card>
+</Cards>

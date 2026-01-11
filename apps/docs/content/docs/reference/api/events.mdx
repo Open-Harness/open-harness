@@ -1,82 +1,329 @@
 ---
-title: Events
-description: Runtime event types and structure
+title: Signals
+description: Signal types and structure reference
 ---
 
-# Events
+# Signals
 
-Runtime execution is observable through typed events.
+All communication in Open Harness flows through typed signals.
 
-## RuntimeEvent Shape
+## Signal Structure
 
 ```typescript
-type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
+interface Signal {
+  id: string;           // Unique identifier ("sig_abc123")
+  name: string;         // Signal name ("analysis:complete")
+  payload: unknown;     // Signal-specific data
+  timestamp: string;    // ISO timestamp
+  source?: {
+    agent?: string;     // Emitting agent
+    parent?: string;    // Parent signal ID (causality)
+  };
+}
 ```
 
-## Flow Events
+## Harness Signals
+
+### harness:start
+
+Emitted when workflow begins:
 
 ```typescript
-{ type: "flow:start", flowName: "greeting" }
-{ type: "flow:complete", flowName: "greeting", status: "complete" }
-{ type: "flow:paused" }
-{ type: "flow:resumed" }
-{ type: "flow:aborted" }
-```
-
-## Node Events
-
-```typescript
-{ type: "node:start", nodeId: "echo", runId: "run-123" }
-{ type: "node:complete", nodeId: "echo", runId: "run-123", output: { text: "Hi" } }
-{ type: "node:error", nodeId: "echo", runId: "run-123", error: "timeout" }
-{ type: "node:skipped", nodeId: "audit", reason: "when" }
-```
-
-## Edge Events
-
-```typescript
-{ type: "edge:fire", edgeId: "a->b", from: "a", to: "b" }
-{ type: "loop:iterate", edgeId: "loop-edge", iteration: 2 }
-```
-
-## State Events
-
-```typescript
-{ type: "state:patch", patch: { op: "set", path: "runs", value: 2 } }
-```
-
-## Command Events
-
-```typescript
-{ type: "command:received", command: { type: "send", runId: "run-123", message: "hi" } }
-```
-
-## Agent Events
-
-```typescript
-{ type: "agent:start", nodeId: "claude", runId: "run-123", sessionId: "session-1", prompt: "..." }
-{ type: "agent:thinking", nodeId: "claude", runId: "run-123", content: "..." }
-{ type: "agent:thinking:delta", nodeId: "claude", runId: "run-123", content: "..." }
-{ type: "agent:text", nodeId: "claude", runId: "run-123", content: "Hello" }
-{ type: "agent:text:delta", nodeId: "claude", runId: "run-123", content: "Hel" }
-{ type: "agent:tool", nodeId: "claude", runId: "run-123", toolName: "search", toolInput: {}, toolOutput: {} }
-{ type: "agent:error", nodeId: "claude", runId: "run-123", errorType: "api", message: "Rate limited" }
-{ type: "agent:complete", nodeId: "claude", runId: "run-123", result: "Done", usage: { inputTokens: 10, outputTokens: 20 }, durationMs: 1200, numTurns: 1 }
-{ type: "agent:paused", nodeId: "claude", runId: "run-123", sessionId: "session-1" }
-{ type: "agent:aborted", nodeId: "claude", runId: "run-123", reason: "user_cancelled" }
-```
-
-## Subscribing to Events
-
-```typescript
-runtime.onEvent((event) => {
-  if (event.type === "node:error") {
-    console.error(event.error);
+{
+  name: "harness:start",
+  payload: {
+    state: { /* initial state */ },
+    agents: ["analyzer", "reviewer"],
   }
+}
+```
+
+### harness:end
+
+Emitted when workflow completes:
+
+```typescript
+{
+  name: "harness:end",
+  payload: {
+    state: { /* final state */ },
+    metrics: {
+      durationMs: 1234,
+      activations: 3,
+    },
+    terminatedEarly: false,
+  }
+}
+```
+
+## Agent Signals
+
+### agent:activated
+
+Emitted when an agent activates:
+
+```typescript
+{
+  name: "agent:activated",
+  payload: {
+    agent: "analyzer",
+    triggeredBy: "harness:start",
+  }
+}
+```
+
+### agent:skipped
+
+Emitted when an agent's `when` guard returns false:
+
+```typescript
+{
+  name: "agent:skipped",
+  payload: {
+    agent: "reviewer",
+    reason: "when guard returned false",
+  }
+}
+```
+
+### agent:completed
+
+Emitted when an agent finishes:
+
+```typescript
+{
+  name: "agent:completed",
+  payload: {
+    agent: "analyzer",
+    output: "Analysis result...",
+  }
+}
+```
+
+## Provider Signals
+
+### provider:start
+
+Emitted when provider begins execution:
+
+```typescript
+{
+  name: "provider:start",
+  payload: {
+    model: "claude-sonnet-4-20250514",
+  }
+}
+```
+
+### provider:end
+
+Emitted when provider completes:
+
+```typescript
+{
+  name: "provider:end",
+  payload: {
+    usage: {
+      inputTokens: 150,
+      outputTokens: 89,
+    },
+    cost: 0.0012,
+    sessionId: "session_abc123",
+  }
+}
+```
+
+### provider:error
+
+Emitted on provider failure:
+
+```typescript
+{
+  name: "provider:error",
+  payload: {
+    error: "Rate limit exceeded",
+    retryAfter: 30,
+  }
+}
+```
+
+## Text Signals
+
+### text:delta
+
+Streaming text chunk:
+
+```typescript
+{
+  name: "text:delta",
+  payload: {
+    content: "The ",
+  }
+}
+```
+
+### text:complete
+
+Full text after streaming:
+
+```typescript
+{
+  name: "text:complete",
+  payload: {
+    content: "The analysis shows three key findings...",
+  }
+}
+```
+
+## Thinking Signals
+
+### thinking:delta
+
+Streaming thinking chunk (extended thinking):
+
+```typescript
+{
+  name: "thinking:delta",
+  payload: {
+    content: "Let me consider the implications...",
+  }
+}
+```
+
+### thinking:complete
+
+Full thinking content:
+
+```typescript
+{
+  name: "thinking:complete",
+  payload: {
+    content: "...",
+  }
+}
+```
+
+## Tool Signals
+
+### tool:call
+
+Tool invocation:
+
+```typescript
+{
+  name: "tool:call",
+  payload: {
+    id: "call_abc123",
+    name: "Read",
+    input: {
+      path: "/src/index.ts",
+    },
+  }
+}
+```
+
+### tool:result
+
+Tool result:
+
+```typescript
+{
+  name: "tool:result",
+  payload: {
+    id: "call_abc123",
+    name: "Read",
+    output: "file contents...",
+    error: null,
+  }
+}
+```
+
+## State Signals
+
+### state:{key}:changed
+
+Emitted when state changes:
+
+```typescript
+{
+  name: "state:analysis:changed",
+  payload: {
+    value: "New analysis result",
+    previousValue: null,
+  }
+}
+```
+
+## Custom Signals
+
+Agents emit custom signals via `emits`:
+
+```typescript
+const analyzer = agent({
+  prompt: "Analyze the input",
+  activateOn: ["harness:start"],
+  emits: ["analysis:complete"],
 });
+```
+
+Emitted as:
+
+```typescript
+{
+  name: "analysis:complete",
+  payload: { /* agent output */ },
+  source: { agent: "analyzer" },
+}
+```
+
+## Signal Patterns
+
+Use patterns to match signals:
+
+| Pattern | Matches |
+|---------|---------|
+| `"harness:start"` | Exact match |
+| `"agent:*"` | `agent:activated`, `agent:completed`, etc. |
+| `"provider:**"` | All provider signals |
+| `"*:complete"` | `text:complete`, `analysis:complete`, etc. |
+
+## Working with Signals
+
+### Filter by Name
+
+```typescript
+const agentSignals = result.signals.filter(s => s.name.startsWith("agent:"));
+```
+
+### Extract Usage
+
+```typescript
+const providerEnds = result.signals.filter(s => s.name === "provider:end");
+const totalTokens = providerEnds.reduce((sum, s) => {
+  const usage = s.payload.usage || { inputTokens: 0, outputTokens: 0 };
+  return sum + usage.inputTokens + usage.outputTokens;
+}, 0);
+```
+
+### Build Causality Chain
+
+```typescript
+import { getCausalityChain } from "@open-harness/core";
+
+const chain = getCausalityChain(result.signals, targetSignalId);
+// Returns array of signals leading to target
 ```
 
 ## See Also
 
-- [RuntimeEvent Type](/docs/reference/types/runtime-event) — Full type definition
-- [Runtime API](/docs/reference/api/runtime) — Event emission
+<Cards>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Conceptual overview
+  </Card>
+  <Card title="runReactive" href="/docs/reference/api/runtime">
+    Execution API
+  </Card>
+  <Card title="Signal Type" href="/docs/reference/types/runtime-event">
+    TypeScript type definition
+  </Card>
+</Cards>

@@ -1,12 +1,4 @@
 {
 	"title": "API",
-	"pages": [
-		"runtime",
-		"node-types",
-		"transport",
-		"flow-runtime",
-		"events",
-		"node-registry",
-		"run-store"
-	]
+	"pages": ["runtime", "events"]
 }
