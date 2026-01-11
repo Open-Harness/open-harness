@@ -112,9 +112,9 @@ export default function HomePage() {
 							without changing your agent logic.
 						</p>
 						<code className="text-xs bg-muted px-2 py-1 rounded block">
-							provider: new ClaudeProvider()
+							harness: new ClaudeHarness()
 							<br />
-							provider: new CodexProvider()
+							harness: new CodexHarness()
 						</code>
 					</div>
 					<div className="p-6 border border-border rounded-lg">
@@ -140,7 +140,7 @@ export default function HomePage() {
 						<code className="text-xs bg-muted px-2 py-1 rounded block">
 							LOG_LEVEL=debug
 							<br />
-							result.signals // full trace
+							result.signals {/* full trace */}
 						</code>
 					</div>
 				</div>
@@ -153,7 +153,7 @@ export default function HomePage() {
 					<span className="text-xs text-muted-foreground">A deep agent that fixes bugs</span>
 				</div>
 				<pre className="p-4 overflow-x-auto text-sm">
-					<code className="language-typescript">{`import { createHarness, ClaudeProvider } from "@open-harness/core";
+					<code className="language-typescript">{`import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 type State = {
   issue: string;
@@ -161,14 +161,14 @@ type State = {
   fix: string | null;
 };
 
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const diagnoser = agent({
   prompt: \`Analyze this issue and identify the root cause:
 {{ state.issue }}
 
 Use bash tools to inspect the codebase.\`,
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["diagnosis:complete"],
   updates: "diagnosis",
 });
@@ -188,7 +188,7 @@ Edit the relevant files and run tests.\`,
 const result = await runReactive({
   agents: { diagnoser, fixer },
   state: { issue: "Tests failing in auth module", diagnosis: null, fix: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "record", store }, // Capture for replay
 });`}</code>
 				</pre>
@@ -231,9 +231,7 @@ const result = await runReactive({
 
 			{/* CTA */}
 			<div className="text-center">
-				<p className="text-sm text-muted-foreground mb-4">
-					Open Harness is open source and free to use.
-				</p>
+				<p className="text-sm text-muted-foreground mb-4">Open Harness is open source and free to use.</p>
 				<div className="flex gap-4 justify-center">
 					<Link
 						href="/docs/learn/quickstart"

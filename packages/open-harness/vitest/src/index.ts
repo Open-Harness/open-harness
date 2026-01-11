@@ -21,20 +21,20 @@
  * ```ts
  * // tests/my-agent.test.ts (v0.3.0)
  * import { test, expect } from 'vitest'
- * import { createHarness, ClaudeProvider, MemorySignalStore } from '@open-harness/vitest'
+ * import { createWorkflow, ClaudeHarness, MemorySignalStore } from '@open-harness/vitest'
  *
- * const { agent, runReactive } = createHarness<{ input: string }>()
+ * const { agent, runReactive } = createWorkflow<{ input: string }>()
  *
  * test('agent responds quickly and cheaply', async () => {
  *   const myAgent = agent({
  *     prompt: 'You are helpful. Input: {{ state.input }}',
- *     activateOn: ['harness:start'],
+ *     activateOn: ['workflow:start'],
  *   })
  *
  *   const result = await runReactive({
  *     agents: { myAgent },
  *     state: { input: 'Hello' },
- *     defaultProvider: new ClaudeProvider(),
+ *     defaultHarness: new ClaudeHarness(),
  *   })
  *
  *   expect(result.state).toBeDefined()
@@ -57,11 +57,11 @@ import "./types.js";
 // Convenience re-exports from core (v0.3.0)
 export {
 	agent,
-	ClaudeProvider,
-	createHarness,
-	harness,
+	ClaudeHarness,
+	createWorkflow,
 	MemorySignalStore,
 	type RunReactiveOptions,
 	type RunReactiveResult,
 	runReactive,
+	workflow,
 } from "@open-harness/core";

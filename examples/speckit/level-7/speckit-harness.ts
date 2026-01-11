@@ -1,4 +1,4 @@
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 import type { Task } from "./agents/spec-agent";
 import type { ValidationResult } from "./agents/coding-agent";
 import type { ReviewIssue, CriterionResult } from "./agents/reviewer-agent";
@@ -76,7 +76,7 @@ export const initialState: SpecKitState = {
 // 2. Create Typed Harness Factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<SpecKitState>();
+const { agent, runReactive } = createWorkflow<SpecKitState>();
 
 // =============================================================================
 // 3. Define Reactive Agents
@@ -124,7 +124,7 @@ By complexity: [breakdown]
 ## STATUS
 COMPLETE or NEEDS_MORE_CONTEXT`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["spec:complete"],
 	updates: "specOutput",
 });
@@ -220,7 +220,7 @@ One of:
 // 4. Runner Function
 // =============================================================================
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
@@ -247,7 +247,7 @@ export async function runSpecKit(prompt: string, options: RunOptions = {}) {
 			...initialState,
 			prompt,
 		},
-		provider,
+		harness,
 		recording: options.fixture
 			? {
 					mode: options.mode ?? "replay",

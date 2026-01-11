@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-11T06:42:54.221Z"
-lastCommit: "edcbf4c29d5c22eb600c6f75d5fcc6c1b8d24d58"
-lastCommitDate: "2026-01-11T06:23:45Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 ---
 # @internal/signals-core
 
@@ -19,7 +19,7 @@ bun add @internal/signals-core
 
 ### Signals
 
-Signals are immutable events that flow through the system. All state changes, agent activations, and provider responses are signals.
+Signals are immutable events that flow through the system. All state changes, agent activations, and harness responses are signals.
 
 ```typescript
 import { createSignal, type Signal } from "@internal/signals-core";
@@ -46,9 +46,9 @@ Signal names use colon-separated namespacing:
 
 | Pattern | Examples |
 |---------|----------|
-| `harness:*` | `harness:start`, `harness:end` |
+| `workflow:*` | `workflow:start`, `workflow:end` |
 | `agent:*` | `agent:activated`, `agent:skipped` |
-| `provider:*` | `provider:start`, `provider:end`, `provider:error` |
+| `harness:*` | `harness:start`, `harness:end`, `harness:error` |
 | `text:*` | `text:delta`, `text:complete` |
 | `tool:*` | `tool:call`, `tool:result` |
 | `state:*:changed` | `state:confidence:changed` |
@@ -64,34 +64,34 @@ const signal = createSignal(
   { result: "bullish" },
   {
     agent: "analyst",           // Which agent emitted this
-    provider: "claude",         // Which provider was used
+    harness: "claude",          // Which harness was used
     parent: "sig_parent123",    // Parent signal that caused this
   }
 );
 ```
 
-## Providers
+## Harnesses
 
-Providers are async generators that bridge AI SDKs to the signal architecture.
+Harnesses are async generators that bridge AI SDKs to the signal architecture.
 
-### Provider Interface
+### Harness Interface
 
 ```typescript
-import type { Provider, ProviderInput, ProviderOutput, RunContext, Signal } from "@internal/signals-core";
+import type { Harness, HarnessInput, HarnessOutput, RunContext, Signal } from "@internal/signals-core";
 
-interface Provider<TInput extends ProviderInput = ProviderInput, TOutput extends ProviderOutput = ProviderOutput> {
+interface Harness<TInput extends HarnessInput = HarnessInput, TOutput extends HarnessOutput = HarnessOutput> {
   readonly type: string;
   readonly displayName: string;
-  readonly capabilities: ProviderCapabilities;
+  readonly capabilities: HarnessCapabilities;
 
   run(input: TInput, ctx: RunContext): AsyncGenerator<Signal, TOutput>;
 }
 ```
 
-### Provider Capabilities
+### Harness Capabilities
 
 ```typescript
-interface ProviderCapabilities {
+interface HarnessCapabilities {
   streaming: boolean;        // Supports streaming responses
   structuredOutput: boolean; // Supports JSON schema output
   tools: boolean;            // Supports tool/function calling
@@ -103,7 +103,7 @@ interface ProviderCapabilities {
 
 ```typescript
 // Input
-interface ProviderInput {
+interface HarnessInput {
   system?: string;                    // System prompt
   messages: readonly Message[];       // Conversation history
   tools?: readonly ToolDefinition[];  // Available tools
@@ -114,7 +114,7 @@ interface ProviderInput {
 }
 
 // Output
-interface ProviderOutput {
+interface HarnessOutput {
   content: string;                    // Generated text
   toolCalls?: ToolCall[];             // Tool invocations
   sessionId?: string;                 // Session for resume
@@ -123,29 +123,29 @@ interface ProviderOutput {
 }
 ```
 
-## Provider Signals
+## Harness Signals
 
-All providers emit a standard set of signals defined in `PROVIDER_SIGNALS`:
+All harnesses emit a standard set of signals defined in `HARNESS_SIGNALS`:
 
 ```typescript
-import { PROVIDER_SIGNALS } from "@internal/signals-core";
+import { HARNESS_SIGNALS } from "@internal/signals-core";
 
 // Lifecycle
-PROVIDER_SIGNALS.START    // "provider:start"
-PROVIDER_SIGNALS.END      // "provider:end"
-PROVIDER_SIGNALS.ERROR    // "provider:error"
+HARNESS_SIGNALS.START    // "harness:start"
+HARNESS_SIGNALS.END      // "harness:end"
+HARNESS_SIGNALS.ERROR    // "harness:error"
 
 // Text streaming
-PROVIDER_SIGNALS.TEXT_DELTA     // "text:delta"
-PROVIDER_SIGNALS.TEXT_COMPLETE  // "text:complete"
+HARNESS_SIGNALS.TEXT_DELTA     // "text:delta"
+HARNESS_SIGNALS.TEXT_COMPLETE  // "text:complete"
 
 // Thinking/reasoning
-PROVIDER_SIGNALS.THINKING_DELTA     // "thinking:delta"
-PROVIDER_SIGNALS.THINKING_COMPLETE  // "thinking:complete"
+HARNESS_SIGNALS.THINKING_DELTA     // "thinking:delta"
+HARNESS_SIGNALS.THINKING_COMPLETE  // "thinking:complete"
 
 // Tool use
-PROVIDER_SIGNALS.TOOL_CALL    // "tool:call"
-PROVIDER_SIGNALS.TOOL_RESULT  // "tool:result"
+HARNESS_SIGNALS.TOOL_CALL    // "tool:call"
+HARNESS_SIGNALS.TOOL_RESULT  // "tool:result"
 ```
 
 ### Signal Payloads
@@ -153,13 +153,13 @@ PROVIDER_SIGNALS.TOOL_RESULT  // "tool:result"
 Each signal type has a defined payload structure:
 
 ```typescript
-// provider:start
-{ input: ProviderInput }
+// harness:start
+{ input: HarnessInput }
 
-// provider:end
-{ output: ProviderOutput, durationMs: number }
+// harness:end
+{ output: HarnessOutput, durationMs: number }
 
-// provider:error
+// harness:error
 { code: string, message: string, recoverable: boolean }
 
 // text:delta / text:complete
@@ -182,8 +182,8 @@ All types have corresponding Zod schemas for runtime validation:
 ```typescript
 import {
   SignalSchema,
-  ProviderInputSchema,
-  ProviderOutputSchema,
+  HarnessInputSchema,
+  HarnessOutputSchema,
   MessageSchema,
   ToolCallSchema,
   TokenUsageSchema,
@@ -226,7 +226,7 @@ const signal = createSignal(
 
 ## See Also
 
-- [@open-harness/core](../open-harness/core/README.md) - Full harness API
-- [@open-harness/provider-claude](../providers/claude/README.md) - Claude provider
-- [@open-harness/provider-openai](../providers/openai/README.md) - OpenAI provider
+- [@open-harness/core](../open-harness/core/README.md) - Full workflow API
+- [@open-harness/claude](../../adapters/harnesses/claude/README.md) - Claude harness
+- [@open-harness/openai](../../adapters/harnesses/openai/README.md) - OpenAI harness
 - [packages/signals](../signals/README.md) - SignalBus, stores, and patterns

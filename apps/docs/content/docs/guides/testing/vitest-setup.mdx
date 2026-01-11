@@ -133,7 +133,7 @@ my-project/
 
 ```typescript title="test/analyzer.test.ts"
 import { describe, it, expect } from "vitest";
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 type State = {
   input: string;
@@ -141,20 +141,20 @@ type State = {
 };
 
 describe("Analyzer Agent", () => {
-  const { agent, runReactive } = createHarness<State>();
+  const { agent, runReactive } = createWorkflow<State>();
 
   const analyzer = agent({
     prompt: "Analyze: {{ state.input }}",
-    activateOn: ["harness:start"],
+    activateOn: ["workflow:start"],
     emits: ["analysis:complete"],
     updates: "analysis",
   });
 
-  it("activates on harness:start", async () => {
+  it("activates on workflow:start", async () => {
     const result = await runReactive({
       agents: { analyzer },
       state: { input: "Test input", analysis: null },
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       endWhen: (s) => s.analysis !== null,
     });
 
@@ -165,7 +165,7 @@ describe("Analyzer Agent", () => {
     const result = await runReactive({
       agents: { analyzer },
       state: { input: "Test input", analysis: null },
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       endWhen: (s) => s.analysis !== null,
     });
 
@@ -176,7 +176,7 @@ describe("Analyzer Agent", () => {
     const result = await runReactive({
       agents: { analyzer },
       state: { input: "Test input", analysis: null },
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       endWhen: (s) => s.analysis !== null,
     });
 

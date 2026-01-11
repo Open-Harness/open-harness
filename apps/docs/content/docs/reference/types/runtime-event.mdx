@@ -38,9 +38,9 @@ Signal names use colon-separated namespaces:
 
 | Namespace | Examples |
 |-----------|----------|
-| `harness:` | `harness:start`, `harness:end` |
+| `workflow:` | `workflow:start`, `workflow:end` |
 | `agent:` | `agent:activated`, `agent:completed` |
-| `provider:` | `provider:start`, `provider:end` |
+| `harness:` | `harness:start`, `harness:end` |
 | `text:` | `text:delta`, `text:complete` |
 | `thinking:` | `thinking:delta`, `thinking:complete` |
 | `tool:` | `tool:call`, `tool:result` |
@@ -49,13 +49,13 @@ Signal names use colon-separated namespaces:
 
 ## Payload Types
 
-### Harness Signals
+### Workflow Signals
 
 ```typescript
-// harness:start
+// workflow:start
 { state: TState; agents: string[] }
 
-// harness:end
+// workflow:end
 {
   state: TState;
   metrics: { durationMs: number; activations: number };
@@ -76,20 +76,20 @@ Signal names use colon-separated namespaces:
 { agent: string; output: unknown }
 ```
 
-### Provider Signals
+### Harness Signals
 
 ```typescript
-// provider:start
+// harness:start
 { model: string }
 
-// provider:end
+// harness:end
 {
   usage?: { inputTokens: number; outputTokens: number };
   cost?: number;
   sessionId?: string;
 }
 
-// provider:error
+// harness:error
 { error: string; retryAfter?: number }
 ```
 
@@ -152,14 +152,14 @@ const chain = result.signals.filter(s => s.source?.parent === targetId);
 
 ## Creating Signals
 
-Providers create signals using `createSignal`:
+Harnesses create signals using `createSignal`:
 
 ```typescript
 import { createSignal } from "@open-harness/core";
 
-yield createSignal("provider:start", { model: "my-model" });
+yield createSignal("harness:start", { model: "my-model" });
 yield createSignal("text:delta", { content: "Hello" });
-yield createSignal("provider:end", { usage: { inputTokens: 10, outputTokens: 5 } });
+yield createSignal("harness:end", { usage: { inputTokens: 10, outputTokens: 5 } });
 ```
 
 ## Working with Signals
@@ -181,7 +181,7 @@ const output = textComplete?.payload.content;
 
 ```typescript
 const totalTokens = result.signals
-  .filter(s => s.name === "provider:end")
+  .filter(s => s.name === "harness:end")
   .reduce((sum, s) => {
     const usage = s.payload.usage || { inputTokens: 0, outputTokens: 0 };
     return sum + usage.inputTokens + usage.outputTokens;
@@ -193,11 +193,11 @@ const totalTokens = result.signals
 Use type guards for type-safe access:
 
 ```typescript
-function isProviderEnd(signal: Signal): signal is Signal & { payload: { usage: Usage } } {
-  return signal.name === "provider:end";
+function isHarnessEnd(signal: Signal): signal is Signal & { payload: { usage: Usage } } {
+  return signal.name === "harness:end";
 }
 
-const providerEnds = result.signals.filter(isProviderEnd);
+const harnessEnds = result.signals.filter(isHarnessEnd);
 ```
 
 ## See Also

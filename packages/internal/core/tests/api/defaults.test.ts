@@ -21,7 +21,7 @@ class MockFixtureStore implements FixtureStore {
 		this.name = name;
 	}
 
-	async create(_options?: { name?: string; tags?: string[]; providerType?: string }): Promise<string> {
+	async create(_options?: { name?: string; tags?: string[]; harnessType?: string }): Promise<string> {
 		return "mock-recording-id";
 	}
 
@@ -56,7 +56,7 @@ class MockFixtureStore implements FixtureStore {
 		return [];
 	}
 
-	async list(_query?: { providerType?: string; tags?: string[]; limit?: number; offset?: number }): Promise<RecordingMetadata[]> {
+	async list(_query?: { harnessType?: string; tags?: string[]; limit?: number; offset?: number }): Promise<RecordingMetadata[]> {
 		return [];
 	}
 

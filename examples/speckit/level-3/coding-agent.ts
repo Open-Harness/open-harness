@@ -1,4 +1,4 @@
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
 /**
  * Coding Agent - Level 3
@@ -17,7 +17,7 @@ import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/
  * 4. Repeat until validation passes or max attempts reached
  *
  * v0.3.0 Migration:
- * - Uses createHarness() for typed agent factory
+ * - Uses createWorkflow() for typed agent factory
  * - Uses runReactive() instead of run()
  * - Agent has activateOn/emits for signal-based activation
  */
@@ -62,7 +62,7 @@ export const initialState: CodingAgentState = {
 // 2. Create typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<CodingAgentState>();
+const { agent, runReactive } = createWorkflow<CodingAgentState>();
 
 // =============================================================================
 // 3. Define the coding agent
@@ -110,7 +110,7 @@ One of:
 
 Be critical of your own work. It's better to catch issues now than deploy broken code.`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["code:complete"],
 	updates: "code",
 });
@@ -119,7 +119,7 @@ Be critical of your own work. It's better to catch issues now than deploy broken
 // 4. Export runner function
 // =============================================================================
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
@@ -141,7 +141,7 @@ export async function runCodingAgent(prompt: string, options: RunOptions = {}) {
 			...initialState,
 			prompt,
 		},
-		provider,
+		harness,
 		recording: options.fixture
 			? {
 					mode: options.mode ?? "replay",

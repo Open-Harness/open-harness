@@ -1,8 +1,8 @@
 ---
 title: "@open-harness/core"
-lastUpdated: "2026-01-10T09:45:31.811Z"
-lastCommit: "a9e5f66d3940822fd2e20996fc38318fe0aede14"
-lastCommitDate: "2026-01-10T05:58:49Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 scope:
   - public-api
   - core
@@ -24,7 +24,7 @@ npm install @open-harness/core
 ## Quick Start
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 // Define your state type
 interface MyState {
@@ -32,13 +32,13 @@ interface MyState {
   analysis?: string;
 }
 
-// Create typed harness factory
-const { agent, runReactive } = createHarness<MyState>();
+// Create typed workflow factory
+const { agent, runReactive } = createWorkflow<MyState>();
 
 // Define agents with signal chaining
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: "analysis",
 });
@@ -47,7 +47,7 @@ const analyzer = agent({
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello, world!" },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 });
 
 console.log(result.state.analysis);
@@ -57,40 +57,40 @@ console.log(result.state.analysis);
 
 This package re-exports from internal packages:
 
-### Harness API
+### Workflow API
 
 ```typescript
 // Factory
-import { createHarness } from "@open-harness/core";
+import { createWorkflow } from "@open-harness/core";
 
 // Execution
 import { runReactive } from "@open-harness/core";
 
 // Types
 import type {
-  HarnessFactory,
+  WorkflowFactory,
   ReactiveAgentConfig,
-  ReactiveHarnessConfig,
-  ReactiveHarnessResult,
+  ReactiveWorkflowConfig,
+  WorkflowResult,
   ActivationContext,
 } from "@open-harness/core";
 ```
 
-### Providers
+### Harnesses
 
 ```typescript
 // Claude (Anthropic)
-import { ClaudeProvider, type ClaudeProviderConfig } from "@open-harness/core";
+import { ClaudeHarness, type ClaudeHarnessConfig } from "@open-harness/core";
 
 // OpenAI/Codex
-import { CodexProvider, type CodexProviderConfig } from "@open-harness/core";
+import { CodexHarness, type CodexHarnessConfig } from "@open-harness/core";
 ```
 
 ### Signals
 
 ```typescript
 // Core
-import { createSignal, type Signal, type Provider } from "@open-harness/core";
+import { createSignal, type Signal, type Harness } from "@open-harness/core";
 
 // Bus
 import { SignalBus, type ISignalBus, type SignalHandler } from "@open-harness/core";
@@ -135,7 +135,7 @@ import { createTelemetrySubscriber, createWideEvent } from "@open-harness/core";
 
 // Defaults
 import {
-  setDefaultProvider,
+  setDefaultHarness,
   setDefaultStore,
   setDefaultMode,
   resetDefaults,
@@ -149,7 +149,7 @@ import {
 Open Harness v0.3.0 uses signals for all agent coordination:
 
 ```
-harness:start → agent activates → emits signal → next agent → harness:complete
+workflow:start → agent activates → emits signal → next agent → workflow:end
 ```
 
 ### Agent Definition
@@ -157,10 +157,10 @@ harness:start → agent activates → emits signal → next agent → harness:co
 ```typescript
 const myAgent = agent({
   prompt: "Your prompt with {{ state.field }} templates",
-  activateOn: ["harness:start"],  // When to activate
-  emits: ["my:complete"],         // What to emit on success
-  updates: "field",               // State field to update
-  when: (ctx) => ctx.state.ready, // Guard condition
+  activateOn: ["workflow:start"],  // When to activate
+  emits: ["my:complete"],          // What to emit on success
+  updates: "field",                // State field to update
+  when: (ctx) => ctx.state.ready,  // Guard condition
 });
 ```
 
@@ -171,7 +171,7 @@ const store = new MemorySignalStore();
 
 // Record
 await runReactive({
-  agents, state, provider,
+  agents, state, harness,
   fixture: "my-test",
   mode: "record",
   store,
@@ -188,14 +188,14 @@ await runReactive({
 
 ## Type Safety
 
-The `createHarness<TState>()` factory ensures all agents share the same state type:
+The `createWorkflow<TState>()` factory ensures all agents share the same state type:
 
 ```typescript
-const { agent, runReactive } = createHarness<MyState>();
+const { agent, runReactive } = createWorkflow<MyState>();
 
 // All agents get typed state access
 const myAgent = agent({
-  when: (ctx) => ctx.state.fieldName,  // ✅ Full autocomplete
+  when: (ctx) => ctx.state.fieldName,  // Full autocomplete
 });
 ```
 

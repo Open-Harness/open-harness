@@ -37,7 +37,7 @@
 		"@internal/core": "workspace:*",
 		"@internal/signals": "workspace:*",
 		"@internal/signals-core": "workspace:*",
-		"@open-harness/provider-claude": "workspace:*",
-		"@open-harness/provider-openai": "workspace:*"
+		"@open-harness/claude": "workspace:*",
+		"@open-harness/openai": "workspace:*"
 	}
 }

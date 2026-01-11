@@ -26,14 +26,14 @@ const store = new MemorySignalStore();
 Enable recording during execution:
 
 ```typescript
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
 const store = new MemorySignalStore();
 
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: {
     mode: "record",
     store,
@@ -47,13 +47,13 @@ console.log("Recording ID:", result.recordingId);
 
 ## Replaying a Workflow
 
-Replay without provider calls:
+Replay without harness calls:
 
 ```typescript
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(), // Not called during replay
+  harness: new ClaudeHarness(), // Not called during replay
   recording: {
     mode: "replay",
     store,

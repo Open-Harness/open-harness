@@ -10,8 +10,8 @@
  */
 
 import {
-	createHarness,
-	ClaudeProvider,
+	createWorkflow,
+	ClaudeHarness,
 	MemorySignalStore,
 	Player,
 } from "@open-harness/core";
@@ -31,7 +31,7 @@ type AnalysisState = {
 // 2. Create provider and store
 // =============================================================================
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
@@ -43,7 +43,7 @@ const store = new MemorySignalStore();
 // 3. Create typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<AnalysisState>();
+const { agent, runReactive } = createWorkflow<AnalysisState>();
 
 // =============================================================================
 // 4. Define agent
@@ -51,9 +51,9 @@ const { agent, runReactive } = createHarness<AnalysisState>();
 
 const analyzer = agent({
 	prompt: `Analyze this input briefly (1-2 sentences): {{ state.input }}`,
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["analysis:complete"],
-	signalProvider: provider,
+	signalHarness: harness,
 
 	// Update state.result with output
 	updates: "result",

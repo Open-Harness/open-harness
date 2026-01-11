@@ -26,8 +26,8 @@ export interface RecordingMetadata {
 	readonly name?: string;
 	/** Tags for filtering */
 	readonly tags?: readonly string[];
-	/** Provider type used (e.g., "claude", "openai") */
-	readonly providerType?: string;
+	/** Harness type used (e.g., "claude", "codex") */
+	readonly harnessType?: string;
 	/** Total number of signals */
 	readonly signalCount: number;
 	/** Duration in milliseconds */
@@ -76,8 +76,8 @@ export interface Checkpoint {
  * Query options for listing recordings
  */
 export interface RecordingQuery {
-	/** Filter by provider type */
-	providerType?: string;
+	/** Filter by harness type */
+	harnessType?: string;
 	/** Filter by tags (any match) */
 	tags?: string[];
 	/** Maximum results */
@@ -121,7 +121,7 @@ export interface SignalStore {
 	 * @param options - Recording options
 	 * @returns Recording ID
 	 */
-	create(options?: { name?: string; tags?: string[]; providerType?: string }): Promise<string>;
+	create(options?: { name?: string; tags?: string[]; harnessType?: string }): Promise<string>;
 
 	/**
 	 * Append a signal to a recording

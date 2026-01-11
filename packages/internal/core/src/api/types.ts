@@ -3,8 +3,8 @@
  *
  * These types form the primary interface for users:
  * - agent() creates an Agent
- * - harness() creates a Harness
- * - createHarness() creates a typed harness factory (v0.3.0)
+ * - workflow() creates a Workflow
+ * - createWorkflow() creates a typed workflow factory (v0.3.0)
  * - runReactive() executes signal-based workflows (v0.3.0)
  *
  * Design decisions documented in SDK_DX_DECISIONS.md
@@ -13,11 +13,11 @@
 import type { ZodType } from "zod";
 
 // v0.3.0 Signal-based types
-import type { Signal, Provider } from "@internal/signals-core";
+import type { Signal, Harness } from "@internal/signals-core";
 import type { SignalPattern, SignalStore } from "@internal/signals";
 
-// Re-export Provider from @internal/signals-core for convenience
-export type { Provider } from "@internal/signals-core";
+// Re-export Harness from @internal/signals-core for convenience
+export type { Harness } from "@internal/signals-core";
 
 /**
  * Standard agent input shape.
@@ -61,8 +61,8 @@ export type FixtureStore = SignalStore;
 /**
  * Configuration for creating an agent.
  *
- * Agents are stateless - state lives on the harness level.
- * Agents are guard-less - use specific signal patterns or harness edges for control flow.
+ * Agents are stateless - state lives on the workflow level.
+ * Agents are guard-less - use specific signal patterns or workflow edges for control flow.
  *
  * @property prompt - System prompt defining agent behavior
  * @property output - Optional output configuration with schema
@@ -70,7 +70,7 @@ export type FixtureStore = SignalStore;
  * v0.3.0 adds reactive properties:
  * @property activateOn - Signal patterns that trigger this agent
  * @property emits - Signals this agent declares it will emit
- * @property signalProvider - Per-agent signal-based provider override
+ * @property signalHarness - Per-agent signal-based harness override
  */
 export type AgentConfig<TOutput = unknown> = {
 	/**
@@ -96,13 +96,13 @@ export type AgentConfig<TOutput = unknown> = {
 
 	/**
 	 * Signal patterns that trigger this agent.
-	 * Uses glob syntax: "harness:start", "state:*:changed", "trade:**"
+	 * Uses glob syntax: "workflow:start", "state:*:changed", "trade:**"
 	 *
 	 * When present, makes this a "reactive agent" that can be used with runReactive().
 	 *
 	 * @example
 	 * ```ts
-	 * activateOn: ["harness:start"]
+	 * activateOn: ["workflow:start"]
 	 * activateOn: ["analysis:complete", "data:updated"]
 	 * activateOn: ["state:*:changed"]
 	 * ```
@@ -123,16 +123,16 @@ export type AgentConfig<TOutput = unknown> = {
 	emits?: string[];
 
 	/**
-	 * Per-agent signal-based provider override (v0.3.0).
-	 * If not set, uses default provider from runReactive options.
+	 * Per-agent signal-based harness override (v0.3.0).
+	 * If not set, uses default harness from runReactive options.
 	 *
 	 * @example
 	 * ```ts
-	 * import { ClaudeProvider } from "@open-harness/provider-claude"
-	 * signalProvider: new ClaudeProvider()
+	 * import { ClaudeHarness } from "@open-harness/claude"
+	 * signalHarness: new ClaudeHarness()
 	 * ```
 	 */
-	signalProvider?: Provider;
+	signalHarness?: Harness;
 };
 
 /**
@@ -140,7 +140,7 @@ export type AgentConfig<TOutput = unknown> = {
  *
  * Agents are stateless building blocks - they have identity,
  * make decisions, but do not maintain state.
- * State lives on the harness level.
+ * State lives on the workflow level.
  */
 export type Agent<TOutput = unknown> = {
 	/**
@@ -169,11 +169,11 @@ export type ReactiveAgent<TOutput = unknown> = Agent<TOutput> & {
 };
 
 // ============================================================================
-// Harness types
+// Workflow types
 // ============================================================================
 
 /**
- * Edge definition for connecting agents in a harness.
+ * Edge definition for connecting agents in a workflow.
  *
  * Edges define control flow - which agent runs after which,
  * and under what conditions.
@@ -200,17 +200,17 @@ export type Edge = {
 };
 
 /**
- * Configuration for creating a harness.
+ * Configuration for creating a workflow.
  *
- * The harness owns all workflow state. Agents are stateless.
+ * The workflow owns all workflow state. Agents are stateless.
  *
- * @property agents - Named agents that comprise this harness
+ * @property agents - Named agents that comprise this workflow
  * @property edges - Connections between agents
  * @property state - Optional shared state accessible to all agents
  */
-export type HarnessConfig<TState = Record<string, unknown>> = {
+export type WorkflowConfig<TState = Record<string, unknown>> = {
 	/**
-	 * Named agents that comprise this harness.
+	 * Named agents that comprise this workflow.
 	 *
 	 * @example
 	 * ```ts
@@ -235,24 +235,24 @@ export type HarnessConfig<TState = Record<string, unknown>> = {
 };
 
 /**
- * A harness definition created by the harness() function.
+ * A workflow definition created by the workflow() function.
  *
- * Harnesses coordinate multiple agents - they own shared state,
+ * Workflows coordinate multiple agents - they own shared state,
  * decide which agent runs next, and coordinate recordings.
  *
- * The harness doesn't "execute" - agents execute. The harness coordinates.
+ * The workflow doesn't "execute" - agents execute. The workflow coordinates.
  * See SDK_DX_DECISIONS.md Decision #8.
  */
-export type Harness<TState = Record<string, unknown>> = {
+export type Workflow<TState = Record<string, unknown>> = {
 	/**
 	 * Discriminator for type checking at runtime.
 	 */
-	readonly _tag: "Harness";
+	readonly _tag: "Workflow";
 
 	/**
-	 * The configuration used to create this harness.
+	 * The configuration used to create this workflow.
 	 */
-	readonly config: HarnessConfig<TState>;
+	readonly config: WorkflowConfig<TState>;
 };
 
 // ============================================================================
@@ -269,7 +269,7 @@ export type Harness<TState = Record<string, unknown>> = {
 export type FixtureMode = "record" | "replay" | "live";
 
 /**
- * Options for running an agent or harness.
+ * Options for running an agent or workflow.
  *
  * See SDK_DX_DECISIONS.md Decision #9.
  */
@@ -278,7 +278,7 @@ export type RunOptions = {
 	 * Fixture identifier for recording/replay.
 	 * When provided, enables fixture-based testing.
 	 *
-	 * For multi-agent harnesses, produces hierarchical IDs:
+	 * For multi-agent workflows, produces hierarchical IDs:
 	 * `<fixture>/<agentId>/inv<N>`
 	 *
 	 * @example "my-test"
@@ -304,24 +304,24 @@ export type RunOptions = {
 
 	/**
 	 * Variant identifier for A/B testing scenarios.
-	 * Passed through to provider for tagging.
+	 * Passed through to harness for tagging.
 	 */
 	variant?: string;
 
 	/**
-	 * Provider for executing agents.
+	 * Harness for executing agents.
 	 *
-	 * If not specified, uses the default provider set via setDefaultProvider().
+	 * If not specified, uses the default harness set via setDefaultHarness().
 	 * If no default is set, throws an error.
 	 *
 	 * @example
 	 * ```ts
 	 * import { createClaudeNode } from "@open-harness/server"
 	 *
-	 * await run(myAgent, input, { provider: createClaudeNode() })
+	 * await run(myAgent, input, { harness: createClaudeNode() })
 	 * ```
 	 */
-	provider?: Provider;
+	harness?: Harness;
 };
 
 /**
@@ -334,7 +334,7 @@ export type RunMetrics = {
 	latencyMs: number;
 
 	/**
-	 * Total cost in USD (from provider pricing).
+	 * Total cost in USD (from harness pricing).
 	 */
 	cost: number;
 
@@ -355,7 +355,7 @@ export type RunMetrics = {
 };
 
 /**
- * Result of running an agent or harness.
+ * Result of running an agent or workflow.
  *
  * See SDK_DX_DECISIONS.md Decision #12.
  *
@@ -363,13 +363,13 @@ export type RunMetrics = {
  */
 export type RunResult<T = unknown> = {
 	/**
-	 * The output produced by the agent/harness.
+	 * The output produced by the agent/workflow.
 	 */
 	output: T;
 
 	/**
-	 * Harness workflow state (if applicable).
-	 * For harnesses, this is the shared workflow state.
+	 * Workflow state (if applicable).
+	 * For workflows, this is the shared workflow state.
 	 * Single agents do not have state.
 	 */
 	state?: Record<string, unknown>;
@@ -383,7 +383,7 @@ export type RunResult<T = unknown> = {
 	 * IDs of fixtures created (when recording).
 	 * Empty array when not recording.
 	 *
-	 * For multi-agent harnesses, contains hierarchical IDs.
+	 * For multi-agent workflows, contains hierarchical IDs.
 	 */
 	fixtures?: string[];
 };
@@ -405,14 +405,14 @@ export function isAgent(value: unknown): value is Agent {
 }
 
 /**
- * Type guard to check if a value is a Harness.
+ * Type guard to check if a value is a Workflow.
  */
-export function isHarness(value: unknown): value is Harness {
+export function isWorkflow(value: unknown): value is Workflow {
 	return (
 		typeof value === "object" &&
 		value !== null &&
 		"_tag" in value &&
-		value._tag === "Harness"
+		value._tag === "Workflow"
 	);
 }
 

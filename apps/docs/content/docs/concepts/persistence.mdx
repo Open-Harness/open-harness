@@ -28,19 +28,19 @@ Every `runReactive` execution produces a signal trace:
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
 });
 
 // Full signal trace
 console.log(result.signals);
 // [
-//   { name: "harness:start", timestamp: "...", payload: { state: {...} } },
+//   { name: "workflow:start", timestamp: "...", payload: { state: {...} } },
 //   { name: "agent:activated", payload: { agent: "analyzer" } },
-//   { name: "provider:start", payload: { model: "..." } },
+//   { name: "harness:start", payload: { model: "..." } },
 //   { name: "text:delta", payload: { content: "..." } },
-//   { name: "provider:end", payload: { ... } },
+//   { name: "harness:end", payload: { ... } },
 //   { name: "analysis:complete", payload: { ... } },
-//   { name: "harness:end", payload: { state: {...}, metrics: {...} } },
+//   { name: "workflow:end", payload: { state: {...}, metrics: {...} } },
 // ]
 ```
 
@@ -101,7 +101,7 @@ Enable recording during execution:
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
   recording: {
     mode: "record",
     store: new MemorySignalStore(),
@@ -121,7 +121,7 @@ Replay a recorded execution:
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider, // Not called during replay
+  harness, // Not called during replay
   recording: {
     mode: "replay",
     store,
@@ -131,7 +131,7 @@ const result = await runReactive({
 ```
 
 During replay:
-- Provider signals are injected from the recording
+- Harness signals are injected from the recording
 - Agents receive the same inputs as the original run
 - No API calls are made
 - Result is deterministic
@@ -172,13 +172,13 @@ describe("Workflow", () => {
   it("emits signals in order", async () => {
     const result = await runReactive({ /* ... */ });
 
-    expect(result.signals).toContainSignal("harness:start");
+    expect(result.signals).toContainSignal("workflow:start");
     expect(result.signals).toContainSignal("analysis:complete");
     expect(result.signals).toHaveSignalsInOrder([
-      "harness:start",
+      "workflow:start",
       "agent:activated",
       "analysis:complete",
-      "harness:end",
+      "workflow:end",
     ]);
   });
 });

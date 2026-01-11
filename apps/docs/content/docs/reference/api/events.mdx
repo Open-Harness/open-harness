@@ -22,15 +22,15 @@ interface Signal {
 }
 ```
 
-## Harness Signals
+## Workflow Signals
 
-### harness:start
+### workflow:start
 
 Emitted when workflow begins:
 
 ```typescript
 {
-  name: "harness:start",
+  name: "workflow:start",
   payload: {
     state: { /* initial state */ },
     agents: ["analyzer", "reviewer"],
@@ -38,13 +38,13 @@ Emitted when workflow begins:
 }
 ```
 
-### harness:end
+### workflow:end
 
 Emitted when workflow completes:
 
 ```typescript
 {
-  name: "harness:end",
+  name: "workflow:end",
   payload: {
     state: { /* final state */ },
     metrics: {
@@ -67,7 +67,7 @@ Emitted when an agent activates:
   name: "agent:activated",
   payload: {
     agent: "analyzer",
-    triggeredBy: "harness:start",
+    triggeredBy: "workflow:start",
   }
 }
 ```
@@ -100,28 +100,28 @@ Emitted when an agent finishes:
 }
 ```
 
-## Provider Signals
+## Harness Signals
 
-### provider:start
+### harness:start
 
-Emitted when provider begins execution:
+Emitted when harness begins execution:
 
 ```typescript
 {
-  name: "provider:start",
+  name: "harness:start",
   payload: {
     model: "claude-sonnet-4-20250514",
   }
 }
 ```
 
-### provider:end
+### harness:end
 
-Emitted when provider completes:
+Emitted when harness completes:
 
 ```typescript
 {
-  name: "provider:end",
+  name: "harness:end",
   payload: {
     usage: {
       inputTokens: 150,
@@ -133,13 +133,13 @@ Emitted when provider completes:
 }
 ```
 
-### provider:error
+### harness:error
 
-Emitted on provider failure:
+Emitted on harness failure:
 
 ```typescript
 {
-  name: "provider:error",
+  name: "harness:error",
   payload: {
     error: "Rate limit exceeded",
     retryAfter: 30,
@@ -261,7 +261,7 @@ Agents emit custom signals via `emits`:
 ```typescript
 const analyzer = agent({
   prompt: "Analyze the input",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
 });
 ```
@@ -282,9 +282,9 @@ Use patterns to match signals:
 
 | Pattern | Matches |
 |---------|---------|
-| `"harness:start"` | Exact match |
+| `"workflow:start"` | Exact match |
 | `"agent:*"` | `agent:activated`, `agent:completed`, etc. |
-| `"provider:**"` | All provider signals |
+| `"harness:**"` | All harness signals |
 | `"*:complete"` | `text:complete`, `analysis:complete`, etc. |
 
 ## Working with Signals
@@ -298,8 +298,8 @@ const agentSignals = result.signals.filter(s => s.name.startsWith("agent:"));
 ### Extract Usage
 
 ```typescript
-const providerEnds = result.signals.filter(s => s.name === "provider:end");
-const totalTokens = providerEnds.reduce((sum, s) => {
+const harnessEnds = result.signals.filter(s => s.name === "harness:end");
+const totalTokens = harnessEnds.reduce((sum, s) => {
   const usage = s.payload.usage || { inputTokens: 0, outputTokens: 0 };
   return sum + usage.inputTokens + usage.outputTokens;
 }, 0);

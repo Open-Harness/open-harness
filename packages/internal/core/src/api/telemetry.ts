@@ -2,7 +2,7 @@
  * Telemetry - Wide Events derived from signals.
  *
  * Wide events aggregate signal streams into single, comprehensive events
- * that capture everything important about a harness run. This pattern
+ * that capture everything important about a workflow run. This pattern
  * reduces log volume while maximizing observability.
  *
  * @example
@@ -14,11 +14,11 @@
  *   sampling: { rate: 0.1, alwaysOnError: true },
  * })
  *
- * // Subscribe to harness signals
+ * // Subscribe to workflow signals
  * const result = await runReactive({
  *   agents: { ... },
  *   state: { ... },
- *   provider,
+ *   harness,
  * })
  *
  * // Emit wide event from result
@@ -45,7 +45,7 @@ export type TokenUsage = {
 };
 
 /**
- * Cost breakdown for a harness run.
+ * Cost breakdown for a workflow run.
  */
 export type CostBreakdown = {
 	/** Cost in USD */
@@ -55,19 +55,19 @@ export type CostBreakdown = {
 };
 
 /**
- * Outcome of a harness run.
+ * Outcome of a workflow run.
  */
-export type HarnessOutcome = "success" | "error" | "timeout" | "terminated";
+export type WorkflowOutcome = "success" | "error" | "timeout" | "terminated";
 
 /**
- * Wide event emitted at harness completion.
+ * Wide event emitted at workflow completion.
  *
  * Contains all relevant information about the run in a single event,
  * making it easy to query and analyze in log aggregation systems.
  */
-export type HarnessWideEvent = {
+export type WorkflowWideEvent = {
 	/** Event type identifier */
-	readonly event: "harness.complete";
+	readonly event: "workflow.complete";
 
 	/** Unique run identifier */
 	readonly runId: string;
@@ -82,7 +82,7 @@ export type HarnessWideEvent = {
 	readonly durationMs: number;
 
 	/** Outcome of the run */
-	readonly outcome: HarnessOutcome;
+	readonly outcome: WorkflowOutcome;
 
 	/** Error message if outcome is "error" */
 	readonly error?: string;
@@ -96,13 +96,13 @@ export type HarnessWideEvent = {
 	/** Total signals emitted during run */
 	readonly signalCount: number;
 
-	/** Token usage (if available from providers) */
+	/** Token usage (if available from harnesses) */
 	readonly tokens?: TokenUsage;
 
 	/** Cost breakdown (if available) */
 	readonly cost?: CostBreakdown;
 
-	/** Whether the harness terminated early via endWhen */
+	/** Whether the workflow terminated early via endWhen */
 	readonly terminatedEarly: boolean;
 
 	/** Sampled signals (based on sampling config) */
@@ -113,10 +113,10 @@ export type HarnessWideEvent = {
 };
 
 /**
- * Wide event emitted when harness starts.
+ * Wide event emitted when workflow starts.
  */
-export type HarnessStartEvent = {
-	readonly event: "harness.start";
+export type WorkflowStartEvent = {
+	readonly event: "workflow.start";
 	readonly runId: string;
 	readonly startedAt: string;
 	readonly agents: string[];
@@ -124,10 +124,10 @@ export type HarnessStartEvent = {
 };
 
 /**
- * Wide event emitted on harness error.
+ * Wide event emitted on workflow error.
  */
-export type HarnessErrorEvent = {
-	readonly event: "harness.error";
+export type WorkflowErrorEvent = {
+	readonly event: "workflow.error";
 	readonly runId: string;
 	readonly timestamp: string;
 	readonly error: string;
@@ -137,9 +137,9 @@ export type HarnessErrorEvent = {
 };
 
 /**
- * Union of all harness wide events.
+ * Union of all workflow wide events.
  */
-export type HarnessEvent = HarnessStartEvent | HarnessWideEvent | HarnessErrorEvent;
+export type WorkflowEvent = WorkflowStartEvent | WorkflowWideEvent | WorkflowErrorEvent;
 
 /**
  * Sampling configuration for signal inclusion in wide events.
@@ -172,7 +172,7 @@ export type SamplingConfig = {
 
 	/**
 	 * Signal patterns to never include.
-	 * @example ["text:delta", "provider:*"]
+	 * @example ["text:delta", "harness:*"]
 	 */
 	neverInclude?: string[];
 };
@@ -185,7 +185,7 @@ export type TelemetryConfig = {
 	 * Function to emit wide events.
 	 * Typically logs to Pino, sends to an APM, etc.
 	 */
-	emitter: (event: HarnessEvent) => void;
+	emitter: (event: WorkflowEvent) => void;
 
 	/**
 	 * Sampling configuration for signal inclusion.
@@ -198,13 +198,13 @@ export type TelemetryConfig = {
 	metadata?: Record<string, unknown>;
 
 	/**
-	 * Whether to emit harness.start events.
+	 * Whether to emit workflow.start events.
 	 * @default true
 	 */
 	emitStart?: boolean;
 
 	/**
-	 * Whether to emit harness.error events.
+	 * Whether to emit workflow.error events.
 	 * @default true
 	 */
 	emitError?: boolean;
@@ -221,7 +221,7 @@ const DEFAULT_SAMPLING: Required<SamplingConfig> = {
 	rate: 0.1,
 	alwaysOnError: true,
 	maxSignals: 100,
-	alwaysInclude: ["error:*", "agent:activated", "harness:*"],
+	alwaysInclude: ["error:*", "agent:activated", "workflow:*"],
 	neverInclude: ["text:delta", "thinking:delta"],
 };
 
@@ -286,7 +286,7 @@ function extractTokenUsage(signals: readonly Signal[]): TokenUsage | undefined {
 	let outputTokens = 0;
 
 	for (const signal of signals) {
-		if (signal.name === "provider:end") {
+		if (signal.name === "harness:end") {
 			const payload = signal.payload as {
 				usage?: { inputTokens?: number; outputTokens?: number };
 			};
@@ -344,17 +344,17 @@ export type TelemetryInput = {
  */
 export type TelemetrySubscriber = {
 	/**
-	 * Emit a harness.start event.
+	 * Emit a workflow.start event.
 	 */
 	emitStart: (runId: string, agents: string[]) => void;
 
 	/**
-	 * Emit a harness.complete wide event from run results.
+	 * Emit a workflow.complete wide event from run results.
 	 */
 	emitComplete: (runId: string, startedAt: string, result: TelemetryInput) => void;
 
 	/**
-	 * Emit a harness.error event.
+	 * Emit a workflow.error event.
 	 */
 	emitError: (
 		runId: string,
@@ -400,8 +400,8 @@ export function createTelemetrySubscriber(
 		emitStart(runId: string, agents: string[]): void {
 			if (!emitStart) return;
 
-			const event: HarnessStartEvent = {
-				event: "harness.start",
+			const event: WorkflowStartEvent = {
+				event: "workflow.start",
 				runId,
 				startedAt: new Date().toISOString(),
 				agents,
@@ -420,15 +420,15 @@ export function createTelemetrySubscriber(
 			const isError = result.error !== undefined;
 
 			// Determine outcome
-			let outcome: HarnessOutcome = "success";
+			let outcome: WorkflowOutcome = "success";
 			if (result.error) {
 				outcome = result.error.name === "TimeoutError" ? "timeout" : "error";
 			} else if (result.terminatedEarly) {
 				outcome = "terminated";
 			}
 
-			const event: HarnessWideEvent = {
-				event: "harness.complete",
+			const event: WorkflowWideEvent = {
+				event: "workflow.complete",
 				runId,
 				startedAt,
 				completedAt,
@@ -454,8 +454,8 @@ export function createTelemetrySubscriber(
 		): void {
 			if (!emitErrorEvents) return;
 
-			const event: HarnessErrorEvent = {
-				event: "harness.error",
+			const event: WorkflowErrorEvent = {
+				event: "workflow.error",
 				runId,
 				timestamp: new Date().toISOString(),
 				error: error.message,
@@ -470,7 +470,7 @@ export function createTelemetrySubscriber(
 }
 
 /**
- * Helper to create a wide event from harness result.
+ * Helper to create a wide event from workflow result.
  * Useful when not using the full subscriber pattern.
  */
 export function createWideEvent(
@@ -478,11 +478,11 @@ export function createWideEvent(
 	startedAt: string,
 	result: TelemetryInput,
 	sampling?: SamplingConfig,
-): HarnessWideEvent {
+): WorkflowWideEvent {
 	const completedAt = new Date().toISOString();
 	const isError = result.error !== undefined;
 
-	let outcome: HarnessOutcome = "success";
+	let outcome: WorkflowOutcome = "success";
 	if (result.error) {
 		outcome = result.error.name === "TimeoutError" ? "timeout" : "error";
 	} else if (result.terminatedEarly) {
@@ -490,7 +490,7 @@ export function createWideEvent(
 	}
 
 	return {
-		event: "harness.complete",
+		event: "workflow.complete",
 		runId,
 		startedAt,
 		completedAt,

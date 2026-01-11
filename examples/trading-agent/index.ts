@@ -11,7 +11,7 @@
  * Run: bun run examples/trading-agent/index.ts
  */
 
-import { ClaudeProvider, createHarness } from "@open-harness/core";
+import { ClaudeHarness, createWorkflow } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define state type for trading workflow
@@ -60,7 +60,7 @@ type TradingState = {
 // 2. Create typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<TradingState>();
+const { agent, runReactive } = createWorkflow<TradingState>();
 
 // =============================================================================
 // 3. Define reactive agents
@@ -69,7 +69,7 @@ const { agent, runReactive } = createHarness<TradingState>();
 /**
  * Market Analyst - Analyzes market data and trends
  *
- * Runs in PARALLEL with Risk Assessor on harness:start
+ * Runs in PARALLEL with Risk Assessor on workflow:start
  */
 const analyst = agent({
 	prompt: `You are a market analyst. Analyze the current market conditions for {{ state.symbol }}.
@@ -88,7 +88,7 @@ Output a JSON object with:
 
 Only output the JSON, nothing else.`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["analysis:complete"],
 
 	// Only analyze if we have a valid symbol
@@ -98,7 +98,7 @@ Only output the JSON, nothing else.`,
 /**
  * Risk Assessor - Evaluates position risk
  *
- * Runs in PARALLEL with Market Analyst on harness:start
+ * Runs in PARALLEL with Market Analyst on workflow:start
  */
 const riskAssessor = agent({
 	prompt: `You are a risk management specialist. Assess the risk of trading {{ state.symbol }}.
@@ -121,7 +121,7 @@ Output a JSON object with:
 
 Only output the JSON, nothing else.`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["risk:assessed"],
 
 	// Only assess if we have balance to trade
@@ -246,7 +246,7 @@ async function main() {
 	console.log("=== Trading Agent Example ===\n");
 	console.log("Demonstrating parallel execution, signal chaining, and guard conditions.\n");
 
-	const provider = new ClaudeProvider({
+	const harness = new ClaudeHarness({
 		model: "claude-sonnet-4-20250514",
 	});
 
@@ -281,7 +281,7 @@ async function main() {
 			confidenceThreshold: 60,
 			balance: 10000,
 		},
-		provider,
+		harness,
 
 		// Reducers parse JSON output from agent signals
 		reducers: {

@@ -20,8 +20,8 @@ docs/internal/
 ├── templates/          # Reusable planning templates
 │   └── VERSION_PLAN_TEMPLATE.md
 ├── decisions/          # Architecture Decision Records (ADRs)
-│   ├── PROVIDER_ARCHITECTURE.md
-│   └── PROVIDER_CLEAN_BREAK_IMPLEMENTATION_PLAN.md
+│   ├── HARNESS_ARCHITECTURE.md
+│   └── HARNESS_CLEAN_BREAK_IMPLEMENTATION_PLAN.md
 └── archive/            # Historical exploration docs (not canonical)
     └── (dated exploration docs)
 ```
@@ -48,7 +48,7 @@ docs/internal/
 
 The v0.3.0 release introduces the signal-based reactive architecture:
 - Signals as first-class primitives
-- `createHarness<TState>()` factory pattern
+- `createWorkflow<TState>()` factory pattern
 - `agent({ activateOn, emits, when })` configuration
 - `runReactive()` execution
 - Event-sourced recording/replay

@@ -1,4 +1,4 @@
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
 /**
  * Task Executor - Level 2
@@ -13,7 +13,7 @@ import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/
  * - Signal recording for fixture-based testing
  *
  * v0.3.0 Migration:
- * - Uses createHarness() for typed agent factory
+ * - Uses createWorkflow() for typed agent factory
  * - Uses runReactive() instead of run()
  * - Uses MemorySignalStore for recording
  */
@@ -42,7 +42,7 @@ export const initialState: TaskExecutorState = {
 // 2. Create typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<TaskExecutorState>();
+const { agent, runReactive } = createWorkflow<TaskExecutorState>();
 
 // =============================================================================
 // 3. Define the agent
@@ -56,7 +56,7 @@ Format: numbered list of 3-5 steps.
 
 Task: {{ state.prompt }}`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["plan:complete"],
 	updates: "plan",
 });
@@ -65,7 +65,7 @@ Task: {{ state.prompt }}`,
 // 4. Export runner function
 // =============================================================================
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
@@ -94,7 +94,7 @@ export async function runTaskExecutor(prompt: string, options: RunOptions = {}) 
 			...initialState,
 			prompt,
 		},
-		provider,
+		harness,
 		recording: options.fixture
 			? {
 					mode: options.mode ?? "replay",

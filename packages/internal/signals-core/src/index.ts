@@ -4,29 +4,29 @@
  * Core primitives for the Open Harness signal-based architecture.
  */
 
-// Provider types
+// Harness types
 export {
+	HARNESS_SIGNALS,
+	type Harness,
+	type HarnessCapabilities,
+	type HarnessInput,
+	type HarnessOutput,
+	type HarnessSignalPayloads,
 	type Message,
-	PROVIDER_SIGNALS,
-	type Provider,
-	type ProviderCapabilities,
-	type ProviderInput,
-	type ProviderOutput,
-	type ProviderSignalPayloads,
 	type RunContext,
 	type TokenUsage,
 	type ToolCall,
 	type ToolDefinition,
 	type ToolResult,
-} from "./provider.js";
+} from "./harness.js";
 // Zod schemas for validation
 export {
+	HarnessEndPayloadSchema,
+	HarnessErrorPayloadSchema,
+	HarnessInputSchema,
+	HarnessOutputSchema,
+	HarnessStartPayloadSchema,
 	MessageSchema,
-	ProviderEndPayloadSchema,
-	ProviderErrorPayloadSchema,
-	ProviderInputSchema,
-	ProviderOutputSchema,
-	ProviderStartPayloadSchema,
 	SignalSchema,
 	SignalSourceSchema,
 	TextCompletePayloadSchema,

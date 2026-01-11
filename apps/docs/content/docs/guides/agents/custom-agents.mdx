@@ -1,21 +1,21 @@
 ---
-title: Custom Providers
-description: Implement your own AI provider
+title: Custom Harnesses
+description: Implement your own AI harness
 ---
 
-# Custom Providers
+# Custom Harnesses
 
-Create custom providers to connect Open Harness to any AI model or service.
+Create custom harnesses to connect Open Harness to any AI model or service.
 
-## Provider Interface
+## Harness Interface
 
-Every provider implements the `Provider` interface:
+Every harness implements the `Harness` interface:
 
 ```typescript
-import type { Provider, ProviderInput, Signal } from "@open-harness/core";
+import type { Harness, HarnessInput, Signal } from "@open-harness/core";
 
-interface Provider {
-  run(input: ProviderInput, context: RunContext): AsyncGenerator<Signal>;
+interface Harness {
+  run(input: HarnessInput, context: RunContext): AsyncGenerator<Signal>;
 }
 
 interface RunContext {
@@ -23,17 +23,17 @@ interface RunContext {
 }
 ```
 
-## Minimal Provider
+## Minimal Harness
 
-A minimal provider that echoes input:
+A minimal harness that echoes input:
 
 ```typescript
-import { createSignal, type Provider, type ProviderInput, type Signal } from "@open-harness/core";
+import { createSignal, type Harness, type HarnessInput, type Signal } from "@open-harness/core";
 
-class EchoProvider implements Provider {
-  async *run(input: ProviderInput): AsyncGenerator<Signal> {
+class EchoHarness implements Harness {
+  async *run(input: HarnessInput): AsyncGenerator<Signal> {
     // Emit start signal
-    yield createSignal("provider:start", { model: "echo" });
+    yield createSignal("harness:start", { model: "echo" });
 
     // Extract prompt from messages
     const prompt = input.messages
@@ -46,31 +46,31 @@ class EchoProvider implements Provider {
     yield createSignal("text:complete", { content: `Echo: ${prompt}` });
 
     // Emit end signal with usage
-    yield createSignal("provider:end", {
+    yield createSignal("harness:end", {
       usage: { inputTokens: prompt.length, outputTokens: prompt.length + 6 },
     });
   }
 }
 ```
 
-## Using Your Provider
+## Using Your Harness
 
 ```typescript
-import { createHarness } from "@open-harness/core";
+import { createWorkflow } from "@open-harness/core";
 
 type State = { input: string; output: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const myAgent = agent({
   prompt: "{{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   updates: "output",
 });
 
 const result = await runReactive({
   agents: { myAgent },
   state: { input: "Hello", output: null },
-  provider: new EchoProvider(),
+  harness: new EchoHarness(),
   endWhen: (s) => s.output !== null,
 });
 
@@ -79,13 +79,13 @@ console.log(result.state.output); // "Echo: Hello"
 
 ## Required Signals
 
-Providers must emit these signals:
+Harnesses must emit these signals:
 
 | Signal | When | Payload |
 |--------|------|---------|
-| `provider:start` | At start | `{ model: string }` |
-| `provider:end` | At completion | `{ usage?: { inputTokens, outputTokens }, cost?, sessionId? }` |
-| `provider:error` | On error | `{ error: string }` |
+| `harness:start` | At start | `{ model: string }` |
+| `harness:end` | At completion | `{ usage?: { inputTokens, outputTokens }, cost?, sessionId? }` |
+| `harness:error` | On error | `{ error: string }` |
 
 ## Text Signals
 
@@ -115,18 +115,18 @@ yield createSignal("tool:result", {
 });
 ```
 
-## OpenAI-Compatible Provider
+## OpenAI-Compatible Harness
 
 Example wrapping an OpenAI-compatible API:
 
 ```typescript
-import { createSignal, type Provider, type ProviderInput, type Signal } from "@open-harness/core";
+import { createSignal, type Harness, type HarnessInput, type Signal } from "@open-harness/core";
 
-class OpenAICompatibleProvider implements Provider {
+class OpenAICompatibleHarness implements Harness {
   constructor(private config: { apiKey: string; baseUrl: string; model: string }) {}
 
-  async *run(input: ProviderInput): AsyncGenerator<Signal> {
-    yield createSignal("provider:start", { model: this.config.model });
+  async *run(input: HarnessInput): AsyncGenerator<Signal> {
+    yield createSignal("harness:start", { model: this.config.model });
 
     try {
       const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
@@ -161,11 +161,11 @@ class OpenAICompatibleProvider implements Provider {
       }
 
       yield createSignal("text:complete", { content: fullContent });
-      yield createSignal("provider:end", {
+      yield createSignal("harness:end", {
         usage: { inputTokens: 0, outputTokens: fullContent.length },
       });
     } catch (error) {
-      yield createSignal("provider:error", { error: String(error) });
+      yield createSignal("harness:error", { error: String(error) });
     }
   }
 }
@@ -176,57 +176,57 @@ class OpenAICompatibleProvider implements Provider {
 Respect the abort signal for cancellation:
 
 ```typescript
-async *run(input: ProviderInput, context: RunContext): AsyncGenerator<Signal> {
-  yield createSignal("provider:start", { model: "my-model" });
+async *run(input: HarnessInput, context: RunContext): AsyncGenerator<Signal> {
+  yield createSignal("harness:start", { model: "my-model" });
 
   for (const chunk of someStreamingSource) {
     // Check for cancellation
     if (context.signal.aborted) {
-      yield createSignal("provider:error", { error: "Cancelled" });
+      yield createSignal("harness:error", { error: "Cancelled" });
       return;
     }
 
     yield createSignal("text:delta", { content: chunk });
   }
 
-  yield createSignal("provider:end", { usage: { inputTokens: 0, outputTokens: 0 } });
+  yield createSignal("harness:end", { usage: { inputTokens: 0, outputTokens: 0 } });
 }
 ```
 
-## Testing Your Provider
+## Testing Your Harness
 
 Test with the signal matchers:
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { createHarness } from "@open-harness/core";
+import { createWorkflow } from "@open-harness/core";
 import { toContainSignal, toHaveSignalsInOrder } from "@open-harness/vitest";
 
 expect.extend({ toContainSignal, toHaveSignalsInOrder });
 
-describe("MyProvider", () => {
+describe("MyHarness", () => {
   it("emits required signals", async () => {
-    const { agent, runReactive } = createHarness<{ input: string; output: string | null }>();
+    const { agent, runReactive } = createWorkflow<{ input: string; output: string | null }>();
 
     const testAgent = agent({
       prompt: "{{ state.input }}",
-      activateOn: ["harness:start"],
+      activateOn: ["workflow:start"],
       updates: "output",
     });
 
     const result = await runReactive({
       agents: { testAgent },
       state: { input: "test", output: null },
-      provider: new MyProvider(),
+      harness: new MyHarness(),
       endWhen: (s) => s.output !== null,
     });
 
-    expect(result.signals).toContainSignal("provider:start");
-    expect(result.signals).toContainSignal("provider:end");
+    expect(result.signals).toContainSignal("harness:start");
+    expect(result.signals).toContainSignal("harness:end");
     expect(result.signals).toHaveSignalsInOrder([
-      "provider:start",
+      "harness:start",
       "text:complete",
-      "provider:end",
+      "harness:end",
     ]);
   });
 });
@@ -235,13 +235,13 @@ describe("MyProvider", () => {
 ## Next Steps
 
 <Cards>
-  <Card title="Claude Provider" href="/docs/guides/agents/claude-agent">
+  <Card title="Claude Harness" href="/docs/guides/agents/claude-agent">
     Reference implementation
   </Card>
   <Card title="Signal System" href="/docs/concepts/event-system">
     Signal types and patterns
   </Card>
   <Card title="Testing Guide" href="/docs/guides/testing">
-    Test providers and agents
+    Test harnesses and agents
   </Card>
 </Cards>

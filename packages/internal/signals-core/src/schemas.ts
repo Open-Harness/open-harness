@@ -1,11 +1,11 @@
 /**
- * Zod Schemas for Provider Types
+ * Zod Schemas for Harness Types
  *
- * These schemas enable runtime validation of provider inputs/outputs,
+ * These schemas enable runtime validation of harness inputs/outputs,
  * useful for:
  * - Validating user-provided inputs
  * - Validating recorded fixtures
- * - Testing provider implementations
+ * - Testing harness implementations
  */
 
 import { z } from "zod";
@@ -32,10 +32,10 @@ export const ToolResultSchema = z.object({
 });
 
 // ============================================================================
-// Provider Input Schema
+// Harness Input Schema
 // ============================================================================
 
-export const ProviderInputSchema = z.object({
+export const HarnessInputSchema = z.object({
 	system: z.string().optional(),
 	messages: z.array(MessageSchema),
 	tools: z.array(ToolDefinitionSchema).optional(),
@@ -46,7 +46,7 @@ export const ProviderInputSchema = z.object({
 });
 
 // ============================================================================
-// Provider Output Schema
+// Harness Output Schema
 // ============================================================================
 
 export const ToolCallSchema = z.object({
@@ -61,7 +61,7 @@ export const TokenUsageSchema = z.object({
 	totalTokens: z.number().nonnegative(),
 });
 
-export const ProviderOutputSchema = z.object({
+export const HarnessOutputSchema = z.object({
 	content: z.string(),
 	toolCalls: z.array(ToolCallSchema).optional(),
 	sessionId: z.string().optional(),
@@ -75,7 +75,7 @@ export const ProviderOutputSchema = z.object({
 
 export const SignalSourceSchema = z.object({
 	agent: z.string().optional(),
-	provider: z.string().optional(),
+	harness: z.string().optional(),
 	parent: z.string().optional(),
 });
 
@@ -88,19 +88,19 @@ export const SignalSchema = z.object({
 });
 
 // ============================================================================
-// Provider Signal Payload Schemas
+// Harness Signal Payload Schemas
 // ============================================================================
 
-export const ProviderStartPayloadSchema = z.object({
-	input: ProviderInputSchema,
+export const HarnessStartPayloadSchema = z.object({
+	input: HarnessInputSchema,
 });
 
-export const ProviderEndPayloadSchema = z.object({
-	output: ProviderOutputSchema,
+export const HarnessEndPayloadSchema = z.object({
+	output: HarnessOutputSchema,
 	durationMs: z.number().nonnegative(),
 });
 
-export const ProviderErrorPayloadSchema = z.object({
+export const HarnessErrorPayloadSchema = z.object({
 	code: z.string(),
 	message: z.string(),
 	recoverable: z.boolean(),
@@ -141,6 +141,6 @@ export const ToolResultPayloadSchema = z.object({
 
 export type MessageInput = z.input<typeof MessageSchema>;
 export type ToolDefinitionInput = z.input<typeof ToolDefinitionSchema>;
-export type ProviderInputType = z.input<typeof ProviderInputSchema>;
-export type ProviderOutputType = z.input<typeof ProviderOutputSchema>;
+export type HarnessInputType = z.input<typeof HarnessInputSchema>;
+export type HarnessOutputType = z.input<typeof HarnessOutputSchema>;
 export type SignalInput = z.input<typeof SignalSchema>;

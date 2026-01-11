@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-10T10:11:36.649Z"
-lastCommit: "150d2ad147832f2553c0dbfb779f1a466c0a001b"
-lastCommitDate: "2026-01-10T09:55:26Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 ---
 # @open-harness/vitest
 
@@ -36,31 +36,31 @@ export default defineConfig({
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { createHarness, ClaudeProvider } from "@open-harness/vitest";
+import { createWorkflow, ClaudeHarness } from "@open-harness/vitest";
 
-const { agent, runReactive } = createHarness<{ input: string }>();
+const { agent, runReactive } = createWorkflow<{ input: string }>();
 
 describe("My Agent", () => {
   it("completes workflow successfully", async () => {
     const myAgent = agent({
       prompt: "Process: {{ state.input }}",
-      activateOn: ["harness:start"],
+      activateOn: ["workflow:start"],
       emits: ["processing:complete"],
     });
 
     const result = await runReactive({
       agents: { myAgent },
       state: { input: "test" },
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
     });
 
     // Signal assertions
-    expect(result.signals).toContainSignal("harness:start");
+    expect(result.signals).toContainSignal("workflow:start");
     expect(result.signals).toContainSignal("processing:complete");
     expect(result.signals).toHaveSignalsInOrder([
-      "harness:start",
+      "workflow:start",
       "agent:activated",
-      "harness:end",
+      "workflow:end",
     ]);
 
     // Metric assertions
@@ -79,11 +79,11 @@ Assert that signals contain a matching signal.
 
 ```typescript
 // Exact name match
-expect(signals).toContainSignal("harness:start");
+expect(signals).toContainSignal("workflow:start");
 
 // Glob patterns
 expect(signals).toContainSignal("agent:*");      // Single segment wildcard
-expect(signals).toContainSignal("provider:**");  // Multi-segment wildcard
+expect(signals).toContainSignal("harness:**");   // Multi-segment wildcard
 
 // With payload matching (partial deep equality)
 expect(signals).toContainSignal({
@@ -104,7 +104,7 @@ Assert exact number of matching signals.
 expect(signals).toHaveSignalCount("agent:activated", 2);
 
 // Count with glob
-expect(signals).toHaveSignalCount("provider:*", 4);
+expect(signals).toHaveSignalCount("harness:*", 4);
 
 // Count with payload condition
 expect(signals).toHaveSignalCount(
@@ -123,10 +123,10 @@ Assert signals appear in specified order (trajectory validation).
 ```typescript
 // Validate workflow sequence
 expect(signals).toHaveSignalsInOrder([
-  "harness:start",
+  "workflow:start",
   "agent:activated",
   "analysis:complete",
-  "harness:end",
+  "workflow:end",
 ]);
 
 // With payload conditions
@@ -138,10 +138,10 @@ expect(signals).toHaveSignalsInOrder([
 
 // With glob patterns
 expect(signals).toHaveSignalsInOrder([
-  "harness:*",
+  "workflow:*",
   "agent:*",
-  "provider:*",
   "harness:*",
+  "workflow:*",
 ]);
 ```
 
@@ -221,13 +221,13 @@ For convenience, this package re-exports common types from `@open-harness/core`:
 ```typescript
 import {
   agent,
-  harness,
-  createHarness,
+  workflow,
+  createWorkflow,
   runReactive,
   MemorySignalStore,
-  ClaudeProvider,
-  type RunReactiveResult,
-  type RunReactiveOptions,
+  ClaudeHarness,
+  type WorkflowResult,
+  type ReactiveWorkflowConfig,
 } from "@open-harness/vitest";
 ```
 

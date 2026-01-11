@@ -4,7 +4,7 @@ A minimal example demonstrating the v0.3.0 signal-based reactive architecture.
 
 ## What This Shows
 
-1. **`createHarness<TState>()`** - Create a typed factory for agents
+1. **`createWorkflow<TState>()`** - Create a typed factory for agents
 2. **`activateOn`** - Declare what signals trigger an agent
 3. **`when`** - Guard conditions for conditional activation
 4. **`emits`** - Declare what signals an agent produces
@@ -13,7 +13,7 @@ A minimal example demonstrating the v0.3.0 signal-based reactive architecture.
 ## The Flow
 
 ```
-harness:start
+workflow:start
     │
     ▼
 ┌─────────┐
@@ -47,7 +47,7 @@ type GreetingState = {
 ### 2. Create Typed Factory
 
 ```typescript
-const { agent, runReactive } = createHarness<GreetingState>();
+const { agent, runReactive } = createWorkflow<GreetingState>();
 ```
 
 ### 3. Define Agents
@@ -55,19 +55,19 @@ const { agent, runReactive } = createHarness<GreetingState>();
 ```typescript
 const greeter = agent({
   prompt: `Create a greeting for {{ state.name }}`,
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["greeting:created"],
   when: (ctx) => ctx.state.name.length > 0,  // Full type safety!
 });
 ```
 
-### 4. Run Harness
+### 4. Run Workflow
 
 ```typescript
 const result = await runReactive({
   agents: { greeter, transformer },
   state: { name: "World", greeting: null, uppercase: true },
-  provider,
+  harness,
   endWhen: (state) => state.greeting !== null,
 });
 ```
@@ -87,9 +87,9 @@ console.log(result.metrics);      // Duration, activations
 Agents declare patterns they react to:
 
 ```typescript
-activateOn: ["harness:start"]           // Exact match
-activateOn: ["greeting:*"]              // Wildcard
-activateOn: ["state:**:changed"]        // Deep wildcard
+activateOn: ["workflow:start"]           // Exact match
+activateOn: ["greeting:*"]               // Wildcard
+activateOn: ["state:**:changed"]         // Deep wildcard
 ```
 
 ### Template Expansion
@@ -101,7 +101,7 @@ prompt: `Analyze {{ state.data }} with confidence {{ state.threshold }}`
 ```
 
 Available context:
-- `state` - Current harness state
+- `state` - Current workflow state
 - `signal` - The triggering signal
 - `input` - Original input to runReactive
 

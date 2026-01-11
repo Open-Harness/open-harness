@@ -13,16 +13,16 @@ The primary functions for building reactive agent workflows:
 
 | Function | Description |
 |----------|-------------|
-| `createHarness<TState>()` | Factory returning typed `agent()` and `runReactive()` |
+| `createWorkflow<TState>()` | Factory returning typed `agent()` and `runReactive()` |
 | `agent(config)` | Define a reactive agent with `activateOn`, `emits`, `when` |
 | `runReactive(config)` | Execute a signal-based workflow |
 
-## Providers
+## Harnesses
 
 Adapters that connect to AI model APIs:
 
-- [ClaudeProvider](/docs/guides/agents/claude-agent) - Anthropic Claude models
-- CodexProvider - OpenAI Codex models (coming soon)
+- [ClaudeHarness](/docs/guides/agents/claude-agent) - Anthropic Claude models
+- CodexHarness - OpenAI Codex models (coming soon)
 
 ## Signal Types
 
@@ -30,9 +30,9 @@ Signals emitted during workflow execution:
 
 | Category | Signals |
 |----------|---------|
-| Harness | `harness:start`, `harness:end` |
+| Workflow | `workflow:start`, `workflow:end` |
 | Agent | `agent:activated`, `agent:skipped`, `agent:completed` |
-| Provider | `provider:start`, `provider:end`, `provider:error` |
+| Harness | `harness:start`, `harness:end`, `harness:error` |
 | Text | `text:delta`, `text:complete` |
 | State | `state:\{key\}:changed` |
 | Custom | Any signal name via `emits` |
@@ -62,7 +62,7 @@ agent({
   emits?: string[],         // Signals this agent emits
   when?: (ctx) => boolean,  // Guard condition
   updates?: keyof TState,   // Auto-update state field
-  provider?: Provider,      // Per-agent provider override
+  harness?: Harness,        // Per-agent harness override
 })
 ```
 
@@ -73,7 +73,7 @@ runReactive({
   // Required
   agents: Record<string, Agent>,
   state: TState,
-  provider: Provider,
+  harness: Harness,
 
   // Optional
   endWhen?: (state: TState) => boolean,
@@ -91,7 +91,7 @@ runReactive({
 ## Result Shape
 
 ```typescript
-interface HarnessResult<TState> {
+interface WorkflowResult<TState> {
   state: TState;              // Final state
   signals: Signal[];          // Full signal trace
   metrics: {

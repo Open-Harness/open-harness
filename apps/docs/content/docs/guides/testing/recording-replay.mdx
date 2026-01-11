@@ -10,13 +10,13 @@ Record agent executions and replay them for deterministic testing.
 ## Why Recording & Replay?
 
 Live agent tests are:
-- **Slow**: Each test calls the AI provider
+- **Slow**: Each test calls the AI harness
 - **Expensive**: You pay for each API call
 - **Non-deterministic**: LLM output varies
 
 Recording & replay solves this:
 - **Fast**: Replay from memory, no API calls
-- **Free**: No provider costs during replay
+- **Free**: No harness costs during replay
 - **Deterministic**: Same signals every time
 
 ## Basic Usage
@@ -24,14 +24,14 @@ Recording & replay solves this:
 ### Record
 
 ```typescript
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   updates: "result",
 });
 
@@ -42,7 +42,7 @@ const store = new MemorySignalStore();
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "record", store },
   endWhen: (s) => s.result !== null,
 });
@@ -59,7 +59,7 @@ console.log("Recorded:", recordingId);
 const replay = await runReactive({
   agents: { analyzer },
   state: { input: "Hello", result: null },
-  provider: new ClaudeProvider(), // Not called during replay
+  harness: new ClaudeHarness(), // Not called during replay
   recording: { mode: "replay", store, recordingId },
   endWhen: (s) => s.result !== null,
 });
@@ -75,18 +75,18 @@ Use recordings for fast, deterministic tests:
 
 ```typescript title="analyzer.test.ts"
 import { describe, it, expect, beforeAll } from "vitest";
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
 
 describe("Analyzer", () => {
-  const { agent, runReactive } = createHarness<State>();
+  const { agent, runReactive } = createWorkflow<State>();
   const store = new MemorySignalStore();
   let recordingId: string;
 
   const analyzer = agent({
     prompt: "Analyze: {{ state.input }}",
-    activateOn: ["harness:start"],
+    activateOn: ["workflow:start"],
     updates: "result",
   });
 
@@ -97,7 +97,7 @@ describe("Analyzer", () => {
     const result = await runReactive({
       agents: { analyzer },
       state: initialState,
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       recording: { mode: "record", store },
       endWhen: (s) => s.result !== null,
     });
@@ -108,7 +108,7 @@ describe("Analyzer", () => {
     const result = await runReactive({
       agents: { analyzer },
       state: initialState,
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       recording: { mode: "replay", store, recordingId },
       endWhen: (s) => s.result !== null,
     });
@@ -120,16 +120,16 @@ describe("Analyzer", () => {
     const result = await runReactive({
       agents: { analyzer },
       state: initialState,
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       recording: { mode: "replay", store, recordingId },
       endWhen: (s) => s.result !== null,
     });
 
     expect(result.signals).toContainSignal("agent:completed");
     expect(result.signals).toHaveSignalsInOrder([
-      "harness:start",
+      "workflow:start",
       "agent:activated",
-      "harness:end",
+      "workflow:end",
     ]);
   });
 });
@@ -143,7 +143,7 @@ Add metadata to recordings for organization:
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
   recording: {
     mode: "record",
     store,
@@ -212,7 +212,7 @@ const mode = process.env.RECORD ? "record" : "replay";
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
   recording: { mode, store, recordingId: mode === "replay" ? savedId : undefined },
 });
 ```
@@ -225,7 +225,7 @@ Recordings capture the full workflow:
 const result = await runReactive({
   agents: { analyzer, reviewer, fixer },
   state: initialState,
-  provider,
+  harness,
   recording: { mode: "record", store },
 });
 
@@ -233,7 +233,7 @@ const result = await runReactive({
 const replay = await runReactive({
   agents: { analyzer, reviewer, fixer },
   state: initialState,
-  provider,
+  harness,
   recording: { mode: "replay", store, recordingId: result.recordingId },
 });
 ```
@@ -250,7 +250,7 @@ store.delete(recordingId);
 const fresh = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
   recording: { mode: "record", store },
 });
 
@@ -290,14 +290,14 @@ const record = await runReactive({ agents: { analyzer }, ... });
 const analyzer2 = agent({ prompt: "Different prompt" }); // ❌ Won't replay correctly
 ```
 
-### Provider Not Called During Replay
+### Harness Not Called During Replay
 
-The provider is not called during replay—signals are returned from the store. You can pass any provider:
+The harness is not called during replay—signals are returned from the store. You can pass any harness:
 
 ```typescript
-// Provider is ignored during replay
+// Harness is ignored during replay
 const replay = await runReactive({
-  provider: new ClaudeProvider(), // Not called
+  harness: new ClaudeHarness(), // Not called
   recording: { mode: "replay", store, recordingId },
 });
 ```

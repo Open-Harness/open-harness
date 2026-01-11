@@ -110,8 +110,8 @@
         "@open-harness/core": "workspace:*",
       },
     },
-    "packages/adapters/providers/claude": {
-      "name": "@open-harness/provider-claude",
+    "packages/adapters/harnesses/claude": {
+      "name": "@open-harness/claude",
       "version": "0.3.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.76",
@@ -123,8 +123,8 @@
         "typescript": "^5",
       },
     },
-    "packages/adapters/providers/openai": {
-      "name": "@open-harness/provider-openai",
+    "packages/adapters/harnesses/openai": {
+      "name": "@open-harness/openai",
       "version": "0.3.0",
       "dependencies": {
         "@internal/signals-core": "workspace:*",
@@ -232,8 +232,8 @@
         "@internal/core": "workspace:*",
         "@internal/signals": "workspace:*",
         "@internal/signals-core": "workspace:*",
-        "@open-harness/provider-claude": "workspace:*",
-        "@open-harness/provider-openai": "workspace:*",
+        "@open-harness/claude": "workspace:*",
+        "@open-harness/openai": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -642,13 +642,13 @@
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
+    "@open-harness/claude": ["@open-harness/claude@workspace:packages/adapters/harnesses/claude"],
+
     "@open-harness/client": ["@open-harness/client@workspace:packages/open-harness/client"],
 
     "@open-harness/core": ["@open-harness/core@workspace:packages/open-harness/core"],
 
-    "@open-harness/provider-claude": ["@open-harness/provider-claude@workspace:packages/adapters/providers/claude"],
-
-    "@open-harness/provider-openai": ["@open-harness/provider-openai@workspace:packages/adapters/providers/openai"],
+    "@open-harness/openai": ["@open-harness/openai@workspace:packages/adapters/harnesses/openai"],
 
     "@open-harness/react": ["@open-harness/react@workspace:packages/open-harness/react"],
 

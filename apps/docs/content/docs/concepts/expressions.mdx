@@ -26,14 +26,14 @@ type State = {
   previousResult: string | null;
 };
 
-const { agent } = createHarness<State>();
+const { agent } = createWorkflow<State>();
 
 const myAgent = agent({
   prompt: `User: {{ state.user.name }}
 Email: {{ state.user.email }}
 Task: {{ state.task }}
 Previous: {{ state.previousResult }}`,
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
 });
 ```
 
@@ -83,7 +83,7 @@ The template syntax is evaluated at runtime, but your `State` type provides comp
 
 ```typescript
 type State = { result: string | null };
-const { agent } = createHarness<State>();
+const { agent } = createWorkflow<State>();
 
 const myAgent = agent({
   updates: "result",     // ✓ Type-checked: keyof State

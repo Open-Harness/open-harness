@@ -1,4 +1,4 @@
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 /**
  * Task Executor Agent - Level 1
@@ -12,7 +12,7 @@ import { createHarness, ClaudeProvider } from "@open-harness/core";
  * - Getting text output and metrics
  *
  * v0.3.0 Migration:
- * - Uses createHarness() for typed agent factory
+ * - Uses createWorkflow() for typed agent factory
  * - Uses runReactive() instead of run()
  * - Agent has activateOn/emits for signal-based activation
  */
@@ -32,7 +32,7 @@ export type TaskExecutorState = {
 // 2. Create typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<TaskExecutorState>();
+const { agent, runReactive } = createWorkflow<TaskExecutorState>();
 
 // =============================================================================
 // 3. Define the task executor agent
@@ -50,7 +50,7 @@ End with a confidence assessment: HIGH, MEDIUM, or LOW.
 If the task is unclear or needs more information, say "NEEDS CLARIFICATION" and explain what's missing.`,
 
 	// Activate when harness starts
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 
 	// Emit completion signal
 	emits: ["plan:complete"],
@@ -63,7 +63,7 @@ If the task is unclear or needs more information, say "NEEDS CLARIFICATION" and 
 // 4. Export runner function for tests
 // =============================================================================
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
@@ -80,7 +80,7 @@ export async function runTaskExecutor(prompt: string) {
 			prompt,
 			plan: null,
 		},
-		provider,
+		harness,
 		endWhen: (state) => state.plan !== null,
 	});
 

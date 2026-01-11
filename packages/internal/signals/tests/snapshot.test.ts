@@ -8,32 +8,32 @@ describe("snapshot", () => {
 			const snap = createEmptySnapshot();
 
 			expect(snap.atIndex).toBe(-1);
-			expect(snap.provider.running).toBe(false);
-			expect(snap.provider.text.content).toBe("");
-			expect(snap.provider.text.deltaCount).toBe(0);
-			expect(snap.provider.toolCalls.size).toBe(0);
+			expect(snap.harness.running).toBe(false);
+			expect(snap.harness.text.content).toBe("");
+			expect(snap.harness.text.deltaCount).toBe(0);
+			expect(snap.harness.toolCalls.size).toBe(0);
 			expect(snap.custom.size).toBe(0);
 			expect(snap.signalCounts.size).toBe(0);
 		});
 	});
 
 	describe("applySignal", () => {
-		test("handles provider:start", () => {
+		test("handles harness:start", () => {
 			const snap = createEmptySnapshot();
-			const signal = createSignal("provider:start", { input: {} });
+			const signal = createSignal("harness:start", { input: {} });
 			const result = applySignal(snap, signal, 0);
 
-			expect(result.provider.running).toBe(true);
+			expect(result.harness.running).toBe(true);
 			expect(result.atIndex).toBe(0);
-			expect(result.signalCounts.get("provider:start")).toBe(1);
+			expect(result.signalCounts.get("harness:start")).toBe(1);
 		});
 
-		test("handles provider:end", () => {
+		test("handles harness:end", () => {
 			let snap = createEmptySnapshot();
-			snap = applySignal(snap, createSignal("provider:start", {}), 0);
-			snap = applySignal(snap, createSignal("provider:end", {}), 1);
+			snap = applySignal(snap, createSignal("harness:start", {}), 0);
+			snap = applySignal(snap, createSignal("harness:end", {}), 1);
 
-			expect(snap.provider.running).toBe(false);
+			expect(snap.harness.running).toBe(false);
 		});
 
 		test("handles text:delta accumulation", () => {
@@ -42,8 +42,8 @@ describe("snapshot", () => {
 			snap = applySignal(snap, createSignal("text:delta", { content: " world" }), 1);
 			snap = applySignal(snap, createSignal("text:delta", { content: "!" }), 2);
 
-			expect(snap.provider.text.content).toBe("Hello world!");
-			expect(snap.provider.text.deltaCount).toBe(3);
+			expect(snap.harness.text.content).toBe("Hello world!");
+			expect(snap.harness.text.deltaCount).toBe(3);
 		});
 
 		test("handles text:complete override", () => {
@@ -51,7 +51,7 @@ describe("snapshot", () => {
 			snap = applySignal(snap, createSignal("text:delta", { content: "partial" }), 0);
 			snap = applySignal(snap, createSignal("text:complete", { content: "full text" }), 1);
 
-			expect(snap.provider.text.content).toBe("full text");
+			expect(snap.harness.text.content).toBe("full text");
 		});
 
 		test("handles thinking:delta accumulation", () => {
@@ -59,8 +59,8 @@ describe("snapshot", () => {
 			snap = applySignal(snap, createSignal("thinking:delta", { content: "Let me think" }), 0);
 			snap = applySignal(snap, createSignal("thinking:delta", { content: "..." }), 1);
 
-			expect(snap.provider.thinking.content).toBe("Let me think...");
-			expect(snap.provider.thinking.deltaCount).toBe(2);
+			expect(snap.harness.thinking.content).toBe("Let me think...");
+			expect(snap.harness.thinking.deltaCount).toBe(2);
 		});
 
 		test("handles tool:call", () => {
@@ -75,7 +75,7 @@ describe("snapshot", () => {
 				0,
 			);
 
-			const tool = snap.provider.toolCalls.get("call_1");
+			const tool = snap.harness.toolCalls.get("call_1");
 			expect(tool?.name).toBe("get_weather");
 			expect(tool?.status).toBe("pending");
 		});
@@ -101,7 +101,7 @@ describe("snapshot", () => {
 				1,
 			);
 
-			const tool = snap.provider.toolCalls.get("call_1");
+			const tool = snap.harness.toolCalls.get("call_1");
 			expect(tool?.status).toBe("complete");
 			expect(tool?.result).toEqual({ temp: 72 });
 		});
@@ -120,17 +120,17 @@ describe("snapshot", () => {
 				1,
 			);
 
-			const tool = snap.provider.toolCalls.get("call_1");
+			const tool = snap.harness.toolCalls.get("call_1");
 			expect(tool?.status).toBe("error");
 			expect(tool?.error).toBe("Failed");
 		});
 
-		test("handles provider:error", () => {
+		test("handles harness:error", () => {
 			let snap = createEmptySnapshot();
-			snap = applySignal(snap, createSignal("provider:error", { code: "ERR", message: "Something broke" }), 0);
+			snap = applySignal(snap, createSignal("harness:error", { code: "ERR", message: "Something broke" }), 0);
 
-			expect(snap.provider.lastError?.code).toBe("ERR");
-			expect(snap.provider.lastError?.message).toBe("Something broke");
+			expect(snap.harness.lastError?.code).toBe("ERR");
+			expect(snap.harness.lastError?.message).toBe("Something broke");
 		});
 
 		test("stores custom signals", () => {
@@ -151,30 +151,30 @@ describe("snapshot", () => {
 
 		test("computes snapshot at default index (last)", () => {
 			const signals = [
-				createSignal("provider:start", {}),
+				createSignal("harness:start", {}),
 				createSignal("text:delta", { content: "Hello" }),
 				createSignal("text:delta", { content: " world" }),
-				createSignal("provider:end", {}),
+				createSignal("harness:end", {}),
 			];
 
 			const snap = snapshot(signals);
 			expect(snap.atIndex).toBe(3);
-			expect(snap.provider.text.content).toBe("Hello world");
-			expect(snap.provider.running).toBe(false);
+			expect(snap.harness.text.content).toBe("Hello world");
+			expect(snap.harness.running).toBe(false);
 		});
 
 		test("computes snapshot at specific index", () => {
 			const signals = [
-				createSignal("provider:start", {}),
+				createSignal("harness:start", {}),
 				createSignal("text:delta", { content: "Hello" }),
 				createSignal("text:delta", { content: " world" }),
-				createSignal("provider:end", {}),
+				createSignal("harness:end", {}),
 			];
 
 			const snap = snapshot(signals, 1);
 			expect(snap.atIndex).toBe(1);
-			expect(snap.provider.text.content).toBe("Hello");
-			expect(snap.provider.running).toBe(true);
+			expect(snap.harness.text.content).toBe("Hello");
+			expect(snap.harness.running).toBe(true);
 		});
 	});
 
@@ -188,9 +188,9 @@ describe("snapshot", () => {
 
 			const snapshots = snapshotAll(signals);
 			expect(snapshots.length).toBe(3);
-			expect(snapshots[0].provider.text.content).toBe("a");
-			expect(snapshots[1].provider.text.content).toBe("ab");
-			expect(snapshots[2].provider.text.content).toBe("abc");
+			expect(snapshots[0].harness.text.content).toBe("a");
+			expect(snapshots[1].harness.text.content).toBe("ab");
+			expect(snapshots[2].harness.text.content).toBe("abc");
 		});
 	});
 });

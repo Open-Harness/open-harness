@@ -51,7 +51,7 @@ export class MemorySignalStore implements SignalStore {
 		return `rec_${Date.now()}_${this.nextId++}`;
 	}
 
-	async create(options?: { name?: string; tags?: string[]; providerType?: string }): Promise<string> {
+	async create(options?: { name?: string; tags?: string[]; harnessType?: string }): Promise<string> {
 		const id = this.generateId();
 		const now = new Date().toISOString();
 
@@ -61,7 +61,7 @@ export class MemorySignalStore implements SignalStore {
 				createdAt: now,
 				name: options?.name,
 				tags: options?.tags,
-				providerType: options?.providerType,
+				harnessType: options?.harnessType,
 				signalCount: 0,
 			},
 			signals: [],
@@ -186,9 +186,9 @@ export class MemorySignalStore implements SignalStore {
 	async list(query?: RecordingQuery): Promise<RecordingMetadata[]> {
 		let results = Array.from(this.recordings.values()).map((s) => s.metadata);
 
-		// Filter by provider type
-		if (query?.providerType) {
-			results = results.filter((m) => m.providerType === query.providerType);
+		// Filter by harness type
+		if (query?.harnessType) {
+			results = results.filter((m) => m.harnessType === query.harnessType);
 		}
 
 		// Filter by tags

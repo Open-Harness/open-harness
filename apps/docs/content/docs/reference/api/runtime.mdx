@@ -10,14 +10,14 @@ The `runReactive()` function executes signal-based agent workflows.
 ## Basic Usage
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: "result",
 });
@@ -25,7 +25,7 @@ const analyzer = agent({
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.result !== null,
 });
 ```
@@ -37,7 +37,7 @@ interface RunReactiveConfig<TState> {
   // Required
   agents: Record<string, Agent>;
   state: TState;
-  provider: Provider;
+  harness: Harness;
 
   // Optional
   endWhen?: (state: TState) => boolean;
@@ -71,12 +71,12 @@ state: {
 }
 ```
 
-### provider
+### harness
 
-Default provider for agents without per-agent override:
+Default harness for agents without per-agent override:
 
 ```typescript
-provider: new ClaudeProvider({ model: "claude-sonnet-4-20250514" })
+harness: new ClaudeHarness({ model: "claude-sonnet-4-20250514" })
 ```
 
 ### endWhen
@@ -127,7 +127,7 @@ timeout: 30000  // 30 seconds
 ## Return Value
 
 ```typescript
-interface HarnessResult<TState> {
+interface WorkflowResult<TState> {
   state: TState;              // Final state
   signals: Signal[];          // Full signal trace
   metrics: {
@@ -194,7 +194,7 @@ if (result.recordingId) {
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.result !== null,
 });
 ```
@@ -205,7 +205,7 @@ const result = await runReactive({
 const result = await runReactive({
   agents: { planner, coder, reviewer },
   state: { task: "Build a TODO app", plan: null, code: null, review: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.review?.passed === true,
 });
 ```
@@ -219,7 +219,7 @@ const store = new MemorySignalStore();
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "record", store, name: "test-run" },
 });
 
@@ -227,7 +227,7 @@ const result = await runReactive({
 const replay = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(), // Not called
+  harness: new ClaudeHarness(), // Not called
   recording: { mode: "replay", store, recordingId: result.recordingId! },
 });
 ```
@@ -238,7 +238,7 @@ const replay = await runReactive({
 const result = await runReactive({
   agents: { analyzer, trader },
   state: { analysis: null, trades: [] },
-  provider,
+  harness,
   reducers: {
     "trade:proposed": (state, signal) => ({
       ...state,
@@ -256,8 +256,8 @@ try {
 } catch (error) {
   if (error instanceof TimeoutError) {
     console.error("Workflow timed out");
-  } else if (error instanceof ProviderError) {
-    console.error("Provider failed:", error.message);
+  } else if (error instanceof HarnessError) {
+    console.error("Harness failed:", error.message);
   }
 }
 ```
@@ -265,7 +265,7 @@ try {
 ## See Also
 
 <Cards>
-  <Card title="createHarness" href="/docs/reference">
+  <Card title="createWorkflow" href="/docs/reference">
     Factory function for typed agents
   </Card>
   <Card title="Signal System" href="/docs/concepts/event-system">

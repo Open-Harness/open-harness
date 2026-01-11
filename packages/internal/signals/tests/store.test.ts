@@ -17,13 +17,13 @@ describe("MemorySignalStore", () => {
 			const id = await store.create({
 				name: "test recording",
 				tags: ["test", "unit"],
-				providerType: "claude",
+				harnessType: "claude",
 			});
 
 			const recording = await store.load(id);
 			expect(recording?.metadata.name).toBe("test recording");
 			expect(recording?.metadata.tags).toEqual(["test", "unit"]);
-			expect(recording?.metadata.providerType).toBe("claude");
+			expect(recording?.metadata.harnessType).toBe("claude");
 		});
 	});
 
@@ -137,7 +137,7 @@ describe("MemorySignalStore", () => {
 				createSignal("text:delta", "a"),
 				createSignal("tool:call", {}),
 				createSignal("text:delta", "b"),
-				createSignal("provider:end", {}),
+				createSignal("harness:end", {}),
 			]);
 
 			const signals = await store.loadSignals(id, { patterns: ["text:*"] });
@@ -160,11 +160,11 @@ describe("MemorySignalStore", () => {
 
 		test("filters by provider type", async () => {
 			const store = new MemorySignalStore();
-			await store.create({ providerType: "claude" });
-			await store.create({ providerType: "openai" });
-			await store.create({ providerType: "claude" });
+			await store.create({ harnessType: "claude" });
+			await store.create({ harnessType: "openai" });
+			await store.create({ harnessType: "claude" });
 
-			const list = await store.list({ providerType: "claude" });
+			const list = await store.list({ harnessType: "claude" });
 			expect(list.length).toBe(2);
 		});
 

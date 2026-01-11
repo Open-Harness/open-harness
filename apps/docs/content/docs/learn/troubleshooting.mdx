@@ -53,14 +53,14 @@ Type 'string' is not assignable to type 'null'
 // Define your state type
 type State = { input: string; result: string | null };
 
-// Create harness with correct type
-const { agent, runReactive } = createHarness<State>();
+// Create workflow with correct type
+const { agent, runReactive } = createWorkflow<State>();
 
 // Initial state must match
 const result = await runReactive({
   agents: { myAgent },
   state: { input: "Hello", result: null }, // ✓ Correct
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 });
 ```
 
@@ -76,29 +76,29 @@ Error: Invalid signal pattern: "invalid"
 
 ```typescript
 // Valid patterns
-activateOn: ["harness:start"]
+activateOn: ["workflow:start"]
 activateOn: ["agent:completed"]
 activateOn: ["analysis:complete"]  // Custom signal
 activateOn: ["state:result:changed"]
 ```
 
-### No provider configured
+### No harness configured
 
 ```
-Error: No provider configured for agent
+Error: No harness configured for agent
 ```
 
-**Cause:** Missing provider in `runReactive` config.
+**Cause:** Missing harness in `runReactive` config.
 
-**Fix:** Pass a provider:
+**Fix:** Pass a harness:
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 const result = await runReactive({
   agents: { myAgent },
   state: initialState,
-  provider: new ClaudeProvider(), // Required
+  harness: new ClaudeHarness(), // Required
 });
 ```
 
@@ -114,7 +114,7 @@ const result = await runReactive({
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello", result: null },
-  provider,
+  harness,
   // Ensure this becomes true
   endWhen: (state) => state.result !== null,
 });
@@ -126,7 +126,7 @@ Or add a timeout:
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
   timeout: 30000, // 30 second safety net
 });
 ```
@@ -147,7 +147,7 @@ const reviewer = agent({
 // But analyzer doesn't emit it!
 const analyzer = agent({
   prompt: "Analyze input",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   // Missing: emits: ["analysis:complete"]
 });
 ```
@@ -157,7 +157,7 @@ Add the `emits` declaration:
 ```typescript
 const analyzer = agent({
   prompt: "Analyze input",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"], // Now reviewer will activate
 });
 ```
@@ -171,7 +171,7 @@ const analyzer = agent({
 ```typescript
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   updates: "result", // Agent output goes to state.result
 });
 ```
@@ -199,7 +199,7 @@ type State = {
 };
 ```
 
-## Provider Errors
+## Harness Errors
 
 ### Authentication failed
 
@@ -231,7 +231,7 @@ Error: Rate limit exceeded
 **Fix:** The error signal includes retry information:
 
 ```typescript
-const errors = result.signals.filter(s => s.name === "provider:error");
+const errors = result.signals.filter(s => s.name === "harness:error");
 for (const error of errors) {
   if (error.payload.retryAfter) {
     console.log(`Retry after ${error.payload.retryAfter} seconds`);
@@ -239,14 +239,14 @@ for (const error of errors) {
 }
 ```
 
-### Provider error in signal trace
+### Harness error in signal trace
 
 ```typescript
 const result = await runReactive({ /* ... */ });
 
-const errors = result.signals.filter(s => s.name === "provider:error");
+const errors = result.signals.filter(s => s.name === "harness:error");
 if (errors.length > 0) {
-  console.error("Provider errors:", errors);
+  console.error("Harness errors:", errors);
 }
 ```
 
@@ -334,7 +334,7 @@ const store = new MemorySignalStore();
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "record", store },
 });
 
@@ -344,7 +344,7 @@ const recordingId = result.recordingId;
 const replay = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "replay", store, recordingId },
 });
 ```

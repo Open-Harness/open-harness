@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-11T06:42:54.221Z"
-lastCommit: "edcbf4c29d5c22eb600c6f75d5fcc6c1b8d24d58"
-lastCommitDate: "2026-01-11T06:23:45Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 ---
 # @internal/core
 
@@ -13,7 +13,7 @@ Internal implementation of the Open Harness v0.3.0 reactive API.
 
 ```
 src/
-├── api/              # Public API (createHarness, runReactive, etc.)
+├── api/              # Public API (createWorkflow, runReactive, etc.)
 ├── lib/              # Internal utilities (logger, etc.)
 ├── persistence/      # Fixture storage interfaces
 ├── state/            # Shared state types
@@ -28,9 +28,9 @@ The primary user-facing API for v0.3.0:
 
 | Export | Description |
 |--------|-------------|
-| `createHarness<TState>()` | Factory for type-safe harness with scoped `agent()` and `runReactive()` |
+| `createWorkflow<TState>()` | Factory for type-safe workflow with scoped `agent()` and `runReactive()` |
 | `agent()` | Create an agent definition |
-| `harness()` | Create a multi-agent harness (legacy, prefer `createHarness`) |
+| `workflow()` | Create a multi-agent workflow (legacy, prefer `createWorkflow`) |
 | `runReactive()` | Execute a signal-based workflow |
 
 ### Reactive Agent Config
@@ -42,24 +42,24 @@ interface ReactiveAgentConfig<TState> {
   emits?: string[];                  // Signals this agent emits
   when?: (ctx: ActivationContext<TState>) => boolean;  // Guard condition
   updates?: keyof TState;            // State field to update with output
-  provider?: Provider;               // Per-agent provider override
+  harness?: Harness;                 // Per-agent harness override
 }
 ```
 
-### Harness Factory
+### Workflow Factory
 
 ```typescript
-const { agent, runReactive } = createHarness<MyState>();
+const { agent, runReactive } = createWorkflow<MyState>();
 
 const myAgent = agent({
   prompt: "...",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
 });
 
 const result = await runReactive({
   agents: { myAgent },
   state: initialState,
-  provider,
+  harness,
 });
 ```
 
@@ -125,8 +125,8 @@ const subscriber = createTelemetrySubscriber({
   sampling: { rate: 0.1 },
 });
 
-subscriber.onHarnessEnd(result.signals);
-// Logs: HarnessWideEvent with duration, tokens, cost, outcome
+subscriber.onWorkflowEnd(result.signals);
+// Logs: WorkflowWideEvent with duration, tokens, cost, outcome
 ```
 
 ## Lib Module (`src/lib/`)
@@ -154,8 +154,8 @@ The following were removed during the v0.3.0 migration:
 
 - `builtins/` - Old echo/constant nodes (use signal patterns instead)
 - `eval/` - Old eval system (signal-native eval planned for P0-6)
-- `nodes/` - Node registry (use `Provider` interface from @internal/signals-core)
-- `providers/` - Provider traits (use `ClaudeProvider`/`CodexProvider`)
+- `nodes/` - Node registry (use `Harness` interface from @internal/signals-core)
+- `providers/` - Provider traits (use `ClaudeHarness`/`CodexHarness`)
 - `recording/` - Old recording (use `@internal/signals` for signal recording)
 - `runtime/` - Graph executor (use `runReactive()` for signal-based execution)
 

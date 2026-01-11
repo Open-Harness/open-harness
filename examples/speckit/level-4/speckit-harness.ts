@@ -1,4 +1,4 @@
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 import type { Task } from "./spec-agent";
 import type { ValidationResult } from "./coding-agent";
 
@@ -71,7 +71,7 @@ export const initialState: SpecKitState = {
 // 2. Create Typed Harness Factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<SpecKitState>();
+const { agent, runReactive } = createWorkflow<SpecKitState>();
 
 // =============================================================================
 // 3. Define Reactive Agents
@@ -126,7 +126,7 @@ Important guidelines:
 - Be specific - vague tasks are useless
 - Don't create too many tiny tasks - group related work`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["spec:complete"],
 	updates: "specOutput",
 });
@@ -181,7 +181,7 @@ Be thorough in your validation. Missing a criterion is worse than admitting a fa
 // 4. Runner Function
 // =============================================================================
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
@@ -203,7 +203,7 @@ export async function runSpecKit(prompt: string, options: RunOptions = {}) {
 			...initialState,
 			prompt,
 		},
-		provider,
+		harness,
 		recording: options.fixture
 			? {
 					mode: options.mode ?? "replay",

@@ -13,16 +13,16 @@ A code review pipeline where agents communicate through signals:
 
 ```mermaid
 flowchart LR
-    Start([harness:start]) --> P[Planner]
+    Start([workflow:start]) --> P[Planner]
     P --> |plan:complete| C[Coder]
     C --> |code:complete| R[Reviewer]
-    R --> |review:complete| End([harness:end])
+    R --> |review:complete| End([workflow:end])
 ```
 
 ## Define the Agents
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 type State = {
   task: string;
@@ -31,12 +31,12 @@ type State = {
   review: { passed: boolean; feedback: string } | null;
 };
 
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
-// Planner: Reacts to harness:start
+// Planner: Reacts to workflow:start
 const planner = agent({
   prompt: `Create an implementation plan for: {{ state.task }}`,
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["plan:complete"],
   updates: "plan",
 });
@@ -73,7 +73,7 @@ const result = await runReactive({
     code: null,
     review: null,
   },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.review !== null,
 });
 
@@ -88,23 +88,23 @@ Here's how signals coordinate the agents:
 
 ```mermaid
 sequenceDiagram
-    participant H as Harness
+    participant W as Workflow
     participant P as Planner
     participant C as Coder
     participant R as Reviewer
 
-    H->>H: emit harness:start
-    H->>P: activate (matches harness:start)
-    P->>H: update state.plan
-    P->>H: emit plan:complete
-    H->>C: activate (matches plan:complete)
-    C->>H: update state.code
-    C->>H: emit code:complete
-    H->>R: activate (matches code:complete)
-    R->>H: update state.review
-    R->>H: emit review:complete
-    H->>H: endWhen(state) → true
-    H->>H: emit harness:end
+    W->>W: emit workflow:start
+    W->>P: activate (matches workflow:start)
+    P->>W: update state.plan
+    P->>W: emit plan:complete
+    W->>C: activate (matches plan:complete)
+    C->>W: update state.code
+    C->>W: emit code:complete
+    W->>R: activate (matches code:complete)
+    R->>W: update state.review
+    R->>W: emit review:complete
+    W->>W: endWhen(state) → true
+    W->>W: emit workflow:end
 ```
 
 ## Parallel Agents
@@ -112,17 +112,17 @@ sequenceDiagram
 When multiple agents subscribe to the same signal, they run **in parallel**:
 
 ```typescript
-// Both react to harness:start → run concurrently
+// Both react to workflow:start → run concurrently
 const riskAnalyzer = agent({
   prompt: "Analyze risk for: {{ state.proposal }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["risk:assessed"],
   updates: "riskScore",
 });
 
 const costEstimator = agent({
   prompt: "Estimate cost for: {{ state.proposal }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["cost:estimated"],
   updates: "costEstimate",
 });
@@ -158,7 +158,7 @@ const escalationAgent = agent({
 Agents declare what signals they react to with `activateOn`:
 
 ```typescript
-activateOn: ["harness:start"]     // React to harness lifecycle
+activateOn: ["workflow:start"]     // React to workflow lifecycle
 activateOn: ["plan:complete"]      // React to custom signals
 activateOn: ["state:code:changed"] // React to state changes
 ```

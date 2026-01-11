@@ -50,7 +50,7 @@ export {
 export {
 	applySignal,
 	createEmptySnapshot,
-	type ProviderState,
+	type HarnessState,
 	type Snapshot,
 	snapshot,
 	snapshotAll,

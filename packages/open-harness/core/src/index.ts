@@ -1,6 +1,6 @@
 export * from "@internal/core";
 
-// v0.3.0: nodes module deleted - use Provider pattern from @internal/signals-core instead
+// v0.3.0: nodes module deleted - use Harness pattern from @internal/signals-core instead
 
 // Re-export signal infrastructure for public API
 // v0.3.0: All signal types now exported - old recording types deleted
@@ -11,6 +11,7 @@ export {
 	createConsoleReporter,
 	createEmptySnapshot,
 	createMetricsReporter,
+	type HarnessState,
 	type ISignalBus,
 	// Stores - Signal recording/replay
 	MemorySignalStore,
@@ -20,7 +21,6 @@ export {
 	Player,
 	type PlayerPosition,
 	type PlayerState,
-	type ProviderState,
 	type Recording,
 	type RecordingMetadata,
 	type RecordingQuery,
@@ -42,14 +42,14 @@ export {
 // Re-export signal primitives from @internal/signals-core
 export {
 	createSignal,
+	// Harness types (v0.3.0: renamed from Provider)
+	HARNESS_SIGNALS,
+	type Harness,
+	type HarnessCapabilities,
+	type HarnessInput,
+	type HarnessOutput,
 	isSignal,
 	type Message,
-	// Provider types
-	PROVIDER_SIGNALS,
-	type Provider,
-	type ProviderCapabilities,
-	type ProviderInput,
-	type ProviderOutput,
 	type RunContext,
 	type Signal,
 	type SignalSource,
@@ -58,17 +58,17 @@ export {
 	type ToolDefinition,
 	type ToolResult,
 } from "@internal/signals-core";
-// Re-export Claude provider for public API
+// Re-export Claude harness for public API (v0.3.0: renamed from provider)
 export {
-	ClaudeProvider,
-	type ClaudeProviderConfig,
-	type ClaudeProviderInput,
-	type ClaudeProviderOutput,
-} from "@open-harness/provider-claude";
-// Re-export OpenAI/Codex provider for public API
+	ClaudeHarness,
+	type ClaudeHarnessConfig,
+	type ClaudeHarnessInput,
+	type ClaudeHarnessOutput,
+} from "@open-harness/claude";
+// Re-export OpenAI/Codex harness for public API (v0.3.0: renamed from provider)
 export {
-	CodexProvider,
-	type CodexProviderConfig,
-	type CodexProviderInput,
-	type CodexProviderOutput,
-} from "@open-harness/provider-openai";
+	CodexHarness,
+	type CodexHarnessConfig,
+	type CodexHarnessInput,
+	type CodexHarnessOutput,
+} from "@open-harness/openai";

@@ -37,10 +37,10 @@ export interface ToolCallState {
 }
 
 /**
- * Provider state at a point in time
+ * Harness state at a point in time (v0.3.0: renamed from ProviderState)
  */
-export interface ProviderState {
-	/** Is provider currently running? */
+export interface HarnessState {
+	/** Is harness currently running? */
 	readonly running: boolean;
 	/** Accumulated text output */
 	readonly text: TextAccumulator;
@@ -63,8 +63,8 @@ export interface Snapshot {
 	readonly atIndex: number;
 	/** Timestamp of the signal at this index */
 	readonly timestamp: string;
-	/** Provider state */
-	readonly provider: ProviderState;
+	/** Harness state (v0.3.0: renamed from provider) */
+	readonly harness: HarnessState;
 	/** Custom state accumulated from user signals */
 	readonly custom: Map<string, unknown>;
 	/** Signal counts by type */
@@ -82,7 +82,7 @@ export function createEmptySnapshot(): Snapshot {
 	return {
 		atIndex: -1,
 		timestamp: new Date().toISOString(),
-		provider: {
+		harness: {
 			running: false,
 			text: { content: "", deltaCount: 0 },
 			thinking: { content: "", deltaCount: 0 },
@@ -105,14 +105,14 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 	signalCounts.set(signal.name, (signalCounts.get(signal.name) ?? 0) + 1);
 
 	// Start with base snapshot updates
-	let provider = snapshot.provider;
+	let harness = snapshot.harness;
 	const custom = new Map(snapshot.custom);
 
-	// Handle provider signals
+	// Handle harness signals
 	switch (signal.name) {
-		case "provider:start":
-			provider = {
-				...provider,
+		case "harness:start":
+			harness = {
+				...harness,
 				running: true,
 				text: { content: "", deltaCount: 0 },
 				thinking: { content: "", deltaCount: 0 },
@@ -121,23 +121,23 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 			};
 			break;
 
-		case "provider:end":
-			provider = { ...provider, running: false };
+		case "harness:end":
+			harness = { ...harness, running: false };
 			break;
 
-		case "provider:error": {
+		case "harness:error": {
 			const payload = signal.payload as { code: string; message: string };
-			provider = { ...provider, lastError: payload };
+			harness = { ...harness, lastError: payload };
 			break;
 		}
 
 		case "text:delta": {
 			const payload = signal.payload as { content: string };
-			provider = {
-				...provider,
+			harness = {
+				...harness,
 				text: {
-					content: provider.text.content + payload.content,
-					deltaCount: provider.text.deltaCount + 1,
+					content: harness.text.content + payload.content,
+					deltaCount: harness.text.deltaCount + 1,
 				},
 			};
 			break;
@@ -145,11 +145,11 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 
 		case "text:complete": {
 			const payload = signal.payload as { content: string };
-			provider = {
-				...provider,
+			harness = {
+				...harness,
 				text: {
 					content: payload.content,
-					deltaCount: provider.text.deltaCount,
+					deltaCount: harness.text.deltaCount,
 				},
 			};
 			break;
@@ -157,11 +157,11 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 
 		case "thinking:delta": {
 			const payload = signal.payload as { content: string };
-			provider = {
-				...provider,
+			harness = {
+				...harness,
 				thinking: {
-					content: provider.thinking.content + payload.content,
-					deltaCount: provider.thinking.deltaCount + 1,
+					content: harness.thinking.content + payload.content,
+					deltaCount: harness.thinking.deltaCount + 1,
 				},
 			};
 			break;
@@ -169,11 +169,11 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 
 		case "thinking:complete": {
 			const payload = signal.payload as { content: string };
-			provider = {
-				...provider,
+			harness = {
+				...harness,
 				thinking: {
 					content: payload.content,
-					deltaCount: provider.thinking.deltaCount,
+					deltaCount: harness.thinking.deltaCount,
 				},
 			};
 			break;
@@ -181,14 +181,14 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 
 		case "tool:call": {
 			const payload = signal.payload as { id: string; name: string; input: unknown };
-			const toolCalls = new Map(provider.toolCalls);
+			const toolCalls = new Map(harness.toolCalls);
 			toolCalls.set(payload.id, {
 				id: payload.id,
 				name: payload.name,
 				input: payload.input,
 				status: "pending",
 			});
-			provider = { ...provider, toolCalls };
+			harness = { ...harness, toolCalls };
 			break;
 		}
 
@@ -199,7 +199,7 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 				result: unknown;
 				error?: string;
 			};
-			const toolCalls = new Map(provider.toolCalls);
+			const toolCalls = new Map(harness.toolCalls);
 			const existing = toolCalls.get(payload.id);
 			if (existing) {
 				toolCalls.set(payload.id, {
@@ -209,14 +209,14 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 					status: payload.error ? "error" : "complete",
 				});
 			}
-			provider = { ...provider, toolCalls };
+			harness = { ...harness, toolCalls };
 			break;
 		}
 
 		default:
 			// Store custom signals in the custom map
 			if (
-				!signal.name.startsWith("provider:") &&
+				!signal.name.startsWith("harness:") &&
 				!signal.name.startsWith("text:") &&
 				!signal.name.startsWith("thinking:") &&
 				!signal.name.startsWith("tool:")
@@ -228,7 +228,7 @@ export function applySignal(snapshot: Snapshot, signal: Signal, index: number): 
 	return {
 		atIndex: index,
 		timestamp: signal.timestamp,
-		provider,
+		harness,
 		custom,
 		signalCounts,
 	};

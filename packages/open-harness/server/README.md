@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-10T10:11:36.649Z"
-lastCommit: "150d2ad147832f2553c0dbfb779f1a466c0a001b"
-lastCommitDate: "2026-01-10T09:55:26Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 ---
 # @open-harness/server
 
@@ -52,20 +52,20 @@ app.onError(errorHandler);
 
 ## Building v0.3.0 Servers
 
-For v0.3.0, build custom Hono routes that consume Provider signals:
+For v0.3.0, build custom Hono routes that consume Harness signals:
 
 ```typescript
 import { Hono } from "hono";
-import { ClaudeProvider, createSignal } from "@open-harness/core";
+import { ClaudeHarness, createSignal } from "@open-harness/core";
 
 const app = new Hono();
 
 app.post("/chat", async (c) => {
-  const provider = new ClaudeProvider();
+  const harness = new ClaudeHarness();
   const input = await c.req.json();
 
   const signals: Signal[] = [];
-  for await (const signal of provider.run(input, { signal: c.req.raw.signal })) {
+  for await (const signal of harness.run(input, { signal: c.req.raw.signal })) {
     signals.push(signal);
   }
 
@@ -79,10 +79,10 @@ The following were removed in v0.3.0:
 
 - `createChatRoute`, `createCommandsRoute`, `createEventsRoute` - Old API routes
 - `createLocalAIKitTransport`, `WebSocketTransport` - Old transports
-- `createHarness`, `runFlow`, `registerStandardNodes` - Old harness utilities
-- Claude agent/node types - Use `ClaudeProvider` from @open-harness/core
+- `createWorkflow`, `runFlow`, `registerStandardNodes` - Old workflow utilities
+- Claude agent/node types - Use `ClaudeHarness` from @open-harness/core
 
 ## See Also
 
-- [@open-harness/core](../core/README.md) - Providers and signals
+- [@open-harness/core](../core/README.md) - Harnesses and signals
 - [Hono documentation](https://hono.dev/) - Web framework

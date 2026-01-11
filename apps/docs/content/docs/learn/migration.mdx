@@ -13,7 +13,7 @@ v0.3.0 introduces a fundamentally new architecture:
 
 | Aspect | v0.2.0 (Old) | v0.3.0 (New) |
 |--------|--------------|--------------|
-| Orchestration | YAML flows, explicit edges | `createHarness<TState>()`, signal-based |
+| Orchestration | YAML flows, explicit edges | `createWorkflow<TState>()`, signal-based |
 | Execution | Sequential DAG walk | Parallel signal dispatch |
 | Agent Definition | `nodes: [{ type: claude.agent }]` | `agent({ prompt, activateOn, emits })` |
 | Expressions | JSONata | `{{ state.x }}` template syntax |
@@ -60,7 +60,7 @@ type State = {
 };
 ```
 
-### 4. Create Harness with Typed State
+### 4. Create Workflow with Typed State
 
 ```typescript
 // OLD
@@ -68,10 +68,10 @@ import { createFlow } from "@open-harness/core";
 const flow = await createFlow("./flow.yaml");
 
 // NEW
-import { createHarness } from "@open-harness/core";
+import { createWorkflow } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 ```
 
 ### 5. Convert Nodes to Agents
@@ -87,7 +87,7 @@ const { agent, runReactive } = createHarness<State>();
 // NEW: TypeScript agent definition
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: "result",
 });
@@ -106,7 +106,7 @@ Edges are now implicit through signal subscriptions:
 // NEW: Signal-based activation
 const analyzer = agent({
   prompt: "Analyze the input",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
 });
 
@@ -137,14 +137,14 @@ import { run } from "@open-harness/core";
 const result = await run(flow, { input: "Hello" });
 
 // NEW
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const result = await runReactive({
   agents: { analyzer, reviewer },
   state: { input: "Hello", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (state) => state.result !== null,
 });
 ```
@@ -190,7 +190,7 @@ test("analyzer works", async () => {
   const result = await runReactive({
     agents: { analyzer },
     state: initialState,
-    provider: new ClaudeProvider(),
+    harness: new ClaudeHarness(),
   });
 
   expect(result.signals).toContainSignal("agent:completed");
@@ -204,8 +204,8 @@ Map old event types to new signal names:
 
 | v0.2.0 Event | v0.3.0 Signal |
 |--------------|---------------|
-| `flow:start` | `harness:start` |
-| `flow:complete` | `harness:end` |
+| `flow:start` | `workflow:start` |
+| `flow:complete` | `workflow:end` |
 | `node:start` | `agent:activated` |
 | `node:complete` | `agent:completed` |
 | `node:skipped` | `agent:skipped` |
@@ -244,7 +244,7 @@ const store = new MemorySignalStore();
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "record", store },
 });
 
@@ -252,7 +252,7 @@ const result = await runReactive({
 const replay = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "replay", store, recordingId: result.recordingId },
 });
 ```
@@ -284,7 +284,7 @@ Make sure your state type matches the generic parameter:
 
 ```typescript
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 // State in runReactive must match State type
 await runReactive({

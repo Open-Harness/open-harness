@@ -1,8 +1,8 @@
 ---
 title: "Open Harness Packages"
-lastUpdated: "2026-01-11T06:42:54.221Z"
-lastCommit: "edcbf4c29d5c22eb600c6f75d5fcc6c1b8d24d58"
-lastCommitDate: "2026-01-11T06:23:45Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 scope:
   - architecture
   - documentation
@@ -25,12 +25,12 @@ Open Harness v0.3.0 uses a **signal-based reactive architecture**:
                    │
 ┌──────────────────▼──────────────────────────┐
 │        Public API (@open-harness/*)          │
-│  createHarness() → agent() → runReactive()   │
+│  createWorkflow() → agent() → runReactive()  │
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
 │           Signal Infrastructure              │
-│  SignalBus │ Providers │ MemorySignalStore   │
+│  SignalBus │ Harnesses │ MemorySignalStore   │
 └─────────────────────────────────────────────┘
 ```
 
@@ -40,23 +40,23 @@ Open Harness v0.3.0 uses a **signal-based reactive architecture**:
 |---------|-------------|
 | **Signal** | Typed event with `source`, `type`, `payload`, `timestamp` |
 | **SignalBus** | Central dispatcher that routes signals to subscribers |
-| **Provider** | AI model wrapper (Claude, OpenAI/Codex) that emits/handles signals |
-| **Agent** | Configured provider with `activateOn` triggers and `emits` outputs |
-| **Harness** | Factory for creating typed agents with shared state |
+| **Harness** | AI SDK wrapper (Claude, OpenAI/Codex) that emits/handles signals |
+| **Agent** | Configured harness with `activateOn` triggers and `emits` outputs |
+| **Workflow** | Factory for creating typed agents with shared state |
 
 ### Signal Flow
 
 ```
-harness:start → agent activates → provider:complete → next agent → harness:complete
-     │                                    │                              │
-     └── activateOn: ["harness:start"] ───┘                              │
+workflow:start → agent activates → harness:end → next agent → workflow:end
+     │                                    │                         │
+     └── activateOn: ["workflow:start"] ──┘                         │
                                           └── activateOn: ["X:complete"] ─┘
 ```
 
 ## Quick Start
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 // 1. Define your state type
 interface MyState {
@@ -64,13 +64,13 @@ interface MyState {
   analysis?: string;
 }
 
-// 2. Create a typed harness
-const { agent, runReactive } = createHarness<MyState>();
+// 2. Create a typed workflow
+const { agent, runReactive } = createWorkflow<MyState>();
 
 // 3. Define agents with signal chaining
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: (output, state) => ({ analysis: output.text }),
 });
@@ -79,7 +79,7 @@ const analyzer = agent({
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello, world!" },
-  defaultProvider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 });
 
 console.log(result.state.analysis);
@@ -94,7 +94,7 @@ Internal packages form the core implementation. They are not published to npm.
 #### **`@internal/core`** — Core API & Signal Infrastructure
 - **Location**: `packages/internal/core/src/`
 - **Key Exports**:
-  - `api/` — `createHarness()`, `agent()`, `runReactive()`
+  - `api/` — `createWorkflow()`, `agent()`, `runReactive()`
   - `lib/` — Logger, utilities
   - `persistence/` — `RunStore` interface (optional persistence)
   - `state/` — State types
@@ -122,14 +122,16 @@ Core signal infrastructure that powers the reactive system:
 
 #### **`@internal/signals-core`** — Signal Primitives
 - `createSignal()` — Signal factory
-- `Provider` interface
+- `Harness` interface
 - Type definitions
 
-#### **`@open-harness/provider-claude`** — Claude Integration
-- `ClaudeProvider` — Anthropic Claude via Agent SDK
+### Harness Packages (`packages/adapters/harnesses/`)
 
-#### **`@open-harness/provider-openai`** — OpenAI Integration
-- `CodexProvider` — OpenAI models
+#### **`@open-harness/claude`** — Claude Integration
+- `ClaudeHarness` — Anthropic Claude via Agent SDK
+
+#### **`@open-harness/openai`** — OpenAI Integration
+- `CodexHarness` — OpenAI models
 
 ### Public Packages (`packages/open-harness/`)
 
@@ -155,12 +157,12 @@ Optional persistence implementations:
 
 ## Key APIs
 
-### `createHarness<TState>()`
+### `createWorkflow<TState>()`
 
 Creates a factory for typed agents:
 
 ```typescript
-const { agent, runReactive } = createHarness<MyState>();
+const { agent, runReactive } = createWorkflow<MyState>();
 ```
 
 Returns:
@@ -175,12 +177,12 @@ Define an agent with signal-based activation:
 const myAgent = agent({
   // Required
   prompt: "Your prompt with {{ state.field }} interpolation",
-  activateOn: ["harness:start"],  // When to activate
-  emits: ["my:complete"],         // What signals to emit
+  activateOn: ["workflow:start"],  // When to activate
+  emits: ["my:complete"],          // What signals to emit
 
   // Optional
   updates: (output, state) => ({ /* partial state */ }),
-  provider: customProvider,
+  harness: customHarness,
   guard: (state) => state.shouldRun,
   timeout: 30000,
 });
@@ -194,7 +196,7 @@ Execute a signal-based workflow:
 const result = await runReactive({
   agents: { analyzer, writer },
   state: initialState,
-  defaultProvider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 
   // Optional recording
   fixture: "my-test",
@@ -219,11 +221,11 @@ Returns:
 
 | Signal | Description |
 |--------|-------------|
-| `harness:start` | Workflow started |
-| `harness:complete` | Workflow finished |
-| `provider:start` | Provider invocation started |
-| `provider:complete` | Provider finished (with output) |
-| `provider:error` | Provider failed |
+| `workflow:start` | Workflow started |
+| `workflow:end` | Workflow finished |
+| `harness:start` | Harness invocation started |
+| `harness:end` | Harness finished (with output) |
+| `harness:error` | Harness failed |
 
 ### Custom Signals
 
@@ -252,7 +254,7 @@ const store = new MemorySignalStore();
 await runReactive({
   agents,
   state,
-  defaultProvider: provider,
+  harness,
   fixture: "my-test",
   mode: "record",
   store,

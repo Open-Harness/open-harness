@@ -61,10 +61,10 @@ describe("Player", () => {
 			const player = Player.fromSignals(signals);
 
 			player.step();
-			expect(player.snapshot.provider.text.content).toBe("Hello");
+			expect(player.snapshot.harness.text.content).toBe("Hello");
 
 			player.step();
-			expect(player.snapshot.provider.text.content).toBe("Hello world");
+			expect(player.snapshot.harness.text.content).toBe("Hello world");
 		});
 	});
 
@@ -101,7 +101,7 @@ describe("Player", () => {
 			player.step(); // abc
 			player.back(); // back to ab
 
-			expect(player.snapshot.provider.text.content).toBe("ab");
+			expect(player.snapshot.harness.text.content).toBe("ab");
 		});
 	});
 
@@ -133,7 +133,7 @@ describe("Player", () => {
 			const player = Player.fromSignals(signals);
 
 			player.goto(1);
-			expect(player.snapshot.provider.text.content).toBe("ab");
+			expect(player.snapshot.harness.text.content).toBe("ab");
 		});
 	});
 
@@ -216,10 +216,10 @@ describe("Player", () => {
 			const player = Player.fromSignals(signals);
 
 			player.step();
-			expect(player.snapshot.provider.text.content).toBe("hello");
+			expect(player.snapshot.harness.text.content).toBe("hello");
 
 			player.rewind();
-			expect(player.snapshot.provider.text.content).toBe("");
+			expect(player.snapshot.harness.text.content).toBe("");
 		});
 	});
 

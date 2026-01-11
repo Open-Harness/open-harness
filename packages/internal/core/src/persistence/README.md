@@ -1,8 +1,8 @@
 ---
 title: "Persistence Layer"
-lastUpdated: "2026-01-10T09:45:31.811Z"
-lastCommit: "a9e5f66d3940822fd2e20996fc38318fe0aede14"
-lastCommitDate: "2026-01-10T05:58:49Z"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 scope:
   - persistence
   - run-store
@@ -27,16 +27,16 @@ Optional storage layer for run history and snapshots.
 In v0.3.0, signal recording is the primary way to capture and replay runs:
 
 ```typescript
-import { createHarness, MemorySignalStore, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, MemorySignalStore, ClaudeHarness } from "@open-harness/core";
 
-const { agent, runReactive } = createHarness<MyState>();
+const { agent, runReactive } = createWorkflow<MyState>();
 const store = new MemorySignalStore();
 
 // Record mode - captures all signals
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   fixture: "my-test",
   mode: "record",
   store,

@@ -5,26 +5,26 @@ description: Test workflows with deterministic signal replay
 
 # Recording & Replay
 
-Record signal traces from live runs and replay them without provider calls — perfect for deterministic testing.
+Record signal traces from live runs and replay them without harness calls — perfect for deterministic testing.
 
 ## Why Recording?
 
 - **Deterministic Tests**: Replay produces identical signal traces every time
 - **No API Calls**: Replay mode injects signals from the recording
-- **CI-Friendly**: Run tests without provider credentials
+- **CI-Friendly**: Run tests without harness credentials
 - **Debugging**: Inspect exactly what happened during a run
 
 ## Record a Run
 
 ```typescript
-import { createHarness, ClaudeProvider, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: "result",
 });
@@ -36,7 +36,7 @@ const store = new MemorySignalStore();
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello world", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.result !== null,
   recording: {
     mode: "record",
@@ -57,7 +57,7 @@ console.log("Signals recorded:", result.signals.length);
 const replayResult = await runReactive({
   agents: { analyzer },
   state: { input: "Hello world", result: null },
-  provider: new ClaudeProvider(), // Not called during replay
+  harness: new ClaudeHarness(), // Not called during replay
   endWhen: (s) => s.result !== null,
   recording: {
     mode: "replay",
@@ -119,7 +119,7 @@ describe("Analyzer Agent", () => {
 
     expect(result.recordingId).toBeDefined();
     expect(result.signals).toContainEqual(
-      expect.objectContaining({ name: "harness:start" })
+      expect.objectContaining({ name: "workflow:start" })
     );
   });
 
@@ -165,14 +165,14 @@ Every run returns the full signal trace:
 ```typescript
 result.signals
 // [
-//   { name: "harness:start", timestamp: "...", payload: { ... } },
+//   { name: "workflow:start", timestamp: "...", payload: { ... } },
 //   { name: "agent:activated", payload: { agent: "analyzer" } },
-//   { name: "provider:start", payload: { model: "claude-sonnet-4-20250514" } },
+//   { name: "harness:start", payload: { model: "claude-sonnet-4-20250514" } },
 //   { name: "text:delta", payload: { content: "The " } },
 //   { name: "text:delta", payload: { content: "analysis " } },
-//   { name: "provider:end", payload: { ... } },
-//   { name: "analysis:complete", payload: { ... } },
 //   { name: "harness:end", payload: { ... } },
+//   { name: "analysis:complete", payload: { ... } },
+//   { name: "workflow:end", payload: { ... } },
 // ]
 ```
 

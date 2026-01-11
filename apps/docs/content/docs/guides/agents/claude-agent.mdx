@@ -1,23 +1,23 @@
 ---
-title: Claude Provider
-description: Configure the ClaudeProvider for Anthropic models
+title: Claude Harness
+description: Configure the ClaudeHarness for Anthropic models
 ---
 
-# Claude Provider
+# Claude Harness
 
-The `ClaudeProvider` connects Open Harness to Anthropic's Claude models.
+The `ClaudeHarness` connects Open Harness to Anthropic's Claude models.
 
 ## Basic Usage
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: "result",
 });
@@ -25,7 +25,7 @@ const analyzer = agent({
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello world", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.result !== null,
 });
 ```
@@ -33,7 +33,7 @@ const result = await runReactive({
 ## Configuration Options
 
 ```typescript
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
   model: "claude-sonnet-4-20250514",  // Model to use
   maxTokens: 4096,                     // Max output tokens
   temperature: 0.7,                    // Sampling temperature
@@ -48,34 +48,34 @@ const provider = new ClaudeProvider({
 | `claude-opus-4-20250514` | Complex reasoning |
 | `claude-haiku-3-20250307` | Fast, simple tasks |
 
-## Per-Agent Provider
+## Per-Agent Harness
 
-Override the provider for specific agents:
+Override the harness for specific agents:
 
 ```typescript
 const complexAgent = agent({
   prompt: "Solve this complex problem: {{ state.problem }}",
-  activateOn: ["harness:start"],
-  provider: new ClaudeProvider({ model: "claude-opus-4-20250514" }),
+  activateOn: ["workflow:start"],
+  harness: new ClaudeHarness({ model: "claude-opus-4-20250514" }),
 });
 
 const quickAgent = agent({
   prompt: "Quick classification: {{ state.input }}",
-  activateOn: ["harness:start"],
-  provider: new ClaudeProvider({ model: "claude-haiku-3-20250307" }),
+  activateOn: ["workflow:start"],
+  harness: new ClaudeHarness({ model: "claude-haiku-3-20250307" }),
 });
 ```
 
 ## Signals Emitted
 
-The ClaudeProvider emits standard provider signals:
+The ClaudeHarness emits standard harness signals:
 
 ### Lifecycle
 
 ```typescript
-{ name: "provider:start", payload: { model: "claude-sonnet-4-20250514" } }
-{ name: "provider:end", payload: { usage: { inputTokens, outputTokens }, cost } }
-{ name: "provider:error", payload: { error: "..." } }
+{ name: "harness:start", payload: { model: "claude-sonnet-4-20250514" } }
+{ name: "harness:end", payload: { usage: { inputTokens, outputTokens }, cost } }
+{ name: "harness:error", payload: { error: "..." } }
 ```
 
 ### Text Streaming
@@ -103,7 +103,7 @@ When using models with extended thinking:
 
 ## Authentication
 
-The provider uses Claude Code subscription authentication by default. No API key is required when running from within Claude Code.
+The harness uses Claude Code subscription authentication by default. No API key is required when running from within Claude Code.
 
 For standalone usage, set the `ANTHROPIC_API_KEY` environment variable:
 
@@ -113,19 +113,19 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 ## Session Support
 
-The ClaudeProvider supports session persistence for multi-turn conversations:
+The ClaudeHarness supports session persistence for multi-turn conversations:
 
 ```typescript
 // First run - creates a session
 const result1 = await runReactive({
   agents: { assistant },
   state: { messages: ["Hello"], response: null },
-  provider,
+  harness,
 });
 
-// Session ID is captured in provider:end signal
+// Session ID is captured in harness:end signal
 const sessionId = result1.signals
-  .find(s => s.name === "provider:end")
+  .find(s => s.name === "harness:end")
   ?.payload.sessionId;
 
 // Resume the session later
@@ -134,33 +134,33 @@ const sessionId = result1.signals
 
 ## Error Handling
 
-The provider emits `provider:error` signals on failure:
+The harness emits `harness:error` signals on failure:
 
 ```typescript
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
 });
 
-const errors = result.signals.filter(s => s.name === "provider:error");
+const errors = result.signals.filter(s => s.name === "harness:error");
 if (errors.length > 0) {
-  console.error("Provider errors:", errors);
+  console.error("Harness errors:", errors);
 }
 ```
 
 ## Usage Metrics
 
-Extract usage from `provider:end` signals:
+Extract usage from `harness:end` signals:
 
 ```typescript
-const providerEnds = result.signals.filter(s => s.name === "provider:end");
+const harnessEnds = result.signals.filter(s => s.name === "harness:end");
 
-const totalTokens = providerEnds.reduce((sum, s) => {
+const totalTokens = harnessEnds.reduce((sum, s) => {
   return sum + (s.payload.usage?.inputTokens || 0) + (s.payload.usage?.outputTokens || 0);
 }, 0);
 
-const totalCost = providerEnds.reduce((sum, s) => {
+const totalCost = harnessEnds.reduce((sum, s) => {
   return sum + (s.payload.cost || 0);
 }, 0);
 
@@ -170,11 +170,11 @@ console.log(`Tokens: ${totalTokens}, Cost: $${totalCost.toFixed(4)}`);
 ## Next Steps
 
 <Cards>
-  <Card title="Custom Providers" href="/docs/guides/agents/custom-agents">
-    Implement your own provider
+  <Card title="Custom Harnesses" href="/docs/guides/agents/custom-agents">
+    Implement your own harness
   </Card>
   <Card title="Signal System" href="/docs/concepts/event-system">
-    Understanding provider signals
+    Understanding harness signals
   </Card>
   <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
     Coordinate multiple agents

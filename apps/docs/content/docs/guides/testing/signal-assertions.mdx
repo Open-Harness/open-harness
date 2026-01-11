@@ -16,7 +16,7 @@ Check if a signal was emitted:
 ```typescript
 expect(result.signals).toContainSignal("agent:completed");
 expect(result.signals).toContainSignal("analysis:complete");
-expect(result.signals).toContainSignal("provider:end");
+expect(result.signals).toContainSignal("harness:end");
 ```
 
 ### toHaveSignalsInOrder
@@ -25,12 +25,12 @@ Check signals appear in a specific order:
 
 ```typescript
 expect(result.signals).toHaveSignalsInOrder([
-  "harness:start",
+  "workflow:start",
   "agent:activated",
-  "provider:start",
-  "provider:end",
-  "agent:completed",
+  "harness:start",
   "harness:end",
+  "agent:completed",
+  "workflow:end",
 ]);
 ```
 
@@ -45,7 +45,7 @@ expect(result.signals).toHaveSignalWithPayload("agent:completed", {
   agent: "analyzer",
 });
 
-expect(result.signals).toHaveSignalWithPayload("provider:end", {
+expect(result.signals).toHaveSignalWithPayload("harness:end", {
   usage: expect.objectContaining({
     inputTokens: expect.any(Number),
     outputTokens: expect.any(Number),
@@ -58,7 +58,7 @@ expect(result.signals).toHaveSignalWithPayload("provider:end", {
 ### Exact Match
 
 ```typescript
-expect(result.signals).toContainSignal("harness:start");
+expect(result.signals).toContainSignal("workflow:start");
 ```
 
 ### Namespace Prefix
@@ -95,7 +95,7 @@ it("reviewer activates after analyzer", async () => {
   const result = await runReactive({
     agents: { analyzer, reviewer },
     state: initialState,
-    provider,
+    harness,
   });
 
   expect(result.signals).toHaveSignalsInOrder([
@@ -116,7 +116,7 @@ it("reviewer skipped when score is low", async () => {
   const result = await runReactive({
     agents: { analyzer, reviewer },
     state: { input: "bad input", score: 0.3, result: null },
-    provider,
+    harness,
   });
 
   // Reviewer should be skipped
@@ -129,18 +129,18 @@ it("reviewer skipped when score is low", async () => {
 
 ### Error Handling
 
-Test provider errors:
+Test harness errors:
 
 ```typescript
-it("handles provider errors gracefully", async () => {
-  // Use a provider that will fail
+it("handles harness errors gracefully", async () => {
+  // Use a harness that will fail
   const result = await runReactive({
     agents: { analyzer },
     state: initialState,
-    provider: new FailingProvider(),
+    harness: new FailingHarness(),
   });
 
-  expect(result.signals).toContainSignal("provider:error");
+  expect(result.signals).toContainSignal("harness:error");
 });
 ```
 
@@ -153,7 +153,7 @@ it("produces expected final state", async () => {
   const result = await runReactive({
     agents: { analyzer },
     state: { input: "Hello", result: null },
-    provider,
+    harness,
     endWhen: (s) => s.result !== null,
   });
 
@@ -171,7 +171,7 @@ it("state updates correctly", async () => {
   const result = await runReactive({
     agents: { analyzer },
     state: { input: "Hello", result: null },
-    provider,
+    harness,
   });
 
   // Find state change signals
@@ -194,7 +194,7 @@ it("completes within timeout", async () => {
   const result = await runReactive({
     agents: { analyzer },
     state: initialState,
-    provider,
+    harness,
     timeout: 5000,
   });
 
@@ -209,7 +209,7 @@ it("activates expected number of agents", async () => {
   const result = await runReactive({
     agents: { analyzer, reviewer, fixer },
     state: initialState,
-    provider,
+    harness,
   });
 
   expect(result.metrics.activations).toBe(3);
@@ -223,11 +223,11 @@ it("stays within token budget", async () => {
   const result = await runReactive({
     agents: { analyzer },
     state: initialState,
-    provider,
+    harness,
   });
 
   const totalTokens = result.signals
-    .filter(s => s.name === "provider:end")
+    .filter(s => s.name === "harness:end")
     .reduce((sum, s) => {
       const usage = s.payload.usage || { inputTokens: 0, outputTokens: 0 };
       return sum + usage.inputTokens + usage.outputTokens;

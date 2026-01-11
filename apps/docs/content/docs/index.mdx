@@ -17,7 +17,7 @@ Open Harness is a signal-based reactive workflow system for building production 
 ## Quick Example
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 // 1. Define your state type
 type State = {
@@ -25,37 +25,37 @@ type State = {
   analysis: string | null;
 };
 
-// 2. Create typed harness factory
-const { agent, runReactive } = createHarness<State>();
+// 2. Create typed workflow factory
+const { agent, runReactive } = createWorkflow<State>();
 
 // 3. Define a reactive agent
 const analyzer = agent({
   prompt: "Analyze this input: {{ state.input }}",
-  activateOn: ["harness:start"],  // React to harness start
-  emits: ["analysis:complete"],   // Emit when done
-  updates: "analysis",            // Update state.analysis with output
+  activateOn: ["workflow:start"],  // React to workflow start
+  emits: ["analysis:complete"],    // Emit when done
+  updates: "analysis",             // Update state.analysis with output
 });
 
 // 4. Run the workflow
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello, world!", analysis: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   endWhen: (s) => s.analysis !== null,
 });
 
 console.log(result.state.analysis);
-// Signals: harness:start → agent:activated → provider:end → analysis:complete → harness:end
+// Signals: workflow:start → agent:activated → harness:end → analysis:complete → workflow:end
 ```
 
 ## Core Concepts
 
 | Concept | Description |
 |---------|-------------|
-| **Signal** | An event that flows through the system (`harness:start`, `analysis:complete`) |
+| **Signal** | An event that flows through the system (`workflow:start`, `analysis:complete`) |
 | **Agent** | A reactive unit that subscribes to signals and produces output |
-| **Harness** | A container that coordinates agents and manages state |
-| **Provider** | An AI model adapter (Claude, OpenAI) that executes agent prompts |
+| **Workflow** | A container that coordinates agents and manages state |
+| **Harness** | An AI model adapter (Claude, OpenAI) that executes agent prompts |
 
 ## Get Started
 
@@ -64,7 +64,7 @@ console.log(result.state.analysis);
     Run your first reactive agent in 5 minutes
   </Card>
   <Card title="Architecture" href="/docs/concepts/architecture">
-    Understand signals, agents, and harnesses
+    Understand signals, agents, and workflows
   </Card>
   <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
     Chain multiple agents with signal subscriptions
@@ -79,14 +79,14 @@ console.log(result.state.analysis);
 Agents activate on signal patterns:
 
 ```typescript
-// Activate on harness lifecycle
-activateOn: ["harness:start"]
+// Activate on workflow lifecycle
+activateOn: ["workflow:start"]
 
 // Activate on custom signals from other agents
 activateOn: ["analysis:complete", "review:done"]
 
-// Activate on provider events (advanced)
-activateOn: ["provider:end"]
+// Activate on harness events (advanced)
+activateOn: ["harness:end"]
 
 // Activate on state changes
 activateOn: ["state:analysis:changed"]

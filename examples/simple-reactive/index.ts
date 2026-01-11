@@ -2,7 +2,7 @@
  * Simple Reactive Agent Example
  *
  * This minimal example demonstrates the core v0.3.0 reactive API:
- * - createHarness() factory for typed agents
+ * - createWorkflow() factory for typed agents
  * - activateOn signal patterns
  * - when guards for conditional activation
  * - emits declarations for signal output
@@ -11,7 +11,7 @@
  * Run: bun run examples/simple-reactive/index.ts
  */
 
-import { ClaudeProvider, createHarness } from "@open-harness/core";
+import { ClaudeHarness, createWorkflow } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define your state type
@@ -27,7 +27,7 @@ type GreetingState = {
 // 2. Create a typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<GreetingState>();
+const { agent, runReactive } = createWorkflow<GreetingState>();
 
 // =============================================================================
 // 3. Define reactive agents
@@ -40,8 +40,8 @@ const greeter = agent({
 	prompt: `You are a friendly greeter. Create a warm, personalized greeting for {{ state.name }}.
 Keep it brief (one sentence). Just output the greeting, nothing else.`,
 
-	// Activate when harness starts
-	activateOn: ["harness:start"],
+	// Activate when workflow starts
+	activateOn: ["workflow:start"],
 
 	// Declare what signals this agent emits
 	emits: ["greeting:created"],
@@ -78,7 +78,7 @@ Output only the transformed text.`,
 async function main() {
 	console.log("Starting Simple Reactive Example...\n");
 
-	const provider = new ClaudeProvider({
+	const harness = new ClaudeHarness({
 		model: "claude-sonnet-4-20250514",
 	});
 
@@ -89,7 +89,7 @@ async function main() {
 			greeting: null,
 			uppercase: true,
 		},
-		provider,
+		harness,
 		endWhen: (state) => state.greeting !== null,
 	});
 

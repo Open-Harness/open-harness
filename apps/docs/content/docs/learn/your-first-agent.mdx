@@ -16,7 +16,7 @@ An agent that:
 
 ```mermaid
 flowchart LR
-    Start([harness:start]) --> C[Classifier]
+    Start([workflow:start]) --> C[Classifier]
     C --> |classify:complete| U[Urgent Handler]
     C --> |classify:complete| N[Normal Handler]
 ```
@@ -24,7 +24,7 @@ flowchart LR
 ## Step 1: Define State and Agents
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 // Define your state type
 type State = {
@@ -33,8 +33,8 @@ type State = {
   response: string | null;
 };
 
-// Create typed harness factory
-const { agent, runReactive } = createHarness<State>();
+// Create typed workflow factory
+const { agent, runReactive } = createWorkflow<State>();
 
 // Classifier agent: determines priority
 const classifier = agent({
@@ -42,7 +42,7 @@ const classifier = agent({
 {{ state.task }}
 
 Respond with JSON: { "priority": "urgent" | "normal", "reason": string }`,
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["classify:complete"],
   updates: "classification",
 });
@@ -73,7 +73,7 @@ const normalHandler = agent({
 
 ```typescript
 async function main() {
-  const provider = new ClaudeProvider({
+  const harness = new ClaudeHarness({
     model: "claude-sonnet-4-20250514",
   });
 
@@ -84,7 +84,7 @@ async function main() {
       classification: null,
       response: null,
     },
-    provider,
+    harness,
     endWhen: (s) => s.response !== null,
   });
 
@@ -112,7 +112,7 @@ Duration: 2345 ms
 
 ## How It Works
 
-1. **harness:start** triggers the classifier
+1. **workflow:start** triggers the classifier
 2. Classifier emits **classify:complete** with the classification
 3. Both handlers receive **classify:complete**, but only one passes its `when` guard
 4. The matching handler runs and emits **response:complete**
@@ -120,20 +120,20 @@ Duration: 2345 ms
 
 ```mermaid
 sequenceDiagram
-    participant H as Harness
+    participant W as Workflow
     participant C as Classifier
     participant U as Urgent
     participant N as Normal
 
-    H->>H: emit harness:start
-    H->>C: activate
-    C->>H: update classification
-    C->>H: emit classify:complete
-    H->>U: check when guard → true
-    H->>N: check when guard → false (skip)
-    U->>H: update response
-    U->>H: emit response:complete
-    H->>H: endWhen → true
+    W->>W: emit workflow:start
+    W->>C: activate
+    C->>W: update classification
+    C->>W: emit classify:complete
+    W->>U: check when guard → true
+    W->>N: check when guard → false (skip)
+    U->>W: update response
+    U->>W: emit response:complete
+    W->>W: endWhen → true
 ```
 
 ## Key Concepts

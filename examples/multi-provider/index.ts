@@ -9,7 +9,7 @@
  * Run: bun run examples/multi-provider/index.ts
  */
 
-import { ClaudeProvider, CodexProvider, createHarness } from "@open-harness/core";
+import { ClaudeHarness, CodexHarness, createWorkflow } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define state type
@@ -33,12 +33,12 @@ type ReviewState = {
 // =============================================================================
 
 // Claude for deep analysis - better at nuanced reasoning
-const claudeProvider = new ClaudeProvider({
+const claudeHarness = new ClaudeHarness({
 	model: "claude-sonnet-4-20250514",
 });
 
 // Codex for quick summarization - fast and cost-effective
-const codexProvider = new CodexProvider({
+const codexHarness = new CodexHarness({
 	model: "gpt-5-mini",
 });
 
@@ -46,7 +46,7 @@ const codexProvider = new CodexProvider({
 // 3. Create typed harness factory
 // =============================================================================
 
-const { agent, runReactive } = createHarness<ReviewState>();
+const { agent, runReactive } = createWorkflow<ReviewState>();
 
 // =============================================================================
 // 4. Define agents with different providers
@@ -78,11 +78,11 @@ Output a JSON object:
 
 Only output the JSON, nothing else.`,
 
-	activateOn: ["harness:start"],
+	activateOn: ["workflow:start"],
 	emits: ["analysis:complete"],
 
 	// Use Claude for this agent
-	signalProvider: claudeProvider,
+	signalHarness: claudeHarness,
 
 	// Update state.analysis with output
 	updates: "analysis",
@@ -104,7 +104,7 @@ Output only the summary sentence, nothing else.`,
 	emits: ["summary:complete"],
 
 	// Use Codex for this agent
-	signalProvider: codexProvider,
+	signalHarness: codexHarness,
 
 	// Update state.summary with output
 	updates: "summary",
@@ -157,7 +157,7 @@ function fetchUser(id) {
 	}
 
 	console.log("\n=== Provider Usage ===\n");
-	const providerStarts = result.signals.filter((s) => s.name === "provider:start");
+	const providerStarts = result.signals.filter((s) => s.name === "harness:start");
 	for (const signal of providerStarts) {
 		const source = signal.source as Record<string, unknown>;
 		console.log(`- ${source?.provider ?? "unknown"}`);

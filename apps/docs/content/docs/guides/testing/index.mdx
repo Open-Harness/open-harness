@@ -25,16 +25,16 @@ Open Harness testing is signal-centric:
 const result = await runReactive({
   agents: { analyzer },
   state: { input: "Hello", result: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 });
 
 // ...assert on the signal trace
 expect(result.signals).toContainSignal("agent:completed");
 expect(result.signals).toHaveSignalsInOrder([
-  "harness:start",
+  "workflow:start",
   "agent:activated",
-  "provider:end",
   "harness:end",
+  "workflow:end",
 ]);
 ```
 
@@ -42,14 +42,14 @@ expect(result.signals).toHaveSignalsInOrder([
 
 ### 1. Live Testing
 
-Run agents with a real provider:
+Run agents with a real harness:
 
 ```typescript
 test("analyzer produces output", async () => {
   const result = await runReactive({
     agents: { analyzer },
     state: { input: "Hello", result: null },
-    provider: new ClaudeProvider(),
+    harness: new ClaudeHarness(),
   });
 
   expect(result.state.result).toBeDefined();
@@ -70,7 +70,7 @@ const store = new MemorySignalStore();
 const recorded = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: { mode: "record", store },
 });
 
@@ -78,7 +78,7 @@ const recorded = await runReactive({
 const replayed = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider: new ClaudeProvider(), // Not called during replay
+  harness: new ClaudeHarness(), // Not called during replay
   recording: { mode: "replay", store, recordingId: recorded.recordingId },
 });
 ```
@@ -93,10 +93,10 @@ Assert on signal patterns rather than exact output:
 ```typescript
 expect(result.signals).toContainSignal("analysis:complete");
 expect(result.signals).toHaveSignalsInOrder([
-  "harness:start",
+  "workflow:start",
   "agent:activated",
   "analysis:complete",
-  "harness:end",
+  "workflow:end",
 ]);
 ```
 
@@ -124,24 +124,24 @@ export default defineConfig({
 
 ```typescript title="analyzer.test.ts"
 import { describe, it, expect } from "vitest";
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 type State = { input: string; result: string | null };
 
 describe("Analyzer", () => {
-  it("produces output on harness:start", async () => {
-    const { agent, runReactive } = createHarness<State>();
+  it("produces output on workflow:start", async () => {
+    const { agent, runReactive } = createWorkflow<State>();
 
     const analyzer = agent({
       prompt: "Analyze: {{ state.input }}",
-      activateOn: ["harness:start"],
+      activateOn: ["workflow:start"],
       updates: "result",
     });
 
     const result = await runReactive({
       agents: { analyzer },
       state: { input: "Hello", result: null },
-      provider: new ClaudeProvider(),
+      harness: new ClaudeHarness(),
       endWhen: (s) => s.result !== null,
     });
 

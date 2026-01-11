@@ -8,10 +8,10 @@ import { describe, it, expect, vi } from "vitest";
 import {
 	createTelemetrySubscriber,
 	createWideEvent,
-	type HarnessEvent,
-	type HarnessWideEvent,
-	type HarnessStartEvent,
-	type HarnessErrorEvent,
+	type WorkflowEvent,
+	type WorkflowWideEvent,
+	type WorkflowStartEvent,
+	type WorkflowErrorEvent,
 	type TelemetryInput,
 } from "./telemetry.js";
 import { createSignal } from "@internal/signals-core";
@@ -22,23 +22,23 @@ import { createSignal } from "@internal/signals-core";
 
 function createTestSignals() {
 	return [
-		createSignal("harness:start", { agents: ["analyst", "executor"] }),
-		createSignal("agent:activated", { agent: "analyst", trigger: "harness:start" }),
-		createSignal("provider:start", {}),
+		createSignal("workflow:start", { agents: ["analyst", "executor"] }),
+		createSignal("agent:activated", { agent: "analyst", trigger: "workflow:start" }),
+		createSignal("harness:start", {}),
 		createSignal("text:delta", { delta: "Hello" }),
 		createSignal("text:delta", { delta: " world" }),
-		createSignal("provider:end", {
+		createSignal("harness:end", {
 			output: "Hello world",
 			usage: { inputTokens: 10, outputTokens: 5 },
 		}),
 		createSignal("analysis:complete", { agent: "analyst" }),
 		createSignal("agent:activated", { agent: "executor", trigger: "analysis:complete" }),
-		createSignal("provider:start", {}),
-		createSignal("provider:end", {
+		createSignal("harness:start", {}),
+		createSignal("harness:end", {
 			output: "Executed",
 			usage: { inputTokens: 20, outputTokens: 10 },
 		}),
-		createSignal("harness:end", { durationMs: 100, activations: 2 }),
+		createSignal("workflow:end", { durationMs: 100, activations: 2 }),
 	];
 }
 
@@ -60,8 +60,8 @@ function createTestResult(overrides: Partial<TelemetryInput> = {}): TelemetryInp
 
 describe("createTelemetrySubscriber", () => {
 	describe("emitStart", () => {
-		it("emits harness.start event", () => {
-			const events: HarnessEvent[] = [];
+		it("emits workflow.start event", () => {
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
@@ -69,15 +69,15 @@ describe("createTelemetrySubscriber", () => {
 			telemetry.emitStart("run-123", ["analyst", "executor"]);
 
 			expect(events).toHaveLength(1);
-			const event = events[0] as HarnessStartEvent;
-			expect(event.event).toBe("harness.start");
+			const event = events[0] as WorkflowStartEvent;
+			expect(event.event).toBe("workflow.start");
 			expect(event.runId).toBe("run-123");
 			expect(event.agents).toEqual(["analyst", "executor"]);
 			expect(event.startedAt).toBeDefined();
 		});
 
 		it("includes metadata when provided", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 				metadata: { env: "test", version: "1.0" },
@@ -85,12 +85,12 @@ describe("createTelemetrySubscriber", () => {
 
 			telemetry.emitStart("run-123", ["agent"]);
 
-			const event = events[0] as HarnessStartEvent;
+			const event = events[0] as WorkflowStartEvent;
 			expect(event.metadata).toEqual({ env: "test", version: "1.0" });
 		});
 
 		it("can be disabled via config", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 				emitStart: false,
@@ -103,8 +103,8 @@ describe("createTelemetrySubscriber", () => {
 	});
 
 	describe("emitComplete", () => {
-		it("emits harness.complete wide event", () => {
-			const events: HarnessEvent[] = [];
+		it("emits workflow.complete wide event", () => {
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
@@ -113,8 +113,8 @@ describe("createTelemetrySubscriber", () => {
 			telemetry.emitComplete("run-123", startedAt, createTestResult());
 
 			expect(events).toHaveLength(1);
-			const event = events[0] as HarnessWideEvent;
-			expect(event.event).toBe("harness.complete");
+			const event = events[0] as WorkflowWideEvent;
+			expect(event.event).toBe("workflow.complete");
 			expect(event.runId).toBe("run-123");
 			expect(event.startedAt).toBe(startedAt);
 			expect(event.completedAt).toBeDefined();
@@ -124,27 +124,27 @@ describe("createTelemetrySubscriber", () => {
 		});
 
 		it("extracts activated agents from signals", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
 
 			telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-			const event = events[0] as HarnessWideEvent;
+			const event = events[0] as WorkflowWideEvent;
 			expect(event.agentsActivated).toContain("analyst");
 			expect(event.agentsActivated).toContain("executor");
 		});
 
 		it("extracts token usage from provider signals", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
 
 			telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-			const event = events[0] as HarnessWideEvent;
+			const event = events[0] as WorkflowWideEvent;
 			expect(event.tokens).toBeDefined();
 			expect(event.tokens?.inputTokens).toBe(30); // 10 + 20
 			expect(event.tokens?.outputTokens).toBe(15); // 5 + 10
@@ -152,7 +152,7 @@ describe("createTelemetrySubscriber", () => {
 		});
 
 		it("sets outcome to terminated when terminatedEarly is true", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
@@ -163,13 +163,13 @@ describe("createTelemetrySubscriber", () => {
 				createTestResult({ terminatedEarly: true }),
 			);
 
-			const event = events[0] as HarnessWideEvent;
+			const event = events[0] as WorkflowWideEvent;
 			expect(event.outcome).toBe("terminated");
 			expect(event.terminatedEarly).toBe(true);
 		});
 
 		it("sets outcome to error when error is present", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
@@ -180,13 +180,13 @@ describe("createTelemetrySubscriber", () => {
 				createTestResult({ error: new Error("Something went wrong") }),
 			);
 
-			const event = events[0] as HarnessWideEvent;
+			const event = events[0] as WorkflowWideEvent;
 			expect(event.outcome).toBe("error");
 			expect(event.error).toBe("Something went wrong");
 		});
 
 		it("sets outcome to timeout for TimeoutError", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
@@ -200,26 +200,26 @@ describe("createTelemetrySubscriber", () => {
 				createTestResult({ error: timeoutError }),
 			);
 
-			const event = events[0] as HarnessWideEvent;
+			const event = events[0] as WorkflowWideEvent;
 			expect(event.outcome).toBe("timeout");
 		});
 
 		it("includes signal count", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
 
 			telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-			const event = events[0] as HarnessWideEvent;
+			const event = events[0] as WorkflowWideEvent;
 			expect(event.signalCount).toBe(11); // Count from createTestSignals
 		});
 	});
 
 	describe("emitError", () => {
-		it("emits harness.error event", () => {
-			const events: HarnessEvent[] = [];
+		it("emits workflow.error event", () => {
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 			});
@@ -228,8 +228,8 @@ describe("createTelemetrySubscriber", () => {
 			telemetry.emitError("run-123", error, "startup");
 
 			expect(events).toHaveLength(1);
-			const event = events[0] as HarnessErrorEvent;
-			expect(event.event).toBe("harness.error");
+			const event = events[0] as WorkflowErrorEvent;
+			expect(event.event).toBe("workflow.error");
 			expect(event.runId).toBe("run-123");
 			expect(event.error).toBe("Startup failed");
 			expect(event.phase).toBe("startup");
@@ -237,7 +237,7 @@ describe("createTelemetrySubscriber", () => {
 		});
 
 		it("can be disabled via config", () => {
-			const events: HarnessEvent[] = [];
+			const events: WorkflowEvent[] = [];
 			const telemetry = createTelemetrySubscriber({
 				emitter: (e) => events.push(e),
 				emitError: false,
@@ -256,7 +256,7 @@ describe("createTelemetrySubscriber", () => {
 
 describe("signal sampling", () => {
 	it("samples signals at configured rate", () => {
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 			sampling: { rate: 1.0 }, // 100% rate for testing
@@ -264,53 +264,53 @@ describe("signal sampling", () => {
 
 		telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		expect(event.sampledSignals).toBeDefined();
 		expect(event.sampledSignals!.length).toBeGreaterThan(0);
 	});
 
 	it("excludes signals matching neverInclude patterns", () => {
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 			sampling: {
 				rate: 1.0,
-				neverInclude: ["text:delta", "provider:*"],
+				neverInclude: ["text:delta", "harness:*"],
 			},
 		});
 
 		telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		const signalNames = event.sampledSignals?.map((s) => s.name) ?? [];
 
 		expect(signalNames).not.toContain("text:delta");
-		expect(signalNames).not.toContain("provider:start");
-		expect(signalNames).not.toContain("provider:end");
+		expect(signalNames).not.toContain("harness:start");
+		expect(signalNames).not.toContain("harness:end");
 	});
 
 	it("always includes signals matching alwaysInclude patterns", () => {
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 			sampling: {
 				rate: 0, // 0% rate, but alwaysInclude should still work
-				alwaysInclude: ["harness:*", "agent:activated"],
+				alwaysInclude: ["workflow:*", "agent:activated"],
 			},
 		});
 
 		telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		const signalNames = event.sampledSignals?.map((s) => s.name) ?? [];
 
-		expect(signalNames).toContain("harness:start");
-		expect(signalNames).toContain("harness:end");
+		expect(signalNames).toContain("workflow:start");
+		expect(signalNames).toContain("workflow:end");
 		expect(signalNames).toContain("agent:activated");
 	});
 
 	it("includes all signals on error when alwaysOnError is true", () => {
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 			sampling: {
@@ -325,12 +325,12 @@ describe("signal sampling", () => {
 			createTestResult({ error: new Error("Failed") }),
 		);
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		expect(event.sampledSignals?.length).toBe(11); // All signals included
 	});
 
 	it("respects maxSignals limit", () => {
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 			sampling: {
@@ -341,7 +341,7 @@ describe("signal sampling", () => {
 
 		telemetry.emitComplete("run-123", new Date().toISOString(), createTestResult());
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		expect(event.sampledSignals?.length).toBeLessThanOrEqual(5);
 	});
 });
@@ -355,7 +355,7 @@ describe("createWideEvent", () => {
 		const startedAt = new Date().toISOString();
 		const event = createWideEvent("run-123", startedAt, createTestResult());
 
-		expect(event.event).toBe("harness.complete");
+		expect(event.event).toBe("workflow.complete");
 		expect(event.runId).toBe("run-123");
 		expect(event.startedAt).toBe(startedAt);
 		expect(event.outcome).toBe("success");
@@ -383,11 +383,11 @@ describe("createWideEvent", () => {
 describe("token extraction", () => {
 	it("returns undefined when no usage data", () => {
 		const signals = [
-			createSignal("provider:start", {}),
-			createSignal("provider:end", { output: "done" }),
+			createSignal("harness:start", {}),
+			createSignal("harness:end", { output: "done" }),
 		];
 
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 		});
@@ -398,18 +398,18 @@ describe("token extraction", () => {
 			terminatedEarly: false,
 		});
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		expect(event.tokens).toBeUndefined();
 	});
 
-	it("aggregates tokens from multiple provider:end signals", () => {
+	it("aggregates tokens from multiple harness:end signals", () => {
 		const signals = [
-			createSignal("provider:end", { usage: { inputTokens: 100, outputTokens: 50 } }),
-			createSignal("provider:end", { usage: { inputTokens: 200, outputTokens: 100 } }),
-			createSignal("provider:end", { usage: { inputTokens: 50, outputTokens: 25 } }),
+			createSignal("harness:end", { usage: { inputTokens: 100, outputTokens: 50 } }),
+			createSignal("harness:end", { usage: { inputTokens: 200, outputTokens: 100 } }),
+			createSignal("harness:end", { usage: { inputTokens: 50, outputTokens: 25 } }),
 		];
 
-		const events: HarnessEvent[] = [];
+		const events: WorkflowEvent[] = [];
 		const telemetry = createTelemetrySubscriber({
 			emitter: (e) => events.push(e),
 		});
@@ -420,7 +420,7 @@ describe("token extraction", () => {
 			terminatedEarly: false,
 		});
 
-		const event = events[0] as HarnessWideEvent;
+		const event = events[0] as WorkflowWideEvent;
 		expect(event.tokens?.inputTokens).toBe(350);
 		expect(event.tokens?.outputTokens).toBe(175);
 		expect(event.tokens?.totalTokens).toBe(525);

@@ -1,16 +1,16 @@
 ---
-title: "Harness API"
-lastUpdated: "2026-01-10T09:45:31.811Z"
-lastCommit: "a9e5f66d3940822fd2e20996fc38318fe0aede14"
-lastCommitDate: "2026-01-10T05:58:49Z"
+title: "Workflow API"
+lastUpdated: "2026-01-11T10:45:35.208Z"
+lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
+lastCommitDate: "2026-01-11T07:21:34Z"
 scope:
   - api
-  - harness
+  - workflow
   - reactive
   - agents
 ---
 
-# Harness API
+# Workflow API
 
 Core API for Open Harness v0.3.0 reactive agent system.
 
@@ -18,7 +18,7 @@ Core API for Open Harness v0.3.0 reactive agent system.
 
 | Module | Description |
 |--------|-------------|
-| `create-harness.ts` | `createHarness<TState>()` factory |
+| `create-workflow.ts` | `createWorkflow<TState>()` factory |
 | `agent.ts` | `agent()` definition builder |
 | `run-reactive.ts` | `runReactive()` execution engine |
 | `template.ts` | `{{ state.field }}` interpolation |
@@ -28,14 +28,14 @@ Core API for Open Harness v0.3.0 reactive agent system.
 | `defaults.ts` | Global default configuration |
 | `types.ts` | Type definitions |
 
-## createHarness<TState>()
+## createWorkflow<TState>()
 
 Factory that creates typed agent builders and runner.
 
 **Why a factory?** TypeScript variance. Without it, agents with `when` guards have contravariant state types that don't compose. The factory scopes all agents to a single state type.
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 interface TradingState {
   confidence: number;
@@ -44,37 +44,37 @@ interface TradingState {
 }
 
 // Create typed factory
-const { agent, runReactive } = createHarness<TradingState>();
+const { agent, runReactive } = createWorkflow<TradingState>();
 
 // All agents share the state type
 const analyst = agent({
   prompt: "Analyze market data",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
-  when: (ctx) => ctx.state.balance > 1000,  // ✅ Fully typed!
+  when: (ctx) => ctx.state.balance > 1000,  // Fully typed!
 });
 
 const executor = agent({
   prompt: "Execute trades based on: {{ state.confidence }}",
   activateOn: ["analysis:complete"],
   emits: ["trade:executed"],
-  when: (ctx) => ctx.state.confidence > 0.8,  // ✅ Autocomplete works!
+  when: (ctx) => ctx.state.confidence > 0.8,  // Autocomplete works!
 });
 
 // Run with typed initial state
 const result = await runReactive({
   agents: { analyst, executor },
   state: { confidence: 0, position: null, balance: 5000 },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 });
 ```
 
 ### Factory Returns
 
 ```typescript
-type HarnessFactory<TState> = {
+type WorkflowFactory<TState> = {
   agent: <TOutput>(config: ReactiveAgentConfig<TOutput, TState>) => ScopedReactiveAgent;
-  runReactive: (config: ReactiveHarnessConfig<TState>) => Promise<ReactiveHarnessResult<TState>>;
+  runReactive: (config: ReactiveWorkflowConfig<TState>) => Promise<WorkflowResult<TState>>;
 };
 ```
 
@@ -85,7 +85,7 @@ type HarnessFactory<TState> = {
 ```typescript
 const myAgent = agent({
   prompt: "Your system prompt",
-  activateOn: ["harness:start"],  // Signal patterns to trigger on
+  activateOn: ["workflow:start"],  // Signal patterns to trigger on
 });
 ```
 
@@ -94,7 +94,7 @@ const myAgent = agent({
 ```typescript
 const myAgent = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
 
   // Signal to emit on completion
   emits: ["analysis:complete"],
@@ -105,8 +105,8 @@ const myAgent = agent({
   // Update state field with output
   updates: "analysis",  // state.analysis = output.text
 
-  // Per-agent provider override
-  signalProvider: customProvider,
+  // Per-agent harness override
+  harness: customHarness,
 
   // Output schema (Zod)
   output: {
@@ -121,8 +121,8 @@ const myAgent = agent({
 
 | Pattern | Matches |
 |---------|---------|
-| `harness:start` | Exact match |
-| `provider:*` | `provider:start`, `provider:complete` |
+| `workflow:start` | Exact match |
+| `harness:*` | `harness:start`, `harness:end` |
 | `node:*:completed` | `node:writer:completed`, `node:analyzer:completed` |
 | `**:error` | Any signal ending in `:error` |
 
@@ -180,7 +180,7 @@ Execute a signal-based workflow.
 const result = await runReactive({
   agents: { analyst, executor },
   state: { confidence: 0, position: null },
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
 });
 
 console.log(result.state);    // Final state
@@ -196,8 +196,8 @@ const result = await runReactive({
   agents: { analyst, executor },
   state: initialState,
 
-  // Provider
-  provider: new ClaudeProvider(),
+  // Harness
+  harness: new ClaudeHarness(),
 
   // Termination
   endWhen: (state) => state.position !== null,
@@ -225,7 +225,7 @@ const result = await runReactive({
 ### Result Type
 
 ```typescript
-type ReactiveHarnessResult<TState> = {
+type WorkflowResult<TState> = {
   state: TState;                    // Final state
   signals: readonly Signal[];       // All signals emitted
   metrics: {
@@ -247,7 +247,7 @@ const store = new MemorySignalStore();
 const result = await runReactive({
   agents,
   state,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   recording: {
     mode: "record",
     store,
@@ -281,7 +281,7 @@ const result = await runReactive({
 const result = await runReactive({
   agents,
   state,
-  provider: new ClaudeProvider(),
+  harness: new ClaudeHarness(),
   fixture: "my-test",
   mode: "record",
   store: new MemorySignalStore(),
@@ -306,7 +306,7 @@ Requirements:
 
 ### Available Context
 
-- `state.*` — Current harness state
+- `state.*` — Current workflow state
 - `input.*` — Original input to runReactive
 - `signal.*` — Triggering signal
 
@@ -353,7 +353,7 @@ console.log(formatSignalTree(tree));
 
 // Summary statistics
 const summary = getSignalSummary(signals);
-// { total: 10, byType: { "harness:start": 1, ... }, ... }
+// { total: 10, byType: { "workflow:start": 1, ... }, ... }
 ```
 
 ## Telemetry
@@ -383,7 +383,7 @@ const result = await runReactive({
 ### Wide Event Structure
 
 ```typescript
-interface HarnessWideEvent {
+interface WorkflowWideEvent {
   service: string;
   timestamp: number;
   outcome: "success" | "error" | "timeout";
@@ -402,24 +402,24 @@ Set defaults to avoid repetition:
 
 ```typescript
 import {
-  setDefaultProvider,
+  setDefaultHarness,
   setDefaultStore,
   setDefaultMode,
-  getDefaultProvider,
+  getDefaultHarness,
   resetDefaults,
 } from "@open-harness/core";
 
 // Set defaults
-setDefaultProvider(new ClaudeProvider());
+setDefaultHarness(new ClaudeHarness());
 setDefaultStore(new MemorySignalStore());
 setDefaultMode("replay");
 
-// Use in runs (provider not needed if default set)
+// Use in runs (harness not needed if default set)
 await runReactive({
   agents,
   state,
   fixture: "my-test",
-  // provider, store, mode inherited from defaults
+  // harness, store, mode inherited from defaults
 });
 
 // Reset all defaults

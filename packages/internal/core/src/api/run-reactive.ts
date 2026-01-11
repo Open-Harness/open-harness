@@ -3,19 +3,19 @@
  *
  * Executes a reactive agent in a signal-driven environment where:
  * - Agents subscribe to signals via `activateOn` patterns
- * - Provider calls emit signals to the SignalBus
+ * - Harness calls emit signals to the SignalBus
  * - Declared `emits` signals fire after agent completion
  *
  * @example
  * ```ts
  * import { agent, runReactive } from "@open-harness/core"
- * import { ClaudeProvider } from "@open-harness/provider-claude"
+ * import { ClaudeHarness } from "@open-harness/claude"
  *
  * const analyst = agent({
  *   prompt: "Analyze the input.",
- *   activateOn: ["harness:start"],
+ *   activateOn: ["workflow:start"],
  *   emits: ["analysis:complete"],
- *   signalProvider: new ClaudeProvider(),
+ *   signalHarness: new ClaudeHarness(),
  * })
  *
  * const result = await runReactive(analyst, { data: "market info" })
@@ -31,8 +31,8 @@ import {
 } from "@internal/signals";
 import {
 	createSignal,
-	type Provider,
-	type ProviderInput,
+	type Harness,
+	type HarnessInput,
 	type RunContext,
 	type Signal,
 } from "@internal/signals-core";
@@ -45,9 +45,9 @@ import type { ReactiveAgent } from "./types.js";
 /**
  * Recording mode for signal capture and replay.
  *
- * - 'live': Execute provider, no recording (default)
- * - 'record': Execute provider, save signals to store
- * - 'replay': Load signals from store, skip provider
+ * - 'live': Execute harness, no recording (default)
+ * - 'record': Execute harness, save signals to store
+ * - 'replay': Load signals from store, skip harness
  */
 export type SignalRecordingMode = "live" | "record" | "replay";
 
@@ -94,10 +94,10 @@ export type SignalRecordingOptions = {
  */
 export type RunReactiveOptions = {
 	/**
-	 * Default provider if agent doesn't specify signalProvider.
-	 * Required if agent has no signalProvider set (unless in replay mode).
+	 * Default harness if agent doesn't specify signalHarness.
+	 * Required if agent has no signalHarness set (unless in replay mode).
 	 */
-	provider?: Provider;
+	harness?: Harness;
 
 	/**
 	 * Abort signal for cancellation.
@@ -116,7 +116,7 @@ export type RunReactiveOptions = {
 	 * @example Record mode - save signals to store
 	 * ```ts
 	 * const result = await runReactive(agent, input, {
-	 *   provider,
+	 *   harness,
 	 *   recording: {
 	 *     mode: 'record',
 	 *     store: new MemorySignalStore(),
@@ -135,7 +135,7 @@ export type RunReactiveOptions = {
 	 *     recordingId: 'rec_xxx',
 	 *   }
 	 * })
-	 * // No provider calls made - signals injected from recording
+	 * // No harness calls made - signals injected from recording
 	 * ```
 	 */
 	recording?: SignalRecordingOptions;
@@ -152,7 +152,7 @@ export type RunReactiveResult<T = unknown> = {
 
 	/**
 	 * All signals emitted during execution.
-	 * Includes harness lifecycle, provider signals, and agent emits.
+	 * Includes workflow lifecycle, harness signals, and agent emits.
 	 */
 	signals: readonly Signal[];
 
@@ -190,10 +190,10 @@ export type RunReactiveResult<T = unknown> = {
  * 2. (Record mode) Creates recording in store
  * 3. (Replay mode) Loads recording from store
  * 4. Subscribes agent based on activateOn patterns
- * 5. Emits harness:start to trigger subscribed agents
- * 6. Executes provider.run() OR replays signals
+ * 5. Emits workflow:start to trigger subscribed agents
+ * 6. Executes harness.run() OR replays signals
  * 7. Emits declared signals from `emits`
- * 8. Emits harness:end
+ * 8. Emits workflow:end
  * 9. (Record mode) Finalizes recording
  * 10. Returns result with full signal history
  *
@@ -202,7 +202,7 @@ export type RunReactiveResult<T = unknown> = {
  * @param options - Execution options
  * @returns Result containing output, signals, and metrics
  *
- * @throws Error if no provider is specified (live/record mode)
+ * @throws Error if no harness is specified (live/record mode)
  * @throws Error if no store is specified (record/replay mode)
  * @throws Error if recording not found (replay mode)
  */
@@ -239,11 +239,11 @@ export async function runReactive<TOutput>(
 		}
 	}
 
-	// Get provider (not required for replay mode)
-	const provider = agent.config.signalProvider ?? options?.provider;
-	if (recordingMode !== "replay" && !provider) {
+	// Get harness (not required for replay mode)
+	const harness = agent.config.signalHarness ?? options?.harness;
+	if (recordingMode !== "replay" && !harness) {
 		throw new Error(
-			"No provider specified. Set signalProvider on agent or provide default in options.",
+			"No harness specified. Set signalHarness on agent or provide default in options.",
 		);
 	}
 
@@ -269,8 +269,8 @@ export async function runReactive<TOutput>(
 	let output: TOutput | undefined;
 	let activationPromise: Promise<void> | null = null;
 
-	// Get activation patterns (default to harness:start if not specified)
-	const patterns: SignalPattern[] = agent.config.activateOn ?? ["harness:start"];
+	// Get activation patterns (default to workflow:start if not specified)
+	const patterns: SignalPattern[] = agent.config.activateOn ?? ["workflow:start"];
 
 	// Subscribe agent to its activation patterns
 	bus.subscribe(patterns, async (triggerSignal) => {
@@ -283,7 +283,7 @@ export async function runReactive<TOutput>(
 		);
 
 		if (recordingMode === "replay" && replayRecording) {
-			// Replay mode: emit recorded signals instead of calling provider
+			// Replay mode: emit recorded signals instead of calling harness
 			activationPromise = replaySignals(bus, replayRecording.signals).then(
 				(result) => {
 					output = result as TOutput;
@@ -299,10 +299,10 @@ export async function runReactive<TOutput>(
 				},
 			);
 		} else {
-			// Live/record mode: execute provider
-			activationPromise = executeProvider(
+			// Live/record mode: execute harness
+			activationPromise = executeHarness(
 				bus,
-				provider as Provider,
+				harness as Harness,
 				input,
 				agent.config.prompt,
 				{
@@ -326,9 +326,9 @@ export async function runReactive<TOutput>(
 		await activationPromise;
 	});
 
-	// Emit harness:start to trigger subscribed agents
+	// Emit workflow:start to trigger subscribed agents
 	bus.emit(
-		createSignal("harness:start", {
+		createSignal("workflow:start", {
 			input,
 			runId,
 		}),
@@ -341,10 +341,10 @@ export async function runReactive<TOutput>(
 		await activationPromise;
 	}
 
-	// Calculate duration and emit harness:end
+	// Calculate duration and emit workflow:end
 	const durationMs = Date.now() - startTime;
 	bus.emit(
-		createSignal("harness:end", {
+		createSignal("workflow:end", {
 			durationMs,
 			output,
 			runId,
@@ -371,27 +371,27 @@ export async function runReactive<TOutput>(
 }
 
 /**
- * Execute a provider and emit all its signals to the bus.
+ * Execute a harness and emit all its signals to the bus.
  *
- * The provider is an async generator that yields signals as it streams.
+ * The harness is an async generator that yields signals as it streams.
  * We iterate over it, emitting each signal to the bus for subscribers.
  *
  * @param bus - SignalBus to emit signals to
- * @param provider - Provider to execute
+ * @param harness - Harness to execute
  * @param input - User input
  * @param prompt - Agent prompt
  * @param ctx - Run context with abort signal and run ID
- * @returns Final output from the provider
+ * @returns Final output from the harness
  */
-async function executeProvider(
+async function executeHarness(
 	bus: SignalBus,
-	provider: Provider,
+	harness: Harness,
 	input: unknown,
 	prompt: string,
 	ctx: RunContext,
 ): Promise<unknown> {
-	// Build provider input
-	const providerInput: ProviderInput = {
+	// Build harness input
+	const harnessInput: HarnessInput = {
 		system: prompt,
 		messages: [
 			{
@@ -403,12 +403,12 @@ async function executeProvider(
 
 	let output: unknown;
 
-	// Iterate over provider signals and emit to bus
-	for await (const signal of provider.run(providerInput, ctx)) {
+	// Iterate over harness signals and emit to bus
+	for await (const signal of harness.run(harnessInput, ctx)) {
 		bus.emit(signal);
 
-		// Capture final output from provider:end signal
-		if (signal.name === "provider:end") {
+		// Capture final output from harness:end signal
+		if (signal.name === "harness:end") {
 			const payload = signal.payload as { output?: unknown };
 			output = payload.output;
 		}
@@ -420,12 +420,12 @@ async function executeProvider(
 /**
  * Replay recorded signals to the bus.
  *
- * Filters out harness lifecycle signals (harness:start, harness:end, agent:activated)
- * since those are generated fresh during replay. Only emits provider signals.
+ * Filters out workflow lifecycle signals (workflow:start, workflow:end, agent:activated)
+ * since those are generated fresh during replay. Only emits harness signals.
  *
  * @param bus - SignalBus to emit signals to
  * @param signals - Recorded signals to replay
- * @returns Final output from the provider:end signal
+ * @returns Final output from the harness:end signal
  */
 async function replaySignals(
 	bus: SignalBus,
@@ -433,20 +433,20 @@ async function replaySignals(
 ): Promise<unknown> {
 	let output: unknown;
 
-	// Provider signal prefixes to replay
-	const providerPrefixes = ["provider:", "text:", "tool:", "thinking:"];
+	// Harness signal prefixes to replay
+	const harnessPrefixes = ["harness:", "text:", "tool:", "thinking:"];
 
 	for (const signal of signals) {
-		// Only replay provider signals, skip harness lifecycle
-		const isProviderSignal = providerPrefixes.some((prefix) =>
+		// Only replay harness signals, skip workflow lifecycle
+		const isHarnessSignal = harnessPrefixes.some((prefix) =>
 			signal.name.startsWith(prefix),
 		);
 
-		if (isProviderSignal) {
+		if (isHarnessSignal) {
 			bus.emit(signal);
 
-			// Capture final output from provider:end signal
-			if (signal.name === "provider:end") {
+			// Capture final output from harness:end signal
+			if (signal.name === "harness:end") {
 				const payload = signal.payload as { output?: unknown };
 				output = payload.output;
 			}

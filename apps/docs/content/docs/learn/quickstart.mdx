@@ -27,7 +27,7 @@ bun add @open-harness/core
 Create `index.ts`:
 
 ```typescript
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 // 1. Define your state type
 type State = {
@@ -35,20 +35,20 @@ type State = {
   summary: string | null;
 };
 
-// 2. Create a typed harness factory
-const { agent, runReactive } = createHarness<State>();
+// 2. Create a typed workflow factory
+const { agent, runReactive } = createWorkflow<State>();
 
 // 3. Define a reactive agent
 const summarizer = agent({
   prompt: `Summarize this topic in 2-3 sentences: {{ state.topic }}`,
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["summary:complete"],
   updates: "summary",
 });
 
 // 4. Run the workflow
 async function main() {
-  const provider = new ClaudeProvider({
+  const harness = new ClaudeHarness({
     model: "claude-sonnet-4-20250514",
   });
 
@@ -58,7 +58,7 @@ async function main() {
       topic: "The history of artificial intelligence",
       summary: null,
     },
-    provider,
+    harness,
     endWhen: (s) => s.summary !== null,
   });
 
@@ -88,23 +88,23 @@ Let's break down the signal flow:
 
 ```mermaid
 sequenceDiagram
-    participant H as Harness
+    participant W as Workflow
     participant S as Summarizer
-    participant P as Provider
+    participant H as Harness
 
-    H->>H: emit harness:start
-    H->>S: activate (matches activateOn)
-    S->>P: run prompt
-    P-->>S: response
-    S->>H: emit summary:complete
-    S->>H: update state.summary
-    H->>H: endWhen(state) → true
-    H->>H: emit harness:end
+    W->>W: emit workflow:start
+    W->>S: activate (matches activateOn)
+    S->>H: run prompt
+    H-->>S: response
+    S->>W: emit summary:complete
+    S->>W: update state.summary
+    W->>W: endWhen(state) → true
+    W->>W: emit workflow:end
 ```
 
-1. **`harness:start`** - The harness emits a start signal
-2. **Agent activates** - Summarizer subscribes to `harness:start`
-3. **Provider runs** - Claude generates the summary
+1. **`workflow:start`** - The workflow emits a start signal
+2. **Agent activates** - Summarizer subscribes to `workflow:start`
+3. **Harness runs** - Claude generates the summary
 4. **State updates** - `updates: "summary"` writes the output to state
 5. **Workflow ends** - `endWhen` condition is satisfied
 
@@ -115,8 +115,8 @@ sequenceDiagram
 Agents declare what signals they react to:
 
 ```typescript
-activateOn: ["harness:start"]  // React to harness lifecycle
-activateOn: ["analysis:done"]  // React to custom signals
+activateOn: ["workflow:start"]  // React to workflow lifecycle
+activateOn: ["analysis:done"]   // React to custom signals
 ```
 
 ### State Updates

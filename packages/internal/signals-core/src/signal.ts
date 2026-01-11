@@ -4,8 +4,8 @@
 export interface SignalSource {
 	/** Agent that emitted this signal */
 	readonly agent?: string;
-	/** Provider that emitted this signal (for provider events) */
-	readonly provider?: string;
+	/** Harness that emitted this signal (for harness events) */
+	readonly harness?: string;
 	/** Parent signal ID that caused this signal (for causality chains) */
 	readonly parent?: string;
 }
@@ -14,7 +14,7 @@ export interface SignalSource {
  * Signal - the fundamental primitive in the reactive architecture
  *
  * Signals are immutable events that flow through the system.
- * All state changes, agent activations, and provider responses are signals.
+ * All state changes, agent activations, and harness responses are signals.
  *
  * @example
  * ```ts

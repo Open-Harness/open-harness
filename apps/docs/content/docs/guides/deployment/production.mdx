@@ -17,22 +17,22 @@ A practical checklist for running Open Harness in production.
 
 ```typescript
 import express from "express";
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 const app = express();
 app.use(express.json());
 
 type State = { input: string; result: string | null };
-const { agent, runReactive } = createHarness<State>();
+const { agent, runReactive } = createWorkflow<State>();
 
 const analyzer = agent({
   prompt: "Analyze: {{ state.input }}",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
   updates: "result",
 });
 
-const provider = new ClaudeProvider({
+const harness = new ClaudeHarness({
   model: "claude-sonnet-4-20250514",
 });
 
@@ -41,7 +41,7 @@ app.post("/analyze", async (req, res) => {
     const result = await runReactive({
       agents: { analyzer },
       state: { input: req.body.input, result: null },
-      provider,
+      harness,
       endWhen: (s) => s.result !== null,
     });
 
@@ -68,12 +68,12 @@ try {
   const result = await runReactive({
     agents: { analyzer },
     state: initialState,
-    provider,
+    harness,
   });
 } catch (error) {
-  if (error instanceof ProviderError) {
-    // Provider API failure
-    logger.error("Provider failed", { error: error.message });
+  if (error instanceof HarnessError) {
+    // Harness API failure
+    logger.error("Harness failed", { error: error.message });
   } else if (error instanceof TimeoutError) {
     // Workflow timeout
     logger.error("Workflow timeout", { durationMs: error.elapsed });
@@ -91,7 +91,7 @@ Log signals for debugging:
 const result = await runReactive({
   agents: { analyzer },
   state: initialState,
-  provider,
+  harness,
 });
 
 // Log signal trace
@@ -124,7 +124,7 @@ const signalCounts = result.signals.reduce((acc, s) => {
 - **Authentication**: Protect endpoints that start workflows
 - **Rate limiting**: Throttle runs per user or API key
 - **Input validation**: Validate user input before `runReactive`
-- **Secrets management**: Store provider credentials in environment variables
+- **Secrets management**: Store harness credentials in environment variables
 
 ## Environment Variables
 

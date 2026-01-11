@@ -8,26 +8,26 @@ import { runReactive } from "../../src/api/run-reactive.js";
 import { isReactiveAgent } from "../../src/api/types.js";
 import {
 	createSignal,
-	PROVIDER_SIGNALS,
-	type Provider,
-	type ProviderInput,
-	type ProviderOutput,
+	HARNESS_SIGNALS,
+	type Harness,
+	type HarnessInput,
+	type HarnessOutput,
 	type RunContext,
 	type Signal,
 } from "@internal/signals-core";
 import { MemorySignalStore } from "@internal/signals";
 
 // ============================================================================
-// Mock Provider
+// Mock Harness
 // ============================================================================
 
 /**
- * Create a mock provider that yields predictable signals
+ * Create a mock harness that yields predictable signals
  */
-function createMockProvider(response: string): Provider {
+function createMockHarness(response: string): Harness {
 	return {
 		type: "mock",
-		displayName: "Mock Provider",
+		displayName: "Mock Harness",
 		capabilities: {
 			streaming: true,
 			structuredOutput: false,
@@ -35,13 +35,13 @@ function createMockProvider(response: string): Provider {
 			resume: false,
 		},
 		async *run(
-			input: ProviderInput,
+			input: HarnessInput,
 			ctx: RunContext,
-		): AsyncGenerator<Signal, ProviderOutput> {
-			yield createSignal(PROVIDER_SIGNALS.START, { input });
-			yield createSignal(PROVIDER_SIGNALS.TEXT_DELTA, { content: response });
-			yield createSignal(PROVIDER_SIGNALS.TEXT_COMPLETE, { content: response });
-			yield createSignal(PROVIDER_SIGNALS.END, {
+		): AsyncGenerator<Signal, HarnessOutput> {
+			yield createSignal(HARNESS_SIGNALS.START, { input });
+			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: response });
+			yield createSignal(HARNESS_SIGNALS.TEXT_COMPLETE, { content: response });
+			yield createSignal(HARNESS_SIGNALS.END, {
 				output: { content: response },
 				durationMs: 100,
 			});
@@ -69,7 +69,7 @@ describe("agent() with reactive properties", () => {
 	test("returns ReactiveAgent when activateOn is specified", () => {
 		const myAgent = agent({
 			prompt: "You are helpful",
-			activateOn: ["harness:start"],
+			activateOn: ["workflow:start"],
 		});
 
 		expect(myAgent._tag).toBe("Agent");
@@ -78,28 +78,28 @@ describe("agent() with reactive properties", () => {
 	});
 
 	test("accepts all reactive properties", () => {
-		const provider = createMockProvider("test");
+		const harness = createMockHarness("test");
 
 		const myAgent = agent({
 			prompt: "Analyze data",
 			activateOn: ["harness:start", "data:updated"],
 			emits: ["analysis:complete"],
-			signalProvider: provider,
+			signalHarness: harness,
 		});
 
 		expect(isReactiveAgent(myAgent)).toBe(true);
 		expect(myAgent.config.activateOn).toEqual(["harness:start", "data:updated"]);
 		expect(myAgent.config.emits).toEqual(["analysis:complete"]);
-		expect(myAgent.config.signalProvider).toBe(provider);
+		expect(myAgent.config.signalHarness).toBe(harness);
 	});
 });
 
 describe("runReactive", () => {
-	test("emits harness:start and harness:end", async () => {
+	test("emits workflow:start and workflow:end", async () => {
 		const myAgent = agent({
 			prompt: "You are helpful",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("Hello!"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("Hello!"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -109,22 +109,22 @@ describe("runReactive", () => {
 		const result = await runReactive(myAgent, "Hi");
 
 		const signalNames = result.signals.map((s) => s.name);
-		expect(signalNames).toContain("harness:start");
-		expect(signalNames).toContain("harness:end");
+		expect(signalNames).toContain("workflow:start");
+		expect(signalNames).toContain("workflow:end");
 
-		// harness:start should be first
-		expect(signalNames[0]).toBe("harness:start");
+		// workflow:start should be first
+		expect(signalNames[0]).toBe("workflow:start");
 
-		// harness:end should be last
-		expect(signalNames[signalNames.length - 1]).toBe("harness:end");
+		// workflow:end should be last
+		expect(signalNames[signalNames.length - 1]).toBe("workflow:end");
 	});
 
 	test("activates agent on matching signal", async () => {
 		const myAgent = agent({
 			prompt: "Analyze data",
-			activateOn: ["harness:start"],
+			activateOn: ["workflow:start"],
 			emits: ["analysis:complete"],
-			signalProvider: createMockProvider("Analysis done"),
+			signalHarness: createMockHarness("Analysis done"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -139,11 +139,11 @@ describe("runReactive", () => {
 		expect(result.metrics.activations).toBe(1);
 	});
 
-	test("emits provider signals to bus", async () => {
+	test("emits harness signals to bus", async () => {
 		const myAgent = agent({
-			prompt: "Test provider",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("Provider response"),
+			prompt: "Test harness",
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("Harness response"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -153,18 +153,18 @@ describe("runReactive", () => {
 		const result = await runReactive(myAgent, "test");
 
 		const signalNames = result.signals.map((s) => s.name);
-		expect(signalNames).toContain(PROVIDER_SIGNALS.START);
-		expect(signalNames).toContain(PROVIDER_SIGNALS.TEXT_DELTA);
-		expect(signalNames).toContain(PROVIDER_SIGNALS.TEXT_COMPLETE);
-		expect(signalNames).toContain(PROVIDER_SIGNALS.END);
+		expect(signalNames).toContain(HARNESS_SIGNALS.START);
+		expect(signalNames).toContain(HARNESS_SIGNALS.TEXT_DELTA);
+		expect(signalNames).toContain(HARNESS_SIGNALS.TEXT_COMPLETE);
+		expect(signalNames).toContain(HARNESS_SIGNALS.END);
 	});
 
 	test("emits declared signals from emits array", async () => {
 		const myAgent = agent({
 			prompt: "Trade executor",
-			activateOn: ["harness:start"],
+			activateOn: ["workflow:start"],
 			emits: ["trade:proposed", "trade:executed"],
-			signalProvider: createMockProvider("Trade executed"),
+			signalHarness: createMockHarness("Trade executed"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -178,13 +178,13 @@ describe("runReactive", () => {
 		expect(signalNames).toContain("trade:executed");
 	});
 
-	test("uses agent signalProvider", async () => {
-		const customProvider = createMockProvider("Custom response");
+	test("uses agent signalHarness", async () => {
+		const customHarness = createMockHarness("Custom response");
 
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: customProvider,
+			activateOn: ["workflow:start"],
+			signalHarness: customHarness,
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -193,9 +193,9 @@ describe("runReactive", () => {
 
 		const result = await runReactive(myAgent, "test");
 
-		// Check the output from provider:end signal
+		// Check the output from harness:end signal
 		const endSignal = result.signals.find(
-			(s) => s.name === PROVIDER_SIGNALS.END,
+			(s) => s.name === HARNESS_SIGNALS.END,
 		);
 		expect(endSignal).toBeDefined();
 		expect((endSignal?.payload as { output: { content: string } }).output.content).toBe(
@@ -203,13 +203,13 @@ describe("runReactive", () => {
 		);
 	});
 
-	test("uses options.provider when agent has no signalProvider", async () => {
-		const defaultProvider = createMockProvider("Default response");
+	test("uses options.harness when agent has no signalHarness", async () => {
+		const defaultHarness = createMockHarness("Default response");
 
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			// No signalProvider
+			activateOn: ["workflow:start"],
+			// No signalHarness
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -217,11 +217,11 @@ describe("runReactive", () => {
 		}
 
 		const result = await runReactive(myAgent, "test", {
-			provider: defaultProvider,
+			harness: defaultHarness,
 		});
 
 		const endSignal = result.signals.find(
-			(s) => s.name === PROVIDER_SIGNALS.END,
+			(s) => s.name === HARNESS_SIGNALS.END,
 		);
 		expect(endSignal).toBeDefined();
 		expect((endSignal?.payload as { output: { content: string } }).output.content).toBe(
@@ -229,11 +229,11 @@ describe("runReactive", () => {
 		);
 	});
 
-	test("throws error when no provider is specified", async () => {
+	test("throws error when no harness is specified", async () => {
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			// No signalProvider
+			activateOn: ["workflow:start"],
+			// No signalHarness
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -241,15 +241,15 @@ describe("runReactive", () => {
 		}
 
 		expect(runReactive(myAgent, "test")).rejects.toThrow(
-			/No provider specified/,
+			/No harness specified/,
 		);
 	});
 
 	test("returns duration in metrics", async () => {
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("response"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("response"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -261,11 +261,11 @@ describe("runReactive", () => {
 		expect(result.metrics.durationMs).toBeGreaterThanOrEqual(0);
 	});
 
-	test("harness:end contains output and duration", async () => {
+	test("workflow:end contains output and duration", async () => {
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("final output"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("final output"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -274,7 +274,7 @@ describe("runReactive", () => {
 
 		const result = await runReactive(myAgent, "test");
 
-		const endSignal = result.signals.find((s) => s.name === "harness:end");
+		const endSignal = result.signals.find((s) => s.name === "workflow:end");
 		expect(endSignal).toBeDefined();
 
 		const payload = endSignal?.payload as {
@@ -295,9 +295,9 @@ describe("runReactive recording", () => {
 		const store = new MemorySignalStore();
 		const myAgent = agent({
 			prompt: "Test recording",
-			activateOn: ["harness:start"],
+			activateOn: ["workflow:start"],
 			emits: ["test:complete"],
-			signalProvider: createMockProvider("recorded output"),
+			signalHarness: createMockHarness("recorded output"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -326,19 +326,19 @@ describe("runReactive recording", () => {
 
 		// Should contain all the signals from the run
 		const recordedNames = recording!.signals.map((s) => s.name);
-		expect(recordedNames).toContain("harness:start");
+		expect(recordedNames).toContain("workflow:start");
 		expect(recordedNames).toContain("agent:activated");
-		expect(recordedNames).toContain(PROVIDER_SIGNALS.START);
-		expect(recordedNames).toContain(PROVIDER_SIGNALS.END);
+		expect(recordedNames).toContain(HARNESS_SIGNALS.START);
+		expect(recordedNames).toContain(HARNESS_SIGNALS.END);
 		expect(recordedNames).toContain("test:complete");
-		expect(recordedNames).toContain("harness:end");
+		expect(recordedNames).toContain("workflow:end");
 	});
 
 	test("record mode throws without store", async () => {
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("test"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("test"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -358,9 +358,9 @@ describe("runReactive replay", () => {
 		const store = new MemorySignalStore();
 		const myAgent = agent({
 			prompt: "Test replay",
-			activateOn: ["harness:start"],
+			activateOn: ["workflow:start"],
 			emits: ["analysis:complete"],
-			signalProvider: createMockProvider("original output"),
+			signalHarness: createMockHarness("original output"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -378,7 +378,7 @@ describe("runReactive replay", () => {
 
 		const recordingId = recordResult.recordingId!;
 
-		// Now replay - should NOT call the provider
+		// Now replay - should NOT call the harness
 		const replayResult = await runReactive(myAgent, "different input", {
 			recording: {
 				mode: "replay",
@@ -390,18 +390,18 @@ describe("runReactive replay", () => {
 		// Replay should have signals
 		expect(replayResult.signals.length).toBeGreaterThan(0);
 
-		// Should contain provider signals (from replay)
+		// Should contain harness signals (from replay)
 		const signalNames = replayResult.signals.map((s) => s.name);
-		expect(signalNames).toContain(PROVIDER_SIGNALS.START);
-		expect(signalNames).toContain(PROVIDER_SIGNALS.END);
+		expect(signalNames).toContain(HARNESS_SIGNALS.START);
+		expect(signalNames).toContain(HARNESS_SIGNALS.END);
 		expect(signalNames).toContain("analysis:complete");
 	});
 
 	test("replay mode throws without store", async () => {
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("test"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("test"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -419,8 +419,8 @@ describe("runReactive replay", () => {
 		const store = new MemorySignalStore();
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("test"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("test"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -438,8 +438,8 @@ describe("runReactive replay", () => {
 		const store = new MemorySignalStore();
 		const myAgent = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("test"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("test"),
 		});
 
 		if (!isReactiveAgent(myAgent)) {
@@ -457,38 +457,38 @@ describe("runReactive replay", () => {
 		).rejects.toThrow(/Recording not found/);
 	});
 
-	test("replay mode does not require provider", async () => {
+	test("replay mode does not require harness", async () => {
 		const store = new MemorySignalStore();
 
-		// Create agent WITH provider for recording
-		const agentWithProvider = agent({
+		// Create agent WITH harness for recording
+		const agentWithHarness = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			signalProvider: createMockProvider("test output"),
+			activateOn: ["workflow:start"],
+			signalHarness: createMockHarness("test output"),
 		});
 
-		if (!isReactiveAgent(agentWithProvider)) {
+		if (!isReactiveAgent(agentWithHarness)) {
 			throw new Error("Expected ReactiveAgent");
 		}
 
 		// Record first
-		const recordResult = await runReactive(agentWithProvider, "test", {
+		const recordResult = await runReactive(agentWithHarness, "test", {
 			recording: { mode: "record", store },
 		});
 
-		// Create agent WITHOUT provider for replay
-		const agentNoProvider = agent({
+		// Create agent WITHOUT harness for replay
+		const agentNoHarness = agent({
 			prompt: "Test",
-			activateOn: ["harness:start"],
-			// No signalProvider
+			activateOn: ["workflow:start"],
+			// No signalHarness
 		});
 
-		if (!isReactiveAgent(agentNoProvider)) {
+		if (!isReactiveAgent(agentNoHarness)) {
 			throw new Error("Expected ReactiveAgent");
 		}
 
-		// Replay should work without provider
-		const replayResult = await runReactive(agentNoProvider, "test", {
+		// Replay should work without harness
+		const replayResult = await runReactive(agentNoHarness, "test", {
 			recording: {
 				mode: "replay",
 				store,

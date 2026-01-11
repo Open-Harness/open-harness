@@ -5,7 +5,7 @@ Demonstrates the signal recording and replay system for testing, debugging, and 
 ## What This Shows
 
 1. **Recording mode** - Capture all signals during live execution
-2. **Replay mode** - Inject recorded signals without calling provider
+2. **Replay mode** - Inject recorded signals without calling harness
 3. **Player API** - VCR-style navigation through recordings
 4. **Store queries** - List and filter recordings
 
@@ -23,8 +23,8 @@ runReactive({                        runReactive({
 })                                   })
      │                                    │
      ▼                                    ▼
-Provider Called ───► Signals        No Provider Call
-                     Captured       Signals Injected
+Harness Called ───► Signals          No Harness Call
+                    Captured         Signals Injected
 ```
 
 ## Running
@@ -41,7 +41,7 @@ bun run examples/recording-replay/index.ts
 
 This example demonstrates:
 1. Recording signals during live execution
-2. Replaying without making provider calls
+2. Replaying without making harness calls
 3. Using Player for debugging
 
 ──────────────────────────────────────────────────
@@ -55,22 +55,22 @@ Signals captured: 15
 Recording ID: rec_1234567890_1
 
 Signal flow:
-  [system] harness:start
+  [system] workflow:start
   [system] agent:activated
-  [claude] provider:start
+  [claude] harness:start
   [claude] text:delta
   [claude] text:complete
-  [claude] provider:end
+  [claude] harness:end
   [analyzer] analysis:complete
-  [system] harness:end
+  [system] workflow:end
 
 === Replay Mode ===
 
-Replaying from recording (no provider calls)...
+Replaying from recording (no harness calls)...
 
 Duration: 5ms
 Signals replayed: 8
-Note: Provider was NOT called - signals were injected from recording
+Note: Harness was NOT called - signals were injected from recording
 
 === Player Debug Mode ===
 
@@ -79,15 +79,15 @@ Stepping through recorded signals...
 VCR Controls Demo:
 
 ▶️ Stepping forward:
-  [0] harness:start
+  [0] workflow:start
   [1] agent:activated
-  [2] provider:start
+  [2] harness:start
   [3] text:delta
   [4] text:complete
 
 📸 Snapshot at current position:
   Text: "This is a pangram - a sentence containing every..."
-  Provider running: false
+  Harness running: false
 
 ⏭️ Fast forward to end:
   Position: 7/8
@@ -124,10 +124,10 @@ Recordings with 'demo' tag: 1
 ### 1. Record a Workflow
 
 ```typescript
-import { createHarness, MemorySignalStore } from "@open-harness/core";
+import { createWorkflow, MemorySignalStore } from "@open-harness/core";
 
 const store = new MemorySignalStore();
-const { agent, runReactive } = createHarness<MyState>();
+const { agent, runReactive } = createWorkflow<MyState>();
 
 // Run with recording enabled
 const result = await runReactive({
@@ -148,7 +148,7 @@ console.log(`Recording ID: ${result.recordingId}`);
 ### 2. Replay the Workflow
 
 ```typescript
-// Replay without calling provider
+// Replay without calling harness
 const replayResult = await runReactive({
   agents: { analyzer },
   state: anyState, // Doesn't matter - signals come from recording
@@ -180,8 +180,8 @@ player.fastForward();  // Go to end
 
 // Inspect state at any point
 const snapshot = player.snapshot;
-console.log(snapshot.provider.text.content);
-console.log(snapshot.provider.toolCalls);
+console.log(snapshot.harness.text.content);
+console.log(snapshot.harness.toolCalls);
 
 // Search for signals
 const matches = player.findAll("tool:*");
@@ -253,10 +253,10 @@ while (!player.position.atEnd) {
 ```
 
 ### Benchmarking
-Compare outputs across provider versions or prompts.
+Compare outputs across harness versions or prompts.
 
 ## Next Steps
 
 - See `examples/simple-reactive/` for basic patterns
-- See `examples/multi-provider/` for multi-provider workflows
+- See `examples/multi-provider/` for multi-harness workflows
 - See `examples/testing-signals/` for testing with vitest matchers

@@ -1,17 +1,17 @@
-# Multi-Provider Example
+# Multi-Harness Example
 
-Demonstrates using multiple AI providers in a single reactive workflow.
+Demonstrates using multiple AI harnesses in a single reactive workflow.
 
 ## What This Shows
 
-1. **Per-agent providers** - Each agent specifies its own `signalProvider`
-2. **Provider selection** - Choose providers based on task requirements
-3. **Signal interoperability** - Signals work the same regardless of provider
+1. **Per-agent harnesses** - Each agent specifies its own `harness`
+2. **Harness selection** - Choose harnesses based on task requirements
+3. **Signal interoperability** - Signals work the same regardless of harness
 
 ## Architecture
 
 ```
-harness:start
+workflow:start
       │
       ▼
 ┌───────────────┐
@@ -26,10 +26,10 @@ harness:start
 └───────────────┘
 ```
 
-## Provider Selection Guidelines
+## Harness Selection Guidelines
 
-| Provider | Best For | Trade-offs |
-|----------|----------|------------|
+| Harness | Best For | Trade-offs |
+|---------|----------|------------|
 | **Claude** | Nuanced analysis, complex reasoning, code review | Higher latency, higher cost |
 | **Codex** | Fast tasks, summarization, simple transforms | Less nuanced, but faster |
 
@@ -43,7 +43,7 @@ bun run examples/multi-provider/index.ts
 ## Example Output
 
 ```
-=== Multi-Provider Example ===
+=== Multi-Harness Example ===
 
 Demonstrating Claude + Codex in a single workflow.
 
@@ -54,14 +54,14 @@ Agent Activations: 2
 
 === Signal Flow ===
 
-[system] harness:start
+[system] workflow:start
 [analyzer] [claude] agent:activated
 [analyzer] analysis:complete
 [summarizer] [codex] agent:activated
 [summarizer] summary:complete
-[system] harness:end
+[system] workflow:end
 
-=== Provider Usage ===
+=== Harness Usage ===
 
 - claude
 - codex
@@ -96,62 +96,62 @@ The code has critical issues including a missing await, no error handling, and p
 
 ## Code Walkthrough
 
-### 1. Create Multiple Providers
+### 1. Create Multiple Harnesses
 
 ```typescript
 // Claude for deep analysis
-const claudeProvider = new ClaudeProvider({
+const claudeHarness = new ClaudeHarness({
   model: "claude-sonnet-4-20250514",
 });
 
 // Codex for quick tasks
-const codexProvider = new CodexProvider({
+const codexHarness = new CodexHarness({
   model: "gpt-4.1-nano",
 });
 ```
 
-### 2. Assign Providers to Agents
+### 2. Assign Harnesses to Agents
 
 ```typescript
 const analyzer = agent({
   prompt: "Analyze this code...",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],
-  signalProvider: claudeProvider,  // Uses Claude
+  harness: claudeHarness,  // Uses Claude
 });
 
 const summarizer = agent({
   prompt: "Summarize the analysis...",
   activateOn: ["analysis:complete"],
   emits: ["summary:complete"],
-  signalProvider: codexProvider,  // Uses Codex
+  harness: codexHarness,  // Uses Codex
 });
 ```
 
-### 3. Run Without Default Provider
+### 3. Run Without Default Harness
 
 ```typescript
 const result = await runReactive({
   agents: { analyzer, summarizer },
   state: { code, analysis: null, summary: null },
-  // No default provider - each agent has its own
+  // No default harness - each agent has its own
 });
 ```
 
-## Provider Configuration
+## Harness Configuration
 
-### Claude Provider
+### Claude Harness
 
 ```typescript
-const claude = new ClaudeProvider({
+const claude = new ClaudeHarness({
   model: "claude-sonnet-4-20250514",  // or "claude-opus-4-20250514"
 });
 ```
 
-### Codex Provider
+### Codex Harness
 
 ```typescript
-const codex = new CodexProvider({
+const codex = new CodexHarness({
   model: "gpt-4.1-nano",  // Fast, cost-effective
   // or "o4-mini" for more capable tasks
 });
@@ -178,12 +178,12 @@ Use Codex for high-volume, straightforward tasks:
 ```typescript
 // Claude analyzes, Codex formats
 const analyst = agent({
-  signalProvider: claude,
+  harness: claude,
   // Complex analysis...
 });
 
 const formatter = agent({
-  signalProvider: codex,
+  harness: codex,
   // Format output...
 });
 ```

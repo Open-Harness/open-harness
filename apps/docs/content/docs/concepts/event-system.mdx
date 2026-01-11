@@ -37,11 +37,11 @@ interface Signal {
 
 ## Signal Categories
 
-### Harness Lifecycle
+### Workflow Lifecycle
 
 ```typescript
-{ name: "harness:start", payload: { state: {...} } }
-{ name: "harness:end", payload: { state: {...}, metrics: {...} } }
+{ name: "workflow:start", payload: { state: {...} } }
+{ name: "workflow:end", payload: { state: {...}, metrics: {...} } }
 ```
 
 ### Agent Signals
@@ -52,12 +52,12 @@ interface Signal {
 { name: "agent:completed", payload: { agent: "analyzer", output: "..." } }
 ```
 
-### Provider Signals
+### Harness Signals
 
 ```typescript
-{ name: "provider:start", payload: { model: "claude-sonnet-4-20250514" } }
-{ name: "provider:end", payload: { usage: { inputTokens: 100, outputTokens: 50 } } }
-{ name: "provider:error", payload: { error: "Rate limited" } }
+{ name: "harness:start", payload: { model: "claude-sonnet-4-20250514" } }
+{ name: "harness:end", payload: { usage: { inputTokens: 100, outputTokens: 50 } } }
+{ name: "harness:error", payload: { error: "Rate limited" } }
 ```
 
 ### Text Streaming
@@ -96,7 +96,7 @@ Agents can emit custom signals via `emits`:
 ```typescript
 const analyzer = agent({
   prompt: "Analyze the input",
-  activateOn: ["harness:start"],
+  activateOn: ["workflow:start"],
   emits: ["analysis:complete"],  // Custom signal
 });
 ```
@@ -106,14 +106,14 @@ const analyzer = agent({
 Agents subscribe to signals with `activateOn`:
 
 ```typescript
-// Activate on harness lifecycle
-activateOn: ["harness:start"]
+// Activate on workflow lifecycle
+activateOn: ["workflow:start"]
 
 // Activate on custom signals
 activateOn: ["analysis:complete", "review:done"]
 
-// Activate on provider events
-activateOn: ["provider:end"]
+// Activate on harness events
+activateOn: ["harness:end"]
 
 // Activate on state changes
 activateOn: ["state:analysis:changed"]
@@ -128,7 +128,7 @@ Signal patterns support wildcards:
 "agent:*"  // Matches agent:activated, agent:completed, etc.
 
 // Multi-segment wildcard
-"provider:**"  // Matches provider:start, provider:end, provider:error
+"harness:**"  // Matches harness:start, harness:end, harness:error
 
 // Prefix matching
 "*:complete"  // Matches analysis:complete, review:complete, etc.
@@ -138,24 +138,24 @@ Signal patterns support wildcards:
 
 ```mermaid
 sequenceDiagram
-    participant H as Harness
+    participant W as Workflow
     participant A as Analyzer
     participant R as Reviewer
-    participant P as Provider
+    participant H as Harness
 
-    H->>H: emit harness:start
-    H->>A: activate (matches harness:start)
-    A->>P: run prompt
-    P-->>A: text:delta (streaming)
-    P-->>A: provider:end
-    A->>H: emit analysis:complete
-    A->>H: update state.analysis
-    H->>R: activate (matches analysis:complete)
-    R->>P: run prompt
-    P-->>R: provider:end
-    R->>H: emit review:done
-    H->>H: endWhen → true
-    H->>H: emit harness:end
+    W->>W: emit workflow:start
+    W->>A: activate (matches workflow:start)
+    A->>H: run prompt
+    H-->>A: text:delta (streaming)
+    H-->>A: harness:end
+    A->>W: emit analysis:complete
+    A->>W: update state.analysis
+    W->>R: activate (matches analysis:complete)
+    R->>H: run prompt
+    H-->>R: harness:end
+    R->>W: emit review:done
+    W->>W: endWhen → true
+    W->>W: emit workflow:end
 ```
 
 ## Causality Tracking
@@ -181,13 +181,13 @@ const result = await runReactive({ /* ... */ });
 
 console.log(result.signals);
 // [
-//   { name: "harness:start", ... },
+//   { name: "workflow:start", ... },
 //   { name: "agent:activated", payload: { agent: "analyzer" } },
-//   { name: "provider:start", ... },
+//   { name: "harness:start", ... },
 //   { name: "text:delta", ... },
-//   { name: "provider:end", ... },
-//   { name: "analysis:complete", ... },
 //   { name: "harness:end", ... },
+//   { name: "analysis:complete", ... },
+//   { name: "workflow:end", ... },
 // ]
 ```
 
