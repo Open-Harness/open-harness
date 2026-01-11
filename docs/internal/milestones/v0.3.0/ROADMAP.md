@@ -47,8 +47,8 @@ v0.3.0 is organized into 5 milestones with **19 epics** total. Each milestone ha
 - [x] OpenAI provider implemented and validated
 - [x] Both providers pass same test suite
 - [ ] Cross-provider recording/replay works
-- [ ] Signal-native eval system works (P0-6)
 - [x] Old RecordingStore infrastructure deleted
+- ⏳ Signal-native eval system (P0-6) - **Deferred to v0.3.1**
 
 ### Quality Gate: Phase 0 → Milestone 1
 
@@ -57,8 +57,8 @@ v0.3.0 is organized into 5 milestones with **19 epics** total. Each milestone ha
 bun run test:providers        # Both providers pass same suite
 bun run test:recording        # Recording/replay works
 bun run test:cross-provider   # Record with Claude, replay with OpenAI signal format
-bun run test:eval             # Signal-native eval assertions work
 bun run typecheck             # No type errors (old types deleted)
+# Note: Signal-native eval (P0-6) deferred to v0.3.1 - vitest provides trajectory assertions
 ```
 
 ### Epics
@@ -148,11 +148,17 @@ bun run typecheck             # No type errors (old types deleted)
 
 ---
 
-#### P0-6: Signal-Native Eval System ❌
+#### P0-6: Signal-Native Eval System ⏳ (Deferred to v0.3.1)
 **Scope:** Migrate eval system from RecordingStore to SignalStore with signal-native assertions.
-**Status:** Not Started - Old eval deleted, new system not yet built
+**Status:** Deferred - `@open-harness/vitest` covers 80% of use cases
 
-**Why Now:**
+**Deferral Rationale:**
+- `@open-harness/vitest` already provides trajectory assertions via `toHaveSignalsInOrder()`
+- Signal pattern matching (`toContainSignal`, `toHaveSignalCount`) already exists
+- Eval adds value for large-scale dataset testing, but vitest is sufficient for v0.3.0
+- Full eval implementation will be P0-1 in v0.3.1
+
+**Original Why:**
 - Eval depends on signals/store which already exist (P0-1, P0-3)
 - Having eval early lets us validate everything as we build
 - Old eval uses `RecordingStore` which we're deleting - need migration path
@@ -513,7 +519,7 @@ bun run docs:build            # Docs site builds
 - [x] Signal reference
 - [x] Provider implementation guide (custom-agents.mdx → Custom Providers)
 - [x] Testing guide (@open-harness/vitest) - 4 pages in guides/testing/
-- [ ] Eval guide (@open-harness/eval) - blocked on P0-6
+- ⏳ Eval guide (@open-harness/eval) - **Deferred to v0.3.1**
 - [x] API reference (runtime.mdx, events.mdx, Signal type)
 - [x] Migration guide from v0.2.0 (learn/migration.mdx)
 
@@ -570,7 +576,7 @@ bun run docs:build            # Docs site builds
 - [ ] Verify bundle size reduced
 
 **Complexity:** Medium
-**Dependencies:** P0-6, P1, P2, P3
+**Dependencies:** P1, P2, P3 (P0-6 deferred to v0.3.1)
 
 ---
 
@@ -579,21 +585,19 @@ bun run docs:build            # Docs site builds
 ```
 Phase 0: Core Infrastructure
 ─────────────────────────────
-P0-1 (Signal Primitives)
+P0-1 (Signal Primitives) ✅
  │
- ├──▶ P0-2 (Provider Interface)
+ ├──▶ P0-2 (Provider Interface) ✅
  │     │
- │     └──▶ P0-4 (Claude Provider)
+ │     └──▶ P0-4 (Claude Provider) ✅
  │           │
- │           └──▶ P0-5 (OpenAI Provider)
- │                 │
- │                 └──▶ P0-6 (Signal-Native Eval) ──▶ [GATE: Phase 0 Complete]
+ │           └──▶ P0-5 (OpenAI Provider) ✅ ──▶ [GATE: Phase 0 Complete]
  │
- └──▶ P0-3 (SignalStore & Recording)
+ └──▶ P0-3 (SignalStore & Recording) ✅
        │
-       ├──▶ P0-4 (Claude Provider)
-       │
-       └──▶ P0-6 (Signal-Native Eval)
+       └──▶ P0-4 (Claude Provider) ✅
+
+ P0-6 (Signal-Native Eval) ⏳ ──▶ Deferred to v0.3.1
 
 
 Milestone 1: Agent Foundation
@@ -647,7 +651,7 @@ P1 (Examples Update)
 | P0-3 | SignalStore & Recording | Phase 0 | High | ✅ Done |
 | P0-4 | Claude Provider Migration | Phase 0 | Medium | ✅ Done |
 | P0-5 | OpenAI Provider | Phase 0 | Medium | ✅ Done |
-| P0-6 | Signal-Native Eval | Phase 0 | High | ❌ Not Started |
+| P0-6 | Signal-Native Eval | Phase 0 | High | ⏳ Deferred to v0.3.1 |
 | F1 | Basic Reactive Agent | Foundation | Medium | ✅ Done |
 | F2 | Template Expansion | Foundation | Medium | ✅ Done |
 | E1 | Multi-Agent Signals | Execution | Medium | ✅ Done |
@@ -679,16 +683,20 @@ P1 (Examples Update)
 - [x] P4: Cleanup & Deletion ✅ **All legacy code deleted**
 - [x] P3: Internal Documentation ✅ **All package READMEs created**
 
-**Remaining Work (1 epic):**
+**Remaining Work:**
 
-1. **P0-6: Signal-Native Eval** ❌ - See detailed spec below
+None for v0.3.0 - P0-6 (Signal-Native Eval) deferred to v0.3.1.
+`@open-harness/vitest` provides trajectory assertions (`toHaveSignalsInOrder`) for v0.3.0.
 
 **Recently Completed:**
 - **P2: Documentation Cleanup** ✅ - Clean slate rewrite complete (all docs except eval guide)
+- **P5: v0.3.0 Landing** 🚀 - Package structure cleanup, eval deferral, quality sweep
 
 ---
 
 ## P0-6: Signal-Native Eval System (Detailed)
+
+> **⏳ DEFERRED TO v0.3.1**: This section is preserved for future reference. For v0.3.0, use `@open-harness/vitest` which provides trajectory assertions (`toHaveSignalsInOrder`), signal pattern matching (`toContainSignal`, `toHaveSignalCount`), and snapshot testing.
 
 **Full Specification:** `specs/p0-6-signal-native-eval/spec.md`
 
@@ -877,7 +885,7 @@ Clean slate rewrite of external documentation:
 - [x] Signal reference - concepts/event-system.mdx, reference/api/events.mdx
 - [x] Provider implementation guide - guides/agents/custom-agents.mdx (Custom Providers)
 - [x] Testing guide (@open-harness/vitest) - guides/testing/* (4 pages)
-- [ ] Eval guide (@open-harness/eval) - blocked on P0-6
+- ⏳ Eval guide (@open-harness/eval) - **Deferred to v0.3.1**
 - [x] API reference - reference/api/runtime.mdx, reference/types/runtime-event.mdx
 - [x] Migration guide from v0.2.0 - learn/migration.mdx
 
