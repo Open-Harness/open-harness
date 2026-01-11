@@ -2,10 +2,22 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.2/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "@open-harness/core",
+      "@open-harness/client",
+      "@open-harness/server",
+      "@open-harness/react",
+      "@open-harness/stores",
+      "@open-harness/testing",
+      "@open-harness/vitest",
+      "@open-harness/claude",
+      "@open-harness/openai"
+    ]
+  ],
   "linked": [],
   "access": "public",
-  "baseBranch": "master",
+  "baseBranch": "dev",
   "updateInternalDependencies": "patch",
   "ignore": []
 }

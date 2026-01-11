@@ -1,0 +1,277 @@
+---
+title: runReactive
+description: Execute signal-based agent workflows
+---
+
+# runReactive
+
+The `runReactive()` function executes signal-based agent workflows.
+
+## Basic Usage
+
+```typescript
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
+
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createWorkflow<State>();
+
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  emits: ["analysis:complete"],
+  updates: "result",
+});
+
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  harness: new ClaudeHarness(),
+  endWhen: (s) => s.result !== null,
+});
+```
+
+## Configuration
+
+```typescript
+interface RunReactiveConfig<TState> {
+  // Required
+  agents: Record<string, Agent>;
+  state: TState;
+  harness: Harness;
+
+  // Optional
+  endWhen?: (state: TState) => boolean;
+  recording?: RecordingConfig;
+  reducers?: Record<string, SignalReducer<TState>>;
+  timeout?: number;
+}
+```
+
+### agents
+
+Record of named agents to include in the workflow:
+
+```typescript
+agents: {
+  analyzer,
+  reviewer,
+  fixer,
+}
+```
+
+### state
+
+Initial state object. Must match the `TState` type parameter:
+
+```typescript
+state: {
+  input: "data to analyze",
+  analysis: null,
+  review: null,
+}
+```
+
+### harness
+
+Default harness for agents without per-agent override:
+
+```typescript
+harness: new ClaudeHarness({ model: "claude-sonnet-4-20250514" })
+```
+
+### endWhen
+
+Termination condition. Workflow ends when this returns `true`:
+
+```typescript
+endWhen: (state) => state.result !== null
+```
+
+If not provided, workflow runs until quiescence (no pending signals).
+
+### recording
+
+Recording/replay configuration:
+
+```typescript
+recording: {
+  mode: "record",           // "record" | "replay"
+  store: new MemorySignalStore(),
+  recordingId?: "rec_123",  // Required for replay
+  name?: "my-workflow",     // Recording name
+  tags?: ["test"],          // Recording tags
+}
+```
+
+### reducers
+
+Custom state reducers for complex signal→state updates:
+
+```typescript
+reducers: {
+  "trade:proposed": (state, signal) => ({
+    ...state,
+    trades: [...state.trades, signal.payload],
+  }),
+}
+```
+
+### timeout
+
+Maximum execution time in milliseconds:
+
+```typescript
+timeout: 30000  // 30 seconds
+```
+
+## Return Value
+
+```typescript
+interface WorkflowResult<TState> {
+  state: TState;              // Final state
+  signals: Signal[];          // Full signal trace
+  metrics: {
+    durationMs: number;       // Execution time
+    activations: number;      // Agent activation count
+  };
+  terminatedEarly: boolean;   // endWhen triggered
+  recordingId?: string;       // If recording
+}
+```
+
+### state
+
+The final state after all agents have completed:
+
+```typescript
+console.log(result.state.analysis);
+```
+
+### signals
+
+Complete signal trace for debugging and testing:
+
+```typescript
+result.signals.forEach(s => {
+  console.log(`[${s.timestamp}] ${s.name}`, s.payload);
+});
+```
+
+### metrics
+
+Execution metrics:
+
+```typescript
+console.log(`Duration: ${result.metrics.durationMs}ms`);
+console.log(`Activations: ${result.metrics.activations}`);
+```
+
+### terminatedEarly
+
+`true` if `endWhen` condition triggered termination:
+
+```typescript
+if (result.terminatedEarly) {
+  console.log("Workflow completed via endWhen condition");
+}
+```
+
+### recordingId
+
+Recording ID if recording was enabled:
+
+```typescript
+if (result.recordingId) {
+  console.log(`Saved recording: ${result.recordingId}`);
+}
+```
+
+## Examples
+
+### Basic Workflow
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  harness: new ClaudeHarness(),
+  endWhen: (s) => s.result !== null,
+});
+```
+
+### Multi-Agent Workflow
+
+```typescript
+const result = await runReactive({
+  agents: { planner, coder, reviewer },
+  state: { task: "Build a TODO app", plan: null, code: null, review: null },
+  harness: new ClaudeHarness(),
+  endWhen: (s) => s.review?.passed === true,
+});
+```
+
+### With Recording
+
+```typescript
+const store = new MemorySignalStore();
+
+// Record
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness: new ClaudeHarness(),
+  recording: { mode: "record", store, name: "test-run" },
+});
+
+// Replay
+const replay = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness: new ClaudeHarness(), // Not called
+  recording: { mode: "replay", store, recordingId: result.recordingId! },
+});
+```
+
+### With Custom Reducers
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer, trader },
+  state: { analysis: null, trades: [] },
+  harness,
+  reducers: {
+    "trade:proposed": (state, signal) => ({
+      ...state,
+      trades: [...state.trades, signal.payload.trade],
+    }),
+  },
+});
+```
+
+## Error Handling
+
+```typescript
+try {
+  const result = await runReactive({ /* ... */ });
+} catch (error) {
+  if (error instanceof TimeoutError) {
+    console.error("Workflow timed out");
+  } else if (error instanceof HarnessError) {
+    console.error("Harness failed:", error.message);
+  }
+}
+```
+
+## See Also
+
+<Cards>
+  <Card title="createWorkflow" href="/docs/reference">
+    Factory function for typed agents
+  </Card>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Signal types and flow
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Persist and replay workflows
+  </Card>
+</Cards>

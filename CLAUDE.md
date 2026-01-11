@@ -36,12 +36,17 @@ tests/
 ## Commands
 
 ```bash
+# From repository root (uses turbo for monorepo with caching):
+bun run typecheck   # Type check entire monorepo
+bun run lint        # Lint entire monorepo
+bun run test        # Run tests across monorepo
+
 # In packages/sdk/:
 bun run test        # Safe tests only (unit + replay, no network)
 bun run test:live   # Integration tests (requires auth)
-bun run typecheck   # Type checking
-bun run lint        # Linting
 ```
+
+**Note**: Always use `bun x` (not `bunx`) for running executables. Use `bun run <script>` for package.json scripts.
 
 ## Code Style
 
@@ -105,6 +110,67 @@ Never claim a task is complete without:
   - Modifying the contract between components
   - Changing data flow patterns (who produces vs consumes)
 - When in doubt, ask. A quick question is better than an unauthorized refactor.
+
+## CRITICAL: Debugging with Logs
+
+**USE THE `harness-logs` SKILL PROACTIVELY** when debugging issues in this repository.
+
+Logs are written to `.open-harness/logs/harness.log` in JSONL format. Before asking the user "what went wrong?" - CHECK THE LOGS FIRST.
+
+**Quick error check:**
+```bash
+jq -c 'select(.level >= 50)' .open-harness/logs/harness.log 2>/dev/null | tail -10
+```
+
+**When to check logs:**
+- Test failures
+- Runtime errors
+- Unexpected behavior
+- Verifying what actually happened
+
+**Activate the skill:** Use `/harness-logs` or let it auto-activate during any debugging session.
+
+See `.claude/skills/harness-logs/SKILL.md` for full JQ patterns and debugging workflows.
+
+## CRITICAL: No console.log/error/warn
+
+**DO NOT use `console.log`, `console.error`, `console.warn`, or `console.debug` in this codebase.**
+
+Use the structured Pino logger instead:
+
+```typescript
+import { getLogger } from "@internal/core";
+
+const logger = getLogger();
+
+// ❌ WRONG
+console.log("Starting process");
+console.error("Something failed:", error);
+
+// ✅ CORRECT
+logger.info({ processId }, "Starting process");
+logger.error({ err: error, context }, "Something failed");
+```
+
+**Why:**
+1. Structured logs are queryable with `jq`
+2. Automatic file output to `.open-harness/logs/harness.log`
+3. Log levels enable filtering (trace/debug/info/warn/error)
+4. Correlation IDs (runId, nodeId) for tracing
+5. Consistent format across the codebase
+
+**Logger API:**
+- `logger.trace()` - Very verbose (streaming deltas)
+- `logger.debug()` - Tool calls, state patches
+- `logger.info()` - Lifecycle events (default level)
+- `logger.warn()` - Interruptions, timeouts
+- `logger.error({ err: error }, "message")` - Failures (use `err` key for errors)
+
+**For event logging**, use the event subscriber instead of manual logging:
+```typescript
+import { subscribeLogger } from "@internal/core";
+const unsubscribe = subscribeLogger(runtime, logger);
+```
 
 ## CRITICAL: Authentication
 

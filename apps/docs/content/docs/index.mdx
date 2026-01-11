@@ -1,54 +1,105 @@
 ---
 title: Open Harness
-description: Event-driven workflow orchestration for multi-agent AI systems
+description: Signal-based reactive workflows for AI agents
 ---
 
 # Open Harness
 
-Open Harness is an event-driven workflow execution system for building production multi-agent AI systems.
+Open Harness is a signal-based reactive workflow system for building production multi-agent AI systems in TypeScript.
 
 ## Why Open Harness?
 
-- **Declarative Workflows**: Define agent pipelines in YAML, not imperative code
-- **Full Observability**: Every event flows through a central Hub you can subscribe to
-- **JSONata Expressions**: Powerful data bindings with a proven expression language
-- **Replay Testing**: Record and replay agent interactions for deterministic tests
+- **Reactive Architecture**: Agents subscribe to signals with `activateOn`, emit signals with `emits`. Workflow emerges from signal flow.
+- **Typed State**: Full TypeScript autocomplete for state, guards, and outputs. No runtime surprises.
+- **Recording/Replay**: Event-sourced signals enable deterministic testing. Record once, replay in CI.
+- **Parallel Execution**: Multiple agents reacting to the same signal run concurrently, automatically.
 
 ## Quick Example
 
-```yaml
-flow:
-  name: research-and-summarize
+```typescript
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
-nodes:
-  - id: researcher
-    type: claude.agent
-    input:
-      prompt: "Research: {{ flow.input.topic }}"
+// 1. Define your state type
+type State = {
+  input: string;
+  analysis: string | null;
+};
 
-  - id: summarizer
-    type: claude.agent
-    input:
-      prompt: "Summarize this research: {{ researcher.text }}"
+// 2. Create typed workflow factory
+const { agent, runReactive } = createWorkflow<State>();
 
-edges:
-  - from: researcher
-    to: summarizer
+// 3. Define a reactive agent
+const analyzer = agent({
+  prompt: "Analyze this input: {{ state.input }}",
+  activateOn: ["workflow:start"],  // React to workflow start
+  emits: ["analysis:complete"],    // Emit when done
+  updates: "analysis",             // Update state.analysis with output
+});
+
+// 4. Run the workflow
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello, world!", analysis: null },
+  harness: new ClaudeHarness(),
+  endWhen: (s) => s.analysis !== null,
+});
+
+console.log(result.state.analysis);
+// Signals: workflow:start → agent:activated → harness:end → analysis:complete → workflow:end
 ```
+
+## Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Signal** | An event that flows through the system (`workflow:start`, `analysis:complete`) |
+| **Agent** | A reactive unit that subscribes to signals and produces output |
+| **Workflow** | A container that coordinates agents and manages state |
+| **Harness** | An AI model adapter (Claude, OpenAI) that executes agent prompts |
 
 ## Get Started
 
 <Cards>
   <Card title="Quickstart" href="/docs/learn/quickstart">
-    Run your first flow in 5 minutes
+    Run your first reactive agent in 5 minutes
   </Card>
   <Card title="Architecture" href="/docs/concepts/architecture">
-    Understand Hub, Flow, and Channels
+    Understand signals, agents, and workflows
   </Card>
-  <Card title="JSONata Bindings" href="/docs/guides/expressions/bindings">
-    Master the expression language
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Chain multiple agents with signal subscriptions
   </Card>
-  <Card title="API Reference" href="/docs/reference/api/hub">
-    Explore the full API
+  <Card title="API Reference" href="/docs/reference">
+    Full API documentation
   </Card>
 </Cards>
+
+## Signal Patterns
+
+Agents activate on signal patterns:
+
+```typescript
+// Activate on workflow lifecycle
+activateOn: ["workflow:start"]
+
+// Activate on custom signals from other agents
+activateOn: ["analysis:complete", "review:done"]
+
+// Activate on harness events (advanced)
+activateOn: ["harness:end"]
+
+// Activate on state changes
+activateOn: ["state:analysis:changed"]
+```
+
+## Installation
+
+```bash
+bun add @open-harness/core
+```
+
+For testing utilities:
+
+```bash
+bun add -D @open-harness/vitest
+```

@@ -1,12 +1,4 @@
 {
 	"title": "API",
-	"pages": [
-		"hub",
-		"agent",
-		"channel",
-		"flow-runtime",
-		"events",
-		"node-registry",
-		"run-store"
-	]
+	"pages": ["runtime", "events"]
 }
