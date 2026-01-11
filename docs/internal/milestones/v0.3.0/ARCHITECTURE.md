@@ -353,6 +353,210 @@ v0.3.0 is complete when:
 
 ---
 
+## Architecture Diagrams
+
+### Signal Flow
+
+How signals flow through the reactive system:
+
+```mermaid
+flowchart TB
+    subgraph Harness["runReactive()"]
+        Start([harness:start]) --> Bus
+
+        subgraph Bus["SignalBus"]
+            direction LR
+            Emit[emit] --> Match[pattern match]
+            Match --> Notify[notify subscribers]
+        end
+
+        Bus --> Agent1["Agent A<br/>activateOn: harness:start"]
+        Bus --> Agent2["Agent B<br/>activateOn: harness:start"]
+
+        Agent1 --> Provider1["ClaudeProvider"]
+        Agent2 --> Provider2["ClaudeProvider"]
+
+        Provider1 -->|"text:delta"| Bus
+        Provider1 -->|"provider:end"| Bus
+        Provider1 -->|"custom:signal"| Bus
+
+        Provider2 -->|"text:delta"| Bus
+        Provider2 -->|"provider:end"| Bus
+
+        Bus --> Agent3["Agent C<br/>activateOn: custom:signal"]
+
+        Agent3 --> Provider3["Provider"]
+        Provider3 -->|"provider:end"| Bus
+
+        Bus --> End([harness:end])
+    end
+
+    subgraph Store["MemorySignalStore"]
+        Record[append signals]
+    end
+
+    Bus -.->|record| Store
+```
+
+### Harness Lifecycle
+
+The execution sequence of `runReactive()`:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Harness as runReactive()
+    participant Bus as SignalBus
+    participant Agent as Agent
+    participant Provider as Provider
+    participant Store as SignalStore
+
+    User->>Harness: runReactive({ agents, state, provider })
+    Harness->>Bus: emit("harness:start")
+    Bus->>Store: append(signal)
+
+    loop For each matching agent
+        Bus->>Agent: activate (pattern matched)
+        Agent->>Agent: check when() guard
+        alt Guard passes
+            Agent->>Provider: run(input, ctx)
+            loop Streaming
+                Provider-->>Bus: emit("text:delta")
+                Bus-->>Store: append(signal)
+            end
+            Provider-->>Bus: emit("provider:end")
+            Provider-->>Agent: return output
+            Agent->>Bus: emit(custom signals)
+            Bus->>Store: append(signal)
+        else Guard fails
+            Agent->>Bus: emit("agent:skipped")
+        end
+    end
+
+    Harness->>Harness: check endWhen(state)
+    alt Quiescence or endWhen
+        Harness->>Bus: emit("harness:end")
+        Harness->>User: return { signals, state, metrics }
+    else More work
+        Note over Harness,Bus: Continue signal loop
+    end
+```
+
+### Package Dependencies
+
+How packages relate to each other:
+
+```mermaid
+graph TB
+    subgraph Published["@open-harness/*"]
+        Core["@open-harness/core"]
+        Vitest["@open-harness/vitest"]
+        Client["@open-harness/client"]
+        Server["@open-harness/server"]
+        React["@open-harness/react"]
+        Testing["@open-harness/testing"]
+        Stores["@open-harness/stores"]
+    end
+
+    subgraph Internal["@internal/*"]
+        ICore["@internal/core"]
+        IClient["@internal/client"]
+        IServer["@internal/server"]
+        ISignalsCore["@internal/signals-core"]
+        ISignals["@internal/signals"]
+    end
+
+    subgraph Adapters["@open-harness/provider-*"]
+        Claude["@open-harness/provider-claude"]
+        OpenAI["@open-harness/provider-openai"]
+    end
+
+    %% Published depends on Internal
+    Core --> ICore
+    Client --> IClient
+    Server --> IServer
+
+    %% Published depends on Internal signals
+    Core --> ISignalsCore
+    Core --> ISignals
+    Core --> Claude
+    Core --> OpenAI
+
+    %% Internal depends on Signals
+    ICore --> ISignalsCore
+    ICore --> ISignals
+
+    %% Vitest re-exports
+    Vitest --> Core
+
+    %% Provider dependencies
+    Claude --> SCore
+    OpenAI --> SCore
+
+    %% Bus depends on core
+    SBus --> SCore
+```
+
+### Agent Activation Flow
+
+How agents are activated by signals:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle: Agent registered
+
+    Idle --> Matching: Signal emitted
+    Matching --> Idle: Pattern doesn't match
+    Matching --> GuardCheck: Pattern matches activateOn
+
+    GuardCheck --> Idle: when() returns false
+    GuardCheck --> Activated: when() returns true (or no guard)
+
+    Activated --> Running: Provider.run() called
+    Running --> Running: Streaming (text:delta)
+    Running --> Emitting: provider:end received
+
+    Emitting --> Updating: Has updates field
+    Updating --> Idle: State updated, signals emitted
+
+    Emitting --> Idle: No updates field
+
+    note right of Activated
+        Template expansion happens here
+        {{ state.x }} resolved
+    end note
+
+    note right of Emitting
+        Custom signals from emits[]
+        are emitted here
+    end note
+```
+
+### Recording & Replay
+
+How signal recording enables deterministic replay:
+
+```mermaid
+flowchart LR
+    subgraph Record["Recording Mode"]
+        R1[runReactive] --> R2[Provider calls SDK]
+        R2 --> R3[Signals captured]
+        R3 --> R4[Save to store]
+    end
+
+    subgraph Replay["Replay Mode"]
+        P1[runReactive] --> P2{Signal in store?}
+        P2 -->|Yes| P3[Inject recorded signal]
+        P2 -->|No| P4[Provider calls SDK]
+        P3 --> P5[Continue execution]
+        P4 --> P5
+    end
+
+    R4 -.->|"fixtures/"| P1
+```
+
+---
+
 ## References
 
 - [Zustand Documentation](https://zustand-demo.pmnd.rs/)

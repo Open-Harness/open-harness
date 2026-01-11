@@ -14,14 +14,16 @@
 	"scripts": {
 		"lint": "biome check . --write",
 		"typecheck": "tsc --noEmit",
-		"test": "bun test tests/"
+		"test": "vitest run"
 	},
 	"peerDependencies": {
 		"vitest": "^2.0.0",
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@open-harness/core": "workspace:*"
+		"@open-harness/core": "workspace:*",
+		"@internal/signals-core": "workspace:*",
+		"@internal/signals": "workspace:*"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",

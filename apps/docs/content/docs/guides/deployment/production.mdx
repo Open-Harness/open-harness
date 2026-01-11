@@ -1,6 +1,6 @@
 ---
 title: Production Deployment
-description: Checklist for deploying Open Harness to production
+description: Checklist for deploying Open Harness workflows
 ---
 
 # Production Deployment
@@ -9,97 +9,149 @@ A practical checklist for running Open Harness in production.
 
 ## Deployment Targets
 
-- **Node.js server**: run flows behind an HTTP API.
-- **Bun service**: use Bun for faster startup and WebSocket transport support.
-- **Serverless**: supported for short-lived flows (avoid long-lived streaming).
+- **Node.js/Bun server**: Run workflows behind an HTTP API
+- **Serverless**: Supported for short-lived workflows (avoid long-running streams)
+- **Edge**: For lightweight workflows with minimal dependencies
 
-## Example: Standalone Runtime Service
+## Example: Workflow API Service
 
 ```typescript
 import express from "express";
-import { createRuntime, parseFlowYaml } from "@open-harness/server";
-import { DefaultNodeRegistry } from "@open-harness/core";
-import { SqliteRunStore } from "@open-harness/run-store-sqlite";
-import { readFileSync } from "node:fs";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
 const app = express();
 app.use(express.json());
 
-const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const registry = new DefaultNodeRegistry();
-const store = new SqliteRunStore({ filename: "./data/runs.db" });
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createWorkflow<State>();
 
-app.post("/run", async (req, res) => {
-  const runtime = createRuntime({ flow, registry, store });
-  const snapshot = await runtime.run(req.body ?? {});
-  res.json({ outputs: snapshot.outputs, status: snapshot.status });
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  emits: ["analysis:complete"],
+  updates: "result",
+});
+
+const harness = new ClaudeHarness({
+  model: "claude-sonnet-4-20250514",
+});
+
+app.post("/analyze", async (req, res) => {
+  try {
+    const result = await runReactive({
+      agents: { analyzer },
+      state: { input: req.body.input, result: null },
+      harness,
+      endWhen: (s) => s.result !== null,
+    });
+
+    res.json({
+      result: result.state.result,
+      metrics: result.metrics,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Workflow failed" });
+  }
 });
 
 app.listen(3000, () => {
-  console.log("Runtime service on :3000");
+  console.log("Workflow service on :3000");
 });
 ```
 
 ## Error Handling
 
-Subscribe to runtime events and log failures:
+Handle workflow failures gracefully:
 
 ```typescript
-runtime.onEvent((event) => {
-  if (event.type === "node:error") {
-    logger.error("Node failed", {
-      nodeId: event.nodeId,
-      error: event.error,
-    });
+try {
+  const result = await runReactive({
+    agents: { analyzer },
+    state: initialState,
+    harness,
+  });
+} catch (error) {
+  if (error instanceof HarnessError) {
+    // Harness API failure
+    logger.error("Harness failed", { error: error.message });
+  } else if (error instanceof TimeoutError) {
+    // Workflow timeout
+    logger.error("Workflow timeout", { durationMs: error.elapsed });
   }
-});
-```
-
-## Timeouts and Retries
-
-Configure node execution policy:
-
-```yaml
-nodes:
-  - id: agent
-    type: claude.agent
-    policy:
-      timeoutMs: 120000
-      retry:
-        maxAttempts: 3
-        backoffMs: 500
+}
 ```
 
 ## Observability
 
-- Emit metrics per event type using `runtime.onEvent`.
-- Persist snapshots with a `RunStore` for replay and auditing.
-- Capture logs with run id and node id for correlation.
+### Signal Logging
+
+Log signals for debugging:
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness,
+});
+
+// Log signal trace
+for (const signal of result.signals) {
+  logger.info(`[${signal.name}]`, {
+    timestamp: signal.timestamp,
+    payload: signal.payload,
+  });
+}
+```
+
+### Metrics
+
+Extract metrics from results:
+
+```typescript
+// Duration and activation count
+console.log(`Duration: ${result.metrics.durationMs}ms`);
+console.log(`Activations: ${result.metrics.activations}`);
+
+// Count signals by type
+const signalCounts = result.signals.reduce((acc, s) => {
+  acc[s.name] = (acc[s.name] || 0) + 1;
+  return acc;
+}, {} as Record<string, number>);
+```
 
 ## Security Best Practices
 
-- **Authentication**: protect any HTTP endpoints that start flows.
-- **Rate limiting**: throttle runs per user or API key.
-- **Input validation**: validate user input before `runtime.run`.
-- **Secrets management**: store API keys in environment variables.
+- **Authentication**: Protect endpoints that start workflows
+- **Rate limiting**: Throttle runs per user or API key
+- **Input validation**: Validate user input before `runReactive`
+- **Secrets management**: Store harness credentials in environment variables
 
 ## Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `ANTHROPIC_API_KEY` | Claude API key (if using `claude.agent`) | Optional |
-| `RUN_DB_PATH` | SQLite database path | Optional |
-| `LOG_LEVEL` | Logging verbosity | Optional |
+| `LOG_LEVEL` | Logging verbosity (trace, debug, info, warn, error) | Optional |
+
+<Callout type="info" title="Authentication">
+Open Harness uses Claude Code subscription authentication. No API key is required - authentication is handled automatically when running from within Claude Code.
+</Callout>
 
 ## Pre-Production Checklist
 
-- [ ] Validate flows with test inputs
-- [ ] Add timeouts/retries for LLM calls
-- [ ] Enable persistence for auditability
-- [ ] Add structured logging and metrics
+- [ ] Validate workflows with test inputs
+- [ ] Set appropriate timeouts
+- [ ] Add structured logging
+- [ ] Configure error handling
 - [ ] Lock down network access and secrets
+- [ ] Test recording/replay for CI
 
 ## Next Steps
 
-- [Persistence Configuration](/docs/guides/deployment/persistence) — Store options
-- [Run Store API](/docs/reference/api/run-store) — Persistence API
+<Cards>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Deterministic testing with signal replay
+  </Card>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Signal system deep dive
+  </Card>
+</Cards>

@@ -16,14 +16,14 @@ const external = [
 export default [
 	{
 		input: "src/index.ts",
-		output: { file: "dist/index.js", format: "esm" },
+		output: { file: "dist/index.js", format: "esm", inlineDynamicImports: true },
 		external,
 		plugins: [
 			commonjs(),
 			resolve({ extensions: [".mjs", ".js", ".ts", ".json"] }),
 			typescript({
 				tsconfig: "./tsconfig.json",
-				include: ["src/**/*", "../../internal/**/src/**/*"],
+				include: ["src/**/*", "../../internal/**/src/**/*", "../../adapters/**/src/**/*"],
 				compilerOptions: {
 					allowImportingTsExtensions: false,
 					noEmit: false,

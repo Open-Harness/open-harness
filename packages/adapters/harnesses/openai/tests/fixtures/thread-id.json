@@ -1,0 +1,69 @@
+{
+	"metadata": {
+		"id": "rec_1767986421167_1",
+		"createdAt": "2026-01-09T19:20:21.167Z",
+		"name": "thread-id",
+		"providerType": "codex",
+		"signalCount": 4
+	},
+	"signals": [
+		{
+			"name": "harness:start",
+			"payload": {
+				"input": {
+					"messages": [
+						{
+							"role": "user",
+							"content": "What is 2+2? Answer with just the number."
+						}
+					]
+				}
+			},
+			"timestamp": "2026-01-09T19:20:21.167Z",
+			"source": {
+				"provider": "codex"
+			}
+		},
+		{
+			"name": "text:delta",
+			"payload": {
+				"content": "4"
+			},
+			"timestamp": "2026-01-09T19:20:27.027Z",
+			"source": {
+				"provider": "codex"
+			}
+		},
+		{
+			"name": "text:complete",
+			"payload": {
+				"content": "4"
+			},
+			"timestamp": "2026-01-09T19:20:27.056Z",
+			"source": {
+				"provider": "codex"
+			}
+		},
+		{
+			"name": "harness:end",
+			"payload": {
+				"output": {
+					"content": "4",
+					"sessionId": "019ba433-ddfb-7940-beff-4f755c0cd08d",
+					"threadId": "019ba433-ddfb-7940-beff-4f755c0cd08d",
+					"usage": {
+						"inputTokens": 14848,
+						"outputTokens": 5,
+						"totalTokens": 14853
+					},
+					"stopReason": "end"
+				},
+				"durationMs": 5889
+			},
+			"timestamp": "2026-01-09T19:20:27.056Z",
+			"source": {
+				"provider": "codex"
+			}
+		}
+	]
+}

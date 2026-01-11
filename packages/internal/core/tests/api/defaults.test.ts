@@ -7,11 +7,12 @@ import {
 	resetDefaults,
 } from "../../src/api/defaults.js";
 import type { FixtureStore } from "../../src/api/types.js";
-import type { Recording, RecordingMetadata } from "../../src/recording/types.js";
-import type { RecordingListQuery } from "../../src/recording/store.js";
+import type { Recording, RecordingMetadata, Checkpoint } from "@internal/signals";
+import type { Signal } from "@internal/signals-core";
 
 /**
  * Mock fixture store for testing.
+ * Implements SignalStore interface (v0.3.0).
  */
 class MockFixtureStore implements FixtureStore {
 	readonly name: string;
@@ -20,16 +21,51 @@ class MockFixtureStore implements FixtureStore {
 		this.name = name;
 	}
 
-	async save<T>(_recording: Recording<T>): Promise<void> {
+	async create(_options?: { name?: string; tags?: string[]; harnessType?: string }): Promise<string> {
+		return "mock-recording-id";
+	}
+
+	async append(_recordingId: string, _signal: Signal): Promise<void> {
 		// No-op
 	}
 
-	async load<T>(_id: string): Promise<Recording<T> | null> {
+	async appendBatch(_recordingId: string, _signals: Signal[]): Promise<void> {
+		// No-op
+	}
+
+	async checkpoint(_recordingId: string, _name: string): Promise<void> {
+		// No-op
+	}
+
+	async getCheckpoints(_recordingId: string): Promise<Checkpoint[]> {
+		return [];
+	}
+
+	async finalize(_recordingId: string, _durationMs?: number): Promise<void> {
+		// No-op
+	}
+
+	async load(_recordingId: string): Promise<Recording | null> {
 		return null;
 	}
 
-	async list(_query?: RecordingListQuery): Promise<RecordingMetadata[]> {
+	async loadSignals(
+		_recordingId: string,
+		_options?: { fromIndex?: number; toIndex?: number; patterns?: string[] },
+	): Promise<Signal[]> {
 		return [];
+	}
+
+	async list(_query?: { harnessType?: string; tags?: string[]; limit?: number; offset?: number }): Promise<RecordingMetadata[]> {
+		return [];
+	}
+
+	async delete(_recordingId: string): Promise<void> {
+		// No-op
+	}
+
+	async exists(_recordingId: string): Promise<boolean> {
+		return false;
 	}
 }
 

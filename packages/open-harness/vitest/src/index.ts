@@ -19,19 +19,26 @@
  *
  * @example
  * ```ts
- * // tests/my-agent.test.ts
+ * // tests/my-agent.test.ts (v0.3.0)
  * import { test, expect } from 'vitest'
- * import { run, agent } from '@open-harness/vitest'
+ * import { createWorkflow, ClaudeHarness, MemorySignalStore } from '@open-harness/vitest'
  *
- * const myAgent = agent({ prompt: 'You are helpful.' })
+ * const { agent, runReactive } = createWorkflow<{ input: string }>()
  *
  * test('agent responds quickly and cheaply', async () => {
- *   const result = await run(myAgent, { prompt: 'Hello' })
+ *   const myAgent = agent({
+ *     prompt: 'You are helpful. Input: {{ state.input }}',
+ *     activateOn: ['workflow:start'],
+ *   })
  *
- *   expect(result.output).toBeDefined()
- *   expect(result).toHaveLatencyUnder(5000)  // < 5 seconds
- *   expect(result).toCostUnder(0.01)         // < $0.01
- *   expect(result).toHaveTokensUnder(1000)   // < 1000 total tokens
+ *   const result = await runReactive({
+ *     agents: { myAgent },
+ *     state: { input: 'Hello' },
+ *     defaultHarness: new ClaudeHarness(),
+ *   })
+ *
+ *   expect(result.state).toBeDefined()
+ *   expect(result.metrics.durationMs).toBeLessThan(5000)
  * })
  * ```
  *
@@ -39,7 +46,7 @@
  */
 
 // Matchers
-export { matchers, setupMatchers } from "./matchers.js";
+export { matchers, type SignalMatcher, setupMatchers, signalMatchers } from "./matchers.js";
 export type { GateConfig } from "./reporter.js";
 // Reporter
 export { OpenHarnessReporter } from "./reporter.js";
@@ -47,6 +54,13 @@ export { OpenHarnessReporter } from "./reporter.js";
 // Types (re-export for type augmentation)
 import "./types.js";
 
-// Convenience re-exports from core
-export type { RunMetrics, RunResult } from "@open-harness/core";
-export { agent, harness, run } from "@open-harness/core";
+// Convenience re-exports from core (v0.3.0)
+export {
+	agent,
+	ClaudeHarness,
+	createWorkflow,
+	MemorySignalStore,
+	type RunReactiveOptions,
+	type RunReactiveResult,
+	runReactive,
+} from "@open-harness/core";

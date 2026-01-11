@@ -1,189 +1,206 @@
 ---
-title: Event System
-description: Event-driven communication in Open Harness
+title: Signal System
+description: Signal-based communication in Open Harness
 ---
 
-# Event System
+# Signal System
 
-Everything in Open Harness communicates through events.
+Everything in Open Harness communicates through signals.
 
 ## Core Principle
 
-> Events are the single source of truth for system state.
+> Signals are the single source of truth for system state.
 
-Instead of direct method calls, components emit and subscribe to events. This provides:
+Instead of direct method calls, agents emit and subscribe to signals. This provides:
 
 - **Observability**: See exactly what happened
-- **Replay**: Reconstruct state from events
-- **Decoupling**: Components don't know about each other
+- **Replay**: Reconstruct state from signals
+- **Decoupling**: Agents don't know about each other
+- **Testing**: Deterministic signal replay in CI
 
-## Event Structure
+## Signal Structure
 
-All events share a common structure:
+All signals share a common structure:
 
 ```typescript
-interface RuntimeEvent {
-  type: string;        // Category:action format
-  timestamp?: Date;    // When it occurred
-  runId?: string;      // Associated flow run
-  nodeId?: string;     // Associated node
-  [key: string]: any;  // Event-specific data
+interface Signal {
+  id: string;           // Unique signal ID ("sig_abc123")
+  name: string;         // Signal name ("analysis:complete")
+  payload: unknown;     // Signal-specific data
+  timestamp: string;    // ISO timestamp
+  source?: {
+    agent?: string;     // Which agent emitted this
+    parent?: string;    // Parent signal (causality chain)
+  };
 }
 ```
 
-## Event Categories
+## Signal Categories
 
-### Flow Events
-
-Track flow lifecycle:
+### Workflow Lifecycle
 
 ```typescript
-{ type: "flow:start", flowId, input }
-{ type: "flow:complete", flowId, output }
-{ type: "flow:error", flowId, error }
+{ name: "workflow:start", payload: { state: {...} } }
+{ name: "workflow:end", payload: { state: {...}, metrics: {...} } }
 ```
 
-### Node Events
-
-Track node execution:
+### Agent Signals
 
 ```typescript
-{ type: "node:start", nodeId }
-{ type: "node:complete", nodeId, output }
+{ name: "agent:activated", payload: { agent: "analyzer" } }
+{ name: "agent:skipped", payload: { agent: "reviewer", reason: "when guard false" } }
+{ name: "agent:completed", payload: { agent: "analyzer", output: "..." } }
 ```
 
-### Agent Events
-
-Track LLM interactions:
+### Harness Signals
 
 ```typescript
-{ type: "agent:start", agentName }
-{ type: "agent:text", text }          // Streaming
-{ type: "agent:tool_use", name, input }
-{ type: "agent:complete", output }
+{ name: "harness:start", payload: { model: "claude-sonnet-4-20250514" } }
+{ name: "harness:end", payload: { usage: { inputTokens: 100, outputTokens: 50 } } }
+{ name: "harness:error", payload: { error: "Rate limited" } }
 ```
 
-## Subscribing to Events
-
-Use `runtime.onEvent()` to subscribe:
+### Text Streaming
 
 ```typescript
-import { createRuntime, parseFlowYaml } from "@open-harness/server";
-
-const runtime = createRuntime({
-  flow: parseFlowYaml(yaml),
-});
-
-// Subscribe to all events
-const unsubscribe = runtime.onEvent((event) => {
-  console.log(event.type, event);
-});
-
-// Run the flow
-await runtime.run({ question: "Hello" });
-
-// Cleanup
-unsubscribe();
+{ name: "text:delta", payload: { content: "The " } }
+{ name: "text:delta", payload: { content: "analysis " } }
+{ name: "text:complete", payload: { content: "The analysis shows..." } }
 ```
 
-### Filtering Events
-
-Filter by event type:
+### Thinking (Extended Thinking)
 
 ```typescript
-runtime.onEvent((event) => {
-  if (event.type === "agent:text") {
-    process.stdout.write(event.text);
-  }
-});
+{ name: "thinking:delta", payload: { content: "Let me consider..." } }
+{ name: "thinking:complete", payload: { content: "..." } }
 ```
 
-### With createHarness
-
-Use the `onEvent` option:
+### Tool Usage
 
 ```typescript
-import { createHarness, parseFlowYaml } from "@open-harness/server";
+{ name: "tool:call", payload: { name: "Read", input: { path: "/file.ts" } } }
+{ name: "tool:result", payload: { name: "Read", output: "file contents..." } }
+```
 
-const harness = createHarness({
-  flow: parseFlowYaml(yaml),
-  onEvent: (event) => {
-    if (event.type === "agent:text") {
-      process.stdout.write(event.text);
-    }
-  },
+### State Changes
+
+```typescript
+{ name: "state:analysis:changed", payload: { value: "new analysis" } }
+{ name: "state:score:changed", payload: { value: 0.95 } }
+```
+
+### Custom Signals
+
+Agents can emit custom signals via `emits`:
+
+```typescript
+const analyzer = agent({
+  prompt: "Analyze the input",
+  activateOn: ["workflow:start"],
+  emits: ["analysis:complete"],  // Custom signal
 });
 ```
 
-## Emitting Events
+## Subscribing to Signals
 
-Nodes emit events via the context:
+Agents subscribe to signals with `activateOn`:
 
 ```typescript
-const myNode = {
-  type: "my.node" as const,
-  run: async (ctx, input) => {
-    ctx.emit({ type: "agent:text", text: "Processing..." });
-    // ... do work
-    return { result: "done" };
-  },
-};
+// Activate on workflow lifecycle
+activateOn: ["workflow:start"]
+
+// Activate on custom signals
+activateOn: ["analysis:complete", "review:done"]
+
+// Activate on harness events
+activateOn: ["harness:end"]
+
+// Activate on state changes
+activateOn: ["state:analysis:changed"]
 ```
 
-## Event Persistence
+## Pattern Matching
 
-Events are persisted to the RunStore:
+Signal patterns support wildcards:
 
 ```typescript
-// Load events for a run
-const events = await store.loadEvents(runId);
+// Single segment wildcard
+"agent:*"  // Matches agent:activated, agent:completed, etc.
 
-// Replay events
-for (const event of events) {
-  await processor.handle(event);
-}
+// Multi-segment wildcard
+"harness:**"  // Matches harness:start, harness:end, harness:error
+
+// Prefix matching
+"*:complete"  // Matches analysis:complete, review:complete, etc.
 ```
 
-## Benefits
+## Signal Flow Example
 
-### Debugging
+```mermaid
+sequenceDiagram
+    participant W as Workflow
+    participant A as Analyzer
+    participant R as Reviewer
+    participant H as Harness
 
-See exactly what happened:
-
-```typescript
-runtime.onEvent((e) => console.log(JSON.stringify(e)));
+    W->>W: emit workflow:start
+    W->>A: activate (matches workflow:start)
+    A->>H: run prompt
+    H-->>A: text:delta (streaming)
+    H-->>A: harness:end
+    A->>W: emit analysis:complete
+    A->>W: update state.analysis
+    W->>R: activate (matches analysis:complete)
+    R->>H: run prompt
+    H-->>R: harness:end
+    R->>W: emit review:done
+    W->>W: endWhen → true
+    W->>W: emit workflow:end
 ```
 
-### Testing
+## Causality Tracking
 
-Assert on event sequences:
+Signals include source tracking for debugging:
 
 ```typescript
-const events: RuntimeEvent[] = [];
-runtime.onEvent((e) => events.push(e));
+const signals = result.signals;
 
-await runtime.run({ input: "test" });
-
-expect(events).toContainEqual({
-  type: "agent:complete",
-  output: expect.any(Object),
-});
+// Find what triggered the reviewer
+const reviewerActivation = signals.find(
+  s => s.name === "agent:activated" && s.payload.agent === "reviewer"
+);
+console.log("Triggered by:", reviewerActivation.source.parent);
 ```
 
-### Integration
+## Signal Trace
 
-React to events for external integrations:
+Every `runReactive` returns the full signal trace:
 
 ```typescript
-runtime.onEvent(async (event) => {
-  if (event.type === "agent:complete") {
-    await notifySlack(event.output);
-  }
-});
+const result = await runReactive({ /* ... */ });
+
+console.log(result.signals);
+// [
+//   { name: "workflow:start", ... },
+//   { name: "agent:activated", payload: { agent: "analyzer" } },
+//   { name: "harness:start", ... },
+//   { name: "text:delta", ... },
+//   { name: "harness:end", ... },
+//   { name: "analysis:complete", ... },
+//   { name: "workflow:end", ... },
+// ]
 ```
 
 ## Next Steps
 
-- [Events API](/docs/reference/api/events) — Event type reference
-- [RuntimeEvent](/docs/reference/types/runtime-event) — Type definition
-
+<Cards>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Full signal architecture overview
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Persist and replay signals
+  </Card>
+  <Card title="API Reference" href="/docs/reference">
+    Signal API documentation
+  </Card>
+</Cards>

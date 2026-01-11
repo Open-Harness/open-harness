@@ -17,7 +17,7 @@
  * ```
  */
 
-import type { FixtureStore, FixtureMode, Provider } from "./types.js";
+import type { FixtureStore, FixtureMode, Harness } from "./types.js";
 
 // ============================================================================
 // Global state
@@ -25,7 +25,7 @@ import type { FixtureStore, FixtureMode, Provider } from "./types.js";
 
 let defaultStore: FixtureStore | undefined;
 let defaultMode: FixtureMode | undefined;
-let defaultProvider: Provider | undefined;
+let defaultHarness: Harness | undefined;
 
 // ============================================================================
 // Store defaults
@@ -119,47 +119,47 @@ export function getDefaultMode(): FixtureMode {
 }
 
 // ============================================================================
-// Provider defaults
+// Harness defaults
 // ============================================================================
 
 /**
- * Set the default provider for agent execution.
+ * Set the default harness for agent execution.
  *
- * When set, this provider will be used by run() when no provider is
+ * When set, this harness will be used by run() when no harness is
  * explicitly provided in options.
  *
- * @param provider - The provider to use as default, or undefined to clear
+ * @param harness - The harness to use as default, or undefined to clear
  *
  * @example
  * ```ts
  * import { createClaudeNode } from "@open-harness/server"
  *
- * // Set default provider
- * setDefaultProvider(createClaudeNode())
+ * // Set default harness
+ * setDefaultHarness(createClaudeNode())
  *
- * // Clear default provider
- * setDefaultProvider(undefined)
+ * // Clear default harness
+ * setDefaultHarness(undefined)
  * ```
  */
-export function setDefaultProvider(provider: Provider | undefined): void {
-	defaultProvider = provider;
+export function setDefaultHarness(harness: Harness | undefined): void {
+	defaultHarness = harness;
 }
 
 /**
- * Get the current default provider.
+ * Get the current default harness.
  *
- * @returns The default provider, or undefined if not set
+ * @returns The default harness, or undefined if not set
  *
  * @example
  * ```ts
- * const provider = getDefaultProvider()
- * if (provider) {
- *   console.log("Default provider is configured")
+ * const harness = getDefaultHarness()
+ * if (harness) {
+ *   console.log("Default harness is configured")
  * }
  * ```
  */
-export function getDefaultProvider(): Provider | undefined {
-	return defaultProvider;
+export function getDefaultHarness(): Harness | undefined {
+	return defaultHarness;
 }
 
 // ============================================================================
@@ -176,5 +176,5 @@ export function getDefaultProvider(): Provider | undefined {
 export function resetDefaults(): void {
 	defaultStore = undefined;
 	defaultMode = undefined;
-	defaultProvider = undefined;
+	defaultHarness = undefined;
 }

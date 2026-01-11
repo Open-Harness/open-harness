@@ -1,226 +1,158 @@
 ---
 title: Quickstart
-description: Build your first Open Harness agent in 5 minutes
+description: Run your first reactive agent in 5 minutes
 ---
 
 # Quickstart
 
-Build and run an agent with Claude in under five minutes, then add fixtures for free, instant test replay.
-
-## What You'll Build
-
-A code review assistant with metrics tracking and fixture-based testing:
-
-```
-Input → [Code Reviewer Agent] → Output + Metrics (latency, cost, tokens)
-```
+This guide will get you running a reactive agent in under 5 minutes.
 
 ## Prerequisites
 
-- Bun 1.0+
-- Running inside Claude Code (for authentication)
+- [Bun](https://bun.sh) installed
+- Claude Code subscription (for auth) or Anthropic API key
 
-## Step 1: Create a Project
+## Installation
+
+Create a new project and install Open Harness:
 
 ```bash
-mkdir code-reviewer && cd code-reviewer
+mkdir my-agent && cd my-agent
 bun init -y
-bun add @open-harness/core @open-harness/server @open-harness/stores
+bun add @open-harness/core
 ```
 
-## Step 2: Define the Agent
+## Your First Agent
 
-Create `agent.ts`:
+Create `index.ts`:
 
-```typescript title="agent.ts"
-import { agent, run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+```typescript
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
-// Configure provider (auth handled by Claude Code subscription)
-setDefaultProvider(createClaudeNode());
+// 1. Define your state type
+type State = {
+  topic: string;
+  summary: string | null;
+};
 
-// Define your agent with a system prompt
-const codeReviewer = agent({
-  prompt: `You are an expert code reviewer. Analyze code for:
-- Bugs and edge cases
-- Security vulnerabilities
-- Performance issues
+// 2. Create a typed workflow factory
+const { agent, runReactive } = createWorkflow<State>();
 
-Format your response as:
-## Issues
-[List issues with severity: HIGH/MEDIUM/LOW]
-
-## Verdict
-APPROVE or REQUEST_CHANGES`,
+// 3. Define a reactive agent
+const summarizer = agent({
+  prompt: `Summarize this topic in 2-3 sentences: {{ state.topic }}`,
+  activateOn: ["workflow:start"],
+  emits: ["summary:complete"],
+  updates: "summary",
 });
 
-// Run the agent
-const result = await run(codeReviewer, {
-  prompt: `Review this code:
-function divide(a, b) {
-  return a / b;
-}`,
-});
+// 4. Run the workflow
+async function main() {
+  const harness = new ClaudeHarness({
+    model: "claude-sonnet-4-20250514",
+  });
 
-console.log("Review:", result.output);
-console.log("Latency:", result.metrics.latencyMs, "ms");
-console.log("Cost: $", result.metrics.cost.toFixed(4));
-```
+  const result = await runReactive({
+    agents: { summarizer },
+    state: {
+      topic: "The history of artificial intelligence",
+      summary: null,
+    },
+    harness,
+    endWhen: (s) => s.summary !== null,
+  });
 
-## Step 3: Run It
-
-```bash
-bun run agent.ts
-```
-
-Expected output:
-
-```
-Review: ## Issues
-- **HIGH**: Division by zero - no check for b === 0
-
-## Verdict
-REQUEST_CHANGES
-
-Latency: 2341 ms
-Cost: $ 0.0023
-```
-
-## Step 4: Add State
-
-Agents can track state across runs:
-
-```typescript title="agent-with-state.ts"
-interface ReviewerState {
-  reviewCount: number;
-  issuesFound: number;
+  console.log("Summary:", result.state.summary);
+  console.log("Duration:", result.metrics.durationMs, "ms");
 }
 
-const codeReviewer = agent({
-  prompt: "Review code for bugs and security issues.",
-  state: {
-    reviewCount: 0,
-    issuesFound: 0,
-  } as ReviewerState,
-});
-
-const result = await run(codeReviewer, { prompt: "..." });
-console.log("State:", result.state); // { reviewCount: 0, issuesFound: 0 }
+main();
 ```
 
-## Step 5: Add Fixtures for Testing
-
-Fixtures record LLM responses so tests are **free and instant** on replay.
-
-Create `test-utils.ts`:
-
-```typescript title="test-utils.ts"
-import { FileRecordingStore } from "@open-harness/stores";
-import { setDefaultStore, setDefaultMode } from "@open-harness/core";
-
-export const fixtureStore = new FileRecordingStore({
-  directory: "./fixtures",
-});
-
-export function setupFixtures(): void {
-  setDefaultStore(fixtureStore);
-  if (!process.env.FIXTURE_MODE) {
-    setDefaultMode("replay"); // Default to replay (fast, free)
-  }
-}
-
-export function withFixture(name: string) {
-  return { fixture: name, store: fixtureStore };
-}
-```
-
-Create `agent.test.ts`:
-
-```typescript title="agent.test.ts"
-import { describe, expect, it, beforeAll } from "bun:test";
-import { agent, run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-import { setupFixtures, withFixture } from "./test-utils";
-
-beforeAll(() => {
-  setDefaultProvider(createClaudeNode());
-  setupFixtures();
-});
-
-const codeReviewer = agent({
-  prompt: "Review code for bugs and security issues.",
-});
-
-describe("Code Reviewer", () => {
-  it("catches division by zero", async () => {
-    const result = await run(
-      codeReviewer,
-      { prompt: "function divide(a, b) { return a / b; }" },
-      withFixture("division-review"), // Name this fixture
-    );
-
-    expect(result.output).toContain("division");
-    expect(result.metrics.latencyMs).toBeGreaterThanOrEqual(0);
-  }, { timeout: 180000 });
-});
-```
-
-Run tests:
+## Run It
 
 ```bash
-# First run: record fixtures (costs ~$0.01)
-FIXTURE_MODE=record bun test
-
-# Subsequent runs: replay fixtures (free, instant)
-bun test
+bun run index.ts
 ```
 
-## What You Learned
+You should see output like:
 
-| Concept | Description |
-|---------|-------------|
-| `agent()` | Creates an agent with a system prompt |
-| `run()` | Executes agent, returns `{ output, metrics, state }` |
-| `metrics` | Automatic tracking of latency, cost, tokens |
-| `state` | Optional typed state returned with each run |
-| `withFixture()` | Records LLM response for deterministic replay |
-
-## Fixture Modes
-
-| Mode | Behavior | When to Use |
-|------|----------|-------------|
-| `replay` | Load saved response | CI, normal development |
-| `record` | Execute live, save response | First run, after prompt changes |
-| `live` | Execute live, don't save | Debugging |
-
-## Troubleshooting
-
-<Callout type="stuck" title="Common Issues">
-**Cannot find module '@open-harness/core'**
-```bash
-bun install
+```
+Summary: Artificial intelligence research began in the 1950s with pioneers like Alan Turing...
+Duration: 1234 ms
 ```
 
-**Authentication failed**
-Run from within Claude Code - authentication uses Claude Code subscription.
+## What Just Happened?
 
-**Test timeout**
-LLM calls take 30-60s. Use `{ timeout: 180000 }` or fixtures for instant replay.
+Let's break down the signal flow:
 
-**Fixture not found**
-Run with `FIXTURE_MODE=record` first to create the fixture.
+```mermaid
+sequenceDiagram
+    participant W as Workflow
+    participant S as Summarizer
+    participant H as Harness
+
+    W->>W: emit workflow:start
+    W->>S: activate (matches activateOn)
+    S->>H: run prompt
+    H-->>S: response
+    S->>W: emit summary:complete
+    S->>W: update state.summary
+    W->>W: endWhen(state) → true
+    W->>W: emit workflow:end
+```
+
+1. **`workflow:start`** - The workflow emits a start signal
+2. **Agent activates** - Summarizer subscribes to `workflow:start`
+3. **Harness runs** - Claude generates the summary
+4. **State updates** - `updates: "summary"` writes the output to state
+5. **Workflow ends** - `endWhen` condition is satisfied
+
+## Key Concepts
+
+### Signal Subscription
+
+Agents declare what signals they react to:
+
+```typescript
+activateOn: ["workflow:start"]  // React to workflow lifecycle
+activateOn: ["analysis:done"]   // React to custom signals
+```
+
+### State Updates
+
+The `updates` field automatically writes agent output to state:
+
+```typescript
+updates: "summary"  // output → state.summary
+```
+
+### Termination
+
+`endWhen` defines when the workflow completes:
+
+```typescript
+endWhen: (state) => state.summary !== null
+```
+
+<Callout type="stuck" title="Are you stuck?">
+**Error: Cannot find module '@open-harness/core'**
+Run `bun install` to install dependencies.
+
+**Error: Authentication failed**
+Open Harness uses Claude Code subscription authentication. Make sure you're running from within Claude Code.
 </Callout>
 
 ## Next Steps
 
 <Cards>
-  <Card title="SpecKit Tutorial" href="/docs/learn/speckit-tutorial">
-    7-level progressive tutorial from basic agents to CI quality gates
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Chain multiple agents together
   </Card>
-  <Card title="Multi-Agent Harness" href="/docs/learn/speckit-tutorial#level-4-multi-agent-harness">
-    Compose multiple agents with harness()
+  <Card title="Signal Patterns" href="/docs/concepts/architecture">
+    Learn the signal system in depth
   </Card>
-  <Card title="Architecture" href="/docs/concepts/architecture">
-    Understand how Open Harness works internally
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Test agents with recorded signals
   </Card>
 </Cards>

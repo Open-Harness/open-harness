@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-07T19:33:33.732Z"
-lastCommit: "1419d161946d58160f1b915b27c81d53749cd653"
-lastCommitDate: "2026-01-07T18:56:43Z"
+lastUpdated: "2026-01-11T06:45:24.116Z"
+lastCommit: "ab7f25696b6e4667745177ceb2b8078657bcfd3a"
+lastCommitDate: "2026-01-11T06:42:52Z"
 ---
 # Open Harness Packages
 
@@ -9,40 +9,50 @@ This directory contains all Open Harness packages organized by category.
 
 ## Package Structure
 
+### Adapters (`adapters/`)
+Optional integrations for external services:
+- **`providers/claude/`** - `@open-harness/provider-claude` - Anthropic Claude models
+- **`providers/openai/`** - `@open-harness/provider-openai` - OpenAI Codex models
+
 ### Internal (`internal/`)
 Private implementation packages used by published packages:
-- **`core/`** - Runtime, state, nodes, bindings, persistence interfaces, shared transport types
-- **`server/`** - Hono API routes, providers (Anthropic), server transports, harness utilities
-- **`client/`** - Client transports (HTTP/SSE client, remote transport)
+- **`core/`** - `@internal/core` - Runtime, state, harness, bindings, telemetry
+- **`server/`** - `@internal/server` - Hono API routes and middleware
+- **`client/`** - `@internal/client` - Client transports (HTTP/SSE client, remote transport)
+- **`signals/`** - `@internal/signals` - SignalBus, stores, reporters, snapshots
+- **`signals-core/`** - `@internal/signals-core` - Signal primitives and Provider types
 
 ### Published (`open-harness/`)
 Packages intended to be published to npm:
-- **`core/`** - Public core API (re-exports from `@internal/core`)
-- **`server/`** - Public server API (re-exports from `@internal/server`)
-- **`client/`** - Public client API (re-exports from `@internal/client`)
-- **`react/`** - React hooks integrating with `@open-harness/client`
-- **`testing/`** - Shared test utilities for Open Harness packages
-
-### Stores (`stores/`)
-Optional persistence implementations that depend on `@open-harness/core` interfaces:
-- **`run-store/sqlite/`** - SQLite `RunStore` implementation
-- **`run-store/testing/`** - `RunStore` contract tests/utilities
-- **`recording-store/file/`** - File-backed `RecordingStore` implementation
-- **`recording-store/sqlite/`** - SQLite `RecordingStore` implementation
-- **`recording-store/testing/`** - `RecordingStore` contract tests/utilities
+- **`core/`** - `@open-harness/core` - Public core API (re-exports from internal packages)
+- **`server/`** - `@open-harness/server` - Public server API
+- **`client/`** - `@open-harness/client` - Public client API
+- **`react/`** - `@open-harness/react` - React hooks integrating with client
+- **`stores/`** - `@open-harness/stores` - Persistence implementations (SQLite, file)
+- **`testing/`** - `@open-harness/testing` - Shared test utilities
+- **`vitest/`** - `@open-harness/vitest` - Vitest matchers for signal assertions
 
 ## Package Dependencies
 
-- Published packages are under `packages/open-harness/*` and use `@internal/*` implementation packages.
-- Stores implement interfaces from `@open-harness/core` (e.g. `RunStore`, `RecordingStore`) and may use store-specific test utilities.
-- `@internal/*` packages are private (not published).
+```
+@open-harness/core (public facade)
+├── @internal/core
+├── @internal/signals
+├── @internal/signals-core
+├── @open-harness/provider-claude
+└── @open-harness/provider-openai
+```
+
+- Published packages are under `packages/open-harness/*` and re-export from `@internal/*`
+- Provider adapters are under `packages/adapters/providers/*`
+- `@internal/*` packages are private (not published)
 
 ## Development
 
 Each package has its own:
 - `package.json` with workspace dependencies
 - `tsconfig.json` for TypeScript configuration
-- `CLAUDE.md` with package-specific context
+- `README.md` with package-specific documentation
 - Tests in `tests/` directory
 
 Run quality checks:

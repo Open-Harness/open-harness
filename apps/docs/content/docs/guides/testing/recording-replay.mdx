@@ -1,0 +1,314 @@
+---
+title: Recording & Replay
+description: Deterministic test replays with signal recordings
+---
+
+# Recording & Replay
+
+Record agent executions and replay them for deterministic testing.
+
+## Why Recording & Replay?
+
+Live agent tests are:
+- **Slow**: Each test calls the AI harness
+- **Expensive**: You pay for each API call
+- **Non-deterministic**: LLM output varies
+
+Recording & replay solves this:
+- **Fast**: Replay from memory, no API calls
+- **Free**: No harness costs during replay
+- **Deterministic**: Same signals every time
+
+## Basic Usage
+
+### Record
+
+```typescript
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
+
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createWorkflow<State>();
+
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  updates: "result",
+});
+
+// Create a store
+const store = new MemorySignalStore();
+
+// Record execution
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  harness: new ClaudeHarness(),
+  recording: { mode: "record", store },
+  endWhen: (s) => s.result !== null,
+});
+
+// Save the recording ID
+const recordingId = result.recordingId;
+console.log("Recorded:", recordingId);
+```
+
+### Replay
+
+```typescript
+// Replay the same execution
+const replay = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  harness: new ClaudeHarness(), // Not called during replay
+  recording: { mode: "replay", store, recordingId },
+  endWhen: (s) => s.result !== null,
+});
+
+// Same result, no API calls
+expect(replay.state.result).toBe(result.state.result);
+expect(replay.signals).toEqual(result.signals);
+```
+
+## Test Pattern
+
+Use recordings for fast, deterministic tests:
+
+```typescript title="analyzer.test.ts"
+import { describe, it, expect, beforeAll } from "vitest";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
+
+type State = { input: string; result: string | null };
+
+describe("Analyzer", () => {
+  const { agent, runReactive } = createWorkflow<State>();
+  const store = new MemorySignalStore();
+  let recordingId: string;
+
+  const analyzer = agent({
+    prompt: "Analyze: {{ state.input }}",
+    activateOn: ["workflow:start"],
+    updates: "result",
+  });
+
+  const initialState = { input: "Test input", result: null };
+
+  beforeAll(async () => {
+    // Record once before all tests
+    const result = await runReactive({
+      agents: { analyzer },
+      state: initialState,
+      harness: new ClaudeHarness(),
+      recording: { mode: "record", store },
+      endWhen: (s) => s.result !== null,
+    });
+    recordingId = result.recordingId!;
+  });
+
+  it("produces output", async () => {
+    const result = await runReactive({
+      agents: { analyzer },
+      state: initialState,
+      harness: new ClaudeHarness(),
+      recording: { mode: "replay", store, recordingId },
+      endWhen: (s) => s.result !== null,
+    });
+
+    expect(result.state.result).toBeDefined();
+  });
+
+  it("emits expected signals", async () => {
+    const result = await runReactive({
+      agents: { analyzer },
+      state: initialState,
+      harness: new ClaudeHarness(),
+      recording: { mode: "replay", store, recordingId },
+      endWhen: (s) => s.result !== null,
+    });
+
+    expect(result.signals).toContainSignal("agent:completed");
+    expect(result.signals).toHaveSignalsInOrder([
+      "workflow:start",
+      "agent:activated",
+      "workflow:end",
+    ]);
+  });
+});
+```
+
+## Recording Metadata
+
+Add metadata to recordings for organization:
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness,
+  recording: {
+    mode: "record",
+    store,
+    name: "analyzer-happy-path",
+    tags: ["unit", "analyzer"],
+  },
+});
+```
+
+## Store Types
+
+### MemorySignalStore
+
+In-memory storage, useful for tests:
+
+```typescript
+import { MemorySignalStore } from "@open-harness/core";
+
+const store = new MemorySignalStore();
+```
+
+**Pros**: Fast, no I/O
+**Cons**: Lost when process ends
+
+### Persistent Storage
+
+For persisting recordings across test runs, you can serialize the store:
+
+```typescript
+import { writeFileSync, readFileSync } from "fs";
+
+// After recording
+const recordings = store.export();
+writeFileSync("recordings.json", JSON.stringify(recordings));
+
+// Before replay
+const data = JSON.parse(readFileSync("recordings.json", "utf-8"));
+store.import(data);
+```
+
+## CI/CD Integration
+
+### Strategy 1: Pre-recorded Fixtures
+
+1. Record fixtures locally:
+```bash
+RECORD=true bun test
+```
+
+2. Commit fixtures to git:
+```bash
+git add recordings/
+git commit -m "Update test recordings"
+```
+
+3. CI runs in replay mode:
+```bash
+bun test # Replays from committed fixtures
+```
+
+### Strategy 2: Conditional Recording
+
+```typescript
+const mode = process.env.RECORD ? "record" : "replay";
+
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness,
+  recording: { mode, store, recordingId: mode === "replay" ? savedId : undefined },
+});
+```
+
+## Multi-Agent Recordings
+
+Recordings capture the full workflow:
+
+```typescript
+const result = await runReactive({
+  agents: { analyzer, reviewer, fixer },
+  state: initialState,
+  harness,
+  recording: { mode: "record", store },
+});
+
+// All agent interactions are recorded
+const replay = await runReactive({
+  agents: { analyzer, reviewer, fixer },
+  state: initialState,
+  harness,
+  recording: { mode: "replay", store, recordingId: result.recordingId },
+});
+```
+
+## Re-recording
+
+When agent behavior changes, re-record:
+
+```typescript
+// Delete old recording
+store.delete(recordingId);
+
+// Record new execution
+const fresh = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness,
+  recording: { mode: "record", store },
+});
+
+// Update saved recording ID
+recordingId = fresh.recordingId!;
+```
+
+## Gotchas
+
+### State Must Match
+
+Initial state must be identical for replay:
+
+```typescript
+// This will fail
+const record = await runReactive({
+  state: { input: "Hello", result: null },
+  recording: { mode: "record", store },
+});
+
+const replay = await runReactive({
+  state: { input: "Different!", result: null }, // ❌ Different state
+  recording: { mode: "replay", store, recordingId },
+});
+```
+
+### Agent Configuration Must Match
+
+Agent definitions must be identical:
+
+```typescript
+// Record with one prompt
+const analyzer = agent({ prompt: "Analyze: {{ state.input }}" });
+const record = await runReactive({ agents: { analyzer }, ... });
+
+// Can't replay with different prompt
+const analyzer2 = agent({ prompt: "Different prompt" }); // ❌ Won't replay correctly
+```
+
+### Harness Not Called During Replay
+
+The harness is not called during replay—signals are returned from the store. You can pass any harness:
+
+```typescript
+// Harness is ignored during replay
+const replay = await runReactive({
+  harness: new ClaudeHarness(), // Not called
+  recording: { mode: "replay", store, recordingId },
+});
+```
+
+## Next Steps
+
+<Cards>
+  <Card title="Signal Assertions" href="/docs/guides/testing/signal-assertions">
+    Assert on recorded signals
+  </Card>
+  <Card title="Troubleshooting" href="/docs/learn/troubleshooting">
+    Recording errors
+  </Card>
+</Cards>
