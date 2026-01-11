@@ -16,27 +16,24 @@ Add persistent storage so flows can be paused, resumed, and replayed.
 ## Configure SQLite Store
 
 ```typescript
-import {
-  createRuntime,
-  SqliteRunStore,
-  parseFlowYaml
-} from "@open-harness/sdk";
+import { createHarness, parseFlowYaml } from "@open-harness/server";
+import { SqliteRunStore } from "@open-harness/run-store-sqlite";
+import { readFileSync } from "node:fs";
 
 // Create persistent store
-const store = new SqliteRunStore("./runs.db");
+const store = new SqliteRunStore({ filename: "./runs.db" });
 
-// Create runtime with store
-const runtime = createRuntime({
-  flow,
-  registry,
-  store
+// Create harness with store
+const harness = createHarness({
+  flow: parseFlowYaml(readFileSync("flow.yaml", "utf-8")),
+  store,
 });
 
 // Execute flow - events are persisted
-const snapshot = await runtime.run(input);
+const snapshot = await harness.run({ question: "Hello" });
 
-// Later: retrieve the run
-const runData = await store.getRun(snapshot.runId);
+// Later: retrieve the events
+const events = store.loadEvents(snapshot.runId);
 ```
 
 ## Run Store Interface
@@ -46,38 +43,52 @@ interface RunStore {
   // Save an event
   saveEvent(runId: string, event: RuntimeEvent): Promise<void>;
 
-  // Get all events for a run
-  getEvents(runId: string): Promise<RuntimeEvent[]>;
+  // Load all events for a run
+  loadEvents(runId: string): RuntimeEvent[];
 
-  // Get run metadata
-  getRun(runId: string): Promise<RunMetadata | null>;
+  // Save a snapshot
+  saveSnapshot(runId: string, snapshot: RunSnapshot): void;
+
+  // Load a snapshot
+  loadSnapshot(runId: string): RunSnapshot | null;
 }
 ```
 
 ## Built-in Stores
 
-| Store | Use Case |
-|-------|----------|
-| `MemoryRunStore` | Testing, ephemeral sessions |
-| `SqliteRunStore` | Production, persistence |
+| Store | Package | Use Case |
+|-------|---------|----------|
+| `InMemoryRunStore` | `@open-harness/core` | Testing, ephemeral sessions |
+| `SqliteRunStore` | `@open-harness/run-store-sqlite` | Production, persistence |
 
-## Replay for Testing
+## Resume a Flow
 
 ```typescript
-import { replayRun } from "@open-harness/sdk";
+// Load previous run state
+const events = store.loadEvents(runId);
+const snapshot = store.loadSnapshot(runId);
 
-// Record a run
-const recording = await recordRun(flow, registry, input);
+// Create runtime with previous state
+const runtime = createRuntime({
+  flow,
+  store,
+  initialState: snapshot?.state,
+});
 
-// Save to fixture
-await writeFile("fixture.json", JSON.stringify(recording));
-
-// Replay in tests (no network calls)
-const result = await replayRun(recording);
-expect(result.outputs.agent.text).toContain("Hello");
+// Resume execution
+await runtime.resume("continue");
 ```
+
+<Callout type="stuck" title="Are you stuck?">
+**TypeError: SqliteRunStore is not a constructor**
+Use the correct constructor: `new SqliteRunStore({ filename: "./runs.db" })`
+
+**Cannot find module '@open-harness/run-store-sqlite'**
+Install the package: `bun add @open-harness/run-store-sqlite`
+</Callout>
 
 ## Next Steps
 
 - [Production Deployment](/docs/guides/deployment/production) — Deploy with persistence
-- [Replay Testing](/docs/reference/api/run-store) — Full RunStore API
+- [RunStore API](/docs/reference/api/run-store) — Full RunStore interface
+

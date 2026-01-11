@@ -1,0 +1,1062 @@
+# Documentation Quality Audit Report
+# Generated: 2026-01-08
+# Auditor: Claude Opus 4.5
+# Total files audited: 38
+
+summary:
+  total_files: 38
+  avg_score: 3.4
+  worst_files:
+    - "docs/guides/channels/websocket.mdx"        # 2.4 - broken API examples
+    - "docs/guides/channels/custom-channels.mdx"  # 2.6 - wrong interfaces
+    - "docs/guides/agents/custom-agents.mdx"      # 2.6 - outdated API
+    - "docs/concepts/architecture.mdx"            # 2.8 - Hub terminology mismatch
+    - "docs/learn/multi-agent-flow.mdx"           # 2.8 - unverified loop syntax
+    - "docs/guides/flows/control-flow.mdx"        # 2.8 - inconsistent binding syntax
+  best_files:
+    - "docs/reference/api/events.mdx"             # 4.4 - accurate, matches source
+    - "docs/reference/types/runtime-event.mdx"    # 4.2 - good event coverage
+    - "docs/concepts/expressions.mdx"             # 4.0 - clear JSONata intro
+    - "docs/reference/expressions/functions.mdx"  # 4.0 - comprehensive function list
+    - "docs/reference/expressions/syntax.mdx"     # 4.0 - clear syntax reference
+
+files:
+  # ============== LANDING & INDEX ==============
+  - path: "docs/index.mdx"
+    scores:
+      clarity: 4
+      completeness: 3
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.6
+    good:
+      - "Clear value proposition in four bullet points"
+      - "Quick example is concise and demonstrates core concepts"
+      - "Good card navigation to key areas"
+    bad:
+      - "Example uses 'flow:' wrapper but actual SDK uses just 'name:' at root"
+    missing:
+      - "No mention of what 'Open Harness' actually is (SDK? Framework? CLI?)"
+      - "No installation command visible"
+      - "No mention of authentication or API keys"
+    wrong:
+      - "YAML example shows 'flow: name:' structure but FlowDefinition uses flat 'name:' at root"
+    confusing:
+      - "Term 'Hub' in cards but not explained anywhere on this page"
+    recommendation: keep
+    priority: P1
+
+  - path: "docs/reference/index.mdx"
+    scores:
+      clarity: 5
+      completeness: 4
+      accuracy: 4
+      actionable: 3
+      progressive: 5
+      average: 4.2
+    good:
+      - "Clear categorization of docs (API, Expressions, Types, Schemas)"
+      - "Brief descriptions for each link"
+    bad: []
+    missing:
+      - "No 'Getting Started' suggestion for newcomers landing here"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  # ============== LEARN SECTION ==============
+  - path: "docs/learn/quickstart.mdx"
+    scores:
+      clarity: 4
+      completeness: 3
+      accuracy: 2
+      actionable: 4
+      progressive: 4
+      average: 3.4
+    good:
+      - "Clear 5-minute promise and step-by-step structure"
+      - "Reasonable Hello World example"
+      - "'What Just Happened' section explains the flow"
+    bad:
+      - "Registry usage in step 3 is inconsistent - says 'no need to create a registry' but code passes registry object"
+    missing:
+      - "No explanation of what happens if agent fails"
+      - "No mention of events or how to observe execution"
+      - "No troubleshooting section"
+    wrong:
+      - "runFlow API shown doesn't match actual SDK - actual API takes { flow, input, registry, store, onEvent }"
+      - "Flow YAML shows 'name:' but actual parseFlowYaml expects root-level fields"
+    confusing:
+      - "Terminology: calls it 'custom agent' but it's just a custom node"
+    recommendation: rewrite
+    priority: P0
+
+  - path: "docs/learn/your-first-agent.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Clear visual diagram of flow structure"
+      - "Good coverage of conditional routing and state"
+      - "Explains when to use agents vs simple nodes"
+    bad:
+      - "Code example imports echoNode but SDK may not export it"
+    missing:
+      - "No error handling in the example"
+      - "No explanation of what ctx.state actually stores"
+    wrong:
+      - "Uses 'when' on edges but shows as quoted string - should clarify if it's JSONata or not"
+    confusing:
+      - "Title says 'Your First Agent' but example is a custom node, not an LLM agent"
+    recommendation: keep
+    priority: P1
+
+  - path: "docs/learn/multi-agent-flow.mdx"
+    scores:
+      clarity: 3
+      completeness: 3
+      accuracy: 2
+      actionable: 3
+      progressive: 4
+      average: 3.0
+    good:
+      - "Clear planner-coder-reviewer example is realistic"
+      - "Good visual ASCII diagram"
+      - "Demonstrates loop edges concept"
+    bad:
+      - "Code example uses createRuntime() but docs elsewhere use createHarness()"
+      - "Loop edge syntax 'type: loop' and 'maxIterations' may not be accurate to actual SDK"
+    missing:
+      - "No complete runnable example"
+      - "No explanation of what happens when reviewer.passed is undefined"
+      - "No discussion of token costs for multi-agent flows"
+    wrong:
+      - "YAML shows 'flow: name:' wrapper but FlowDefinition uses flat structure"
+      - "Loop edge syntax with 'type: loop' is not in EdgeDefinition type"
+    confusing:
+      - "Mixing '{{ }}' syntax in prompts but also in 'when' conditions without clarifying"
+    recommendation: rewrite
+    priority: P0
+
+  - path: "docs/learn/persistence.mdx"
+    scores:
+      clarity: 4
+      completeness: 3
+      accuracy: 3
+      actionable: 3
+      progressive: 3
+      average: 3.2
+    good:
+      - "Clear three-point value proposition"
+      - "Interface definition is helpful"
+    bad:
+      - "SqliteRunStore constructor signature wrong - takes options object not string"
+    missing:
+      - "No mention of when to use memory vs sqlite"
+      - "Replay example uses recordRun which may not exist"
+      - "No actual pause/resume example"
+    wrong:
+      - "SqliteRunStore('./runs.db') - actual API is SqliteRunStore({ filename: './runs.db' })"
+      - "RunStore interface shows Promise return types but actual SDK uses sync methods"
+    confusing:
+      - "recordRun and replayRun functions mentioned but not in SDK exports"
+    recommendation: rewrite
+    priority: P1
+
+  # ============== CONCEPTS SECTION ==============
+  - path: "docs/concepts/architecture.mdx"
+    scores:
+      clarity: 4
+      completeness: 3
+      accuracy: 2
+      actionable: 2
+      progressive: 4
+      average: 3.0
+    good:
+      - "Good high-level mental model with layers"
+      - "Mermaid diagrams are clear"
+      - "Channel vs Transport distinction is useful"
+    bad:
+      - "Hub terminology is confusing - actual SDK uses Runtime, not Hub as central coordinator"
+    missing:
+      - "No actual code examples"
+      - "No explanation of where state lives"
+      - "No discussion of event flow mechanics"
+    wrong:
+      - "Hub is described as 'central meeting point' but actual SDK centers on Runtime"
+      - "Channels aren't actually implemented as described"
+    confusing:
+      - "Hub, Runtime, Harness terminology overlap - which should users use?"
+    recommendation: rewrite
+    priority: P0
+
+  - path: "docs/concepts/event-system.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Core principle quote is memorable"
+      - "Good categorization of event types"
+      - "Benefits section with practical examples"
+    bad:
+      - "hub.subscribe() API doesn't match actual SDK - Runtime uses onEvent()"
+    missing:
+      - "No mention of event timestamps"
+      - "No guidance on event volume or filtering"
+    wrong:
+      - "hub.subscribe('agent:text', ...) - actual API is runtime.onEvent() without pattern matching"
+      - "Wildcard hub.subscribe('*', ...) not in actual API"
+    confusing:
+      - "Shows 'hub' but actual code uses 'runtime' for event subscription"
+    recommendation: rewrite
+    priority: P1
+
+  - path: "docs/concepts/expressions.mdx"
+    scores:
+      clarity: 5
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.2
+    good:
+      - "Clear explanation of JSONata benefits"
+      - "Good context table with available variables"
+      - "Practical examples for each operation type"
+    bad: []
+    missing:
+      - "No mention of $exists() for null safety"
+      - "No debugging tips for complex expressions"
+    wrong:
+      - "$env variable shown but may not be in actual context"
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/concepts/persistence.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 3
+      progressive: 4
+      average: 3.6
+    good:
+      - "Event sourcing principle clearly stated"
+      - "Good comparison table of built-in stores"
+      - "Custom store example is helpful"
+    bad:
+      - "RunStore interface shown has async methods but actual SDK uses sync"
+    missing:
+      - "No performance characteristics"
+      - "No migration guidance between stores"
+    wrong:
+      - "listRuns() method shown but not in actual RunStore interface"
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/concepts/why-jsonata.mdx"
+    scores:
+      clarity: 5
+      completeness: 3
+      accuracy: 5
+      actionable: 3
+      progressive: 4
+      average: 4.0
+    good:
+      - "Clear rationale for JSONata choice"
+      - "Good comparison to alternatives"
+      - "Concise and focused"
+    bad: []
+    missing:
+      - "No JSONata limitations mentioned"
+      - "No performance considerations"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/concepts/design-decisions/graph-first.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 3
+      progressive: 4
+      average: 3.6
+    good:
+      - "Clear problem/solution framing"
+      - "Good trade-offs discussion"
+      - "When to use vs not use guidance"
+    bad:
+      - "Condition syntax uses '{{ nodes.classify.output.type }}' but actual binding uses just '{{ classify.type }}'"
+    missing:
+      - "No mention of performance overhead"
+    wrong:
+      - "Node output binding shows 'nodes.classify.output.type' but actual syntax is direct 'nodeId.field'"
+    confusing: []
+    recommendation: keep
+    priority: P1
+
+  # ============== GUIDES - AGENTS ==============
+  - path: "docs/guides/agents/claude-agent.mdx"
+    scores:
+      clarity: 4
+      completeness: 3
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.6
+    good:
+      - "Clear configuration options table"
+      - "Model comparison table is useful"
+      - "Event types listed"
+    bad:
+      - "Model names may be outdated (claude-sonnet-4-20250514)"
+    missing:
+      - "No mention of tools/function calling"
+      - "No system prompt best practices"
+      - "No token limit guidance"
+    wrong:
+      - "hub.subscribe() API not accurate - should be runtime.onEvent()"
+    confusing: []
+    recommendation: keep
+    priority: P1
+
+  - path: "docs/guides/agents/custom-agents.mdx"
+    scores:
+      clarity: 3
+      completeness: 3
+      accuracy: 2
+      actionable: 3
+      progressive: 3
+      average: 2.8
+    good:
+      - "Streaming example is useful"
+      - "Shows hub.emit() pattern"
+    bad:
+      - "Interface names don't match SDK - AgentDefinition vs NodeTypeDefinition"
+    missing:
+      - "No error handling example"
+      - "No Zod schema usage example"
+      - "No testing guidance"
+    wrong:
+      - "AgentDefinition interface doesn't exist - SDK uses NodeTypeDefinition"
+      - "defineAgent() function shown but not in SDK exports"
+      - "AgentContext interface wrong - actual is NodeRunContext"
+    confusing:
+      - "Conflates 'agent' and 'node' terminology throughout"
+    recommendation: rewrite
+    priority: P0
+
+  # ============== GUIDES - CHANNELS ==============
+  - path: "docs/guides/channels/websocket.mdx"
+    scores:
+      clarity: 3
+      completeness: 2
+      accuracy: 2
+      actionable: 3
+      progressive: 3
+      average: 2.6
+    good:
+      - "Client-side WebSocket example is clear"
+    bad:
+      - "Server API completely wrong"
+    missing:
+      - "No reconnection handling"
+      - "No message format specification"
+      - "No error handling"
+    wrong:
+      - "createHub() function doesn't exist in SDK"
+      - "WebSocketChannel class doesn't exist - SDK has WebSocketTransport"
+      - "hub.registerChannel() not in API"
+      - "Filter callback pattern not accurate"
+    confusing:
+      - "Mixes Hub and Channel concepts that don't exist in this form"
+    recommendation: rewrite
+    priority: P0
+
+  - path: "docs/guides/channels/custom-channels.mdx"
+    scores:
+      clarity: 3
+      completeness: 2
+      accuracy: 2
+      actionable: 2
+      progressive: 3
+      average: 2.4
+    good:
+      - "Conceptually shows what channels could do"
+    bad:
+      - "Interface is completely fabricated"
+    missing:
+      - "No actual working example"
+      - "No integration with runtime"
+    wrong:
+      - "ChannelDefinition interface doesn't exist in SDK"
+      - "hub.registerChannel() not in API"
+      - "hub.sendToRun() not in API"
+      - "on/onStart/onStop lifecycle not in SDK"
+    confusing:
+      - "Shows aspirational API that doesn't exist"
+    recommendation: delete
+    priority: P0
+
+  # ============== GUIDES - DEPLOYMENT ==============
+  - path: "docs/guides/deployment/persistence.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Good progression from memory to sqlite to custom"
+      - "Trade-offs table is helpful"
+      - "Migration guidance is practical"
+    bad: []
+    missing:
+      - "No data retention policies"
+      - "No backup guidance"
+    wrong:
+      - "InMemoryRunStore not MemoryRunStore (docs inconsistent)"
+      - "SqliteRunStore constructor takes options object, not just filename string"
+    confusing: []
+    recommendation: keep
+    priority: P1
+
+  - path: "docs/guides/deployment/production.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Practical deployment targets listed"
+      - "Express example is realistic"
+      - "Security checklist is valuable"
+      - "Environment variables table"
+    bad:
+      - "Mentions ANTHROPIC_API_KEY but CLAUDE.md says not to use it"
+    missing:
+      - "No Docker example"
+      - "No monitoring/alerting setup"
+    wrong:
+      - "runtime.onEvent() callback type incorrect"
+      - "Policy YAML (timeoutMs, retry) may not be implemented"
+    confusing:
+      - "ANTHROPIC_API_KEY mentioned but project uses subscription auth"
+    recommendation: keep
+    priority: P1
+
+  # ============== GUIDES - EXPRESSIONS ==============
+  - path: "docs/guides/expressions/bindings.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 5
+      progressive: 4
+      average: 4.2
+    good:
+      - "Clear variable table"
+      - "Good troubleshooting section"
+      - "Object construction example is valuable"
+    bad: []
+    missing:
+      - "No complex nesting examples"
+    wrong:
+      - "Shows 'nodes.nodeId.output.field' in troubleshooting but says not to use it"
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/guides/expressions/conditionals.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Clear edge vs node condition distinction"
+      - "Operator examples are comprehensive"
+      - "Error handling pattern shown"
+    bad: []
+    missing:
+      - "No complex boolean logic examples"
+    wrong: []
+    confusing:
+      - "Uses bare strings 'triage.priority = ...' but unclear if '{{ }}' needed"
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/guides/expressions/iteration.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Good coverage of map, filter, aggregate"
+      - "Practical examples throughout"
+    bad: []
+    missing:
+      - "No forEach edge example (from SDK)"
+      - "No performance considerations for large arrays"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/guides/expressions/migration.mdx"
+    scores:
+      clarity: 4
+      completeness: 3
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Clear before/after comparison table"
+      - "Common patterns section is helpful"
+    bad: []
+    missing:
+      - "No mention of breaking changes"
+      - "No automated migration tooling"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  # ============== GUIDES - FLOWS ==============
+  - path: "docs/guides/flows/control-flow.mdx"
+    scores:
+      clarity: 3
+      completeness: 3
+      accuracy: 2
+      actionable: 3
+      progressive: 3
+      average: 2.8
+    good:
+      - "Good coverage of flow patterns"
+      - "Fan-out pattern example"
+    bad:
+      - "Inconsistent binding syntax - mixes '{{ nodes.x.output.y }}' with '{{ x.y }}'"
+    missing:
+      - "No error path handling"
+      - "No timeout configuration"
+    wrong:
+      - "Uses 'condition' on edges but actual SDK uses 'when'"
+      - "Binding syntax '{{ nodes.x.output.y }}' not accurate - should be '{{ x.y }}'"
+    confusing:
+      - "Sequential execution 'default' not explained - how are dependencies inferred?"
+    recommendation: rewrite
+    priority: P1
+
+  # ============== REFERENCE - API ==============
+  - path: "docs/reference/api/agent.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 3
+      progressive: 4
+      average: 3.8
+    good:
+      - "NodeTypeDefinition interface matches SDK"
+      - "NodeRunContext mostly accurate"
+      - "Emit example is helpful"
+    bad: []
+    missing:
+      - "No full list of ctx methods"
+    wrong:
+      - "Title says 'Node Types' but filename is 'agent.mdx' - confusing"
+    confusing:
+      - "File is named 'agent' but describes NodeTypeDefinition"
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/api/channel.mdx"
+    scores:
+      clarity: 3
+      completeness: 2
+      accuracy: 2
+      actionable: 2
+      progressive: 3
+      average: 2.4
+    good:
+      - "Transport interface is accurate"
+      - "WebSocketTransport example close to reality"
+    bad:
+      - "Title says 'Transport API' but file is 'channel.mdx'"
+    missing:
+      - "No custom transport implementation guide"
+    wrong:
+      - "WebSocketTransportOptions may not match actual SDK"
+      - "Client protocol JSON format may not be accurate"
+    confusing:
+      - "Channel vs Transport naming inconsistency"
+    recommendation: rewrite
+    priority: P1
+
+  - path: "docs/reference/api/events.mdx"
+    scores:
+      clarity: 5
+      completeness: 5
+      accuracy: 4
+      actionable: 3
+      progressive: 4
+      average: 4.2
+    good:
+      - "Comprehensive event type listing"
+      - "Matches actual SDK event types closely"
+      - "Good categorization"
+    bad: []
+    missing:
+      - "No event ordering guarantees"
+    wrong:
+      - "Some event payloads may have additional fields"
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/api/flow-runtime.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 3
+      progressive: 4
+      average: 3.8
+    good:
+      - "RunSnapshot type matches SDK"
+      - "RuntimeCommand matches SDK"
+      - "Resume options documented"
+    bad: []
+    missing:
+      - "No error states documentation"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/api/hub.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Quick start section with both runFlow and createHarness"
+      - "API methods documented"
+      - "Runtime options shown"
+    bad:
+      - "Title says 'Runtime' but file is 'hub.mdx'"
+    missing: []
+    wrong:
+      - "createDefaultRegistry() shown but actual function name needs verification"
+    confusing:
+      - "hub.mdx filename doesn't match 'Runtime' content"
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/api/node-registry.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Clear method documentation"
+      - "Built-in nodes table"
+      - "Custom node registration example"
+    bad: []
+    missing:
+      - "No unregister functionality documented"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/api/run-store.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Interface matches SDK"
+      - "Both built-in stores documented"
+      - "Custom store example"
+    bad: []
+    missing:
+      - "No sequence number explanation"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  # ============== REFERENCE - EXPRESSIONS ==============
+  - path: "docs/reference/expressions/context.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Clear variable documentation"
+      - "Good examples for each context variable"
+      - "Iteration context covered"
+    bad: []
+    missing:
+      - "No $runId or $nodeId context variables documented"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/expressions/functions.mdx"
+    scores:
+      clarity: 4
+      completeness: 5
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.2
+    good:
+      - "Comprehensive function reference"
+      - "Good categorization (string, numeric, array, object)"
+      - "Clear usage examples"
+    bad: []
+    missing:
+      - "No custom function registration"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/expressions/syntax.mdx"
+    scores:
+      clarity: 5
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.2
+    good:
+      - "Clear operator tables"
+      - "Good array expression examples"
+      - "Object construction documented"
+    bad: []
+    missing:
+      - "No error handling in expressions"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  # ============== REFERENCE - SCHEMAS ==============
+  - path: "docs/reference/schemas/flow-yaml.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Complete schema documentation"
+      - "Node type examples"
+      - "Expression syntax section"
+    bad:
+      - "Node types like http.get, map, delay may not exist in SDK"
+    missing:
+      - "No state schema documentation"
+    wrong:
+      - "http.get/http.post/map/delay node types may not be implemented"
+    confusing: []
+    recommendation: keep
+    priority: P1
+
+  # ============== REFERENCE - TYPES ==============
+  - path: "docs/reference/types/edge-definition.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 4
+      progressive: 4
+      average: 3.8
+    good:
+      - "Clear type definition"
+      - "Good branching pattern examples"
+      - "Implicit vs explicit edges explained"
+    bad: []
+    missing:
+      - "forEach edge option not documented"
+      - "gate option not documented"
+    wrong:
+      - "Uses 'condition' but actual SDK uses 'when'"
+      - "Binding syntax '{{ nodes.x.output.y }}' should be '{{ x.y }}'"
+    confusing: []
+    recommendation: keep
+    priority: P1
+
+  - path: "docs/reference/types/flow-definition.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 3
+      actionable: 3
+      progressive: 4
+      average: 3.6
+    good:
+      - "Type definition shown"
+      - "YAML format documented"
+    bad: []
+    missing:
+      - "version property not documented"
+      - "state.initial structure not shown"
+    wrong:
+      - "Shows 'id' as primary key but actual FlowDefinition uses 'name'"
+    confusing: []
+    recommendation: keep
+    priority: P1
+
+  - path: "docs/reference/types/node-definition.mdx"
+    scores:
+      clarity: 4
+      completeness: 4
+      accuracy: 4
+      actionable: 4
+      progressive: 4
+      average: 4.0
+    good:
+      - "Clear property documentation"
+      - "Good examples"
+      - "Built-in type list"
+    bad: []
+    missing:
+      - "'when' property not documented"
+      - "'policy' property not documented"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+  - path: "docs/reference/types/runtime-event.mdx"
+    scores:
+      clarity: 4
+      completeness: 5
+      accuracy: 4
+      actionable: 3
+      progressive: 4
+      average: 4.0
+    good:
+      - "Comprehensive event type coverage"
+      - "Matches SDK event types well"
+      - "Good categorization"
+    bad: []
+    missing:
+      - "usage field on agent:complete not shown"
+    wrong: []
+    confusing: []
+    recommendation: keep
+    priority: P2
+
+top_issues:
+  - severity: critical
+    description: "Core API examples use non-existent functions and wrong signatures"
+    affected_files:
+      - "docs/learn/quickstart.mdx"
+      - "docs/learn/persistence.mdx"
+      - "docs/guides/channels/websocket.mdx"
+      - "docs/guides/channels/custom-channels.mdx"
+      - "docs/guides/agents/custom-agents.mdx"
+    details: |
+      Multiple files reference APIs that don't exist:
+      - createHub() doesn't exist
+      - WebSocketChannel doesn't exist (it's WebSocketTransport)
+      - hub.registerChannel() doesn't exist
+      - AgentDefinition interface doesn't exist (it's NodeTypeDefinition)
+      - defineAgent() doesn't exist
+      - SqliteRunStore constructor takes options object, not string
+
+  - severity: critical
+    description: "Hub vs Runtime terminology confusion throughout docs"
+    affected_files:
+      - "docs/concepts/architecture.mdx"
+      - "docs/concepts/event-system.mdx"
+      - "docs/guides/channels/websocket.mdx"
+    details: |
+      Docs refer to 'Hub' as a central coordinator, but actual SDK:
+      - Has no Hub class
+      - Uses Runtime as the execution controller
+      - Uses Harness as the convenience wrapper
+      - hub.subscribe() pattern doesn't exist - it's runtime.onEvent()
+
+  - severity: high
+    description: "Binding syntax inconsistency - nodes.x.output vs x.field"
+    affected_files:
+      - "docs/guides/flows/control-flow.mdx"
+      - "docs/concepts/design-decisions/graph-first.mdx"
+      - "docs/reference/types/edge-definition.mdx"
+    details: |
+      Some docs show '{{ nodes.classify.output.type }}' but actual binding
+      syntax is '{{ classify.type }}' (direct nodeId.field access).
+      This will cause user confusion and broken flows.
+
+  - severity: high
+    description: "Edge condition uses 'condition' but SDK uses 'when'"
+    affected_files:
+      - "docs/guides/flows/control-flow.mdx"
+      - "docs/reference/types/edge-definition.mdx"
+    details: |
+      EdgeDefinition type uses 'when' for conditional expressions,
+      but docs show 'condition' property which doesn't exist.
+
+  - severity: high
+    description: "Loop edge syntax may be fabricated"
+    affected_files:
+      - "docs/learn/multi-agent-flow.mdx"
+    details: |
+      Shows 'type: loop' and 'maxIterations' on edges but:
+      - EdgeDefinition has no 'type' field
+      - maxIterations exists but loop behavior unclear
+
+  - severity: medium
+    description: "No progressive example threading through docs"
+    affected_files:
+      - "docs/learn/quickstart.mdx"
+      - "docs/learn/your-first-agent.mdx"
+      - "docs/learn/multi-agent-flow.mdx"
+      - "docs/learn/persistence.mdx"
+    details: |
+      Each tutorial uses different examples. Would benefit from a
+      single evolving project that grows across tutorials.
+
+  - severity: medium
+    description: "Missing error handling examples throughout"
+    affected_files:
+      - "docs/learn/quickstart.mdx"
+      - "docs/guides/agents/custom-agents.mdx"
+      - "docs/guides/channels/websocket.mdx"
+    details: |
+      No docs show:
+      - What happens when a node fails
+      - How to handle agent errors
+      - Retry configuration
+      - Error recovery patterns
+
+  - severity: medium
+    description: "FlowDefinition shows 'id' but actual type uses 'name'"
+    affected_files:
+      - "docs/reference/types/flow-definition.mdx"
+      - "docs/reference/schemas/flow-yaml.mdx"
+    details: |
+      Docs show FlowDefinition with 'id' property but actual
+      type definition uses 'name' as the identifier.
+
+recommendations:
+  priority_order:
+    - label: "P0 - Must Fix Before Release"
+      files:
+        - "docs/learn/quickstart.mdx"
+        - "docs/learn/multi-agent-flow.mdx"
+        - "docs/concepts/architecture.mdx"
+        - "docs/guides/channels/websocket.mdx"
+        - "docs/guides/channels/custom-channels.mdx"
+        - "docs/guides/agents/custom-agents.mdx"
+      rationale: "These have completely broken examples or fabricated APIs"
+
+    - label: "P1 - Fix Soon"
+      files:
+        - "docs/index.mdx"
+        - "docs/learn/your-first-agent.mdx"
+        - "docs/learn/persistence.mdx"
+        - "docs/concepts/event-system.mdx"
+        - "docs/concepts/design-decisions/graph-first.mdx"
+        - "docs/guides/agents/claude-agent.mdx"
+        - "docs/guides/deployment/persistence.mdx"
+        - "docs/guides/deployment/production.mdx"
+        - "docs/guides/flows/control-flow.mdx"
+        - "docs/reference/api/channel.mdx"
+        - "docs/reference/schemas/flow-yaml.mdx"
+        - "docs/reference/types/edge-definition.mdx"
+        - "docs/reference/types/flow-definition.mdx"
+      rationale: "Minor inaccuracies or missing information but basically functional"
+
+    - label: "P2 - Polish Later"
+      files:
+        - "docs/reference/index.mdx"
+        - "docs/concepts/expressions.mdx"
+        - "docs/concepts/persistence.mdx"
+        - "docs/concepts/why-jsonata.mdx"
+        - "docs/guides/expressions/bindings.mdx"
+        - "docs/guides/expressions/conditionals.mdx"
+        - "docs/guides/expressions/iteration.mdx"
+        - "docs/guides/expressions/migration.mdx"
+        - "docs/reference/api/agent.mdx"
+        - "docs/reference/api/events.mdx"
+        - "docs/reference/api/flow-runtime.mdx"
+        - "docs/reference/api/hub.mdx"
+        - "docs/reference/api/node-registry.mdx"
+        - "docs/reference/api/run-store.mdx"
+        - "docs/reference/expressions/context.mdx"
+        - "docs/reference/expressions/functions.mdx"
+        - "docs/reference/expressions/syntax.mdx"
+        - "docs/reference/types/node-definition.mdx"
+        - "docs/reference/types/runtime-event.mdx"
+      rationale: "Good quality, minor enhancements only"
+
+  structural_changes:
+    - title: "Rename files to match content"
+      description: |
+        - reference/api/hub.mdx -> reference/api/runtime.mdx (content is about Runtime)
+        - reference/api/agent.mdx -> reference/api/node-types.mdx (content is about NodeTypeDefinition)
+        - reference/api/channel.mdx -> reference/api/transport.mdx (content is about Transport)
+
+    - title: "Delete fabricated content"
+      description: |
+        - guides/channels/custom-channels.mdx shows API that doesn't exist
+        - Consider removing until Channels are actually implemented
+
+    - title: "Add missing docs"
+      description: |
+        - Error handling guide
+        - Testing guide (using InMemoryRunStore)
+        - Debugging guide (event inspection)
+        - Token cost management
+
+    - title: "Create progressive tutorial"
+      description: |
+        Thread a single example (task management system?) through all tutorials:
+        1. Quickstart: Single echo node
+        2. Your First Agent: Add classification
+        3. Multi-Agent: Add review loop
+        4. Persistence: Add replay testing

@@ -5,93 +5,170 @@ description: Build your own agent implementations
 
 # Custom Agents
 
-Create custom agents that integrate with any LLM or service.
-
-## Agent Interface
-
-```typescript
-interface AgentDefinition<TIn = unknown, TOut = unknown> {
-  name: string;
-  execute(input: TIn, ctx: AgentContext): Promise<TOut>;
-}
-
-interface AgentContext {
-  hub: Hub;
-  runId: string;
-  abortSignal?: AbortSignal;
-}
-```
+Create custom agents with specialized behaviors and configurations.
 
 ## Basic Agent
 
-```typescript
-import { defineAgent } from "@open-harness/sdk";
-import { z } from "zod";
+Define an agent with a system prompt:
 
-export const echoAgent = defineAgent({
-  name: "echo",
-  inputSchema: z.object({ message: z.string() }),
-  outputSchema: z.object({ echoed: z.string() }),
+```typescript title="agent.ts"
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
 
-  async execute(input, ctx) {
-    ctx.hub.emit({ type: "agent:start", agentName: "echo" });
+setDefaultProvider(createClaudeNode());
 
-    const result = { echoed: `Echo: ${input.message}` };
+const codeReviewer = agent({
+  prompt: `You are a senior code reviewer. Analyze code for:
+- Bugs and logical errors
+- Security vulnerabilities
+- Performance issues
+- Style and readability`,
+});
 
-    ctx.hub.emit({ type: "agent:complete", output: result });
-    return result;
-  }
+const result = await run(codeReviewer, {
+  prompt: `Review this function:
+function divide(a, b) {
+  return a / b;
+}`,
+});
+
+console.log(result.output);
+```
+
+## Agent with Configuration
+
+Customize agent behavior with additional options:
+
+```typescript title="configured-agent.ts"
+import { agent, run } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+const technicalWriter = agent({
+  prompt: "Write clear, concise technical documentation.",
+  // Provider override (optional)
+  provider: createClaudeNode({ model: "claude-3-opus-latest" }),
+});
+
+const result = await run(technicalWriter, {
+  prompt: "Document this API endpoint: POST /users",
 });
 ```
 
-## Streaming Agent
+## Streaming Output
 
-```typescript
-export const streamingAgent = defineAgent({
-  name: "streaming",
+Handle streaming responses for real-time output:
 
-  async execute(input, ctx) {
-    const response = await fetch("https://api.example.com/stream", {
-      method: "POST",
-      body: JSON.stringify(input),
-      signal: ctx.abortSignal,
+```typescript title="streaming.ts"
+import { agent, run, onEvent } from "@open-harness/core";
+
+const chatAgent = agent({
+  prompt: "You are a helpful assistant.",
+});
+
+// Subscribe to streaming events
+onEvent((event) => {
+  if (event.type === "agent:text") {
+    process.stdout.write(event.text);
+  }
+});
+
+await run(chatAgent, { prompt: "Tell me a story." });
+```
+
+## Multi-Agent Harness
+
+Coordinate multiple agents with a harness:
+
+```typescript title="harness.ts"
+import { harness, agent, run } from "@open-harness/core";
+
+const classifier = agent({
+  prompt: "Classify input as 'question', 'statement', or 'command'.",
+});
+
+const responder = agent({
+  prompt: "Respond helpfully to the input.",
+});
+
+const myHarness = harness({
+  agents: { classifier, responder },
+  flow: async (agents, input) => {
+    const classification = await agents.classifier.run(input);
+    const response = await agents.responder.run({
+      ...input,
+      classification: classification.output,
     });
+    return { classification: classification.output, response: response.output };
+  },
+});
 
-    const reader = response.body.getReader();
-    let fullText = "";
+const result = await run(myHarness, {
+  prompt: "What is the capital of France?",
+});
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+console.log(result.output);
+// { classification: "question", response: "The capital of France is Paris." }
+```
 
-      const text = new TextDecoder().decode(value);
-      fullText += text;
+## Testing Agents
 
-      // Stream each chunk
-      ctx.hub.emit({ type: "agent:text", content: text });
-    }
+Write tests for your agents using Vitest:
 
-    return { text: fullText };
-  }
+```typescript title="agent.test.ts"
+import { test, expect } from "vitest";
+import { run, agent } from "@open-harness/vitest";
+
+const codeReviewer = agent({
+  prompt: "Review code for bugs.",
+});
+
+test("catches division by zero", async () => {
+  const result = await run(codeReviewer, {
+    prompt: "function divide(a, b) { return a / b; }",
+  });
+
+  expect(result.output).toContain("division");
+  expect(result).toHaveLatencyUnder(10000);
+  expect(result).toCostUnder(0.01);
 });
 ```
 
-## Register and Use
+## Recording and Replay
 
-```typescript
-import { DefaultNodeRegistry } from "@open-harness/sdk";
+Record agent responses for deterministic testing:
 
-const registry = new DefaultNodeRegistry();
-registry.register(echoAgent);
+```typescript title="fixture-recording.ts"
+import { agent, run } from "@open-harness/core";
+import { FileFixtureStore } from "@open-harness/stores";
 
-// In flow.yaml
-// - id: echo
-//   type: echo
-//   input:
-//     message: "{{ flow.input.text }}"
+const store = new FileFixtureStore("./fixtures");
+const myAgent = agent({ prompt: "Answer questions." });
+
+// Record mode: saves response to fixture
+const recordResult = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "hello-test",
+  mode: "record",
+  store,
+});
+
+// Replay mode: uses saved fixture (no API call)
+const replayResult = await run(myAgent, { prompt: "Hello" }, {
+  fixture: "hello-test",
+  mode: "replay",
+  store,
+});
 ```
+
+<Callout type="stuck" title="Are you stuck?">
+**Error: No provider configured**
+Make sure you call `setDefaultProvider()` before running agents, or pass a provider in `run()` options.
+
+**Error: Cannot read property 'run' of undefined**
+Check that your harness's `agents` object has the correct keys.
+</Callout>
 
 ## Next Steps
 
 - [Claude Agent](/docs/guides/agents/claude-agent) — Configure the built-in Claude agent
 - [Events API](/docs/reference/api/events) — Event types for agents
+- [Runtime API](/docs/reference/api/runtime) — Execute agents and harnesses

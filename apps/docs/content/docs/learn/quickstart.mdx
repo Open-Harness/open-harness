@@ -1,94 +1,151 @@
 ---
 title: Quickstart
-description: Run your first Open Harness flow in under 5 minutes
+description: Run your first Open Harness agent in under 5 minutes
 ---
 
 # Quickstart
 
-Build and run a "Hello World" flow in under five minutes.
+Build and run an agent with Claude in under five minutes.
 
 ## What You'll Build
 
-A single-agent flow that takes a name and returns a greeting:
+A code review assistant that uses Claude to analyze code:
 
 ```
-┌────────────────┐
-│  hello.agent   │
-│  (custom node) │
-└────────────────┘
+┌─────────────────┐
+│     agent()     │
+│  (code review)  │
+└─────────────────┘
 ```
 
 ## Prerequisites
 
 - Bun 1.0+
-- A terminal with access to your project directory
+- Running inside Claude Code (for authentication)
 
-## Step 1: Create a Project
+## Step 01: Create a Project
 
 ```bash
-mkdir my-first-flow
-cd my-first-flow
+mkdir code-reviewer
+cd code-reviewer
 bun init -y
-bun add @open-harness/sdk
+bun add @open-harness/core
 ```
 
-## Step 2: Define the Flow
+## Step 02: Define the Agent
 
-Create `flow.yaml`:
+Create `agent.ts`:
 
-```yaml
-name: hello-world
-nodes:
-  - id: hello
-    type: hello.agent
-    input:
-      name: "{{ flow.input.name }}"
-edges: []
-```
+```typescript title="agent.ts"
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
 
-## Step 3: Run It
+// Set up the Claude provider
+setDefaultProvider(createClaudeNode());
 
-Create `run.ts`:
+// Define a code review agent
+export const codeReviewer = agent({
+  prompt: `You are a code reviewer. Analyze code for:
+- Potential bugs
+- Security vulnerabilities
+- Style issues
 
-```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/sdk";
-import { readFileSync } from "node:fs";
-
-const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const helloAgent = {
-  type: "hello.agent" as const,
-  run: async (_ctx: any, input: { name: string }) => ({ message: `Hello, ${input.name}!` }),
-};
-
-const snapshot = await runFlow({
-  flow,
-  registry: { [helloAgent.type]: helloAgent },
-  input: { name: "World" },
+Provide a brief summary of any problems found.`,
 });
 
-console.log("Output:", snapshot.outputs);
+// Run the agent
+const result = await run(codeReviewer, {
+  prompt: `Review this code:
+function divide(a, b) {
+  return a / b;
+}`,
+});
+
+console.log("Review:", result.output);
+console.log("Metrics:", result.metrics);
 ```
 
-Run it:
+## Step 03: Run It
 
 ```bash
-bun run run.ts
+bun run agent.ts
 ```
 
-You should see output similar to:
+You should see output like:
 
 ```
-Output: { hello: { message: "Hello, World!" } }
+Review: This function has a potential division by zero issue.
+Consider adding a check for b === 0 before dividing.
+Metrics: { latencyMs: 1234, cost: 0.001, tokens: { input: 45, output: 32 } }
 ```
 
 ## What Just Happened?
 
-1. You defined a flow with a single custom agent node.
-2. You passed that node directly to `runFlow()` (no need to create a registry).
-3. You ran the flow with input.
+1. You defined an **agent** with a system prompt
+2. The `run()` function executed the agent with your input
+3. The result includes the output and real **metrics**
+4. Authentication happened automatically via Claude Code
+
+<Callout type="stuck" title="Are you stuck?">
+**Error: Cannot find module '@open-harness/core'**
+Run `bun install` to install dependencies.
+
+**Error: Claude API authentication failed**
+Make sure you're running from within Claude Code.
+</Callout>
+
+## What You Learned
+
+- `agent()` defines an agent with a system prompt
+- `run()` executes the agent and returns a result
+- Results include `output` and `metrics` (latency, cost, tokens)
+- Authentication is handled automatically
+
+## Adding Tests
+
+Create tests for your agent using Bun's built-in test runner:
+
+Create `agent.test.ts`:
+
+```typescript title="agent.test.ts"
+import { describe, expect, it, beforeAll } from "bun:test";
+import { agent, run, setDefaultProvider } from "@open-harness/core";
+import { createClaudeNode } from "@open-harness/server";
+
+// Set up provider before tests run
+beforeAll(() => {
+  setDefaultProvider(createClaudeNode());
+});
+
+const codeReviewer = agent({
+  prompt: "Review code for bugs and security issues.",
+});
+
+describe("Code Reviewer", () => {
+  it("catches division by zero", async () => {
+    const result = await run(codeReviewer, {
+      prompt: "function divide(a, b) { return a / b; }",
+    });
+
+    expect(result.output).toBeDefined();
+    expect(typeof result.output).toBe("string");
+    expect(result.metrics.latencyMs).toBeGreaterThan(0);
+  }, { timeout: 180000 }); // 3 min timeout for LLM calls
+});
+```
+
+Run tests:
+
+```bash
+bun test
+```
+
+<Callout type="info" title="Test Timeouts">
+LLM calls can take 30-60 seconds. Always set appropriate timeouts for tests that call `run()`.
+</Callout>
 
 ## Next Steps
 
-- [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow
-- [Runtime API](/docs/reference/api/hub) — Full control with `createHarness()`
-- [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
+- [Custom Agents](/docs/guides/agents/custom-agents) — Build specialized agent implementations
+- [Architecture](/docs/concepts/architecture) — Understand how Open Harness works
+- [Troubleshooting](/docs/learn/troubleshooting) — Common errors and fixes

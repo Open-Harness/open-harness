@@ -1,0 +1,371 @@
+# v0.2.0 Feature Integration Analysis
+#
+# Analysis of where each v0.2.0 feature fits in documentation structure
+# using Diataxis framework (tutorials, guides, concepts, reference).
+#
+# Generated: 2026-01-08
+# Author: Billie (AI Assistant)
+
+features:
+  evals:
+    who_needs:
+      primary: "Anyone wanting to measure/compare agent prompts or configurations"
+      secondary: "CI/CD pipeline integration, regression detection"
+      when: "After basic workflow works, before production deployment"
+
+    prerequisites:
+      - concept: "flows"
+        must_understand: "How to define and run a workflow"
+        why: "Evals test workflows, not raw prompts"
+      - concept: "variants"
+        must_understand: "What a variant is and how to define configuration differences"
+        why: "Evals compare variants (different models, prompts, configs)"
+      - concept: "assertions"
+        must_understand: "How to specify expected outcomes"
+        why: "Assertions define what 'passing' means"
+
+    journey_level: 7  # Final level in progressive disclosure
+    recommended_section: guides
+    subsection: "guides/evaluation/"
+    rationale: |
+      Evals are a HOW-TO pattern - users need to know they exist but don't need
+      full details until they're ready to measure/compare. The DX layer (defineSuite,
+      variant, gates) is mature and well-documented. Starter-kit provides working
+      reference implementation.
+
+    current_state:
+      quality_score: 4.2
+      clarity: 4
+      completeness: 5
+      accuracy: 4
+      source_files_assessed:
+        - "packages/internal/core/src/eval/README.md"
+        - "apps/docs/content/0.2.0/03-patterns/evals-pattern.md"
+        - "apps/starter-kit/README.md"
+        - "apps/starter-kit/src/evals/prompt-comparison.ts"
+      issues:
+        - "evals-pattern.md has redundant 'Purpose' section at end"
+        - "Could use more real-world examples beyond coding tasks"
+        - "FAQ is good but could expand on debugging failed evals"
+      good:
+        - "DX API (defineSuite, variant, gates) is clean and ergonomic"
+        - "README.md in eval/ is comprehensive with all assertion types"
+        - "Starter kit is excellent - clear user story, working CLI"
+        - "Two API layers documented: DX (high-level) and Engine (low-level)"
+        - "Recording integration is well-explained"
+        - "Gates vs assertions distinction is clear"
+      limitations_documented: true
+      limitations:
+        - "similarity scorer only has exact/contains (stub for others)"
+        - "LLM-judge disabled by default, returns stubs"
+      ready_for_v020: true
+
+    integration_plan:
+      - action: "Move evals-pattern.md to guides/evaluation/evals-quickstart.mdx"
+        reason: "How-to guide format; convert to MDX for components"
+      - action: "Add eval mention in Level 7 of threaded tutorial"
+        reason: "Progressive disclosure - last level"
+      - action: "Create reference page for assertion types"
+        reason: "Lookup table for what assertions are available"
+      - action: "Cross-link starter-kit as canonical working example"
+        reason: "Learn by example - starter-kit is production-quality"
+      - action: "Remove duplicate 'Purpose' section at end of evals-pattern.md"
+        reason: "Cleanup"
+
+  providers:
+    who_needs:
+      primary: "Users wanting to swap Claude for OpenCode or mix providers"
+      secondary: "Power users comparing provider performance"
+      when: "After understanding agents, when they want portability or comparison"
+
+    prerequisites:
+      - concept: "agents"
+        must_understand: "What an agent node is and how to configure it"
+        why: "Providers power agent nodes"
+      - concept: "workflows"
+        must_understand: "How nodes are connected in a flow"
+        why: "Provider choice is per-node"
+
+    journey_level: 5  # Mid-level architectural concept
+    recommended_section: concepts
+    subsection: "concepts/architecture/"
+    rationale: |
+      Provider abstraction is an EXPLANATION topic - understanding WHY providers
+      are abstracted helps users architect their systems. The ProviderTrait
+      interface is well-designed but the user-facing docs are incomplete.
+
+    current_state:
+      quality_score: 2.0
+      clarity: 2
+      completeness: 1
+      accuracy: 3
+      source_files_assessed:
+        - "apps/docs/content/0.2.0/02-architecture/providers.md"
+        - "packages/internal/core/src/providers/trait.ts"
+        - "packages/internal/core/src/providers/index.ts"
+      issues:
+        - "providers.md is OUTLINE ONLY - just bullet points"
+        - "OpenCode and Codex marked 'Coming soon' - not implemented"
+        - "No actual code examples for swapping providers"
+        - "Capabilities section is just a list, not explained"
+        - "No working example of mixing providers in workflow"
+      good:
+        - "ProviderTrait interface in code is clean"
+        - "Capabilities (streaming, structuredOutput) well-designed"
+        - "Concept of provider portability is solid"
+      limitations_documented: false
+      ready_for_v020: false  # OUTLINE ONLY
+
+    integration_plan:
+      - action: "Flesh out providers.md with actual content"
+        reason: "Currently just an outline - needs real documentation"
+        priority: high
+      - action: "Add code example showing how to define a provider"
+        reason: "Users need to see working examples"
+      - action: "Document what providers exist in v0.2.0 (just Claude?)"
+        reason: "Honest about what's implemented"
+      - action: "Move to concepts/architecture/providers.mdx"
+        reason: "Explanation document - why providers are abstracted"
+      - action: "Remove 'Coming soon' for OpenCode/Codex or add timeline"
+        reason: "Vaporware feels dishonest"
+      - action: "Add swapping example using variants in evals"
+        reason: "Show providers + evals integration"
+
+  recording:
+    who_needs:
+      primary: "Testing/CI users wanting deterministic replay"
+      secondary: "Debugging users wanting to reproduce issues"
+      tertiary: "Eval users recording golden fixtures"
+      when: "After flow works, before CI/CD setup"
+
+    prerequisites:
+      - concept: "flows"
+        must_understand: "How workflows execute"
+        why: "Recording captures workflow execution"
+      - concept: "providers"
+        must_understand: "Provider-level execution produces events"
+        why: "Recording is at provider level, not workflow level"
+      - concept: "evals"
+        must_understand: "Why you'd want deterministic replay"
+        why: "Primary use case is eval fixture recording"
+
+    journey_level: 6  # After evals concepts but before full eval setup
+    recommended_section: guides
+    subsection: "guides/testing/"
+    rationale: |
+      Recording & replay is a HOW-TO pattern for testing. The withRecording
+      wrapper is elegant but needs user-facing docs explaining the record/replay
+      lifecycle. Integrates tightly with evals.
+
+    current_state:
+      quality_score: 3.5
+      clarity: 4
+      completeness: 3
+      accuracy: 4
+      source_files_assessed:
+        - "packages/internal/core/src/recording/README.md"
+        - "packages/internal/core/src/recording/with-recording.ts"
+        - "packages/internal/core/src/recording/types.ts"
+        - "apps/starter-kit/src/evals/record.ts"
+      issues:
+        - "README is terse - developer-focused not user-focused"
+        - "No user-facing documentation exists (only internal README)"
+        - "No explanation of 'live' vs 'record' vs 'replay' modes"
+        - "No guidance on when to use each mode"
+        - "File store adapter mentioned but not documented"
+      good:
+        - "API is clean (withRecording wrapper)"
+        - "Modes are clear in code (live/record/replay/passthrough)"
+        - "inputHash for deterministic replay is smart"
+        - "RecordingStore interface is well-designed"
+        - "starter-kit has working record.ts CLI"
+      limitations_documented: true
+      limitations:
+        - "File/SQLite stores live outside core - adapters not documented"
+      ready_for_v020: false  # Needs user-facing docs
+
+    integration_plan:
+      - action: "Create guides/testing/recording-replay.mdx"
+        reason: "User-facing how-to guide for recording"
+      - action: "Document the 3 modes (live, record, replay)"
+        reason: "Users need to understand when to use each"
+      - action: "Add workflow showing record-then-replay lifecycle"
+        reason: "Show the CI pattern: record locally, replay in CI"
+      - action: "Cross-link with evals documentation"
+        reason: "Recording exists primarily for eval fixtures"
+      - action: "Document starter-kit's record.ts as working example"
+        reason: "Working CLI reference"
+
+excluded:
+  telemetry:
+    reason: "v0.3.0 scope - OTel/wide events work not complete"
+    current_state: |
+      telemetry.md is actually comprehensive (429 lines!) and documents
+      the built-in event system well. However it describes a target state
+      with OTel integration that isn't implemented. The event system IS
+      implemented but the "no configuration required" story assumes
+      infrastructure that doesn't exist yet.
+    what_is_real:
+      - "Event types (flow:*, node:*, agent:*, state:*) ARE implemented"
+      - "Event emission via ctx.emit() IS implemented"
+      - "Metrics in agent:complete ARE captured"
+    what_is_not_real:
+      - "Built-in transports (HTTP-SSE, WebSocket) - not in core"
+      - "'No configuration required' - requires eventHandler callback"
+      - "Recording & replay as described - uses separate recording system"
+    action: "Move to docs/future/ or add 'v0.3.0' status marker"
+    recommendation: |
+      Keep the event system documentation but clearly mark telemetry.md
+      as describing v0.3.0 goals. The event types and emission ARE real.
+
+  skills_pattern:
+    reason: "Not v0.2.0 scope - Skills are a future enhancement"
+    current_state: |
+      skills-pattern.md is OUTLINE ONLY (60 lines). Skills are mentioned
+      heavily in zen.md as the mental model but no implementation exists.
+      Skills are: prompt + rules + scripts + evals. The concept is solid
+      but there's no Skills type or skill loader in the codebase.
+    what_is_real:
+      - "Mental model in zen.md is good"
+      - "Concept of 'domain expertise encoded for agents' is valid"
+    what_is_not_real:
+      - "No Skills type definition in codebase"
+      - "No skill loader or skill registry"
+      - "No progressive disclosure system for skills"
+    action: "Delete from 0.2.0, preserve in docs/future/"
+    recommendation: |
+      Skills are core to the Open Harness vision but not implemented.
+      Move to future roadmap. Keep zen.md's conceptual discussion.
+
+  scripts_pattern:
+    reason: "Not v0.2.0 scope - Scripts are a future enhancement"
+    current_state: |
+      scripts-pattern.md is OUTLINE ONLY (56 lines). Scripts are wrappers
+      around libraries for shell tool access. The concept is valid but
+      there's no Scripts type or script registry in the codebase.
+    what_is_real:
+      - "Agents CAN call bash (shell tool exists in SDK)"
+      - "Concept of wrapping libraries is valid"
+    what_is_not_real:
+      - "No Scripts type definition"
+      - "No script registry or loader"
+      - "No example scripts in codebase"
+    action: "Delete from 0.2.0, preserve in docs/future/"
+    recommendation: |
+      Scripts are how agents get 'universal access' but the pattern
+      isn't formalized in v0.2.0. Move to future roadmap.
+
+migration_recommendations:
+  from_020_directory:
+    keep_and_migrate:
+      - source: "0.2.0/01-foundations/zen.md"
+        target: "docs/concepts/philosophy/zen.mdx"
+        changes_needed: "Convert to MDX; excellent content - migrate as-is"
+        quality: 5
+
+      - source: "0.2.0/01-foundations/philosophy.md"
+        target: "docs/concepts/philosophy/design-principles.mdx"
+        changes_needed: "Review completeness; currently outline-ish"
+        quality: 3
+
+      - source: "0.2.0/03-patterns/evals-pattern.md"
+        target: "docs/guides/evaluation/evals-quickstart.mdx"
+        changes_needed: "Convert to MDX; remove duplicate Purpose section at end"
+        quality: 4
+
+      - source: "0.2.0/02-architecture/architecture.md"
+        target: "docs/concepts/architecture/overview.mdx"
+        changes_needed: "Review completeness; outline-ish"
+        quality: 3
+
+      - source: "0.2.0/02-architecture/providers.md"
+        target: "docs/concepts/architecture/providers.mdx"
+        changes_needed: "REQUIRES SIGNIFICANT WRITING - currently outline only"
+        quality: 2
+        priority: high
+
+    needs_work_before_migration:
+      - source: "0.2.0/04-getting-started/quickstart.md"
+        issue: "Needs review to ensure it reflects v0.2.0 API"
+        action: "Validate against actual code, update examples"
+
+      - source: "0.2.0/04-getting-started/what-can-i-build.md"
+        issue: "Outline only - needs real content"
+        action: "Write concrete examples with code"
+
+      - source: "0.2.0/04-getting-started/why-open-harness.md"
+        issue: "Outline only"
+        action: "Write value proposition content"
+
+    move_to_future:
+      - source: "0.2.0/02-architecture/telemetry.md"
+        reason: "v0.3.0 scope - OTel integration not complete"
+        destination: "docs/future/v030-telemetry.md"
+
+      - source: "0.2.0/03-patterns/skills-pattern.md"
+        reason: "Not implemented - conceptual only"
+        destination: "docs/future/skills-pattern.md"
+
+      - source: "0.2.0/03-patterns/scripts-pattern.md"
+        reason: "Not implemented - conceptual only"
+        destination: "docs/future/scripts-pattern.md"
+
+    delete:
+      - file: "0.2.0/README.md"
+        reason: "Navigation doc for 0.2.0 structure - won't apply to new structure"
+        action: "Delete after migration complete; info is organizational not content"
+
+  new_docs_needed:
+    - path: "docs/guides/testing/recording-replay.mdx"
+      reason: "Recording system has no user-facing docs"
+      sources:
+        - "packages/internal/core/src/recording/README.md"
+        - "apps/starter-kit/src/evals/record.ts"
+      priority: high
+
+    - path: "docs/reference/assertions.mdx"
+      reason: "Lookup table for all assertion types"
+      sources:
+        - "packages/internal/core/src/eval/README.md"
+      priority: medium
+
+    - path: "docs/reference/gates.mdx"
+      reason: "Lookup table for all gate types"
+      sources:
+        - "packages/internal/core/src/eval/dx.ts"
+      priority: medium
+
+    - path: "docs/reference/scorers.mdx"
+      reason: "Lookup table for all scorer types"
+      sources:
+        - "packages/internal/core/src/eval/README.md"
+        - "packages/internal/core/src/eval/scorers/"
+      priority: medium
+
+summary:
+  v020_ready_features:
+    - name: "Evals System"
+      completeness: "95%"
+      docs_quality: "Good - needs minor cleanup"
+
+  needs_work:
+    - name: "Providers"
+      completeness: "30%"
+      docs_quality: "Outline only - needs writing"
+      blocker: true
+
+    - name: "Recording"
+      completeness: "70%"
+      docs_quality: "Internal docs only - needs user-facing guide"
+      blocker: false
+
+  excluded_correctly:
+    - "telemetry.md - v0.3.0 scope (good content, future target)"
+    - "skills-pattern.md - not implemented"
+    - "scripts-pattern.md - not implemented"
+
+  key_insight: |
+    Evals are v0.2.0 ready with excellent DX layer. Providers doc needs
+    significant work - it's just an outline. Recording needs user-facing
+    docs but the code is solid. Skills/Scripts are conceptual vision from
+    zen.md but have no implementation, correctly excluded.

@@ -32,18 +32,27 @@ Flows are directed graphs where:
 nodes:
   - id: classify
     type: claude.agent
+    input:
+      prompt: "Classify this request: {{ flow.input.text }}"
+
   - id: handle-bug
     type: claude.agent
+    input:
+      prompt: "Handle the bug report"
+
   - id: handle-feature
     type: claude.agent
+    input:
+      prompt: "Handle the feature request"
 
 edges:
   - from: classify
     to: handle-bug
-    condition: "{{ nodes.classify.output.type = 'bug' }}"
+    when: "$contains(classify.text, 'bug')"
+
   - from: classify
     to: handle-feature
-    condition: "{{ nodes.classify.output.type = 'feature' }}"
+    when: "$contains(classify.text, 'feature')"
 ```
 
 ## Benefits
@@ -58,15 +67,22 @@ Nodes without dependencies run in parallel automatically:
 
 ```yaml
 nodes:
-  - id: fetch-users    # These run in parallel
-    type: http.get
-  - id: fetch-orders   # No dependency on fetch-users
-    type: http.get
-  - id: combine        # Waits for both
+  - id: analyze-code
     type: claude.agent
     input:
-      users: "{{ nodes.fetch-users.output }}"
-      orders: "{{ nodes.fetch-orders.output }}"
+      prompt: "Analyze code quality"
+
+  - id: analyze-security
+    type: claude.agent
+    input:
+      prompt: "Analyze security issues"
+
+  - id: combine
+    type: claude.agent
+    input:
+      code: "{{ analyze-code.text }}"
+      security: "{{ analyze-security.text }}"
+      prompt: "Combine the analyses"
 ```
 
 ### Declarative Data Flow
@@ -75,7 +91,7 @@ Data dependencies are explicit in bindings:
 
 ```yaml
 input:
-  data: "{{ nodes.fetch.output }}"
+  data: "{{ fetch.text }}"
 ```
 
 The runtime knows exactly what each node needs.
@@ -89,15 +105,7 @@ Every node emits events. The graph structure makes it clear:
 
 ### Composable
 
-Flows can invoke other flows as nodes:
-
-```yaml
-- id: sub-workflow
-  type: flow
-  input:
-    flowId: "shared-validation"
-    data: "{{ flow.input }}"
-```
+Flows can be nested and reused.
 
 ## Trade-offs
 
@@ -111,7 +119,7 @@ Developers need to think in graphs rather than sequential code.
 
 Graph structure is static. Can't add nodes at runtime.
 
-**Mitigation**: Use conditional edges and the `map` node for dynamic patterns.
+**Mitigation**: Use conditional edges for dynamic branching patterns.
 
 ### Verbosity for Simple Cases
 
@@ -136,3 +144,4 @@ A single agent call requires more boilerplate than a function call.
 
 - [Architecture](/docs/concepts/architecture) — System overview
 - [Control Flow Guide](/docs/guides/flows/control-flow) — Flow patterns
+

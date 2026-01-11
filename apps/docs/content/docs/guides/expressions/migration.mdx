@@ -44,7 +44,7 @@ prompt: "{{ flow.input.firstName & ' ' & flow.input.lastName }}"
 value: "${nodes.api.output.data.items[0].name}"
 
 # After - same syntax
-value: "{{ nodes.api.output.data.items[0].name }}"
+value: "{{ api.data.items[0].name }}"
 ```
 
 ## Conditional Values

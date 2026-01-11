@@ -3,7 +3,15 @@ import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 import dts from "rollup-plugin-dts";
 
-const external = ["react", "react/jsx-runtime", "ai"];
+const external = [
+	"react",
+	"react/jsx-runtime",
+	"ai",
+	// Node.js native modules - should not be bundled
+	"pino",
+	"pino-pretty",
+	"thread-stream",
+];
 
 export default [
 	{

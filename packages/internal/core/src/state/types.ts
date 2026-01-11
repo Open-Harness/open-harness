@@ -17,8 +17,8 @@ export type NodeTypeId = string;
  * @property {Record<string, unknown>} [schema] - Optional metadata or schema.
  */
 export type StateSchemaDefinition = {
-  initial: Record<string, unknown>;
-  schema?: Record<string, unknown>;
+	initial: Record<string, unknown>;
+	schema?: Record<string, unknown>;
 };
 
 /**
@@ -31,11 +31,11 @@ export type StateSchemaDefinition = {
  * @property {EdgeDefinition[]} edges - Edge list.
  */
 export type FlowDefinition = {
-  name: string;
-  version?: number;
-  state?: StateSchemaDefinition;
-  nodes: NodeDefinition[];
-  edges: EdgeDefinition[];
+	name: string;
+	version?: number;
+	state?: StateSchemaDefinition;
+	nodes: NodeDefinition[];
+	edges: EdgeDefinition[];
 };
 
 /**
@@ -47,10 +47,10 @@ export type FlowDefinition = {
  * @property {string} [color] - Node color.
  */
 export type NodeUi = {
-  x: number;
-  y: number;
-  label?: string;
-  color?: string;
+	x: number;
+	y: number;
+	label?: string;
+	color?: string;
 };
 
 /**
@@ -64,12 +64,12 @@ export type NodeUi = {
  * @property {NodeUi} [ui] - Optional UI metadata.
  */
 export type NodeDefinition = {
-  id: NodeId;
-  type: NodeTypeId;
-  input: Record<string, unknown>;
-  when?: WhenExpr;
-  policy?: NodePolicy;
-  ui?: NodeUi;
+	id: NodeId;
+	type: NodeTypeId;
+	input: Record<string, unknown>;
+	when?: WhenExpr;
+	policy?: NodePolicy;
+	ui?: NodeUi;
 };
 
 /** Edge gating mode for inbound edges on a node. */
@@ -82,8 +82,8 @@ export type EdgeGate = "any" | "all";
  * @property {string} as - Variable name for each item.
  */
 export type EdgeForEach = {
-  in: string;
-  as: string;
+	in: string;
+	as: string;
 };
 
 /**
@@ -98,13 +98,13 @@ export type EdgeForEach = {
  * @property {number} [maxIterations] - Optional cap for loop edges.
  */
 export type EdgeDefinition = {
-  id?: EdgeId;
-  from: NodeId;
-  to: NodeId;
-  when?: WhenExpr;
-  gate?: EdgeGate;
-  forEach?: EdgeForEach;
-  maxIterations?: number;
+	id?: EdgeId;
+	from: NodeId;
+	to: NodeId;
+	when?: WhenExpr;
+	gate?: EdgeGate;
+	forEach?: EdgeForEach;
+	maxIterations?: number;
 };
 
 /**
@@ -117,10 +117,10 @@ export type EdgeDefinition = {
  * - or: logical disjunction
  */
 export type WhenExprAST =
-  | { equals: { var: string; value: unknown } }
-  | { not: WhenExprAST }
-  | { and: WhenExprAST[] }
-  | { or: WhenExprAST[] };
+	| { equals: { var: string; value: unknown } }
+	| { not: WhenExprAST }
+	| { and: WhenExprAST[] }
+	| { or: WhenExprAST[] };
 
 /**
  * Conditional expression - either a JSONata string or structured AST.
@@ -143,8 +143,8 @@ export type WhenExpr = string | WhenExprAST;
  * @property {number} [backoffMs] - Backoff delay in milliseconds.
  */
 export type RetryPolicy = {
-  maxAttempts: number;
-  backoffMs?: number;
+	maxAttempts: number;
+	backoffMs?: number;
 };
 
 /**
@@ -155,9 +155,9 @@ export type RetryPolicy = {
  * @property {boolean} [continueOnError] - Whether to continue on error.
  */
 export type NodePolicy = {
-  retry?: RetryPolicy;
-  timeoutMs?: number;
-  continueOnError?: boolean;
+	retry?: RetryPolicy;
+	timeoutMs?: number;
+	continueOnError?: boolean;
 };
 
 const NodeIdSchema = z.string().min(1, "Node id is required");
@@ -165,112 +165,109 @@ const NodeTypeIdSchema = z.string().min(1, "Node type is required");
 const EdgeIdSchema = z.string().min(1).optional();
 
 const StateSchemaDefinitionSchema = z.object({
-  initial: z.record(z.string(), z.unknown()),
-  schema: z.record(z.string(), z.unknown()).optional(),
+	initial: z.record(z.string(), z.unknown()),
+	schema: z.record(z.string(), z.unknown()).optional(),
 });
 
 const NodeUiSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  label: z.string().optional(),
-  color: z.string().optional(),
+	x: z.number(),
+	y: z.number(),
+	label: z.string().optional(),
+	color: z.string().optional(),
 });
 
 const RetryPolicySchema = z.object({
-  maxAttempts: z.number().int().min(1),
-  backoffMs: z.number().int().nonnegative().optional(),
+	maxAttempts: z.number().int().min(1),
+	backoffMs: z.number().int().nonnegative().optional(),
 });
 
 const NodePolicySchema = z.object({
-  retry: RetryPolicySchema.optional(),
-  timeoutMs: z.number().int().nonnegative().optional(),
-  continueOnError: z.boolean().optional(),
+	retry: RetryPolicySchema.optional(),
+	timeoutMs: z.number().int().nonnegative().optional(),
+	continueOnError: z.boolean().optional(),
 });
 
 /** Zod schema for WhenExprAST validation (structured format). */
 export const WhenExprASTSchema: ZodType<WhenExprAST> = z.lazy(() =>
-  z.union([
-    z.object({
-      equals: z.object({ var: z.string(), value: z.unknown() }),
-    }),
-    z.object({
-      not: WhenExprASTSchema,
-    }),
-    z.object({
-      and: z.array(WhenExprASTSchema),
-    }),
-    z.object({
-      or: z.array(WhenExprASTSchema),
-    }),
-  ]),
+	z.union([
+		z.object({
+			equals: z.object({ var: z.string(), value: z.unknown() }),
+		}),
+		z.object({
+			not: WhenExprASTSchema,
+		}),
+		z.object({
+			and: z.array(WhenExprASTSchema),
+		}),
+		z.object({
+			or: z.array(WhenExprASTSchema),
+		}),
+	]),
 );
 
 /** Zod schema for WhenExpr validation (string or AST). */
-export const WhenExprSchema: ZodType<WhenExpr> = z.union([
-  z.string(),
-  WhenExprASTSchema,
-]);
+export const WhenExprSchema: ZodType<WhenExpr> = z.union([z.string(), WhenExprASTSchema]);
 
 const EdgeForEachSchema = z.object({
-  in: z.string().min(1),
-  as: z.string().min(1),
+	in: z.string().min(1),
+	as: z.string().min(1),
 });
 
 /** Zod schema for EdgeDefinition validation. */
 export const EdgeDefinitionSchema: ZodType<EdgeDefinition> = z.object({
-  id: EdgeIdSchema,
-  from: NodeIdSchema,
-  to: NodeIdSchema,
-  when: WhenExprSchema.optional(),
-  gate: z.enum(["any", "all"]).optional(),
-  forEach: EdgeForEachSchema.optional(),
-  maxIterations: z.number().int().positive().optional(),
+	id: EdgeIdSchema,
+	from: NodeIdSchema,
+	to: NodeIdSchema,
+	when: WhenExprSchema.optional(),
+	gate: z.enum(["any", "all"]).optional(),
+	forEach: EdgeForEachSchema.optional(),
+	maxIterations: z.number().int().positive().optional(),
 });
 
 /** Zod schema for NodeDefinition validation. */
 export const NodeDefinitionSchema: ZodType<NodeDefinition> = z.object({
-  id: NodeIdSchema,
-  type: NodeTypeIdSchema,
-  input: z.record(z.string(), z.unknown()),
-  when: WhenExprSchema.optional(),
-  policy: NodePolicySchema.optional(),
-  ui: NodeUiSchema.optional(),
+	id: NodeIdSchema,
+	type: NodeTypeIdSchema,
+	input: z.record(z.string(), z.unknown()),
+	when: WhenExprSchema.optional(),
+	policy: NodePolicySchema.optional(),
+	ui: NodeUiSchema.optional(),
 });
 
 /** Zod schema for FlowDefinition validation. */
 export const FlowDefinitionSchema: ZodType<FlowDefinition> = z
-  .object({
-    name: z.string().min(1),
-    version: z.number().optional(),
-    state: StateSchemaDefinitionSchema.optional(),
-    nodes: z.array(NodeDefinitionSchema),
-    edges: z.array(EdgeDefinitionSchema),
-  })
-  .superRefine((value, ctx) => {
-    const ids = value.nodes.map((node) => node.id);
-    const unique = new Set(ids);
-    if (unique.size !== ids.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Node ids must be unique",
-        path: ["nodes"],
-      });
-    }
+	.object({
+		name: z.string().min(1),
+		version: z.number().optional(),
+		state: StateSchemaDefinitionSchema.optional(),
+		nodes: z.array(NodeDefinitionSchema),
+		edges: z.array(EdgeDefinitionSchema),
+	})
+	.superRefine((value, ctx) => {
+		const ids = value.nodes.map((node) => node.id);
+		const unique = new Set(ids);
+		if (unique.size !== ids.length) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "Node ids must be unique",
+				path: ["nodes"],
+			});
+		}
 
-    for (const edge of value.edges) {
-      if (!unique.has(edge.from)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Edge from "${edge.from}" does not reference a node`,
-          path: ["edges"],
-        });
-      }
-      if (!unique.has(edge.to)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Edge to "${edge.to}" does not reference a node`,
-          path: ["edges"],
-        });
-      }
-    }
-  });
+		for (const edge of value.edges) {
+			if (!unique.has(edge.from)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: `Edge from "${edge.from}" does not reference a node`,
+					path: ["edges"],
+				});
+			}
+			if (!unique.has(edge.to)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: `Edge to "${edge.to}" does not reference a node`,
+					path: ["edges"],
+				});
+			}
+		}
+	});

@@ -1,0 +1,22 @@
+{
+	"name": "@examples/speckit",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "bun test --timeout 60000",
+		"test:live": "FIXTURE_MODE=live bun test --timeout 300000",
+		"test:record": "FIXTURE_MODE=record bun test --timeout 300000",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@open-harness/core": "workspace:*",
+		"@open-harness/server": "workspace:*",
+		"@open-harness/stores": "workspace:*",
+		"zod": "^3.25.67"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5"
+	}
+}

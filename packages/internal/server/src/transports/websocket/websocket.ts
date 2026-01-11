@@ -75,7 +75,18 @@ export class WebSocketTransport implements Transport {
           const payload = decodeMessage(message);
           if (!payload) return;
           if (payload.type === "command") {
-            this.runtime.dispatch(payload.command);
+            const command = payload.command;
+            if (command.type === "pause") {
+              this.runtime.pause();
+              return;
+            }
+            if (command.type === "stop") {
+              this.runtime.stop();
+              return;
+            }
+            if (command.type === "resume") {
+              void this.runtime.resume(command.message);
+            }
           }
         },
         close: (ws) => {

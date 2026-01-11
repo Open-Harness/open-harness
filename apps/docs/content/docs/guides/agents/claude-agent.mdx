@@ -45,7 +45,7 @@ The Claude agent emits these events:
 
 ```typescript
 // Text chunks
-{ type: "agent:text", content: "Hello..." }
+{ type: "agent:text", text: "Hello..." }
 
 // Tool use
 { type: "agent:tool_use", name: "search", input: {...} }
@@ -56,21 +56,37 @@ The Claude agent emits these events:
 
 ## Subscribe to Events
 
+Use `runtime.onEvent()` or the `onEvent` option:
+
 ```typescript
-hub.subscribe("agent:text", (event) => {
-  process.stdout.write(event.event.content);
+import { createHarness, parseFlowYaml } from "@open-harness/server";
+
+const harness = createHarness({
+  flow: parseFlowYaml(yaml),
+  onEvent: (event) => {
+    if (event.type === "agent:text") {
+      process.stdout.write(event.text);
+    }
+  },
 });
+
+await harness.run({ question: "What is AI?" });
 ```
 
 ## Error Handling
 
+Handle errors in the event stream:
+
 ```typescript
-hub.subscribe("agent:error", (event) => {
-  console.error("Agent failed:", event.event.error);
+runtime.onEvent((event) => {
+  if (event.type === "flow:error") {
+    console.error("Flow failed:", event.error);
+  }
 });
 ```
 
 ## Next Steps
 
-- [Custom Agents](/docs/guides/agents/custom-agents) — Build your own agents
+- [Custom Nodes](/docs/guides/agents/custom-agents) — Build your own nodes
 - [Events API](/docs/reference/api/events) — Full event reference
+

@@ -1,2 +1,7 @@
-// Provider contracts and shared types will go here
-// TODO: Extract provider interface from claude.agent.ts
+/**
+ * Shared provider contracts and types.
+ *
+ * NOTE: Provider interface is currently defined in claude.agent.ts.
+ * Extraction to this module is planned for a future release.
+ */
+export {};

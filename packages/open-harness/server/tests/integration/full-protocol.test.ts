@@ -33,11 +33,11 @@ const reviewNode: NodeTypeDefinition<Record<string, never>, { passed: boolean }>
 	},
 };
 
-const agentNode: NodeTypeDefinition<{ text: string }, { text: string; reply?: string }> = {
+const agentNode: NodeTypeDefinition<{ text: string; message?: string }, { text: string; reply?: string }> = {
 	type: "mock.agent",
-	run: async (ctx, input) => {
-		const command = ctx.inbox.next();
-		const reply = command?.type === "send" ? command.message : undefined;
+	run: async (_ctx, input) => {
+		// Simplified: reply comes from input instead of inbox
+		const reply = input.message;
 		return { text: input.text, reply };
 	},
 };
@@ -125,28 +125,18 @@ edges:
 
 		const runtime = createRuntime({ flow, registry });
 		const events: RuntimeEvent[] = [];
-		const pendingReplies = ["one", "two"];
 		runtime.onEvent((event) => {
 			events.push(event);
-			if (event.type === "node:start" && event.nodeId === "agent") {
-				const reply = pendingReplies.shift();
-				if (reply) {
-					runtime.dispatch({
-						type: "send",
-						runId: event.runId,
-						message: reply,
-					});
-				}
-			}
 		});
 
 		const snapshot = await runtime.run();
 
 		expect(snapshot.outputs.list).toEqual({ value: ["alpha", "beta"] });
+		// Updated: agent node no longer receives messages via inbox, so no replies
 		expect(snapshot.outputs.agent).toEqual({
 			iterations: [
-				{ item: "alpha", output: { text: "alpha", reply: "one" } },
-				{ item: "beta", output: { text: "beta", reply: "two" } },
+				{ item: "alpha", output: { text: "alpha", reply: undefined } },
+				{ item: "beta", output: { text: "beta", reply: undefined } },
 			],
 		});
 		expect(snapshot.outputs.counter).toEqual({ count: 2 });
@@ -160,7 +150,6 @@ edges:
 		expect(eventTypes).toContain("edge:fire");
 		expect(eventTypes).toContain("loop:iterate");
 		expect(eventTypes).toContain("state:patch");
-		expect(eventTypes).toContain("command:received");
 		expect(eventTypes).toContain("flow:complete");
 	});
 });

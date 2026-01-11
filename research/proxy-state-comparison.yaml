@@ -1,0 +1,1008 @@
+proxy_comparison:
+  recommended: "valtio"
+  rationale: |
+    Valtio offers the best balance for agent state management with:
+    - Cleanest mutation syntax (just assign values)
+    - Excellent TypeScript inference through proxies
+    - Built-in snapshot system for immutable reads
+    - First-class Zod integration (valtio-zod)
+    - Minimal API surface (proxy/snapshot/subscribe)
+    - Node.js native (no DOM dependencies)
+    - Smallest bundle size
+
+    While @vue/reactivity is technically superior in features, Valtio's simplicity
+    and direct Zod integration make it ideal for agent state where you want natural
+    mutations with schema validation.
+
+  libraries:
+    - name: "valtio"
+      mutation_style: |
+        import { proxy } from 'valtio'
+
+        type AgentState = {
+          status: 'idle' | 'running' | 'paused'
+          currentTask: string | null
+          metrics: { tokensUsed: number }
+        }
+
+        const state = proxy<AgentState>({
+          status: 'idle',
+          currentTask: null,
+          metrics: { tokensUsed: 0 }
+        })
+
+        // Natural mutations - just assign
+        state.status = 'running'
+        state.currentTask = 'analyze-code'
+        state.metrics.tokensUsed += 100
+
+        // Nested updates work naturally
+        state.metrics.tokensUsed = 500
+
+      subscription_api: |
+        import { subscribe, snapshot } from 'valtio'
+
+        // Subscribe to all changes
+        const unsubscribe = subscribe(state, () => {
+          console.log('State changed:', snapshot(state))
+        })
+
+        // Subscribe to specific path
+        subscribe(state.metrics, () => {
+          console.log('Metrics updated:', state.metrics.tokensUsed)
+        })
+
+        // Cleanup
+        unsubscribe()
+
+      snapshot_pattern: |
+        Yes - first-class feature
+
+        import { snapshot } from 'valtio'
+
+        // Get immutable snapshot at any time
+        const snap = snapshot(state)
+        console.log(snap.status) // Read-only
+
+        // Snapshots work with JSON.stringify
+        const json = JSON.stringify(snapshot(state))
+
+        // Use snapshots for comparisons, serialization, logging
+
+      ts_inference: "excellent"
+      ts_inference_details: |
+        - Generic type parameter: proxy<T>(initialState)
+        - Full type inference on mutations
+        - Snapshot types match proxy types
+        - No weird proxy type leakage
+        - Works great with discriminated unions
+
+      zod_compatibility: |
+        Excellent - official valtio-zod package
+
+        import { schema } from 'valtio-zod'
+        import { z } from 'zod'
+
+        const AgentStateSchema = z.object({
+          status: z.enum(['idle', 'running', 'paused']),
+          currentTask: z.string().nullable(),
+          metrics: z.object({ tokensUsed: z.number() })
+        })
+
+        const state = schema(AgentStateSchema).proxy({
+          status: 'idle',
+          currentTask: null,
+          metrics: { tokensUsed: 0 }
+        })
+
+        state.status = 'invalid' // Silently rejected, keeps old value
+        state.metrics.tokensUsed = 'bad' // Type error + runtime rejection
+
+        // With error handling
+        const state = schema(AgentStateSchema).proxy(initial, {
+          parseSafe: true,
+          errorHandler: (err) => console.error('Validation failed:', err)
+        })
+
+      node_compatible: true
+      node_details: |
+        - Zero DOM dependencies
+        - Works in any JS environment
+        - Official support for Node.js, Next.js SSR
+        - Lightweight (3-4kb gzipped)
+
+      performance: |
+        - Fast proxy creation
+        - Minimal overhead on mutations
+        - Efficient subscription tracking
+        - Deep nested objects work fine
+        - No performance issues reported in backend use
+
+      memory_management: |
+        - Subscribe returns unsubscribe function
+        - Manual cleanup required
+        - No automatic disposal
+        - Memory leaks if subscriptions not cleaned up
+
+        Pattern:
+        class Agent {
+          private disposers: Array<() => void> = []
+
+          setupState() {
+            this.disposers.push(
+              subscribe(state, () => { /* ... */ })
+            )
+          }
+
+          dispose() {
+            this.disposers.forEach(d => d())
+          }
+        }
+
+      serialization: |
+        Built-in via snapshots
+
+        // Serialize
+        const json = JSON.stringify(snapshot(state))
+        localStorage.setItem('state', json)
+
+        // Hydrate
+        const stored = JSON.parse(localStorage.getItem('state'))
+        const state = proxy(stored)
+
+        Note: Non-serializable values need special handling
+
+      strengths:
+        - Simplest API of all options
+        - Natural mutation syntax
+        - Official Zod integration
+        - Excellent TypeScript support
+        - Snapshot system built-in
+        - Small bundle size
+        - Active maintenance (pmndrs ecosystem)
+
+      weaknesses:
+        - Less granular subscription control
+        - No computed values built-in
+        - Manual cleanup required
+        - Smaller ecosystem than MobX
+        - Subscribe doesn't give old/new values
+
+      best_for:
+        - Agent state management
+        - Schema-validated state
+        - Simple reactive patterns
+        - Lightweight backend services
+        - When you want natural mutations
+
+    - name: "@vue/reactivity"
+      mutation_style: |
+        import { reactive, ref } from '@vue/reactivity'
+
+        // Object-based (reactive)
+        const state = reactive({
+          status: 'idle',
+          currentTask: null,
+          metrics: { tokensUsed: 0 }
+        })
+
+        state.status = 'running' // Direct mutation
+        state.metrics.tokensUsed += 100
+
+        // Value-based (ref) - requires .value
+        const count = ref(0)
+        const name = ref('agent')
+
+        count.value++ // Must use .value
+        name.value = 'new-agent'
+
+        // Mixed approach
+        const state = reactive({
+          count: ref(0), // Auto-unwrapped in reactive
+          name: 'agent'
+        })
+
+        state.count++ // No .value needed (unwrapped)
+
+      subscription_api: |
+        import { watch, watchEffect } from '@vue/reactivity'
+
+        // Auto-tracking (like React useEffect)
+        const stop = watchEffect(() => {
+          console.log('Status:', state.status)
+          console.log('Tokens:', state.metrics.tokensUsed)
+        })
+
+        // Explicit watch (like React useEffect with deps)
+        const stop = watch(
+          () => state.status,
+          (newVal, oldVal) => {
+            console.log(`Status: ${oldVal} -> ${newVal}`)
+          },
+          { immediate: true, deep: true }
+        )
+
+        // Watch multiple sources
+        watch(
+          [() => state.status, () => state.currentTask],
+          ([newStatus, newTask], [oldStatus, oldTask]) => {
+            console.log('Multiple changed')
+          }
+        )
+
+        // Cleanup
+        stop()
+
+      snapshot_pattern: |
+        No built-in snapshots - use manual cloning
+
+        import { toRaw } from '@vue/reactivity'
+
+        // Get raw object (not truly immutable)
+        const raw = toRaw(state)
+
+        // For immutable snapshot, must deep clone
+        const snapshot = JSON.parse(JSON.stringify(toRaw(state)))
+
+        // Or use readonly wrapper
+        import { readonly } from '@vue/reactivity'
+        const immutable = readonly(state)
+
+      ts_inference: "excellent"
+      ts_inference_details: |
+        - Best-in-class TypeScript support
+        - Generic types: reactive<T>(), ref<T>()
+        - Full inference on nested properties
+        - Refs auto-unwrap in reactive objects
+        - Computed types inferred correctly
+        - Official Vue team maintenance
+
+      zod_compatibility: |
+        No official integration - manual validation needed
+
+        import { reactive, watch } from '@vue/reactivity'
+        import { z } from 'zod'
+
+        const schema = z.object({
+          status: z.enum(['idle', 'running']),
+          tokensUsed: z.number()
+        })
+
+        const state = reactive(schema.parse({
+          status: 'idle',
+          tokensUsed: 0
+        }))
+
+        // Validate on change (manual)
+        watch(state, (newState) => {
+          const result = schema.safeParse(newState)
+          if (!result.success) {
+            console.error('Invalid state:', result.error)
+            // Must manually revert or handle
+          }
+        }, { deep: true })
+
+        Not as ergonomic as valtio-zod integration.
+
+      node_compatible: true
+      node_details: |
+        - Published as standalone @vue/reactivity package
+        - Zero Vue.js dependencies
+        - No DOM requirements
+        - Works in any JS environment
+        - ~10kb gzipped
+
+      performance: |
+        - Highly optimized (powers Vue 3)
+        - Fine-grained reactivity tracking
+        - Efficient computed caching
+        - Handles large object graphs well
+        - Battle-tested in production at scale
+
+      memory_management: |
+        - watch/watchEffect return stop functions
+        - Effects auto-cleanup when stopped
+        - Good disposal patterns
+        - Clear lifecycle management
+
+        class Agent {
+          private stops: Array<() => void> = []
+
+          setupReactivity() {
+            this.stops.push(
+              watch(() => state.status, () => { /* ... */ }),
+              watchEffect(() => { /* ... */ })
+            )
+          }
+
+          dispose() {
+            this.stops.forEach(stop => stop())
+          }
+        }
+
+      serialization: |
+        Manual serialization required
+
+        import { toRaw, reactive } from '@vue/reactivity'
+
+        // Serialize
+        const json = JSON.stringify(toRaw(state))
+
+        // Hydrate
+        const state = reactive(JSON.parse(json))
+
+        Note: ref() values need special handling
+
+      computed_values: |
+        Built-in computed() API
+
+        import { computed } from '@vue/reactivity'
+
+        const doubleCount = computed(() => state.count * 2)
+
+        // Read-only by default
+        console.log(doubleCount.value)
+
+        // Writable computed
+        const fullName = computed({
+          get: () => `${state.first} ${state.last}`,
+          set: (val) => {
+            const [first, last] = val.split(' ')
+            state.first = first
+            state.last = last
+          }
+        })
+
+      strengths:
+        - Most feature-complete reactivity system
+        - Built-in computed values
+        - Excellent TypeScript support
+        - Fine-grained subscription control
+        - Old/new values in watchers
+        - Battle-tested at massive scale
+        - Active Vue team maintenance
+        - Best performance characteristics
+
+      weaknesses:
+        - ref() requires .value (ergonomics)
+        - No official Zod integration
+        - Larger bundle than Valtio
+        - More API surface to learn
+        - No built-in snapshot system
+        - Documentation assumes Vue knowledge
+
+      best_for:
+        - Complex reactivity requirements
+        - Need computed values built-in
+        - High-performance requirements
+        - When you need fine-grained control
+        - Large-scale backend state
+
+    - name: "mobx"
+      mutation_style: |
+        import { makeAutoObservable, observable } from 'mobx'
+
+        // Class-based (recommended)
+        class AgentState {
+          status: 'idle' | 'running' | 'paused' = 'idle'
+          currentTask: string | null = null
+          metrics = { tokensUsed: 0 }
+
+          constructor() {
+            makeAutoObservable(this)
+          }
+
+          setStatus(status: typeof this.status) {
+            this.status = status
+          }
+
+          incrementTokens(amount: number) {
+            this.metrics.tokensUsed += amount
+          }
+        }
+
+        const state = new AgentState()
+        state.setStatus('running')
+
+        // Object-based (less idiomatic)
+        const state = observable({
+          status: 'idle',
+          currentTask: null
+        })
+
+        state.status = 'running' // Direct mutation works
+
+      subscription_api: |
+        import { autorun, reaction, when } from 'mobx'
+
+        // Auto-tracking (runs immediately + on changes)
+        const dispose = autorun(() => {
+          console.log('Status:', state.status)
+        })
+
+        // Reaction (data function + effect function)
+        const dispose = reaction(
+          () => state.metrics.tokensUsed,
+          (tokens, prevTokens) => {
+            console.log(`Tokens: ${prevTokens} -> ${tokens}`)
+          }
+        )
+
+        // When (run once when condition becomes true)
+        const dispose = when(
+          () => state.status === 'idle',
+          () => console.log('Agent is idle')
+        )
+
+        // Or use as Promise
+        await when(() => state.status === 'idle')
+
+        // Cleanup
+        dispose()
+
+      snapshot_pattern: |
+        No built-in snapshots - use toJS() or manual cloning
+
+        import { toJS } from 'mobx'
+
+        // Convert observable to plain JS (not immutable)
+        const plain = toJS(state)
+
+        // For true immutability, deep clone
+        const snapshot = JSON.parse(JSON.stringify(toJS(state)))
+
+      ts_inference: "good"
+      ts_inference_details: |
+        - Good TypeScript support
+        - Works well with classes
+        - Decorators support (legacy + stage 3)
+        - makeAutoObservable infers types
+        - Some proxy type leakage in edge cases
+        - Less inference magic than Valtio/Vue
+
+      zod_compatibility: |
+        No official integration - manual validation
+
+        import { makeAutoObservable, reaction } from 'mobx'
+        import { z } from 'zod'
+
+        const schema = z.object({
+          status: z.enum(['idle', 'running']),
+          tokensUsed: z.number()
+        })
+
+        class AgentState {
+          status = 'idle'
+          tokensUsed = 0
+
+          constructor() {
+            makeAutoObservable(this)
+
+            // Validate on any change
+            reaction(
+              () => ({ status: this.status, tokensUsed: this.tokensUsed }),
+              (data) => {
+                const result = schema.safeParse(data)
+                if (!result.success) {
+                  console.error('Invalid state:', result.error)
+                  // Must manually revert
+                }
+              }
+            )
+          }
+        }
+
+        MobX's action-based pattern makes validation awkward.
+
+      node_compatible: true
+      node_details: |
+        - Works in Node.js environments
+        - No DOM dependencies (core package)
+        - React bindings separate (mobx-react-lite)
+        - ~16kb gzipped (larger than Valtio/Vue)
+
+      performance: |
+        - Excellent fine-grained reactivity
+        - Lazy computed values
+        - Efficient change detection
+        - Good with large state graphs
+        - Mature, battle-tested codebase
+
+      memory_management: |
+        - All reactions return dispose functions
+        - Must manually dispose to prevent leaks
+        - Modern Symbol.dispose support
+
+        class Agent {
+          private disposers: Array<() => void> = []
+
+          setupReactions() {
+            this.disposers.push(
+              autorun(() => { /* ... */ }),
+              reaction(() => this.state.x, () => { /* ... */ })
+            )
+          }
+
+          dispose() {
+            this.disposers.forEach(d => d())
+          }
+        }
+
+        // Modern pattern
+        class Agent {
+          stack = new DisposableStack()
+
+          constructor() {
+            this.stack.use(autorun(() => { /* ... */ }))
+          }
+
+          [Symbol.dispose]() {
+            this.stack[Symbol.dispose]()
+          }
+        }
+
+      serialization: |
+        Manual serialization with toJS()
+
+        import { toJS } from 'mobx'
+
+        // Serialize
+        const json = JSON.stringify(toJS(state))
+
+        // Hydrate (class-based)
+        class AgentState {
+          // ... fields
+
+          constructor(initial?: Partial<AgentState>) {
+            makeAutoObservable(this)
+            if (initial) Object.assign(this, initial)
+          }
+        }
+
+        const state = new AgentState(JSON.parse(json))
+
+      computed_values: |
+        Built-in computed values
+
+        import { computed } from 'mobx'
+
+        class AgentState {
+          status = 'idle'
+          tokensUsed = 0
+
+          constructor() {
+            makeAutoObservable(this)
+          }
+
+          get statusMessage() { // Auto-computed via makeAutoObservable
+            return `Agent is ${this.status}, used ${this.tokensUsed} tokens`
+          }
+        }
+
+        // Or explicit computed
+        const doubled = computed(() => state.tokensUsed * 2)
+        console.log(doubled.get())
+
+      strengths:
+        - Mature, battle-tested (10+ years)
+        - Powerful computed values
+        - Fine-grained reactivity
+        - Excellent performance
+        - when() for async patterns
+        - Good debugging tools
+        - Large ecosystem
+
+      weaknesses:
+        - Larger bundle size
+        - More boilerplate (classes/actions)
+        - No official Zod integration
+        - Verbose compared to Valtio
+        - Learning curve for MobX patterns
+        - No built-in snapshots
+        - Class-based feels less modern
+
+      best_for:
+        - Large complex state machines
+        - OOP-style codebases
+        - When you need computed values
+        - Migration from existing MobX code
+        - Complex derived state requirements
+
+    - name: "immer"
+      mutation_style: |
+        import produce from 'immer'
+
+        type State = {
+          status: 'idle' | 'running'
+          metrics: { tokensUsed: number }
+        }
+
+        let state: State = {
+          status: 'idle',
+          metrics: { tokensUsed: 0 }
+        }
+
+        // Produce next state with mutations
+        state = produce(state, draft => {
+          draft.status = 'running'
+          draft.metrics.tokensUsed += 100
+        })
+
+        // Note: Immer itself doesn't provide reactivity
+        // It only provides immutable updates via copy-on-write
+
+      subscription_api: |
+        Immer has NO built-in subscription system
+
+        You must combine with other libraries:
+
+        // Option 1: Manual subscriptions
+        type Listener = (state: State) => void
+        const listeners = new Set<Listener>()
+
+        function setState(updater: (draft: State) => void) {
+          state = produce(state, updater)
+          listeners.forEach(fn => fn(state))
+        }
+
+        function subscribe(listener: Listener) {
+          listeners.add(listener)
+          return () => listeners.delete(listener)
+        }
+
+        // Option 2: Use with Zustand/Redux Toolkit
+        import create from 'zustand'
+        import { immer } from 'zustand/middleware/immer'
+
+        const useStore = create(immer((set) => ({
+          status: 'idle',
+          setStatus: (status) => set(state => {
+            state.status = status // Immer mutation
+          })
+        })))
+
+      snapshot_pattern: |
+        Immer produces immutable snapshots by default
+
+        const nextState = produce(currentState, draft => {
+          draft.count++
+        })
+
+        // currentState is unchanged (immutable)
+        // nextState is new immutable object
+
+        // This IS the snapshot pattern - structural sharing
+
+      ts_inference: "excellent"
+      ts_inference_details: |
+        - Excellent TypeScript support
+        - Type-safe mutations in produce()
+        - Draft types match original types
+        - Readonly modifiers removed in drafts
+        - WritableDraft<T> utility type
+        - Patch types for change tracking
+
+      zod_compatibility: |
+        No direct integration - manual validation
+
+        import produce from 'immer'
+        import { z } from 'zod'
+
+        const schema = z.object({
+          status: z.enum(['idle', 'running']),
+          tokensUsed: z.number()
+        })
+
+        function setState(updater: (draft: State) => void) {
+          const next = produce(state, updater)
+          const result = schema.safeParse(next)
+
+          if (result.success) {
+            state = next
+            notifyListeners()
+          } else {
+            console.error('Invalid state:', result.error)
+          }
+        }
+
+        Validation is manual but straightforward.
+
+      node_compatible: true
+      node_details: |
+        - Pure JavaScript library
+        - No DOM dependencies
+        - Works in any environment
+        - ~13kb gzipped
+        - Used in Redux Toolkit, Zustand
+
+      performance: |
+        - Very fast structural sharing
+        - Efficient copy-on-write
+        - Only changed paths are copied
+        - Good with deeply nested objects
+        - Freeze in dev (catches mutations)
+
+      memory_management: |
+        No memory management - Immer doesn't manage subscriptions
+
+        If you build subscriptions yourself:
+
+        class StateManager {
+          private listeners = new Set<Function>()
+
+          subscribe(fn: Function) {
+            this.listeners.add(fn)
+            return () => this.listeners.delete(fn)
+          }
+        }
+
+      serialization: |
+        Trivial - state is always plain objects
+
+        const json = JSON.stringify(state)
+        const state = JSON.parse(json)
+
+        No special serialization logic needed.
+
+      strengths:
+        - Immutability + mutation syntax
+        - Structural sharing (memory efficient)
+        - No proxy overhead in production
+        - Excellent TypeScript support
+        - Simple mental model
+        - Widely adopted (Redux Toolkit)
+        - Patches for change tracking
+
+      weaknesses:
+        - NO built-in reactivity
+        - Must build subscription layer
+        - Each produce() creates new object
+        - Not truly "reactive" by itself
+        - Requires wrapping for state management
+
+      best_for:
+        - Immutable updates without reactivity
+        - Redux/Zustand middleware
+        - When you want structural sharing
+        - Building custom state solutions
+        - NOT for standalone reactive state
+
+dx_assessment:
+  winner: "valtio"
+
+  summary: |
+    For agent state management, Valtio provides the most natural DX:
+
+    1. **Natural mutations**: state.x = y (no actions, no .value, no produce())
+    2. **Zod integration**: Official valtio-zod for schema validation
+    3. **Snapshots built-in**: Get immutable views instantly
+    4. **Minimal API**: proxy/snapshot/subscribe - that's it
+    5. **TypeScript magic**: Full inference, no type gymnastics
+
+  comparison_table:
+    mutation_ergonomics:
+      valtio: "⭐⭐⭐⭐⭐ Natural (state.x = y)"
+      vue: "⭐⭐⭐⭐ Natural but ref needs .value"
+      mobx: "⭐⭐⭐ Actions preferred (verbose)"
+      immer: "⭐⭐⭐ produce() wrapper required"
+
+    zod_integration:
+      valtio: "⭐⭐⭐⭐⭐ Official valtio-zod package"
+      vue: "⭐⭐ Manual validation only"
+      mobx: "⭐⭐ Manual validation only"
+      immer: "⭐⭐ Manual validation only"
+
+    snapshot_pattern:
+      valtio: "⭐⭐⭐⭐⭐ Built-in snapshot() function"
+      vue: "⭐⭐ Manual toRaw() + clone"
+      mobx: "⭐⭐ Manual toJS() + clone"
+      immer: "⭐⭐⭐⭐⭐ Everything is immutable"
+
+    subscriptions:
+      valtio: "⭐⭐⭐⭐ Simple subscribe()"
+      vue: "⭐⭐⭐⭐⭐ watch/watchEffect (most powerful)"
+      mobx: "⭐⭐⭐⭐⭐ autorun/reaction/when (most powerful)"
+      immer: "⭐ None - DIY required"
+
+    typescript:
+      valtio: "⭐⭐⭐⭐⭐ Excellent inference"
+      vue: "⭐⭐⭐⭐⭐ Excellent inference"
+      mobx: "⭐⭐⭐⭐ Good, some quirks"
+      immer: "⭐⭐⭐⭐⭐ Excellent inference"
+
+    bundle_size:
+      valtio: "⭐⭐⭐⭐⭐ ~3kb (smallest)"
+      vue: "⭐⭐⭐⭐ ~10kb"
+      mobx: "⭐⭐⭐ ~16kb (largest)"
+      immer: "⭐⭐⭐ ~13kb"
+
+    learning_curve:
+      valtio: "⭐⭐⭐⭐⭐ Minimal (3 functions)"
+      vue: "⭐⭐⭐⭐ Medium (ref/reactive/watch)"
+      mobx: "⭐⭐⭐ Steep (classes/actions/concepts)"
+      immer: "⭐⭐⭐⭐ Low (but no reactivity)"
+
+recommended_stack:
+  backend_agent_state: "valtio + valtio-zod"
+
+  example: |
+    import { proxy, subscribe, snapshot } from 'valtio'
+    import { schema } from 'valtio-zod'
+    import { z } from 'zod'
+
+    // Define schema
+    const AgentStateSchema = z.object({
+      status: z.enum(['idle', 'thinking', 'acting', 'paused']),
+      currentTask: z.string().nullable(),
+      history: z.array(z.object({
+        timestamp: z.number(),
+        action: z.string(),
+        result: z.any()
+      })),
+      metrics: z.object({
+        tokensUsed: z.number().nonnegative(),
+        tasksCompleted: z.number().nonnegative()
+      })
+    })
+
+    type AgentState = z.infer<typeof AgentStateSchema>
+
+    // Create validated proxy state
+    export const agentState = schema(AgentStateSchema).proxy<AgentState>({
+      status: 'idle',
+      currentTask: null,
+      history: [],
+      metrics: { tokensUsed: 0, tasksCompleted: 0 }
+    }, {
+      parseSafe: true,
+      errorHandler: (err) => console.error('State validation failed:', err)
+    })
+
+    // Natural mutations (validated automatically)
+    agentState.status = 'thinking'
+    agentState.currentTask = 'analyze-logs'
+    agentState.metrics.tokensUsed += 150
+
+    // Invalid mutations are rejected silently
+    agentState.status = 'invalid' // Validation fails, keeps old value
+    agentState.metrics.tokensUsed = -100 // Negative rejected
+
+    // Subscribe to changes
+    const unsubscribe = subscribe(agentState, () => {
+      const snap = snapshot(agentState)
+      console.log('Agent state changed:', snap)
+
+      // Persist to disk/DB
+      saveStateToDB(snap)
+    })
+
+    // Get immutable snapshot for serialization
+    function serializeState() {
+      return JSON.stringify(snapshot(agentState))
+    }
+
+    // Hydrate from storage
+    function hydrateState(json: string) {
+      const data = JSON.parse(json)
+      Object.assign(agentState, data)
+    }
+
+    // Cleanup
+    function dispose() {
+      unsubscribe()
+    }
+
+  rationale: |
+    This combination gives you:
+    - Natural mutation syntax (no boilerplate)
+    - Automatic Zod validation on every change
+    - Type-safe schema-driven state
+    - Immutable snapshots for serialization
+    - Simple subscription for side effects
+    - Minimal bundle size (~3kb + Zod)
+    - Perfect fit for agent state machines
+
+alternatives:
+  if_you_need_computed_values:
+    library: "@vue/reactivity"
+    reason: "Built-in computed() with caching"
+
+  if_you_have_existing_mobx:
+    library: "mobx"
+    reason: "Don't rewrite working code"
+
+  if_you_dont_need_reactivity:
+    library: "immer"
+    reason: "Just immutable updates, build your own layer"
+
+  if_you_want_maximum_power:
+    library: "@vue/reactivity"
+    reason: "Most feature-complete, battle-tested at scale"
+
+key_insights:
+  proxy_tradeoffs: |
+    Proxies provide magic mutation tracking but:
+    - Can't proxy primitives directly (hence ref() in Vue)
+    - Performance overhead vs plain objects (minimal in practice)
+    - Debugging can be harder (proxy wrappers in console)
+    - Memory: proxies have overhead, must dispose subscriptions
+
+  zod_validation_patterns: |
+    Valtio-zod is unique in trapping invalid mutations.
+    Others require manual post-validation and revert logic.
+
+    This makes valtio-zod ideal for state that MUST stay valid.
+
+  snapshot_importance: |
+    Snapshots enable:
+    - Serialization (JSON.stringify)
+    - Time-travel debugging
+    - State persistence
+    - Comparison (before/after)
+    - Passing to external APIs (immutable contract)
+
+    Valtio's built-in snapshots are a huge DX win.
+
+  subscription_granularity: |
+    - Valtio: Subscribe to whole proxy or nested path
+    - Vue: Fine-grained watch with old/new values
+    - MobX: Fine-grained autorun/reaction
+    - Immer: DIY (no built-in subscriptions)
+
+    For agent state, Valtio's granularity is sufficient.
+
+  memory_leaks: |
+    ALL libraries require manual disposal of subscriptions.
+    None have automatic cleanup without explicit calls.
+
+    Pattern for all:
+    const dispose = subscribe/watch/autorun(...)
+    // Later: dispose()
+
+    Use DisposableStack or custom cleanup registry.
+
+performance_notes:
+  deeply_nested_objects: |
+    All tested libraries handle deep nesting well:
+    - Valtio: Recursive proxy wrapping
+    - Vue: Deep reactive by default
+    - MobX: Deep observable by default
+    - Immer: Structural sharing (efficient copies)
+
+    No reported issues with agent state depth.
+
+  mutation_speed: |
+    Benchmarks (rough order):
+    1. Plain objects (baseline)
+    2. Immer (fast structural sharing)
+    3. Valtio (proxy overhead minimal)
+    4. Vue reactivity (highly optimized)
+    5. MobX (fine-grained tracking overhead)
+
+    All are fast enough for agent state. Don't optimize prematurely.
+
+  memory_usage: |
+    Proxies add overhead per object:
+    - Valtio: ~100 bytes per proxy
+    - Vue: ~100 bytes per reactive object
+    - MobX: ~200 bytes per observable
+    - Immer: No persistent overhead (copies on write)
+
+    For typical agent state (<100 objects), negligible.
+
+conclusion: |
+  For Open Harness agent state management, use Valtio + valtio-zod:
+
+  ✅ Natural mutations (state.x = y)
+  ✅ Automatic schema validation (Zod integration)
+  ✅ Built-in snapshots (immutable reads)
+  ✅ Simple API (3 functions)
+  ✅ Excellent TypeScript support
+  ✅ Small bundle size
+  ✅ Node.js native
+
+  This gives the best DX for schema-driven agent state where you want
+  type-safe mutations with automatic validation.
+
+  Consider @vue/reactivity if you need computed values built-in, but
+  for straightforward agent state, Valtio's simplicity wins.
