@@ -1,6 +1,6 @@
 {
 	"name": "@open-harness/starter-kit",
-	"version": "0.2.0",
+	"version": "0.2.1-alpha.0",
 	"private": true,
 	"type": "module",
 	"description": "Starter kit demonstrating Open Harness eval system with prompt comparison",

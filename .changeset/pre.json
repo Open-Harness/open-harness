@@ -1,18 +1,37 @@
 {
-  "mode": "pre",
-  "tag": "alpha",
-  "initialVersions": {
-    "docs": "0.0.0",
-    "@open-harness/run-store-sqlite": "0.2.0-alpha.1",
-    "@open-harness/run-store-testing": "0.2.0-alpha.1",
-    "@internal/client": "0.2.0",
-    "@internal/core": "0.2.0",
-    "@internal/server": "0.2.0",
-    "@open-harness/client": "0.2.0-alpha.1",
-    "@open-harness/core": "0.2.0-alpha.1",
-    "@open-harness/react": "0.2.0-alpha.1",
-    "@open-harness/server": "0.2.0-alpha.1",
-    "@open-harness/testing": "0.2.0-alpha.1"
-  },
-  "changesets": []
+	"mode": "pre",
+	"tag": "alpha",
+	"initialVersions": {
+		"docs": "0.0.0",
+		"@open-harness/run-store-sqlite": "0.2.0-alpha.1",
+		"@open-harness/run-store-testing": "0.2.0-alpha.1",
+		"@internal/client": "0.2.0",
+		"@internal/core": "0.2.0",
+		"@internal/server": "0.2.0",
+		"@open-harness/client": "0.2.0-alpha.1",
+		"@open-harness/core": "0.2.0-alpha.1",
+		"@open-harness/react": "0.2.0-alpha.1",
+		"@open-harness/server": "0.2.0-alpha.1",
+		"@open-harness/testing": "0.2.0-alpha.1",
+		"@open-harness/starter-kit": "0.2.0",
+		"@examples/multi-provider": "0.0.0",
+		"@examples/recording-replay": "0.0.0",
+		"@examples/simple-reactive": "0.0.0",
+		"@examples/speckit": "0.0.0",
+		"@examples/testing-signals": "0.0.0",
+		"@examples/trading-agent": "0.0.0",
+		"@open-harness/claude": "0.3.0",
+		"@open-harness/openai": "0.3.0",
+		"@internal/signals": "0.3.0",
+		"@internal/signals-core": "0.3.0",
+		"@open-harness/stores": "0.2.0-alpha.1",
+		"@open-harness/vitest": "0.2.0-alpha.1"
+	},
+	"changesets": [
+		"alpha-release-sdk",
+		"ci-beads-hook-fix",
+		"dev-infrastructure-setup",
+		"unified-flow-execution-api",
+		"v030-signal-architecture"
+	]
 }
