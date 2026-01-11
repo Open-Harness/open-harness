@@ -3,6 +3,7 @@ import typescript from "@rollup/plugin-typescript";
 import dts from "rollup-plugin-dts";
 
 const external = [
+	"@open-harness/core",
 	"@open-harness/recording-store-file",
 	"@open-harness/recording-store-sqlite",
 	"@open-harness/run-store-sqlite",
