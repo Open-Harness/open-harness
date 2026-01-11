@@ -4,8 +4,6 @@
 		"architecture",
 		"event-system",
 		"expressions",
-		"why-jsonata",
-		"persistence",
-		"...design-decisions"
+		"persistence"
 	]
 }

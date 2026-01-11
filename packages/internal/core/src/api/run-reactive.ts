@@ -9,7 +9,7 @@
  * @example
  * ```ts
  * import { agent, runReactive } from "@open-harness/core"
- * import { ClaudeProvider } from "@signals/provider-claude"
+ * import { ClaudeProvider } from "@open-harness/provider-claude"
  *
  * const analyst = agent({
  *   prompt: "Analyze the input.",
@@ -28,14 +28,14 @@ import {
 	type SignalPattern,
 	type SignalStore,
 	type Recording,
-} from "@signals/bus";
+} from "@internal/signals";
 import {
 	createSignal,
 	type Provider,
 	type ProviderInput,
 	type RunContext,
 	type Signal,
-} from "@signals/core";
+} from "@internal/signals-core";
 import type { ReactiveAgent } from "./types.js";
 
 // ============================================================================

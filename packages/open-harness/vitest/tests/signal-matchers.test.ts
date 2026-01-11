@@ -5,7 +5,7 @@
  * integration with vitest's expect.extend().
  */
 
-import { createSignal, type Signal } from "@signals/core";
+import { createSignal, type Signal } from "@internal/signals-core";
 import { beforeAll, describe, expect, it } from "vitest";
 import { matchers, signalMatchers } from "../src/matchers.js";
 

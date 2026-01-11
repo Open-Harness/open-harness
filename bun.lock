@@ -110,13 +110,28 @@
         "@open-harness/core": "workspace:*",
       },
     },
-    "packages/core": {
-      "name": "@signals/core",
+    "packages/adapters/providers/claude": {
+      "name": "@open-harness/provider-claude",
       "version": "0.3.0",
       "dependencies": {
-        "zod": "^3.24.0",
+        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
+        "@internal/signals-core": "workspace:*",
       },
       "devDependencies": {
+        "@internal/signals": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
+    "packages/adapters/providers/openai": {
+      "name": "@open-harness/provider-openai",
+      "version": "0.3.0",
+      "dependencies": {
+        "@internal/signals-core": "workspace:*",
+        "@openai/codex-sdk": "^0.79.0",
+      },
+      "devDependencies": {
+        "@internal/signals": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5",
       },
@@ -136,8 +151,8 @@
       "version": "0.2.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "@signals/bus": "workspace:*",
-        "@signals/core": "workspace:*",
+        "@internal/signals": "workspace:*",
+        "@internal/signals-core": "workspace:*",
         "ai": "^6.0.9",
         "jsonata": "^2.1.0",
         "neverthrow": "^8.2.0",
@@ -167,6 +182,28 @@
         "bun": "*",
       },
     },
+    "packages/internal/signals": {
+      "name": "@internal/signals",
+      "version": "0.3.0",
+      "dependencies": {
+        "@internal/signals-core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
+    "packages/internal/signals-core": {
+      "name": "@internal/signals-core",
+      "version": "0.3.0",
+      "dependencies": {
+        "zod": "^3.24.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5",
+      },
+    },
     "packages/open-harness/client": {
       "name": "@open-harness/client",
       "version": "0.2.0-alpha.1",
@@ -193,10 +230,10 @@
       "version": "0.2.0-alpha.1",
       "dependencies": {
         "@internal/core": "workspace:*",
-        "@signals/bus": "workspace:*",
-        "@signals/core": "workspace:*",
-        "@signals/provider-claude": "workspace:*",
-        "@signals/provider-openai": "workspace:*",
+        "@internal/signals": "workspace:*",
+        "@internal/signals-core": "workspace:*",
+        "@open-harness/provider-claude": "workspace:*",
+        "@open-harness/provider-openai": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -208,26 +245,6 @@
         "rollup": "^4.14.0",
         "rollup-plugin-dts": "^6.2.3",
         "typescript": "^5",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
-      },
-    },
-    "packages/open-harness/eval": {
-      "name": "@open-harness/eval",
-      "version": "0.3.0-alpha.1",
-      "dependencies": {
-        "@open-harness/core": "workspace:*",
-        "@signals/bus": "workspace:*",
-        "@signals/core": "workspace:*",
-        "yaml": "^2.4.5",
-        "zod": "^3.23.0",
-      },
-      "devDependencies": {
-        "@biomejs/biome": "2.3.11",
-        "@types/bun": "latest",
-        "typescript": "^5",
-        "vitest": "^2.0.0",
       },
       "peerDependencies": {
         "typescript": "^5",
@@ -328,9 +345,9 @@
       "name": "@open-harness/vitest",
       "version": "0.2.0-alpha.1",
       "dependencies": {
+        "@internal/signals": "workspace:*",
+        "@internal/signals-core": "workspace:*",
         "@open-harness/core": "workspace:*",
-        "@signals/bus": "workspace:*",
-        "@signals/core": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
@@ -341,43 +358,6 @@
       "peerDependencies": {
         "typescript": "^5",
         "vitest": "^2.0.0",
-      },
-    },
-    "packages/providers/claude": {
-      "name": "@signals/provider-claude",
-      "version": "0.3.0",
-      "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.1.76",
-        "@signals/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@signals/bus": "workspace:*",
-        "@types/bun": "latest",
-        "typescript": "^5",
-      },
-    },
-    "packages/providers/openai": {
-      "name": "@signals/provider-openai",
-      "version": "0.3.0",
-      "dependencies": {
-        "@openai/codex-sdk": "^0.79.0",
-        "@signals/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@signals/bus": "workspace:*",
-        "@types/bun": "latest",
-        "typescript": "^5",
-      },
-    },
-    "packages/signals": {
-      "name": "@signals/bus",
-      "version": "0.3.0",
-      "dependencies": {
-        "@signals/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "^5",
       },
     },
   },
@@ -612,6 +592,10 @@
 
     "@internal/server": ["@internal/server@workspace:packages/internal/server"],
 
+    "@internal/signals": ["@internal/signals@workspace:packages/internal/signals"],
+
+    "@internal/signals-core": ["@internal/signals-core@workspace:packages/internal/signals-core"],
+
     "@isaacs/balanced-match": ["@isaacs/balanced-match@4.0.1", "", {}, "sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ=="],
 
     "@isaacs/brace-expansion": ["@isaacs/brace-expansion@5.0.0", "", { "dependencies": { "@isaacs/balanced-match": "^4.0.1" } }, "sha512-ZT55BDLV0yv0RBm2czMiZ+SqCGO7AvmOM3G/w2xhVPH+te0aKgFjmBvGlL1dH+ql2tgGO3MVrbb3jCKyvpgnxA=="],
@@ -662,7 +646,9 @@
 
     "@open-harness/core": ["@open-harness/core@workspace:packages/open-harness/core"],
 
-    "@open-harness/eval": ["@open-harness/eval@workspace:packages/open-harness/eval"],
+    "@open-harness/provider-claude": ["@open-harness/provider-claude@workspace:packages/adapters/providers/claude"],
+
+    "@open-harness/provider-openai": ["@open-harness/provider-openai@workspace:packages/adapters/providers/openai"],
 
     "@open-harness/react": ["@open-harness/react@workspace:packages/open-harness/react"],
 
@@ -843,14 +829,6 @@
     "@shikijs/types": ["@shikijs/types@3.20.0", "", { "dependencies": { "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4" } }, "sha512-lhYAATn10nkZcBQ0BlzSbJA3wcmL5MXUUF8d2Zzon6saZDlToKaiRX60n2+ZaHJCmXEcZRWNzn+k9vplr8Jhsw=="],
 
     "@shikijs/vscode-textmate": ["@shikijs/vscode-textmate@10.0.2", "", {}, "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg=="],
-
-    "@signals/bus": ["@signals/bus@workspace:packages/signals"],
-
-    "@signals/core": ["@signals/core@workspace:packages/core"],
-
-    "@signals/provider-claude": ["@signals/provider-claude@workspace:packages/providers/claude"],
-
-    "@signals/provider-openai": ["@signals/provider-openai@workspace:packages/providers/openai"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

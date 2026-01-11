@@ -9,11 +9,11 @@
  * Run: bun run examples/multi-provider/index.ts
  */
 
-import { createHarness, ClaudeProvider, CodexProvider } from "@open-harness/core";
+import { ClaudeProvider, CodexProvider, createHarness } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define state type
-// =============================================================================
+// ============ =================================================================
 
 type ReviewState = {
 	/** Code to review */

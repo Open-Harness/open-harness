@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { createSignal, type Signal } from "@signals/core";
+import { createSignal, type Signal } from "@internal/signals-core";
 import {
 	getCausalityChain,
 	getAgentSignals,

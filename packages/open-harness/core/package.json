@@ -35,9 +35,9 @@
 	},
 	"dependencies": {
 		"@internal/core": "workspace:*",
-		"@signals/bus": "workspace:*",
-		"@signals/core": "workspace:*",
-		"@signals/provider-claude": "workspace:*",
-		"@signals/provider-openai": "workspace:*"
+		"@internal/signals": "workspace:*",
+		"@internal/signals-core": "workspace:*",
+		"@open-harness/provider-claude": "workspace:*",
+		"@open-harness/provider-openai": "workspace:*"
 	}
 }

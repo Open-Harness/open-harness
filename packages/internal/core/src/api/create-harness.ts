@@ -41,8 +41,8 @@
  */
 
 import type { ZodType } from "zod";
-import type { Signal, Provider as SignalProvider } from "@signals/core";
-import type { SignalPattern, SignalStore, Recording } from "@signals/bus";
+import type { Signal, Provider as SignalProvider } from "@internal/signals-core";
+import type { SignalPattern, SignalStore, Recording } from "@internal/signals";
 import type { SignalRecordingOptions } from "./run-reactive.js";
 
 // ============================================================================
@@ -411,8 +411,8 @@ export function createHarness<TState>(): HarnessFactory<TState> {
 		config: ReactiveHarnessConfig<TState>,
 	): Promise<ReactiveHarnessResult<TState>> {
 		// Import at runtime to avoid circular dependencies
-		const { SignalBus } = await import("@signals/bus");
-		const { createSignal } = await import("@signals/core");
+		const { SignalBus } = await import("@internal/signals");
+		const { createSignal } = await import("@internal/signals-core");
 
 		// ========================================================================
 		// Recording Setup

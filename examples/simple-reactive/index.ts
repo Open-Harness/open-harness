@@ -11,7 +11,7 @@
  * Run: bun run examples/simple-reactive/index.ts
  */
 
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { ClaudeProvider, createHarness } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define your state type
@@ -117,9 +117,7 @@ async function main() {
 	// Extract the text content for display
 	const greetingOutput = result.state.greeting as { content?: string } | string | null;
 	const greetingText =
-		typeof greetingOutput === "string"
-			? greetingOutput
-			: greetingOutput?.content ?? "(no greeting)";
+		typeof greetingOutput === "string" ? greetingOutput : (greetingOutput?.content ?? "(no greeting)");
 	console.log(`Greeting: ${greetingText}`);
 }
 

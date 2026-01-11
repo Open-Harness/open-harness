@@ -1,0 +1,21 @@
+{
+	"name": "@internal/signals",
+	"version": "0.3.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check . --write"
+	},
+	"dependencies": {
+		"@internal/signals-core": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5"
+	}
+}

@@ -462,13 +462,13 @@ graph TB
         ICore["@internal/core"]
         IClient["@internal/client"]
         IServer["@internal/server"]
+        ISignalsCore["@internal/signals-core"]
+        ISignals["@internal/signals"]
     end
 
-    subgraph Signals["@signals/*"]
-        SCore["@signals/core"]
-        SBus["@signals/bus"]
-        Claude["@signals/provider-claude"]
-        OpenAI["@signals/provider-openai"]
+    subgraph Adapters["@open-harness/provider-*"]
+        Claude["@open-harness/provider-claude"]
+        OpenAI["@open-harness/provider-openai"]
     end
 
     %% Published depends on Internal
@@ -476,15 +476,15 @@ graph TB
     Client --> IClient
     Server --> IServer
 
-    %% Published depends on Signals
-    Core --> SCore
-    Core --> SBus
+    %% Published depends on Internal signals
+    Core --> ISignalsCore
+    Core --> ISignals
     Core --> Claude
     Core --> OpenAI
 
     %% Internal depends on Signals
-    ICore --> SCore
-    ICore --> SBus
+    ICore --> ISignalsCore
+    ICore --> ISignals
 
     %% Vitest re-exports
     Vitest --> Core

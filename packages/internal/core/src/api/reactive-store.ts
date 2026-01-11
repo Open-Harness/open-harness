@@ -26,7 +26,7 @@
  * ```
  */
 
-import { createSignal, type Signal, type SignalSource } from "@signals/core";
+import { createSignal, type Signal, type SignalSource } from "@internal/signals-core";
 
 // ============================================================================
 // Types

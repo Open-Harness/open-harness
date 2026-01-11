@@ -22,8 +22,8 @@
 	},
 	"dependencies": {
 		"@open-harness/core": "workspace:*",
-		"@signals/core": "workspace:*",
-		"@signals/bus": "workspace:*"
+		"@internal/signals-core": "workspace:*",
+		"@internal/signals": "workspace:*"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",

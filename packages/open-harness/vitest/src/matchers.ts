@@ -34,8 +34,8 @@
  * ```
  */
 import type { RunResult } from "@open-harness/core";
-import { compilePattern, matchesPattern, type SignalPattern } from "@signals/bus";
-import type { Signal } from "@signals/core";
+import { compilePattern, matchesPattern, type SignalPattern } from "@internal/signals";
+import type { Signal } from "@internal/signals-core";
 
 // ============================================================================
 // Signal Matcher Types

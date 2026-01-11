@@ -7,8 +7,8 @@ import {
 	resetDefaults,
 } from "../../src/api/defaults.js";
 import type { FixtureStore } from "../../src/api/types.js";
-import type { Recording, RecordingMetadata, Checkpoint } from "@signals/bus";
-import type { Signal } from "@signals/core";
+import type { Recording, RecordingMetadata, Checkpoint } from "@internal/signals";
+import type { Signal } from "@internal/signals-core";
 
 /**
  * Mock fixture store for testing.

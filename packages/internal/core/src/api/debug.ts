@@ -16,7 +16,7 @@
  * ```
  */
 
-import type { Signal } from "@signals/core";
+import type { Signal } from "@internal/signals-core";
 
 /**
  * Build a map of signal ID to signal for quick lookup.

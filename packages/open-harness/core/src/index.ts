@@ -1,6 +1,6 @@
 export * from "@internal/core";
 
-// v0.3.0: nodes module deleted - use Provider pattern from @signals/core instead
+// v0.3.0: nodes module deleted - use Provider pattern from @internal/signals-core instead
 
 // Re-export signal infrastructure for public API
 // v0.3.0: All signal types now exported - old recording types deleted
@@ -38,8 +38,8 @@ export {
 	snapshot,
 	snapshotAll,
 	type Unsubscribe,
-} from "@signals/bus";
-// Re-export signal primitives from @signals/core
+} from "@internal/signals";
+// Re-export signal primitives from @internal/signals-core
 export {
 	createSignal,
 	isSignal,
@@ -57,18 +57,18 @@ export {
 	type ToolCall,
 	type ToolDefinition,
 	type ToolResult,
-} from "@signals/core";
+} from "@internal/signals-core";
 // Re-export Claude provider for public API
 export {
 	ClaudeProvider,
 	type ClaudeProviderConfig,
 	type ClaudeProviderInput,
 	type ClaudeProviderOutput,
-} from "@signals/provider-claude";
+} from "@open-harness/provider-claude";
 // Re-export OpenAI/Codex provider for public API
 export {
 	CodexProvider,
 	type CodexProviderConfig,
 	type CodexProviderInput,
 	type CodexProviderOutput,
-} from "@signals/provider-openai";
+} from "@open-harness/provider-openai";

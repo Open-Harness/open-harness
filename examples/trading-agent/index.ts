@@ -11,7 +11,7 @@
  * Run: bun run examples/trading-agent/index.ts
  */
 
-import { createHarness, ClaudeProvider } from "@open-harness/core";
+import { ClaudeProvider, createHarness } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define state type for trading workflow
@@ -253,7 +253,7 @@ async function main() {
 	// Helper to extract JSON from provider output
 	const extractJSON = (output: unknown): unknown => {
 		const raw = output as { content?: string } | string | null;
-		const text = typeof raw === "string" ? raw : raw?.content ?? "";
+		const text = typeof raw === "string" ? raw : (raw?.content ?? "");
 		try {
 			// Find JSON in the text (may have markdown code blocks)
 			const jsonMatch = text.match(/\{[\s\S]*\}/);

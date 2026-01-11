@@ -13,11 +13,11 @@
 import type { ZodType } from "zod";
 
 // v0.3.0 Signal-based types
-import type { Signal, Provider } from "@signals/core";
-import type { SignalPattern, SignalStore } from "@signals/bus";
+import type { Signal, Provider } from "@internal/signals-core";
+import type { SignalPattern, SignalStore } from "@internal/signals";
 
-// Re-export Provider from @signals/core for convenience
-export type { Provider } from "@signals/core";
+// Re-export Provider from @internal/signals-core for convenience
+export type { Provider } from "@internal/signals-core";
 
 /**
  * Standard agent input shape.
@@ -128,7 +128,7 @@ export type AgentConfig<TOutput = unknown> = {
 	 *
 	 * @example
 	 * ```ts
-	 * import { ClaudeProvider } from "@signals/provider-claude"
+	 * import { ClaudeProvider } from "@open-harness/provider-claude"
 	 * signalProvider: new ClaudeProvider()
 	 * ```
 	 */

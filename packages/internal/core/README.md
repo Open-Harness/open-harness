@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-10T10:11:36.649Z"
-lastCommit: "150d2ad147832f2553c0dbfb779f1a466c0a001b"
-lastCommitDate: "2026-01-10T09:55:26Z"
+lastUpdated: "2026-01-11T06:42:54.221Z"
+lastCommit: "edcbf4c29d5c22eb600c6f75d5fcc6c1b8d24d58"
+lastCommitDate: "2026-01-11T06:23:45Z"
 ---
 # @internal/core
 
@@ -154,9 +154,9 @@ The following were removed during the v0.3.0 migration:
 
 - `builtins/` - Old echo/constant nodes (use signal patterns instead)
 - `eval/` - Old eval system (signal-native eval planned for P0-6)
-- `nodes/` - Node registry (use `Provider` interface from @signals/core)
+- `nodes/` - Node registry (use `Provider` interface from @internal/signals-core)
 - `providers/` - Provider traits (use `ClaudeProvider`/`CodexProvider`)
-- `recording/` - Old recording (use `@signals/bus` for signal recording)
+- `recording/` - Old recording (use `@internal/signals` for signal recording)
 - `runtime/` - Graph executor (use `runReactive()` for signal-based execution)
 
 ## Testing

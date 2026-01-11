@@ -14,7 +14,7 @@ import {
 	type HarnessErrorEvent,
 	type TelemetryInput,
 } from "./telemetry.js";
-import { createSignal } from "@signals/core";
+import { createSignal } from "@internal/signals-core";
 
 // ============================================================================
 // Test Helpers

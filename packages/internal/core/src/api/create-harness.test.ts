@@ -14,7 +14,7 @@ import {
 	TimeoutError,
 	type ActivationContext,
 } from "./create-harness.js";
-import { createSignal, type Signal, type Provider } from "@signals/core";
+import { createSignal, type Signal, type Provider } from "@internal/signals-core";
 
 // ============================================================================
 // Test State Types

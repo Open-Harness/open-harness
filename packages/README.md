@@ -1,8 +1,8 @@
 ---
 title: "Open Harness Packages"
-lastUpdated: "2026-01-10T09:45:31.811Z"
-lastCommit: "a9e5f66d3940822fd2e20996fc38318fe0aede14"
-lastCommitDate: "2026-01-10T05:58:49Z"
+lastUpdated: "2026-01-11T06:42:54.221Z"
+lastCommit: "edcbf4c29d5c22eb600c6f75d5fcc6c1b8d24d58"
+lastCommitDate: "2026-01-11T06:23:45Z"
 scope:
   - architecture
   - documentation
@@ -114,21 +114,21 @@ Internal packages form the core implementation. They are not published to npm.
 
 Core signal infrastructure that powers the reactive system:
 
-#### **`@signals/bus`** — Signal Dispatcher
+#### **`@internal/signals`** — Signal Dispatcher
 - `SignalBus` — Central event routing
 - `MemorySignalStore` — Recording/replay
 - `Player` — VCR-style navigation
 - Pattern matching, snapshots, reporters
 
-#### **`@signals/core`** — Signal Primitives
+#### **`@internal/signals-core`** — Signal Primitives
 - `createSignal()` — Signal factory
 - `Provider` interface
 - Type definitions
 
-#### **`@signals/provider-claude`** — Claude Integration
+#### **`@open-harness/provider-claude`** — Claude Integration
 - `ClaudeProvider` — Anthropic Claude via Agent SDK
 
-#### **`@signals/provider-openai`** — OpenAI Integration
+#### **`@open-harness/provider-openai`** — OpenAI Integration
 - `CodexProvider` — OpenAI models
 
 ### Public Packages (`packages/open-harness/`)

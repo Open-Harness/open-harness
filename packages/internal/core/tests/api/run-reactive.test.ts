@@ -14,8 +14,8 @@ import {
 	type ProviderOutput,
 	type RunContext,
 	type Signal,
-} from "@signals/core";
-import { MemorySignalStore } from "@signals/bus";
+} from "@internal/signals-core";
+import { MemorySignalStore } from "@internal/signals";
 
 // ============================================================================
 // Mock Provider

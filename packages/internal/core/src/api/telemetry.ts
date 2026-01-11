@@ -26,7 +26,7 @@
  * ```
  */
 
-import type { Signal } from "@signals/core";
+import type { Signal } from "@internal/signals-core";
 
 // ============================================================================
 // Types

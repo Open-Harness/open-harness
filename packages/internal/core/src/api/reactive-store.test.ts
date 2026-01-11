@@ -10,7 +10,7 @@ import {
 	connectStoreToBus,
 	type StateChangePayload,
 } from "./reactive-store.js";
-import type { Signal } from "@signals/core";
+import type { Signal } from "@internal/signals-core";
 
 // ============================================================================
 // Basic Functionality
