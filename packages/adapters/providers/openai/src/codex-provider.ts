@@ -5,7 +5,6 @@
  * Yields Signal objects as events stream in from the SDK.
  */
 
-import type { Codex, Thread } from "@openai/codex-sdk";
 import {
 	createSignal,
 	PROVIDER_SIGNALS,
@@ -18,6 +17,7 @@ import {
 	type TokenUsage,
 	type ToolCall,
 } from "@internal/signals-core";
+import type { Codex, Thread } from "@openai/codex-sdk";
 
 // ============================================================================
 // Configuration Types

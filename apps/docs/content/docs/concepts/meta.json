@@ -1,9 +1,4 @@
 {
 	"title": "Concepts",
-	"pages": [
-		"architecture",
-		"event-system",
-		"expressions",
-		"persistence"
-	]
+	"pages": ["architecture", "event-system", "expressions", "persistence"]
 }
