@@ -18,8 +18,12 @@ jobs:
           echo "PR: ${HEAD_BRANCH} → ${BASE_BRANCH}"
           
           if [ "${BASE_BRANCH}" = "master" ]; then
-            # Only dev can merge to master
-            if [ "${HEAD_BRANCH}" != "dev" ]; then
+            # Only dev or changeset-release branches can merge to master
+            if [ "${HEAD_BRANCH}" = "dev" ]; then
+              echo "✅ Valid: dev → master"
+            elif [[ "${HEAD_BRANCH}" == changeset-release/* ]]; then
+              echo "✅ Valid: ${HEAD_BRANCH} → master (automated release)"
+            else
               echo "❌ ERROR: PRs to master must come from dev branch only."
               echo ""
               echo "Current: ${HEAD_BRANCH} → master"
@@ -30,7 +34,6 @@ jobs:
               echo "2. Create a PR from dev to master"
               exit 1
             fi
-            echo "✅ Valid: dev → master"
           elif [ "${BASE_BRANCH}" = "dev" ]; then
             # Feature branches go to dev (not master or dev itself)
             if [ "${HEAD_BRANCH}" = "master" ]; then
