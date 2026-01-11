@@ -10,13 +10,14 @@
 
 v0.3.0 fundamentally reimagines Open Harness orchestration by replacing the edge-based DAG model with a **signal-based reactive architecture**. Instead of explicitly defining "run A then B," agents declare what signals they react to and what signals they emit. The workflow emerges from signal flow.
 
-**Key Insight:** Agent systems are inherently reactive. An analyst finds something → a trader reacts. This IS the mental model. Signals make this explicit.
+**Key Insight:** Agent systems are **inherently** reactive. An analyst finds something → a trader reacts. This IS the mental model. Signals make this explicit.
 
 ---
 
 ## Problems with Current Architecture (v0.2.0)
 
 ### 1. Imperative Wiring
+
 ```typescript
 // Current: Explicit edges
 edges: [
@@ -24,21 +25,25 @@ edges: [
   { from: "trader", to: "reviewer" },
 ]
 ```
+
 - Verbose for complex workflows
 - Doesn't match how we think about agents
 - Hard to add conditional paths
 
 ### 2. State is Passive
+
 - State is just an object passed around
 - No notifications when state changes
 - Templates like `{{ state.x }}` are manual work
 
 ### 3. Sequential Execution
+
 - DAG walks one node at a time
 - No natural parallelism
 - Independent agents can't run concurrently
 
 ### 4. Disconnected Systems
+
 - Output schema defined but not enforced
 - State and outputs stored separately
 - Recording captures snapshots, not causality
@@ -73,6 +78,7 @@ type Signal<T = unknown> = {
 ```
 
 **Signal Categories:**
+
 - **System:** `flow:start`, `flow:end`, `node:X:activated`, `provider:response`
 - **State:** `state:analysis:changed`, `state:trades:added`
 - **User-defined:** `trade:proposed`, `review:approved`
@@ -194,24 +200,28 @@ const metricsReporter = {
 
 ## Comparison: Before & After
 
-| Aspect | v0.2.0 (Edge-Based) | v0.3.0 (Signal-Based) |
-|--------|---------------------|----------------------|
-| Orchestration | Explicit edges | Implicit via signals |
-| Execution | Sequential DAG walk | Parallel signal dispatch |
-| State | Passive object | Zustand store, auto-emit |
-| Recording | Snapshots per node | Event-sourced signal log |
-| Parallelism | Not supported | Automatic for multi-subscribe |
-| Debugging | Linear trace | Causality chain |
-| Reporters | Callbacks | Signal subscribers |
+
+| Aspect        | v0.2.0 (Edge-Based) | v0.3.0 (Signal-Based)         |
+| ------------- | ------------------- | ----------------------------- |
+| Orchestration | Explicit edges      | Implicit via signals          |
+| Execution     | Sequential DAG walk | Parallel signal dispatch      |
+| State         | Passive object      | Zustand store, auto-emit      |
+| Recording     | Snapshots per node  | Event-sourced signal log      |
+| Parallelism   | Not supported       | Automatic for multi-subscribe |
+| Debugging     | Linear trace        | Causality chain               |
+| Reporters     | Callbacks           | Signal subscribers            |
+
 
 ---
 
 ## Key Decisions
 
 ### D1: Zustand as State Foundation
+
 **Decision:** Use Zustand (not Jotai, not custom) for state management.
 
 **Rationale:**
+
 - Explicit actions (updateAnalysis, addTrade)
 - Works in Node.js (not React-specific)
 - Immer middleware for clean mutations
@@ -219,25 +229,31 @@ const metricsReporter = {
 - Serializable for fixtures
 
 ### D2: Signals are First-Class
+
 **Decision:** Signals are not an implementation detail—they're the primary abstraction.
 
 **Rationale:**
+
 - Recording IS the signal log
 - Debugging IS following signals
 - Testing IS asserting on signals
 
 ### D3: Backward Compatibility via Adapter
+
 **Decision:** Provide `harnessToReactive()` for migration.
 
 **Rationale:**
+
 - Existing harnesses can migrate incrementally
 - Don't force immediate rewrite
 - Edges translate to signal subscriptions
 
 ### D4: Guards on Activation
+
 **Decision:** Agents can have `when` conditions for activation.
 
 **Rationale:**
+
 - Not every signal should trigger every subscriber
 - Guards prevent wasted provider calls
 - State conditions gate execution
@@ -247,7 +263,9 @@ const metricsReporter = {
 ## Architectural Components
 
 ### 1. SignalBus
+
 Central dispatcher for all signals. Handles:
+
 - Signal emission
 - Subscriber notification
 - Pattern matching (`node:*:completed`)
@@ -255,20 +273,26 @@ Central dispatcher for all signals. Handles:
 - History recording
 
 ### 2. ReactiveRuntime
+
 Execution engine that:
+
 - Wires state changes to signals
 - Wires agents to signal subscriptions
 - Manages parallel execution
 - Detects quiescence (workflow complete)
 
 ### 3. StateProxy
+
 Wraps Zustand store to:
+
 - Auto-emit signals on mutation
 - Track diffs for targeted signals
 - Support template expansion
 
 ### 4. SignalRecorder
+
 Recording layer that:
+
 - Captures all signals
 - Stores provider request/response pairs
 - Enables deterministic replay
@@ -287,19 +311,25 @@ Recording layer that:
 ## Open Questions
 
 ### Q1: Signal Ordering Guarantees
+
 When multiple signals fire simultaneously, what's the order?
+
 - **Option A:** FIFO queue
 - **Option B:** Priority-based
 - **Option C:** No guarantees (parallel)
 
 ### Q2: Infinite Loop Prevention
+
 If A triggers B triggers A, how do we prevent loops?
+
 - **Option A:** Depth limit
 - **Option B:** Cycle detection
 - **Option C:** User responsibility with warnings
 
 ### Q3: Template Expansion Timing
+
 When do we expand `{{ state.x }}` in prompts?
+
 - **Option A:** At agent activation
 - **Option B:** At provider call (later)
 - **Option C:** Lazy evaluation
@@ -328,3 +358,4 @@ v0.3.0 is complete when:
 - [Zustand Documentation](https://zustand-demo.pmnd.rs/)
 - [Event Sourcing Pattern](https://martinfowler.com/eaaDev/EventSourcing.html)
 - [Reactive Systems Manifesto](https://www.reactivemanifesto.org/)
+
