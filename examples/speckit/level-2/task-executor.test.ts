@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { MemorySignalStore } from "@open-harness/core";
-import { initialState, runTaskExecutor } from "./task-executor";
+import { runTaskExecutor } from "./task-executor";
 
 /**
  * Level 2: Harness with State + Signal Recording

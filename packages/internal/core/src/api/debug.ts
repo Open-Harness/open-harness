@@ -88,7 +88,6 @@ export type SignalNode = {
  * Build a tree structure from flat signal array.
  */
 export function buildSignalTree(signals: readonly Signal[]): SignalNode[] {
-	const signalMap = buildSignalMap(signals);
 	const childMap = new Map<string | undefined, Signal[]>();
 
 	// Group signals by parent

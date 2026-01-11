@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, statSync, renameSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import pino, { type DestinationStream, type Logger } from "pino";
 import type { LoggerConfig } from "./config.js";
 
