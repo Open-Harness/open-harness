@@ -67,12 +67,12 @@ describe("MetricsSignalReporter", () => {
 
 			bus.emit(
 				createSignal("harness:end", {
-					usage: { inputTokens: 100, outputTokens: 50 },
+					output: { usage: { inputTokens: 100, outputTokens: 50 } },
 				}),
 			);
 			bus.emit(
 				createSignal("harness:end", {
-					usage: { inputTokens: 200, outputTokens: 75 },
+					output: { usage: { inputTokens: 200, outputTokens: 75 } },
 				}),
 			);
 
@@ -86,8 +86,8 @@ describe("MetricsSignalReporter", () => {
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("harness:end", { cost: 0.01 }));
-			bus.emit(createSignal("harness:end", { cost: 0.005 }));
+			bus.emit(createSignal("harness:end", { output: { cost: 0.01 } }));
+			bus.emit(createSignal("harness:end", { output: { cost: 0.005 } }));
 
 			const metrics = reporter.getMetrics();
 			expect(metrics.totalCost).toBeCloseTo(0.015);
@@ -116,8 +116,8 @@ describe("MetricsSignalReporter", () => {
 			attachReporter(bus, reporter);
 
 			bus.emit(createSignal("harness:end", {}));
-			bus.emit(createSignal("harness:end", { usage: {} }));
-			bus.emit(createSignal("harness:end", { usage: { inputTokens: 50 } }));
+			bus.emit(createSignal("harness:end", { output: { usage: {} } }));
+			bus.emit(createSignal("harness:end", { output: { usage: { inputTokens: 50 } } }));
 
 			const metrics = reporter.getMetrics();
 			expect(metrics.totalInputTokens).toBe(50);
@@ -132,7 +132,7 @@ describe("MetricsSignalReporter", () => {
 			attachReporter(bus, reporter);
 
 			bus.emit(createSignal("harness:start", {}));
-			bus.emit(createSignal("harness:end", { usage: { inputTokens: 100 } }));
+			bus.emit(createSignal("harness:end", { output: { usage: { inputTokens: 100 } } }));
 			bus.emit(createSignal("harness:end", { durationMs: 500 }));
 
 			expect(onUpdate).toHaveBeenCalledTimes(3);
@@ -143,7 +143,7 @@ describe("MetricsSignalReporter", () => {
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("harness:end", { usage: { inputTokens: 100 } }));
+			bus.emit(createSignal("harness:end", { output: { usage: { inputTokens: 100 } } }));
 			bus.emit(createSignal("agent:activated", { agent: "test" }));
 
 			expect(reporter.getMetrics().harnessCalls).toBe(1);
