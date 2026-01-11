@@ -131,8 +131,10 @@ export function createMetricsReporter(options: MetricsReporterOptions = {}): Met
 					const payload = signal.payload as
 						| {
 								durationMs?: number;
-								usage?: { inputTokens?: number; outputTokens?: number };
-								cost?: number;
+								output?: {
+									usage?: { inputTokens?: number; outputTokens?: number };
+									cost?: number;
+								};
 						  }
 						| undefined;
 
@@ -140,13 +142,14 @@ export function createMetricsReporter(options: MetricsReporterOptions = {}): Met
 						metrics.durationMs = payload.durationMs;
 					}
 
-					if (payload?.usage) {
-						metrics.totalInputTokens += payload.usage.inputTokens ?? 0;
-						metrics.totalOutputTokens += payload.usage.outputTokens ?? 0;
+					// Usage is nested under output (harness emits { output: { usage: {...} } })
+					if (payload?.output?.usage) {
+						metrics.totalInputTokens += payload.output.usage.inputTokens ?? 0;
+						metrics.totalOutputTokens += payload.output.usage.outputTokens ?? 0;
 					}
 
-					if (payload?.cost) {
-						metrics.totalCost += payload.cost;
+					if (payload?.output?.cost) {
+						metrics.totalCost += payload.output.cost;
 					}
 
 					notifyUpdate();

@@ -9,7 +9,10 @@
  */
 
 import type { Signal } from "@internal/signals-core";
+import pino from "pino";
 import { type CompiledPattern, compilePattern, matchesPattern, type SignalPattern } from "./patterns.js";
+
+const logger = pino({ name: "signal-bus" });
 
 /**
  * Handler function for signal subscriptions
@@ -106,7 +109,7 @@ export class SignalBus implements ISignalBus {
 					subscription.handler(signal);
 				} catch (error) {
 					// Log but don't propagate handler errors
-					console.error(`SignalBus: Error in handler for ${signal.name}:`, error);
+					logger.error({ err: error, signalName: signal.name }, "Error in signal handler");
 				}
 			}
 		}

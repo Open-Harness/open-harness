@@ -130,8 +130,11 @@ const signalCounts = result.signals.reduce((acc, s) => {
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `ANTHROPIC_API_KEY` | Claude API key (or use Claude Code auth) | Optional |
-| `LOG_LEVEL` | Logging verbosity | Optional |
+| `LOG_LEVEL` | Logging verbosity (trace, debug, info, warn, error) | Optional |
+
+<Callout type="info" title="Authentication">
+Open Harness uses Claude Code subscription authentication. No API key is required - authentication is handled automatically when running from within Claude Code.
+</Callout>
 
 ## Pre-Production Checklist
 

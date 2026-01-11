@@ -103,13 +103,11 @@ When using models with extended thinking:
 
 ## Authentication
 
-The harness uses Claude Code subscription authentication by default. No API key is required when running from within Claude Code.
+The harness uses Claude Code subscription authentication. No API key is required - authentication is handled automatically when running from within Claude Code.
 
-For standalone usage, set the `ANTHROPIC_API_KEY` environment variable:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-```
+<Callout type="info" title="Claude Code Required">
+Open Harness is designed to work with Claude Code subscription authentication. Run your agents from within Claude Code for automatic authentication.
+</Callout>
 
 ## Session Support
 

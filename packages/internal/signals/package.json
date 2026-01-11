@@ -12,7 +12,8 @@
 		"lint": "biome check . --write"
 	},
 	"dependencies": {
-		"@internal/signals-core": "workspace:*"
+		"@internal/signals-core": "workspace:*",
+		"pino": "^10.1.0"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
