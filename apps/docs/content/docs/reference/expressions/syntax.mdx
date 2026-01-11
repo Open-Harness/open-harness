@@ -1,0 +1,134 @@
+---
+title: JSONata Syntax
+description: Complete JSONata expression syntax reference
+---
+
+# JSONata Syntax
+
+Open Harness uses JSONata for all data binding expressions.
+
+## Expression Delimiters
+
+Expressions are wrapped in double curly braces:
+
+```yaml
+prompt: "Hello, {{ flow.input.name }}!"
+```
+
+## Path Expressions
+
+Access nested data with dot notation:
+
+```yaml
+# Simple path
+{{ flow.input.name }}
+
+# Nested path
+{{ profile.contact.email }}
+
+# Node output by id
+{{ fetch.data.user.email }}
+
+# Array index
+{{ flow.input.items[0] }}
+
+# Last item
+{{ flow.input.items[-1] }}
+```
+
+## Operators
+
+### Arithmetic
+
+| Operator | Description |
+|----------|-------------|
+| `+` | Addition |
+| `-` | Subtraction |
+| `*` | Multiplication |
+| `/` | Division |
+| `%` | Modulo |
+
+### Comparison
+
+| Operator | Description |
+|----------|-------------|
+| `=` | Equal |
+| `!=` | Not equal |
+| `<` | Less than |
+| `<=` | Less or equal |
+| `>` | Greater than |
+| `>=` | Greater or equal |
+
+### Boolean
+
+| Operator | Description |
+|----------|-------------|
+| `and` | Logical AND |
+| `or` | Logical OR |
+| `not` | Logical NOT |
+
+### String
+
+| Operator | Description |
+|----------|-------------|
+| `&` | Concatenation |
+
+## Array Expressions
+
+### Filtering
+
+```yaml
+# Filter by condition
+{{ items[status = 'active'] }}
+
+# Multiple conditions
+{{ users[age > 18 and verified = true] }}
+```
+
+### Mapping
+
+```yaml
+# Extract field from all items
+{{ users.name }}
+
+# Equivalent to map
+{{ users.(firstName & ' ' & lastName) }}
+```
+
+### Range
+
+```yaml
+# Slice
+{{ items[[0..5]] }}
+```
+
+## Conditional Expressions
+
+### Ternary
+
+```yaml
+{{ condition ? valueIfTrue : valueIfFalse }}
+```
+
+### Null Coalescing
+
+```yaml
+{{ value ? value : defaultValue }}
+```
+
+## Object Construction
+
+```yaml
+{{
+  {
+    "name": flow.input.name,
+    "timestamp": $now(),
+    "items": fetch.data
+  }
+}}
+```
+
+## See Also
+
+- [Context Variables](/docs/reference/expressions/context) — Available variables
+- [Functions](/docs/reference/expressions/functions) — Built-in functions

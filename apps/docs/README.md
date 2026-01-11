@@ -1,45 +1,44 @@
-# docs
+# Open Harness Documentation
 
-This is a Next.js application generated with
-[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
+This is the official documentation site for Open Harness, built with Next.js and Fumadocs.
 
-Run development server:
+## Development
+
+Run the development server:
 
 ```bash
-npm run dev
-# or
-pnpm dev
-# or
-yarn dev
+bun run dev
 ```
 
 Open http://localhost:3000 with your browser to see the result.
 
-## Explore
+## Structure
 
-In the project, you can see:
+- `content/docs/` - Documentation content (tutorials, guides, reference, concepts)
+- `src/app/(home)` - Landing page and marketing pages
+- `src/app/docs` - Documentation layout and pages
+- `src/app/api/search` - Search API endpoint
 
-- `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
-- `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
+## Adding Documentation
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+Documentation is written in MDX format. Add new content to `content/docs/`:
 
-### Fumadocs MDX
+```
+content/docs/
+├── learn/           # Tutorials
+├── guides/          # How-to guides
+├── reference/       # API reference
+└── concepts/        # Conceptual explanations
+```
 
-A `source.config.ts` config file has been included, you can customise different options like frontmatter schema.
+## Tech Stack
 
-Read the [Introduction](https://fumadocs.dev/docs/mdx) for further details.
+- [Next.js](https://nextjs.org/) - React framework
+- [Fumadocs](https://fumadocs.dev) - Documentation framework
+- [MDX](https://mdxjs.com/) - Markdown with JSX
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
 
 ## Learn More
 
-To learn more about Next.js and Fumadocs, take a look at the following
-resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
-  features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Fumadocs](https://fumadocs.dev) - learn about Fumadocs
+- [Fumadocs Documentation](https://fumadocs.dev) - Learn about Fumadocs
+- [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js

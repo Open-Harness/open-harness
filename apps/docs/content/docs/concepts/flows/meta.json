@@ -1,4 +1,0 @@
-{
-  "title": "Flows",
-  "pages": ["binding-system", "dag-model", "node-lifecycle", "when-expressions"]
-}

@@ -92,7 +92,7 @@ waves:
         kernel_files: 26
         apps_files: 26
         sync_status: "complete"
-        recommendation: "SAFE_TO_DELETE packages/kernel/docs"
+        recommendation: "SAFE_TO_DELETE packages/sdk/docs"
         reason: "All content synced, apps/docs is source of truth"
 
   wave_2:
@@ -406,7 +406,7 @@ user_research:
       questions_asked:
         - "Who will maintain docs?"
         - "How to sync with code changes?"
-        - "What about packages/kernel/docs?"
+        - "What about packages/sdk/docs?"
         - "How to track quality?"
       answers_received:
         maintainer: "CI/CD skill/action (automated)"
@@ -419,7 +419,7 @@ user_research:
         - "Single source of truth: apps/docs"
         - "Quality is multi-signal approach"
       action_items:
-        - "Delete packages/kernel/docs (after migrating any unique content)"
+        - "Delete packages/sdk/docs (after migrating any unique content)"
         - "Create CI/CD doc skill/action"
         - "Add doc checklist to PR template"
         - "Set up link checker"
@@ -626,7 +626,7 @@ user_research:
       depth: "HOW first, WHY separate"
 
     maintenance:
-      source_of_truth: "apps/docs (delete packages/kernel/docs)"
+      source_of_truth: "apps/docs (delete packages/sdk/docs)"
       sync_strategy: "PR checklist + CI skill"
       ci_skill: "Check outdated + run examples + gen API docs + report"
       quality_tracking: "Manual + automated + feedback"
@@ -781,7 +781,7 @@ recommendations:
       effort: "medium"
 
     - id: "P1-5"
-      title: "Delete packages/kernel/docs"
+      title: "Delete packages/sdk/docs"
       issue: "Dual source of truth"
       action: "Remove directory, apps/docs is sole source"
       effort: "small"

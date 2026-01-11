@@ -1,0 +1,122 @@
+---
+title: Data Bindings
+description: Connect node inputs with JSONata expressions
+---
+
+# Data Bindings
+
+Use JSONata expressions inside `{{ }}` to bind data into node inputs.
+
+## Binding Basics
+
+A binding is any `{{ expression }}` in a string:
+
+```yaml
+input:
+  prompt: "Hello, {{ flow.input.name }}!"
+```
+
+Bindings can reference:
+
+| Variable | Description |
+|----------|-------------|
+| `flow.input` | Input passed to `runtime.run()` |
+| `state` | Flow state snapshot |
+| `<nodeId>` | Output from a completed node (by id) |
+| `$env` | Environment variables |
+| `$iteration`, `$first`, `$last` | Loop context (for `forEach`) |
+
+## Example: Flow Input
+
+```yaml
+nodes:
+  - id: greeting
+    type: echo
+    input:
+      text: "Hello, {{ flow.input.name }}!"
+```
+
+Expected output:
+
+```
+{ greeting: { text: "Hello, Ada!" } }
+```
+
+## Example: Previous Node Output
+
+```yaml
+nodes:
+  - id: source
+    type: constant
+    input:
+      value: "Welcome"
+
+  - id: greet
+    type: echo
+    input:
+      text: "{{ source.value }} to Open Harness"
+```
+
+Expected output:
+
+```
+{ greet: { text: "Welcome to Open Harness" } }
+```
+
+## Example: Arrays and Filters
+
+```yaml
+nodes:
+  - id: summary
+    type: echo
+    input:
+      text: "Active users: {{ users[status = 'active'].name }}"
+```
+
+Expected output:
+
+```
+Active users: ["Ada", "Grace"]
+```
+
+## Example: Object Construction (Pure Binding)
+
+If the entire value is a binding, the output preserves its type:
+
+```yaml
+input:
+  payload: |
+    {{
+      {
+        "name": flow.input.name,
+        "role": flow.input.role,
+        "active": true
+      }
+    }}
+```
+
+Expected output:
+
+```
+{ payload: { name: "Ada", role: "Engineer", active: true } }
+```
+
+## Common Patterns
+
+- **State access**: `{{ state.runs }}`
+- **String concat**: `{{ flow.input.first & ' ' & flow.input.last }}`
+- **Nested access**: `{{ profile.contact.email }}`
+
+## Troubleshooting
+
+- **Blank output**: Missing paths return `""` in mixed templates. Use a pure
+  binding (`{{ value }}`) if you need `null`/`undefined` behavior.
+- **Wrong path**: Node outputs are available as `{{ nodeId.field }}`, not
+  `{{ nodes.nodeId.output.field }}`.
+- **Forgetting `flow.input`**: Inputs from `runtime.run()` live under
+  `flow.input`, not at the top level.
+
+## Next Steps
+
+- [Conditional Expressions](/docs/guides/expressions/conditionals) — Branch flows
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Full syntax reference

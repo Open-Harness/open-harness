@@ -1,0 +1,437 @@
+# Open Harness Contributor Workflow Manifest
+# Design document for human/agent collaboration model
+# Working on: open-harness-1wp
+
+version: 1
+bead_id: open-harness-1wp
+last_updated: "2026-01-05T08:03:00Z"
+
+# =============================================================================
+# PHASE 1: Context Gathered
+# =============================================================================
+
+context_gathered:
+  beads_version: "0.43.0"
+  linear_workspace: null  # Will be created (not priority now)
+  daemon_status: running
+  hooks_installed:
+    - pre-commit
+    - post-merge
+    - pre-push
+    - post-checkout
+    - prepare-commit-msg
+
+  existing_patterns:
+    git_workflow: "GitFlow with release train (feat/* -> dev -> master)"
+    commit_style: "Conventional commits with Claude co-authoring signatures"
+    merge_style: "Non-squash merges (preserve full history)"
+    ci_enforcement: "Branch policy enforced via GitHub Actions"
+    testing_policy: "REAL fixtures only, no fabrication. Integration tests mandatory."
+    oharnes_framework: "Spec-driven development with validation gates"
+
+  beads_state:
+    total_issues: 21
+    open: 8
+    in_progress: 0
+    blocked: 0
+    closed: 13
+    health: excellent
+
+# =============================================================================
+# PHASE 2: Interview Results
+# =============================================================================
+
+interview:
+  - question: "How do you prefer to receive and discover work?"
+    answer: "Both (bidirectional) - Issues can be created in either Linear or beads; sync keeps them in parity"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "How much autonomy should agents have?"
+    answer: "High autonomy - Agents implement, test, and PR without asking. Only escalate blockers."
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "Should agents be able to self-merge PRs?"
+    answer: "Risk-tiered - Low-risk (docs/tests/configs) can self-merge; code changes need human review"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "Which tasks should ALWAYS be human-only?"
+    answer:
+      - "Releases & deployments (merging dev->master, version bumps, publishing)"
+      - "Security-sensitive changes (auth, permissions, secrets)"
+      - "Breaking API changes (semver major)"
+      - "New architectural patterns (first-time patterns not in codebase)"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "How should agents escalate blockers?"
+    answer: "Stop and notify - Create blocking issue, stop work on that task, wait for human response"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "Will multiple agents work in parallel?"
+    answer: "Multiple agents, separate issues - Agents work concurrently but on different issues (worktrees)"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "Linear workspace status?"
+    answer: "Will create one - Plan to set up Linear but not immediate priority"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "What qualifies as low-risk for auto-merge?"
+    answer: "Docs + tests + configs - Documentation, test files, and config/CI files (biome, turbo, etc.)"
+    timestamp: "2026-01-05T08:03:00Z"
+
+  - question: "Preferred cadence for reviewing agent work?"
+    answer: "Async batching - Review all accumulated PRs in 1-2 sessions per day"
+    timestamp: "2026-01-05T08:03:00Z"
+
+# =============================================================================
+# PHASE 3: Workflow Design - HYBRID BIDIRECTIONAL (Option C)
+# =============================================================================
+
+decisions:
+  workflow_model: "hybrid_bidirectional"
+  chosen_at: "2026-01-05T08:10:00Z"
+  rubric_score: 83.0
+
+  # ---------------------------------------------------------------------------
+  # Sync Model
+  # ---------------------------------------------------------------------------
+  sync_direction: "bidirectional"
+  sync_details:
+    linear_to_beads: "Pull human-created issues (when Linear configured)"
+    beads_to_linear: "Push agent-discovered issues (when Linear configured)"
+    conflict_resolution: "Latest timestamp wins, with source annotation"
+    phase_1: "Beads-only (Linear not yet configured)"
+    phase_2: "Full bidirectional (when Linear workspace created)"
+
+  # ---------------------------------------------------------------------------
+  # Human-Only Tasks (Agents NEVER do these)
+  # ---------------------------------------------------------------------------
+  human_tasks:
+    - category: "Releases & Deployments"
+      actions:
+        - "Merging dev -> master"
+        - "Version bumps and changelogs"
+        - "Publishing packages to npm/registry"
+        - "Creating GitHub releases"
+      guardrail: "branch-policy.yml blocks direct pushes to master"
+
+    - category: "Security-Sensitive Changes"
+      actions:
+        - "Authentication/authorization code"
+        - "Permissions and access control"
+        - "Secrets management"
+        - "Security patches"
+      guardrail: "CODEOWNERS file can require specific reviewers"
+
+    - category: "Breaking API Changes"
+      actions:
+        - "Semver major bumps"
+        - "Removing or renaming public APIs"
+        - "Changing event contracts"
+      guardrail: "Require 'breaking-change' label for human review"
+
+    - category: "New Architectural Patterns"
+      actions:
+        - "First-time patterns not in codebase"
+        - "New abstractions or frameworks"
+        - "Major dependency additions"
+      guardrail: "Agents ask via AskUserQuestion before implementing"
+
+  # ---------------------------------------------------------------------------
+  # Agent Tasks (High Autonomy)
+  # ---------------------------------------------------------------------------
+  agent_tasks:
+    - category: "Issue Lifecycle"
+      actions:
+        - "Claim issues via 'bd update <id> --status=in_progress'"
+        - "Create discovered work via 'bd create'"
+        - "Add progress comments via 'bd comment'"
+        - "Close completed issues via 'bd close'"
+
+    - category: "Development"
+      actions:
+        - "Create worktree via 'bd worktree create <branch>'"
+        - "Implement assigned features/fixes"
+        - "Write tests (unit, integration, fixtures)"
+        - "Run quality gates before PR"
+        - "Open PR targeting 'dev' branch"
+
+    - category: "Self-Merge (Low-Risk)"
+      actions:
+        - "Merge docs-only PRs after CI passes"
+        - "Merge test-only PRs after CI passes"
+        - "Merge config-only PRs after CI passes"
+      guardrail: "File path rules in auto_merge_rules below"
+
+    - category: "Escalation"
+      actions:
+        - "Create blocking issue when stuck"
+        - "Stop work on blocked task"
+        - "Move to next ready issue"
+        - "Wait for human resolution"
+
+  # ---------------------------------------------------------------------------
+  # Quality Gates (Must pass before PR merge)
+  # ---------------------------------------------------------------------------
+  quality_gates:
+    - name: "typecheck"
+      command: "bun run typecheck"
+      blocking: true
+      description: "TypeScript strict mode validation"
+
+    - name: "lint"
+      command: "bun run lint"
+      blocking: true
+      description: "Biome linting"
+
+    - name: "test_unit"
+      command: "bun run test"
+      blocking: true
+      description: "Unit + replay tests (no network)"
+
+    - name: "test_integration"
+      command: "bun run test:live"
+      blocking: false  # Only required for SDK-touching changes
+      description: "Integration tests (requires Claude Code auth)"
+
+    - name: "pr_review"
+      blocking: true
+      description: "Human review for code changes; auto-approve for low-risk"
+
+  # ---------------------------------------------------------------------------
+  # Auto-Merge Rules (Risk-Tiered)
+  # ---------------------------------------------------------------------------
+  auto_merge_rules:
+    low_risk_patterns:
+      - "**/*.md"                    # Documentation
+      - "**/tests/**"                # Test directories
+      - "**/*.test.ts"               # Test files
+      - "**/*.spec.ts"               # Spec files
+      - "biome.json"                 # Linter config
+      - "turbo.json"                 # Turbo config
+      - ".github/**"                 # CI/CD workflows
+      - "**/.gitignore"              # Git ignore
+      - "**/tsconfig*.json"          # TypeScript configs
+
+    high_risk_patterns:
+      - "packages/*/src/**"          # Library source code
+      - "apps/*/src/**"              # Application source code
+      - "**/package.json"            # Dependency changes
+      - "**/*.ts"                    # General TypeScript (if not in tests)
+
+    merge_policy:
+      low_risk: "Agent can self-merge after CI passes"
+      high_risk: "Requires human approval before merge"
+      implementation: "GitHub Actions workflow with path-based conditions"
+
+  # ---------------------------------------------------------------------------
+  # Multi-Agent Coordination
+  # ---------------------------------------------------------------------------
+  multi_agent:
+    isolation: "worktree"
+    worktree_pattern: "bd worktree create <issue-id>"
+    shared_state: "beads DB via worktree redirect"
+    claim_model: "explicit"
+    claim_action: "bd update <id> --status=in_progress"
+    conflict_handling: "If issue claimed, skip to next ready issue"
+    daemon: "bd daemon running with auto-sync"
+
+  # ---------------------------------------------------------------------------
+  # Review Cadence
+  # ---------------------------------------------------------------------------
+  review_cadence:
+    model: "async_batching"
+    frequency: "1-2 sessions per day"
+    notification: "PR accumulation in GitHub"
+    priority_handling: "P0/P1 issues flagged for immediate attention"
+
+# =============================================================================
+# Evaluation Rubric (Weights based on user priorities)
+# =============================================================================
+
+rubric:
+  - criterion: "Human ergonomics"
+    weight: 20
+    description: "Easy for humans to track and review work async"
+
+  - criterion: "Agent efficiency"
+    weight: 30
+    description: "Minimal friction for high-autonomy agents; clear escalation paths"
+
+  - criterion: "Sync reliability"
+    weight: 20
+    description: "No lost work, clean multi-agent coordination via worktrees"
+
+  - criterion: "Auditability"
+    weight: 15
+    description: "Clear trail of who did what (beads + git history)"
+
+  - criterion: "Simplicity"
+    weight: 15
+    description: "Minimal process overhead; avoid ceremony"
+
+# =============================================================================
+# Workflow Diagram (ASCII)
+# =============================================================================
+
+workflow_diagram: |
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                    HYBRID BIDIRECTIONAL WORKFLOW                            │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+  HUMAN SIDE                              AGENT SIDE
+  ═══════════                             ══════════
+
+  ┌─────────────┐                         ┌─────────────┐
+  │   Linear    │◄───── Sync ─────────────│   Beads     │
+  │  (planned)  │      (future)           │ (discovered)│
+  └──────┬──────┘                         └──────┬──────┘
+         │                                       │
+         │ Phase 1: Beads only                   │
+         │ Phase 2: Full bidirectional           │
+         │                                       │
+         ▼                                       ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                    bd ready                         │
+  │              (unified work queue)                   │
+  └─────────────────────────────────────────────────────┘
+                          │
+                          ▼
+  ┌─────────────────────────────────────────────────────┐
+  │              Agent Claims Issue                     │
+  │         bd update <id> --status=in_progress         │
+  └─────────────────────────────────────────────────────┘
+                          │
+                          ▼
+  ┌─────────────────────────────────────────────────────┐
+  │              Create Worktree                        │
+  │         bd worktree create <issue-id>               │
+  └─────────────────────────────────────────────────────┘
+                          │
+                          ▼
+  ┌─────────────────────────────────────────────────────┐
+  │                 Implement                           │
+  │   Code → Tests → Quality Gates → PR (target: dev)   │
+  └─────────────────────────────────────────────────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+    ┌───────────────┐           ┌───────────────┐
+    │   Low Risk    │           │   High Risk   │
+    │ (docs/tests/  │           │   (code)      │
+    │   configs)    │           │               │
+    └───────┬───────┘           └───────┬───────┘
+            │                           │
+            ▼                           ▼
+    ┌───────────────┐           ┌───────────────┐
+    │  Auto-merge   │           │ Human Review  │
+    │  after CI     │           │   Required    │
+    └───────┬───────┘           └───────┬───────┘
+            │                           │
+            └───────────┬───────────────┘
+                        ▼
+  ┌─────────────────────────────────────────────────────┐
+  │               bd close <id>                         │
+  │                 bd sync                             │
+  └─────────────────────────────────────────────────────┘
+
+  ESCALATION PATH:
+  ════════════════
+
+  Agent stuck → bd create (blocking issue) → Stop work → Human resolves
+
+# =============================================================================
+# Implementation Roadmap
+# =============================================================================
+
+implementation_roadmap:
+  phase_1_immediate:
+    title: "Beads-Only Foundation"
+    issues_created:
+      - id: open-harness-jnb
+        title: "Create auto-merge GitHub Action for low-risk PRs"
+      - id: open-harness-60t
+        title: "Document agent onboarding in CONTRIBUTING.md"
+      - id: open-harness-6ef
+        title: "Add CODEOWNERS for human-only paths"
+    issues_to_create:
+      - title: "Create auto-merge GitHub Action for low-risk PRs"
+        type: task
+        priority: 2
+        description: |
+          Implement path-based auto-merge workflow:
+          - Detect PR file paths
+          - Match against low_risk_patterns
+          - Auto-approve and merge if CI passes
+          - Require review for high_risk_patterns
+
+      - title: "Document agent onboarding in CONTRIBUTING.md"
+        type: task
+        priority: 2
+        description: |
+          Create CONTRIBUTING.md with:
+          - Beads workflow (bd ready → claim → implement → close)
+          - Quality gates checklist
+          - Escalation procedure
+          - Human-only task list
+
+      - title: "Add CODEOWNERS for human-only paths"
+        type: task
+        priority: 3
+        description: |
+          Create .github/CODEOWNERS to require human review for:
+          - packages/*/src/auth/**
+          - packages/*/src/security/**
+          - **/secrets/**
+
+  phase_2_linear_integration:
+    title: "Linear Bidirectional Sync"
+    blocked_by: "Linear workspace creation"
+    issues_to_create:
+      - title: "Configure bd linear sync"
+        type: task
+        priority: 3
+        description: |
+          Set up bidirectional Linear sync:
+          - bd config set linear.api_key
+          - bd config set linear.team_id
+          - Configure state/priority mappings
+
+      - title: "Create Linear project board view"
+        type: task
+        priority: 4
+        description: |
+          Set up Linear board with views:
+          - Ready for Agent (no blockers, unassigned)
+          - In Progress (agent working)
+          - Awaiting Review (PR open)
+          - Blocked (needs human)
+
+# =============================================================================
+# Next Steps (Immediate Actions)
+# =============================================================================
+
+next_steps:
+  - action: "Review and approve this manifest"
+    owner: human
+    status: pending
+
+  - action: "Create beads issues for Phase 1 implementation"
+    owner: agent
+    status: pending
+    blocked_by: "manifest approval"
+
+  - action: "Create auto-merge GitHub Action"
+    owner: agent
+    status: pending
+    blocked_by: "issue creation"
+
+  - action: "Write CONTRIBUTING.md"
+    owner: agent
+    status: pending
+    blocked_by: "issue creation"
+
+  - action: "Set up Linear workspace"
+    owner: human
+    status: future
+    description: "When ready, create workspace and run 'bd linear sync --pull'"

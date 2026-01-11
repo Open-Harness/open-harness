@@ -20,20 +20,20 @@ apps/docs/content/docs/           → Fumadocs site (MDX)
 │   ├── bindings/                 → A3 syntax
 │   ├── when/                     → Conditional expressions
 │   ├── config/                   → Configuration options
-│   └── kernel-spec/              → SYNCED from packages/kernel/docs/
+│   └── kernel-spec/              → SYNCED from packages/sdk/docs/
 └── contributing/                 → Contributor documentation
 
-packages/kernel/docs/             → Protocol specs (source of truth for kernel-spec)
-packages/kernel/src/              → TypeScript source (source of truth for API/types)
+packages/sdk/docs/             → Protocol specs (source of truth for kernel-spec)
+packages/sdk/src/              → TypeScript source (source of truth for API/types)
 ```
 
 ## Source of Truth Strategy
 
 | Documentation Type | Source | Method |
 |-------------------|--------|--------|
-| Protocol Specs | `packages/kernel/docs/*.md` | Sync script (`sync:kernel-docs`) |
-| API Functions | `packages/kernel/src/**/*.ts` | Auto-generated from TSDoc |
-| Type Definitions | `packages/kernel/src/**/*.ts` | Auto-generated from TypeScript |
+| Protocol Specs | `packages/sdk/docs/*.md` | Sync script (`sync:kernel-docs`) |
+| API Functions | `packages/sdk/src/**/*.ts` | Auto-generated from TSDoc |
+| Type Definitions | `packages/sdk/src/**/*.ts` | Auto-generated from TypeScript |
 | Tutorials/Guides | `apps/docs/content/docs/` | Manual |
 | Concepts | `apps/docs/content/docs/` | Manual |
 
@@ -125,7 +125,7 @@ import { createGenerator, createFileSystemGeneratorCache } from 'fumadocs-typesc
 
 const generator = createGenerator({
   // Point to kernel source
-  input: ['../../packages/kernel/src/**/*.ts'],
+  input: ['../../packages/sdk/src/**/*.ts'],
   // Use cache for faster builds
   cache: createFileSystemGeneratorCache(),
 });
@@ -143,7 +143,7 @@ The central event bus.
 
 ```ts doc
 // This generates a TypeTable automatically from the type
-import { Hub } from "@open-harness/kernel"
+import { Hub } from "@open-harness/sdk"
 ```
 ```
 
@@ -188,7 +188,7 @@ When the kernel protocol changes:
 ### 1. Update Kernel Docs (if protocol spec changed)
 ```bash
 # Edit the source
-vim packages/kernel/docs/spec/hub.md
+vim packages/sdk/docs/spec/hub.md
 
 # Sync will happen automatically on next dev/build
 cd apps/docs && bun run sync:kernel-docs
@@ -254,7 +254,7 @@ function functionName(param: Type): ReturnType
 ## Example
 
 \`\`\`typescript
-import { functionName } from "@open-harness/kernel";
+import { functionName } from "@open-harness/sdk";
 
 const result = functionName(value);
 \`\`\`
@@ -359,3 +359,33 @@ Ensure component is imported in `mdx-components.tsx`:
 ```typescript
 import { TypeTable } from 'fumadocs-ui/components/type-table';
 ```
+
+### Pages break except landing page (Next.js params type error)
+
+**CRITICAL: This has broken the docs site multiple times. DO NOT repeat this mistake.**
+
+In Next.js 15+, `params` in page/route components is a Promise and MUST be typed as `Promise<PageParams>`, not just `PageParams`.
+
+#### ❌ WRONG (breaks at runtime):
+```typescript
+type PageProps = {
+	params: { slug?: string[] };  // ❌ Wrong
+};
+```
+
+#### ✅ CORRECT:
+```typescript
+type PageParams = {
+	slug?: string[];
+};
+
+type PageProps = {
+	params: Promise<PageParams>;  // ✅ Correct
+};
+```
+
+**Symptoms**: All docs pages return 404 or error except the landing page (`/docs`).
+
+**Fix**: Update the type definition in `apps/docs/src/app/docs/[[...slug]]/page.tsx` to use `Promise<PageParams>`.
+
+**Reference**: See `apps/docs/src/app/og/docs/[...slug]/route.tsx` for correct pattern.

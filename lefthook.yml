@@ -1,0 +1,52 @@
+# Lefthook configuration for Open Harness
+# See: https://github.com/evilmartians/lefthook
+
+# Skip lefthook on CI (CI runs full checks anyway)
+skip_output:
+  - meta
+  - success
+
+pre-commit:
+  parallel: true
+  commands:
+    # Run beads pre-commit hook first
+    beads:
+      priority: 1
+      run: bd hooks run pre-commit {staged_files}
+      stage_fixed: false
+
+    # Lint and format staged files with biome
+    lint-staged:
+      priority: 2
+      run: bunx lint-staged
+      stage_fixed: true
+
+    # Type check (optional - can be slow on large repos)
+    # Uncomment if you want type checking on every commit
+    # typecheck:
+    #   priority: 3
+    #   run: bun run typecheck
+    #   stage_fixed: false
+
+pre-push:
+  parallel: true
+  commands:
+    # Lint check (no auto-fix on push, just validation)
+    lint:
+      run: bun run lint
+      stage_fixed: false
+
+    # Check markdown links in docs
+    lint-links:
+      run: cd apps/docs && bun run lint:links
+      stage_fixed: false
+
+    # Type check before push (catches type errors before CI)
+    typecheck:
+      run: bun run typecheck
+      stage_fixed: false
+
+    # Run unit and replay tests (excludes slow live/e2e tests)
+    test:
+      run: bun run test
+      stage_fixed: false

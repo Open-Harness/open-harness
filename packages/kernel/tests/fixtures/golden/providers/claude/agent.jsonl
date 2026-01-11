@@ -1,1 +1,0 @@
-{"sessionId":"record-provider-claude-agent","scenario":"agent","cases":[{"name":"basic","input":{"prompt":"Say hello"},"expected":{"text":"Hello!"}}],"metadata":{"recordedAt":"2025-12-30T16:34:07.004Z","component":"providers/claude","description":"Claude agent replay output"}}

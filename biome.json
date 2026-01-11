@@ -1,61 +1,61 @@
 {
-  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "includes": [
-      "**",
-      "!**/recordings",
-      "!**/.next",
-      "!**/dist",
-      "!**/.turbo",
-      "!**/dev-dist",
-      "!**/.zed",
-      "!**/.vscode",
-      "!**/routeTree.gen.ts",
-      "!**/src-tauri",
-      "!**/.nuxt",
-      "!bts.jsonc",
-      "!**/.expo",
-      "!**/.wrangler",
-      "!**/.alchemy",
-      "!**/.svelte-kit",
-      "!**/wrangler.jsonc",
-      "!**/.source",
-      "!**/convex/_generated"
-    ]
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "tab"
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double",
-      "lineWidth": 120
-    }
-  },
-  "assist": {
-    "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
-  },
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  }
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**",
+			"!**/recordings",
+			"!**/.next",
+			"!**/dist",
+			"!**/.turbo",
+			"!**/dev-dist",
+			"!**/.zed",
+			"!**/.vscode",
+			"!**/routeTree.gen.ts",
+			"!**/src-tauri",
+			"!**/.nuxt",
+			"!bts.jsonc",
+			"!**/.expo",
+			"!**/.wrangler",
+			"!**/.alchemy",
+			"!**/.svelte-kit",
+			"!**/wrangler.jsonc",
+			"!**/.source",
+			"!**/convex/_generated"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"lineWidth": 120
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
 }

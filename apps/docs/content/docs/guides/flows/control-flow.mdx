@@ -1,0 +1,126 @@
+---
+title: Control Flow
+description: Build complex flow logic with branching and loops
+---
+
+# Control Flow
+
+Create sophisticated agent workflows with branching, loops, and parallel execution.
+
+## Sequential Execution
+
+Default behavior — nodes run in order:
+
+```yaml
+nodes:
+  - id: step1
+    type: claude.agent
+    input:
+      prompt: "First step"
+
+  - id: step2
+    type: claude.agent
+    input:
+      prompt: "Uses {{ nodes.step1.output.text }}"
+```
+
+## Branching
+
+Use conditional edges for different paths:
+
+```yaml
+nodes:
+  - id: router
+    type: claude.agent
+    input:
+      prompt: "Classify: {{ flow.input.query }}"
+
+  - id: path-a
+    type: claude.agent
+    input:
+      prompt: "Handle type A"
+
+  - id: path-b
+    type: claude.agent
+    input:
+      prompt: "Handle type B"
+
+edges:
+  - from: router
+    to: path-a
+    condition: "{{ nodes.router.output.type = 'A' }}"
+
+  - from: router
+    to: path-b
+    condition: "{{ nodes.router.output.type = 'B' }}"
+```
+
+## Parallel Execution
+
+Nodes without dependencies run in parallel:
+
+```yaml
+nodes:
+  - id: fetch-users
+    type: http.get
+    input:
+      url: "/api/users"
+
+  - id: fetch-orders
+    type: http.get
+    input:
+      url: "/api/orders"
+
+  - id: combine
+    type: claude.agent
+    input:
+      users: "{{ nodes.fetch-users.output }}"
+      orders: "{{ nodes.fetch-orders.output }}"
+```
+
+## Fan-Out Pattern
+
+Process items in parallel:
+
+```yaml
+nodes:
+  - id: get-items
+    type: http.get
+    input:
+      url: "/api/items"
+
+  - id: process-each
+    type: map
+    input:
+      items: "{{ nodes.get-items.output.data }}"
+      node: process-item
+
+  - id: process-item
+    type: claude.agent
+    input:
+      item: "{{ $.item }}"
+```
+
+## Convergence
+
+Multiple paths joining:
+
+```yaml
+edges:
+  - from: path-a
+    to: final
+  - from: path-b
+    to: final
+
+nodes:
+  - id: final
+    type: claude.agent
+    input:
+      # Access whichever path completed
+      result: "{{ nodes.path-a.output ? nodes.path-a.output : nodes.path-b.output }}"
+```
+
+## Next Steps
+
+- [Conditionals](/docs/guides/expressions/conditionals) — Expression-based conditions
+- [Flow Definition](/docs/reference/types/flow-definition) — Complete flow schema

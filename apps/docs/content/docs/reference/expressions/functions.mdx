@@ -1,0 +1,201 @@
+---
+title: JSONata Functions
+description: Built-in functions for expressions
+---
+
+# JSONata Functions
+
+Built-in functions available in all expressions.
+
+## String Functions
+
+### $string(value)
+
+Convert to string:
+
+```yaml
+{{ $string(flow.input.count) }}
+```
+
+### $length(string)
+
+String length:
+
+```yaml
+{{ $length(flow.input.name) }}
+```
+
+### $substring(string, start, length?)
+
+Extract substring:
+
+```yaml
+{{ $substring(flow.input.text, 0, 100) }}
+```
+
+### $contains(string, pattern)
+
+Check if contains:
+
+```yaml
+{{ $contains(flow.input.email, '@') }}
+```
+
+### $split(string, separator)
+
+Split string to array:
+
+```yaml
+{{ $split(flow.input.tags, ',') }}
+```
+
+### $join(array, separator?)
+
+Join array to string:
+
+```yaml
+{{ $join(flow.input.names, ', ') }}
+```
+
+### $trim(string)
+
+Remove whitespace:
+
+```yaml
+{{ $trim(flow.input.text) }}
+```
+
+### $uppercase(string) / $lowercase(string)
+
+Case conversion:
+
+```yaml
+{{ $uppercase(flow.input.code) }}
+{{ $lowercase(flow.input.email) }}
+```
+
+## Numeric Functions
+
+### $number(value)
+
+Convert to number:
+
+```yaml
+{{ $number(flow.input.quantity) }}
+```
+
+### $sum(array)
+
+Sum array values:
+
+```yaml
+{{ $sum(flow.input.items.price) }}
+```
+
+### $average(array)
+
+Average of array:
+
+```yaml
+{{ $average(scores.values) }}
+```
+
+### $min(array) / $max(array)
+
+Min/max values:
+
+```yaml
+{{ $min(flow.input.prices) }}
+{{ $max(flow.input.prices) }}
+```
+
+### $round(number, precision?)
+
+Round number:
+
+```yaml
+{{ $round(calc.value, 2) }}
+```
+
+## Array Functions
+
+### $count(array)
+
+Array length:
+
+```yaml
+{{ $count(flow.input.items) }}
+```
+
+### $distinct(array)
+
+Unique values:
+
+```yaml
+{{ $distinct(flow.input.tags) }}
+```
+
+### $sort(array, function?)
+
+Sort array:
+
+```yaml
+{{ $sort(flow.input.items) }}
+```
+
+### $reverse(array)
+
+Reverse array:
+
+```yaml
+{{ $reverse(flow.input.items) }}
+```
+
+### $append(array1, array2)
+
+Concatenate arrays:
+
+```yaml
+{{ $append(flow.input.items, more.items) }}
+```
+
+## Object Functions
+
+### $keys(object)
+
+Get object keys:
+
+```yaml
+{{ $keys(flow.input.config) }}
+```
+
+### $values(object)
+
+Get object values:
+
+```yaml
+{{ $values(flow.input.config) }}
+```
+
+### $merge(objects...)
+
+Merge objects:
+
+```yaml
+{{ $merge([flow.input.defaults, flow.input.overrides]) }}
+```
+
+## Date Functions
+
+### $now()
+
+Current timestamp (ISO 8601):
+
+```yaml
+{{ $now() }}
+```
+
+## See Also
+
+- [JSONata Syntax](/docs/reference/expressions/syntax) — Expression syntax
+- [Context Variables](/docs/reference/expressions/context) — Available variables

@@ -1,4 +1,4 @@
 {
-  "title": "Agent Guides",
-  "pages": ["define-agent", "anthropic-agent"]
+	"title": "Agents",
+	"pages": ["custom-agents", "claude-agent"]
 }
