@@ -193,7 +193,8 @@ describe("CodexHarness", () => {
 			// Should have text:complete
 			const textComplete = signals.find((s) => s.name === HARNESS_SIGNALS.TEXT_COMPLETE);
 			expect(textComplete).toBeDefined();
-			expect((textComplete!.payload as { content: string }).content).toBe("Hello world");
+			if (!textComplete) throw new Error("Expected textComplete signal");
+			expect((textComplete.payload as { content: string }).content).toBe("Hello world");
 
 			// Result should have accumulated text
 			expect(result.content).toBe("Hello world");
@@ -227,7 +228,8 @@ describe("CodexHarness", () => {
 			// Should have thinking:complete
 			const thinkingComplete = signals.find((s) => s.name === HARNESS_SIGNALS.THINKING_COMPLETE);
 			expect(thinkingComplete).toBeDefined();
-			expect((thinkingComplete!.payload as { content: string }).content).toBe("Let me think...");
+			if (!thinkingComplete) throw new Error("Expected thinkingComplete signal");
+			expect((thinkingComplete.payload as { content: string }).content).toBe("Let me think...");
 		});
 
 		test("emits tool:call for MCP tool use", async () => {
@@ -261,18 +263,21 @@ describe("CodexHarness", () => {
 			// Find tool:call signal
 			const toolCall = signals.find((s) => s.name === HARNESS_SIGNALS.TOOL_CALL);
 			expect(toolCall).toBeDefined();
-			expect((toolCall!.payload as { id: string }).id).toBe("tool-123");
-			expect((toolCall!.payload as { name: string }).name).toBe("read_file");
-			expect((toolCall!.payload as { input: unknown }).input).toEqual({ path: "/test.txt" });
+			if (!toolCall) throw new Error("Expected toolCall signal");
+			expect((toolCall.payload as { id: string }).id).toBe("tool-123");
+			expect((toolCall.payload as { name: string }).name).toBe("read_file");
+			expect((toolCall.payload as { input: unknown }).input).toEqual({ path: "/test.txt" });
 
 			// Find tool:result signal
 			const toolResult = signals.find((s) => s.name === HARNESS_SIGNALS.TOOL_RESULT);
 			expect(toolResult).toBeDefined();
-			expect((toolResult!.payload as { id: string }).id).toBe("tool-123");
+			if (!toolResult) throw new Error("Expected toolResult signal");
+			expect((toolResult.payload as { id: string }).id).toBe("tool-123");
 
 			// Result should have tool calls
 			expect(result.toolCalls).toHaveLength(1);
-			expect(result.toolCalls![0].id).toBe("tool-123");
+			if (!result.toolCalls) throw new Error("Expected toolCalls");
+			expect(result.toolCalls[0].id).toBe("tool-123");
 		});
 
 		test("emits tool:call for shell command execution", async () => {
@@ -304,18 +309,21 @@ describe("CodexHarness", () => {
 			// Find tool:call signal - should be named "shell"
 			const toolCall = signals.find((s) => s.name === HARNESS_SIGNALS.TOOL_CALL);
 			expect(toolCall).toBeDefined();
-			expect((toolCall!.payload as { id: string }).id).toBe("cmd-456");
-			expect((toolCall!.payload as { name: string }).name).toBe("shell");
-			expect((toolCall!.payload as { input: { command: string } }).input.command).toBe("ls -la");
+			if (!toolCall) throw new Error("Expected toolCall signal");
+			expect((toolCall.payload as { id: string }).id).toBe("cmd-456");
+			expect((toolCall.payload as { name: string }).name).toBe("shell");
+			expect((toolCall.payload as { input: { command: string } }).input.command).toBe("ls -la");
 
 			// Find tool:result signal
 			const toolResult = signals.find((s) => s.name === HARNESS_SIGNALS.TOOL_RESULT);
 			expect(toolResult).toBeDefined();
-			expect((toolResult!.payload as { name: string }).name).toBe("shell");
+			if (!toolResult) throw new Error("Expected toolResult signal");
+			expect((toolResult.payload as { name: string }).name).toBe("shell");
 
 			// Result should have tool calls
 			expect(result.toolCalls).toHaveLength(1);
-			expect(result.toolCalls![0].name).toBe("shell");
+			if (!result.toolCalls) throw new Error("Expected toolCalls");
+			expect(result.toolCalls[0].name).toBe("shell");
 		});
 
 		test("emits harness:error for turn failed", async () => {
@@ -336,7 +344,8 @@ describe("CodexHarness", () => {
 			// Find error signal
 			const errorSignal = signals.find((s) => s.name === HARNESS_SIGNALS.ERROR);
 			expect(errorSignal).toBeDefined();
-			expect((errorSignal!.payload as { message: string }).message).toContain("Rate limit exceeded");
+			if (!errorSignal) throw new Error("Expected errorSignal");
+			expect((errorSignal.payload as { message: string }).message).toContain("Rate limit exceeded");
 
 			// Result should have error stop reason
 			expect(result.stopReason).toBe("error");
@@ -363,9 +372,10 @@ describe("CodexHarness", () => {
 			const { result } = await collectSignals(harness.run(input, ctx));
 
 			expect(result.usage).toBeDefined();
-			expect(result.usage!.inputTokens).toBe(100);
-			expect(result.usage!.outputTokens).toBe(50);
-			expect(result.usage!.totalTokens).toBe(150);
+			if (!result.usage) throw new Error("Expected usage");
+			expect(result.usage.inputTokens).toBe(100);
+			expect(result.usage.outputTokens).toBe(50);
+			expect(result.usage.totalTokens).toBe(150);
 		});
 
 		test("includes structured output in final output", async () => {

@@ -2,7 +2,7 @@
  * Tests for ConsoleSignalReporter
  */
 
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { createSignal } from "@internal/signals-core";
 import { SignalBus } from "../src/bus.js";
 import { createConsoleReporter, defaultConsoleReporter } from "../src/console-reporter.js";

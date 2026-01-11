@@ -63,5 +63,4 @@ export {
 	type RunReactiveOptions,
 	type RunReactiveResult,
 	runReactive,
-	workflow,
 } from "@open-harness/core";

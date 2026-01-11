@@ -239,7 +239,7 @@ export const signalMatchers = {
 	 *
 	 * @example
 	 * ```ts
-	 * // Expect exactly 2 provider:end signals
+	 * // Expect exactly 2 harness:end signals
 	 * expect(result.signals).toHaveSignalCount('harness:end', 2)
 	 *
 	 * // Expect exactly 3 agent activations

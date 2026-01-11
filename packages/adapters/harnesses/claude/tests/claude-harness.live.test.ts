@@ -159,7 +159,8 @@ describe("ClaudeHarness Live Integration", () => {
 				// Result should have session ID
 				expect(result.sessionId).toBeDefined();
 				expect(typeof result.sessionId).toBe("string");
-				expect(result.sessionId!.length).toBeGreaterThan(0);
+				if (!result.sessionId) throw new Error("Expected sessionId");
+				expect(result.sessionId.length).toBeGreaterThan(0);
 
 				// Save fixture
 				const recording = await store.load(recordingId);
@@ -197,9 +198,10 @@ describe("ClaudeHarness Live Integration", () => {
 
 				// Result should have usage
 				expect(result.usage).toBeDefined();
-				expect(result.usage!.inputTokens).toBeGreaterThan(0);
-				expect(result.usage!.outputTokens).toBeGreaterThan(0);
-				expect(result.usage!.totalTokens).toBe(result.usage!.inputTokens + result.usage!.outputTokens);
+				if (!result.usage) throw new Error("Expected usage");
+				expect(result.usage.inputTokens).toBeGreaterThan(0);
+				expect(result.usage.outputTokens).toBeGreaterThan(0);
+				expect(result.usage.totalTokens).toBe(result.usage.inputTokens + result.usage.outputTokens);
 
 				// Save fixture
 				const recording = await store.load(recordingId);
@@ -301,8 +303,9 @@ describe("ClaudeHarness Live Integration", () => {
 
 				const endSignal = signals.find((s) => s.name === HARNESS_SIGNALS.END);
 				expect(endSignal).toBeDefined();
+				if (!endSignal) throw new Error("Expected endSignal");
 
-				const payload = endSignal!.payload as { durationMs: number; output: unknown };
+				const payload = endSignal.payload as { durationMs: number; output: unknown };
 				expect(payload.durationMs).toBeGreaterThan(0);
 				expect(payload.output).toBeDefined();
 			},

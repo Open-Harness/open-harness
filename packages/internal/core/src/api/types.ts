@@ -169,93 +169,6 @@ export type ReactiveAgent<TOutput = unknown> = Agent<TOutput> & {
 };
 
 // ============================================================================
-// Workflow types
-// ============================================================================
-
-/**
- * Edge definition for connecting agents in a workflow.
- *
- * Edges define control flow - which agent runs after which,
- * and under what conditions.
- */
-export type Edge = {
-	/**
-	 * Source agent identifier.
-	 */
-	from: string;
-
-	/**
-	 * Target agent identifier.
-	 */
-	to: string;
-
-	/**
-	 * Optional condition for when this edge fires.
-	 * Uses JSONata expression syntax.
-	 *
-	 * @example "status = 'needs_review'"
-	 * @example "$exists(errors) and $count(errors) > 0"
-	 */
-	when?: string;
-};
-
-/**
- * Configuration for creating a workflow.
- *
- * The workflow owns all workflow state. Agents are stateless.
- *
- * @property agents - Named agents that comprise this workflow
- * @property edges - Connections between agents
- * @property state - Optional shared state accessible to all agents
- */
-export type WorkflowConfig<TState = Record<string, unknown>> = {
-	/**
-	 * Named agents that comprise this workflow.
-	 *
-	 * @example
-	 * ```ts
-	 * agents: {
-	 *   coder: agent({ prompt: "You are a coder" }),
-	 *   reviewer: agent({ prompt: "You are a reviewer" }),
-	 * }
-	 * ```
-	 */
-	agents: Record<string, Agent>;
-
-	/**
-	 * Edges defining control flow between agents.
-	 */
-	edges: Edge[];
-
-	/**
-	 * Optional shared state accessible to all agents.
-	 * This is the single source of truth for workflow state.
-	 */
-	state?: TState;
-};
-
-/**
- * A workflow definition created by the workflow() function.
- *
- * Workflows coordinate multiple agents - they own shared state,
- * decide which agent runs next, and coordinate recordings.
- *
- * The workflow doesn't "execute" - agents execute. The workflow coordinates.
- * See SDK_DX_DECISIONS.md Decision #8.
- */
-export type Workflow<TState = Record<string, unknown>> = {
-	/**
-	 * Discriminator for type checking at runtime.
-	 */
-	readonly _tag: "Workflow";
-
-	/**
-	 * The configuration used to create this workflow.
-	 */
-	readonly config: WorkflowConfig<TState>;
-};
-
-// ============================================================================
 // Run types
 // ============================================================================
 
@@ -401,18 +314,6 @@ export function isAgent(value: unknown): value is Agent {
 		value !== null &&
 		"_tag" in value &&
 		value._tag === "Agent"
-	);
-}
-
-/**
- * Type guard to check if a value is a Workflow.
- */
-export function isWorkflow(value: unknown): value is Workflow {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"_tag" in value &&
-		value._tag === "Workflow"
 	);
 }
 

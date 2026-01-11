@@ -162,8 +162,8 @@ async function debugWithPlayer(recordingId: string): Promise<void> {
 	// Show snapshot
 	console.log("\n📸 Snapshot at current position:");
 	const snap = player.snapshot;
-	console.log(`  Text: "${snap.provider.text.content.slice(0, 50)}..."`);
-	console.log(`  Provider running: ${snap.provider.running}`);
+	console.log(`  Text: "${snap.harness.text.content.slice(0, 50)}..."`);
+	console.log(`  Harness running: ${snap.harness.running}`);
 
 	// Jump to end
 	console.log("\n⏭️ Fast forward to end:");

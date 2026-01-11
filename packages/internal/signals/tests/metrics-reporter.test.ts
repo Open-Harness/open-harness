@@ -60,7 +60,7 @@ describe("MetricsSignalReporter", () => {
 			expect(metrics.harnessCalls).toBe(3);
 		});
 
-		it("aggregates token usage from provider:end", () => {
+		it("aggregates token usage from harness:end", () => {
 			const bus = new SignalBus();
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
@@ -81,7 +81,7 @@ describe("MetricsSignalReporter", () => {
 			expect(metrics.totalOutputTokens).toBe(125);
 		});
 
-		it("aggregates cost from provider:end", () => {
+		it("aggregates cost from harness:end", () => {
 			const bus = new SignalBus();
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);

@@ -28,11 +28,10 @@ The recommended approach is to use the shared test utilities, which handle all t
 
 ```typescript
 import { setupFixtures, withFixture } from "../test-utils";
-import { run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+import { run, setDefaultHarness, ClaudeHarness } from "@open-harness/core";
 
 beforeAll(() => {
-  setDefaultProvider(createClaudeNode());
+  setDefaultHarness(new ClaudeHarness());
   setupFixtures();  // Configures the shared fixture store
 });
 

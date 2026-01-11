@@ -11,20 +11,14 @@ export async function collectSignals<T>(
 	generator: AsyncGenerator<Signal, T>,
 ): Promise<{ signals: Signal[]; result: T }> {
 	const signals: Signal[] = [];
-	let result: T;
 
-	let done = false;
-	while (!done) {
+	while (true) {
 		const next = await generator.next();
 		if (next.done) {
-			done = true;
-			result = next.value;
-		} else {
-			signals.push(next.value);
+			return { signals, result: next.value };
 		}
+		signals.push(next.value);
 	}
-
-	return { signals, result: result! };
 }
 
 /**

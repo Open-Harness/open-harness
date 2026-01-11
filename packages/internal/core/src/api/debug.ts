@@ -120,13 +120,13 @@ export function buildSignalTree(signals: readonly Signal[]): SignalNode[] {
  * ```
  * harness:start
  * └─ agent:activated (analyst)
- *    ├─ provider:start
+ *    ├─ harness:start
  *    ├─ text:delta
- *    ├─ provider:end
+ *    ├─ harness:end
  *    └─ analysis:complete
  *       └─ agent:activated (executor)
- *          ├─ provider:start
- *          └─ provider:end
+ *          ├─ harness:start
+ *          └─ harness:end
  * ```
  */
 export function formatSignalTree(signals: readonly Signal[]): string {

@@ -33,10 +33,6 @@ export type {
 	AgentConfig,
 	AgentInput,
 	AgentOutput,
-	Workflow,
-	WorkflowConfig,
-	Edge,
-	// RunOptions removed (v0.3.0) - use RunReactiveOptions instead
 	RunResult,
 	RunMetrics,
 	FixtureStore,
@@ -47,11 +43,10 @@ export type {
 } from "./types.js";
 
 // Type guards
-export { isAgent, isWorkflow, isReactiveAgent } from "./types.js";
+export { isAgent, isReactiveAgent } from "./types.js";
 
 // Factory functions
 export { agent } from "./agent.js";
-export { workflow, type WorkflowWithFlow } from "./workflow.js";
 
 // Execution (v0.3.0 - signal-based)
 export {

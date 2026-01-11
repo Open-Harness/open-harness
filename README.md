@@ -2,15 +2,15 @@
 
 ![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
 
-> Event-driven workflow orchestration for production multi-agent AI systems.
+> Signal-based observability infrastructure for production AI agents.
 
 ## Overview
 
-Open Harness provides a declarative, event-driven framework for building multi-agent systems:
+Open Harness provides a reactive, signal-based architecture for building observable AI agent systems:
 
-- **Declarative Workflows**: Define agent pipelines in YAML, not imperative code
-- **Full Observability**: Every event flows through a central Hub you can subscribe to
-- **JSONata Expressions**: Powerful data bindings with a proven expression language
+- **Signal-Based Architecture**: All agent events flow as typed signals through a central bus
+- **Full Observability**: Subscribe to any signal pattern for logging, metrics, or custom handlers
+- **Harness Adapters**: Unified interface for Claude, OpenAI, and other AI providers
 - **Replay Testing**: Record and replay agent interactions for deterministic tests
 
 ## Quick Start
@@ -18,65 +18,105 @@ Open Harness provides a declarative, event-driven framework for building multi-a
 ### Installation
 
 ```bash
-# Add the SDK to your project
-bun add @open-harness/sdk
+bun add @open-harness/core
 ```
 
-### Hello World Flow
-
-Create `flow.yaml`:
-
-```yaml
-name: hello-world
-nodes:
-  - id: researcher
-    type: claude.agent
-    input:
-      prompt: "Research: {{ flow.input.topic }}"
-
-  - id: summarizer
-    type: claude.agent
-    input:
-      prompt: "Summarize this research: {{ researcher.text }}"
-
-edges:
-  - from: researcher
-    to: summarizer
-```
-
-Run it:
+### Hello World
 
 ```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/sdk";
-import { readFileSync } from "node:fs";
+import { ClaudeHarness } from "@open-harness/core";
+import { SignalBus, attachReporter, createConsoleReporter } from "@open-harness/core";
 
-const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const snapshot = await runFlow({ flow, input: { topic: "quantum computing" } });
+// Create a signal bus for observability
+const bus = new SignalBus();
 
-console.log("Results:", snapshot.outputs);
+// Attach a console reporter to see all signals
+attachReporter(bus, createConsoleReporter());
+
+// Create a harness for Claude
+const harness = new ClaudeHarness({ model: "claude-sonnet-4-20250514" });
+
+// Run the harness - it yields signals as the agent streams
+const input = {
+  messages: [{ role: "user", content: "What is quantum computing?" }],
+};
+
+for await (const signal of harness.run(input, { signal: new AbortController().signal })) {
+  bus.emit(signal); // Route signals through the bus
+
+  // Handle specific signals
+  if (signal.name === "harness:text:delta") {
+    process.stdout.write(signal.payload.content);
+  }
+}
 ```
 
 ## Documentation
 
-- 📚 [Full Documentation](https://docs.open-harness.dev) - Tutorials, guides, and API reference
-- 🚀 [Quickstart Tutorial](https://docs.open-harness.dev/docs/learn/quickstart) - Run your first flow in 5 minutes
-- 🏗️ [Architecture](https://docs.open-harness.dev/docs/concepts/architecture) - Understand the system design
-- 📖 [Contributing Guide](CONTRIBUTING.md) - How to contribute to Open Harness
+- [Full Documentation](https://docs.open-harness.dev) - Tutorials, guides, and API reference
+- [Quickstart Tutorial](https://docs.open-harness.dev/docs/learn/quickstart) - Run your first harness
+- [Architecture](https://docs.open-harness.dev/docs/concepts/architecture) - Understand the signal-based design
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute to Open Harness
+
+## Core Concepts
+
+### Signals
+
+Everything in Open Harness is a signal. Signals are typed events with a name, payload, and metadata:
+
+```typescript
+interface Signal<T = unknown> {
+  name: string;           // e.g., "harness:text:delta"
+  payload: T;             // Typed payload
+  timestamp: number;      // When the signal was created
+  source?: SignalSource;  // Where it came from
+}
+```
+
+### SignalBus
+
+The central dispatcher for all signals. Subscribe to patterns and handle events:
+
+```typescript
+const bus = new SignalBus();
+
+// Subscribe to all harness signals
+bus.subscribe("harness:*", (signal) => {
+  console.log(signal.name, signal.payload);
+});
+
+// Subscribe to specific patterns
+bus.subscribe("harness:text:*", (signal) => {
+  // Handle text deltas and completions
+});
+```
+
+### Harnesses
+
+Harnesses wrap AI providers and emit signals as async generators:
+
+```typescript
+const harness = new ClaudeHarness();
+
+for await (const signal of harness.run(input, ctx)) {
+  // Signals: harness:start, harness:text:delta, harness:tool:call, harness:end, etc.
+}
+```
 
 ## Features
 
-- **Event-Driven Architecture**: All components communicate through events for full observability
-- **JSONata Bindings**: Connect data between nodes with a powerful expression language
-- **Conditional Flow Control**: Branch workflows based on node outputs
-- **State Management**: Track run state across executions
-- **Multiple Transports**: WebSocket, HTTP, CLI adapters for different environments
-- **Replay Testing**: Record live executions and replay for deterministic tests
+- **Reactive Signal Architecture**: Typed signals flow through a central bus
+- **Pattern Matching**: Subscribe to signals using glob patterns (`harness:*`, `harness:text:*`)
+- **Multiple Reporters**: Console, metrics, custom reporters attach to the bus
+- **Harness Adapters**: Claude, OpenAI Codex, with more coming
+- **Snapshot State**: Derive point-in-time state from signal history
+- **Replay Testing**: Record signals and replay for deterministic tests
 
 ## Development
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/open-harness.git
+git clone https://github.com/open-harness/open-harness.git
 cd open-harness
 
 # Install dependencies
@@ -97,16 +137,24 @@ bun run lint
 ```
 open-harness/
 ├── apps/
-│   └── docs/             # Documentation site (Next.js + Fumadocs)
+│   └── docs/                    # Documentation site (Next.js + Fumadocs)
 ├── packages/
-│   └── sdk/              # Core Open Harness SDK
-├── specs/                # Feature specifications
-└── .beads/               # Issue tracking
+│   ├── adapters/
+│   │   └── harnesses/           # Harness implementations (Claude, OpenAI)
+│   ├── internal/
+│   │   ├── signals/             # SignalBus, stores, reporters
+│   │   └── signals-core/        # Signal primitives, Harness interface
+│   └── open-harness/
+│       ├── core/                # Public core API
+│       ├── testing/             # Test utilities
+│       └── vitest/              # Vitest matchers
+├── specs/                       # Feature specifications
+└── .beads/                      # Issue tracking
 ```
 
 ## Authentication
 
-When using the SDK with Claude agents, authentication is handled automatically through the Claude Code subscription:
+When using harnesses with Claude, authentication is handled automatically through the Claude Code subscription:
 
 ```bash
 # Live tests work automatically with subscription auth
