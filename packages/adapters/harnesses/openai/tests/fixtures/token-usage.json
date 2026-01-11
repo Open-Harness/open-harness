@@ -8,7 +8,7 @@
 	},
 	"signals": [
 		{
-			"name": "provider:start",
+			"name": "harness:start",
 			"payload": {
 				"input": {
 					"messages": [
@@ -45,7 +45,7 @@
 			}
 		},
 		{
-			"name": "provider:end",
+			"name": "harness:end",
 			"payload": {
 				"output": {
 					"content": "Hi — what are you working on in `packages/providers/openai` and how can I help?",

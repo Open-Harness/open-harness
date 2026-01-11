@@ -2,7 +2,7 @@
  * MetricsSignalReporter - Collects metrics from signals
  *
  * Aggregates metrics like token usage, costs, latency, and activation counts
- * from provider and harness signals.
+ * from harness and agent signals.
  *
  * @example
  * ```ts
@@ -32,14 +32,14 @@ import type { ReporterContext, SignalReporter } from "./reporter.js";
  * Aggregated metrics collected from signals
  */
 export interface AggregatedMetrics {
-	/** Total input tokens across all provider calls */
+	/** Total input tokens across all harness calls */
 	totalInputTokens: number;
-	/** Total output tokens across all provider calls */
+	/** Total output tokens across all harness calls */
 	totalOutputTokens: number;
 	/** Total cost in USD (if available in signals) */
 	totalCost: number;
-	/** Number of provider calls */
-	providerCalls: number;
+	/** Number of harness calls */
+	harnessCalls: number;
 	/** Number of agent activations */
 	agentActivations: number;
 	/** Total duration in milliseconds (from harness:end if available) */
@@ -99,7 +99,7 @@ export function createMetricsReporter(options: MetricsReporterOptions = {}): Met
 			totalInputTokens: 0,
 			totalOutputTokens: 0,
 			totalCost: 0,
-			providerCalls: 0,
+			harnessCalls: 0,
 			agentActivations: 0,
 			durationMs: 0,
 			agentCounts: {},
@@ -113,8 +113,8 @@ export function createMetricsReporter(options: MetricsReporterOptions = {}): Met
 	return {
 		name: "metrics",
 
-		// Subscribe to provider and harness signals for metrics
-		patterns: ["provider:end", "harness:start", "harness:end", "agent:activated"],
+		// Subscribe to harness and agent signals for metrics
+		patterns: ["harness:start", "harness:end", "agent:activated"],
 
 		onSignal(signal: Signal, _ctx: ReporterContext): void {
 			switch (signal.name) {
@@ -126,23 +126,19 @@ export function createMetricsReporter(options: MetricsReporterOptions = {}): Met
 
 				case "harness:end": {
 					metrics.endedAt = signal.timestamp;
-					const payload = signal.payload as { durationMs?: number } | undefined;
-					if (payload?.durationMs) {
-						metrics.durationMs = payload.durationMs;
-					}
-					notifyUpdate();
-					break;
-				}
-
-				case "provider:end": {
-					metrics.providerCalls++;
+					metrics.harnessCalls++;
 
 					const payload = signal.payload as
 						| {
+								durationMs?: number;
 								usage?: { inputTokens?: number; outputTokens?: number };
 								cost?: number;
 						  }
 						| undefined;
+
+					if (payload?.durationMs) {
+						metrics.durationMs = payload.durationMs;
+					}
 
 					if (payload?.usage) {
 						metrics.totalInputTokens += payload.usage.inputTokens ?? 0;

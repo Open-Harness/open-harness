@@ -1,7 +1,7 @@
 ---
-lastUpdated: "2026-01-10T10:11:36.649Z"
-lastCommit: "150d2ad147832f2553c0dbfb779f1a466c0a001b"
-lastCommitDate: "2026-01-10T09:55:26Z"
+lastUpdated: "2026-01-11T13:09:48.217Z"
+lastCommit: "907d0b728b929259d4b202827743bf044de77fdd"
+lastCommitDate: "2026-01-11T10:45:33Z"
 ---
 # @open-harness/testing
 
@@ -49,9 +49,9 @@ import { type Provider, createSignal } from "@open-harness/core";
 
 const mockProvider: Provider = {
   run: async function* (input, ctx) {
-    yield createSignal("provider:start", {});
+    yield createSignal("harness:start", {});
     yield createSignal("text:delta", { delta: "Mock response" });
-    yield createSignal("provider:end", { output: "Mock response" });
+    yield createSignal("harness:end", { output: "Mock response" });
   },
 };
 ```

@@ -68,7 +68,7 @@ export interface ConsoleReporterOptions {
  *
  * // Verbose mode with specific patterns
  * const reporter = createConsoleReporter({
- *   patterns: ["provider:*", "agent:activated"],
+ *   patterns: ["harness:*", "agent:activated"],
  *   verbose: true,
  * });
  * ```
@@ -128,9 +128,9 @@ export function createConsoleReporter(options: ConsoleReporterOptions = {}): Sig
 /**
  * Pre-configured console reporter for common patterns.
  *
- * Logs provider and harness lifecycle signals.
+ * Logs harness lifecycle and agent activation signals.
  */
 export const defaultConsoleReporter = createConsoleReporter({
-	patterns: ["harness:*", "provider:*", "agent:activated"],
+	patterns: ["harness:*", "agent:activated"],
 	showTimestamp: true,
 });

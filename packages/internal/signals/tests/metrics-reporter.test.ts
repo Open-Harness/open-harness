@@ -17,7 +17,7 @@ describe("MetricsSignalReporter", () => {
 			expect(metrics.totalInputTokens).toBe(0);
 			expect(metrics.totalOutputTokens).toBe(0);
 			expect(metrics.totalCost).toBe(0);
-			expect(metrics.providerCalls).toBe(0);
+			expect(metrics.harnessCalls).toBe(0);
 			expect(metrics.agentActivations).toBe(0);
 			expect(metrics.durationMs).toBe(0);
 		});
@@ -52,12 +52,12 @@ describe("MetricsSignalReporter", () => {
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("provider:end", {}));
-			bus.emit(createSignal("provider:end", {}));
-			bus.emit(createSignal("provider:end", {}));
+			bus.emit(createSignal("harness:end", {}));
+			bus.emit(createSignal("harness:end", {}));
+			bus.emit(createSignal("harness:end", {}));
 
 			const metrics = reporter.getMetrics();
-			expect(metrics.providerCalls).toBe(3);
+			expect(metrics.harnessCalls).toBe(3);
 		});
 
 		it("aggregates token usage from provider:end", () => {
@@ -66,12 +66,12 @@ describe("MetricsSignalReporter", () => {
 			attachReporter(bus, reporter);
 
 			bus.emit(
-				createSignal("provider:end", {
+				createSignal("harness:end", {
 					usage: { inputTokens: 100, outputTokens: 50 },
 				}),
 			);
 			bus.emit(
-				createSignal("provider:end", {
+				createSignal("harness:end", {
 					usage: { inputTokens: 200, outputTokens: 75 },
 				}),
 			);
@@ -86,8 +86,8 @@ describe("MetricsSignalReporter", () => {
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("provider:end", { cost: 0.01 }));
-			bus.emit(createSignal("provider:end", { cost: 0.005 }));
+			bus.emit(createSignal("harness:end", { cost: 0.01 }));
+			bus.emit(createSignal("harness:end", { cost: 0.005 }));
 
 			const metrics = reporter.getMetrics();
 			expect(metrics.totalCost).toBeCloseTo(0.015);
@@ -115,9 +115,9 @@ describe("MetricsSignalReporter", () => {
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("provider:end", {}));
-			bus.emit(createSignal("provider:end", { usage: {} }));
-			bus.emit(createSignal("provider:end", { usage: { inputTokens: 50 } }));
+			bus.emit(createSignal("harness:end", {}));
+			bus.emit(createSignal("harness:end", { usage: {} }));
+			bus.emit(createSignal("harness:end", { usage: { inputTokens: 50 } }));
 
 			const metrics = reporter.getMetrics();
 			expect(metrics.totalInputTokens).toBe(50);
@@ -132,7 +132,7 @@ describe("MetricsSignalReporter", () => {
 			attachReporter(bus, reporter);
 
 			bus.emit(createSignal("harness:start", {}));
-			bus.emit(createSignal("provider:end", { usage: { inputTokens: 100 } }));
+			bus.emit(createSignal("harness:end", { usage: { inputTokens: 100 } }));
 			bus.emit(createSignal("harness:end", { durationMs: 500 }));
 
 			expect(onUpdate).toHaveBeenCalledTimes(3);
@@ -143,16 +143,16 @@ describe("MetricsSignalReporter", () => {
 			const reporter = createMetricsReporter();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("provider:end", { usage: { inputTokens: 100 } }));
+			bus.emit(createSignal("harness:end", { usage: { inputTokens: 100 } }));
 			bus.emit(createSignal("agent:activated", { agent: "test" }));
 
-			expect(reporter.getMetrics().providerCalls).toBe(1);
+			expect(reporter.getMetrics().harnessCalls).toBe(1);
 
 			reporter.reset();
 
 			const metrics = reporter.getMetrics();
 			expect(metrics.totalInputTokens).toBe(0);
-			expect(metrics.providerCalls).toBe(0);
+			expect(metrics.harnessCalls).toBe(0);
 			expect(metrics.agentActivations).toBe(0);
 			expect(metrics.agentCounts).toEqual({});
 		});

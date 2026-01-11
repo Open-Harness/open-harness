@@ -8,7 +8,7 @@
 	},
 	"signals": [
 		{
-			"name": "provider:start",
+			"name": "harness:start",
 			"payload": {
 				"input": {
 					"messages": [
@@ -465,7 +465,7 @@
 			}
 		},
 		{
-			"name": "provider:end",
+			"name": "harness:end",
 			"payload": {
 				"output": {
 					"content": "Hello! I'm Claude, an AI assistant that can help you with a wide variety of tasks including coding, file management, web research, and more. I have access to many tools that allow me to read and edit files, run commands, search the web, and interact with your development environment.\n\nWhat would you like to work on today? I can help with:\n- Writing or editing code\n- Analyzing codebases\n- Running commands and scripts\n- Searching for information\n- Managing files and directories\n- And much more!\n\nJust let me know what you'd like to do.",

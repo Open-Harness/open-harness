@@ -56,7 +56,7 @@ expect(signals).toContainSignal('harness:start');
 
 // Glob patterns
 expect(signals).toContainSignal('agent:*');      // Single segment wildcard
-expect(signals).toContainSignal('provider:**');  // Multi-segment wildcard
+expect(signals).toContainSignal('harness:**');  // Multi-segment wildcard
 
 // With payload matching
 expect(signals).toContainSignal({
@@ -77,7 +77,7 @@ Assert exact number of matching signals.
 expect(signals).toHaveSignalCount('agent:activated', 2);
 
 // Count with glob
-expect(signals).toHaveSignalCount('provider:*', 4);
+expect(signals).toHaveSignalCount('harness:*', 4);
 
 // Count with payload condition
 expect(signals).toHaveSignalCount(
@@ -114,7 +114,7 @@ expect(signals).toHaveSignalsInOrder([
 expect(signals).toHaveSignalsInOrder([
   'harness:*',
   'agent:*',
-  'provider:*',
+  'harness:*',
   'harness:*'
 ]);
 ```
@@ -176,8 +176,8 @@ it('handles provider errors gracefully', async () => {
     provider: failingProvider,
   });
 
-  expect(result.signals).toContainSignal('provider:error');
-  expect(result.signals).not.toContainSignal('provider:end');
+  expect(result.signals).toContainSignal('harness:error');
+  expect(result.signals).not.toContainSignal('harness:end');
   expect(result.signals).toContainSignal('harness:end');
 });
 ```
@@ -228,7 +228,7 @@ it('maintains proper causality chain', async () => {
 
 ## Tips
 
-1. **Use glob patterns** for flexible matching (`provider:*` instead of listing every signal)
+1. **Use glob patterns** for flexible matching (`harness:*` instead of listing every signal)
 2. **Test negative cases** with `.not.toContainSignal()` to ensure unwanted signals don't appear
 3. **Combine matchers** - use `toHaveSignalsInOrder` for flow, `toHaveSignalCount` for quantities
 4. **Match partial payloads** - only specify the fields you care about

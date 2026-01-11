@@ -3,7 +3,7 @@
  *
  * Patterns can be:
  * - Exact string: "analysis:complete"
- * - Glob with wildcards: "node:*:completed", "provider:*"
+ * - Glob with wildcards: "node:*:completed", "harness:*"
  * - RegExp for complex matching
  */
 
@@ -32,7 +32,7 @@ export interface CompiledPattern {
  * @example
  * ```ts
  * globToRegex("node:*:completed") // matches "node:analyst:completed"
- * globToRegex("provider:**")       // matches "provider:claude:text:delta"
+ * globToRegex("harness:**")       // matches "harness:claude:text:delta"
  * ```
  */
 export function globToRegex(pattern: string): RegExp {

@@ -81,7 +81,7 @@ interface SignalMatchers<R = unknown> {
 	 * @example
 	 * ```ts
 	 * // Expect exactly 2 provider:end signals
-	 * expect(result.signals).toHaveSignalCount('provider:end', 2)
+	 * expect(result.signals).toHaveSignalCount('harness:end', 2)
 	 *
 	 * // Expect exactly 3 agent activations
 	 * expect(result.signals).toHaveSignalCount('agent:activated', 3)
@@ -99,8 +99,8 @@ interface SignalMatchers<R = unknown> {
 	 * expect(result.signals).toHaveSignalsInOrder([
 	 *   'harness:start',
 	 *   'agent:activated',
-	 *   'provider:start',
-	 *   'provider:end',
+	 *   'harness:start',
+	 *   'harness:end',
 	 *   'harness:end'
 	 * ])
 	 * ```

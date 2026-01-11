@@ -93,20 +93,20 @@ describe("ConsoleSignalReporter", () => {
 		it("respects pattern filters", () => {
 			const logs: string[] = [];
 			const reporter = createConsoleReporter({
-				patterns: ["provider:*"],
+				patterns: ["harness:*"],
 				log: (msg) => logs.push(msg),
 			});
 
 			const bus = new SignalBus();
 			attachReporter(bus, reporter);
 
-			bus.emit(createSignal("provider:start", {}));
+			bus.emit(createSignal("harness:start", {}));
 			bus.emit(createSignal("agent:activated", {}));
-			bus.emit(createSignal("provider:end", {}));
+			bus.emit(createSignal("harness:end", {}));
 
 			expect(logs).toHaveLength(2);
-			expect(logs[0]).toContain("provider:start");
-			expect(logs[1]).toContain("provider:end");
+			expect(logs[0]).toContain("harness:start");
+			expect(logs[1]).toContain("harness:end");
 		});
 
 		it("truncates long payloads", () => {
@@ -167,7 +167,7 @@ describe("ConsoleSignalReporter", () => {
 
 	describe("defaultConsoleReporter", () => {
 		it("has correct default patterns", () => {
-			expect(defaultConsoleReporter.patterns).toEqual(["harness:*", "provider:*", "agent:activated"]);
+			expect(defaultConsoleReporter.patterns).toEqual(["harness:*", "agent:activated"]);
 		});
 
 		it("has name 'console'", () => {

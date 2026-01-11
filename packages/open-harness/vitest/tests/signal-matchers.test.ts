@@ -20,14 +20,14 @@ function createTestSignals(): Signal[] {
 	return [
 		createSignal("harness:start", { agents: ["analyst", "executor"] }),
 		createSignal("agent:activated", { agent: "analyst", trigger: "harness:start" }),
-		createSignal("provider:start", {}),
+		createSignal("harness:start", {}),
 		createSignal("text:delta", { content: "Hello" }),
 		createSignal("text:delta", { content: " world" }),
-		createSignal("provider:end", { output: "Hello world", usage: { inputTokens: 10 } }),
+		createSignal("harness:end", { output: "Hello world", usage: { inputTokens: 10 } }),
 		createSignal("analysis:complete", { agent: "analyst", confidence: 0.85 }),
 		createSignal("agent:activated", { agent: "executor", trigger: "analysis:complete" }),
-		createSignal("provider:start", {}),
-		createSignal("provider:end", { output: "Done", usage: { inputTokens: 20 } }),
+		createSignal("harness:start", {}),
+		createSignal("harness:end", { output: "Done", usage: { inputTokens: 20 } }),
 		createSignal("harness:end", { durationMs: 100 }),
 	];
 }
@@ -48,7 +48,7 @@ describe("signalMatchers", () => {
 
 		it("matches signal with ** glob pattern", () => {
 			const signals = createTestSignals();
-			const result = signalMatchers.toContainSignal(signals, "provider:**");
+			const result = signalMatchers.toContainSignal(signals, "harness:**");
 			expect(result.pass).toBe(true);
 		});
 
@@ -97,7 +97,7 @@ describe("signalMatchers", () => {
 
 		it("matches with regex pattern", () => {
 			const signals = createTestSignals();
-			const result = signalMatchers.toContainSignal(signals, /^provider:/);
+			const result = signalMatchers.toContainSignal(signals, /^harness:/);
 			expect(result.pass).toBe(true);
 		});
 	});
@@ -109,9 +109,9 @@ describe("signalMatchers", () => {
 			expect(result.pass).toBe(true);
 		});
 
-		it("counts provider signals with glob", () => {
+		it("counts harness signals with glob", () => {
 			const signals = createTestSignals();
-			const result = signalMatchers.toHaveSignalCount(signals, "provider:*", 4);
+			const result = signalMatchers.toHaveSignalCount(signals, "harness:*", 6);
 			expect(result.pass).toBe(true);
 		});
 
@@ -146,8 +146,8 @@ describe("signalMatchers", () => {
 			const result = signalMatchers.toHaveSignalsInOrder(signals, [
 				"harness:start",
 				"agent:activated",
-				"provider:start",
-				"provider:end",
+				"harness:start",
+				"harness:end",
 				"harness:end",
 			]);
 			expect(result.pass).toBe(true);
@@ -162,17 +162,17 @@ describe("signalMatchers", () => {
 
 		it("works with glob patterns in order", () => {
 			const signals = createTestSignals();
-			const result = signalMatchers.toHaveSignalsInOrder(signals, ["harness:*", "agent:*", "provider:*", "harness:*"]);
+			const result = signalMatchers.toHaveSignalsInOrder(signals, ["harness:*", "agent:*", "harness:*", "harness:*"]);
 			expect(result.pass).toBe(true);
 		});
 
 		it("handles repeated patterns finding next occurrence", () => {
 			const signals = createTestSignals();
 			const result = signalMatchers.toHaveSignalsInOrder(signals, [
-				"provider:start",
-				"provider:end",
-				"provider:start",
-				"provider:end",
+				"harness:start",
+				"harness:end",
+				"harness:start",
+				"harness:end",
 			]);
 			expect(result.pass).toBe(true);
 		});

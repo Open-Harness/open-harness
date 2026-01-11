@@ -8,7 +8,7 @@
 	},
 	"signals": [
 		{
-			"name": "provider:start",
+			"name": "harness:start",
 			"payload": {
 				"input": {
 					"messages": [
@@ -55,7 +55,7 @@
 			}
 		},
 		{
-			"name": "provider:end",
+			"name": "harness:end",
 			"payload": {
 				"output": {
 					"content": "1\n2\n3\n4\n5",

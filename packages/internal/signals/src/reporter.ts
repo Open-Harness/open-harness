@@ -7,7 +7,7 @@
  * @example
  * ```ts
  * const myReporter: SignalReporter = {
- *   patterns: ["provider:*", "agent:activated"],
+ *   patterns: ["harness:*", "agent:activated"],
  *   onSignal: (signal) => {
  *     console.log(`[${signal.name}]`, signal.payload);
  *   },
@@ -43,7 +43,7 @@ export interface SignalReporter {
 
 	/**
 	 * Signal patterns this reporter subscribes to.
-	 * Uses glob syntax: "provider:*", "agent:**", "state:analysis:changed"
+	 * Uses glob syntax: "harness:*", "agent:**", "state:analysis:changed"
 	 */
 	readonly patterns: SignalPattern[];
 

@@ -20,26 +20,26 @@ import {
 
 function createTestSignals(): Signal[] {
 	// Create a realistic signal chain:
-	// harness:start
+	// workflow:start (orchestration level)
 	//   └─ agent:activated (analyst)
-	//      ├─ provider:start
+	//      ├─ harness:start (SDK adapter call)
 	//      ├─ text:delta
-	//      ├─ provider:end
+	//      ├─ harness:end
 	//      └─ analysis:complete
 	//         └─ agent:activated (executor)
-	//            ├─ provider:start
-	//            └─ provider:end
+	//            ├─ harness:start (SDK adapter call)
+	//            └─ harness:end
 
-	const harnessStart = createSignal("harness:start", { runId: "run_123" });
+	const workflowStart = createSignal("workflow:start", { runId: "run_123" });
 
 	const analystActivated = createSignal(
 		"agent:activated",
-		{ agent: "analyst", trigger: "harness:start" },
-		{ agent: "analyst", parent: harnessStart.id },
+		{ agent: "analyst", trigger: "workflow:start" },
+		{ agent: "analyst", parent: workflowStart.id },
 	);
 
-	const providerStart1 = createSignal(
-		"provider:start",
+	const harnessStart1 = createSignal(
+		"harness:start",
 		{},
 		{ agent: "analyst", parent: analystActivated.id },
 	);
@@ -50,8 +50,8 @@ function createTestSignals(): Signal[] {
 		{ agent: "analyst", parent: analystActivated.id },
 	);
 
-	const providerEnd1 = createSignal(
-		"provider:end",
+	const harnessEnd1 = createSignal(
+		"harness:end",
 		{ output: "analysis result" },
 		{ agent: "analyst", parent: analystActivated.id },
 	);
@@ -68,31 +68,31 @@ function createTestSignals(): Signal[] {
 		{ agent: "executor", parent: analysisComplete.id },
 	);
 
-	const providerStart2 = createSignal(
-		"provider:start",
+	const harnessStart2 = createSignal(
+		"harness:start",
 		{},
 		{ agent: "executor", parent: executorActivated.id },
 	);
 
-	const providerEnd2 = createSignal(
-		"provider:end",
+	const harnessEnd2 = createSignal(
+		"harness:end",
 		{ output: "trade executed" },
 		{ agent: "executor", parent: executorActivated.id },
 	);
 
-	const harnessEnd = createSignal("harness:end", { durationMs: 1000 });
+	const workflowEnd = createSignal("workflow:end", { durationMs: 1000 });
 
 	return [
-		harnessStart,
+		workflowStart,
 		analystActivated,
-		providerStart1,
+		harnessStart1,
 		textDelta,
-		providerEnd1,
+		harnessEnd1,
 		analysisComplete,
 		executorActivated,
-		providerStart2,
-		providerEnd2,
-		harnessEnd,
+		harnessStart2,
+		harnessEnd2,
+		workflowEnd,
 	];
 }
 
@@ -112,7 +112,7 @@ describe("getCausalityChain", () => {
 		const chain = getCausalityChain(signals, executorActivated.id);
 
 		expect(chain).toHaveLength(4);
-		expect(chain[0].name).toBe("harness:start");
+		expect(chain[0].name).toBe("workflow:start");
 		expect(chain[1].name).toBe("agent:activated");
 		expect(chain[2].name).toBe("analysis:complete");
 		expect(chain[3].name).toBe("agent:activated");
@@ -120,12 +120,12 @@ describe("getCausalityChain", () => {
 
 	it("returns single signal for root signals", () => {
 		const signals = createTestSignals();
-		const harnessStart = signals[0];
+		const workflowStart = signals[0];
 
-		const chain = getCausalityChain(signals, harnessStart.id);
+		const chain = getCausalityChain(signals, workflowStart.id);
 
 		expect(chain).toHaveLength(1);
-		expect(chain[0].name).toBe("harness:start");
+		expect(chain[0].name).toBe("workflow:start");
 	});
 
 	it("returns empty for unknown signal ID", () => {
@@ -142,9 +142,9 @@ describe("getAgentSignals", () => {
 
 		expect(analystSignals).toHaveLength(5);
 		expect(analystSignals.map((s) => s.name)).toContain("agent:activated");
-		expect(analystSignals.map((s) => s.name)).toContain("provider:start");
+		expect(analystSignals.map((s) => s.name)).toContain("harness:start");
 		expect(analystSignals.map((s) => s.name)).toContain("text:delta");
-		expect(analystSignals.map((s) => s.name)).toContain("provider:end");
+		expect(analystSignals.map((s) => s.name)).toContain("harness:end");
 		expect(analystSignals.map((s) => s.name)).toContain("analysis:complete");
 	});
 
@@ -167,9 +167,9 @@ describe("getChildSignals", () => {
 		const children = getChildSignals(signals, analystActivated.id);
 
 		expect(children).toHaveLength(4);
-		expect(children.map((s) => s.name)).toContain("provider:start");
+		expect(children.map((s) => s.name)).toContain("harness:start");
 		expect(children.map((s) => s.name)).toContain("text:delta");
-		expect(children.map((s) => s.name)).toContain("provider:end");
+		expect(children.map((s) => s.name)).toContain("harness:end");
 		expect(children.map((s) => s.name)).toContain("analysis:complete");
 	});
 });
@@ -179,11 +179,11 @@ describe("buildSignalTree", () => {
 		const signals = createTestSignals();
 		const trees = buildSignalTree(signals);
 
-		// Should have 2 root signals (harness:start and harness:end)
+		// Should have 2 root signals (workflow:start and workflow:end)
 		expect(trees).toHaveLength(2);
-		expect(trees[0].signal.name).toBe("harness:start");
+		expect(trees[0].signal.name).toBe("workflow:start");
 
-		// harness:start should have agent:activated as child
+		// workflow:start should have agent:activated as child
 		expect(trees[0].children).toHaveLength(1);
 		expect(trees[0].children[0].signal.name).toBe("agent:activated");
 	});
@@ -194,7 +194,7 @@ describe("formatSignalTree", () => {
 		const signals = createTestSignals();
 		const formatted = formatSignalTree(signals);
 
-		expect(formatted).toContain("harness:start");
+		expect(formatted).toContain("workflow:start");
 		expect(formatted).toContain("agent:activated");
 		expect(formatted).toContain("(analyst)");
 		expect(formatted).toContain("analysis:complete");
@@ -207,11 +207,11 @@ describe("getSignalSummary", () => {
 		const signals = createTestSignals();
 		const summary = getSignalSummary(signals);
 
-		expect(summary["harness:start"]).toBe(1);
-		expect(summary["harness:end"]).toBe(1);
+		expect(summary["workflow:start"]).toBe(1);
+		expect(summary["workflow:end"]).toBe(1);
 		expect(summary["agent:activated"]).toBe(2);
-		expect(summary["provider:start"]).toBe(2);
-		expect(summary["provider:end"]).toBe(2);
+		expect(summary["harness:start"]).toBe(2);
+		expect(summary["harness:end"]).toBe(2);
 		expect(summary["text:delta"]).toBe(1);
 		expect(summary["analysis:complete"]).toBe(1);
 	});
@@ -220,15 +220,15 @@ describe("getSignalSummary", () => {
 describe("filterSignals", () => {
 	it("filters by exact name", () => {
 		const signals = createTestSignals();
-		const filtered = filterSignals(signals, "harness:start");
+		const filtered = filterSignals(signals, "workflow:start");
 
 		expect(filtered).toHaveLength(1);
-		expect(filtered[0].name).toBe("harness:start");
+		expect(filtered[0].name).toBe("workflow:start");
 	});
 
 	it("filters by glob pattern with *", () => {
 		const signals = createTestSignals();
-		const filtered = filterSignals(signals, "provider:*");
+		const filtered = filterSignals(signals, "harness:*");
 
 		expect(filtered).toHaveLength(4); // 2 start + 2 end
 	});

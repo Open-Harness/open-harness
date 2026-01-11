@@ -1,8 +1,8 @@
 ---
 title: "Signal Infrastructure"
-lastUpdated: "2026-01-11T06:42:54.221Z"
-lastCommit: "edcbf4c29d5c22eb600c6f75d5fcc6c1b8d24d58"
-lastCommitDate: "2026-01-11T06:23:45Z"
+lastUpdated: "2026-01-11T13:09:48.217Z"
+lastCommit: "907d0b728b929259d4b202827743bf044de77fdd"
+lastCommitDate: "2026-01-11T10:45:33Z"
 scope:
   - signals
   - event-bus
@@ -43,7 +43,7 @@ const unsub = bus.subscribe("analysis:complete", (signal) => {
 });
 
 // Subscribe to pattern (glob-style)
-bus.subscribe("provider:*", (signal) => {
+bus.subscribe("harness:*", (signal) => {
   console.log("Provider event:", signal.type);
 });
 
@@ -178,12 +178,12 @@ import { matchesPattern, matchesAnyPattern } from "@internal/signals";
 matchesPattern("analysis:complete", signal); // true if type === "analysis:complete"
 
 // Glob patterns
-matchesPattern("provider:*", signal);        // Matches "provider:start", "provider:complete"
+matchesPattern("harness:*", signal);        // Matches "harness:start", "provider:complete"
 matchesPattern("node:*:completed", signal);  // Matches "node:writer:completed"
 matchesPattern("**:error", signal);          // Matches any signal ending in ":error"
 
 // Multiple patterns
-matchesAnyPattern(["harness:*", "provider:*"], signal);
+matchesAnyPattern(["harness:*", "harness:*"], signal);
 ```
 
 ### Pattern Syntax
@@ -191,7 +191,7 @@ matchesAnyPattern(["harness:*", "provider:*"], signal);
 | Pattern | Matches |
 |---------|---------|
 | `analysis:complete` | Exact match only |
-| `provider:*` | Any single segment after `provider:` |
+| `harness:*` | Any single segment after `provider:` |
 | `**:error` | Any signal ending in `:error` |
 | `node:*:*` | Two segments after `node:` |
 
@@ -236,7 +236,7 @@ import { attachReporter, attachReporters, createConsoleReporter, createMetricsRe
 
 // Console reporter (debug logging)
 const consoleReporter = createConsoleReporter({
-  filter: ["provider:*", "harness:*"],  // Only log these patterns
+  filter: ["harness:*", "harness:*"],  // Only log these patterns
   format: "compact",                     // "compact" | "full"
 });
 
