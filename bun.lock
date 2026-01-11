@@ -213,11 +213,30 @@
         "typescript": "^5",
       },
     },
+    "packages/open-harness/eval": {
+      "name": "@open-harness/eval",
+      "version": "0.3.0-alpha.1",
+      "dependencies": {
+        "@open-harness/core": "workspace:*",
+        "@signals/bus": "workspace:*",
+        "@signals/core": "workspace:*",
+        "yaml": "^2.4.5",
+        "zod": "^3.23.0",
+      },
+      "devDependencies": {
+        "@biomejs/biome": "2.3.11",
+        "@types/bun": "latest",
+        "typescript": "^5",
+        "vitest": "^2.0.0",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/open-harness/react": {
       "name": "@open-harness/react",
       "version": "0.2.0-alpha.1",
       "dependencies": {
-        "@open-harness/client": "workspace:*",
         "@open-harness/core": "workspace:*",
         "react": "^19.0.0",
       },
@@ -642,6 +661,8 @@
     "@open-harness/client": ["@open-harness/client@workspace:packages/open-harness/client"],
 
     "@open-harness/core": ["@open-harness/core@workspace:packages/open-harness/core"],
+
+    "@open-harness/eval": ["@open-harness/eval@workspace:packages/open-harness/eval"],
 
     "@open-harness/react": ["@open-harness/react@workspace:packages/open-harness/react"],
 
