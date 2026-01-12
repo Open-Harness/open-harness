@@ -9,12 +9,7 @@
  * Run: bun run examples/recording-replay/index.ts
  */
 
-import {
-	createWorkflow,
-	ClaudeHarness,
-	MemorySignalStore,
-	Player,
-} from "@open-harness/core";
+import { ClaudeHarness, createWorkflow, MemorySignalStore, Player } from "@open-harness/core";
 
 // =============================================================================
 // 1. Define state type

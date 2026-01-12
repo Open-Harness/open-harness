@@ -3,12 +3,20 @@
 	"version": "1.0.0-alpha.2",
 	"type": "module",
 	"main": "./src/index.ts",
+	"types": "./src/index.ts",
 	"exports": {
-		".": "./src/index.ts",
-		"./setup": "./src/setup.ts"
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./setup": {
+			"types": "./src/setup.ts",
+			"import": "./src/setup.ts",
+			"default": "./src/setup.ts"
+		}
 	},
 	"files": [
-		"dist",
 		"src"
 	],
 	"scripts": {
@@ -21,12 +29,12 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
-		"@open-harness/core": "workspace:*",
-		"@internal/signals-core": "workspace:*",
-		"@internal/signals": "workspace:*"
+		"@open-harness/core": "workspace:*"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
+		"@internal/signals": "workspace:*",
+		"@internal/signals-core": "workspace:*",
 		"@types/bun": "latest",
 		"vitest": "^2.0.0",
 		"typescript": "^5"
