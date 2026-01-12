@@ -324,3 +324,42 @@ export function isAgent(value: unknown): value is Agent {
 export function isReactiveAgent(value: unknown): value is ReactiveAgent {
 	return isAgent(value) && "_reactive" in value && value._reactive === true;
 }
+
+// ============================================================================
+// Logging types (v3.1)
+// ============================================================================
+
+/**
+ * Logging configuration for runReactive.
+ *
+ * Default (batteries included):
+ * - console: true - see what's happening
+ * - file: false - opt-in for persistence
+ * - level: "info" - lifecycle events
+ * - logDir: ".open-harness/logs"
+ */
+export type LoggingConfig = {
+	/**
+	 * Enable console output (pretty printed).
+	 * @default true
+	 */
+	console?: boolean;
+
+	/**
+	 * Enable file output (JSONL format).
+	 * @default false
+	 */
+	file?: boolean;
+
+	/**
+	 * Minimum log level.
+	 * @default "info"
+	 */
+	level?: "trace" | "debug" | "info" | "warn" | "error";
+
+	/**
+	 * Log directory for file output.
+	 * @default ".open-harness/logs"
+	 */
+	logDir?: string;
+};

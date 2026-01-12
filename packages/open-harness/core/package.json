@@ -1,6 +1,6 @@
 {
 	"name": "@open-harness/core",
-	"version": "1.0.0-alpha.3",
+	"version": "1.0.0-alpha.4",
 	"type": "module",
 	"private": false,
 	"main": "./dist/index.js",

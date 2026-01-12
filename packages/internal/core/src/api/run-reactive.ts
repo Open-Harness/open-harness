@@ -36,7 +36,8 @@ import {
 	type RunContext,
 	type Signal,
 } from "@internal/signals-core";
-import type { ReactiveAgent } from "./types.js";
+import type { ReactiveAgent, LoggingConfig } from "./types.js";
+import { createLogger, subscribeSignalLogger } from "../lib/logger/index.js";
 
 // ============================================================================
 // Recording Types
@@ -139,6 +140,42 @@ export type RunReactiveOptions = {
 	 * ```
 	 */
 	recording?: SignalRecordingOptions;
+
+	/**
+	 * Logging configuration for automatic signal logging.
+	 *
+	 * Default (batteries included):
+	 * - console: true - see what's happening
+	 * - file: false - opt-in for persistence
+	 * - level: "info" - lifecycle events
+	 *
+	 * Set to false to disable all logging.
+	 *
+	 * @example Enable file logging
+	 * ```ts
+	 * const result = await runReactive(agent, input, {
+	 *   harness,
+	 *   logging: { file: true }
+	 * })
+	 * ```
+	 *
+	 * @example Debug mode
+	 * ```ts
+	 * const result = await runReactive(agent, input, {
+	 *   harness,
+	 *   logging: { level: "debug" }
+	 * })
+	 * ```
+	 *
+	 * @example Disable logging
+	 * ```ts
+	 * const result = await runReactive(agent, input, {
+	 *   harness,
+	 *   logging: false
+	 * })
+	 * ```
+	 */
+	logging?: LoggingConfig | false;
 };
 
 /**
@@ -214,6 +251,20 @@ export async function runReactive<TOutput>(
 	const startTime = Date.now();
 	const runId = options?.runId ?? crypto.randomUUID();
 	const bus = new SignalBus();
+
+	// Setup logging (v3.1 - batteries included)
+	// Default: logging enabled with console ON, file OFF
+	let unsubscribeLogger: (() => void) | undefined;
+	if (options?.logging !== false) {
+		const loggingConfig = options?.logging ?? {};
+		const logger = createLogger({
+			console: loggingConfig.console ?? true,
+			file: loggingConfig.file ?? false,
+			level: loggingConfig.level ?? "info",
+			logDir: loggingConfig.logDir ?? ".open-harness/logs",
+		});
+		unsubscribeLogger = subscribeSignalLogger(bus, logger, { runId });
+	}
 
 	// Determine recording mode
 	const recordingMode = options?.recording?.mode ?? "live";
@@ -357,6 +408,11 @@ export async function runReactive<TOutput>(
 			await store.appendBatch(recordingId, recordedSignals);
 		}
 		await store.finalize(recordingId, durationMs);
+	}
+
+	// Cleanup logger subscription
+	if (unsubscribeLogger) {
+		unsubscribeLogger();
 	}
 
 	return {

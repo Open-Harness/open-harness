@@ -10,6 +10,7 @@
  */
 
 import { ClaudeHarness, createWorkflow, MemorySignalStore, Player } from "@open-harness/core";
+import { render } from "../lib/render.js";
 
 // =============================================================================
 // 1. Define state type
@@ -59,8 +60,9 @@ const analyzer = agent({
 // =============================================================================
 
 async function recordWorkflow(): Promise<string> {
-	console.log("=== Recording Mode ===\n");
-	console.log("Running workflow with recording enabled...\n");
+	render.banner("Recording Mode");
+	render.text("Running workflow with recording enabled...");
+	render.blank();
 
 	const result = await runReactive({
 		agents: { analyzer },
@@ -77,15 +79,16 @@ async function recordWorkflow(): Promise<string> {
 		endWhen: (state) => state.result !== null,
 	});
 
-	console.log(`Duration: ${result.metrics.durationMs}ms`);
-	console.log(`Signals captured: ${result.signals.length}`);
-	console.log(`Recording ID: ${result.recordingId}\n`);
+	render.metric("Duration", `${result.metrics.durationMs}ms`);
+	render.metric("Signals captured", result.signals.length);
+	render.metric("Recording ID", result.recordingId);
+	render.blank();
 
 	// Show signal names
-	console.log("Signal flow:");
+	render.text("Signal flow:");
 	for (const signal of result.signals) {
 		const source = signal.source?.agent ?? "system";
-		console.log(`  [${source}] ${signal.name}`);
+		render.text(`  [${source}] ${signal.name}`);
 	}
 
 	return result.recordingId!;
@@ -96,8 +99,9 @@ async function recordWorkflow(): Promise<string> {
 // =============================================================================
 
 async function replayWorkflow(recordingId: string): Promise<void> {
-	console.log("\n=== Replay Mode ===\n");
-	console.log("Replaying from recording (no provider calls)...\n");
+	render.banner("Replay Mode");
+	render.text("Replaying from recording (no provider calls)...");
+	render.blank();
 
 	const result = await runReactive({
 		agents: { analyzer },
@@ -113,15 +117,16 @@ async function replayWorkflow(recordingId: string): Promise<void> {
 		endWhen: (state) => state.result !== null,
 	});
 
-	console.log(`Duration: ${result.metrics.durationMs}ms`);
-	console.log(`Signals replayed: ${result.signals.length}`);
-	console.log("Note: Provider was NOT called - signals were injected from recording\n");
+	render.metric("Duration", `${result.metrics.durationMs}ms`);
+	render.metric("Signals replayed", result.signals.length);
+	render.text("Note: Provider was NOT called - signals were injected from recording");
+	render.blank();
 
 	// Show signal names
-	console.log("Signal flow (from replay):");
+	render.text("Signal flow (from replay):");
 	for (const signal of result.signals) {
 		const source = signal.source?.agent ?? "system";
-		console.log(`  [${source}] ${signal.name}`);
+		render.text(`  [${source}] ${signal.name}`);
 	}
 }
 
@@ -130,8 +135,9 @@ async function replayWorkflow(recordingId: string): Promise<void> {
 // =============================================================================
 
 async function debugWithPlayer(recordingId: string): Promise<void> {
-	console.log("\n=== Player Debug Mode ===\n");
-	console.log("Stepping through recorded signals...\n");
+	render.banner("Player Debug Mode");
+	render.text("Stepping through recorded signals...");
+	render.blank();
 
 	// Load recording
 	const recording = await store.load(recordingId);
@@ -143,45 +149,50 @@ async function debugWithPlayer(recordingId: string): Promise<void> {
 	const player = new Player(recording);
 
 	// Step through signals
-	console.log("VCR Controls Demo:\n");
+	render.section("VCR Controls Demo");
 
 	// Step forward
-	console.log("▶️ Stepping forward:");
+	render.text("Stepping forward:");
 	for (let i = 0; i < 5 && !player.position.atEnd; i++) {
 		const signal = player.step();
 		if (signal) {
-			console.log(`  [${player.position.index}] ${signal.name}`);
+			render.text(`  [${player.position.index}] ${signal.name}`);
 		}
 	}
 
 	// Show snapshot
-	console.log("\n📸 Snapshot at current position:");
+	render.blank();
+	render.text("Snapshot at current position:");
 	const snap = player.snapshot;
-	console.log(`  Text: "${snap.harness.text.content.slice(0, 50)}..."`);
-	console.log(`  Harness running: ${snap.harness.running}`);
+	render.text(`  Text: "${snap.harness.text.content.slice(0, 50)}..."`);
+	render.text(`  Harness running: ${snap.harness.running}`);
 
 	// Jump to end
-	console.log("\n⏭️ Fast forward to end:");
+	render.blank();
+	render.text("Fast forward to end:");
 	player.fastForward();
-	console.log(`  Position: ${player.position.index}/${player.position.total}`);
+	render.text(`  Position: ${player.position.index}/${player.position.total}`);
 
 	// Step back
-	console.log("\n⏪ Step back:");
+	render.blank();
+	render.text("Step back:");
 	player.back();
 	player.back();
-	console.log(`  Position: ${player.position.index}/${player.position.total}`);
+	render.text(`  Position: ${player.position.index}/${player.position.total}`);
 
 	// Rewind
-	console.log("\n⏮️ Rewind to start:");
+	render.blank();
+	render.text("Rewind to start:");
 	player.rewind();
-	console.log(`  At start: ${player.position.atStart}`);
+	render.text(`  At start: ${player.position.atStart}`);
 
 	// Find specific signal
-	console.log("\n🔍 Find analysis:complete signal:");
+	render.blank();
+	render.text("Find analysis:complete signal:");
 	const analysisSignals = player.findAll("analysis:complete");
-	console.log(`  Found ${analysisSignals.length} match(es)`);
+	render.text(`  Found ${analysisSignals.length} match(es)`);
 	if (analysisSignals.length > 0) {
-		console.log(`  At index: ${analysisSignals[0].index}`);
+		render.text(`  At index: ${analysisSignals[0].index}`);
 	}
 }
 
@@ -190,22 +201,24 @@ async function debugWithPlayer(recordingId: string): Promise<void> {
 // =============================================================================
 
 async function queryStore(): Promise<void> {
-	console.log("\n=== Store Query ===\n");
+	render.banner("Store Query");
 
 	const recordings = await store.list();
-	console.log(`Total recordings: ${recordings.length}\n`);
+	render.metric("Total recordings", recordings.length);
+	render.blank();
 
 	for (const meta of recordings) {
-		console.log(`📼 ${meta.name ?? "Unnamed"}`);
-		console.log(`   ID: ${meta.id}`);
-		console.log(`   Signals: ${meta.signalCount}`);
-		console.log(`   Duration: ${meta.durationMs}ms`);
-		console.log(`   Tags: ${meta.tags?.join(", ") ?? "none"}`);
+		render.text(`Recording: ${meta.name ?? "Unnamed"}`);
+		render.text(`   ID: ${meta.id}`);
+		render.text(`   Signals: ${meta.signalCount}`);
+		render.text(`   Duration: ${meta.durationMs}ms`);
+		render.text(`   Tags: ${meta.tags?.join(", ") ?? "none"}`);
 	}
 
 	// Query by tag
 	const demoRecordings = await store.list({ tags: ["demo"] });
-	console.log(`\nRecordings with 'demo' tag: ${demoRecordings.length}`);
+	render.blank();
+	render.metric("Recordings with 'demo' tag", demoRecordings.length);
 }
 
 // =============================================================================
@@ -213,12 +226,16 @@ async function queryStore(): Promise<void> {
 // =============================================================================
 
 async function main(): Promise<void> {
-	console.log("=== Recording & Replay Example ===\n");
-	console.log("This example demonstrates:");
-	console.log("1. Recording signals during live execution");
-	console.log("2. Replaying without making provider calls");
-	console.log("3. Using Player for debugging\n");
-	console.log("─".repeat(50) + "\n");
+	render.banner("Recording & Replay Example");
+	render.text("This example demonstrates:");
+	render.list([
+		"Recording signals during live execution",
+		"Replaying without making provider calls",
+		"Using Player for debugging",
+	]);
+	render.blank();
+	render.text("─".repeat(50));
+	render.blank();
 
 	// Record a workflow
 	const recordingId = await recordWorkflow();
@@ -232,8 +249,10 @@ async function main(): Promise<void> {
 	// Query the store
 	await queryStore();
 
-	console.log("\n" + "─".repeat(50));
-	console.log("\n✅ Recording & replay example complete!");
+	render.blank();
+	render.text("─".repeat(50));
+	render.blank();
+	render.text("Recording & replay example complete!");
 }
 
-main().catch(console.error);
+main().catch((err) => render.error(err.message));

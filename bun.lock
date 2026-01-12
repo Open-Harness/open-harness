@@ -95,6 +95,13 @@
         "typescript": "^5",
       },
     },
+    "examples/test-logging": {
+      "name": "@examples/test-logging",
+      "version": "0.0.1-alpha.1",
+      "dependencies": {
+        "@open-harness/core": "workspace:*",
+      },
+    },
     "examples/testing-signals": {
       "name": "@examples/testing-signals",
       "version": "0.0.0",
@@ -149,7 +156,7 @@
     },
     "packages/internal/core": {
       "name": "@internal/core",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.1.76",
         "@internal/signals": "workspace:*",
@@ -226,7 +233,7 @@
     },
     "packages/open-harness/core": {
       "name": "@open-harness/core",
-      "version": "1.0.0-alpha.3",
+      "version": "1.0.0-alpha.4",
       "dependencies": {
         "ai": "^6.0.9",
         "pino": "^10.1.0",
@@ -507,6 +514,8 @@
     "@examples/simple-reactive": ["@examples/simple-reactive@workspace:examples/simple-reactive"],
 
     "@examples/speckit": ["@examples/speckit@workspace:examples/speckit"],
+
+    "@examples/test-logging": ["@examples/test-logging@workspace:examples/test-logging"],
 
     "@examples/testing-signals": ["@examples/testing-signals@workspace:examples/testing-signals"],
 

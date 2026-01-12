@@ -12,6 +12,7 @@
  */
 
 import { ClaudeHarness, createWorkflow } from "@open-harness/core";
+import { render } from "../lib/render.js";
 
 // =============================================================================
 // 1. Define your state type
@@ -76,7 +77,7 @@ Output only the transformed text.`,
 // =============================================================================
 
 async function main() {
-	console.log("Starting Simple Reactive Example...\n");
+	render.banner("Simple Reactive Example", "Demonstrating the core v0.3.0 reactive API.");
 
 	const harness = new ClaudeHarness({
 		model: "claude-sonnet-4-20250514",
@@ -91,34 +92,35 @@ async function main() {
 		},
 		harness,
 		endWhen: (state) => state.greeting !== null,
+		// Infrastructure logging happens automatically via Pino
 	});
 
 	// =============================================================================
-	// 5. Inspect results
+	// 5. Inspect results (user-facing output via render)
 	// =============================================================================
 
-	console.log("=== Results ===\n");
-	console.log(`Duration: ${result.metrics.durationMs}ms`);
-	console.log(`Activations: ${result.metrics.activations}`);
-	console.log(`Terminated early: ${result.terminatedEarly}`);
+	render.section("Results");
+	render.metric("Duration", `${result.metrics.durationMs}ms`);
+	render.metric("Activations", result.metrics.activations);
+	render.metric("Terminated early", result.terminatedEarly);
 
-	console.log("\n=== Signal Flow ===\n");
+	render.section("Signal Flow");
 	for (const signal of result.signals) {
 		const payload = signal.payload as Record<string, unknown>;
 		const agent = payload?.agent ?? "system";
-		console.log(`[${agent}] ${signal.name}`);
+		render.text(`[${agent}] ${signal.name}`);
 	}
 
-	console.log("\n=== Final State ===\n");
-	console.log(`Name: ${result.state.name}`);
-	console.log(`Uppercase: ${result.state.uppercase}`);
+	render.section("Final State");
+	render.metric("Name", result.state.name);
+	render.metric("Uppercase", result.state.uppercase);
 
 	// The greeting contains the full provider output
 	// Extract the text content for display
 	const greetingOutput = result.state.greeting as { content?: string } | string | null;
 	const greetingText =
 		typeof greetingOutput === "string" ? greetingOutput : (greetingOutput?.content ?? "(no greeting)");
-	console.log(`Greeting: ${greetingText}`);
+	render.metric("Greeting", greetingText);
 }
 
-main().catch(console.error);
+main().catch((err) => render.error(err.message));

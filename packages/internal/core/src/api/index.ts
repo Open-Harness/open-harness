@@ -40,6 +40,8 @@ export type {
 	Harness,
 	// v0.3.0 Reactive types
 	ReactiveAgent,
+	// v3.1 Logging config
+	LoggingConfig,
 } from "./types.js";
 
 // Type guards
