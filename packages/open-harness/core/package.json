@@ -1,6 +1,6 @@
 {
 	"name": "@open-harness/core",
-	"version": "1.0.0-alpha.2",
+	"version": "1.0.0-alpha.3",
 	"type": "module",
 	"private": false,
 	"main": "./dist/index.js",
@@ -28,8 +28,6 @@
 		"@internal/core": "workspace:*",
 		"@internal/signals": "workspace:*",
 		"@internal/signals-core": "workspace:*",
-		"@open-harness/claude": "workspace:*",
-		"@open-harness/openai": "workspace:*",
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-node-resolve": "^15.3.0",
 		"@rollup/plugin-typescript": "^11.1.6",
