@@ -218,6 +218,18 @@ function updateFile(
 }
 
 /**
+ * Check if a file is in a published package (npm-published packages)
+ * These should NOT have frontmatter as it shows up on npm
+ */
+function isPublishedPackage(filePath: string): boolean {
+  const publishedPaths = [
+    "packages/open-harness/",  // All @open-harness/* packages
+    "packages/adapters/",      // All adapter packages
+  ];
+  return publishedPaths.some((p) => filePath.startsWith(p));
+}
+
+/**
  * Get list of changed files in staging area
  */
 function getChangedFiles(): string[] {
@@ -227,7 +239,7 @@ function getChangedFiles(): string[] {
     });
     return output
       .split("\n")
-      .filter((f) => f.endsWith(".md") && f.startsWith("packages/"));
+      .filter((f) => f.endsWith(".md") && f.startsWith("packages/") && !isPublishedPackage(f));
   } catch {
     return [];
   }
@@ -235,6 +247,7 @@ function getChangedFiles(): string[] {
 
 /**
  * Recursively find all README.md files in a directory
+ * Excludes published packages (they shouldn't have frontmatter)
  */
 function findReadmes(dir: string, results: string[] = []): string[] {
   try {
@@ -244,10 +257,16 @@ function findReadmes(dir: string, results: string[] = []): string[] {
       if (entry.isDirectory()) {
         // Skip node_modules, .git, etc.
         if (![".git", "node_modules", ".next", "dist", "build", ".turbo"].includes(entry.name)) {
-          findReadmes(fullPath, results);
+          // Skip published package directories
+          if (!isPublishedPackage(fullPath + "/")) {
+            findReadmes(fullPath, results);
+          }
         }
       } else if (entry.name === "README.md") {
-        results.push(fullPath);
+        // Skip READMEs in published packages
+        if (!isPublishedPackage(fullPath)) {
+          results.push(fullPath);
+        }
       }
     }
   } catch {

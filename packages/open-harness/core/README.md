@@ -1,19 +1,33 @@
----
-title: "@open-harness/core"
-lastUpdated: "2026-01-11T10:45:35.208Z"
-lastCommit: "7c119005269c88d906afffaea1ab3b283a07056f"
-lastCommitDate: "2026-01-11T07:21:34Z"
-scope:
-  - public-api
-  - core
-  - signals
----
-
 # @open-harness/core
 
-Public core API for Open Harness v0.3.0.
+**TypeScript-native agent framework. Signals. Recording. Evals.**
 
-## Installation
+```typescript
+const analyst = agent({
+  prompt: "Analyze {{ state.symbol }}",
+  activateOn: ["workflow:start"],
+  when: (ctx) => ctx.state.ready,
+  emits: ["analysis:complete"],
+});
+
+const trader = agent({
+  prompt: "Trade based on {{ signal.payload.output }}",
+  activateOn: ["analysis:complete"],
+  when: (ctx) => ctx.state.analysis?.confidence > 0.8,
+});
+
+await runReactive({
+  agents: { analyst, trader },
+  state: { symbol: "AAPL", analysis: null },
+  harness: new ClaudeHarness(),
+});
+```
+
+Two agents. Signal-based coordination. Typed guards. 15 lines.
+
+---
+
+## Install
 
 ```bash
 bun add @open-harness/core
@@ -21,138 +35,114 @@ bun add @open-harness/core
 npm install @open-harness/core
 ```
 
+---
+
+## What You Get
+
+### Test the execution, not just the output
+
+```typescript
+import { expect } from "vitest";
+import "@open-harness/vitest";
+
+expect(result.signals).toHaveSignalsInOrder([
+  "workflow:start",
+  "analysis:complete",
+  "trade:proposed",
+]);
+
+expect(result.signals).toHaveSignalCount("agent:activated", 2);
+expect(result).toCostUnder(0.05);
+expect(result).toHaveLatencyUnder(5000);
+```
+
+Built on Vitest. Assert on signal flow, cost, and latency.
+
+### Record once, replay forever
+
+```typescript
+// Record live execution
+await runReactive({
+  agents,
+  state,
+  fixture: "my-workflow",
+  mode: "record",
+  store,
+});
+
+// Replay in CI (zero API calls)
+await runReactive({
+  agents,
+  state,
+  fixture: "my-workflow",
+  mode: "replay",
+  store,
+});
+```
+
+Your agent tests run in milliseconds.
+
+### Swap providers without rewriting
+
+```typescript
+// Claude
+const result = await runReactive({
+  agents,
+  state,
+  harness: new ClaudeHarness(),
+});
+
+// OpenAI - one line change
+const result = await runReactive({
+  agents,
+  state,
+  harness: new CodexHarness(),
+});
+```
+
+Same agents. Different model.
+
+---
+
 ## Quick Start
 
 ```typescript
 import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
-// Define your state type
+// Define your state
 interface MyState {
-  input: string;
-  analysis?: string;
+  name: string;
+  greeting: string | null;
 }
 
-// Create typed workflow factory
+// Create typed workflow
 const { agent, runReactive } = createWorkflow<MyState>();
 
-// Define agents with signal chaining
-const analyzer = agent({
-  prompt: "Analyze: {{ state.input }}",
+// Define an agent
+const greeter = agent({
+  prompt: "Create a greeting for {{ state.name }}",
   activateOn: ["workflow:start"],
-  emits: ["analysis:complete"],
-  updates: "analysis",
+  updates: "greeting",
 });
 
-// Run the workflow
+// Run it
 const result = await runReactive({
-  agents: { analyzer },
-  state: { input: "Hello, world!" },
+  agents: { greeter },
+  state: { name: "World", greeting: null },
   harness: new ClaudeHarness(),
+  endWhen: (state) => state.greeting !== null,
 });
 
-console.log(result.state.analysis);
+console.log(result.state.greeting);
 ```
 
-## Exports
-
-This package re-exports from internal packages:
-
-### Workflow API
-
-```typescript
-// Factory
-import { createWorkflow } from "@open-harness/core";
-
-// Execution
-import { runReactive } from "@open-harness/core";
-
-// Types
-import type {
-  WorkflowFactory,
-  ReactiveAgentConfig,
-  ReactiveWorkflowConfig,
-  WorkflowResult,
-  ActivationContext,
-} from "@open-harness/core";
-```
-
-### Harnesses
-
-```typescript
-// Claude (Anthropic)
-import { ClaudeHarness, type ClaudeHarnessConfig } from "@open-harness/core";
-
-// OpenAI/Codex
-import { CodexHarness, type CodexHarnessConfig } from "@open-harness/core";
-```
-
-### Signals
-
-```typescript
-// Core
-import { createSignal, type Signal, type Harness } from "@open-harness/core";
-
-// Bus
-import { SignalBus, type ISignalBus, type SignalHandler } from "@open-harness/core";
-
-// Storage
-import { MemorySignalStore, type SignalStore, type Recording } from "@open-harness/core";
-
-// Playback
-import { Player, type PlayerState, type PlayerPosition } from "@open-harness/core";
-
-// Patterns
-import { matchesPattern, matchesAnyPattern, type SignalPattern } from "@open-harness/core";
-
-// Snapshots
-import { snapshot, snapshotAll, type Snapshot } from "@open-harness/core";
-
-// Reporters
-import {
-  attachReporter,
-  createConsoleReporter,
-  createMetricsReporter,
-  type SignalReporter,
-} from "@open-harness/core";
-```
-
-### Utilities
-
-```typescript
-// Templates
-import { expandTemplate, hasTemplateExpressions, extractPaths } from "@open-harness/core";
-
-// Debug
-import {
-  getCausalityChain,
-  getAgentSignals,
-  buildSignalTree,
-  formatSignalTree,
-} from "@open-harness/core";
-
-// Telemetry
-import { createTelemetrySubscriber, createWideEvent } from "@open-harness/core";
-
-// Defaults
-import {
-  setDefaultHarness,
-  setDefaultStore,
-  setDefaultMode,
-  resetDefaults,
-} from "@open-harness/core";
-```
+---
 
 ## Core Concepts
 
-### Signal-Based Architecture
+### Signals, not spaghetti
 
-Open Harness v0.3.0 uses signals for all agent coordination:
-
-```
-workflow:start → agent activates → emits signal → next agent → workflow:end
-```
-
-### Agent Definition
+Agents subscribe to signal patterns. No imperative chains.
 
 ```typescript
 const myAgent = agent({
@@ -164,44 +154,40 @@ const myAgent = agent({
 });
 ```
 
-### Recording & Replay
+### Signal flow
 
-```typescript
-const store = new MemorySignalStore();
-
-// Record
-await runReactive({
-  agents, state, harness,
-  fixture: "my-test",
-  mode: "record",
-  store,
-});
-
-// Replay (no API calls)
-await runReactive({
-  agents, state,
-  fixture: "my-test",
-  mode: "replay",
-  store,
-});
+```
+workflow:start → agent activates → emits signal → next agent → workflow:end
 ```
 
-## Type Safety
+Every step is observable. Every step is testable.
 
-The `createWorkflow<TState>()` factory ensures all agents share the same state type:
+---
 
-```typescript
-const { agent, runReactive } = createWorkflow<MyState>();
+## Packages
 
-// All agents get typed state access
-const myAgent = agent({
-  when: (ctx) => ctx.state.fieldName,  // Full autocomplete
-});
-```
+| Package | Purpose |
+|---------|---------|
+| `@open-harness/core` | Workflow API, harnesses, signals |
+| `@open-harness/vitest` | Vitest matchers for testing |
+| `@open-harness/testing` | Test utilities |
+| `@open-harness/stores` | Persistence (SQLite, file) |
+| `@open-harness/server` | Server-side streaming |
+| `@open-harness/client` | Client transports |
+| `@open-harness/react` | React hooks |
 
-## See Also
+---
 
-- `packages/README.md` — Architecture overview
-- `packages/internal/core/src/api/README.md` — API implementation
-- `packages/signals/README.md` — Signal infrastructure
-- `examples/` — Working examples
+## Why This Exists
+
+We got tired of:
+- Testing agents by eyeballing output
+- Hitting APIs on every test run
+- Rewriting when providers change
+- Multi-agent code nobody can follow
+
+So we built the framework we wanted to use.
+
+---
+
+[GitHub](https://github.com/Open-Harness/open-harness) · [Docs](https://open-harness.dev) · [Discord](https://discord.gg/openharness)
