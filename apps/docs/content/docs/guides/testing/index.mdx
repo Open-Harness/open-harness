@@ -1,0 +1,172 @@
+---
+title: Testing Overview
+description: Test your Open Harness agents
+---
+
+# Testing
+
+Test your agents with signal assertions and deterministic replay.
+
+## Why Test Agents?
+
+Agent behavior can be unpredictable. Testing helps you:
+
+- **Verify signal flow** - Ensure agents activate in the right order
+- **Check state updates** - Validate state changes correctly
+- **Reproduce bugs** - Replay recordings for deterministic debugging
+- **Guard against regressions** - Catch breaking changes in CI
+
+## Testing Philosophy
+
+Open Harness testing is signal-centric:
+
+```typescript
+// Instead of mocking the entire agent...
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  harness: new ClaudeHarness(),
+});
+
+// ...assert on the signal trace
+expect(result.signals).toContainSignal("agent:completed");
+expect(result.signals).toHaveSignalsInOrder([
+  "workflow:start",
+  "agent:activated",
+  "harness:end",
+  "workflow:end",
+]);
+```
+
+## Testing Approaches
+
+### 1. Live Testing
+
+Run agents with a real harness:
+
+```typescript
+test("analyzer produces output", async () => {
+  const result = await runReactive({
+    agents: { analyzer },
+    state: { input: "Hello", result: null },
+    harness: new ClaudeHarness(),
+  });
+
+  expect(result.state.result).toBeDefined();
+});
+```
+
+**Pros**: Tests real behavior
+**Cons**: Slow, non-deterministic, costs money
+
+### 2. Recording & Replay
+
+Record once, replay deterministically:
+
+```typescript
+const store = new MemorySignalStore();
+
+// Record (run once)
+const recorded = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness: new ClaudeHarness(),
+  recording: { mode: "record", store },
+});
+
+// Replay (fast, deterministic)
+const replayed = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness: new ClaudeHarness(), // Not called during replay
+  recording: { mode: "replay", store, recordingId: recorded.recordingId },
+});
+```
+
+**Pros**: Fast, deterministic, free
+**Cons**: Must re-record when behavior changes
+
+### 3. Signal Assertions
+
+Assert on signal patterns rather than exact output:
+
+```typescript
+expect(result.signals).toContainSignal("analysis:complete");
+expect(result.signals).toHaveSignalsInOrder([
+  "workflow:start",
+  "agent:activated",
+  "analysis:complete",
+  "workflow:end",
+]);
+```
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+bun add -D @open-harness/vitest vitest
+```
+
+### 2. Configure Vitest
+
+```typescript title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    setupFiles: ["@open-harness/vitest/setup"],
+  },
+});
+```
+
+### 3. Write Your First Test
+
+```typescript title="analyzer.test.ts"
+import { describe, it, expect } from "vitest";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
+
+type State = { input: string; result: string | null };
+
+describe("Analyzer", () => {
+  it("produces output on workflow:start", async () => {
+    const { agent, runReactive } = createWorkflow<State>();
+
+    const analyzer = agent({
+      prompt: "Analyze: {{ state.input }}",
+      activateOn: ["workflow:start"],
+      updates: "result",
+    });
+
+    const result = await runReactive({
+      agents: { analyzer },
+      state: { input: "Hello", result: null },
+      harness: new ClaudeHarness(),
+      endWhen: (s) => s.result !== null,
+    });
+
+    expect(result.state.result).toBeDefined();
+    expect(result.signals).toContainSignal("agent:completed");
+  });
+});
+```
+
+### 4. Run Tests
+
+```bash
+bun test
+```
+
+## Next Steps
+
+<Cards>
+  <Card title="Vitest Setup" href="/docs/guides/testing/vitest-setup">
+    Configure Vitest for Open Harness
+  </Card>
+  <Card title="Signal Assertions" href="/docs/guides/testing/signal-assertions">
+    Assert on signal patterns
+  </Card>
+  <Card title="Recording & Replay" href="/docs/guides/testing/recording-replay">
+    Deterministic test replays
+  </Card>
+</Cards>

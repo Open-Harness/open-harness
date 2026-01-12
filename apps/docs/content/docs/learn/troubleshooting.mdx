@@ -37,168 +37,169 @@ Error: Cannot find module '@open-harness/vitest'
 bun add -D @open-harness/vitest vitest
 ```
 
+## Configuration Errors
+
+### State type mismatch
+
+```
+Type 'string' is not assignable to type 'null'
+```
+
+**Cause:** Initial state doesn't match the `TState` type parameter.
+
+**Fix:** Ensure your state matches your type definition:
+
+```typescript
+// Define your state type
+type State = { input: string; result: string | null };
+
+// Create workflow with correct type
+const { agent, runReactive } = createWorkflow<State>();
+
+// Initial state must match
+const result = await runReactive({
+  agents: { myAgent },
+  state: { input: "Hello", result: null }, // ✓ Correct
+  harness: new ClaudeHarness(),
+});
+```
+
+### Invalid activateOn pattern
+
+```
+Error: Invalid signal pattern: "invalid"
+```
+
+**Cause:** Signal pattern doesn't match expected format.
+
+**Fix:** Use valid signal patterns:
+
+```typescript
+// Valid patterns
+activateOn: ["workflow:start"]
+activateOn: ["agent:completed"]
+activateOn: ["analysis:complete"]  // Custom signal
+activateOn: ["state:result:changed"]
+```
+
+### No harness configured
+
+```
+Error: No harness configured for agent
+```
+
+**Cause:** Missing harness in `runReactive` config.
+
+**Fix:** Pass a harness:
+
+```typescript
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
+
+const result = await runReactive({
+  agents: { myAgent },
+  state: initialState,
+  harness: new ClaudeHarness(), // Required
+});
+```
+
 ## Runtime Errors
 
-### No provider configured
+### Workflow never terminates
 
-```
-Error: No provider configured. Call setDefaultProvider() or pass provider in options.
-```
+**Cause:** `endWhen` condition never returns `true` and signals stop flowing.
 
-**Cause:** No default provider set before running an agent.
-
-**Fix:** Set up a provider before running:
+**Fix:** Check your termination condition:
 
 ```typescript
-import { setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
-
-setDefaultProvider(createClaudeNode());
-```
-
-Or pass a provider directly:
-
-```typescript
-const result = await run(myAgent, { prompt: "Hello" }, {
-  provider: createClaudeNode(),
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello", result: null },
+  harness,
+  // Ensure this becomes true
+  endWhen: (state) => state.result !== null,
 });
 ```
 
-### Agent output is undefined
-
-```
-TypeError: Cannot read properties of undefined (reading 'output')
-```
-
-**Cause:** The agent execution failed or returned nothing.
-
-**Fix:** Check that:
-1. Your agent has a valid prompt
-2. The provider is configured correctly
-3. You're running from within Claude Code (for authentication)
+Or add a timeout:
 
 ```typescript
-const result = await run(myAgent, { prompt: "Hello" });
-if (result.output) {
-  console.log(result.output);
-} else {
-  console.error("No output received");
-}
-```
-
-### Matcher not recognized
-
-```
-TypeError: expect(...).toHaveLatencyUnder is not a function
-```
-
-**Cause:** Vitest matchers not registered.
-
-**Fix:** Add the setup file to your Vitest config:
-
-```typescript title="vitest.config.ts"
-import { defineConfig } from "vitest/config";
-
-export default defineConfig({
-  test: {
-    setupFiles: ["@open-harness/vitest/setup"],
-  },
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness,
+  timeout: 30000, // 30 second safety net
 });
 ```
 
-Or manually register in your test:
+### Agent not activating
+
+**Cause:** The `activateOn` signal was never emitted, or `when` guard returned false.
+
+**Fix:** Check your signal chain:
 
 ```typescript
-import { setupMatchers } from "@open-harness/vitest";
-
-setupMatchers();
-```
-
-## Agent Definition Errors
-
-### Invalid agent configuration
-
-```
-Error: Agent configuration is invalid
-```
-
-**Cause:** Agent definition is missing required fields.
-
-**Fix:** Ensure your agent has a valid prompt:
-
-```typescript
-// Correct
-const myAgent = agent({
-  prompt: "You are a helpful assistant.",
+// Agent waits for analysis:complete
+const reviewer = agent({
+  prompt: "Review the analysis",
+  activateOn: ["analysis:complete"],
 });
 
-// Wrong - missing prompt
-const badAgent = agent({});
-```
-
-### Harness flow error
-
-```
-Error: Harness flow function threw an error
-```
-
-**Cause:** Your harness's flow function failed.
-
-**Fix:** Check your flow function for errors:
-
-```typescript
-const myHarness = harness({
-  agents: { classifier, responder },
-  flow: async (agents, input) => {
-    try {
-      const result = await agents.classifier.run(input);
-      return result;
-    } catch (error) {
-      console.error("Flow error:", error);
-      throw error;
-    }
-  },
+// But analyzer doesn't emit it!
+const analyzer = agent({
+  prompt: "Analyze input",
+  activateOn: ["workflow:start"],
+  // Missing: emits: ["analysis:complete"]
 });
 ```
 
-## Fixture Errors
-
-### Fixture not found
-
-```
-Error: Fixture 'my-test' not found
-```
-
-**Cause:** Trying to replay a fixture that doesn't exist.
-
-**Fix:** Record the fixture first:
-
-```bash
-# Record fixtures
-FIXTURE_MODE=record bun test
-
-# Then replay
-FIXTURE_MODE=replay bun test
-```
-
-### Fixture store path error
-
-```
-Error: Cannot write to fixture store
-```
-
-**Cause:** Invalid fixture store path or permissions.
-
-**Fix:** Ensure the fixture directory exists and is writable:
+Add the `emits` declaration:
 
 ```typescript
-import { FileFixtureStore } from "@open-harness/stores";
-
-// Make sure this directory exists
-const store = new FileFixtureStore("./fixtures");
+const analyzer = agent({
+  prompt: "Analyze input",
+  activateOn: ["workflow:start"],
+  emits: ["analysis:complete"], // Now reviewer will activate
+});
 ```
 
-## Authentication Errors
+### State not updating
+
+**Cause:** Agent doesn't have `updates` field.
+
+**Fix:** Specify which state key to update:
+
+```typescript
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  updates: "result", // Agent output goes to state.result
+});
+```
+
+### Agent guard always false
+
+```typescript
+// This agent never runs
+const reviewer = agent({
+  prompt: "Review",
+  activateOn: ["analysis:complete"],
+  when: (state) => state.needsReview === true,
+});
+```
+
+**Cause:** `when` guard condition never met.
+
+**Fix:** Ensure state has the expected shape:
+
+```typescript
+// Make sure needsReview can become true
+type State = {
+  analysis: string | null;
+  needsReview: boolean;
+};
+```
+
+## Harness Errors
 
 ### Authentication failed
 
@@ -227,9 +228,58 @@ Error: Rate limit exceeded
 
 **Cause:** Too many requests in a short period.
 
-**Fix:** Add delays between requests or reduce parallel agent execution.
+**Fix:** The error signal includes retry information:
+
+```typescript
+const errors = result.signals.filter(s => s.name === "harness:error");
+for (const error of errors) {
+  if (error.payload.retryAfter) {
+    console.log(`Retry after ${error.payload.retryAfter} seconds`);
+  }
+}
+```
+
+### Harness error in signal trace
+
+```typescript
+const result = await runReactive({ /* ... */ });
+
+const errors = result.signals.filter(s => s.name === "harness:error");
+if (errors.length > 0) {
+  console.error("Harness errors:", errors);
+}
+```
 
 ## Test Errors
+
+### Matcher not recognized
+
+```
+TypeError: expect(...).toContainSignal is not a function
+```
+
+**Cause:** Vitest matchers not registered.
+
+**Fix:** Add the setup file to your Vitest config:
+
+```typescript title="vitest.config.ts"
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    setupFiles: ["@open-harness/vitest/setup"],
+  },
+});
+```
+
+Or manually register in your test:
+
+```typescript
+import { expect } from "vitest";
+import { toContainSignal, toHaveSignalsInOrder } from "@open-harness/vitest";
+
+expect.extend({ toContainSignal, toHaveSignalsInOrder });
+```
 
 ### Test timeout
 
@@ -242,31 +292,118 @@ Error: Test timed out after 5000ms
 **Fix:** Increase the test timeout:
 
 ```typescript
-import { test, expect } from "vitest";
+import { test } from "vitest";
 
 test("slow agent test", async () => {
   // Test code here
 }, 30000); // 30 second timeout
 ```
 
-### Quality gate failed
+### Signal assertion failed
 
 ```
-❌ Gate FAILED: pass rate 75.0% < 80.0%
+Expected signals to contain "analysis:complete" but it was not found
 ```
 
-**Cause:** Too many tests failed based on the configured pass rate.
+**Fix:** Debug by logging all signals:
 
-**Fix:** Either fix the failing tests or adjust the pass rate threshold:
+```typescript
+const result = await runReactive({ /* ... */ });
 
-```typescript title="vitest.config.ts"
-import { OpenHarnessReporter } from "@open-harness/vitest";
+console.log("All signals:", result.signals.map(s => s.name));
 
-export default defineConfig({
-  test: {
-    reporters: ["default", new OpenHarnessReporter({ passRate: 0.7 })],
-  },
+expect(result.signals).toContainSignal("analysis:complete");
+```
+
+## Recording/Replay Errors
+
+### Recording not found
+
+```
+Error: Recording 'rec_abc123' not found
+```
+
+**Cause:** Trying to replay a recording that doesn't exist.
+
+**Fix:** Record first, then replay:
+
+```typescript
+const store = new MemorySignalStore();
+
+// Record
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness: new ClaudeHarness(),
+  recording: { mode: "record", store },
 });
+
+const recordingId = result.recordingId;
+
+// Replay with the same ID
+const replay = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness: new ClaudeHarness(),
+  recording: { mode: "replay", store, recordingId },
+});
+```
+
+### Replay state mismatch
+
+```
+Error: Replay state doesn't match recorded state
+```
+
+**Cause:** Initial state differs from when recording was made.
+
+**Fix:** Use the same initial state for replay:
+
+```typescript
+const initialState = { input: "Hello", result: null };
+
+// Same state for both
+const record = await runReactive({
+  state: initialState,
+  recording: { mode: "record", store },
+});
+
+const replay = await runReactive({
+  state: initialState, // Must match!
+  recording: { mode: "replay", store, recordingId },
+});
+```
+
+## Debugging Tips
+
+### Enable signal tracing
+
+```typescript
+const result = await runReactive({ /* ... */ });
+
+// Log signal flow
+for (const signal of result.signals) {
+  console.log(`[${signal.timestamp}] ${signal.name}`, signal.payload);
+}
+```
+
+### Check agent activations
+
+```typescript
+const activations = result.signals.filter(s => s.name === "agent:activated");
+console.log("Agents that ran:", activations.map(s => s.payload.agent));
+
+const skipped = result.signals.filter(s => s.name === "agent:skipped");
+console.log("Agents skipped:", skipped.map(s => `${s.payload.agent}: ${s.payload.reason}`));
+```
+
+### Inspect final state
+
+```typescript
+console.log("Final state:", result.state);
+console.log("Duration:", result.metrics.durationMs, "ms");
+console.log("Agent activations:", result.metrics.activations);
+console.log("Terminated early:", result.terminatedEarly);
 ```
 
 ## Still Stuck?
@@ -275,4 +412,4 @@ If your error isn't listed here:
 
 1. Check the [API Reference](/docs/reference/api/runtime) for correct function signatures
 2. Look at the [Quickstart](/docs/learn/quickstart) for working examples
-3. Review the [Custom Agents](/docs/guides/agents/custom-agents) guide for agent patterns
+3. Review the [Signal System](/docs/concepts/event-system) for signal patterns

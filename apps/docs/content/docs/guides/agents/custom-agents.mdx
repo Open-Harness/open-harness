@@ -1,174 +1,247 @@
 ---
-title: Custom Agents
-description: Build your own agent implementations
+title: Custom Harnesses
+description: Implement your own AI harness
 ---
 
-# Custom Agents
+# Custom Harnesses
 
-Create custom agents with specialized behaviors and configurations.
+Create custom harnesses to connect Open Harness to any AI model or service.
 
-## Basic Agent
+## Harness Interface
 
-Define an agent with a system prompt:
+Every harness implements the `Harness` interface:
 
-```typescript title="agent.ts"
-import { agent, run, setDefaultProvider } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+```typescript
+import type { Harness, HarnessInput, Signal } from "@open-harness/core";
 
-setDefaultProvider(createClaudeNode());
+interface Harness {
+  run(input: HarnessInput, context: RunContext): AsyncGenerator<Signal>;
+}
 
-const codeReviewer = agent({
-  prompt: `You are a senior code reviewer. Analyze code for:
-- Bugs and logical errors
-- Security vulnerabilities
-- Performance issues
-- Style and readability`,
-});
-
-const result = await run(codeReviewer, {
-  prompt: `Review this function:
-function divide(a, b) {
-  return a / b;
-}`,
-});
-
-console.log(result.output);
+interface RunContext {
+  signal: AbortSignal;  // For cancellation
+}
 ```
 
-## Agent with Configuration
+## Minimal Harness
 
-Customize agent behavior with additional options:
+A minimal harness that echoes input:
 
-```typescript title="configured-agent.ts"
-import { agent, run } from "@open-harness/core";
-import { createClaudeNode } from "@open-harness/server";
+```typescript
+import { createSignal, type Harness, type HarnessInput, type Signal } from "@open-harness/core";
 
-const technicalWriter = agent({
-  prompt: "Write clear, concise technical documentation.",
-  // Provider override (optional)
-  provider: createClaudeNode({ model: "claude-3-opus-latest" }),
-});
+class EchoHarness implements Harness {
+  async *run(input: HarnessInput): AsyncGenerator<Signal> {
+    // Emit start signal
+    yield createSignal("harness:start", { model: "echo" });
 
-const result = await run(technicalWriter, {
-  prompt: "Document this API endpoint: POST /users",
-});
-```
+    // Extract prompt from messages
+    const prompt = input.messages
+      .filter(m => m.role === "user")
+      .map(m => m.content)
+      .join("\n");
 
-## Streaming Output
+    // Emit text (simulate streaming)
+    yield createSignal("text:delta", { content: `Echo: ${prompt}` });
+    yield createSignal("text:complete", { content: `Echo: ${prompt}` });
 
-Handle streaming responses for real-time output:
-
-```typescript title="streaming.ts"
-import { agent, run, onEvent } from "@open-harness/core";
-
-const chatAgent = agent({
-  prompt: "You are a helpful assistant.",
-});
-
-// Subscribe to streaming events
-onEvent((event) => {
-  if (event.type === "agent:text") {
-    process.stdout.write(event.text);
-  }
-});
-
-await run(chatAgent, { prompt: "Tell me a story." });
-```
-
-## Multi-Agent Harness
-
-Coordinate multiple agents with a harness:
-
-```typescript title="harness.ts"
-import { harness, agent, run } from "@open-harness/core";
-
-const classifier = agent({
-  prompt: "Classify input as 'question', 'statement', or 'command'.",
-});
-
-const responder = agent({
-  prompt: "Respond helpfully to the input.",
-});
-
-const myHarness = harness({
-  agents: { classifier, responder },
-  flow: async (agents, input) => {
-    const classification = await agents.classifier.run(input);
-    const response = await agents.responder.run({
-      ...input,
-      classification: classification.output,
+    // Emit end signal with usage
+    yield createSignal("harness:end", {
+      usage: { inputTokens: prompt.length, outputTokens: prompt.length + 6 },
     });
-    return { classification: classification.output, response: response.output };
-  },
-});
-
-const result = await run(myHarness, {
-  prompt: "What is the capital of France?",
-});
-
-console.log(result.output);
-// { classification: "question", response: "The capital of France is Paris." }
+  }
+}
 ```
 
-## Testing Agents
+## Using Your Harness
 
-Write tests for your agents using Vitest:
+```typescript
+import { createWorkflow } from "@open-harness/core";
 
-```typescript title="agent.test.ts"
-import { test, expect } from "vitest";
-import { run, agent } from "@open-harness/vitest";
+type State = { input: string; output: string | null };
+const { agent, runReactive } = createWorkflow<State>();
 
-const codeReviewer = agent({
-  prompt: "Review code for bugs.",
+const myAgent = agent({
+  prompt: "{{ state.input }}",
+  activateOn: ["workflow:start"],
+  updates: "output",
 });
 
-test("catches division by zero", async () => {
-  const result = await run(codeReviewer, {
-    prompt: "function divide(a, b) { return a / b; }",
+const result = await runReactive({
+  agents: { myAgent },
+  state: { input: "Hello", output: null },
+  harness: new EchoHarness(),
+  endWhen: (s) => s.output !== null,
+});
+
+console.log(result.state.output); // "Echo: Hello"
+```
+
+## Required Signals
+
+Harnesses must emit these signals:
+
+| Signal | When | Payload |
+|--------|------|---------|
+| `harness:start` | At start | `{ model: string }` |
+| `harness:end` | At completion | `{ usage?: { inputTokens, outputTokens }, cost?, sessionId? }` |
+| `harness:error` | On error | `{ error: string }` |
+
+## Text Signals
+
+For streaming text output:
+
+```typescript
+yield createSignal("text:delta", { content: "partial text" });
+yield createSignal("text:complete", { content: "full text" });
+```
+
+## Tool Signals
+
+For tool/function calling:
+
+```typescript
+yield createSignal("tool:call", {
+  id: "call_123",
+  name: "search",
+  input: { query: "..." },
+});
+
+// After tool execution
+yield createSignal("tool:result", {
+  id: "call_123",
+  name: "search",
+  output: { results: [...] },
+});
+```
+
+## OpenAI-Compatible Harness
+
+Example wrapping an OpenAI-compatible API:
+
+```typescript
+import { createSignal, type Harness, type HarnessInput, type Signal } from "@open-harness/core";
+
+class OpenAICompatibleHarness implements Harness {
+  constructor(private config: { apiKey: string; baseUrl: string; model: string }) {}
+
+  async *run(input: HarnessInput): AsyncGenerator<Signal> {
+    yield createSignal("harness:start", { model: this.config.model });
+
+    try {
+      const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.config.model,
+          messages: input.messages,
+          stream: true,
+        }),
+      });
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        // Parse SSE and extract content...
+        const content = parseSSEChunk(chunk);
+        if (content) {
+          fullContent += content;
+          yield createSignal("text:delta", { content });
+        }
+      }
+
+      yield createSignal("text:complete", { content: fullContent });
+      yield createSignal("harness:end", {
+        usage: { inputTokens: 0, outputTokens: fullContent.length },
+      });
+    } catch (error) {
+      yield createSignal("harness:error", { error: String(error) });
+    }
+  }
+}
+```
+
+## Cancellation Support
+
+Respect the abort signal for cancellation:
+
+```typescript
+async *run(input: HarnessInput, context: RunContext): AsyncGenerator<Signal> {
+  yield createSignal("harness:start", { model: "my-model" });
+
+  for (const chunk of someStreamingSource) {
+    // Check for cancellation
+    if (context.signal.aborted) {
+      yield createSignal("harness:error", { error: "Cancelled" });
+      return;
+    }
+
+    yield createSignal("text:delta", { content: chunk });
+  }
+
+  yield createSignal("harness:end", { usage: { inputTokens: 0, outputTokens: 0 } });
+}
+```
+
+## Testing Your Harness
+
+Test with the signal matchers:
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { createWorkflow } from "@open-harness/core";
+import { toContainSignal, toHaveSignalsInOrder } from "@open-harness/vitest";
+
+expect.extend({ toContainSignal, toHaveSignalsInOrder });
+
+describe("MyHarness", () => {
+  it("emits required signals", async () => {
+    const { agent, runReactive } = createWorkflow<{ input: string; output: string | null }>();
+
+    const testAgent = agent({
+      prompt: "{{ state.input }}",
+      activateOn: ["workflow:start"],
+      updates: "output",
+    });
+
+    const result = await runReactive({
+      agents: { testAgent },
+      state: { input: "test", output: null },
+      harness: new MyHarness(),
+      endWhen: (s) => s.output !== null,
+    });
+
+    expect(result.signals).toContainSignal("harness:start");
+    expect(result.signals).toContainSignal("harness:end");
+    expect(result.signals).toHaveSignalsInOrder([
+      "harness:start",
+      "text:complete",
+      "harness:end",
+    ]);
   });
-
-  expect(result.output).toContain("division");
-  expect(result).toHaveLatencyUnder(10000);
-  expect(result).toCostUnder(0.01);
 });
 ```
-
-## Recording and Replay
-
-Record agent responses for deterministic testing:
-
-```typescript title="fixture-recording.ts"
-import { agent, run } from "@open-harness/core";
-import { FileFixtureStore } from "@open-harness/stores";
-
-const store = new FileFixtureStore("./fixtures");
-const myAgent = agent({ prompt: "Answer questions." });
-
-// Record mode: saves response to fixture
-const recordResult = await run(myAgent, { prompt: "Hello" }, {
-  fixture: "hello-test",
-  mode: "record",
-  store,
-});
-
-// Replay mode: uses saved fixture (no API call)
-const replayResult = await run(myAgent, { prompt: "Hello" }, {
-  fixture: "hello-test",
-  mode: "replay",
-  store,
-});
-```
-
-<Callout type="stuck" title="Are you stuck?">
-**Error: No provider configured**
-Make sure you call `setDefaultProvider()` before running agents, or pass a provider in `run()` options.
-
-**Error: Cannot read property 'run' of undefined**
-Check that your harness's `agents` object has the correct keys.
-</Callout>
 
 ## Next Steps
 
-- [Claude Agent](/docs/guides/agents/claude-agent) — Configure the built-in Claude agent
-- [Events API](/docs/reference/api/events) — Event types for agents
-- [Runtime API](/docs/reference/api/runtime) — Execute agents and harnesses
+<Cards>
+  <Card title="Claude Harness" href="/docs/guides/agents/claude-agent">
+    Reference implementation
+  </Card>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Signal types and patterns
+  </Card>
+  <Card title="Testing Guide" href="/docs/guides/testing">
+    Test harnesses and agents
+  </Card>
+</Cards>

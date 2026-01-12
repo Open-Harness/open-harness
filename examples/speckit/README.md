@@ -41,16 +41,32 @@ bun test
 ## What You'll Learn
 
 ### Level 1: Basic Agent
-Create your first agent with `agent()` and run it with `run()`.
+Create your first agent with `createWorkflow()` and run it with `runReactive()`.
 
 ```typescript
-import { agent, run } from "@open-harness/core"
+import { createWorkflow, ClaudeHarness } from "@open-harness/core"
 
+// 1. Define state type
+type TaskState = { prompt: string; plan: string | null }
+
+// 2. Create typed workflow factory
+const { agent, runReactive } = createWorkflow<TaskState>()
+
+// 3. Define agent with signal activation
 const taskExecutor = agent({
-  prompt: `You are a task planning assistant...`
+  prompt: `You are a task planning assistant. Task: {{ state.prompt }}`,
+  activateOn: ["workflow:start"],
+  emits: ["plan:complete"],
+  updates: "plan",
 })
 
-const result = await run(taskExecutor, { prompt: "Implement email validation" })
+// 4. Run the workflow
+const result = await runReactive({
+  agents: { taskExecutor },
+  state: { prompt: "Implement email validation", plan: null },
+  harness: new ClaudeHarness({ model: "claude-sonnet-4-20250514" }),
+  endWhen: (state) => state.plan !== null,
+})
 ```
 
 ### Level 2: State + Fixtures
@@ -74,13 +90,31 @@ See [level-2/README.md](./level-2/README.md) for full fixture documentation.
 Agents can validate their own output and iterate until quality thresholds are met.
 
 ### Level 4: Multi-Agent Harness
-Coordinate multiple agents with `harness()` and edges.
+Coordinate multiple agents with signal chaining (activateOn/emits).
 
 ```typescript
-const specKit = harness({
+// Spec agent activates on start, emits when done
+const specAgent = agent({
+  prompt: `Break down PRD into tasks: {{ state.prompt }}`,
+  activateOn: ["workflow:start"],
+  emits: ["spec:complete"],
+  updates: "specOutput",
+})
+
+// Coder agent activates when spec completes
+const codingAgent = agent({
+  prompt: `Implement tasks from: {{ state.specOutput }}`,
+  activateOn: ["spec:complete"],  // Signal chaining!
+  emits: ["code:complete"],
+  updates: "coderOutput",
+})
+
+// Run coordinated workflow
+const result = await runReactive({
   agents: { spec: specAgent, coder: codingAgent },
-  edges: [{ from: "spec", to: "coder" }],
-  state: initialState
+  state: initialState,
+  harness,
+  endWhen: (state) => state.coderOutput !== null,
 })
 ```
 

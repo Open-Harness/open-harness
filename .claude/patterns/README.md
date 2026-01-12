@@ -1,3 +1,8 @@
+---
+title: "Anti-Patterns Registry"
+description: "Historical patterns learned from retrospectives"
+---
+
 # Anti-Patterns Registry
 
 Central registry of known anti-patterns learned from retrospectives. This is part of the oharnes historical awareness system.

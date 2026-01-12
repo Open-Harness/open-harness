@@ -7,11 +7,8 @@ import {
 } from "./config.js";
 import { createTransports, getLogFilePath, listLogFiles } from "./transports.js";
 import { getEventLevel, getEventsAtLevel, shouldLog } from "./levels.js";
-import {
-	subscribeLogger,
-	subscribeLoggerFiltered,
-	subscribeLoggerForRun,
-} from "./event-subscriber.js";
+// v0.3.0: event-subscriber removed - old EventBus deleted
+// For signal-based logging, use createTelemetrySubscriber from api/telemetry
 
 // Re-export types and utilities
 export type { LoggerConfig };
@@ -24,9 +21,6 @@ export {
 	getEventLevel,
 	getEventsAtLevel,
 	shouldLog,
-	subscribeLogger,
-	subscribeLoggerFiltered,
-	subscribeLoggerForRun,
 };
 
 /**

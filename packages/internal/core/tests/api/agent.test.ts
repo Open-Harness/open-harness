@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import { agent } from "../../src/api/agent.js";
-import { isAgent, isHarness } from "../../src/api/types.js";
+import { isAgent } from "../../src/api/types.js";
 
 describe("api/agent", () => {
 	describe("agent()", () => {
@@ -70,14 +70,9 @@ describe("api/agent", () => {
 			expect(isAgent(null)).toBe(false);
 			expect(isAgent(undefined)).toBe(false);
 			expect(isAgent({})).toBe(false);
-			expect(isAgent({ _tag: "Harness" })).toBe(false);
+			expect(isAgent({ _tag: "SomethingElse" })).toBe(false);
 			expect(isAgent("Agent")).toBe(false);
 			expect(isAgent(42)).toBe(false);
-		});
-
-		it("isHarness() should return false for Agent", () => {
-			const myAgent = agent({ prompt: "Test" });
-			expect(isHarness(myAgent)).toBe(false);
 		});
 	});
 

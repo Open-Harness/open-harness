@@ -1,43 +1,104 @@
 ---
 title: Reference
-description: Complete API reference and technical documentation for Open Harness
+description: Complete API reference for Open Harness v0.3.0
 ---
 
 # Reference Documentation
 
-Complete technical reference for Open Harness — APIs, types, schemas, and expressions.
+Complete technical reference for Open Harness — APIs, types, and signals.
 
-## API Reference
+## Core API
 
-Core SDK APIs for building agent workflows:
+The primary functions for building reactive agent workflows:
 
-- [Runtime](/docs/reference/api/runtime) - Orchestrates flow execution and manages runtime state
-- [Node Types](/docs/reference/api/node-types) - Wraps AI model interactions (Claude, GPT, etc.)
-- [Transport](/docs/reference/api/transport) - Connects agents with structured message passing
-- [Flow Runtime](/docs/reference/api/flow-runtime) - Executes flows and manages node lifecycle
-- [Events](/docs/reference/api/events) - Event system for monitoring and debugging
-- [Node Registry](/docs/reference/api/node-registry) - Registers and resolves flow nodes
-- [Run Store](/docs/reference/api/run-store) - Persists execution history and state
+| Function | Description |
+|----------|-------------|
+| `createWorkflow<TState>()` | Factory returning typed `agent()` and `runReactive()` |
+| `agent(config)` | Define a reactive agent with `activateOn`, `emits`, `when` |
+| `runReactive(config)` | Execute a signal-based workflow |
 
-## Expressions
+## Harnesses
 
-Dynamic data access in flows:
+Adapters that connect to AI model APIs:
 
-- [Syntax](/docs/reference/expressions/syntax) - JSONata expression syntax
-- [Context](/docs/reference/expressions/context) - Available runtime context
-- [Functions](/docs/reference/expressions/functions) - Built-in expression functions
+- [ClaudeHarness](/docs/guides/agents/claude-agent) - Anthropic Claude models
+- CodexHarness - OpenAI Codex models (coming soon)
+
+## Signal Types
+
+Signals emitted during workflow execution:
+
+| Category | Signals |
+|----------|---------|
+| Workflow | `workflow:start`, `workflow:end` |
+| Agent | `agent:activated`, `agent:skipped`, `agent:completed` |
+| Harness | `harness:start`, `harness:end`, `harness:error` |
+| Text | `text:delta`, `text:complete` |
+| State | `state:\{key\}:changed` |
+| Custom | Any signal name via `emits` |
+
+## API Pages
+
+Detailed reference for runtime components:
+
+- [Runtime](/docs/reference/api/runtime) - Core runtime execution
+- [Events](/docs/reference/api/events) - Signal system reference
 
 ## Type Definitions
 
-TypeScript types for flows and runtime:
+TypeScript types for the signal architecture:
 
-- [Flow Definition](/docs/reference/types/flow-definition) - Complete flow structure
-- [Node Definition](/docs/reference/types/node-definition) - Node configuration types
-- [Edge Definition](/docs/reference/types/edge-definition) - Flow connections
-- [Runtime Event](/docs/reference/types/runtime-event) - Event payloads
+- [Runtime Event](/docs/reference/types/runtime-event) - Signal event structure
 
-## Schemas
+## Agent Configuration
 
-YAML schemas for flow specifications:
+```typescript
+agent({
+  // Required
+  prompt: string,           // Template with {{ state.x }} syntax
+  activateOn: string[],     // Signal patterns to react to
 
-- [Flow YAML](/docs/reference/schemas/flow-yaml) - FlowSpec YAML schema
+  // Optional
+  emits?: string[],         // Signals this agent emits
+  when?: (ctx) => boolean,  // Guard condition
+  updates?: keyof TState,   // Auto-update state field
+  harness?: Harness,        // Per-agent harness override
+})
+```
+
+## runReactive Configuration
+
+```typescript
+runReactive({
+  // Required
+  agents: Record<string, Agent>,
+  state: TState,
+  harness: Harness,
+
+  // Optional
+  endWhen?: (state: TState) => boolean,
+  recording?: {
+    mode: "record" | "replay",
+    store: SignalStore,
+    recordingId?: string,    // Required for replay
+    name?: string,           // Recording name
+    tags?: string[],         // Recording tags
+  },
+  reducers?: Record<string, Reducer>,
+})
+```
+
+## Result Shape
+
+```typescript
+interface WorkflowResult<TState> {
+  state: TState;              // Final state
+  signals: Signal[];          // Full signal trace
+  metrics: {
+    durationMs: number;       // Execution time
+    activations: number;      // Agent activation count
+  };
+  terminatedEarly: boolean;   // endWhen triggered
+  recordingId?: string;       // If recording
+}
+```

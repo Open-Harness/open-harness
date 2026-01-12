@@ -1,19 +1,29 @@
 /**
- * Public API for Open Harness v0.2.0
+ * Public API for Open Harness v0.3.0
  *
  * This module exports the primary user-facing API:
  *
  * - `agent()` - Create an agent definition
- * - `harness()` - Create a multi-agent harness
- * - `run()` - Execute an agent or harness
- * - `setDefaultStore()`, `setDefaultMode()` - Configure defaults
+ * - `createWorkflow()` - Create a typed workflow factory
+ * - `runReactive()` - Execute signal-based workflows
  *
  * @example
  * ```ts
- * import { agent, harness, run } from "@open-harness/core"
+ * import { createWorkflow, ClaudeHarness } from "@open-harness/core"
  *
- * const myAgent = agent({ prompt: "You are helpful." })
- * const result = await run(myAgent, { prompt: "Hello!" })
+ * const { agent, runReactive } = createWorkflow<MyState>()
+ *
+ * const analyzer = agent({
+ *   prompt: "Analyze: {{ state.input }}",
+ *   activateOn: ["workflow:start"],
+ *   emits: ["analysis:complete"],
+ * })
+ *
+ * const result = await runReactive({
+ *   agents: { analyzer },
+ *   state: initialState,
+ *   defaultHarness: new ClaudeHarness(),
+ * })
  * ```
  */
 
@@ -23,26 +33,29 @@ export type {
 	AgentConfig,
 	AgentInput,
 	AgentOutput,
-	Harness,
-	HarnessConfig,
-	Edge,
-	RunOptions,
 	RunResult,
 	RunMetrics,
 	FixtureStore,
 	FixtureMode,
-	Provider,
+	Harness,
+	// v0.3.0 Reactive types
+	ReactiveAgent,
 } from "./types.js";
 
 // Type guards
-export { isAgent, isHarness } from "./types.js";
+export { isAgent, isReactiveAgent } from "./types.js";
 
 // Factory functions
 export { agent } from "./agent.js";
-export { harness, type HarnessWithFlow } from "./harness.js";
 
-// Execution
-export { run, generateFixtureId } from "./run.js";
+// Execution (v0.3.0 - signal-based)
+export {
+	runReactive,
+	type RunReactiveOptions,
+	type RunReactiveResult,
+	type SignalRecordingMode,
+	type SignalRecordingOptions,
+} from "./run-reactive.js";
 
 // Defaults
 export {
@@ -50,7 +63,65 @@ export {
 	getDefaultStore,
 	setDefaultMode,
 	getDefaultMode,
-	setDefaultProvider,
-	getDefaultProvider,
+	setDefaultHarness,
+	getDefaultHarness,
 	resetDefaults,
 } from "./defaults.js";
+
+// v0.3.0 Workflow Factory (solves variance problem)
+export {
+	createWorkflow,
+	TimeoutError,
+	type ActivationContext,
+	type ReactiveAgentConfig,
+	type ScopedReactiveAgent,
+	type ReactiveWorkflowConfig,
+	type ReactiveWorkflowResult,
+	type WorkflowFactory,
+} from "./create-workflow.js";
+
+// v0.3.0 Template Engine (F2)
+export {
+	expandTemplate,
+	hasTemplateExpressions,
+	extractPaths,
+	type TemplateContext,
+} from "./template.js";
+
+// v0.3.0 Debug Utilities (E1)
+export {
+	getCausalityChain,
+	getAgentSignals,
+	getChildSignals,
+	buildSignalTree,
+	formatSignalTree,
+	getSignalSummary,
+	filterSignals,
+	type SignalNode,
+} from "./debug.js";
+
+// v0.3.0 Reactive Store (E2)
+export {
+	createReactiveStore,
+	connectStoreToBus,
+	type StateChangePayload,
+	type StateChangeHandler,
+	type ReactiveStore,
+} from "./reactive-store.js";
+
+// v0.3.0 Telemetry - Wide Events (E5)
+export {
+	createTelemetrySubscriber,
+	createWideEvent,
+	type TelemetryConfig,
+	type TelemetrySubscriber,
+	type TelemetryInput,
+	type WorkflowWideEvent,
+	type WorkflowStartEvent,
+	type WorkflowErrorEvent,
+	type WorkflowEvent,
+	type WorkflowOutcome,
+	type TokenUsage,
+	type CostBreakdown,
+	type SamplingConfig,
+} from "./telemetry.js";

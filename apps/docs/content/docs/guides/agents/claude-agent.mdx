@@ -1,92 +1,180 @@
 ---
-title: Claude Agent
-description: Configure the built-in Claude agent
+title: Claude Harness
+description: Configure the ClaudeHarness for Anthropic models
 ---
 
-# Claude Agent
+# Claude Harness
 
-Configure and use the built-in Claude agent powered by the Anthropic SDK.
+The `ClaudeHarness` connects Open Harness to Anthropic's Claude models.
 
 ## Basic Usage
 
-```yaml
-nodes:
-  - id: assistant
-    type: claude.agent
-    input:
-      prompt: "{{ flow.input.question }}"
+```typescript
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
+
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createWorkflow<State>();
+
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  emits: ["analysis:complete"],
+  updates: "result",
+});
+
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello world", result: null },
+  harness: new ClaudeHarness(),
+  endWhen: (s) => s.result !== null,
+});
 ```
 
 ## Configuration Options
 
-```yaml
-nodes:
-  - id: assistant
-    type: claude.agent
-    input:
-      prompt: "Answer this question"
-      model: "claude-sonnet-4-20250514"
-      maxTokens: 4096
-      temperature: 0.7
-      system: "You are a helpful assistant."
+```typescript
+const harness = new ClaudeHarness({
+  model: "claude-sonnet-4-20250514",  // Model to use
+  maxTokens: 4096,                     // Max output tokens
+  temperature: 0.7,                    // Sampling temperature
+});
 ```
 
 ## Available Models
 
 | Model | Use Case |
 |-------|----------|
-| `claude-sonnet-4-20250514` | Balanced performance |
+| `claude-sonnet-4-20250514` | Balanced performance (default) |
 | `claude-opus-4-20250514` | Complex reasoning |
 | `claude-haiku-3-20250307` | Fast, simple tasks |
 
-## Streaming Events
+## Per-Agent Harness
 
-The Claude agent emits these events:
-
-```typescript
-// Text chunks
-{ type: "agent:text", text: "Hello..." }
-
-// Tool use
-{ type: "agent:tool_use", name: "search", input: {...} }
-
-// Completion
-{ type: "agent:complete", output: { text: "..." } }
-```
-
-## Subscribe to Events
-
-Use `runtime.onEvent()` or the `onEvent` option:
+Override the harness for specific agents:
 
 ```typescript
-import { createHarness, parseFlowYaml } from "@open-harness/server";
-
-const harness = createHarness({
-  flow: parseFlowYaml(yaml),
-  onEvent: (event) => {
-    if (event.type === "agent:text") {
-      process.stdout.write(event.text);
-    }
-  },
+const complexAgent = agent({
+  prompt: "Solve this complex problem: {{ state.problem }}",
+  activateOn: ["workflow:start"],
+  harness: new ClaudeHarness({ model: "claude-opus-4-20250514" }),
 });
 
-await harness.run({ question: "What is AI?" });
+const quickAgent = agent({
+  prompt: "Quick classification: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  harness: new ClaudeHarness({ model: "claude-haiku-3-20250307" }),
+});
+```
+
+## Signals Emitted
+
+The ClaudeHarness emits standard harness signals:
+
+### Lifecycle
+
+```typescript
+{ name: "harness:start", payload: { model: "claude-sonnet-4-20250514" } }
+{ name: "harness:end", payload: { usage: { inputTokens, outputTokens }, cost } }
+{ name: "harness:error", payload: { error: "..." } }
+```
+
+### Text Streaming
+
+```typescript
+{ name: "text:delta", payload: { content: "The " } }
+{ name: "text:complete", payload: { content: "The analysis shows..." } }
+```
+
+### Extended Thinking
+
+When using models with extended thinking:
+
+```typescript
+{ name: "thinking:delta", payload: { content: "Let me consider..." } }
+{ name: "thinking:complete", payload: { content: "..." } }
+```
+
+### Tool Usage
+
+```typescript
+{ name: "tool:call", payload: { name: "Read", input: { path: "/file.ts" } } }
+{ name: "tool:result", payload: { name: "Read", output: "..." } }
+```
+
+## Authentication
+
+The harness uses Claude Code subscription authentication. No API key is required - authentication is handled automatically when running from within Claude Code.
+
+<Callout type="info" title="Claude Code Required">
+Open Harness is designed to work with Claude Code subscription authentication. Run your agents from within Claude Code for automatic authentication.
+</Callout>
+
+## Session Support
+
+The ClaudeHarness supports session persistence for multi-turn conversations:
+
+```typescript
+// First run - creates a session
+const result1 = await runReactive({
+  agents: { assistant },
+  state: { messages: ["Hello"], response: null },
+  harness,
+});
+
+// Session ID is captured in harness:end signal
+const sessionId = result1.signals
+  .find(s => s.name === "harness:end")
+  ?.payload.sessionId;
+
+// Resume the session later
+// (Implementation depends on your session storage strategy)
 ```
 
 ## Error Handling
 
-Handle errors in the event stream:
+The harness emits `harness:error` signals on failure:
 
 ```typescript
-runtime.onEvent((event) => {
-  if (event.type === "flow:error") {
-    console.error("Flow failed:", event.error);
-  }
+const result = await runReactive({
+  agents: { analyzer },
+  state: initialState,
+  harness,
 });
+
+const errors = result.signals.filter(s => s.name === "harness:error");
+if (errors.length > 0) {
+  console.error("Harness errors:", errors);
+}
+```
+
+## Usage Metrics
+
+Extract usage from `harness:end` signals:
+
+```typescript
+const harnessEnds = result.signals.filter(s => s.name === "harness:end");
+
+const totalTokens = harnessEnds.reduce((sum, s) => {
+  return sum + (s.payload.usage?.inputTokens || 0) + (s.payload.usage?.outputTokens || 0);
+}, 0);
+
+const totalCost = harnessEnds.reduce((sum, s) => {
+  return sum + (s.payload.cost || 0);
+}, 0);
+
+console.log(`Tokens: ${totalTokens}, Cost: $${totalCost.toFixed(4)}`);
 ```
 
 ## Next Steps
 
-- [Custom Nodes](/docs/guides/agents/custom-agents) — Build your own nodes
-- [Events API](/docs/reference/api/events) — Full event reference
-
+<Cards>
+  <Card title="Custom Harnesses" href="/docs/guides/agents/custom-agents">
+    Implement your own harness
+  </Card>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Understanding harness signals
+  </Card>
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Coordinate multiple agents
+  </Card>
+</Cards>

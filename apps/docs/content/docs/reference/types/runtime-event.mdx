@@ -1,78 +1,215 @@
 ---
-title: RuntimeEvent
-description: Runtime event type reference
+title: Signal
+description: Signal type reference
 ---
 
-# RuntimeEvent
+# Signal
 
-All runtime communication uses typed events.
+All communication in Open Harness uses typed signals.
 
-## Base Type
+## Type Definition
 
 ```typescript
-type RuntimeEvent = RuntimeEventPayload & { timestamp: number };
+interface Signal {
+  id: string;           // Unique identifier ("sig_abc123")
+  name: string;         // Signal name ("analysis:complete")
+  payload: unknown;     // Signal-specific data
+  timestamp: string;    // ISO timestamp
+  source?: {
+    agent?: string;     // Emitting agent
+    parent?: string;    // Parent signal ID (causality)
+  };
+}
 ```
 
-## Common Fields
+## Signal ID Format
 
-- `type`: event identifier
-- `timestamp`: milliseconds since epoch
-- `runId` and `nodeId`: included on node/agent events
-
-## Event Categories
-
-### Flow Events
+Signal IDs use the format `sig_<random>`:
 
 ```typescript
-{ type: "flow:start", flowName: string }
-{ type: "flow:complete", flowName: string, status: "complete" | "failed" }
-{ type: "flow:paused" }
-{ type: "flow:resumed" }
-{ type: "flow:aborted" }
+"sig_abc123def456"
 ```
 
-### Node Events
+IDs are unique within a workflow execution.
+
+## Signal Names
+
+Signal names use colon-separated namespaces:
+
+| Namespace | Examples |
+|-----------|----------|
+| `workflow:` | `workflow:start`, `workflow:end` |
+| `agent:` | `agent:activated`, `agent:completed` |
+| `harness:` | `harness:start`, `harness:end` |
+| `text:` | `text:delta`, `text:complete` |
+| `thinking:` | `thinking:delta`, `thinking:complete` |
+| `tool:` | `tool:call`, `tool:result` |
+| `state:` | `state:analysis:changed` |
+| Custom | `analysis:complete`, `review:done` |
+
+## Payload Types
+
+### Workflow Signals
 
 ```typescript
-{ type: "node:start", nodeId: string, runId: string }
-{ type: "node:complete", nodeId: string, runId: string, output: unknown }
-{ type: "node:error", nodeId: string, runId: string, error: string }
-{ type: "node:skipped", nodeId: string, reason: "edge" | "when" }
+// workflow:start
+{ state: TState; agents: string[] }
+
+// workflow:end
+{
+  state: TState;
+  metrics: { durationMs: number; activations: number };
+  terminatedEarly: boolean;
+}
 ```
 
-### Edge Events
+### Agent Signals
 
 ```typescript
-{ type: "edge:fire", edgeId?: string, from: string, to: string }
-{ type: "loop:iterate", edgeId?: string, iteration: number }
+// agent:activated
+{ agent: string; triggeredBy: string }
+
+// agent:skipped
+{ agent: string; reason: string }
+
+// agent:completed
+{ agent: string; output: unknown }
 ```
 
-### Agent Events
+### Harness Signals
 
 ```typescript
-{ type: "agent:start", nodeId: string, runId: string, sessionId: string, prompt: unknown }
-{ type: "agent:text", nodeId: string, runId: string, content: string }
-{ type: "agent:text:delta", nodeId: string, runId: string, content: string }
-{ type: "agent:tool", nodeId: string, runId: string, toolName: string, toolInput: unknown, toolOutput: unknown }
-{ type: "agent:complete", nodeId: string, runId: string, result: string }
+// harness:start
+{ model: string }
+
+// harness:end
+{
+  usage?: { inputTokens: number; outputTokens: number };
+  cost?: number;
+  sessionId?: string;
+}
+
+// harness:error
+{ error: string; retryAfter?: number }
 ```
 
-### State and Command Events
+### Text Signals
 
 ```typescript
-{ type: "state:patch", patch: StatePatch }
-{ type: "command:received", command: RuntimeCommand }
+// text:delta
+{ content: string }
+
+// text:complete
+{ content: string }
 ```
 
-## Subscribing
+### Thinking Signals
 
 ```typescript
-runtime.onEvent((event) => {
-  console.log(event.type, event.timestamp);
-});
+// thinking:delta
+{ content: string }
+
+// thinking:complete
+{ content: string }
+```
+
+### Tool Signals
+
+```typescript
+// tool:call
+{ id: string; name: string; input: unknown }
+
+// tool:result
+{ id: string; name: string; output: unknown; error?: string }
+```
+
+### State Signals
+
+```typescript
+// state:{key}:changed
+{ value: unknown; previousValue: unknown }
+```
+
+## Source Tracking
+
+The `source` field tracks signal origin:
+
+```typescript
+{
+  name: "analysis:complete",
+  source: {
+    agent: "analyzer",       // Which agent emitted
+    parent: "sig_xyz789",    // Parent signal (trigger)
+  },
+}
+```
+
+Use for causality debugging:
+
+```typescript
+const chain = result.signals.filter(s => s.source?.parent === targetId);
+```
+
+## Creating Signals
+
+Harnesses create signals using `createSignal`:
+
+```typescript
+import { createSignal } from "@open-harness/core";
+
+yield createSignal("harness:start", { model: "my-model" });
+yield createSignal("text:delta", { content: "Hello" });
+yield createSignal("harness:end", { usage: { inputTokens: 10, outputTokens: 5 } });
+```
+
+## Working with Signals
+
+### Filter by Name
+
+```typescript
+const agentSignals = result.signals.filter(s => s.name.startsWith("agent:"));
+```
+
+### Extract Text
+
+```typescript
+const textComplete = result.signals.find(s => s.name === "text:complete");
+const output = textComplete?.payload.content;
+```
+
+### Calculate Totals
+
+```typescript
+const totalTokens = result.signals
+  .filter(s => s.name === "harness:end")
+  .reduce((sum, s) => {
+    const usage = s.payload.usage || { inputTokens: 0, outputTokens: 0 };
+    return sum + usage.inputTokens + usage.outputTokens;
+  }, 0);
+```
+
+## Type Guards
+
+Use type guards for type-safe access:
+
+```typescript
+function isHarnessEnd(signal: Signal): signal is Signal & { payload: { usage: Usage } } {
+  return signal.name === "harness:end";
+}
+
+const harnessEnds = result.signals.filter(isHarnessEnd);
 ```
 
 ## See Also
 
-- [Events API](/docs/reference/api/events) — Event details
-- [Runtime API](/docs/reference/api/runtime) — Event emission
+<Cards>
+  <Card title="Signal System" href="/docs/concepts/event-system">
+    Conceptual overview
+  </Card>
+  <Card title="runReactive" href="/docs/reference/api/runtime">
+    Execution API
+  </Card>
+  <Card title="Signals Reference" href="/docs/reference/api/events">
+    All signal types
+  </Card>
+</Cards>
