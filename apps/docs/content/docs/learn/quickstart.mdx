@@ -1,94 +1,158 @@
 ---
 title: Quickstart
-description: Run your first Open Harness flow in under 5 minutes
+description: Run your first reactive agent in 5 minutes
 ---
 
 # Quickstart
 
-Build and run a "Hello World" flow in under five minutes.
-
-## What You'll Build
-
-A single-agent flow that takes a name and returns a greeting:
-
-```
-┌────────────────┐
-│  hello.agent   │
-│  (custom node) │
-└────────────────┘
-```
+This guide will get you running a reactive agent in under 5 minutes.
 
 ## Prerequisites
 
-- Bun 1.0+
-- A terminal with access to your project directory
+- [Bun](https://bun.sh) installed
+- Claude Code subscription (for auth) or Anthropic API key
 
-## Step 1: Create a Project
+## Installation
+
+Create a new project and install Open Harness:
 
 ```bash
-mkdir my-first-flow
-cd my-first-flow
+mkdir my-agent && cd my-agent
 bun init -y
-bun add @open-harness/sdk
+bun add @open-harness/core
 ```
 
-## Step 2: Define the Flow
+## Your First Agent
 
-Create `flow.yaml`:
-
-```yaml
-name: hello-world
-nodes:
-  - id: hello
-    type: hello.agent
-    input:
-      name: "{{ flow.input.name }}"
-edges: []
-```
-
-## Step 3: Run It
-
-Create `run.ts`:
+Create `index.ts`:
 
 ```typescript
-import { runFlow, parseFlowYaml } from "@open-harness/sdk";
-import { readFileSync } from "node:fs";
+import { createWorkflow, ClaudeHarness } from "@open-harness/core";
 
-const flow = parseFlowYaml(readFileSync("flow.yaml", "utf-8"));
-const helloAgent = {
-  type: "hello.agent" as const,
-  run: async (_ctx: any, input: { name: string }) => ({ message: `Hello, ${input.name}!` }),
+// 1. Define your state type
+type State = {
+  topic: string;
+  summary: string | null;
 };
 
-const snapshot = await runFlow({
-  flow,
-  registry: { [helloAgent.type]: helloAgent },
-  input: { name: "World" },
+// 2. Create a typed workflow factory
+const { agent, runReactive } = createWorkflow<State>();
+
+// 3. Define a reactive agent
+const summarizer = agent({
+  prompt: `Summarize this topic in 2-3 sentences: {{ state.topic }}`,
+  activateOn: ["workflow:start"],
+  emits: ["summary:complete"],
+  updates: "summary",
 });
 
-console.log("Output:", snapshot.outputs);
+// 4. Run the workflow
+async function main() {
+  const harness = new ClaudeHarness({
+    model: "claude-sonnet-4-20250514",
+  });
+
+  const result = await runReactive({
+    agents: { summarizer },
+    state: {
+      topic: "The history of artificial intelligence",
+      summary: null,
+    },
+    harness,
+    endWhen: (s) => s.summary !== null,
+  });
+
+  console.log("Summary:", result.state.summary);
+  console.log("Duration:", result.metrics.durationMs, "ms");
+}
+
+main();
 ```
 
-Run it:
+## Run It
 
 ```bash
-bun run run.ts
+bun run index.ts
 ```
 
-You should see output similar to:
+You should see output like:
 
 ```
-Output: { hello: { message: "Hello, World!" } }
+Summary: Artificial intelligence research began in the 1950s with pioneers like Alan Turing...
+Duration: 1234 ms
 ```
 
 ## What Just Happened?
 
-1. You defined a flow with a single custom agent node.
-2. You passed that node directly to `runFlow()` (no need to create a registry).
-3. You ran the flow with input.
+Let's break down the signal flow:
+
+```mermaid
+sequenceDiagram
+    participant W as Workflow
+    participant S as Summarizer
+    participant H as Harness
+
+    W->>W: emit workflow:start
+    W->>S: activate (matches activateOn)
+    S->>H: run prompt
+    H-->>S: response
+    S->>W: emit summary:complete
+    S->>W: update state.summary
+    W->>W: endWhen(state) → true
+    W->>W: emit workflow:end
+```
+
+1. **`workflow:start`** - The workflow emits a start signal
+2. **Agent activates** - Summarizer subscribes to `workflow:start`
+3. **Harness runs** - Claude generates the summary
+4. **State updates** - `updates: "summary"` writes the output to state
+5. **Workflow ends** - `endWhen` condition is satisfied
+
+## Key Concepts
+
+### Signal Subscription
+
+Agents declare what signals they react to:
+
+```typescript
+activateOn: ["workflow:start"]  // React to workflow lifecycle
+activateOn: ["analysis:done"]   // React to custom signals
+```
+
+### State Updates
+
+The `updates` field automatically writes agent output to state:
+
+```typescript
+updates: "summary"  // output → state.summary
+```
+
+### Termination
+
+`endWhen` defines when the workflow completes:
+
+```typescript
+endWhen: (state) => state.summary !== null
+```
+
+<Callout type="stuck" title="Are you stuck?">
+**Error: Cannot find module '@open-harness/core'**
+Run `bun install` to install dependencies.
+
+**Error: Authentication failed**
+Open Harness uses Claude Code subscription authentication. Make sure you're running from within Claude Code.
+</Callout>
 
 ## Next Steps
 
-- [Your First Agent](/docs/learn/your-first-agent) — Build a multi-node flow
-- [Runtime API](/docs/reference/api/hub) — Full control with `createHarness()`
-- [Data Bindings](/docs/guides/expressions/bindings) — Pass data between nodes
+<Cards>
+  <Card title="Multi-Agent Workflows" href="/docs/learn/multi-agent-flow">
+    Chain multiple agents together
+  </Card>
+  <Card title="Signal Patterns" href="/docs/concepts/architecture">
+    Learn the signal system in depth
+  </Card>
+  <Card title="Recording & Replay" href="/docs/learn/persistence">
+    Test agents with recorded signals
+  </Card>
+</Cards>

@@ -1,56 +1,95 @@
 ---
-title: Persistence
-description: Add SQLite persistence for state and replay
+title: Recording & Replay
+description: Test workflows with deterministic signal replay
 ---
 
-# Persistence
+# Recording & Replay
 
-Add persistent storage so flows can be paused, resumed, and replayed.
+Record signal traces from live runs and replay them without harness calls — perfect for deterministic testing.
 
-## Why Persistence?
+## Why Recording?
 
-- **Pause/Resume**: Stop a flow and continue later
-- **Replay Testing**: Record events and replay deterministically
-- **Audit Trail**: Full history of all events
+- **Deterministic Tests**: Replay produces identical signal traces every time
+- **No API Calls**: Replay mode injects signals from the recording
+- **CI-Friendly**: Run tests without harness credentials
+- **Debugging**: Inspect exactly what happened during a run
 
-## Configure SQLite Store
+## Record a Run
 
 ```typescript
-import {
-  createRuntime,
-  SqliteRunStore,
-  parseFlowYaml
-} from "@open-harness/sdk";
+import { createWorkflow, ClaudeHarness, MemorySignalStore } from "@open-harness/core";
 
-// Create persistent store
-const store = new SqliteRunStore("./runs.db");
+type State = { input: string; result: string | null };
+const { agent, runReactive } = createWorkflow<State>();
 
-// Create runtime with store
-const runtime = createRuntime({
-  flow,
-  registry,
-  store
+const analyzer = agent({
+  prompt: "Analyze: {{ state.input }}",
+  activateOn: ["workflow:start"],
+  emits: ["analysis:complete"],
+  updates: "result",
 });
 
-// Execute flow - events are persisted
-const snapshot = await runtime.run(input);
+// Create a signal store
+const store = new MemorySignalStore();
 
-// Later: retrieve the run
-const runData = await store.getRun(snapshot.runId);
+// Record mode: signals are stored
+const result = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello world", result: null },
+  harness: new ClaudeHarness(),
+  endWhen: (s) => s.result !== null,
+  recording: {
+    mode: "record",
+    store,
+    name: "analyzer-test",
+    tags: ["unit-test"],
+  },
+});
+
+console.log("Recording ID:", result.recordingId);
+console.log("Signals recorded:", result.signals.length);
 ```
 
-## Run Store Interface
+## Replay a Run
 
 ```typescript
-interface RunStore {
-  // Save an event
-  saveEvent(runId: string, event: RuntimeEvent): Promise<void>;
+// Replay mode: signals injected from recording
+const replayResult = await runReactive({
+  agents: { analyzer },
+  state: { input: "Hello world", result: null },
+  harness: new ClaudeHarness(), // Not called during replay
+  endWhen: (s) => s.result !== null,
+  recording: {
+    mode: "replay",
+    store,
+    recordingId: result.recordingId!, // From previous run
+  },
+});
 
-  // Get all events for a run
-  getEvents(runId: string): Promise<RuntimeEvent[]>;
+// Same result, no API calls
+console.log("Replayed result:", replayResult.state.result);
+```
 
-  // Get run metadata
-  getRun(runId: string): Promise<RunMetadata | null>;
+## Signal Store Interface
+
+```typescript
+interface SignalStore {
+  // Save a recording
+  saveRecording(recording: Recording): Promise<void>;
+
+  // Load a recording
+  loadRecording(id: string): Promise<Recording | null>;
+
+  // List recordings
+  listRecordings(options?: ListOptions): Promise<RecordingMetadata[]>;
+}
+
+interface Recording {
+  id: string;
+  name?: string;
+  tags?: string[];
+  signals: Signal[];
+  createdAt: string;
 }
 ```
 
@@ -58,26 +97,95 @@ interface RunStore {
 
 | Store | Use Case |
 |-------|----------|
-| `MemoryRunStore` | Testing, ephemeral sessions |
-| `SqliteRunStore` | Production, persistence |
+| `MemorySignalStore` | Testing, ephemeral sessions |
+| File-based (coming soon) | Persist recordings to disk |
 
-## Replay for Testing
+## Testing Pattern
+
+Use recording/replay in your tests:
 
 ```typescript
-import { replayRun } from "@open-harness/sdk";
+import { describe, it, expect } from "vitest";
+import { MemorySignalStore } from "@open-harness/core";
 
-// Record a run
-const recording = await recordRun(flow, registry, input);
+describe("Analyzer Agent", () => {
+  const store = new MemorySignalStore();
 
-// Save to fixture
-await writeFile("fixture.json", JSON.stringify(recording));
+  it("records a live run", async () => {
+    const result = await runReactive({
+      // ... config ...
+      recording: { mode: "record", store, name: "test-run" },
+    });
 
-// Replay in tests (no network calls)
-const result = await replayRun(recording);
-expect(result.outputs.agent.text).toContain("Hello");
+    expect(result.recordingId).toBeDefined();
+    expect(result.signals).toContainEqual(
+      expect.objectContaining({ name: "workflow:start" })
+    );
+  });
+
+  it("replays deterministically", async () => {
+    const recordings = await store.listRecordings({ name: "test-run" });
+    const recordingId = recordings[0].id;
+
+    const result = await runReactive({
+      // ... same config ...
+      recording: { mode: "replay", store, recordingId },
+    });
+
+    // Same output every time
+    expect(result.state.result).toBeDefined();
+  });
+});
+```
+
+## VCR-Style Debugging
+
+Use the Player for step-through debugging:
+
+```typescript
+import { Player } from "@open-harness/core";
+
+const recording = await store.loadRecording(recordingId);
+const player = new Player(recording);
+
+// Step through signals
+while (player.hasNext()) {
+  const signal = player.next();
+  console.log(`[${signal.timestamp}] ${signal.name}`, signal.payload);
+}
+
+// Or jump to specific signal
+player.seekTo("agent:completed");
+```
+
+## Signal Trace
+
+Every run returns the full signal trace:
+
+```typescript
+result.signals
+// [
+//   { name: "workflow:start", timestamp: "...", payload: { ... } },
+//   { name: "agent:activated", payload: { agent: "analyzer" } },
+//   { name: "harness:start", payload: { model: "claude-sonnet-4-20250514" } },
+//   { name: "text:delta", payload: { content: "The " } },
+//   { name: "text:delta", payload: { content: "analysis " } },
+//   { name: "harness:end", payload: { ... } },
+//   { name: "analysis:complete", payload: { ... } },
+//   { name: "workflow:end", payload: { ... } },
+// ]
 ```
 
 ## Next Steps
 
-- [Production Deployment](/docs/guides/deployment/production) — Deploy with persistence
-- [Replay Testing](/docs/reference/api/run-store) — Full RunStore API
+<Cards>
+  <Card title="Vitest Matchers" href="/docs/reference/api/events">
+    Signal assertion helpers
+  </Card>
+  <Card title="Architecture" href="/docs/concepts/architecture">
+    Signal system deep dive
+  </Card>
+  <Card title="API Reference" href="/docs/reference">
+    Full API documentation
+  </Card>
+</Cards>

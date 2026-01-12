@@ -1,0 +1,18 @@
+{
+	"type": "object",
+	"properties": {
+		"passed": {
+			"type": "boolean"
+		},
+		"feedback": {
+			"type": "string"
+		},
+		"issues": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			}
+		}
+	},
+	"required": ["passed", "feedback"]
+}

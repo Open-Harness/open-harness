@@ -1,5 +1,5 @@
 ---
-"@open-harness/sdk": minor
+"@open-harness/server": minor
 ---
 
 Add unified flow execution API with smart defaults for reduced boilerplate.

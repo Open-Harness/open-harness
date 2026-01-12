@@ -1,0 +1,15 @@
+{
+	"name": "@internal/client",
+	"private": true,
+	"type": "module",
+	"version": "0.2.0",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@internal/core": "workspace:*",
+		"ai": "^6.0.9",
+		"neverthrow": "^8.2.0",
+		"zod": "^4.3.4"
+	}
+}

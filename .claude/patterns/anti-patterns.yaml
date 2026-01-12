@@ -5,7 +5,7 @@
 # Updated by oharnes.close when crystallizing retrospective decisions.
 # ─────────────────────────────────────────────────────────────────────────────
 
-last_updated: "2025-12-26"
+last_updated: "2026-01-09"
 
 source_retros:
   - specs/003-harness-renderer/retro
@@ -53,6 +53,35 @@ code_patterns:
     recommendation: "Use 'bun run test' to respect package.json config"
     severity: medium
     source: "004-test-infra-audit RC004"
+
+  # Console logging violations
+  - pattern: "console\\.log\\("
+    context: "packages/**/*.ts"
+    issue: "Use structured logger instead of console.log"
+    recommendation: "Import { getLogger } from '@internal/core' and use logger.info()"
+    severity: high
+    source: "logging-infrastructure-2026-01"
+
+  - pattern: "console\\.error\\("
+    context: "packages/**/*.ts"
+    issue: "Use structured logger instead of console.error"
+    recommendation: "Import { getLogger } from '@internal/core' and use logger.error({ err: error }, 'message')"
+    severity: high
+    source: "logging-infrastructure-2026-01"
+
+  - pattern: "console\\.warn\\("
+    context: "packages/**/*.ts"
+    issue: "Use structured logger instead of console.warn"
+    recommendation: "Import { getLogger } from '@internal/core' and use logger.warn()"
+    severity: high
+    source: "logging-infrastructure-2026-01"
+
+  - pattern: "console\\.debug\\("
+    context: "packages/**/*.ts"
+    issue: "Use structured logger instead of console.debug"
+    recommendation: "Import { getLogger } from '@internal/core' and use logger.debug()"
+    severity: medium
+    source: "logging-infrastructure-2026-01"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STRUCTURAL PATTERNS
