@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { MemorySignalStore } from "@open-harness/core";
-import { type CodingAgentState, runCodingAgent, initialState, parseValidationStatus } from "./coding-agent";
+import { type CodingAgentState, runCodingAgent, parseValidationStatus } from "./coding-agent";
 
 /**
  * Level 3: Self-Validation Loop + Recording
