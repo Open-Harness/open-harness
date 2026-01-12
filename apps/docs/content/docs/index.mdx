@@ -1,54 +1,88 @@
 ---
 title: Open Harness
-description: Event-driven workflow orchestration for multi-agent AI systems
+description: Build and test multi-agent AI systems with fixtures and metrics
 ---
 
 # Open Harness
 
-Open Harness is an event-driven workflow execution system for building production multi-agent AI systems.
+Open Harness is a TypeScript framework for building **production-ready multi-agent AI systems** with built-in testing, metrics, and fixture recording.
 
 ## Why Open Harness?
 
-- **Declarative Workflows**: Define agent pipelines in YAML, not imperative code
-- **Full Observability**: Every event flows through a central Hub you can subscribe to
-- **JSONata Expressions**: Powerful data bindings with a proven expression language
-- **Replay Testing**: Record and replay agent interactions for deterministic tests
+| Problem | Solution |
+|---------|----------|
+| LLM calls are expensive to test | **Fixtures**: Record once, replay forever (free, instant) |
+| Agent outputs are unpredictable | **Deterministic replay**: Same fixture = same output |
+| No visibility into agent performance | **Metrics**: Latency, cost, and token usage on every run |
+| Multi-agent coordination is complex | **Harness**: Compose agents with typed edges and shared state |
 
 ## Quick Example
 
-```yaml
-flow:
-  name: research-and-summarize
+```typescript
+import { agent, harness, run } from "@open-harness/core";
 
-nodes:
-  - id: researcher
-    type: claude.agent
-    input:
-      prompt: "Research: {{ flow.input.topic }}"
+// Define agents
+const specAgent = agent({
+  prompt: "Break down PRDs into actionable tasks with acceptance criteria.",
+});
 
-  - id: summarizer
-    type: claude.agent
-    input:
-      prompt: "Summarize this research: {{ researcher.text }}"
+const coderAgent = agent({
+  prompt: "Implement tasks. Include self-validation of your work.",
+});
 
-edges:
-  - from: researcher
-    to: summarizer
+const reviewerAgent = agent({
+  prompt: "Review code against acceptance criteria. APPROVE or REJECT.",
+});
+
+// Compose into a harness
+const specKit = harness({
+  agents: { spec: specAgent, coder: coderAgent, reviewer: reviewerAgent },
+  edges: [
+    { from: "spec", to: "coder" },
+    { from: "coder", to: "reviewer" },
+  ],
+});
+
+// Run with metrics
+const result = await run(specKit, { prompt: "PRD: Build a login form" });
+
+console.log(result.output);           // Reviewer's verdict
+console.log(result.metrics.latencyMs); // Total time
+console.log(result.metrics.cost);      // Total cost across all agents
 ```
+
+## Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Agent** | Single LLM-powered unit with a system prompt and optional state |
+| **Harness** | Composition of agents with edges defining execution order |
+| **Fixture** | Recorded LLM response for deterministic replay in tests |
+| **Metrics** | Automatic tracking of latency, cost, and tokens for every run |
+
+## Learning Path
+
+| Day | Topic | What You Learn |
+|-----|-------|----------------|
+| 1 | [Quickstart](/docs/learn/quickstart) | `agent()` + `run()` basics |
+| 2 | [SpecKit Level 1-2](/docs/learn/speckit-tutorial) | State and fixtures |
+| 3 | [SpecKit Level 3-4](/docs/learn/speckit-tutorial#level-3-self-validation) | Self-validation and multi-agent |
+| 4 | [SpecKit Level 5-6](/docs/learn/speckit-tutorial#level-5-full-3-agent-system) | Full pipelines and advanced fixtures |
+| 5 | [SpecKit Level 7](/docs/learn/speckit-tutorial#level-7-ci-quality-gates) | CI quality gates |
 
 ## Get Started
 
 <Cards>
   <Card title="Quickstart" href="/docs/learn/quickstart">
-    Run your first flow in 5 minutes
+    Build your first agent in 5 minutes
+  </Card>
+  <Card title="SpecKit Tutorial" href="/docs/learn/speckit-tutorial">
+    7-level progressive tutorial
   </Card>
   <Card title="Architecture" href="/docs/concepts/architecture">
-    Understand Hub, Flow, and Channels
+    Understand how Open Harness works
   </Card>
-  <Card title="JSONata Bindings" href="/docs/guides/expressions/bindings">
-    Master the expression language
-  </Card>
-  <Card title="API Reference" href="/docs/reference/api/runtime">
-    Explore the full API
+  <Card title="API Reference" href="/docs/reference">
+    Explore the complete API
   </Card>
 </Cards>
