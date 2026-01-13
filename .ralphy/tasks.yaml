@@ -1,0 +1,179 @@
+# Immer + ProcessManager Implementation
+# Run: ./ralphy.sh --yaml .ralphy/tasks.yaml
+# All tasks sequential (no parallel_group = run one at a time)
+# RULE: Verification gates after every phase
+
+tasks:
+  # ============================================
+  # Phase 0: Branch Consolidation
+  # ============================================
+
+  - title: "Consolidate branches: cherry-pick Agent 5 onto clean base"
+    completed: false
+    details: |
+      1. git stash push -m "WIP before consolidation"
+      2. git reset --hard 21b5865  (CQRS doc commit)
+      3. git cherry-pick 24106cc   (Agent 5's commit)
+      4. bun install
+      5. Verify: packages/internal/core/package.json has "immer"
+      6. Verify: packages/internal/core/src/api/create-workflow.ts has ProcessManager type
+
+  - title: "GATE: Verify Phase 0 - SDK compiles after cherry-pick"
+    completed: false
+    details: |
+      Run ALL THREE checks:
+      1. bun run typecheck
+      2. bun run lint
+      3. bun run test
+
+      Fix any errors before proceeding to Phase 1.
+
+  # ============================================
+  # Phase 1: PRD Workflow Refactor
+  # ============================================
+
+  - title: "Create processes/index.ts with all orchestration logic extracted from reducers"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/processes/index.ts
+
+      Extract all ctx.emit() calls from reducers into process managers.
+      Each process manager receives read-only state and returns Signal[].
+
+      Pattern:
+      - "plan:created" → emit "task:ready" for first task
+      - "task:complete" → emit "discovery:submitted" if discoveries
+      - "task:approved" → emit "milestone:testable" or "task:ready"
+      - "milestone:passed" → emit "task:ready" or "workflow:complete"
+
+      Import: import type { ProcessManagers } from "@internal/core";
+      Export: export const processes: ProcessManagers<PRDWorkflowState> = { ... };
+
+  - title: "Refactor planning.ts reducer: remove ctx.emit, use Immer mutations"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/reducers/planning.ts
+
+      1. Remove ctx parameter from reducer signature
+      2. Remove all ctx.emit() calls (moved to processes)
+      3. Use direct mutations instead of spread operators:
+         - Before: state.planning = { ...state.planning, phase: "x" }
+         - After:  state.planning.phase = "x"
+
+  - title: "Refactor execution.ts reducer: remove ctx.emit, use Immer mutations"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/reducers/execution.ts
+
+      1. Remove ctx parameter
+      2. Remove ctx.emit() calls
+      3. Use Immer mutations
+
+  - title: "Refactor review.ts reducer: remove ctx.emit, use Immer mutations"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/reducers/review.ts
+
+      1. Remove ctx parameter
+      2. Remove ctx.emit() calls
+      3. Use Immer mutations
+
+  - title: "Update reducers/index.ts: remove ReducerContext from type signature"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/reducers/index.ts
+
+      Update SignalReducer type to: (state: TState, signal: Signal) => void
+      No ctx parameter.
+
+  - title: "Update workflow.ts: pass both reducers and processes to runReactive"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/workflow.ts
+
+      1. Import: import { processes } from "./processes/index.js";
+      2. Update runReactive call to include: processes,
+      3. Verify reducers are passed without ctx
+
+  - title: "Export processes from prd-workflow index"
+    completed: false
+    details: |
+      File: packages/prd-workflow/src/index.ts
+
+      Add: export { processes } from "./processes/index.js";
+
+  - title: "GATE: Verify Phase 1 - PRD workflow compiles and tests pass"
+    completed: false
+    details: |
+      Run ALL THREE checks:
+      1. bun run typecheck
+      2. bun run lint
+      3. bun run test
+
+      Fix any errors before proceeding to Phase 2.
+
+  # ============================================
+  # Phase 2: DX Integration Test
+  # ============================================
+
+  - title: "Create dx-integration.test.ts with record/replay test"
+    completed: false
+    details: |
+      File: packages/prd-workflow/tests/dx-integration.test.ts
+
+      Create test that:
+      1. Runs a simple PRD with recording: { mode: "record", store }
+      2. Captures the recordingId
+      3. Runs again with recording: { mode: "replay", recordingId }
+      4. Asserts final state matches
+
+      Use MemorySignalStore from @internal/signals.
+      Use a minimal PRD: "Create a function that returns 'Hello'"
+
+  - title: "Run DX integration test in RECORD mode (live network)"
+    completed: false
+    details: |
+      Run the test to make a real network call and record signals.
+      This creates the fixture.
+
+      Command: bun test packages/prd-workflow/tests/dx-integration.test.ts
+
+      The test should pass and save signals to the MemorySignalStore.
+
+  - title: "Verify REPLAY mode works (no network, deterministic)"
+    completed: false
+    details: |
+      The same test should also verify replay works.
+      After recording, the test replays and compares results.
+
+      Success criteria:
+      - Replay produces identical final state
+      - Replay produces identical signal history
+      - Replay is instant (no network calls)
+
+  - title: "GATE: Verify Phase 2 - Full test suite passes with DX test"
+    completed: false
+    details: |
+      Run ALL THREE checks:
+      1. bun run typecheck
+      2. bun run lint
+      3. bun run test
+
+      All tests including the new dx-integration.test.ts must pass.
+
+  # ============================================
+  # Phase 3: Commit
+  # ============================================
+
+  - title: "Commit all changes with descriptive message"
+    completed: false
+    details: |
+      git add .
+      git commit -m "feat(core): add Immer + ProcessManager for CQRS state management
+
+      - Add Immer for clean state mutations (no spread operator nesting)
+      - Add ProcessManager type for orchestration (CQRS separation)
+      - Refactor PRD workflow to use new patterns
+      - Add DX integration test with record/replay verification
+
+      Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"

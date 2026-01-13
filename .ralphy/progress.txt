@@ -1,0 +1,5 @@
+# Ralphy Progress Log
+# Feature: Immer + ProcessManager State Management
+# Branch: feat/immer-signals-state-management
+# Started: 2026-01-18
+
