@@ -9,7 +9,7 @@ tasks:
   # ============================================
 
   - title: "Consolidate branches: cherry-pick Agent 5 onto clean base"
-    completed: false
+    completed: true
     details: |
       1. git stash push -m "WIP before consolidation"
       2. git reset --hard 21b5865  (CQRS doc commit)
@@ -17,9 +17,16 @@ tasks:
       4. bun install
       5. Verify: packages/internal/core/package.json has "immer"
       6. Verify: packages/internal/core/src/api/create-workflow.ts has ProcessManager type
+    notes: |
+      Commit 24106cc not found in repository. Implemented from scratch:
+      - Added immer@11.1.3 dependency to @internal/core
+      - Created ProcessManager and ProcessManagers types for CQRS orchestration
+      - Updated reducers to use Immer's produce() for clean state mutations
+      - Added processes field to ReactiveWorkflowConfig
+      - Exported all new types from API index
 
   - title: "GATE: Verify Phase 0 - SDK compiles after cherry-pick"
-    completed: false
+    completed: true
     details: |
       Run ALL THREE checks:
       1. bun run typecheck
@@ -27,6 +34,11 @@ tasks:
       3. bun run test
 
       Fix any errors before proceeding to Phase 1.
+    notes: |
+      All gates passed:
+      - typecheck: 14 packages checked, 0 errors
+      - lint: 13 packages linted, no fixes needed
+      - test: 10 test suites, all passed (123 + 6 + 5 + 45 tests)
 
   # ============================================
   # Phase 1: PRD Workflow Refactor

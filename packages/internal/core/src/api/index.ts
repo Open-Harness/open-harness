@@ -80,6 +80,11 @@ export {
 	type ReactiveWorkflowConfig,
 	type ReactiveWorkflowResult,
 	type WorkflowFactory,
+	// v0.3.1 CQRS Pattern Types
+	type SignalReducer,
+	type SignalReducers,
+	type ProcessManager,
+	type ProcessManagers,
 } from "./create-workflow.js";
 
 // v0.3.0 Template Engine (F2)

@@ -44,6 +44,7 @@ import type { ZodType } from "zod";
 import type { Signal, Harness as SignalHarness } from "@internal/signals-core";
 import type { SignalPattern, SignalStore, Recording } from "@internal/signals";
 import type { SignalRecordingOptions } from "./run-reactive.js";
+import { produce } from "immer";
 
 // ============================================================================
 // Timeout Error
@@ -255,6 +256,7 @@ export type ReactiveWorkflowConfig<TState> = {
 	 *
 	 * Reducers are called when matching signals are emitted,
 	 * allowing state mutations based on signal payloads.
+	 * Reducers run within Immer's `produce`, enabling direct mutations.
 	 *
 	 * Use for:
 	 * - Cross-cutting state updates
@@ -268,6 +270,7 @@ export type ReactiveWorkflowConfig<TState> = {
 	 *   state: { greeting: null, count: 0 },
 	 *   reducers: {
 	 *     "greeting:transformed": (state, signal) => {
+	 *       // Direct mutation (Immer handles immutability)
 	 *       state.greeting = signal.payload.output as string;
 	 *       state.count++;
 	 *     }
@@ -276,11 +279,53 @@ export type ReactiveWorkflowConfig<TState> = {
 	 * ```
 	 */
 	reducers?: SignalReducers<TState>;
+
+	/**
+	 * Process managers for orchestration logic (CQRS pattern).
+	 *
+	 * Process managers are called AFTER reducers, receiving read-only state
+	 * and returning signals to emit. This separates:
+	 * - Reducers: State mutations (command side)
+	 * - Processes: Signal emission (query side)
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await runReactive({
+	 *   agents: { planner, executor },
+	 *   state: { tasks: [], currentTask: null },
+	 *   reducers: {
+	 *     "plan:created": (state, signal) => {
+	 *       state.tasks = signal.payload.tasks;
+	 *     }
+	 *   },
+	 *   processes: {
+	 *     "plan:created": (state, signal) => {
+	 *       // Emit signal for first pending task
+	 *       const first = state.tasks.find(t => t.status === "pending");
+	 *       return first ? [createSignal("task:ready", { taskId: first.id })] : [];
+	 *     }
+	 *   }
+	 * })
+	 * ```
+	 */
+	processes?: ProcessManagers<TState>;
 };
 
 /**
  * Signal reducer function type.
  * Receives mutable state and the triggering signal.
+ *
+ * Reducers are called within an Immer producer, so you can mutate
+ * state directly without spread operators:
+ *
+ * @example
+ * ```ts
+ * const reducer: SignalReducer<MyState> = (state, signal) => {
+ *   // Direct mutation (Immer handles immutability)
+ *   state.planning.phase = "executing";
+ *   state.tasks[0].status = "complete";
+ * };
+ * ```
  */
 export type SignalReducer<TState> = (state: TState, signal: Signal) => void;
 
@@ -288,6 +333,86 @@ export type SignalReducer<TState> = (state: TState, signal: Signal) => void;
  * Map of signal patterns to reducer functions.
  */
 export type SignalReducers<TState> = Record<string, SignalReducer<TState>>;
+
+// ============================================================================
+// Process Manager Types (CQRS Orchestration)
+// ============================================================================
+
+/**
+ * Process manager function type for CQRS orchestration.
+ *
+ * Process managers are the "query" side of CQRS - they observe state changes
+ * and decide what signals to emit for orchestration, without mutating state.
+ *
+ * Key principles:
+ * - Receives **read-only** state (no mutations allowed)
+ * - Receives the triggering signal for context
+ * - Returns an array of signals to emit
+ * - Must be **pure functions** (deterministic, no side effects)
+ *
+ * @example
+ * ```ts
+ * const onPlanCreated: ProcessManager<PRDState> = (state, signal) => {
+ *   // Find first pending task and emit ready signal
+ *   const firstTask = state.tasks.find(t => t.status === "pending");
+ *   if (firstTask) {
+ *     return [createSignal("task:ready", { taskId: firstTask.id })];
+ *   }
+ *   return [];
+ * };
+ * ```
+ *
+ * @example Chaining signals
+ * ```ts
+ * const onTaskComplete: ProcessManager<PRDState> = (state, signal) => {
+ *   const allComplete = state.tasks.every(t => t.status === "complete");
+ *   if (allComplete) {
+ *     return [createSignal("milestone:testable", { milestone: state.currentMilestone })];
+ *   }
+ *   // Find next pending task
+ *   const nextTask = state.tasks.find(t => t.status === "pending");
+ *   if (nextTask) {
+ *     return [createSignal("task:ready", { taskId: nextTask.id })];
+ *   }
+ *   return [];
+ * };
+ * ```
+ */
+export type ProcessManager<TState> = (
+	state: Readonly<TState>,
+	signal: Signal,
+) => Signal[];
+
+/**
+ * Map of signal patterns to process manager functions.
+ *
+ * Process managers handle orchestration logic separately from state mutations:
+ * - Reducers: Update state (command side)
+ * - ProcessManagers: Emit signals (query side)
+ *
+ * This separation enables:
+ * - Easier testing of orchestration logic
+ * - Clear separation of concerns
+ * - Deterministic signal emission
+ *
+ * @example
+ * ```ts
+ * const processes: ProcessManagers<PRDState> = {
+ *   "plan:created": (state, signal) => {
+ *     const first = state.tasks.find(t => t.status === "pending");
+ *     return first ? [createSignal("task:ready", { taskId: first.id })] : [];
+ *   },
+ *   "task:complete": (state, signal) => {
+ *     // Check if discoveries need review
+ *     if (state.pendingDiscoveries.length > 0) {
+ *       return [createSignal("discovery:submitted", { count: state.pendingDiscoveries.length })];
+ *     }
+ *     return [];
+ *   },
+ * };
+ * ```
+ */
+export type ProcessManagers<TState> = Record<string, ProcessManager<TState>>;
 
 /**
  * Result from running a reactive workflow.
@@ -473,10 +598,27 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 		const pending = new Set<Promise<void>>();
 
 		// Subscribe reducers to apply state mutations on matching signals
+		// Reducers run within Immer's produce for clean mutations
 		const reducers = config.reducers ?? {};
 		for (const [signalPattern, reducer] of Object.entries(reducers)) {
 			bus.subscribe([signalPattern], (signal) => {
-				reducer(state, signal);
+				// Use Immer's produce for immutable updates with mutable syntax
+				state = produce(state, (draft) => {
+					reducer(draft as TState, signal);
+				});
+			});
+		}
+
+		// Subscribe process managers for orchestration (CQRS pattern)
+		// Process managers run AFTER reducers and emit derived signals
+		const processes = config.processes ?? {};
+		for (const [signalPattern, processManager] of Object.entries(processes)) {
+			bus.subscribe([signalPattern], (signal) => {
+				// Process managers receive read-only state and return signals to emit
+				const signalsToEmit = processManager(state as Readonly<TState>, signal);
+				for (const derivedSignal of signalsToEmit) {
+					bus.emit(derivedSignal);
+				}
 			});
 		}
 
