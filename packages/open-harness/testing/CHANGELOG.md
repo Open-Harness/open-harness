@@ -1,8 +1,21 @@
 ---
+
+## 1.0.0-alpha.3
+### Patch Changes
+
+- fix: resolve npm publishing issues
+  
+  - Fixed workspace:* protocol leaking to published packages
+  - Fixed entry points pointing to TypeScript source instead of dist/
+  - Moved bundled internal dependencies to devDependencies
+  - Updated @open-harness/vitest to import from @open-harness/core
+- Updated dependencies
+  - @open-harness/core@1.0.0-alpha.3
 lastUpdated: "2026-01-11T22:24:30.758Z"
 lastCommit: "d9135fcfeffa2f6fcee18474af588d736159f828"
 lastCommitDate: "2026-01-11T22:24:09Z"
 ---
+
 # @open-harness/testing
 
 ## 1.0.0-alpha.2

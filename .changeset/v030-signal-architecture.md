@@ -6,8 +6,6 @@
 "@open-harness/stores": major
 "@open-harness/testing": major
 "@open-harness/vitest": major
-"@open-harness/claude": major
-"@open-harness/openai": major
 ---
 
 Signal-based reactive architecture (v0.3.0)

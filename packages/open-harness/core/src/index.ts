@@ -8,6 +8,8 @@ export {
 	attachReporter,
 	attachReporters,
 	type Checkpoint,
+	// Pattern matching utilities
+	compilePattern,
 	createConsoleReporter,
 	createEmptySnapshot,
 	createMetricsReporter,

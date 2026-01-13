@@ -1,5 +1,14 @@
 # @examples/speckit
 
+## 0.0.1-alpha.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @open-harness/core@1.0.0-alpha.3
+  - @open-harness/server@1.0.0-alpha.3
+  - @open-harness/stores@1.0.0-alpha.3
+
 ## 0.0.1-alpha.0
 
 ### Patch Changes

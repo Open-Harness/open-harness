@@ -12,6 +12,7 @@
  */
 
 import { ClaudeHarness, createWorkflow } from "@open-harness/core";
+import { render } from "../lib/render.js";
 
 // =============================================================================
 // 1. Define state type for trading workflow
@@ -243,8 +244,7 @@ Only output the JSON, nothing else.`,
 // =============================================================================
 
 async function main() {
-	console.log("=== Trading Agent Example ===\n");
-	console.log("Demonstrating parallel execution, signal chaining, and guard conditions.\n");
+	render.banner("Trading Agent Example", "Demonstrating parallel execution, signal chaining, and guard conditions.");
 
 	const harness = new ClaudeHarness({
 		model: "claude-sonnet-4-20250514",
@@ -316,15 +316,15 @@ async function main() {
 	});
 
 	// =============================================================================
-	// 5. Display results
+	// 5. Display results (user-facing output via render)
 	// =============================================================================
 
-	console.log("=== Execution Summary ===\n");
-	console.log(`Duration: ${result.metrics.durationMs}ms`);
-	console.log(`Agent Activations: ${result.metrics.activations}`);
-	console.log(`Terminated Early: ${result.terminatedEarly}`);
+	render.section("Execution Summary");
+	render.metric("Duration", `${result.metrics.durationMs}ms`);
+	render.metric("Agent Activations", result.metrics.activations);
+	render.metric("Terminated Early", result.terminatedEarly);
 
-	console.log("\n=== Signal Flow ===\n");
+	render.section("Signal Flow");
 	const agentSignals = result.signals.filter(
 		(s) =>
 			s.name.startsWith("agent:") ||
@@ -338,59 +338,63 @@ async function main() {
 	for (const signal of agentSignals) {
 		const payload = signal.payload as Record<string, unknown>;
 		const agent = payload?.agent ?? "system";
-		console.log(`[${agent}] ${signal.name}`);
+		render.text(`[${agent}] ${signal.name}`);
 	}
 
-	console.log("\n=== Final State ===\n");
+	render.section("Final State");
 	const { analysis, risk, proposal, review, execution } = result.state;
 
 	if (analysis) {
-		console.log(`Market Analysis:`);
-		console.log(`  Trend: ${analysis.trend} (${analysis.confidence}% confidence)`);
-		console.log(`  Summary: ${analysis.summary}`);
+		render.text("Market Analysis:");
+		render.metric("  Trend", `${analysis.trend} (${analysis.confidence}% confidence)`);
+		render.metric("  Summary", analysis.summary);
 	}
 
 	if (risk) {
-		console.log(`\nRisk Assessment:`);
-		console.log(`  Level: ${risk.level}`);
-		console.log(`  Max Position: $${risk.maxPosition}`);
+		render.blank();
+		render.text("Risk Assessment:");
+		render.metric("  Level", risk.level);
+		render.metric("  Max Position", `$${risk.maxPosition}`);
 		if (risk.warnings.length > 0) {
-			console.log(`  Warnings: ${risk.warnings.join(", ")}`);
+			render.metric("  Warnings", risk.warnings.join(", "));
 		}
 	}
 
 	if (proposal) {
-		console.log(`\nTrade Proposal:`);
-		console.log(`  Action: ${proposal.action}`);
-		console.log(`  Quantity: ${proposal.quantity}`);
-		console.log(`  Price: $${proposal.price}`);
-		console.log(`  Reason: ${proposal.reason}`);
+		render.blank();
+		render.text("Trade Proposal:");
+		render.metric("  Action", proposal.action);
+		render.metric("  Quantity", proposal.quantity);
+		render.metric("  Price", `$${proposal.price}`);
+		render.metric("  Reason", proposal.reason);
 	}
 
 	if (review) {
-		console.log(`\nReview Decision:`);
-		console.log(`  Approved: ${review.approved}`);
-		console.log(`  Feedback: ${review.feedback}`);
+		render.blank();
+		render.text("Review Decision:");
+		render.metric("  Approved", review.approved);
+		render.metric("  Feedback", review.feedback);
 	}
 
 	if (execution) {
-		console.log(`\nExecution Result:`);
-		console.log(`  Order ID: ${execution.orderId}`);
-		console.log(`  Status: ${execution.status}`);
-		console.log(`  Timestamp: ${execution.timestamp}`);
+		render.blank();
+		render.text("Execution Result:");
+		render.metric("  Order ID", execution.orderId);
+		render.metric("  Status", execution.status);
+		render.metric("  Timestamp", execution.timestamp);
 	}
 
 	// Outcome summary
-	console.log("\n=== Outcome ===\n");
+	render.section("Outcome");
 	if (execution?.status === "filled") {
-		console.log("Trade executed successfully.");
+		render.text("Trade executed successfully.");
 	} else if (review?.approved === false) {
-		console.log("Trade rejected by reviewer.");
+		render.text("Trade rejected by reviewer.");
 	} else if (proposal?.action === "hold") {
-		console.log("Decided to hold - no trade executed.");
+		render.text("Decided to hold - no trade executed.");
 	} else {
-		console.log("Workflow completed without execution.");
+		render.text("Workflow completed without execution.");
 	}
 }
 
-main().catch(console.error);
+main().catch((err) => render.error(err.message));
