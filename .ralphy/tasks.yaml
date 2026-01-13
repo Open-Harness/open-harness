@@ -45,7 +45,7 @@ tasks:
   # ============================================
 
   - title: "Create processes/index.ts with all orchestration logic extracted from reducers"
-    completed: false
+    completed: true
     details: |
       File: packages/prd-workflow/src/processes/index.ts
 
@@ -60,6 +60,24 @@ tasks:
 
       Import: import type { ProcessManagers } from "@internal/core";
       Export: export const processes: ProcessManagers<PRDWorkflowState> = { ... };
+    notes: |
+      Created complete PRD workflow package from scratch:
+      - packages/prd-workflow/package.json - Package configuration with dependencies
+      - packages/prd-workflow/tsconfig.json - TypeScript configuration
+      - packages/prd-workflow/src/types.ts - PRDWorkflowState, Task, Milestone types
+      - packages/prd-workflow/src/processes/index.ts - CQRS process managers
+      - packages/prd-workflow/src/index.ts - Package exports
+      - packages/prd-workflow/tests/processes.test.ts - 12 tests, all passing
+
+      Process managers implemented:
+      - plan:created → task:ready or workflow:complete
+      - task:complete → discovery:submitted if discoveries
+      - task:approved → milestone:testable or task:ready
+      - milestone:passed → task:ready or workflow:complete
+      - milestone:failed → fix:required or milestone:retry
+      - discovery:reviewed → task:approved
+
+      All gates passed: typecheck, lint, and 12 tests
 
   - title: "Refactor planning.ts reducer: remove ctx.emit, use Immer mutations"
     completed: false

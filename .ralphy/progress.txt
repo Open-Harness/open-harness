@@ -42,3 +42,49 @@ Implemented the Immer + ProcessManager pattern from scratch.
 - `bun run lint` - 13 packages, no fixes needed
 - `bun run test` - 10 suites, 179+ tests passed
 
+## 2026-01-19 - Phase 1: PRD Workflow Refactor (IN PROGRESS)
+
+### Task: Create processes/index.ts with orchestration logic
+
+**Context**: The prd-workflow package was essentially empty. Created the complete package
+structure from scratch following the CQRS pattern documented in Phase 0.
+
+**Files Created**:
+
+1. **packages/prd-workflow/package.json**
+   - Package configuration for @internal/prd-workflow
+   - Dependencies: @internal/core, @internal/signals, @internal/signals-core, immer, zod
+   - Scripts: test, typecheck, lint
+
+2. **packages/prd-workflow/tsconfig.json**
+   - TypeScript configuration extending root config
+
+3. **packages/prd-workflow/src/types.ts**
+   - `PRDWorkflowState` - Main state interface with planning, execution, review slices
+   - `Task`, `Milestone`, `DiscoveredTask` - Domain types
+   - `PlanningPhase`, `ExecutionPhase`, `ReviewPhase` - State machine phases
+   - `createInitialState()` - Factory function
+
+4. **packages/prd-workflow/src/processes/index.ts**
+   - Process managers implementing CQRS orchestration pattern
+   - Signal handlers:
+     - `plan:created` → `task:ready` (first task) or `workflow:complete` (no tasks)
+     - `task:complete` → `discovery:submitted` (if discoveries exist)
+     - `task:approved` → `milestone:testable` (all tasks done) or `task:ready` (next task)
+     - `milestone:passed` → `workflow:complete` (all done) or `task:ready` (next)
+     - `milestone:failed` → `fix:required` or `milestone:retry`
+     - `discovery:reviewed` → `task:approved`
+   - Helper functions for task/milestone queries
+
+5. **packages/prd-workflow/src/index.ts**
+   - Package exports: types, createInitialState, processes
+
+6. **packages/prd-workflow/tests/processes.test.ts**
+   - 12 tests covering all process managers
+   - Tests for edge cases: empty tasks, skipped tasks, milestone completion
+
+### GATE: Verification Passed
+- `bun run typecheck` - 15 packages (including new prd-workflow), 0 errors
+- `bun run lint` - 14 packages, no fixes needed
+- `bun run test` - 11 suites, all passed (including 12 new process tests)
+
