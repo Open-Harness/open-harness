@@ -3,9 +3,9 @@ import type { Level } from "pino";
 /**
  * Logger configuration options.
  *
- * Defaults:
- * - File logging: ON (for debugging)
- * - Console logging: OFF (opt-in)
+ * Defaults (v3.1 - batteries included):
+ * - Console logging: ON (see what's happening immediately)
+ * - File logging: OFF (opt-in for persistence)
  * - Level: "info"
  * - Log directory: ".open-harness/logs"
  */
@@ -18,7 +18,7 @@ export interface LoggerConfig {
 
 	/**
 	 * Enable file logging (JSONL format).
-	 * @default true
+	 * @default false
 	 */
 	file: boolean;
 
@@ -48,7 +48,7 @@ export interface LoggerConfig {
 
 	/**
 	 * Enable pretty console output.
-	 * @default false
+	 * @default true
 	 */
 	console: boolean;
 
@@ -62,18 +62,19 @@ export interface LoggerConfig {
 /**
  * Default logger configuration.
  *
- * - File logging ON by default (for debugging)
- * - Console logging OFF by default (opt-in)
- * - 10MB rotation, keep 5 files (50MB max)
+ * v3.1 "Batteries included" defaults:
+ * - Console logging ON (see what's happening immediately)
+ * - File logging OFF (opt-in for persistence)
+ * - 10MB rotation, keep 5 files (50MB max when enabled)
  */
 export const DEFAULT_CONFIG: LoggerConfig = {
 	level: "info",
-	file: true,
+	file: false,
 	logDir: ".open-harness/logs",
 	fileName: "harness.log",
 	maxFileSize: 10 * 1024 * 1024, // 10MB
 	maxFiles: 5,
-	console: false,
+	console: true,
 	disabled: false,
 };
 
@@ -82,9 +83,9 @@ export const DEFAULT_CONFIG: LoggerConfig = {
  *
  * Environment variables:
  * - LOG_LEVEL: "trace" | "debug" | "info" | "warn" | "error" | "fatal"
- * - LOG_FILE: "true" | "false" (default: true)
+ * - LOG_FILE: "true" | "false" (default: false)
  * - LOG_DIR: Custom log directory path
- * - LOG_CONSOLE: "true" | "false" (default: false)
+ * - LOG_CONSOLE: "true" | "false" (default: true)
  * - LOG_DISABLED: "true" | "false" (default: false)
  */
 export function loadConfigFromEnv(

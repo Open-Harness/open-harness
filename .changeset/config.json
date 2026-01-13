@@ -10,14 +10,15 @@
       "@open-harness/react",
       "@open-harness/stores",
       "@open-harness/testing",
-      "@open-harness/vitest",
-      "@open-harness/claude",
-      "@open-harness/openai"
+      "@open-harness/vitest"
     ]
   ],
   "linked": [],
   "access": "public",
   "baseBranch": "dev",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [
+    "@open-harness/claude",
+    "@open-harness/openai"
+  ]
 }

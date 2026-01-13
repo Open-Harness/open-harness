@@ -1,5 +1,5 @@
 {
-	"name": "@examples/simple-reactive",
+	"name": "@examples/test-logging",
 	"version": "0.0.1-alpha.1",
 	"private": true,
 	"type": "module",

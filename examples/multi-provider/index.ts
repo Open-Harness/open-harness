@@ -10,6 +10,7 @@
  */
 
 import { ClaudeHarness, CodexHarness, createWorkflow } from "@open-harness/core";
+import { render } from "../lib/render.js";
 
 // =============================================================================
 // 1. Define state type
@@ -115,8 +116,7 @@ Output only the summary sentence, nothing else.`,
 // =============================================================================
 
 async function main() {
-	console.log("=== Multi-Provider Example ===\n");
-	console.log("Demonstrating Claude + Codex in a single workflow.\n");
+	render.banner("Multi-Provider Example", "Demonstrating Claude + Codex in a single workflow.");
 
 	const sampleCode = `
 function fetchUser(id) {
@@ -134,17 +134,18 @@ function fetchUser(id) {
 		},
 		// No default provider - each agent has its own
 		endWhen: (state) => state.summary !== null,
+		// Infrastructure logging happens automatically via Pino
 	});
 
 	// =============================================================================
-	// 6. Display results
+	// 6. Display results (user-facing output via render)
 	// =============================================================================
 
-	console.log("=== Execution Summary ===\n");
-	console.log(`Duration: ${result.metrics.durationMs}ms`);
-	console.log(`Agent Activations: ${result.metrics.activations}`);
+	render.section("Execution Summary");
+	render.metric("Duration", `${result.metrics.durationMs}ms`);
+	render.metric("Agent Activations", result.metrics.activations);
 
-	console.log("\n=== Signal Flow ===\n");
+	render.section("Signal Flow");
 	const relevantSignals = result.signals.filter(
 		(s) => s.name.startsWith("agent:") || s.name.startsWith("harness:") || s.name.includes(":complete"),
 	);
@@ -153,32 +154,32 @@ function fetchUser(id) {
 		const agent = payload?.agent ?? "system";
 		const source = (signal.source as Record<string, unknown>)?.provider;
 		const providerInfo = source ? ` [${source}]` : "";
-		console.log(`[${agent}]${providerInfo} ${signal.name}`);
+		render.text(`[${agent}]${providerInfo} ${signal.name}`);
 	}
 
-	console.log("\n=== Provider Usage ===\n");
+	render.section("Provider Usage");
 	const providerStarts = result.signals.filter((s) => s.name === "harness:start");
-	for (const signal of providerStarts) {
-		const source = signal.source as Record<string, unknown>;
-		console.log(`- ${source?.provider ?? "unknown"}`);
-	}
+	render.list(providerStarts.map((s) => {
+		const source = s.source as Record<string, unknown>;
+		return source?.provider as string ?? "unknown";
+	}));
 
-	console.log("\n=== Code Reviewed ===\n");
-	console.log(sampleCode.trim());
+	render.section("Code Reviewed");
+	render.text(sampleCode.trim());
 
-	console.log("\n=== Analysis (Claude) ===\n");
+	render.section("Analysis (Claude)");
 	const analysisSignal = result.signals.find((s) => s.name === "analysis:complete");
 	if (analysisSignal) {
 		const payload = analysisSignal.payload as Record<string, unknown>;
-		console.log(JSON.stringify(payload.output, null, 2));
+		render.json(payload.output);
 	}
 
-	console.log("\n=== Summary (Codex) ===\n");
+	render.section("Summary (Codex)");
 	const summarySignal = result.signals.find((s) => s.name === "summary:complete");
 	if (summarySignal) {
 		const payload = summarySignal.payload as Record<string, unknown>;
-		console.log(payload.output);
+		render.text(payload.output as string);
 	}
 }
 
-main().catch(console.error);
+main().catch((err) => render.error(err.message));
