@@ -531,3 +531,81 @@ avoid collision. This allows:
 
 **Conclusion**: Phase 1 (SDK Core - Handler Type) complete. Ready to proceed with Phase 2 (SQLite Signal Store).
 
+## 2026-01-19 - Phase 2: SQLite Signal Store (IN PROGRESS)
+
+### Task: Phase 2.1 - Create SqliteSignalStore implementation
+
+**Context**: The codebase only had MemorySignalStore (ephemeral, in-memory). We needed
+SqliteSignalStore for persistent recordings that survive process restarts.
+
+**Decision: Bun's Native SQLite vs better-sqlite3**:
+The tasks.yaml suggested using better-sqlite3, but this is a Bun project (bun@1.3.3).
+Bun has built-in SQLite support via `bun:sqlite` which provides:
+- Zero external dependencies
+- Native Bun integration
+- Better performance
+- Same synchronous API as better-sqlite3
+
+**Files Created**:
+
+1. **packages/open-harness/stores/src/sqlite-store.ts**
+   - Implements full `SignalStore` interface from `@internal/signals`
+   - Uses Bun's native `bun:sqlite` module
+   - 12 methods: create, append, appendBatch, checkpoint, getCheckpoints,
+     finalize, load, loadSignals, list, delete, exists, close
+   - SQLite schema with 3 tables: recordings, signals, checkpoints
+   - Pattern matching for signal filtering (using regex in memory)
+   - Transaction support for atomic batch operations
+
+2. **packages/open-harness/stores/tests/sqlite-store.test.ts**
+   - 33 comprehensive tests covering all 12 interface methods
+   - Tests for edge cases: nonexistent recordings, finalized recordings
+   - Persistence test verifying data survives across store instances
+   - Uses temp database files with cleanup in afterEach
+
+**Key Implementation Details**:
+
+1. **ID Generation**: `rec_${crypto.randomUUID().slice(0, 8)}`
+
+2. **Schema Tables**:
+   - `recordings`: metadata (id, name, tags, harness_type, created_at, etc.)
+   - `signals`: signal data (recording_id, signal_index, signal_id, name, payload, timestamp, source)
+   - `checkpoints`: checkpoint markers (recording_id, name, signal_index, timestamp)
+
+3. **Signal Serialization**:
+   - `payload` stored as JSON string
+   - `source` (SignalSource object) stored as JSON string
+   - Full Signal interface preserved: id, name, payload, timestamp, source
+
+4. **Bun SQLite Quirks Discovered**:
+   - `stmt.get()` returns `null` (not `undefined`) when no row found
+   - `OFFSET` requires `LIMIT` in SQLite (use `LIMIT -1` for unlimited)
+
+**Updated Package Exports** (`packages/open-harness/stores/src/index.ts`):
+- Added: `export { SqliteSignalStore } from "./sqlite-store.js";`
+
+### Task: Phase 2.2 - Add SqliteSignalStore unit tests
+
+**Context**: Tests were written as part of Phase 2.1 implementation.
+
+**Test Coverage** (33 tests):
+- Constructor: database and table creation
+- create(): unique ID generation, metadata storage
+- append(): signal storage, error handling for missing/finalized recordings
+- appendBatch(): atomic multi-signal insert
+- checkpoint(): checkpoint creation at signal index
+- getCheckpoints(): ordered checkpoint retrieval
+- finalize(): metadata update with duration
+- load(): complete recording retrieval with all signals
+- loadSignals(): fromIndex, toIndex, pattern filters
+- list(): harnessType filter, tags filter, limit, offset, newest-first ordering
+- delete(): cascade deletion of recording + signals + checkpoints
+- exists(): boolean existence check
+- persistence: data survives across store instances
+
+### GATE: Phase 2.1 & 2.2 Verification Passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 12 test tasks, ALL passed
+  - 33 new SqliteSignalStore tests, ALL passed
+
