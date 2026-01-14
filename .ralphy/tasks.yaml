@@ -178,7 +178,7 @@ tasks:
       git add -A && git commit -m "feat(core): add SignalHandler type for unified state+signal handling"
 
   - title: "Phase 1.2: Export SignalHandler from public packages"
-    completed: false
+    completed: true
     details: |
       CONTEXT: The SignalHandler type needs to be available from @open-harness/core.
 
