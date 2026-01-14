@@ -88,3 +88,43 @@ structure from scratch following the CQRS pattern documented in Phase 0.
 - `bun run lint` - 14 packages, no fixes needed
 - `bun run test` - 11 suites, all passed (including 12 new process tests)
 
+### Task: Refactor planning.ts reducer - remove ctx.emit, use Immer mutations
+
+**Context**: Created the planning reducer module following CQRS command-side pattern.
+Reducers handle state mutations; orchestration signals already handled by process managers.
+
+**Files Created**:
+
+1. **packages/prd-workflow/src/reducers/planning.ts**
+   - 4 reducers using Immer Draft pattern for type-safe direct mutations
+   - `planStartReducer` - Transitions to "planning" phase, optionally updates PRD
+   - `planCreatedReducer` - Stores tasks, milestones, taskOrder; transitions to "plan_complete"
+   - `discoverySubmittedReducer` - Stores discoveries; transitions to "discovery_review"
+   - `discoveryReviewedReducer` - Adds accepted tasks to plan; clears discoveries
+
+2. **packages/prd-workflow/src/reducers/index.ts**
+   - Combined exports for all reducers
+   - `reducers: SignalReducers<PRDWorkflowState>` - Main export
+   - Re-exports individual reducer modules for granular testing
+
+3. **packages/prd-workflow/tests/reducers/planning.test.ts**
+   - 16 tests covering all 4 reducers
+   - Uses Immer's produce() to simulate workflow engine behavior
+   - Tests state mutations, phase transitions, and data storage
+
+**Key Implementation Pattern**:
+```typescript
+export const myReducer: SignalReducer<PRDWorkflowState> = (state, signal) => {
+  const draft = state as Draft<PRDWorkflowState>;  // Type-safe cast
+  draft.planning.phase = "new_phase";  // Direct mutations via Immer
+};
+```
+
+**Updated Package Exports** (`packages/prd-workflow/src/index.ts`):
+- Added: `export { reducers, planningReducers } from "./reducers/index.js";`
+
+### GATE: Verification Passed
+- `bun run typecheck` - 15 packages, 0 errors
+- `bun run lint` - 14 packages, no issues
+- `bun run test` - 11 suites, 28 prd-workflow tests (12 process + 16 reducer)
+
