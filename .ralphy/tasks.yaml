@@ -57,7 +57,7 @@ tasks:
       - All changes committed
 
   - title: "Phase 0.2: GATE - Verify clean baseline"
-    completed: false
+    completed: true
     details: |
       VERIFICATION GATE: Confirm the codebase is in a clean state.
 
