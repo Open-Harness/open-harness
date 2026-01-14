@@ -172,3 +172,47 @@ Reducers handle state mutations; orchestration signals already handled by proces
 - `bun run lint` - Passes, no issues (fixed 8 noNonNullAssertion warnings)
 - `bun run test` - 53 prd-workflow tests (12 process + 16 planning + 25 execution)
 
+### Task: Refactor review.ts reducer - remove ctx.emit, use Immer mutations
+
+**Context**: Created the review reducer module following CQRS command-side pattern.
+Reducers handle state mutations; orchestration signals already handled by process managers.
+
+**Files Created**:
+
+1. **packages/prd-workflow/src/reducers/review.ts**
+   - 4 reducers using Immer Draft pattern for type-safe direct mutations
+   - `taskApprovedReducer` - Clears currentTaskId, transitions execution and review phases to "idle"
+   - `milestoneFailedReducer` - Sets currentMilestoneId, resets failing task to "pending"
+   - `milestoneRetryReducer` - Sets milestone for retry, resets all tasks in milestone to "pending"
+   - `workflowCompleteReducer` - Transitions review phase to "complete", clears state
+
+2. **packages/prd-workflow/tests/reducers/review.test.ts**
+   - 23 tests covering all 4 reducers
+   - Tests for state mutations, phase transitions, edge cases
+   - Handles: null taskId, nonexistent tasks/milestones, various completion reasons
+
+**Updated Files**:
+
+1. **packages/prd-workflow/src/reducers/index.ts**
+   - Added import: `import { reviewReducers } from "./review.js";`
+   - Added spread: `...reviewReducers` to combined reducers
+   - Added re-export: `export { reviewReducers } from "./review.js";`
+
+**Key Implementation Patterns**:
+
+1. **Review state management**:
+   - `task:approved` → Clears execution state, ready for next task
+   - `milestone:failed` → Preserves milestone context for debugging
+   - `milestone:retry` → Full reset of all tasks in milestone for re-execution
+   - `workflow:complete` → Final cleanup, marks workflow as done
+
+2. **Phase state machine** - ReviewPhase transitions:
+   - idle ↔ reviewing_task (task review cycle)
+   - idle ↔ reviewing_milestone (milestone test cycle)
+   - * → complete (workflow:complete terminal state)
+
+### GATE: Verification Passed
+- `bun run typecheck` - Passes, 0 errors
+- `bun run lint` - Passes, no issues
+- `bun run test` - 76 prd-workflow tests (12 process + 16 planning + 25 execution + 23 review)
+
