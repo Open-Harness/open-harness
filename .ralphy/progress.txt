@@ -216,3 +216,62 @@ Reducers handle state mutations; orchestration signals already handled by proces
 - `bun run lint` - Passes, no issues
 - `bun run test` - 76 prd-workflow tests (12 process + 16 planning + 25 execution + 23 review)
 
+### Task: Update reducers/index.ts - remove ReducerContext from type signature
+
+**Context**: Verified that this task was already complete. The reducers were created with the
+correct signature from the start - no ReducerContext parameter exists anywhere in the codebase.
+
+**Verification**:
+- `grep ReducerContext packages/prd-workflow` - No matches
+- `grep ctx.emit packages/prd-workflow` - No matches
+- SignalReducer type in @internal/core already defines: `(state: TState, signal: Signal) => void`
+
+### Task: Update workflow.ts - pass both reducers and processes to runReactive
+
+**Context**: Created workflow.ts to provide a pre-configured workflow runner combining the
+CQRS reducers (command side) and process managers (query side).
+
+**Files Created**:
+
+1. **packages/prd-workflow/src/workflow.ts**
+   - `createPRDWorkflow()` - Factory function returning typed `agent()` and `runReactive()`
+   - `runPRDWorkflow(config)` - Convenience wrapper that:
+     - Creates initial state from PRD string via `createInitialState()`
+     - Attaches all reducers (planning, execution, review)
+     - Attaches all process managers for orchestration
+     - Runs the reactive workflow
+   - `PRDWorkflowConfig` interface for configuration
+
+2. **packages/prd-workflow/tests/workflow.test.ts**
+   - 10 tests covering factory and runner
+   - Tests for: factory creation, typed agent state access, initial state from PRD
+   - Tests for: workflow signal history (start/end), reducer exports, process exports
+   - Uses mock harness for testing without network calls
+
+**Updated Package Exports** (`packages/prd-workflow/src/index.ts`):
+- Added: `export { createPRDWorkflow, runPRDWorkflow } from "./workflow.js";`
+- Added: `export type { PRDWorkflowConfig } from "./workflow.js";`
+
+### Task: Export processes from prd-workflow index
+
+**Context**: Already complete - processes were exported in earlier task. Added workflow exports.
+
+## 2026-01-19 - Phase 1: PRD Workflow Refactor (COMPLETE)
+
+### GATE: Phase 1 Verification Passed
+- `bun run typecheck` - 15 packages, 0 errors
+- `bun run lint` - 14 packages, no issues
+- `bun run test` - 86 prd-workflow tests, all passing
+  - 12 process manager tests
+  - 16 planning reducer tests
+  - 25 execution reducer tests
+  - 23 review reducer tests
+  - 10 workflow runner tests
+
+**Phase 1 Summary**:
+Created complete PRD workflow package implementing CQRS pattern:
+- **Process Managers** (query side): 6 orchestration handlers emitting derived signals
+- **Reducers** (command side): 13 state mutation handlers using Immer Draft pattern
+- **Workflow Runner**: Convenience API combining reducers + processes
+- **Total**: 86 comprehensive tests covering all functionality
+

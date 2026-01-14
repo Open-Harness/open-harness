@@ -153,31 +153,48 @@ tasks:
       All gates passed: typecheck, lint, and 76 tests (12 process + 16 planning + 25 execution + 23 review)
 
   - title: "Update reducers/index.ts: remove ReducerContext from type signature"
-    completed: false
+    completed: true
     details: |
       File: packages/prd-workflow/src/reducers/index.ts
 
       Update SignalReducer type to: (state: TState, signal: Signal) => void
       No ctx parameter.
+    notes: |
+      Already complete - reducers/index.ts was created with correct signature from the start.
+      The SignalReducer type at @internal/core already defines: (state: TState, signal: Signal) => void
+      No ReducerContext exists anywhere in prd-workflow package.
 
   - title: "Update workflow.ts: pass both reducers and processes to runReactive"
-    completed: false
+    completed: true
     details: |
       File: packages/prd-workflow/src/workflow.ts
 
       1. Import: import { processes } from "./processes/index.js";
       2. Update runReactive call to include: processes,
       3. Verify reducers are passed without ctx
+    notes: |
+      Created packages/prd-workflow/src/workflow.ts with:
+      - createPRDWorkflow() - Factory function for typed agent creation
+      - runPRDWorkflow(config) - Convenience wrapper combining reducers + processes
+      - PRDWorkflowConfig interface for configuration
+
+      The runReactive call includes both reducers and processes following CQRS pattern.
+      Created 10 tests in tests/workflow.test.ts covering factory and runner.
 
   - title: "Export processes from prd-workflow index"
-    completed: false
+    completed: true
     details: |
       File: packages/prd-workflow/src/index.ts
 
       Add: export { processes } from "./processes/index.js";
+    notes: |
+      Already complete - processes export existed from earlier task.
+      Added additional exports for workflow.ts:
+      - export { createPRDWorkflow, runPRDWorkflow } from "./workflow.js"
+      - export type { PRDWorkflowConfig } from "./workflow.js"
 
   - title: "GATE: Verify Phase 1 - PRD workflow compiles and tests pass"
-    completed: false
+    completed: true
     details: |
       Run ALL THREE checks:
       1. bun run typecheck
@@ -185,6 +202,12 @@ tasks:
       3. bun run test
 
       Fix any errors before proceeding to Phase 2.
+    notes: |
+      All gates passed:
+      - typecheck: 15 packages, 0 errors
+      - lint: 14 packages, no issues
+      - test: 86 prd-workflow tests, all passing
+        (12 process + 16 planning + 25 execution + 23 review + 10 workflow)
 
   # ============================================
   # Phase 2: DX Integration Test
