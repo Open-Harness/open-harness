@@ -38,6 +38,7 @@ import {
 } from "@internal/signals-core";
 import type { ReactiveAgent, LoggingConfig } from "./types.js";
 import { createLogger, subscribeSignalLogger } from "../lib/logger/index.js";
+import { createSignalConsole } from "../lib/logger/signal-console.js";
 
 // ============================================================================
 // Recording Types
@@ -252,18 +253,44 @@ export async function runReactive<TOutput>(
 	const runId = options?.runId ?? crypto.randomUUID();
 	const bus = new SignalBus();
 
-	// Setup logging (v3.1 - batteries included)
-	// Default: logging enabled with console ON, file OFF
+	// Setup logging (v3.2 - batteries included with pretty signal console)
+	// Default: console: true (pretty signal console), file: false
 	let unsubscribeLogger: (() => void) | undefined;
+	let unsubscribeSignalConsole: (() => void) | undefined;
 	if (options?.logging !== false) {
 		const loggingConfig = options?.logging ?? {};
-		const logger = createLogger({
-			console: loggingConfig.console ?? true,
-			file: loggingConfig.file ?? false,
-			level: loggingConfig.level ?? "info",
-			logDir: loggingConfig.logDir ?? ".open-harness/logs",
-		});
-		unsubscribeLogger = subscribeSignalLogger(bus, logger, { runId });
+		const consoleMode = loggingConfig.console ?? true;
+		const level = loggingConfig.level ?? "info";
+
+		// Console output: pretty signal console (default), JSON (Pino), or disabled
+		if (consoleMode === true || consoleMode === "pretty") {
+			// v3.2: Pretty signal console - clean, color-coded output
+			// Note: createSignalConsole accepts both old (info/debug/trace) and new (quiet/normal/verbose)
+			// level names and normalizes internally for backward compatibility
+			const signalConsole = createSignalConsole({ level });
+			unsubscribeSignalConsole = bus.subscribe(["**"], signalConsole);
+		} else if (consoleMode === "json") {
+			// JSON mode: use Pino for structured logging
+			const logger = createLogger({
+				console: true,
+				file: loggingConfig.file ?? false,
+				level,
+				logDir: loggingConfig.logDir ?? ".open-harness/logs",
+			});
+			unsubscribeLogger = subscribeSignalLogger(bus, logger, { runId });
+		}
+
+		// File logging (if enabled, always uses Pino)
+		if (loggingConfig.file && consoleMode !== "json") {
+			// Only create file logger if we're not already using JSON mode (which handles both)
+			const logger = createLogger({
+				console: false, // Don't duplicate console output
+				file: true,
+				level,
+				logDir: loggingConfig.logDir ?? ".open-harness/logs",
+			});
+			unsubscribeLogger = subscribeSignalLogger(bus, logger, { runId });
+		}
 	}
 
 	// Determine recording mode
@@ -410,9 +437,12 @@ export async function runReactive<TOutput>(
 		await store.finalize(recordingId, durationMs);
 	}
 
-	// Cleanup logger subscription
+	// Cleanup logger subscriptions
 	if (unsubscribeLogger) {
 		unsubscribeLogger();
+	}
+	if (unsubscribeSignalConsole) {
+		unsubscribeSignalConsole();
 	}
 
 	return {
