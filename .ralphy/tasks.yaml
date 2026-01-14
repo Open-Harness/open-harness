@@ -82,7 +82,7 @@ tasks:
   # ============================================================================
 
   - title: "Phase 1.1: Design SignalHandler type in @internal/core"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Currently the SDK has two separate concepts:
       - SignalReducer<TState>: (state, signal) => void (mutations only)
