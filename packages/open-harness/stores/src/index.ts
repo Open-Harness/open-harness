@@ -1,16 +1,24 @@
 /**
  * @open-harness/stores
  *
- * v0.3.0: All legacy stores deleted.
+ * Persistence implementations for signal storage.
  *
- * For signal recording, use:
- * - MemorySignalStore from @open-harness/core (in-memory)
- * - Future: FileSignalStore, SqliteSignalStore
+ * These stores have runtime-specific dependencies and are kept separate
+ * from @open-harness/core to avoid bundling issues:
+ * - SqliteSignalStore requires bun:sqlite (Bun runtime)
+ * - FileSignalStore requires node:fs/promises (Node.js/Bun)
  *
- * For run persistence:
- * - Use @open-harness/core persistence interfaces
- * - Future: SqliteRunStore
+ * For in-memory storage (no external dependencies), use:
+ * - MemorySignalStore from @open-harness/core
  */
 
-// Re-export signal stores from core for convenience
+// Re-export base types from core
 export { MemorySignalStore, type SignalStore } from "@open-harness/core";
+
+// File-based persistence (requires node:fs/promises)
+// Imported via subpath export to avoid bundling in @open-harness/core
+export { FileSignalStore, type FileSignalStoreOptions } from "@internal/signals/file-store";
+
+// SQLite-based persistence (requires bun:sqlite)
+// Imported via subpath export to avoid bundling in @open-harness/core
+export { SqliteSignalStore, type SqliteSignalStoreOptions } from "@internal/signals/sqlite-store";

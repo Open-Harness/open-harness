@@ -16,6 +16,8 @@ export {
 	type HarnessState,
 	type ISignalBus,
 	// Stores - Signal recording/replay
+	// Note: SqliteSignalStore and FileSignalStore are in @open-harness/stores
+	// to avoid bundling runtime-specific dependencies (bun:sqlite, node:fs)
 	MemorySignalStore,
 	matchesAnyPattern,
 	matchesPattern,
