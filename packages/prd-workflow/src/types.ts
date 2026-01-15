@@ -295,8 +295,12 @@ export type DraftState = Draft<PRDWorkflowState>;
 /**
  * Type-safe handler function signature.
  * Receives the payload already typed, no casting needed.
+ *
+ * Returns Signal[] to emit follow-up signals, or void for state-only mutations.
+ * Uses `void` to match SignalHandler from @internal/core which also uses void.
  */
-export type TypedHandler<TPayload> = (draft: DraftState, payload: TPayload, signal: Signal) => Signal[] | undefined;
+// biome-ignore lint/suspicious/noConfusingVoidType: void is required to match SignalHandler<TState> from @internal/core
+export type TypedHandler<TPayload> = (draft: DraftState, payload: TPayload, signal: Signal) => Signal[] | void;
 
 /**
  * Creates a type-safe signal handler.
