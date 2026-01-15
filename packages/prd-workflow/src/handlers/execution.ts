@@ -20,47 +20,17 @@
 
 import type { SignalHandler } from "@internal/core";
 import { createSignal } from "@internal/signals-core";
-import type { Draft } from "immer";
-import type { AttemptRecord, PRDWorkflowState, Task } from "../types.js";
-
-/**
- * Draft state type - Immer removes readonly modifiers
- */
-type DraftState = Draft<PRDWorkflowState>;
-
-/**
- * Signal payload types for execution handlers
- */
-interface TaskReadyPayload {
-	taskId: string;
-	title: string;
-	description: string;
-	definitionOfDone: readonly string[];
-}
-
-interface TaskCompletePayload {
-	taskId: string;
-	outcome: "success" | "failure" | "partial";
-	summary: string;
-	filesChanged?: string[];
-	checkpointHash?: string;
-}
-
-interface FixRequiredPayload {
-	taskId: string;
-	milestoneId: string;
-	error?: string;
-	attempt: number;
-}
-
-interface MilestoneTestablePayload {
-	milestoneId: string;
-	taskIds: readonly string[];
-}
-
-interface MilestonePassedPayload {
-	milestoneId: string;
-}
+import {
+	type AttemptRecord,
+	createHandler,
+	type FixRequiredPayload,
+	type MilestonePassedPayload,
+	type MilestoneTestablePayload,
+	type PRDWorkflowState,
+	type Task,
+	type TaskCompletePayload,
+	type TaskReadyPayload,
+} from "../types.js";
 
 /**
  * Helper: Find the first pending task in the workflow
@@ -104,10 +74,7 @@ function findNextUntestedMilestone(
  * Sets the current task and transitions to executing phase.
  * No signals emitted - agent will execute the task.
  */
-export const taskReadyHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as TaskReadyPayload;
-
+export const taskReadyHandler = createHandler<TaskReadyPayload>((draft, payload) => {
 	// Set current task
 	draft.execution.currentTaskId = payload.taskId;
 	draft.execution.phase = "executing_task";
@@ -119,7 +86,7 @@ export const taskReadyHandler: SignalHandler<PRDWorkflowState> = (state, signal)
 	}
 
 	// No signals to emit - agent handles task execution
-};
+});
 
 /**
  * Handler: task:complete
@@ -129,10 +96,7 @@ export const taskReadyHandler: SignalHandler<PRDWorkflowState> = (state, signal)
  * - Mutation: Update task status, record attempt history
  * - Emission: discovery:submitted if discoveries exist, else nothing (await review)
  */
-export const taskCompleteHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as TaskCompletePayload;
-
+export const taskCompleteHandler = createHandler<TaskCompletePayload>((draft, payload) => {
 	const task = draft.planning.allTasks[payload.taskId];
 	if (task) {
 		// Mark task as complete
@@ -170,7 +134,7 @@ export const taskCompleteHandler: SignalHandler<PRDWorkflowState> = (state, sign
 	}
 
 	// No discoveries - wait for task review (no signal emitted)
-};
+});
 
 /**
  * Handler: fix:required
@@ -178,10 +142,7 @@ export const taskCompleteHandler: SignalHandler<PRDWorkflowState> = (state, sign
  * Enters fixing phase when a task/milestone fails.
  * No signals emitted - agent will fix the task.
  */
-export const fixRequiredHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as FixRequiredPayload;
-
+export const fixRequiredHandler = createHandler<FixRequiredPayload>((draft, payload) => {
 	// Set the failing task as current
 	draft.execution.currentTaskId = payload.taskId;
 	draft.execution.phase = "fixing";
@@ -197,7 +158,7 @@ export const fixRequiredHandler: SignalHandler<PRDWorkflowState> = (state, signa
 	draft.review.currentMilestoneId = payload.milestoneId;
 
 	// No signals to emit - agent handles the fix
-};
+});
 
 /**
  * Handler: milestone:testable
@@ -205,10 +166,7 @@ export const fixRequiredHandler: SignalHandler<PRDWorkflowState> = (state, signa
  * Begins milestone testing phase.
  * No signals emitted - test runner will execute tests.
  */
-export const milestoneTestableHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as MilestoneTestablePayload;
-
+export const milestoneTestableHandler = createHandler<MilestoneTestablePayload>((draft, payload) => {
 	// Set milestone for review
 	draft.review.currentMilestoneId = payload.milestoneId;
 	draft.review.phase = "reviewing_milestone";
@@ -217,7 +175,7 @@ export const milestoneTestableHandler: SignalHandler<PRDWorkflowState> = (state,
 	draft.execution.phase = "idle";
 
 	// No signals to emit - test runner handles next steps
-};
+});
 
 /**
  * Handler: milestone:passed
@@ -227,10 +185,7 @@ export const milestoneTestableHandler: SignalHandler<PRDWorkflowState> = (state,
  * - Mutation: Mark milestone passed, update passedMilestones
  * - Emission: workflow:complete if all done, else task:ready for next task
  */
-export const milestonePassedHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as MilestonePassedPayload;
-
+export const milestonePassedHandler = createHandler<MilestonePassedPayload>((draft, payload) => {
 	// MUTATION: Mark milestone as passed
 	const milestone = draft.planning.milestones.find((m) => m.id === payload.milestoneId);
 	if (milestone) {
@@ -286,7 +241,7 @@ export const milestonePassedHandler: SignalHandler<PRDWorkflowState> = (state, s
 
 	// Nothing left to do
 	return [];
-};
+});
 
 /**
  * Execution handlers map

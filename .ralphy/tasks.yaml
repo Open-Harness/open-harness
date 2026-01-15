@@ -483,7 +483,7 @@ tasks:
       git add -A && git commit -m "refactor(prd-workflow): remove legacy reducers/ and processes/"
 
   - title: "Phase 3.4: Fix type safety - remove all casts"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Handlers should have typed signal payloads - no 'as FooPayload' casts.
 
