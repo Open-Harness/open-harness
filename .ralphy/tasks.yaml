@@ -699,7 +699,7 @@ tasks:
       git add -A && git commit -m "feat(prd-workflow): add runPRDWorkflow for CLI"
 
   - title: "Phase 4.4: GATE - Verify CLI compiles"
-    completed: false
+    completed: true
     details: |
       VERIFICATION GATE: Confirm CLI is functional.
 
