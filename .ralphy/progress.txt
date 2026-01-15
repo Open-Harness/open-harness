@@ -749,3 +749,65 @@ state updates, and any returned `Signal[]` are emitted after the state update co
 **Conclusion**: Phase 3.2 complete. workflow.ts now uses unified handlers.
 Ready to proceed with Phase 3.3 (Remove reducers/ and processes/ directories).
 
+### Task: Phase 3.3 - Remove reducers/ and processes/ directories
+
+**Context**: With the unified Handler pattern in place and workflow.ts using it,
+the legacy CQRS directories (reducers/ and processes/) can now be removed.
+
+**Files Removed**:
+
+1. **packages/prd-workflow/src/reducers/** (entire directory)
+   - execution.ts, index.ts, planning.ts, review.ts
+
+2. **packages/prd-workflow/src/processes/** (entire directory)
+   - index.ts
+
+3. **packages/prd-workflow/tests/reducers/** (entire directory)
+   - Tests for the old reducer pattern
+
+4. **packages/prd-workflow/tests/processes.test.ts**
+   - Tests for the old process manager pattern
+
+**Files Modified**:
+
+1. **packages/prd-workflow/src/index.ts**
+   - Updated JSDoc: Changed from "CQRS pattern" to "unified Handler pattern"
+   - Updated example to use `PRDWorkflowHandlers` instead of `reducers` + `processes`
+   - Removed: `export { processes } from "./processes/index.js";`
+   - Removed: `export { planningReducers, reducers } from "./reducers/index.js";`
+   - Added: `export { PRDWorkflowHandlers } from "./handlers/index.js";`
+
+2. **packages/prd-workflow/tests/workflow.test.ts**
+   - Updated JSDoc comment
+   - Changed import from `processes, reducers` to `PRDWorkflowHandlers`
+   - Renamed test suite: "reducers and processes integration" → "unified handlers integration"
+   - Updated tests to verify handler exports and behavior:
+     - "exports handlers for all signal types" (13 handlers)
+     - "handlers have correct signature (state, signal) => Signal[] | void"
+     - "handlers can return signals for orchestration" (tests plan:created → task:ready)
+
+**Key Changes**:
+
+| Before (CQRS) | After (Handler Pattern) |
+|---------------|------------------------|
+| `reducers` export | `PRDWorkflowHandlers` export |
+| `processes` export | (merged into handlers) |
+| `reducers: { ... }` in runReactive | `handlers: PRDWorkflowHandlers` |
+| 4 reducer test files | 0 (coverage via workflow tests) |
+| 1 process test file | 0 (coverage via workflow tests) |
+
+**Test Count Change**:
+- Old tests removed: 76 tests (12 process + 64 reducer tests)
+- Tests updated: 4 tests (workflow.test.ts handler tests updated to match new API)
+- Net reduction reflects consolidation - handler behavior tested through workflow integration
+
+### GATE: Phase 3.3 Verification Passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 12 test tasks, ALL passed
+- `ls packages/prd-workflow/src/reducers/` - "No such file or directory" ✓
+- `ls packages/prd-workflow/src/processes/` - "No such file or directory" ✓
+
+**Conclusion**: Phase 3.3 complete. Legacy reducers/ and processes/ directories removed.
+Ready to proceed with Phase 3.4 (Fix type safety - remove all casts).
+
