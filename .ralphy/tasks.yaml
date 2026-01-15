@@ -559,7 +559,7 @@ tasks:
   # ============================================================================
 
   - title: "Phase 4.1: Create sandbox directory and example PRD"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Setup sandbox directory and example PRD file.
 

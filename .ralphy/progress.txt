@@ -951,3 +951,35 @@ Added biome-ignore comment to suppress lint warning about void in union (necessa
 **Conclusion**: Phase 3.5 GATE passed. PRD-workflow refactor to Handler pattern is complete.
 Ready to proceed with Phase 4 (CLI).
 
+## 2026-01-19 - Phase 4: CLI (IN PROGRESS)
+
+### Task: Phase 4.1 - Create sandbox directory and example PRD
+
+**Context**: Setup the sandbox directory for PRD workflow execution and create an example PRD file.
+
+**Files Created**:
+
+1. **.sandbox/.gitkeep**
+   - Empty file to ensure the .sandbox directory is tracked by git
+   - The directory itself is ignored (for generated content)
+
+2. **examples/hello-world.prd.md**
+   - Simple example PRD for testing the CLI
+   - Contains: Overview, 2 Tasks (create function + tests), 1 Milestone
+
+**Files Modified**:
+
+1. **.gitignore**
+   - Added `.sandbox/` to "Test Artifacts & Workspaces" section
+   - This ignores generated content but .gitkeep ensures directory exists
+
+**Verification**:
+- `ls -la .sandbox/` - .gitkeep present
+- `grep sandbox .gitignore` - Shows `.sandbox/` at line 81
+- `cat examples/hello-world.prd.md` - Shows expected PRD content
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+
+**Conclusion**: Phase 4.1 complete. Sandbox directory and example PRD created.
+Ready to proceed with Phase 4.2 (Create CLI entry point).
+
