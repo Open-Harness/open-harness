@@ -699,3 +699,53 @@ This allows the handlers to coexist until Phase 3.2 updates workflow.ts to use t
 **Conclusion**: Phase 3.1 complete. handlers/ directory created with unified handlers.
 Ready to proceed with Phase 3.2 (Update workflow.ts to use handlers).
 
+### Task: Phase 3.2 - Update workflow.ts to use handlers
+
+**Context**: Updated the PRD workflow runner to use the unified Handler pattern instead of
+the separate CQRS reducers/processes approach.
+
+**Files Modified**:
+
+1. **packages/prd-workflow/src/workflow.ts**
+   - Updated module JSDoc to describe the Handler pattern instead of CQRS
+   - Removed imports: `processes` from `./processes/index.js`, `reducers` from `./reducers/index.js`
+   - Added import: `PRDWorkflowHandlers` from `./handlers/index.js`
+   - Updated `runPRDWorkflow` JSDoc to explain unified handler approach
+   - Changed `runReactive` call: replaced `reducers` + `processes` with `handlers: PRDWorkflowHandlers`
+
+**Key Changes**:
+
+Old approach (CQRS):
+```typescript
+return runReactive({
+  agents: config.agents,
+  state: createInitialState(config.prd),
+  // CQRS pattern: reducers handle state mutations, processes handle orchestration
+  reducers,
+  processes,
+});
+```
+
+New approach (Unified Handlers):
+```typescript
+return runReactive({
+  agents: config.agents,
+  state: createInitialState(config.prd),
+  // Unified Handler pattern: handlers do both state mutations AND signal emissions
+  handlers: PRDWorkflowHandlers,
+});
+```
+
+**Why This Works**: The `runReactive` function in `@internal/core` was updated in Phase 1.1
+to support a `handlers` option. Handlers execute within Immer's `produce()` for immutable
+state updates, and any returned `Signal[]` are emitted after the state update completes.
+
+### GATE: Phase 3.2 Verification Passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 12 test tasks, 96 prd-workflow tests, ALL passed
+- `bun test packages/prd-workflow/tests/workflow.test.ts` - 10 tests, ALL passed
+
+**Conclusion**: Phase 3.2 complete. workflow.ts now uses unified handlers.
+Ready to proceed with Phase 3.3 (Remove reducers/ and processes/ directories).
+

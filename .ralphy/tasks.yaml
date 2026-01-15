@@ -419,7 +419,7 @@ tasks:
       git add -A && git commit -m "feat(prd-workflow): add handlers/ with unified state+signal handlers"
 
   - title: "Phase 3.2: Update workflow.ts to use handlers"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Update the workflow runner to use handlers instead of reducers/processes.
 
