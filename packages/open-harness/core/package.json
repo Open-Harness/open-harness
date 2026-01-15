@@ -28,6 +28,8 @@
 		"@internal/core": "workspace:*",
 		"@internal/signals": "workspace:*",
 		"@internal/signals-core": "workspace:*",
+		"@open-harness/claude": "workspace:*",
+		"@open-harness/openai": "workspace:*",
 		"@rollup/plugin-commonjs": "^28.0.6",
 		"@rollup/plugin-node-resolve": "^15.3.0",
 		"@rollup/plugin-typescript": "^11.1.6",
