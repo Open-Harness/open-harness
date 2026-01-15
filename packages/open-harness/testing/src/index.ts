@@ -15,5 +15,4 @@
  */
 
 // Re-export core testing types for convenience
-// Import from @internal/signals for development (exports source files for tsc resolution)
-export { MemorySignalStore, Player, type SignalStore } from "@internal/signals";
+export { MemorySignalStore, Player, type SignalStore } from "@open-harness/core";

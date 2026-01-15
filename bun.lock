@@ -350,7 +350,7 @@
       "name": "@open-harness/testing",
       "version": "1.0.0-alpha.3",
       "dependencies": {
-        "@internal/signals": "workspace:*",
+        "@open-harness/core": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
