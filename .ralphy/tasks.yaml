@@ -606,7 +606,7 @@ tasks:
       git commit -m "chore: add .sandbox/ and example PRD"
 
   - title: "Phase 4.2: Create CLI entry point"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Create the CLI script that runs the PRD workflow.
 
