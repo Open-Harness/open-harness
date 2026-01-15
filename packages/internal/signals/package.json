@@ -4,7 +4,9 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./file-store": "./src/file-store.ts",
+		"./sqlite-store": "./src/sqlite-store.ts"
 	},
 	"scripts": {
 		"test": "bun test",

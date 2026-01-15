@@ -1,11 +1,10 @@
 /**
- * Test script to validate v3.1 logging implementation
+ * Test script to validate signal-console logging levels
  *
- * Tests:
- * 1. Default logging (console ON, file OFF)
- * 2. Different log levels (info, debug, trace)
- * 3. Logging disabled
- * 4. Render utility
+ * Tests the three verbosity levels:
+ * 1. quiet  - Just workflow start/end (CI/CD, batch jobs)
+ * 2. normal - All signals with truncated content (default for development)
+ * 3. verbose - Full content including streaming deltas (debugging)
  */
 
 import {
@@ -43,13 +42,36 @@ function createMockHarness(response: string): Harness {
 			// Emit various signals to test logging
 			yield createSignal(HARNESS_SIGNALS.START, { agent: "test-agent" });
 
-			// Simulate tool call (debug level)
-			yield createSignal("tool:call", { tool: "web_search", input: { query: "test" } });
-			yield createSignal("tool:result", { tool: "web_search", result: "Search results" });
+			// Tool call with long input (truncated at normal, full at verbose)
+			yield createSignal("tool:call", {
+				name: "web_search",
+				input: {
+					query: "test query with some extra parameters that make this longer",
+					limit: 10,
+					includeImages: false,
+				},
+			});
 
-			// Simulate text streaming (trace level - very verbose)
-			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "Hello " });
-			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "World" });
+			// Tool result with multiline content (truncated at normal, full at verbose)
+			const multilineResult = `Found 5 results:
+1. Example.com - This is a test result with some content
+2. Another.com - More content here for the second result
+3. Third.com - Even more content on the third line
+4. Fourth.com - Additional information here
+5. Fifth.com - Final result in the list`;
+
+			yield createSignal("tool:result", {
+				result: multilineResult,
+			});
+
+			// Simulate text streaming (only shown at verbose level)
+			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "Based " });
+			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "on " });
+			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "my " });
+			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "search, " });
+			yield createSignal(HARNESS_SIGNALS.TEXT_DELTA, { content: "I found..." });
+
+			// Complete text (truncated at normal, full at verbose)
 			yield createSignal(HARNESS_SIGNALS.TEXT_COMPLETE, { content: response });
 
 			yield createSignal(HARNESS_SIGNALS.END, {
@@ -69,54 +91,27 @@ function createMockHarness(response: string): Harness {
 // Test Cases
 // ============================================================================
 
-async function testDefaultLogging() {
-	render.banner("Test 1: Default Logging", "Console ON, File OFF, Level INFO");
+async function testQuietLevel() {
+	render.banner("Test 1: Quiet Level", "Minimal output for CI/CD");
 
 	const myAgent = agent({
 		prompt: "You are a test agent",
 		activateOn: ["workflow:start"],
 		emits: ["test:complete"],
-		signalHarness: createMockHarness("Test response"),
+		signalHarness: createMockHarness("Quiet test response"),
 	});
 
 	if (!isReactiveAgent(myAgent)) {
 		throw new Error("Expected ReactiveAgent");
 	}
 
-	render.text("Running with default logging (info level)...");
-	render.text("You should see: workflow:start, agent:activated, harness:start, harness:end, test:complete, workflow:end");
-	render.text("You should NOT see: tool:call, tool:result, text:delta (debug/trace level)");
-	render.blank();
-
-	const result = await runReactive(myAgent, "test input");
-
-	render.section("Result");
-	render.metric("Duration", `${result.metrics.durationMs}ms`);
-	render.metric("Activations", result.metrics.activations);
-	render.metric("Signal Count", result.signals.length);
-}
-
-async function testDebugLogging() {
-	render.banner("Test 2: Debug Logging", "Should show tool calls");
-
-	const myAgent = agent({
-		prompt: "You are a test agent",
-		activateOn: ["workflow:start"],
-		emits: ["test:complete"],
-		signalHarness: createMockHarness("Debug test"),
-	});
-
-	if (!isReactiveAgent(myAgent)) {
-		throw new Error("Expected ReactiveAgent");
-	}
-
-	render.text("Running with debug level...");
-	render.text("You should see: everything from info PLUS tool:call, tool:result");
-	render.text("You should NOT see: text:delta (trace level)");
+	render.text("Running with QUIET level...");
+	render.text("You should ONLY see: workflow:start, workflow:end");
+	render.text("You should NOT see: agent, harness, tool, text signals");
 	render.blank();
 
 	const result = await runReactive(myAgent, "test input", {
-		logging: { level: "debug" },
+		logging: { level: "quiet" },
 	});
 
 	render.section("Result");
@@ -124,26 +119,65 @@ async function testDebugLogging() {
 	render.metric("Signal Count", result.signals.length);
 }
 
-async function testTraceLogging() {
-	render.banner("Test 3: Trace Logging", "Should show everything including deltas");
+async function testNormalLevel() {
+	render.banner("Test 2: Normal Level (Default)", "All signals, truncated content");
 
 	const myAgent = agent({
 		prompt: "You are a test agent",
 		activateOn: ["workflow:start"],
 		emits: ["test:complete"],
-		signalHarness: createMockHarness("Trace test"),
+		signalHarness: createMockHarness(
+			"Based on my search, I found that the quick brown fox jumps over the lazy dog. This is a complete multi-line response that demonstrates truncation behavior.",
+		),
 	});
 
 	if (!isReactiveAgent(myAgent)) {
 		throw new Error("Expected ReactiveAgent");
 	}
 
-	render.text("Running with trace level (verbose)...");
-	render.text("You should see: EVERYTHING including text:delta signals");
+	render.text("Running with NORMAL level (default)...");
+	render.text("You should see: ALL signals with TRUNCATED content");
+	render.text("  - tool:call input truncated to ~60 chars");
+	render.text("  - tool:result truncated to ~80 chars with line count hint");
+	render.text("  - text:complete truncated to ~80 chars");
+	render.text("You should NOT see: text:delta (streaming)");
 	render.blank();
 
 	const result = await runReactive(myAgent, "test input", {
-		logging: { level: "trace" },
+		logging: { level: "normal" },
+	});
+
+	render.section("Result");
+	render.metric("Duration", `${result.metrics.durationMs}ms`);
+	render.metric("Signal Count", result.signals.length);
+}
+
+async function testVerboseLevel() {
+	render.banner("Test 3: Verbose Level", "Full content including streaming");
+
+	const myAgent = agent({
+		prompt: "You are a test agent",
+		activateOn: ["workflow:start"],
+		emits: ["test:complete"],
+		signalHarness: createMockHarness(
+			"Based on my search, I found that the quick brown fox jumps over the lazy dog.\nThis is a complete multi-line response.\nIt demonstrates verbose output with full content.",
+		),
+	});
+
+	if (!isReactiveAgent(myAgent)) {
+		throw new Error("Expected ReactiveAgent");
+	}
+
+	render.text("Running with VERBOSE level...");
+	render.text("You should see: EVERYTHING with FULL content");
+	render.text("  - text:delta streaming tokens");
+	render.text("  - Full tool inputs (indented)");
+	render.text("  - Full tool results (indented)");
+	render.text("  - Full text:complete content (indented)");
+	render.blank();
+
+	const result = await runReactive(myAgent, "test input", {
+		logging: { level: "verbose" },
 	});
 
 	render.section("Result");
@@ -185,21 +219,26 @@ async function testLoggingDisabled() {
 // ============================================================================
 
 async function main() {
-	render.banner("v3.1 Logging Validation", "Testing signal-to-Pino subscriber");
+	render.banner("Signal Console Level Validation", "Testing quiet/normal/verbose levels");
 
-	await testDefaultLogging();
+	await testQuietLevel();
 	render.blank();
 
-	await testDebugLogging();
+	await testNormalLevel();
 	render.blank();
 
-	await testTraceLogging();
+	await testVerboseLevel();
 	render.blank();
 
 	await testLoggingDisabled();
 
 	render.section("All Tests Complete");
 	render.text("Check the console output above to verify logging behavior at each level.");
+	render.blank();
+	render.text("Level Summary:");
+	render.text("  quiet   → workflow:start + workflow:end only");
+	render.text("  normal  → all signals, truncated content (default)");
+	render.text("  verbose → all signals, full content + streaming");
 }
 
 main().catch((err) => render.error(err.message));
