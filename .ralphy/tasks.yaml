@@ -662,7 +662,7 @@ tasks:
       git add -A && git commit -m "feat(prd-workflow): add CLI with live/record/replay modes"
 
   - title: "Phase 4.3: Update workflow.ts for CLI options"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Ensure workflow.ts has a runPRDWorkflow function that the CLI can use.
 
