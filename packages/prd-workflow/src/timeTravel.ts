@@ -307,3 +307,45 @@ export function isFuture(date: Date): boolean {
 export function calculateYearDifference(from: Date, to: Date): number {
   return to.getFullYear() - from.getFullYear();
 }
+
+/**
+ * Checks if a given year is a leap year
+ *
+ * @param year - Year to check
+ * @returns True if the year is a leap year
+ */
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
+
+/**
+ * Gets the number of days in a specific month and year
+ *
+ * @param month - Month (0-based index, 0 = January)
+ * @param year - Year
+ * @returns Number of days in the month
+ */
+function getDaysInMonth(month: number, year: number): number {
+  const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+  if (month === 1 && isLeapYear(year)) {
+    return 29; // February in leap year
+  }
+
+  return daysInMonth[month] || 31;
+}
+
+/**
+ * Gets the name of a month from its 0-based index
+ *
+ * @param month - Month index (0-based, 0 = January)
+ * @returns Month name
+ */
+function getMonthName(month: number): string {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  return monthNames[month] || 'Unknown';
+}
