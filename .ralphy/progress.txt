@@ -167,3 +167,38 @@ Updated `packages/prd-workflow/src/types.ts` to:
 - Lint passes (14 packages)
 
 Next step: Task 3.1 - Create planner.agent.ts
+
+
+## 2026-01-19 17:30 - Task 3.1 Complete
+
+### Planner Agent Created with defineAgent
+
+**Task 3.1: Create planner.agent.ts**
+
+Created `packages/prd-workflow/src/agents/planner.agent.ts` with:
+- `plannerAgent` using `defineAgent()` from @internal/core
+- `outputSchema: PlanCreatedPayloadSchema` for structured Claude output
+- Dynamic prompt function that injects PRD from `ctx.state.planning.prd`
+- `activateOn: ["workflow:start"]` for initial trigger
+- `emits: ["plan:created"]` signal declaration
+- `when` guard ensuring activation only when `planning.phase === "idle"`
+
+**Key design decisions**:
+1. Dynamic prompt `(ctx) => string` allows runtime PRD injection
+2. When guard prevents duplicate plan generation if workflow restarts
+3. Agent is generic typed for both output schema and workflow state
+4. Created `agents/index.ts` barrel export for clean imports
+
+**Tests**: Created comprehensive test suite with 13 tests covering:
+- Agent structure (tags, reactive markers, schemas)
+- Activation configuration (signals, emits)
+- JSON Schema output validation
+- Dynamic prompt behavior
+- When guard logic
+
+**Verification**:
+- All 96 tests pass in prd-workflow (13 new + 83 existing)
+- Typecheck passes
+- Lint passes
+
+Next step: Task 3.2 - Update create-workflow.ts to wire schemas

@@ -140,7 +140,7 @@ tasks:
   # Phase 3: Agent & Workflow Wiring
   # ═══════════════════════════════════════════════════════════════════════════
   - title: "3.1: Create planner.agent.ts"
-    completed: false
+    completed: true
     parallel_group: 3
     phase: "Phase 3: Agent & Workflow Wiring"
     details: |
