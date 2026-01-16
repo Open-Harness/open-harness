@@ -128,7 +128,7 @@ export async function timeTravel(
 }
 
 /**
- * Validates the input date parameter
+ * Validates the input date parameter with comprehensive bounds checking
  *
  * @param date - Date to validate
  * @throws TimeTravelError if date is invalid
@@ -137,7 +137,7 @@ function validateDateInput(date: Date): void {
   // Check if date is a valid Date object
   if (!(date instanceof Date)) {
     throw new TimeTravelError(
-      'Destination must be a valid Date object',
+      'Destination must be a valid Date object. Please provide a Date instance.',
       'INVALID_DATE_TYPE'
     );
   }
@@ -145,17 +145,91 @@ function validateDateInput(date: Date): void {
   // Check if date is not NaN (invalid date)
   if (isNaN(date.getTime())) {
     throw new TimeTravelError(
-      'Destination date is invalid or malformed',
+      'Destination date is invalid or malformed. Please check your date format and values.',
       'INVALID_DATE_VALUE'
     );
   }
 
-  // Basic bounds checking - will be enhanced in T002
-  const year = date.getFullYear();
-  if (year < 1000 || year > 3000) {
+  // Check for edge cases with extreme timestamps
+  const timestamp = date.getTime();
+  if (timestamp < -62135596800000) { // Before year 1 CE
     throw new TimeTravelError(
-      `Date ${year} is outside reasonable simulation bounds (1000-3000)`,
-      'DATE_OUT_OF_BOUNDS'
+      'Time travel to dates before year 1 CE is not supported by our simulation.',
+      'DATE_TOO_ANCIENT'
+    );
+  }
+
+  if (timestamp > 32503680000000) { // After year 3000 CE
+    throw new TimeTravelError(
+      'Time travel beyond year 3000 CE exceeds our future projection capabilities.',
+      'DATE_TOO_DISTANT_FUTURE'
+    );
+  }
+
+  // Enhanced bounds checking with more specific ranges
+  const year = date.getFullYear();
+  const currentYear = new Date().getFullYear();
+
+  // Define reasonable simulation bounds
+  const MIN_PAST_YEAR = 1000;
+  const MAX_FUTURE_YEAR = currentYear + 500; // 500 years into future
+  const FAR_FUTURE_LIMIT = 3000;
+
+  // Handle past dates beyond reasonable bounds
+  if (year < MIN_PAST_YEAR) {
+    throw new TimeTravelError(
+      `Travel to year ${year} is beyond our historical simulation capabilities. ` +
+      `Please choose a date from ${MIN_PAST_YEAR} CE or later.`,
+      'PAST_DATE_OUT_OF_BOUNDS'
+    );
+  }
+
+  // Handle near future dates (within reasonable projection range)
+  if (year > currentYear && year <= MAX_FUTURE_YEAR) {
+    // Future dates within reasonable projection range are allowed
+    return;
+  }
+
+  // Handle far future dates with warning
+  if (year > MAX_FUTURE_YEAR && year <= FAR_FUTURE_LIMIT) {
+    throw new TimeTravelError(
+      `Travel to year ${year} is in the far future beyond reliable predictions. ` +
+      `Our simulation may be less accurate for dates beyond ${MAX_FUTURE_YEAR}. ` +
+      `Consider choosing a nearer future date for better simulation quality.`,
+      'FAR_FUTURE_WARNING'
+    );
+  }
+
+  // Handle dates beyond all reasonable bounds
+  if (year > FAR_FUTURE_LIMIT) {
+    throw new TimeTravelError(
+      `Year ${year} exceeds our maximum simulation range. ` +
+      `Please choose a date before ${FAR_FUTURE_LIMIT} CE.`,
+      'FUTURE_DATE_OUT_OF_BOUNDS'
+    );
+  }
+
+  // Additional edge case: Check for invalid dates that might pass basic checks
+  // but represent problematic scenarios
+  const month = date.getMonth();
+  const day = date.getDate();
+
+  // Validate February 29th on non-leap years
+  if (month === 1 && day === 29 && !isLeapYear(year)) {
+    throw new TimeTravelError(
+      `February 29, ${year} is invalid because ${year} is not a leap year. ` +
+      `Please choose a valid date.`,
+      'INVALID_LEAP_DATE'
+    );
+  }
+
+  // Check for other impossible dates (this should be rare with Date constructor,
+  // but can happen with invalid date manipulations)
+  if (day > getDaysInMonth(month, year)) {
+    throw new TimeTravelError(
+      `Day ${day} is invalid for ${getMonthName(month)} ${year}. ` +
+      `Please choose a valid date.`,
+      'INVALID_DAY_FOR_MONTH'
     );
   }
 }

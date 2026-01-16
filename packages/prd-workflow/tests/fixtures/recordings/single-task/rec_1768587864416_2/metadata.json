@@ -6,6 +6,7 @@
     "fix-loop",
     "single-task"
   ],
-  "signalCount": 0,
-  "finalized": false
+  "signalCount": 1046,
+  "finalized": true,
+  "durationMs": 265839
 }

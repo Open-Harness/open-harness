@@ -4,8 +4,6 @@
  * @param {number} b - The second number to add
  * @returns {number} The sum of a and b
  */
-function add(a, b) {
+export function add(a, b) {
   return a + b;
 }
-
-module.exports = { add };
