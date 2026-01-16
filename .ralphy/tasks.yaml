@@ -784,7 +784,7 @@ tasks:
   # ============================================================================
 
   - title: "Phase 6.1: Run full quality suite"
-    completed: false
+    completed: true
     details: |
       FULL QUALITY VERIFICATION
 
