@@ -13,6 +13,6 @@
 		"skipLibCheck": true,
 		"types": ["bun"]
 	},
-	"include": ["src/**/*", "tests/**/*"],
+	"include": ["src/**/*", "tests/**/*", "validators/**/*"],
 	"exclude": ["dist", "node_modules"]
 }
