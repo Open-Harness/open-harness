@@ -1,0 +1,11 @@
+{
+  "id": "rec_1768587864429_3",
+  "createdAt": "2026-01-16T18:24:24.429Z",
+  "name": "single-task-escalation",
+  "tags": [
+    "escalation",
+    "single-task"
+  ],
+  "signalCount": 0,
+  "finalized": false
+}

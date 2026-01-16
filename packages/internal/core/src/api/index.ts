@@ -80,6 +80,9 @@ export {
 	type ReactiveWorkflowConfig,
 	type ReactiveWorkflowResult,
 	type WorkflowFactory,
+	type ReducerContext,
+	type SignalReducer,
+	type SignalReducers,
 } from "./create-workflow.js";
 
 // v0.3.0 Template Engine (F2)
@@ -87,6 +90,7 @@ export {
 	expandTemplate,
 	hasTemplateExpressions,
 	extractPaths,
+	parsePath,
 	type TemplateContext,
 } from "./template.js";
 

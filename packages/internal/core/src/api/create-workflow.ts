@@ -40,7 +40,7 @@
  * ```
  */
 
-import type { ZodType } from "zod";
+import { toJSONSchema, type ZodType } from "zod";
 import type { Signal, Harness as SignalHarness } from "@internal/signals-core";
 import type { SignalPattern, SignalStore, Recording } from "@internal/signals";
 import type { SignalRecordingOptions } from "./run-reactive.js";
@@ -279,10 +279,25 @@ export type ReactiveWorkflowConfig<TState> = {
 };
 
 /**
- * Signal reducer function type.
- * Receives mutable state and the triggering signal.
+ * Context passed to signal reducers for emitting follow-up signals.
  */
-export type SignalReducer<TState> = (state: TState, signal: Signal) => void;
+export type ReducerContext = {
+	/**
+	 * Emit a new signal from within a reducer.
+	 * Emitted signals are processed after the current reducer completes.
+	 */
+	emit: (signal: Signal) => void;
+};
+
+/**
+ * Signal reducer function type.
+ * Receives mutable state, the triggering signal, and a context for emitting signals.
+ */
+export type SignalReducer<TState> = (
+	state: TState,
+	signal: Signal,
+	ctx: ReducerContext,
+) => void;
 
 /**
  * Map of signal patterns to reducer functions.
@@ -473,10 +488,14 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 		const pending = new Set<Promise<void>>();
 
 		// Subscribe reducers to apply state mutations on matching signals
+		// Reducers receive a context that allows them to emit follow-up signals
 		const reducers = config.reducers ?? {};
 		for (const [signalPattern, reducer] of Object.entries(reducers)) {
 			bus.subscribe([signalPattern], (signal) => {
-				reducer(state, signal);
+				const ctx: ReducerContext = {
+					emit: (newSignal: Signal) => bus.emit(newSignal),
+				};
+				reducer(state, signal, ctx);
 			});
 		}
 
@@ -736,6 +755,16 @@ async function executeAgent<TOutput, TState>(
 	});
 
 	// Build harness input with expanded prompt
+	// Convert Zod schema to JSON Schema if defined
+	// Remove $schema property as Claude Agent SDK uses draft-07 internally
+	// and doesn't handle the draft-2020-12 $schema declaration properly
+	let outputSchema: Record<string, unknown> | undefined;
+	if (config.output?.schema) {
+		const jsonSchema = toJSONSchema(config.output.schema) as Record<string, unknown>;
+		delete jsonSchema.$schema;
+		outputSchema = jsonSchema;
+	}
+
 	const harnessInput = {
 		system: expandedPrompt,
 		messages: [
@@ -747,6 +776,8 @@ async function executeAgent<TOutput, TState>(
 						: JSON.stringify(ctx.input),
 			},
 		],
+		// Pass JSON Schema for structured output
+		...(outputSchema ? { outputSchema } : {}),
 	};
 
 	const runContext = {

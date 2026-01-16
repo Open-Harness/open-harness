@@ -1,0 +1,12 @@
+{
+  "id": "rec_1768584781895_1",
+  "createdAt": "2026-01-16T17:33:01.895Z",
+  "name": "single-task-happy-path",
+  "tags": [
+    "happy-path",
+    "single-task"
+  ],
+  "signalCount": 455,
+  "finalized": true,
+  "durationMs": 36128
+}

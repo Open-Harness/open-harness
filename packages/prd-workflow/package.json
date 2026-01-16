@@ -1,0 +1,28 @@
+{
+	"name": "@open-harness/prd-workflow",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"test": "bun test",
+		"test:record": "FIXTURE_MODE=record bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check . --write"
+	},
+	"dependencies": {
+		"@internal/core": "workspace:*",
+		"@internal/signals": "workspace:*",
+		"@internal/signals-core": "workspace:*",
+		"@open-harness/core": "workspace:*",
+		"@open-harness/stores": "workspace:*",
+		"zod": "^4.3.4"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5",
+		"vitest": "^2.0.0"
+	}
+}

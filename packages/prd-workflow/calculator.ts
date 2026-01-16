@@ -6,16 +6,17 @@
  * @returns The result of the calculation
  */
 export function calculate(operation: string, a: number, b: number): number {
-  // TODO: Implement operation logic
-  // This is a basic structure that will be filled in subsequent tasks
+  // Validate and perform the requested arithmetic operation
 
   switch (operation) {
     case 'add':
+      return a + b;
     case 'subtract':
+      return a - b;
     case 'multiply':
+      return a * b;
     case 'divide':
-      // Placeholder implementation - will be completed in T002
-      return 0;
+      return a / b;
     default:
       // Placeholder error handling - will be completed in T004
       throw new Error(`Unknown operation: ${operation}`);

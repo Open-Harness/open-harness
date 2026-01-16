@@ -1,0 +1,12 @@
+{
+  "id": "rec_1768584487808_2",
+  "createdAt": "2026-01-16T17:28:07.808Z",
+  "name": "single-task-fix-loop",
+  "tags": [
+    "fix-loop",
+    "single-task"
+  ],
+  "signalCount": 560,
+  "finalized": true,
+  "durationMs": 41798
+}
