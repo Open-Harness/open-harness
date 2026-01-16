@@ -27,9 +27,9 @@ export class AuthService {
    * Authenticates a user with the provided email and password
    * @param email - User's email address
    * @param password - User's plain text password
-   * @returns Promise<User | null> - The authenticated user object or null if authentication fails
+   * @returns Promise<User> - The authenticated user object
    */
-  async login(email: string, password: string): Promise<User | null> {
+  async login(email: string, password: string): Promise<User> {
     // TODO: Implementation will be added in subsequent tasks
     throw new Error('login method not yet implemented');
   }
