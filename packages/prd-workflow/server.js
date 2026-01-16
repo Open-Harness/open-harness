@@ -1,6 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,7 +49,7 @@ app.get('/', (req, res) => {
 });
 
 // Error handling for 404
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.originalUrl} not found`,
@@ -98,4 +98,4 @@ process.on('SIGINT', () => {
   });
 });
 
-module.exports = app;
+export default app;
