@@ -130,3 +130,40 @@ Created `packages/prd-workflow/src/schemas/plan.schema.ts` with:
 - Lint passes
 
 Next step: Task 2.2 - Create schemas index and update types.ts
+
+
+## 2026-01-19 17:00 - Task 2.2 Complete
+
+### Schemas Index and types.ts Updated
+
+**Task 2.2: Create schemas index and update types.ts**
+
+Created `packages/prd-workflow/src/schemas/index.ts` barrel export with:
+- All schemas: `TaskStatusSchema`, `AttemptRecordSchema`, `TaskSchema`, `MilestoneSchema`, `PlanCreatedPayloadSchema`
+- All inferred types: `TaskStatus`, `AttemptRecord`, `Task`, `Milestone`, `PlanCreatedPayload`
+
+Updated `packages/prd-workflow/src/types.ts` to:
+- Re-export all types from `./schemas/index.js` (single source of truth)
+- Re-export all schemas for direct use
+- Removed duplicate `PlanCreatedPayload` interface definition
+- Import locally aliased types for use within the file (`Task`, `Milestone`, `PlanCreatedPayload`)
+
+**Key design decisions**:
+1. Barrel export pattern for clean imports
+2. Types re-exported from schemas are the canonical source
+3. Local type aliases needed because `export type` doesn't make types available within the same file
+4. Backward compatibility maintained - existing consumers continue to work
+
+**Tests**: Created two comprehensive test files:
+- `schemas/index.test.ts` - 12 tests for schema exports and type inference
+- `types.test.ts` - 12 tests for re-exports and local types
+
+**Also fixed**:
+- Pre-existing TypeScript strict null check errors in `plan.schema.test.ts` (lines 159-160)
+
+**Verification**:
+- All 80 tests pass in prd-workflow
+- Typecheck passes (15 packages)
+- Lint passes (14 packages)
+
+Next step: Task 3.1 - Create planner.agent.ts

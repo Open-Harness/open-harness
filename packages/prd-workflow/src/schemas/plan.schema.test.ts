@@ -156,8 +156,8 @@ describe("Plan Schemas", () => {
 			expect(parsed.milestones.length).toBe(1);
 			expect(parsed.taskOrder).toEqual(["task-1", "task-2"]);
 			// Verify defaults were applied
-			expect(parsed.tasks[0].status).toBe("pending");
-			expect(parsed.milestones[0].passed).toBe(false);
+			expect(parsed.tasks[0]?.status).toBe("pending");
+			expect(parsed.milestones[0]?.passed).toBe(false);
 		});
 
 		it("should generate valid JSON Schema", () => {

@@ -5,6 +5,31 @@
  * Follows CQRS pattern: state is updated by reducers, signals emitted by process managers.
  */
 
+// Import types for local use in this file (only the ones used in local interfaces)
+import type {
+	Milestone as MilestoneType,
+	PlanCreatedPayload as PlanCreatedPayloadType,
+	Task as TaskType,
+} from "./schemas/index.js";
+
+// Re-export shared types from schemas (single source of truth)
+// These are the canonical types - consumers should import from here or directly from schemas
+export type { AttemptRecord, Milestone, PlanCreatedPayload, Task, TaskStatus } from "./schemas/index.js";
+
+// Re-export schemas for direct use
+export {
+	AttemptRecordSchema,
+	MilestoneSchema,
+	PlanCreatedPayloadSchema,
+	TaskSchema,
+	TaskStatusSchema,
+} from "./schemas/index.js";
+
+// Local type aliases for use within this file
+type Task = TaskType;
+type Milestone = MilestoneType;
+type PlanCreatedPayload = PlanCreatedPayloadType;
+
 /**
  * Phases of the planning stage
  */
@@ -19,48 +44,6 @@ export type ExecutionPhase = "idle" | "executing_task" | "awaiting_review" | "fi
  * Phases of the review stage
  */
 export type ReviewPhase = "idle" | "reviewing_task" | "reviewing_milestone" | "complete";
-
-/**
- * Task status in the workflow
- */
-export type TaskStatus = "pending" | "in_progress" | "complete" | "blocked";
-
-/**
- * Definition of a single task in the PRD
- */
-export interface Task {
-	readonly id: string;
-	readonly title: string;
-	readonly description: string;
-	readonly definitionOfDone: readonly string[];
-	readonly milestoneId: string;
-	status: TaskStatus;
-	attempt: number;
-	attemptHistory: readonly AttemptRecord[];
-}
-
-/**
- * Record of a task execution attempt
- */
-export interface AttemptRecord {
-	readonly attempt: number;
-	readonly timestamp: string;
-	readonly outcome: "success" | "failure" | "partial";
-	readonly summary: string;
-	readonly filesChanged?: readonly string[];
-	readonly checkpointHash?: string;
-}
-
-/**
- * Milestone containing multiple tasks
- */
-export interface Milestone {
-	readonly id: string;
-	readonly title: string;
-	readonly taskIds: readonly string[];
-	readonly testCommand?: string;
-	passed: boolean;
-}
 
 /**
  * Discovered task during execution (emergent work)
@@ -146,14 +129,7 @@ export interface PlanStartPayload {
 	prd?: string;
 }
 
-/**
- * Payload for plan:created signal
- */
-export interface PlanCreatedPayload {
-	tasks: Task[];
-	milestones: Milestone[];
-	taskOrder: string[];
-}
+// NOTE: PlanCreatedPayload is imported from ./schemas/index.js (single source of truth)
 
 /**
  * Payload for discovery:submitted signal
@@ -332,11 +308,26 @@ export type TypedHandler<TPayload> = (draft: DraftState, payload: TPayload, sign
  * @param handler - Handler function receiving typed draft state and payload
  * @returns A SignalHandler compatible with the reactive workflow system
  */
+/**
+ * Type guard to check if a payload is wrapped in agent output format.
+ * Agent signals from create-workflow.ts emit: { agent: string, output: unknown }
+ */
+function isAgentOutputWrapper(payload: unknown): payload is { agent: string; output: unknown } {
+	return (
+		typeof payload === "object" &&
+		payload !== null &&
+		"agent" in payload &&
+		"output" in payload &&
+		typeof (payload as { agent: unknown }).agent === "string"
+	);
+}
+
 export function createHandler<TPayload>(handler: TypedHandler<TPayload>): SignalHandler<PRDWorkflowState> {
 	return (state, signal) => {
-		// Single centralized type assertion - documented and auditable
-		// The signal bus guarantees payloads match their signal names
-		const payload = signal.payload as TPayload;
+		// Handle agent output wrapper: agents emit { agent, output } but handlers expect output directly
+		// This defensive unwrapping bridges the contract between create-workflow.ts and handlers
+		const rawPayload = signal.payload;
+		const payload = isAgentOutputWrapper(rawPayload) ? (rawPayload.output as TPayload) : (rawPayload as TPayload);
 		const draft = state as DraftState;
 		return handler(draft, payload, signal);
 	};
