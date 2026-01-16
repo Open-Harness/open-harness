@@ -1,876 +1,277 @@
-# Ralphy Task List: Handler Pattern + DX CLI for PRD Workflow
-# ============================================================
-#
-# This task list implements the Handler pattern and DX CLI as defined in:
-# - docs/internal/MENTAL_MODEL.md (source of truth)
-# - .ralphy/PROBLEMS.md (issues to fix)
-# - .ralphy/DEFINITION_OF_DONE.md (acceptance criteria)
-#
-# PREVIOUS WORK: The codebase has Reducers + ProcessManagers from earlier implementation.
-# THIS TASK LIST: Consolidates them into the unified Handler pattern.
-#
-# Run with: ./ralphy.sh --yaml .ralphy/tasks.yaml
-
-tasks:
-  # ============================================================================
-  # PHASE 0: CLEANUP
-  # Fix all existing errors before making changes
-  # ============================================================================
-
-  - title: "Phase 0.1: Fix existing TypeScript and lint errors"
-    completed: true
-    details: |
-      CONTEXT: The codebase has existing errors that must be fixed first.
-
-      REQUIRED READING:
-      - CLAUDE.md (project rules)
-
-      STEPS:
-      1. Run: bun run typecheck
-         Known errors in packages/prd-workflow/src/reducers/execution.ts:
-         - Line 73: 'payload' is of type 'unknown'
-         - Line 77: 'payload' is of type 'unknown'
-
-      2. Fix the TypeScript errors:
-         - In execution.ts, the reducers access signal.payload without type guards
-         - Add proper type narrowing or use the payload interface types defined at the top
-
-      3. Run: bun run lint
-         Known warnings:
-         - Unused TaskReadyPayload interface in execution.ts
-         - Non-null assertions in tests/dx-integration.test.ts
-
-      4. Fix the lint warnings:
-         - Either use TaskReadyPayload or remove it
-         - Replace non-null assertions (!) with optional chaining (?.)
-
-      5. Verify fixes:
-         - bun run typecheck (must show ZERO errors)
-         - bun run lint (must show ZERO warnings)
-
-      6. Commit changes:
-         git add -A && git commit -m "fix: resolve TypeScript and lint errors in prd-workflow"
-
-      SUCCESS CRITERIA:
-      - bun run typecheck exits with code 0
-      - bun run lint exits with code 0
-      - All changes committed
-
-  - title: "Phase 0.2: GATE - Verify clean baseline"
-    completed: true
-    details: |
-      VERIFICATION GATE: Confirm the codebase is in a clean state.
-
-      STEPS:
-      1. Run: bun run typecheck
-         Expected: "15 successful, 15 total" or similar (ALL pass)
-
-      2. Run: bun run lint
-         Expected: No errors or warnings
-
-      3. Run: bun run test
-         Note any failing tests (we'll address these later)
-
-      GATE CRITERIA:
-      - Typecheck: ZERO errors
-      - Lint: ZERO warnings
-      - If any fail, DO NOT proceed - go back and fix
-
-  # ============================================================================
-  # PHASE 1: SDK CORE - Handler Type
-  # Add SignalHandler<TState> that combines state mutation + signal emission
-  # ============================================================================
-
-  - title: "Phase 1.1: Design SignalHandler type in @internal/core"
-    completed: true
-    details: |
-      CONTEXT: Currently the SDK has two separate concepts:
-      - SignalReducer<TState>: (state, signal) => void (mutations only)
-      - ProcessManager<TState>: (state, signal) => Signal[] (emissions only)
-
-      We need ONE concept - SignalHandler - that does BOTH:
-      - Mutates state directly (Immer handles immutability)
-      - Returns Signal[] for follow-up emissions (or undefined/void)
-
-      REQUIRED READING:
-      - docs/internal/MENTAL_MODEL.md (see Handler pattern)
-      - packages/internal/core/src/api/create-workflow.ts (current types)
-
-      FILE TO MODIFY:
-      packages/internal/core/src/api/create-workflow.ts
-
-      CHANGES TO MAKE:
-
-      1. Add new SignalHandler type AFTER the SignalReducer definition (~line 330):
-
-         /**
-          * Signal handler function type (unified pattern).
-          *
-          * Handlers are the unified approach to signal handling:
-          * - Receive mutable state and the triggering signal
-          * - Mutate state directly (Immer handles immutability)
-          * - Return new signals to emit (or undefined for no emissions)
-          *
-          * @example
-          * const handler: SignalHandler<MyState> = (state, signal) => {
-          *   // Direct mutation (Immer handles immutability)
-          *   state.tasks[signal.payload.taskId].status = "complete";
-          *
-          *   // Return signals to emit
-          *   return [{ name: "review:start", payload: { taskId: signal.payload.taskId } }];
-          * };
-          */
-         export type SignalHandler<TState> = (
-           state: TState,
-           signal: Signal,
-         ) => Signal[] | void;
-
-         /**
-          * Map of signal patterns to handler functions.
-          */
-         export type SignalHandlers<TState> = Record<string, SignalHandler<TState>>;
-
-      2. Add 'handlers' option to ReactiveWorkflowConfig (find the type definition, add this field):
-
-         /**
-          * Signal handlers (unified pattern).
-          *
-          * Handlers combine state mutations and signal emission:
-          * - Mutate state directly (Immer wraps in produce)
-          * - Return Signal[] for follow-up emissions
-          *
-          * Preferred over separate reducers/processes.
-          */
-         handlers?: SignalHandlers<TState>;
-
-      3. Update runReactive implementation to support handlers.
-         Find the runReactive function. After the reducers subscription loop and process managers loop,
-         add handler subscription:
-
-         // Subscribe unified handlers (Handler pattern)
-         // Handlers run within Immer and can return signals to emit
-         const handlers = config.handlers ?? {};
-         for (const [signalPattern, handler] of Object.entries(handlers)) {
-           bus.subscribe([signalPattern], (signal) => {
-             // Use Immer's produce and collect returned signals
-             let signalsToEmit: Signal[] = [];
-             state = produce(state, (draft) => {
-               const result = handler(draft as TState, signal);
-               if (Array.isArray(result)) {
-                 signalsToEmit = result;
-               }
-             });
-             // Emit any returned signals
-             for (const derivedSignal of signalsToEmit) {
-               bus.emit(derivedSignal);
-             }
-           });
-         }
-
-      4. Export the new types in packages/internal/core/src/api/index.ts.
-         Find the exports at the bottom and add: SignalHandler, SignalHandlers
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - bun run lint (ZERO warnings)
-
-      COMMIT:
-      git add -A && git commit -m "feat(core): add SignalHandler type for unified state+signal handling"
-
-  - title: "Phase 1.2: Export SignalHandler from public packages"
-    completed: true
-    details: |
-      CONTEXT: The SignalHandler type needs to be available from @open-harness/core.
-
-      FILES TO CHECK/MODIFY:
-      - packages/internal/core/src/api/index.ts (should have exports from Phase 1.1)
-      - packages/open-harness/core/src/index.ts (add re-export if needed)
-
-      STEPS:
-      1. Verify packages/internal/core/src/api/index.ts exports SignalHandler, SignalHandlers
-
-      2. Check packages/open-harness/core/src/index.ts - does it re-export from @internal/core?
-         If not, add the re-exports for SignalHandler and SignalHandlers.
-
-      3. Verify exports work by checking TypeScript resolution
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-
-      COMMIT:
-      git add -A && git commit -m "feat(core): export SignalHandler from public packages"
-
-  - title: "Phase 1.3: GATE - Verify SDK Handler type works"
-    completed: true
-    details: |
-      VERIFICATION GATE: Confirm the new Handler type is properly integrated.
-
-      TESTS TO RUN:
-      1. bun run typecheck (ZERO errors across all packages)
-      2. bun run lint (ZERO warnings)
-      3. bun run test (run tests to ensure nothing broke)
-
-      GATE CRITERIA:
-      - All quality checks pass
-      - Handler type is exported and usable
-      - If anything fails, fix before proceeding
-
-  # ============================================================================
-  # PHASE 2: SQLITE SIGNAL STORE
-  # Implement persistent storage for recordings
-  # ============================================================================
-
-  - title: "Phase 2.1: Create SqliteSignalStore implementation"
-    completed: true
-    details: |
-      CONTEXT: Currently only MemorySignalStore exists (ephemeral).
-      We need SqliteSignalStore for persistent recordings.
-
-      REQUIRED READING:
-      - packages/internal/signals/src/store.ts (SignalStore interface)
-      - packages/internal/signals/src/memory-store.ts (reference implementation)
-
-      LOCATION: packages/open-harness/stores/src/sqlite-store.ts
-
-      STEP 1: Add dependency
-      cd packages/open-harness/stores && bun add better-sqlite3 && bun add -d @types/better-sqlite3
-
-      STEP 2: Create the file packages/open-harness/stores/src/sqlite-store.ts
-
-      The SqliteSignalStore class must implement the SignalStore interface from @internal/signals.
-      Key interface methods:
-      - create(options?): Promise<string>  - Create new recording, return ID
-      - append(recordingId, signal): Promise<void>  - Add signal to recording
-      - appendBatch(recordingId, signals): Promise<void>  - Add multiple signals
-      - checkpoint(recordingId, name): Promise<void>  - Create checkpoint
-      - getCheckpoints(recordingId): Promise<Checkpoint[]>  - Get checkpoints
-      - finalize(recordingId, durationMs?): Promise<void>  - Mark recording complete
-      - load(recordingId): Promise<Recording | null>  - Load full recording
-      - loadSignals(recordingId, options?): Promise<Signal[]>  - Load signals with filters
-      - list(query?): Promise<RecordingMetadata[]>  - Query recordings
-      - delete(recordingId): Promise<void>  - Delete recording
-      - exists(recordingId): Promise<boolean>  - Check existence
-
-      SCHEMA (create in constructor):
-      CREATE TABLE IF NOT EXISTS recordings (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        tags TEXT,
-        harness_type TEXT,
-        created_at TEXT NOT NULL,
-        finalized_at TEXT,
-        duration_ms INTEGER,
-        signal_count INTEGER DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS signals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        recording_id TEXT NOT NULL,
-        signal_index INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        payload TEXT,
-        timestamp TEXT NOT NULL,
-        source TEXT,
-        FOREIGN KEY (recording_id) REFERENCES recordings(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS checkpoints (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        recording_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        signal_index INTEGER NOT NULL,
-        timestamp TEXT NOT NULL,
-        FOREIGN KEY (recording_id) REFERENCES recordings(id)
-      );
-
-      ID FORMAT: Generate IDs like "rec_" + crypto.randomUUID().slice(0, 8)
-
-      STEP 3: Export from packages/open-harness/stores/src/index.ts
-      Add: export { SqliteSignalStore } from "./sqlite-store.js";
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - bun run lint (ZERO warnings)
-
-      COMMIT:
-      git add -A && git commit -m "feat(stores): add SqliteSignalStore for persistent recordings"
-
-  - title: "Phase 2.2: Add SqliteSignalStore unit tests"
-    completed: true
-    details: |
-      CONTEXT: Test the SqliteSignalStore implementation.
-
-      FILE TO CREATE:
-      packages/open-harness/stores/tests/sqlite-store.test.ts
-
-      TESTS TO WRITE:
-      1. Constructor creates database and tables
-      2. create() generates unique recording IDs with "rec_" prefix
-      3. append() stores signals correctly
-      4. appendBatch() stores multiple signals atomically
-      5. checkpoint() creates checkpoints
-      6. getCheckpoints() returns checkpoints in order
-      7. finalize() updates metadata (duration, signal_count)
-      8. load() returns complete Recording with all signals
-      9. loadSignals() respects filters (fromIndex, toIndex, patterns)
-      10. list() filters by harnessType, tags, limit, offset
-      11. delete() removes recording and all associated data
-      12. exists() returns correct boolean
-
-      USE TEMP DATABASE:
-      - Use a temp file path like /tmp/test-signals-${Date.now()}.db
-      - Clean up after each test
-
-      VERIFICATION:
-      - bun test packages/open-harness/stores/tests/sqlite-store.test.ts (ALL pass)
-
-      COMMIT:
-      git add -A && git commit -m "test(stores): add SqliteSignalStore unit tests"
-
-  - title: "Phase 2.3: GATE - Verify SqliteSignalStore works"
-    completed: true
-    details: |
-      VERIFICATION GATE: Confirm SqliteSignalStore is working.
-
-      TESTS TO RUN:
-      1. bun run typecheck (ZERO errors)
-      2. bun run lint (ZERO warnings)
-      3. bun test packages/open-harness/stores/ (ALL pass)
-
-      GATE CRITERIA:
-      - All quality checks pass
-      - SqliteSignalStore exports correctly
-      - All tests pass
-
-  # ============================================================================
-  # PHASE 3: PRD-WORKFLOW REFACTOR
-  # Convert from Reducers/ProcessManagers to Handler pattern
-  # ============================================================================
-
-  - title: "Phase 3.1: Create handlers/ directory with unified handlers"
-    completed: true
-    details: |
-      CONTEXT: Convert prd-workflow from reducers/ + processes/ to handlers/
-
-      REQUIRED READING:
-      - docs/internal/MENTAL_MODEL.md (Handler pattern)
-      - packages/prd-workflow/src/reducers/planning.ts
-      - packages/prd-workflow/src/reducers/execution.ts
-      - packages/prd-workflow/src/reducers/review.ts
-      - packages/prd-workflow/src/processes/index.ts
-
-      STEP 1: Create directory
-      mkdir -p packages/prd-workflow/src/handlers
-
-      STEP 2: Create handlers/planning.ts
-      Combine planning reducers with planning process managers.
-      Use SignalHandler<PRDWorkflowState> type.
-
-      Example pattern:
-      import type { SignalHandler } from "@internal/core";
-      import type { PRDWorkflowState } from "../types.js";
-
-      export const planCreatedHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-        // MUTATION: From reducer
-        const { tasks, milestones, taskOrder } = signal.payload;
-        state.planning.allTasks = tasks;
-        state.planning.milestones = milestones;
-        state.planning.taskOrder = taskOrder;
-        state.planning.phase = "plan_complete";
-
-        // EMISSION: From process manager
-        const firstTask = taskOrder[0];
-        if (firstTask) {
-          return [{ name: "task:ready", payload: { taskId: firstTask } }];
-        }
-        return [];
-      };
-
-      STEP 3: Create handlers/execution.ts
-      Combine execution reducers with execution process managers.
-      Signals: task:ready, task:complete, fix:required, etc.
-
-      STEP 4: Create handlers/review.ts
-      Combine review reducers with review process managers.
-      Signals: task:approved, milestone:testable, milestone:passed, milestone:failed, etc.
-
-      STEP 5: Create handlers/index.ts
-      Export combined handler map:
-
-      import { planStartHandler, planCreatedHandler, ... } from "./planning.js";
-      import { taskReadyHandler, taskCompleteHandler, ... } from "./execution.js";
-      import { taskApprovedHandler, milestonePassedHandler, ... } from "./review.js";
-
-      export const PRDWorkflowHandlers = {
-        "plan:start": planStartHandler,
-        "plan:created": planCreatedHandler,
-        "task:ready": taskReadyHandler,
-        "task:complete": taskCompleteHandler,
-        // ... all handlers
-      };
-
-      DO NOT delete reducers/ or processes/ yet - just create handlers/ alongside.
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - bun run lint (ZERO warnings)
-
-      COMMIT:
-      git add -A && git commit -m "feat(prd-workflow): add handlers/ with unified state+signal handlers"
-
-  - title: "Phase 3.2: Update workflow.ts to use handlers"
-    completed: true
-    details: |
-      CONTEXT: Update the workflow runner to use handlers instead of reducers/processes.
-
-      FILE TO MODIFY:
-      packages/prd-workflow/src/workflow.ts
-
-      CHANGES:
-      1. Import PRDWorkflowHandlers:
-         import { PRDWorkflowHandlers } from "./handlers/index.js";
-
-      2. Update the runReactive call in runPRDWorkflow (or similar):
-         - Remove: reducers: { ... }
-         - Remove: processes: { ... }
-         - Add: handlers: PRDWorkflowHandlers
-
-      Example:
-      const result = await runReactive({
-        agents: { coder },
-        state: initialState,
-        handlers: PRDWorkflowHandlers,  // Unified handlers
-        harness: config.harness,
-        recording: config.recording,
-      });
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - bun run lint (ZERO warnings)
-
-      COMMIT:
-      git add -A && git commit -m "feat(prd-workflow): use unified handlers in workflow.ts"
-
-  - title: "Phase 3.3: Remove reducers/ and processes/ directories"
-    completed: true
-    details: |
-      CONTEXT: Now that handlers/ is working, remove the old directories.
-
-      STEPS:
-      1. Delete packages/prd-workflow/src/reducers/ directory:
-         rm -rf packages/prd-workflow/src/reducers/
-
-      2. Delete packages/prd-workflow/src/processes/ directory:
-         rm -rf packages/prd-workflow/src/processes/
-
-      3. Update packages/prd-workflow/src/index.ts exports:
-         - Remove any exports from reducers/
-         - Remove any exports from processes/
-         - Ensure exports from handlers/ are present
-
-      4. Check for any remaining imports of old directories:
-         grep -r "from.*reducers" packages/prd-workflow/src/
-         grep -r "from.*processes" packages/prd-workflow/src/
-         (Should find nothing)
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - bun run lint (ZERO warnings)
-      - ls packages/prd-workflow/src/reducers/ (should NOT exist)
-      - ls packages/prd-workflow/src/processes/ (should NOT exist)
-
-      COMMIT:
-      git add -A && git commit -m "refactor(prd-workflow): remove legacy reducers/ and processes/"
-
-  - title: "Phase 3.4: Fix type safety - remove all casts"
-    completed: true
-    details: |
-      CONTEXT: Handlers should have typed signal payloads - no 'as FooPayload' casts.
-
-      REQUIRED READING:
-      - docs/internal/MENTAL_MODEL.md (Type Safety section)
-
-      FILES TO MODIFY:
-      packages/prd-workflow/src/handlers/*.ts
-      packages/prd-workflow/src/types.ts (add signal types)
-
-      APPROACH:
-
-      1. Define typed signal union in types.ts:
-
-         // Signal payload types (already exist, consolidate here)
-         export interface TaskReadyPayload { taskId: string; title: string; description: string; }
-         export interface TaskCompletePayload { taskId: string; outcome: "success" | "failure"; summary: string; }
-         // ... other payloads
-
-         // Discriminated union of all PRD signals
-         export type PRDSignal =
-           | { name: "plan:start"; payload?: { prd?: string } }
-           | { name: "plan:created"; payload: PlanCreatedPayload }
-           | { name: "task:ready"; payload: TaskReadyPayload }
-           | { name: "task:complete"; payload: TaskCompletePayload }
-           // ... all signals
-
-      2. Create typed handler helper or use generics so signal payloads are typed
-
-      3. In each handler file, ensure NO 'as FooPayload' casts exist.
-         Use type guards or typed signal patterns.
-
-      4. Check for casts:
-         grep -r "as.*Payload" packages/prd-workflow/src/handlers/
-         Expected: ZERO matches
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - grep -r "as.*Payload" packages/prd-workflow/src/handlers/ (ZERO matches)
-
-      COMMIT:
-      git add -A && git commit -m "feat(prd-workflow): type-safe signal payloads - no casts"
-
-  - title: "Phase 3.5: GATE - Verify prd-workflow refactor"
-    completed: true
-    details: |
-      VERIFICATION GATE: Confirm prd-workflow refactor is complete.
-
-      STRUCTURAL CHECKS:
-      1. ls packages/prd-workflow/src/handlers/
-         Expected: planning.ts, execution.ts, review.ts, index.ts
-
-      2. ls packages/prd-workflow/src/reducers/ 2>&1
-         Expected: "No such file or directory"
-
-      3. ls packages/prd-workflow/src/processes/ 2>&1
-         Expected: "No such file or directory"
-
-      QUALITY CHECKS:
-      1. bun run typecheck (ZERO errors)
-      2. bun run lint (ZERO warnings)
-      3. grep -r "as.*Payload" packages/prd-workflow/src/ (ZERO casts)
-
-      GATE CRITERIA:
-      - Old directories removed
-      - handlers/ exists with all files
-      - No type casts remain
-      - All quality checks pass
-
-  # ============================================================================
-  # PHASE 4: CLI
-  # Add prd:live, prd:record, prd:replay scripts
-  # ============================================================================
-
-  - title: "Phase 4.1: Create sandbox directory and example PRD"
-    completed: true
-    details: |
-      CONTEXT: Setup sandbox directory and example PRD file.
-
-      STEPS:
-      1. Create .sandbox directory:
-         mkdir -p .sandbox
-
-      2. Add to .gitignore (append if not present):
-         echo "# PRD Workflow sandbox" >> .gitignore
-         echo ".sandbox/" >> .gitignore
-
-      3. Create .sandbox/.gitkeep:
-         touch .sandbox/.gitkeep
-
-      4. Create examples/hello-world.prd.md with content:
-         # Hello World PRD
-
-         ## Overview
-         Create a simple TypeScript function that returns "Hello, World!"
-
-         ## Tasks
-
-         ### Task 1: Create the function
-         - Create `src/hello.ts`
-         - Export function `hello()` that returns "Hello, World!"
-
-         ### Task 2: Add tests
-         - Create `src/hello.test.ts`
-         - Test that `hello()` returns "Hello, World!"
-
-         ## Milestones
-
-         ### Milestone 1: Function works
-         - Tasks: 1, 2
-         - Test: `bun test src/hello.test.ts`
-
-      VERIFICATION:
-      - ls -la .sandbox/ (exists with .gitkeep)
-      - cat .gitignore | grep sandbox (shows .sandbox/)
-      - cat examples/hello-world.prd.md (shows content)
-
-      COMMIT:
-      git add .gitignore .sandbox/.gitkeep examples/hello-world.prd.md && \
-      git commit -m "chore: add .sandbox/ and example PRD"
-
-  - title: "Phase 4.2: Create CLI entry point"
-    completed: true
-    details: |
-      CONTEXT: Create the CLI script that runs the PRD workflow.
-
-      FILE TO CREATE:
-      packages/prd-workflow/src/cli.ts
-
-      DEPENDENCIES (check if needed):
-      - SqliteSignalStore should be available from @open-harness/stores
-
-      IMPLEMENTATION OUTLINE:
-
-      #!/usr/bin/env bun
-      /**
-       * PRD Workflow CLI
-       *
-       * Usage:
-       *   bun run prd:live <prd-file>     - Run live against Claude API
-       *   bun run prd:record <prd-file>   - Run live and record signals
-       *   bun run prd:replay <recording>  - Replay a recording
-       */
-
-      import { parseArgs } from "util";
-      import { runPRDWorkflow } from "./workflow.js";
-      import { SqliteSignalStore } from "@open-harness/stores";
-
-      const { values, positionals } = parseArgs({
-        args: Bun.argv.slice(2),
-        options: {
-          mode: { type: "string", short: "m", default: "live" },
-          recording: { type: "string", short: "r" },
-          sandbox: { type: "string", short: "s", default: ".sandbox" },
-          database: { type: "string", short: "d", default: ".sandbox/recordings.db" },
-        },
-        allowPositionals: true,
-      });
-
-      // Parse mode and validate args
-      // Create SqliteSignalStore
-      // Call runPRDWorkflow with appropriate options
-      // Output results
-
-      UPDATE PACKAGE.JSON:
-      Add to packages/prd-workflow/package.json scripts:
-      "prd:live": "bun run src/cli.ts --mode live",
-      "prd:record": "bun run src/cli.ts --mode record",
-      "prd:replay": "bun run src/cli.ts --mode replay"
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-      - cat packages/prd-workflow/package.json | grep prd: (shows scripts)
-
-      COMMIT:
-      git add -A && git commit -m "feat(prd-workflow): add CLI with live/record/replay modes"
-
-  - title: "Phase 4.3: Update workflow.ts for CLI options"
-    completed: true
-    details: |
-      CONTEXT: Ensure workflow.ts has a runPRDWorkflow function that the CLI can use.
-
-      FILE TO CHECK/MODIFY:
-      packages/prd-workflow/src/workflow.ts
-
-      ENSURE THIS INTERFACE EXISTS:
-      export interface PRDWorkflowOptions {
-        prdFile: string;
-        sandboxDir: string;
-        recording?: {
-          mode: "record" | "replay";
-          store: SignalStore;
-          recordingId?: string;  // Required for replay
-          name?: string;         // For record
-          tags?: string[];
-        };
-      }
-
-      export async function runPRDWorkflow(
-        options: PRDWorkflowOptions
-      ): Promise<ReactiveWorkflowResult<PRDWorkflowState>>;
-
-      The function should:
-      1. Read and parse the PRD file (basic parsing of tasks/milestones)
-      2. Create initial state
-      3. Call runReactive with handlers and recording options
-      4. Return the result
-
-      VERIFICATION:
-      - bun run typecheck (ZERO errors)
-
-      COMMIT:
-      git add -A && git commit -m "feat(prd-workflow): add runPRDWorkflow for CLI"
-
-  - title: "Phase 4.4: GATE - Verify CLI compiles"
-    completed: true
-    details: |
-      VERIFICATION GATE: Confirm CLI is functional.
-
-      TESTS:
-      1. bun run typecheck (ZERO errors)
-      2. bun run lint (ZERO warnings)
-      3. cd packages/prd-workflow && bun run prd:live --help 2>&1 || echo "Check output"
-         (Should either show help or attempt to run)
-
-      GATE CRITERIA:
-      - CLI script exists
-      - Package.json has prd:* scripts
-      - Quality checks pass
-
-  # ============================================================================
-  # PHASE 5: INTEGRATION TESTING
-  # Test real recording/replay flow
-  # ============================================================================
-
-  - title: "Phase 5.1: Update dx-integration tests for Handler pattern"
-    completed: true
-    details: |
-      CONTEXT: Update existing tests to use handlers instead of reducers/processes.
-
-      FILE TO MODIFY:
-      packages/prd-workflow/tests/dx-integration.test.ts
-
-      CHANGES:
-      1. Update any imports to use new handler exports
-      2. Verify tests still pass with the Handler pattern
-      3. Ensure recording/replay tests work
-
-      NOTE: These tests may use mock harnesses. That's OK for testing the
-      recording/replay mechanics. Real integration requires Claude API access.
-
-      VERIFICATION:
-      - bun test packages/prd-workflow/tests/dx-integration.test.ts (ALL pass)
-
-      COMMIT:
-      git add -A && git commit -m "test(prd-workflow): update tests for Handler pattern"
-
-  - title: "Phase 5.2: Add SqliteSignalStore integration test"
-    completed: true
-    details: |
-      CONTEXT: Test recording with SqliteSignalStore.
-
-      FILE TO CREATE OR MODIFY:
-      packages/prd-workflow/tests/sqlite-recording.test.ts
-
-      TEST CASES:
-      1. Record mode with SqliteSignalStore saves signals to database
-      2. Replay mode with SqliteSignalStore loads signals correctly
-      3. Recording persists across process restarts (save, reload, verify)
-      4. Replay produces same state as original recording
-
-      USE TEMP DATABASE:
-      Create temp database in beforeEach, clean up in afterEach.
-
-      VERIFICATION:
-      - bun test packages/prd-workflow/tests/sqlite-recording.test.ts
-
-      COMMIT:
-      git add -A && git commit -m "test(prd-workflow): add SqliteSignalStore integration tests"
-
-  - title: "Phase 5.3: GATE - Verify all tests pass"
-    completed: true
-    details: |
-      VERIFICATION GATE: All tests pass.
-
-      TESTS:
-      1. bun run typecheck (ZERO errors)
-      2. bun run lint (ZERO warnings)
-      3. bun run test (ALL pass)
-
-      GATE CRITERIA:
-      - All quality checks pass
-      - All tests pass
-
-  # ============================================================================
-  # PHASE 6: FINAL VERIFICATION
-  # Verify against Definition of Done
-  # ============================================================================
-
-  - title: "Phase 6.1: Run full quality suite"
-    completed: true
-    details: |
-      FULL QUALITY VERIFICATION
-
-      STEPS:
-      1. bun run typecheck
-         Expected: ALL packages pass, ZERO errors
-
-      2. bun run lint
-         Expected: ALL packages pass, ZERO warnings
-
-      3. bun run test
-         Expected: ALL tests pass
-
-      If ANY fail, go back and fix before proceeding.
-
-  - title: "Phase 6.2: Verify against DEFINITION_OF_DONE.md"
-    completed: true
-    details: |
-      FINAL ACCEPTANCE VERIFICATION
-
-      Read: .ralphy/DEFINITION_OF_DONE.md
-
-      RUN THESE CHECKS:
-
-      ### AC1: CLI Works
-      - [ ] cat packages/prd-workflow/package.json | grep "prd:"
-            Expected: prd:live, prd:record, prd:replay scripts exist
-
-      ### AC2: Uses Handler Pattern
-      - [ ] ls packages/prd-workflow/src/handlers/
-            Expected: planning.ts, execution.ts, review.ts, index.ts
-
-      - [ ] ls packages/prd-workflow/src/reducers/ 2>&1
-            Expected: "No such file or directory"
-
-      - [ ] ls packages/prd-workflow/src/processes/ 2>&1
-            Expected: "No such file or directory"
-
-      ### AC3: Type Safety (No Casts)
-      - [ ] grep -r "as.*Payload" packages/prd-workflow/src/handlers/
-            Expected: ZERO matches
-
-      ### AC4: SqliteSignalStore Works
-      - [ ] grep -r "SqliteSignalStore" packages/open-harness/stores/src/
-            Expected: Class is defined and exported
-
-      ### AC7: Sandbox Isolation
-      - [ ] cat .gitignore | grep sandbox
-            Expected: .sandbox/ is listed
-
-      REPORT:
-      - List all passing criteria
-      - List any failing criteria with reason
-
-  - title: "Phase 6.3: Document remaining work"
-    completed: true
-    details: |
-      WRAP-UP: Document any remaining work.
-
-      IF all criteria pass:
-        Create commit message summarizing achievement.
-
-      IF any criteria fail:
-        Create .ralphy/REMAINING_WORK.md listing:
-        - What's done
-        - What's not done
-        - What blocked progress
-        - Suggested next steps
-
-      COMMIT:
-      git add -A && git commit -m "chore: complete Handler pattern + DX CLI implementation"
-
-  - title: "Phase 6.4: Final summary"
-    completed: true
-    details: |
-      FINAL STEP: Print summary of work completed.
-
-      OUTPUT:
-      1. git log --oneline -15 (show commits)
-      2. bun run typecheck && echo "✓ Typecheck passed" || echo "✗ Typecheck failed"
-      3. bun run lint && echo "✓ Lint passed" || echo "✗ Lint failed"
-      4. bun run test && echo "✓ Tests passed" || echo "✗ Tests failed"
-
-      Summary of changes:
-      - Handler pattern implemented in SDK core
-      - SqliteSignalStore for persistent recordings
-      - prd-workflow refactored to use Handlers
-      - CLI with prd:live, prd:record, prd:replay
-      - Type-safe signal payloads (no casts)
+# Golden Recording Capture - Task List
+# Generated: 2026-01-19
+# PRD: .ralphy/PRD.md
+# Constitution: .ralphy/constitution.md
+
+metadata:
+  name: "Golden Recording Capture"
+  branch: "feat/handler-pattern-dx-cli"
+  prd: ".ralphy/PRD.md"
+  total_tasks: 6
+
+# =============================================================================
+# Phase 1: Verify Infrastructure
+# =============================================================================
+
+phases:
+  - name: "Phase 1: Verify Infrastructure"
+    tasks:
+      - id: "1.1"
+        name: "Verify CLI works end-to-end with real Claude API"
+        status: pending
+        description: |
+          Run the CLI in live mode to verify it calls the REAL Claude API
+          and executes a workflow successfully.
+
+          CONTEXT: The CLI was built in the previous cycle but never tested
+          against the real Claude API. This task proves the infrastructure works.
+
+          REQUIRED: Actual Claude API responses must be observed.
+
+        steps:
+          - "cd packages/prd-workflow"
+          - "bun run prd:live ../../examples/hello-world.prd.md"
+          - "Observe: Claude API is called (check logs for API requests)"
+          - "Observe: Workflow progresses through planning/execution phases"
+          - "Verify: Generated code appears in .sandbox/"
+
+        verify:
+          - command: "ls -la .sandbox/"
+            expect: "Generated files from Claude exist"
+          - command: "cat .open-harness/logs/harness.log | grep -i 'claude\\|api\\|request' | tail -20"
+            expect: "Log entries showing real API calls"
+
+        acceptance:
+          - "CLI completes with no errors"
+          - "Real Claude API responses received"
+          - "Generated code exists in .sandbox/"
+
+# =============================================================================
+# Phase 2: Capture Golden Recording
+# =============================================================================
+
+  - name: "Phase 2: Capture Golden Recording"
+    tasks:
+      - id: "2.1"
+        name: "Run prd:record to capture real Claude signals"
+        status: pending
+        description: |
+          Execute prd:record to capture a REAL recording from the Claude API.
+          This recording becomes the golden fixture for all future replay tests.
+
+          REQUIRED: Recording contains REAL Claude responses from live API call.
+
+        steps:
+          - "cd packages/prd-workflow"
+          - "bun run prd:record ../../examples/hello-world.prd.md --name 'hello-world-golden' --tags 'golden,ci'"
+          - "Note the recording ID returned (format: rec_XXXXXXXX)"
+          - "Verify recording saved to SQLite database"
+
+        verify:
+          - command: "sqlite3 .sandbox/recordings.db 'SELECT id, name, signal_count FROM recordings WHERE name LIKE \"%golden%\"'"
+            expect: "Recording with signal_count > 0"
+
+        acceptance:
+          - "Recording ID returned in format rec_XXXXXXXX"
+          - "Recording saved to SQLite with signal_count > 0"
+          - "Recording contains actual Claude responses"
+
+      - id: "2.2"
+        name: "Verify recording persistence"
+        status: pending
+        description: |
+          Verify the recording persists in SQLite and survives process restarts.
+
+        steps:
+          - "Query SQLite directly to confirm recording exists"
+          - "Restart the process and query again"
+          - "Verify all signals preserved"
+
+        verify:
+          - command: "sqlite3 .sandbox/recordings.db 'SELECT COUNT(*) FROM signals WHERE recording_id IN (SELECT id FROM recordings WHERE name LIKE \"%golden%\")'"
+            expect: "Signal count > 0"
+
+        acceptance:
+          - "Recording persists after process restart"
+          - "All signals preserved in database"
+
+# =============================================================================
+# Phase 3: Verify Replay
+# =============================================================================
+
+  - name: "Phase 3: Verify Replay"
+    tasks:
+      - id: "3.1"
+        name: "Run prd:replay and verify identical renderer output"
+        status: pending
+        description: |
+          Run replay with the golden recording and verify it produces
+          IDENTICAL renderer output to the original run.
+
+          The replay injects signals from the recording, so renderers see
+          exactly the same data as the original live run. No network calls occur.
+
+        steps:
+          - "cd packages/prd-workflow"
+          - "bun run prd:replay --recording <RECORDING_ID>"
+          - "Observe: Same renderer output as original recording"
+          - "Verify: ZERO Claude API calls (check network/logs)"
+
+        verify:
+          - command: "cat .open-harness/logs/harness.log | grep -i 'replay' | tail -10"
+            expect: "Replay mode indicators, no API call logs"
+
+        acceptance:
+          - "Replay completes successfully"
+          - "Renderer output matches original recording"
+          - "Zero Claude API calls during replay"
+          - "Replay is fast (signals injected from recording)"
+
+# =============================================================================
+# Phase 4: Fixture Factory
+# =============================================================================
+
+  - name: "Phase 4: Fixture Factory"
+    tasks:
+      - id: "4.1"
+        name: "Create loadFixtureHarness factory"
+        status: pending
+        description: |
+          Create a factory function that loads fixtures from REAL recordings.
+
+          The factory:
+          1. Loads recording by name from SQLite (or exported JSON)
+          2. Creates a harness that injects recorded signals
+          3. Provides same interface as live harness
+
+          All tests will use this factory to load real recorded data.
+
+        steps:
+          - "Create packages/prd-workflow/src/test-utils/fixture-factory.ts"
+          - "Implement loadFixtureHarness(recordingName: string)"
+          - "Factory loads from SqliteSignalStore"
+          - "Returns harness that replays recorded signals"
+          - "Export from package"
+
+        verify:
+          - command: "grep -r 'loadFixtureHarness' packages/prd-workflow/src/"
+            expect: "Factory function defined"
+
+        acceptance:
+          - "Factory function exists at src/test-utils/fixture-factory.ts"
+          - "Loads from real recordings"
+          - "Exported from package"
+
+      - id: "4.2"
+        name: "Remove legacy test utilities"
+        status: pending
+        description: |
+          Remove the legacy test utility functions that do not use real recordings.
+
+          Search for and delete any test helpers that generate synthetic data
+          instead of loading from recordings.
+
+        steps:
+          - "Search for legacy test utility functions in test files"
+          - "Delete the functions and their definitions"
+          - "Update all tests to use the new factory"
+
+        verify:
+          - command: "bun run typecheck"
+            expect: "No errors (all references updated)"
+
+        acceptance:
+          - "Legacy utilities removed"
+          - "No synthetic data generators remain"
+
+      - id: "4.3"
+        name: "Update tests to use fixture factory"
+        status: pending
+        description: |
+          Update all tests to use loadFixtureHarness to load real recordings.
+
+        steps:
+          - "Find all tests using legacy utilities"
+          - "Replace with loadFixtureHarness('hello-world-golden')"
+          - "Ensure tests pass with real fixtures"
+
+        verify:
+          - command: "bun test packages/prd-workflow/"
+            expect: "All tests pass"
+
+        acceptance:
+          - "All tests use factory pattern"
+          - "All tests pass with real fixtures"
+
+# =============================================================================
+# Phase 5: Documentation
+# =============================================================================
+
+  - name: "Phase 5: Documentation"
+    tasks:
+      - id: "5.1"
+        name: "Document recording/replay workflow in README"
+        status: pending
+        description: |
+          Update the prd-workflow README with clear instructions for
+          the recording/replay workflow.
+
+        steps:
+          - "Add 'Recording & Replay' section to README"
+          - "Document prd:live, prd:record, prd:replay commands"
+          - "Explain value proposition (record once, replay forever)"
+          - "Document database location and management"
+
+        verify:
+          - command: "grep -A5 'Recording' packages/prd-workflow/README.md"
+            expect: "Recording section exists"
+
+        acceptance:
+          - "README contains recording/replay section"
+          - "Commands documented with examples"
+
+# =============================================================================
+# Phase 6: Final Verification
+# =============================================================================
+
+  - name: "Phase 6: Final Verification"
+    tasks:
+      - id: "6.1"
+        name: "Run full quality suite"
+        status: pending
+        description: |
+          Run all quality gates to ensure everything passes.
+
+        verify:
+          - command: "bun run typecheck"
+            expect: "ZERO errors"
+          - command: "bun run lint"
+            expect: "ZERO warnings"
+          - command: "bun run test"
+            expect: "ALL tests pass"
+
+        acceptance:
+          - "Typecheck passes with zero errors"
+          - "Lint passes with zero warnings"
+          - "All tests pass"
+
+      - id: "6.2"
+        name: "Verify Definition of Done"
+        status: pending
+        description: |
+          Final check against DEFINITION_OF_DONE.md criteria.
+
+        checklist:
+          - "Golden recording captured from REAL Claude API"
+          - "prd:replay shows identical renderer output"
+          - "All legacy test utilities removed"
+          - "All quality gates pass"
+          - "Factory pattern for all fixtures"
+
+        verify:
+          - command: "grep -r 'loadFixtureHarness' packages/prd-workflow/src/"
+            expect: "Factory exists"
+
+        acceptance:
+          - "All DOD criteria met"
+          - "Ready to merge"
