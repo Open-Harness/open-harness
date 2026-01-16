@@ -135,3 +135,11 @@ export {
 	type CostBreakdown,
 	type SamplingConfig,
 } from "./telemetry.js";
+
+// v0.4.0 Declarative Agent Pattern
+export {
+	defineAgent,
+	type AgentDefinition,
+	type CompiledAgent,
+	type JSONSchema,
+} from "./define-agent.js";

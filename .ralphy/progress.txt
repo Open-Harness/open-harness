@@ -55,3 +55,46 @@ Tests: PASSED
 Lint: PASSED
 
 Next step: Task 1.2 - Create defineAgent utility
+
+
+## 2026-01-19 15:14 - Tasks 1.2 & 1.3 Complete
+
+### defineAgent Utility Created and Exported
+
+**Task 1.2: Create defineAgent utility**
+
+Created `packages/internal/core/src/api/define-agent.ts` with:
+- `defineAgent<TOutput, TState>()` function accepting Zod schemas
+- Uses Zod 4's native `z.toJSONSchema()` for conversion (no external lib)
+- Returns `CompiledAgent` with both `zodSchema` and `jsonSchema`
+- Supports dynamic prompts: `prompt: string | (ctx) => string`
+- Supports `when` guards for conditional activation
+- Supports `updates` field for direct state mapping
+
+**Key design decisions**:
+1. Custom `ZodSchema<T>` type for Zod 3/4 compatibility
+2. JSON Schema cached at definition time (not per-call)
+3. Type inference preserved through generic parameters
+
+**Task 1.3: Export from @internal/core**
+
+Updated `packages/internal/core/src/api/index.ts` to export:
+- `defineAgent` function
+- `AgentDefinition` type
+- `CompiledAgent` type
+- `JSONSchema` type
+
+**Tests**: Created comprehensive test suite with 9 tests covering:
+- Basic schema conversion
+- Dynamic prompts
+- When guards
+- Agents without schemas
+- Complex nested schemas
+- Type inference
+
+**Verification**:
+- All 143 tests pass
+- Typecheck passes (15 packages)
+- Lint passes (14 packages)
+
+Next step: Task 2.1 - Create plan.schema.ts with Zod schemas
