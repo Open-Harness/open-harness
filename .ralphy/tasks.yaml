@@ -1,277 +1,275 @@
-# Golden Recording Capture - Task List
+# Declarative Agent Pattern - Task List
 # Generated: 2026-01-19
 # PRD: .ralphy/PRD.md
-# Constitution: .ralphy/constitution.md
 
 metadata:
-  name: "Golden Recording Capture"
+  name: "Declarative Agent Pattern with Structured Outputs"
   branch: "feat/handler-pattern-dx-cli"
   prd: ".ralphy/PRD.md"
-  total_tasks: 6
+  total_tasks: 9
+  total_phases: 4
 
-# =============================================================================
-# Phase 1: Verify Infrastructure
-# =============================================================================
+tasks:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 1: Dependencies & Core Utility
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "1.1: Verify Zod 4 native JSON Schema support"
+    completed: true
+    parallel_group: 1
+    phase: "Phase 1: Dependencies & Core Utility"
+    details: |
+      UPDATED: The original task specified zod-to-json-schema, but that library
+      doesn't support Zod 4.x (returns empty schema). Zod 4 has native JSON
+      Schema support via z.toJSONSchema() - no additional dependency needed.
 
-phases:
-  - name: "Phase 1: Verify Infrastructure"
-    tasks:
-      - id: "1.1"
-        name: "Verify CLI works end-to-end with real Claude API"
-        status: pending
-        description: |
-          Run the CLI in live mode to verify it calls the REAL Claude API
-          and executes a workflow successfully.
+      ACTUAL STEPS:
+      1. Tested zod-to-json-schema - confirmed incompatible with zod 4.x
+      2. Verified z.toJSONSchema() works natively with zod 4.x
+      3. Removed zod-to-json-schema dependency (not needed)
 
-          CONTEXT: The CLI was built in the previous cycle but never tested
-          against the real Claude API. This task proves the infrastructure works.
+      IMPLEMENTATION NOTE FOR TASK 1.2:
+      Use z.toJSONSchema(schema) instead of zodToJsonSchema(schema, options)
+    verify:
+      - command: "bun -e \"import { z } from 'zod'; console.log(z.toJSONSchema(z.object({x:z.string()})))\""
+        expect: "Returns valid JSON Schema"
+    acceptance:
+      - "Zod 4 native z.toJSONSchema() verified working"
+      - "No additional dependencies required"
 
-          REQUIRED: Actual Claude API responses must be observed.
+  - title: "1.2: Create defineAgent utility"
+    completed: false
+    parallel_group: 1
+    phase: "Phase 1: Dependencies & Core Utility"
+    details: |
+      Create the defineAgent() function that accepts Zod schemas and
+      converts them to JSON schema for the harness.
 
-        steps:
-          - "cd packages/prd-workflow"
-          - "bun run prd:live ../../examples/hello-world.prd.md"
-          - "Observe: Claude API is called (check logs for API requests)"
-          - "Observe: Workflow progresses through planning/execution phases"
-          - "Verify: Generated code appears in .sandbox/"
+      Location: packages/internal/core/src/api/define-agent.ts
 
-        verify:
-          - command: "ls -la .sandbox/"
-            expect: "Generated files from Claude exist"
-          - command: "cat .open-harness/logs/harness.log | grep -i 'claude\\|api\\|request' | tail -20"
-            expect: "Log entries showing real API calls"
+      INTERFACE:
+      - Accept AgentDefinition with optional outputSchema (Zod type)
+      - Convert Zod → JSON schema using z.toJSONSchema() (Zod 4 native)
+      - Return CompiledAgent with both zodSchema and jsonSchema
+      - Support prompt as string OR function of ActivationContext
 
-        acceptance:
-          - "CLI completes with no errors"
-          - "Real Claude API responses received"
-          - "Generated code exists in .sandbox/"
+      EXPORTS:
+      - defineAgent function
+      - AgentDefinition type
+      - CompiledAgent type
+    verify:
+      - command: "grep -l 'defineAgent' packages/internal/core/src/api/define-agent.ts"
+        expect: "File exists with defineAgent"
+      - command: "grep 'toJSONSchema' packages/internal/core/src/api/define-agent.ts"
+        expect: "Uses z.toJSONSchema()"
+    acceptance:
+      - "defineAgent() accepts Zod schema in outputSchema"
+      - "Converts to JSON schema using z.toJSONSchema()"
+      - "Exports types for external use"
 
-# =============================================================================
-# Phase 2: Capture Golden Recording
-# =============================================================================
+  - title: "1.3: Export defineAgent from @internal/core"
+    completed: false
+    parallel_group: 1
+    phase: "Phase 1: Dependencies & Core Utility"
+    details: |
+      Add defineAgent to the public exports of @internal/core package.
 
-  - name: "Phase 2: Capture Golden Recording"
-    tasks:
-      - id: "2.1"
-        name: "Run prd:record to capture real Claude signals"
-        status: pending
-        description: |
-          Execute prd:record to capture a REAL recording from the Claude API.
-          This recording becomes the golden fixture for all future replay tests.
+      Location: packages/internal/core/src/index.ts
 
-          REQUIRED: Recording contains REAL Claude responses from live API call.
+      STEPS:
+      1. Import from ./api/define-agent.js
+      2. Re-export defineAgent, AgentDefinition, CompiledAgent
+    verify:
+      - command: "grep 'defineAgent' packages/internal/core/src/index.ts"
+        expect: "Exported from index"
+    acceptance:
+      - "defineAgent importable from @internal/core"
 
-        steps:
-          - "cd packages/prd-workflow"
-          - "bun run prd:record ../../examples/hello-world.prd.md --name 'hello-world-golden' --tags 'golden,ci'"
-          - "Note the recording ID returned (format: rec_XXXXXXXX)"
-          - "Verify recording saved to SQLite database"
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 2: Shared Schemas
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "2.1: Create plan.schema.ts with Zod schemas"
+    completed: false
+    parallel_group: 2
+    phase: "Phase 2: Shared Schemas"
+    details: |
+      Create shared Zod schemas for planning-related payloads.
+      These will be used by BOTH agents AND handlers.
 
-        verify:
-          - command: "sqlite3 .sandbox/recordings.db 'SELECT id, name, signal_count FROM recordings WHERE name LIKE \"%golden%\"'"
-            expect: "Recording with signal_count > 0"
+      Location: packages/prd-workflow/src/schemas/plan.schema.ts
 
-        acceptance:
-          - "Recording ID returned in format rec_XXXXXXXX"
-          - "Recording saved to SQLite with signal_count > 0"
-          - "Recording contains actual Claude responses"
+      SCHEMAS TO CREATE:
+      - TaskSchema (matches existing Task interface)
+      - MilestoneSchema (matches existing Milestone interface)
+      - PlanCreatedPayloadSchema (tasks, milestones, taskOrder)
 
-      - id: "2.2"
-        name: "Verify recording persistence"
-        status: pending
-        description: |
-          Verify the recording persists in SQLite and survives process restarts.
+      MUST:
+      - Use .describe() for documentation
+      - Export inferred types: Task, Milestone, PlanCreatedPayload
+      - Match structure in types.ts exactly
+    verify:
+      - command: "grep -l 'PlanCreatedPayloadSchema' packages/prd-workflow/src/schemas/plan.schema.ts"
+        expect: "Schema file exists"
+    acceptance:
+      - "All schemas defined with Zod"
+      - "Types exported via z.infer"
+      - "Structure matches types.ts"
 
-        steps:
-          - "Query SQLite directly to confirm recording exists"
-          - "Restart the process and query again"
-          - "Verify all signals preserved"
+  - title: "2.2: Create schemas index and update types.ts"
+    completed: false
+    parallel_group: 2
+    phase: "Phase 2: Shared Schemas"
+    details: |
+      Create index file for schemas and update types.ts to use shared types.
 
-        verify:
-          - command: "sqlite3 .sandbox/recordings.db 'SELECT COUNT(*) FROM signals WHERE recording_id IN (SELECT id FROM recordings WHERE name LIKE \"%golden%\")'"
-            expect: "Signal count > 0"
+      FILES:
+      1. packages/prd-workflow/src/schemas/index.ts
+         - Re-export all schemas and types from plan.schema.ts
 
-        acceptance:
-          - "Recording persists after process restart"
-          - "All signals preserved in database"
+      2. packages/prd-workflow/src/types.ts
+         - Import types from schemas instead of defining locally
+         - Keep backward compatibility (re-export if needed)
+    verify:
+      - command: "grep 'from.*schemas' packages/prd-workflow/src/types.ts"
+        expect: "types.ts imports from schemas"
+    acceptance:
+      - "schemas/index.ts exports all schemas"
+      - "types.ts uses shared types"
+      - "No duplicate type definitions"
 
-# =============================================================================
-# Phase 3: Verify Replay
-# =============================================================================
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 3: Agent & Workflow Wiring
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "3.1: Create planner.agent.ts"
+    completed: false
+    parallel_group: 3
+    phase: "Phase 3: Agent & Workflow Wiring"
+    details: |
+      Create the planner agent using defineAgent with Zod schema.
 
-  - name: "Phase 3: Verify Replay"
-    tasks:
-      - id: "3.1"
-        name: "Run prd:replay and verify identical renderer output"
-        status: pending
-        description: |
-          Run replay with the golden recording and verify it produces
-          IDENTICAL renderer output to the original run.
+      Location: packages/prd-workflow/src/agents/planner.agent.ts
 
-          The replay injects signals from the recording, so renderers see
-          exactly the same data as the original live run. No network calls occur.
+      MUST INCLUDE:
+      - Import defineAgent from @internal/core
+      - Import PlanCreatedPayloadSchema from ../schemas
+      - Define prompt that instructs Claude to return structured plan
+      - Set activateOn: ["workflow:start"]
+      - Set emits: ["plan:created"]
+      - Set outputSchema: PlanCreatedPayloadSchema
+    verify:
+      - command: "grep 'defineAgent' packages/prd-workflow/src/agents/planner.agent.ts"
+        expect: "Uses defineAgent"
+      - command: "grep 'outputSchema' packages/prd-workflow/src/agents/planner.agent.ts"
+        expect: "Has outputSchema"
+    acceptance:
+      - "Agent defined with defineAgent()"
+      - "Uses PlanCreatedPayloadSchema"
+      - "Prompt instructs structured output"
 
-        steps:
-          - "cd packages/prd-workflow"
-          - "bun run prd:replay --recording <RECORDING_ID>"
-          - "Observe: Same renderer output as original recording"
-          - "Verify: ZERO Claude API calls (check network/logs)"
+  - title: "3.2: Update create-workflow.ts to wire schemas"
+    completed: false
+    parallel_group: 3
+    phase: "Phase 3: Agent & Workflow Wiring"
+    details: |
+      Modify the workflow to pass JSON schema to harness and use
+      structuredOutput for signal payloads.
 
-        verify:
-          - command: "cat .open-harness/logs/harness.log | grep -i 'replay' | tail -10"
-            expect: "Replay mode indicators, no API call logs"
+      Location: packages/internal/core/src/api/create-workflow.ts
 
-        acceptance:
-          - "Replay completes successfully"
-          - "Renderer output matches original recording"
-          - "Zero Claude API calls during replay"
-          - "Replay is fast (signals injected from recording)"
+      CHANGES:
+      1. When calling harness, pass agent.jsonSchema as input.outputSchema
+      2. When emitting signals, check for result.structuredOutput
+      3. If structuredOutput exists, use it as payload directly
+      4. If not, fall back to { agent, output } wrapper
 
-# =============================================================================
-# Phase 4: Fixture Factory
-# =============================================================================
+      FIND the signal emission code (around line 896-904):
+      ```typescript
+      for (const signalName of agentConfig.emits ?? []) {
+        bus.emit(createSignal(signalName, { agent: name, output: result }));
+      }
+      ```
 
-  - name: "Phase 4: Fixture Factory"
-    tasks:
-      - id: "4.1"
-        name: "Create loadFixtureHarness factory"
-        status: pending
-        description: |
-          Create a factory function that loads fixtures from REAL recordings.
+      CHANGE TO:
+      ```typescript
+      for (const signalName of agentConfig.emits ?? []) {
+        const payload = result.structuredOutput ?? { agent: name, output: result.content };
+        bus.emit(createSignal(signalName, payload, { agent: name }));
+      }
+      ```
+    verify:
+      - command: "grep 'structuredOutput' packages/internal/core/src/api/create-workflow.ts"
+        expect: "Uses structuredOutput"
+      - command: "grep 'jsonSchema\\|outputSchema' packages/internal/core/src/api/create-workflow.ts"
+        expect: "Passes schema to harness"
+    acceptance:
+      - "JSON schema passed to harness input"
+      - "structuredOutput used as signal payload"
+      - "Fallback for text-only agents"
 
-          The factory:
-          1. Loads recording by name from SQLite (or exported JSON)
-          2. Creates a harness that injects recorded signals
-          3. Provides same interface as live harness
+  - title: "3.3: Update CLI to use planner agent"
+    completed: false
+    parallel_group: 3
+    phase: "Phase 3: Agent & Workflow Wiring"
+    details: |
+      Update the CLI to import and use the new planner agent.
 
-          All tests will use this factory to load real recorded data.
+      Location: packages/prd-workflow/src/cli.ts
 
-        steps:
-          - "Create packages/prd-workflow/src/test-utils/fixture-factory.ts"
-          - "Implement loadFixtureHarness(recordingName: string)"
-          - "Factory loads from SqliteSignalStore"
-          - "Returns harness that replays recorded signals"
-          - "Export from package"
+      CHANGES:
+      1. Import plannerAgent from ./agents/planner.agent.js
+      2. Remove inline agent definition (lines ~237-251)
+      3. Pass plannerAgent to runPRDWorkflow
 
-        verify:
-          - command: "grep -r 'loadFixtureHarness' packages/prd-workflow/src/"
-            expect: "Factory function defined"
+      BEFORE:
+      ```typescript
+      const planner = agent({
+        prompt: `You are analyzing...`,
+        activateOn: ["workflow:start"],
+        emits: ["plan:created"],
+      });
+      ```
 
-        acceptance:
-          - "Factory function exists at src/test-utils/fixture-factory.ts"
-          - "Loads from real recordings"
-          - "Exported from package"
+      AFTER:
+      ```typescript
+      import { plannerAgent } from "./agents/planner.agent.js";
+      // ... later ...
+      agents: { planner: plannerAgent },
+      ```
+    verify:
+      - command: "grep 'plannerAgent' packages/prd-workflow/src/cli.ts"
+        expect: "Imports plannerAgent"
+    acceptance:
+      - "Inline agent definition removed"
+      - "plannerAgent imported and used"
+      - "CLI still runs"
 
-      - id: "4.2"
-        name: "Remove legacy test utilities"
-        status: pending
-        description: |
-          Remove the legacy test utility functions that do not use real recordings.
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 4: Verification
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "4.1: Run quality gates and live test"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Verification"
+    details: |
+      Run all quality checks and verify live workflow completes.
 
-          Search for and delete any test helpers that generate synthetic data
-          instead of loading from recordings.
-
-        steps:
-          - "Search for legacy test utility functions in test files"
-          - "Delete the functions and their definitions"
-          - "Update all tests to use the new factory"
-
-        verify:
-          - command: "bun run typecheck"
-            expect: "No errors (all references updated)"
-
-        acceptance:
-          - "Legacy utilities removed"
-          - "No synthetic data generators remain"
-
-      - id: "4.3"
-        name: "Update tests to use fixture factory"
-        status: pending
-        description: |
-          Update all tests to use loadFixtureHarness to load real recordings.
-
-        steps:
-          - "Find all tests using legacy utilities"
-          - "Replace with loadFixtureHarness('hello-world-golden')"
-          - "Ensure tests pass with real fixtures"
-
-        verify:
-          - command: "bun test packages/prd-workflow/"
-            expect: "All tests pass"
-
-        acceptance:
-          - "All tests use factory pattern"
-          - "All tests pass with real fixtures"
-
-# =============================================================================
-# Phase 5: Documentation
-# =============================================================================
-
-  - name: "Phase 5: Documentation"
-    tasks:
-      - id: "5.1"
-        name: "Document recording/replay workflow in README"
-        status: pending
-        description: |
-          Update the prd-workflow README with clear instructions for
-          the recording/replay workflow.
-
-        steps:
-          - "Add 'Recording & Replay' section to README"
-          - "Document prd:live, prd:record, prd:replay commands"
-          - "Explain value proposition (record once, replay forever)"
-          - "Document database location and management"
-
-        verify:
-          - command: "grep -A5 'Recording' packages/prd-workflow/README.md"
-            expect: "Recording section exists"
-
-        acceptance:
-          - "README contains recording/replay section"
-          - "Commands documented with examples"
-
-# =============================================================================
-# Phase 6: Final Verification
-# =============================================================================
-
-  - name: "Phase 6: Final Verification"
-    tasks:
-      - id: "6.1"
-        name: "Run full quality suite"
-        status: pending
-        description: |
-          Run all quality gates to ensure everything passes.
-
-        verify:
-          - command: "bun run typecheck"
-            expect: "ZERO errors"
-          - command: "bun run lint"
-            expect: "ZERO warnings"
-          - command: "bun run test"
-            expect: "ALL tests pass"
-
-        acceptance:
-          - "Typecheck passes with zero errors"
-          - "Lint passes with zero warnings"
-          - "All tests pass"
-
-      - id: "6.2"
-        name: "Verify Definition of Done"
-        status: pending
-        description: |
-          Final check against DEFINITION_OF_DONE.md criteria.
-
-        checklist:
-          - "Golden recording captured from REAL Claude API"
-          - "prd:replay shows identical renderer output"
-          - "All legacy test utilities removed"
-          - "All quality gates pass"
-          - "Factory pattern for all fixtures"
-
-        verify:
-          - command: "grep -r 'loadFixtureHarness' packages/prd-workflow/src/"
-            expect: "Factory exists"
-
-        acceptance:
-          - "All DOD criteria met"
-          - "Ready to merge"
+      STEPS:
+      1. bun run typecheck - Zero errors
+      2. bun run lint - Zero warnings
+      3. bun run test - All pass
+      4. cd packages/prd-workflow && bun run prd:live ../../examples/hello-world.prd.md
+         - Must call real Claude API
+         - Must receive structured output
+         - Handler must process without crash
+         - Workflow must complete
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero errors"
+      - command: "bun run lint"
+        expect: "Zero warnings"
+      - command: "bun run test"
+        expect: "All pass"
+    acceptance:
+      - "Type check passes"
+      - "Lint passes"
+      - "Tests pass"
+      - "Live workflow completes without handler crash"
