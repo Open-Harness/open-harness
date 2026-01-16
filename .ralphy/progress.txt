@@ -202,3 +202,45 @@ Created `packages/prd-workflow/src/agents/planner.agent.ts` with:
 - Lint passes
 
 Next step: Task 3.2 - Update create-workflow.ts to wire schemas
+
+
+## 2026-01-19 18:15 - Task 3.2 Complete
+
+### Schema Wiring in create-workflow.ts
+
+**Task 3.2: Update create-workflow.ts to wire schemas**
+
+Modified `packages/internal/core/src/api/create-workflow.ts` to:
+1. Pass `outputSchema` to harness when agent has `jsonSchema` (from defineAgent)
+2. Extract `structuredOutput` from harness response
+3. Use `structuredOutput` directly as signal payload when available
+4. Fall back to `{ agent, output }` wrapper for text-only agents
+
+**Key changes**:
+1. Added `AgentExecutionResult` interface to carry both raw output and structuredOutput
+2. `executeAgent` now accepts optional `jsonSchema` parameter
+3. Includes `outputSchema` in harness input when schema is provided
+4. Signal emission uses structuredOutput directly as payload (type-safe handlers!)
+5. `updates` field also prefers structuredOutput for state updates
+
+**Implementation details**:
+- Runtime check for `jsonSchema` property on agent (may exist from defineAgent)
+- Backward compatible: agents without schemas continue to work
+- Mixed workflows supported: defineAgent and factory agent() can coexist
+
+**Tests**: Created comprehensive test suite with 8 tests covering:
+- JSON Schema passing to harness
+- structuredOutput extraction from harness response
+- Signal payload uses structuredOutput when available
+- Fallback to wrapper when no structured output
+- updates field with structuredOutput
+- state change signal with structuredOutput value
+- Backward compatibility with factory agents
+- Mixed defineAgent and factory agents in same workflow
+
+**Verification**:
+- All tests pass (including 8 new schema wiring tests)
+- Typecheck passes (15 packages)
+- Lint passes (14 packages)
+
+Next step: Task 3.3 - Update CLI to use planner agent

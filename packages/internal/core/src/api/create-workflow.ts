@@ -845,6 +845,11 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 						}
 					} else if (harness) {
 						// Live/record mode: execute harness
+						// Check if agent has jsonSchema (from defineAgent)
+						// TypeScript doesn't know about it at compile time, but it may exist at runtime
+						const agentWithSchema = scopedAgent as { jsonSchema?: Record<string, unknown> };
+						const jsonSchema = agentWithSchema.jsonSchema;
+
 						result = await executeAgent(
 							bus,
 							harness,
@@ -853,15 +858,41 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 							ctx,
 							createSignal,
 							activatedSignal.id,
+							jsonSchema,
 						);
 					}
 
 					return result;
-				})().then((result) => {
+				})().then((executionResult) => {
+					// Extract output and structuredOutput from execution result
+					// For replay mode, result is still the raw output (unknown)
+					// For live mode with new executeAgent, result is AgentExecutionResult
+					let output: unknown;
+					let structuredOutput: unknown;
+
+					if (
+						executionResult &&
+						typeof executionResult === "object" &&
+						"output" in executionResult
+					) {
+						// New format: AgentExecutionResult
+						const execResult = executionResult as {
+							output: unknown;
+							structuredOutput?: unknown;
+						};
+						output = execResult.output;
+						structuredOutput = execResult.structuredOutput;
+					} else {
+						// Legacy/replay format: raw output
+						output = executionResult;
+					}
+
 					// Apply `updates` field - update state with agent output
-					if (agentConfig.updates && result !== undefined) {
+					// Prefer structuredOutput if available
+					const updateValue = structuredOutput ?? output;
+					if (agentConfig.updates && updateValue !== undefined) {
 						const field = agentConfig.updates;
-						(state as Record<string, unknown>)[field] = result;
+						(state as Record<string, unknown>)[field] = updateValue;
 
 						// Emit state change signal for reactive subscribers
 						bus.emit(
@@ -870,7 +901,7 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 								{
 									key: field,
 									oldValue: (config.state as Record<string, unknown>)[field],
-									newValue: result,
+									newValue: updateValue,
 									agent: name,
 								},
 								{ agent: name, parent: activatedSignal.id },
@@ -892,17 +923,13 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 					}
 
 					// Emit declared signals with causality tracking
-					// These may be skipped by handlers if terminated is true
+					// Use structuredOutput as payload if available, otherwise fall back to wrapper
 					for (const signalName of agentConfig.emits ?? []) {
+						// If structuredOutput exists, use it directly as the payload
+						// This enables type-safe handlers that know the exact payload shape
+						const payload = structuredOutput ?? { agent: name, output };
 						bus.emit(
-							createSignal(
-								signalName,
-								{
-									agent: name,
-									output: result,
-								},
-								{ agent: name, parent: activatedSignal.id },
-							),
+							createSignal(signalName, payload, { agent: name, parent: activatedSignal.id }),
 						);
 					}
 				});
@@ -985,6 +1012,17 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 // ============================================================================
 
 /**
+ * Result from executing an agent's harness.
+ * Contains both the raw output and structured output if available.
+ */
+interface AgentExecutionResult {
+	/** Raw output from harness (text content) */
+	output: unknown;
+	/** Structured output if agent has outputSchema and harness returned it */
+	structuredOutput?: unknown;
+}
+
+/**
  * Execute an agent's harness and return the result.
  */
 async function executeAgent<TOutput, TState>(
@@ -999,7 +1037,8 @@ async function executeAgent<TOutput, TState>(
 		source?: { agent?: string; harness?: string; parent?: string },
 	) => Signal,
 	parentSignalId: string,
-): Promise<unknown> {
+	jsonSchema?: Record<string, unknown>,
+): Promise<AgentExecutionResult> {
 	// Import template engine
 	const { expandTemplate } = await import("./template.js");
 
@@ -1014,6 +1053,7 @@ async function executeAgent<TOutput, TState>(
 	});
 
 	// Build harness input with expanded prompt
+	// Include outputSchema if agent has a JSON schema for structured output
 	const harnessInput = {
 		system: expandedPrompt,
 		messages: [
@@ -1025,6 +1065,7 @@ async function executeAgent<TOutput, TState>(
 						: JSON.stringify(ctx.input),
 			},
 		],
+		...(jsonSchema ? { outputSchema: jsonSchema } : {}),
 	};
 
 	const runContext = {
@@ -1033,6 +1074,7 @@ async function executeAgent<TOutput, TState>(
 	};
 
 	let output: unknown;
+	let structuredOutput: unknown;
 
 	// Stream signals from harness
 	for await (const signal of harness.run(harnessInput, runContext)) {
@@ -1041,12 +1083,22 @@ async function executeAgent<TOutput, TState>(
 
 		// Capture output from harness:end
 		if (signal.name === "harness:end") {
-			const payload = signal.payload as { output?: unknown };
+			const payload = signal.payload as {
+				output?: { content?: unknown; structuredOutput?: unknown };
+			};
 			output = payload.output;
+			// Extract structuredOutput from harness output if present
+			if (
+				payload.output &&
+				typeof payload.output === "object" &&
+				"structuredOutput" in payload.output
+			) {
+				structuredOutput = payload.output.structuredOutput;
+			}
 		}
 	}
 
-	return output;
+	return { output, structuredOutput };
 }
 
 /**
