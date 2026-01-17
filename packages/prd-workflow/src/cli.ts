@@ -162,7 +162,8 @@ async function main(): Promise<void> {
 
 	// Dynamic imports to avoid loading heavy dependencies when just showing help
 	const { SqliteSignalStore } = await import("@open-harness/stores");
-	const { runPRDWorkflow, createPRDWorkflow } = await import("./workflow.js");
+	const { runPRDWorkflow } = await import("./workflow.js");
+	const { plannerAgent } = await import("./agents/index.js");
 
 	// Ensure database directory exists
 	const dbDir = dirname(resolve(args.database));
@@ -217,21 +218,22 @@ async function main(): Promise<void> {
 			store.close();
 		}
 	} else {
-		// Live or Record mode: run against harness
+		// Live or Record mode: run against Claude API
 		const prdContent = readFileSync(args.prdFile as string, "utf-8");
 		console.log(`   PRD: ${args.prdFile}`);
 		console.log(`   Sandbox: ${args.sandbox}`);
 
-		// Create a simple planner agent for demonstration
-		// In real usage, users would provide their own agents
-		const { agent } = createPRDWorkflow();
+		// Import Claude harness
+		const { ClaudeHarness } = await import("@open-harness/claude");
 
-		// Placeholder agent - in real usage this would use Claude
-		const planner = agent({
-			prompt: "Analyze the PRD and create a development plan",
-			activateOn: ["workflow:start"],
-			emits: ["plan:created"],
+		// Create Claude harness for REAL API calls
+		const harness = new ClaudeHarness({
+			model: "claude-sonnet-4-20250514",
 		});
+
+		// Use the declarative planner agent with structured output schema
+		// The agent's dynamic prompt reads PRD from ctx.state.planning.prd
+		// which is populated by createInitialState(prdContent) in runPRDWorkflow
 
 		const startTime = performance.now();
 
@@ -242,12 +244,13 @@ async function main(): Promise<void> {
 				console.log(`   Tags: ${args.tags.join(", ")}`);
 			}
 
-			console.log(`\n🎬 Recording workflow...`);
+			console.log(`\n🎬 Recording workflow (calling REAL Claude API)...`);
 
 			try {
 				const result = await runPRDWorkflow({
 					prd: prdContent,
-					agents: { planner },
+					agents: { planner: plannerAgent },
+					harness,
 					recording: {
 						mode: "record",
 						store,
@@ -265,11 +268,12 @@ async function main(): Promise<void> {
 			}
 		} else {
 			// Live mode
-			console.log(`\n⚡ Running workflow...`);
+			console.log(`\n⚡ Running workflow (calling REAL Claude API)...`);
 
 			const result = await runPRDWorkflow({
 				prd: prdContent,
-				agents: { planner },
+				agents: { planner: plannerAgent },
+				harness,
 			});
 
 			const durationMs = Math.round(performance.now() - startTime);

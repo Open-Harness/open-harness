@@ -244,3 +244,42 @@ Modified `packages/internal/core/src/api/create-workflow.ts` to:
 - Lint passes (14 packages)
 
 Next step: Task 3.3 - Update CLI to use planner agent
+
+
+## 2026-01-19 19:00 - Task 3.3 Complete
+
+### CLI Updated to Use plannerAgent
+
+**Task 3.3: Update CLI to use planner agent**
+
+Modified `packages/prd-workflow/src/cli.ts` to:
+1. Import `plannerAgent` from `./agents/index.js` (dynamic import)
+2. Removed inline agent definition using `createPRDWorkflow` factory
+3. Pass `plannerAgent` directly to `runPRDWorkflow`
+4. Updated both live and record modes to use `{ planner: plannerAgent }`
+
+**Key changes**:
+1. Dynamic import of `plannerAgent` alongside workflow functions
+2. Removed `createPRDWorkflow` import (no longer needed for agent factory)
+3. Comment added explaining that agent's dynamic prompt reads PRD from state
+4. Both record and live modes now use the declarative agent
+
+**Also fixed**:
+- Updated `ReactiveAgentConfig.prompt` type in create-workflow.ts to support
+  dynamic prompts: `string | ((ctx: ActivationContext<TState>) => string)`
+- Added prompt resolution logic in `executeAgent` to call function if needed
+
+**Tests**: Created CLI test suite with 13 tests covering:
+- plannerAgent export availability and structure
+- JSON Schema presence for structured output
+- Activation signals and emission configuration
+- CLI source file verification (imports, no inline agent)
+- Agent compatibility with workflow config
+- Dynamic prompt and when guard presence
+
+**Verification**:
+- All 109 tests pass in prd-workflow (13 new CLI tests)
+- Typecheck passes (15 packages)
+- Lint passes (14 packages)
+
+Next step: Task 4.1 - Run quality gates and live test
