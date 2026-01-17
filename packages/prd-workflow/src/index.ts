@@ -10,13 +10,15 @@
  * import {
  *   PRDWorkflowHandlers,
  *   createInitialState,
+ *   plannerAgent,
+ *   PlanCreatedPayloadSchema,
  *   type PRDWorkflowState
  * } from "@internal/prd-workflow";
  *
  * const { agent, runReactive } = createWorkflow<PRDWorkflowState>();
  *
  * const result = await runReactive({
- *   agents: { planner, coder, reviewer },
+ *   agents: { planner: plannerAgent, coder, reviewer },
  *   state: createInitialState(prdContent),
  *   handlers: PRDWorkflowHandlers,
  * });
@@ -25,6 +27,15 @@
 
 // Unified handlers (Handler pattern - state mutations + signal emissions)
 export { PRDWorkflowHandlers } from "./handlers/index.js";
+
+// Planner agent and schemas (canonical location)
+export {
+	createPlannerPrompt,
+	type PlanCreatedPayload,
+	PlanCreatedPayloadSchema,
+	type PlannerPromptContext,
+	plannerAgent,
+} from "./planner/index.js";
 // Types
 export type {
 	AttemptRecord,

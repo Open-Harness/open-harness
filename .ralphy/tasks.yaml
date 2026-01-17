@@ -106,7 +106,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "0.3: Update package exports and cleanup old dirs (TR-00c)"
-    completed: false
+    completed: true
     parallel_group: 0
     phase: "Phase 0: Code Reorganization"
     details: |

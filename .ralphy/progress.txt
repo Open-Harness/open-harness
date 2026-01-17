@@ -56,3 +56,35 @@ Updated `types.ts` to import directly from the new `./planner/` module instead o
 - Updated types.ts to use the new canonical location for imports
 - Fixed stale comment referencing old import path
 
+
+## Task 0.3: Update package exports and cleanup old dirs (TR-00c) - COMPLETED
+
+### Summary
+Updated the main package `index.ts` to export `plannerAgent`, `PlanCreatedPayloadSchema`, and related types from the canonical `./planner/` module. The old `agents/` and `schemas/` directories were NOT removed because they contain backward-compatible re-exports and tests (not empty).
+
+### Files Modified
+- packages/prd-workflow/src/index.ts - Added exports from `./planner/index.js`
+
+### Exports Added
+- `plannerAgent` - The planner agent definition
+- `PlanCreatedPayloadSchema` - Zod schema for plan output
+- `PlanCreatedPayload` (type) - TypeScript type for plan output
+- `PlannerPromptContext` (type) - Context type for prompt function
+- `createPlannerPrompt` - Factory function for planner prompt
+
+### Directory Cleanup Assessment
+- `agents/` directory: NOT empty - contains backward-compat re-exports and old test file
+- `schemas/` directory: NOT empty - contains original schema file and tests
+- Per task instructions "(if empty after moves)" - no directories removed since none are empty
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages, 1 auto-fixed)
+- bun run test: All 124 tests pass
+- Import test: Successfully imports plannerAgent and PlanCreatedPayloadSchema from main export
+
+### Notes
+- Public API is unchanged - existing consumers can still import from old locations via re-exports
+- New consumers should import from main `@internal/prd-workflow` entry point
+- Example docstring in index.ts updated to show new import pattern
+
