@@ -31,3 +31,28 @@ Created the planner module directory structure to co-locate agent-related code (
 - Both old and new test files run successfully (agents/ and planner/ locations)
 - No breaking changes to existing consumers
 
+
+## Task 0.2: Update handlers to use new planner imports (TR-00b) - COMPLETED
+
+### Summary
+Updated `types.ts` to import directly from the new `./planner/` module instead of the deprecated `./schemas/` path. The handlers themselves already imported from `../types.js` (not from `../agents/` or `../schemas/`), so no handler changes were needed.
+
+### Files Modified
+- packages/prd-workflow/src/types.ts - Updated imports from `./schemas/index.js` → `./planner/index.js`
+
+### Key Observations
+- Handlers import from `../types.js`, not directly from agents/ or schemas/
+- The backward-compatible re-exports in schemas/index.ts and agents/index.ts remain for external consumers
+- types.ts now imports directly from the canonical planner module location
+
+### Verification Results
+- grep for old imports in handlers: "No old imports" (handlers use ../types.js)
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- bun run test: All 124 tests pass
+
+### Notes
+- The task expected handler files to have direct imports from ../agents/ or ../schemas/, but they follow the pattern of importing types from ../types.js
+- Updated types.ts to use the new canonical location for imports
+- Fixed stale comment referencing old import path
+

@@ -69,7 +69,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "0.2: Update handlers to use new planner imports (TR-00b)"
-    completed: false
+    completed: true
     parallel_group: 0
     phase: "Phase 0: Code Reorganization"
     details: |

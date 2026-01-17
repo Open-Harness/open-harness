@@ -10,11 +10,11 @@ import type {
 	Milestone as MilestoneType,
 	PlanCreatedPayload as PlanCreatedPayloadType,
 	Task as TaskType,
-} from "./schemas/index.js";
+} from "./planner/index.js";
 
-// Re-export shared types from schemas (single source of truth)
-// These are the canonical types - consumers should import from here or directly from schemas
-export type { AttemptRecord, Milestone, PlanCreatedPayload, Task, TaskStatus } from "./schemas/index.js";
+// Re-export shared types from planner module (single source of truth)
+// These are the canonical types - consumers should import from here or directly from planner
+export type { AttemptRecord, Milestone, PlanCreatedPayload, Task, TaskStatus } from "./planner/index.js";
 
 // Re-export schemas for direct use
 export {
@@ -23,7 +23,7 @@ export {
 	PlanCreatedPayloadSchema,
 	TaskSchema,
 	TaskStatusSchema,
-} from "./schemas/index.js";
+} from "./planner/index.js";
 
 // Local type aliases for use within this file
 type Task = TaskType;
@@ -133,7 +133,7 @@ export interface PlanStartPayload {
 	prd?: string;
 }
 
-// NOTE: PlanCreatedPayload is imported from ./schemas/index.js (single source of truth)
+// NOTE: PlanCreatedPayload is imported from ./planner/index.js (single source of truth)
 
 /**
  * Payload for discovery:submitted signal
