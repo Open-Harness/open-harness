@@ -1,0 +1,9 @@
+{
+  "id": "rec_escalation",
+  "createdAt": "2026-01-17T00:00:02.000Z",
+  "name": "single-task-escalation",
+  "tags": ["escalation", "single-task"],
+  "signalCount": 735,
+  "finalized": true,
+  "durationMs": 164541
+}

@@ -112,14 +112,186 @@ export function extractPaths(template: string): string[] {
 	return paths;
 }
 
+// ============================================================================
+// Path Segment Types for Bracket Notation (FE-002)
+// ============================================================================
+
 /**
- * Resolve a dot-separated path against the context.
+ * A segment of a parsed path.
+ */
+type PathSegment =
+	| { type: "property"; name: string }
+	| { type: "index"; value: number }
+	| { type: "dynamic"; expression: string };
+
+/**
+ * Parse a path string with bracket notation into segments.
  *
- * @param path - Dot-separated path like "state.user.name"
+ * Supports:
+ * - Property access: `state.foo.bar`
+ * - Array index: `state.items[0]`
+ * - Dynamic key: `state.tasks[state.currentId]`
+ * - Mixed: `state.tasks[state.currentId].name`
+ *
+ * @param path - Path string to parse
+ * @returns Array of path segments
+ */
+export function parsePath(path: string): PathSegment[] {
+	const segments: PathSegment[] = [];
+	let remaining = path;
+
+	while (remaining.length > 0) {
+		// Check for bracket notation first
+		if (remaining.startsWith("[")) {
+			// Find the matching closing bracket (handle nested brackets)
+			let depth = 0;
+			let endIdx = -1;
+			for (let i = 0; i < remaining.length; i++) {
+				if (remaining[i] === "[") depth++;
+				if (remaining[i] === "]") depth--;
+				if (depth === 0) {
+					endIdx = i;
+					break;
+				}
+			}
+
+			if (endIdx === -1) {
+				// Malformed - no closing bracket, treat rest as property
+				segments.push({ type: "property", name: remaining });
+				break;
+			}
+
+			const inner = remaining.slice(1, endIdx);
+
+			// Is it a number (array index)?
+			if (/^\d+$/.test(inner)) {
+				segments.push({ type: "index", value: parseInt(inner, 10) });
+			} else {
+				// It's a dynamic expression
+				segments.push({ type: "dynamic", expression: inner });
+			}
+
+			remaining = remaining.slice(endIdx + 1);
+			// Skip trailing dot if present
+			if (remaining.startsWith(".")) {
+				remaining = remaining.slice(1);
+			}
+			continue;
+		}
+
+		// Check for property access (until next dot or bracket)
+		const propMatch = remaining.match(/^([^.\[]+)/);
+		if (propMatch && propMatch[1]) {
+			segments.push({ type: "property", name: propMatch[1] });
+			remaining = remaining.slice(propMatch[0].length);
+			// Skip trailing dot if present
+			if (remaining.startsWith(".")) {
+				remaining = remaining.slice(1);
+			}
+			continue;
+		}
+
+		// If we get here, something went wrong - break to avoid infinite loop
+		break;
+	}
+
+	return segments;
+}
+
+/**
+ * Resolve a path with bracket notation support.
+ *
+ * @param path - Path string (may include bracket notation)
+ * @param context - Template context to resolve against
+ * @returns Resolved value or undefined
+ */
+function resolvePathWithBrackets(
+	path: string,
+	context: TemplateContext,
+): unknown {
+	const segments = parsePath(path);
+	if (segments.length === 0) return undefined;
+
+	// Determine the root value based on first segment
+	const firstSegment = segments[0];
+	if (firstSegment?.type !== "property") {
+		return undefined;
+	}
+
+	const root = firstSegment.name;
+	let current: unknown;
+	let startIdx = 1;
+
+	switch (root) {
+		case "state":
+			current = context.state;
+			break;
+		case "signal":
+			current = context.signal;
+			break;
+		case "input":
+			current = context.input;
+			break;
+		default:
+			// Unknown root - try state as fallback for convenience
+			// e.g., {{ ticker }} is shorthand for {{ state.ticker }}
+			current = context.state;
+			startIdx = 0; // Include the first segment
+			break;
+	}
+
+	// Resolve remaining segments
+	for (let i = startIdx; i < segments.length; i++) {
+		if (current === null || current === undefined) {
+			return undefined;
+		}
+
+		const segment = segments[i];
+		if (!segment) continue;
+
+		switch (segment.type) {
+			case "property":
+				if (typeof current !== "object") return undefined;
+				current = (current as Record<string, unknown>)[segment.name];
+				break;
+			case "index":
+				if (!Array.isArray(current) && typeof current !== "object")
+					return undefined;
+				current = (current as Record<string | number, unknown>)[segment.value];
+				break;
+			case "dynamic": {
+				// Recursively resolve the expression to get the key
+				const key = resolvePathWithBrackets(segment.expression, context);
+				if (typeof key !== "string" && typeof key !== "number") {
+					return undefined;
+				}
+				if (typeof current !== "object" || current === null) {
+					return undefined;
+				}
+				current = (current as Record<string | number, unknown>)[key];
+				break;
+			}
+		}
+	}
+
+	return current;
+}
+
+/**
+ * Resolve a path against the context.
+ * Supports both dot notation and bracket notation.
+ *
+ * @param path - Path string like "state.user.name" or "state.tasks[state.currentId]"
  * @param context - Context to resolve against
  * @returns Resolved value or undefined if not found
  */
 function resolvePath(path: string, context: TemplateContext): unknown {
+	// Check if path contains bracket notation
+	if (path.includes("[")) {
+		return resolvePathWithBrackets(path, context);
+	}
+
+	// Fast path for simple dot notation (backward compatible)
 	const parts = path.split(".");
 
 	// Start with the appropriate root

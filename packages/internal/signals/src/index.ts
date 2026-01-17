@@ -18,8 +18,13 @@ export {
 	createConsoleReporter,
 	defaultConsoleReporter,
 } from "./console-reporter.js";
-// MemorySignalStore - In-memory implementation
+// MemorySignalStore - In-memory implementation (no external dependencies)
 export { MemorySignalStore } from "./memory-store.js";
+// Note: FileSignalStore and SqliteSignalStore are NOT exported here
+// to avoid bundling runtime-specific dependencies (bun:sqlite, node:fs).
+// Import them directly from their files if needed:
+//   import { FileSignalStore } from "@internal/signals/src/file-store.js";
+//   import { SqliteSignalStore } from "@internal/signals/src/sqlite-store.js";
 // Metrics Reporter - Aggregated metrics collection
 export {
 	type AggregatedMetrics,
@@ -38,7 +43,6 @@ export {
 } from "./patterns.js";
 // Player - Navigate recordings
 export { Player, type PlayerPosition, type PlayerState } from "./player.js";
-
 // Reporters - Signal-based reporting interface
 export {
 	attachReporter,

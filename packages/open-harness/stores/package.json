@@ -29,6 +29,7 @@
 		"typescript": "^5"
 	},
 	"dependencies": {
+		"@internal/signals": "workspace:*",
 		"@open-harness/core": "workspace:*"
 	}
 }

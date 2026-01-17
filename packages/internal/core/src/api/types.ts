@@ -340,10 +340,13 @@ export function isReactiveAgent(value: unknown): value is ReactiveAgent {
  */
 export type LoggingConfig = {
 	/**
-	 * Enable console output (pretty printed).
+	 * Console output mode.
+	 * - `true` or `"pretty"`: Color-coded signal console (default)
+	 * - `"json"`: Pino JSON logging
+	 * - `false`: No console output
 	 * @default true
 	 */
-	console?: boolean;
+	console?: boolean | "pretty" | "json";
 
 	/**
 	 * Enable file output (JSONL format).

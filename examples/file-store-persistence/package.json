@@ -1,0 +1,12 @@
+{
+	"name": "@examples/file-store-persistence",
+	"version": "0.0.1-alpha.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "bun run index.ts"
+	},
+	"dependencies": {
+		"@open-harness/core": "workspace:*"
+	}
+}

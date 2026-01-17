@@ -9,6 +9,7 @@ import {
 	expandTemplate,
 	hasTemplateExpressions,
 	extractPaths,
+	parsePath,
 	type TemplateContext,
 } from "./template.js";
 
@@ -239,5 +240,211 @@ describe("extractPaths", () => {
 
 	it("trims whitespace from paths", () => {
 		expect(extractPaths("{{   state.name   }}")).toEqual(["state.name"]);
+	});
+});
+
+// ============================================================================
+// FE-002: Bracket Notation Tests
+// ============================================================================
+
+describe("parsePath", () => {
+	it("parses simple property path", () => {
+		expect(parsePath("state.foo.bar")).toEqual([
+			{ type: "property", name: "state" },
+			{ type: "property", name: "foo" },
+			{ type: "property", name: "bar" },
+		]);
+	});
+
+	it("parses array index", () => {
+		expect(parsePath("state.items[0]")).toEqual([
+			{ type: "property", name: "state" },
+			{ type: "property", name: "items" },
+			{ type: "index", value: 0 },
+		]);
+	});
+
+	it("parses dynamic key", () => {
+		expect(parsePath("state.tasks[state.currentId]")).toEqual([
+			{ type: "property", name: "state" },
+			{ type: "property", name: "tasks" },
+			{ type: "dynamic", expression: "state.currentId" },
+		]);
+	});
+
+	it("parses mixed bracket and property", () => {
+		expect(parsePath("state.tasks[0].name")).toEqual([
+			{ type: "property", name: "state" },
+			{ type: "property", name: "tasks" },
+			{ type: "index", value: 0 },
+			{ type: "property", name: "name" },
+		]);
+	});
+
+	it("parses chained brackets", () => {
+		expect(parsePath("state.a[state.b][state.c]")).toEqual([
+			{ type: "property", name: "state" },
+			{ type: "property", name: "a" },
+			{ type: "dynamic", expression: "state.b" },
+			{ type: "dynamic", expression: "state.c" },
+		]);
+	});
+
+	it("parses nested expression in brackets", () => {
+		expect(parsePath("state.nested[state.a.b.c]")).toEqual([
+			{ type: "property", name: "state" },
+			{ type: "property", name: "nested" },
+			{ type: "dynamic", expression: "state.a.b.c" },
+		]);
+	});
+});
+
+describe("expandTemplate with bracket notation", () => {
+	it("expands array index access", () => {
+		const ctx = createContext({
+			state: { items: ["first", "second", "third"] },
+		});
+		const result = expandTemplate("First: {{ state.items[0] }}", ctx);
+		expect(result).toBe("First: first");
+	});
+
+	it("expands multiple array indices", () => {
+		const ctx = createContext({
+			state: { items: ["a", "b", "c"] },
+		});
+		const result = expandTemplate(
+			"{{ state.items[0] }}-{{ state.items[1] }}-{{ state.items[2] }}",
+			ctx,
+		);
+		expect(result).toBe("a-b-c");
+	});
+
+	it("expands dynamic key from state", () => {
+		const ctx = createContext({
+			state: {
+				currentKey: "foo",
+				map: { foo: "bar value", baz: "other value" },
+			},
+		});
+		const result = expandTemplate(
+			"Value: {{ state.map[state.currentKey] }}",
+			ctx,
+		);
+		expect(result).toBe("Value: bar value");
+	});
+
+	it("expands nested dynamic key", () => {
+		const ctx = createContext({
+			state: {
+				a: { b: "taskId123" },
+				tasks: {
+					taskId123: { name: "My Task", status: "complete" },
+				},
+			},
+		});
+		const result = expandTemplate(
+			"Task: {{ state.tasks[state.a.b].name }}",
+			ctx,
+		);
+		expect(result).toBe("Task: My Task");
+	});
+
+	it("expands chained dynamic keys", () => {
+		const ctx = createContext({
+			state: {
+				keyA: "level1",
+				keyB: "level2",
+				data: {
+					level1: {
+						level2: "deep value",
+					},
+				},
+			},
+		});
+		const result = expandTemplate(
+			"Deep: {{ state.data[state.keyA][state.keyB] }}",
+			ctx,
+		);
+		expect(result).toBe("Deep: deep value");
+	});
+
+	it("expands mixed array index and property", () => {
+		const ctx = createContext({
+			state: {
+				users: [
+					{ name: "Alice", age: 30 },
+					{ name: "Bob", age: 25 },
+				],
+			},
+		});
+		const result = expandTemplate(
+			"User: {{ state.users[1].name }}, Age: {{ state.users[1].age }}",
+			ctx,
+		);
+		expect(result).toBe("User: Bob, Age: 25");
+	});
+
+	it("returns empty string for undefined dynamic key", () => {
+		const ctx = createContext({
+			state: {
+				currentKey: "nonexistent",
+				map: { foo: "bar" },
+			},
+		});
+		const result = expandTemplate(
+			"Value: {{ state.map[state.currentKey] }}",
+			ctx,
+		);
+		expect(result).toBe("Value: ");
+	});
+
+	it("returns empty string for out of bounds array index", () => {
+		const ctx = createContext({
+			state: { items: ["only one"] },
+		});
+		const result = expandTemplate("Item: {{ state.items[5] }}", ctx);
+		expect(result).toBe("Item: ");
+	});
+
+	it("works with numeric string keys", () => {
+		const ctx = createContext({
+			state: {
+				index: "1",
+				items: ["a", "b", "c"],
+			},
+		});
+		// Numeric string key works on arrays too
+		const result = expandTemplate("Item: {{ state.items[state.index] }}", ctx);
+		expect(result).toBe("Item: b");
+	});
+
+	it("handles complex real-world PRD workflow pattern", () => {
+		// This is the actual use case from the PRD Agent System
+		const ctx = createContext({
+			state: {
+				execution: {
+					currentTaskId: "T001",
+				},
+				planning: {
+					allTasks: {
+						T001: {
+							id: "T001",
+							title: "Implement login form",
+							status: "in_progress",
+						},
+						T002: {
+							id: "T002",
+							title: "Add validation",
+							status: "pending",
+						},
+					},
+				},
+			},
+		});
+		const result = expandTemplate(
+			"Current task: {{ state.planning.allTasks[state.execution.currentTaskId].title }}",
+			ctx,
+		);
+		expect(result).toBe("Current task: Implement login form");
 	});
 });

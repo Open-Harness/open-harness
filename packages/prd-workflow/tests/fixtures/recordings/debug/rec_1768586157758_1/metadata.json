@@ -1,0 +1,11 @@
+{
+  "id": "rec_1768586157758_1",
+  "createdAt": "2026-01-16T17:55:57.758Z",
+  "name": "debug-test",
+  "tags": [
+    "debug"
+  ],
+  "signalCount": 512,
+  "finalized": true,
+  "durationMs": 61006
+}
