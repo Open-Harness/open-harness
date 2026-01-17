@@ -188,3 +188,43 @@ Implemented the `defineSignal()` factory function that creates type-safe signal 
 - Phase 1 Task 2 of 4 complete (1.1, 1.2 done; 1.3, 1.G remaining)
 - Next task: 1.3 Create adapter interface (TR-03)
 
+
+## Task 1.3: Create adapter interface (TR-03) - COMPLETED
+
+### Summary
+Created the `SignalAdapter` interface for rendering signals to different outputs (terminal, logs, web). The adapter interface provides a standard way for adapters to receive and process signals with display metadata support.
+
+### Files Created
+- packages/internal/signals/src/adapter.ts - SignalAdapter interface and createAdapter() factory
+- packages/internal/signals/tests/adapter.test.ts - Comprehensive test suite (17 tests)
+
+### Files Modified
+- packages/internal/signals/src/index.ts - Added exports for SignalAdapter, CreateAdapterConfig, createAdapter
+
+### New Types Added
+- `SignalAdapter` - Interface with name, patterns, onSignal, onStart?, onStop?
+- `CreateAdapterConfig` - Configuration options for createAdapter() factory
+
+### Key Design Decisions
+- `onSignal` can be sync or async (`void | Promise<void>`) for I/O-bound operations
+- Lifecycle methods `onStart`/`onStop` are optional and also support async
+- `patterns` defaults to `["*"]` in createAdapter() to subscribe to all signals
+- Distinct from `SignalReporter`: adapters focus on OUTPUT rendering, reporters on observation
+- Adapters have explicit lifecycle semantics (start/stop) vs reporters (attach/detach)
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors
+- grep 'export interface SignalAdapter': Interface exported
+- bun test packages/internal/signals/tests/adapter.test.ts: All 17 tests pass
+
+### Acceptance Criteria Met
+- ✓ SignalAdapter interface exported
+- ✓ createAdapter() helper exists
+- ✓ TypeScript compilation passes
+- ✓ Lint passes
+
+### Notes
+- Phase 1 Task 3 of 4 complete (1.1, 1.2, 1.3 done; 1.G remaining)
+- Next task: 1.G Phase 1 Gate - Type Safety Verification
+
