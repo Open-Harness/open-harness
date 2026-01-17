@@ -4,21 +4,157 @@
  * Handle plan creation and discovery processing signals.
  */
 
-import type { ReducerContext, SignalReducer } from "@internal/core";
-import type { Signal } from "@internal/signals-core";
+import type { SignalReducer } from "@internal/core";
 import type { DiscoveryDecision, PlanOutput } from "../schemas.js";
-import type { DiscoveredTask, Milestone, PRDWorkflowState, Task } from "../types.js";
+import type { DiscoveredTask, PRDWorkflowState, Task } from "../types.js";
 import { createSignal } from "./utils.js";
+
+// =============================================================================
+// Legacy Recording Format Support
+// =============================================================================
+
+/**
+ * Legacy task format from older recordings.
+ * Tasks were stored as a dictionary with string IDs.
+ */
+interface LegacyTask {
+	id: string;
+	title: string;
+	description: string;
+	definitionOfDone: string | string[];
+	files?: string[];
+	dependencies: string[];
+	milestoneId?: string;
+}
+
+/**
+ * Legacy plan format from older recordings.
+ * Plan was embedded as JSON in the content field.
+ */
+interface LegacyPlan {
+	approach: string;
+	reasoning: string;
+	milestones: Array<{
+		id?: string;
+		title: string;
+		description: string;
+		acceptanceTest: string;
+		tasks: string[]; // Task IDs
+		dependencies: string[];
+	}>;
+	tasks: Record<string, LegacyTask>;
+}
+
+/**
+ * Parse plan data from content field (legacy recordings).
+ * Looks for JSON embedded in markdown code blocks.
+ */
+function parsePlanFromContent(content: string): PlanOutput | undefined {
+	// Look for JSON code blocks
+	const matches = content.match(/```json\s*([\s\S]*?)```/g);
+	if (!matches) return undefined;
+
+	// Try each JSON block (in reverse order - last one is often the final plan)
+	for (const match of [...matches].reverse()) {
+		try {
+			const jsonStr = match.replace(/```json\s*/, "").replace(/\s*```$/, "");
+			const parsed = JSON.parse(jsonStr);
+
+			// Check if this is the legacy format (tasks as dictionary)
+			if (parsed.milestones && parsed.tasks && typeof parsed.tasks === "object" && !Array.isArray(parsed.tasks)) {
+				return transformLegacyPlan(parsed as LegacyPlan);
+			}
+
+			// Check if this is already the new format
+			if (
+				parsed.milestones &&
+				Array.isArray(parsed.milestones) &&
+				parsed.milestones[0]?.tasks &&
+				Array.isArray(parsed.milestones[0].tasks) &&
+				typeof parsed.milestones[0].tasks[0] === "object"
+			) {
+				return parsed as PlanOutput;
+			}
+		} catch {}
+	}
+	return undefined;
+}
+
+/**
+ * Transform legacy plan format to new PlanOutput format.
+ */
+function transformLegacyPlan(legacy: LegacyPlan): PlanOutput {
+	return {
+		approach: legacy.approach,
+		reasoning: legacy.reasoning,
+		milestones: legacy.milestones.map((m) => ({
+			title: m.title,
+			description: m.description,
+			acceptanceTest: {
+				type: "manual" as const,
+				description: m.acceptanceTest,
+				command: null,
+				expectedOutcome: m.acceptanceTest,
+			},
+			tasks: m.tasks
+				.map((taskId) => {
+					const task = legacy.tasks[taskId];
+					if (!task) return null;
+					const dod = Array.isArray(task.definitionOfDone) ? task.definitionOfDone : [task.definitionOfDone];
+					return {
+						title: task.title,
+						description: task.description,
+						definitionOfDone: dod,
+						technicalApproach: null,
+						filesToModify: [] as string[],
+						filesToCreate: task.files || [],
+						changes: [] as Array<{
+							file: string;
+							changeType: "create" | "modify" | "delete" | "rename";
+							description: string;
+							location: string | null;
+						}>,
+						context: null,
+						dependencies: task.dependencies,
+					};
+				})
+				.filter((t): t is NonNullable<typeof t> => t !== null),
+			dependencies: m.dependencies,
+		})),
+	};
+}
+
+// =============================================================================
+// Reducers
+// =============================================================================
 
 /**
  * Handle plan:created signal.
  * Builds milestones and tasks from plan output, queues first tasks.
+ *
+ * Supports multiple formats for backwards compatibility:
+ * 1. structuredOutput field (new format with schema validation)
+ * 2. JSON in content field (legacy recordings)
  */
 export const planCreatedReducer: SignalReducer<PRDWorkflowState> = (state, signal, ctx) => {
 	// The output from harness contains { content, sessionId, usage, structuredOutput }
 	// When using a schema, the parsed output is in structuredOutput
-	const harnessOutput = (signal.payload as { output: { structuredOutput?: PlanOutput } }).output;
-	const plan = harnessOutput.structuredOutput;
+	const harnessOutput = (signal.payload as { output?: { structuredOutput?: PlanOutput; content?: string } }).output;
+
+	// Early return if no output (e.g., empty recordings)
+	if (!harnessOutput) {
+		state.terminalFailure = "Plan agent did not produce output";
+		state.workflowPhase = "failed";
+		return;
+	}
+
+	// Try structuredOutput first (new format)
+	let plan = harnessOutput.structuredOutput;
+
+	// Fallback to parsing JSON from content (legacy recordings)
+	if (!plan && harnessOutput.content) {
+		plan = parsePlanFromContent(harnessOutput.content);
+	}
 
 	if (!plan) {
 		// No structured output available, workflow cannot proceed
@@ -141,7 +277,7 @@ export const planCreatedReducer: SignalReducer<PRDWorkflowState> = (state, signa
  * Handle tasks:queued signal.
  * Additional tasks added to queue (e.g., after dependencies resolve).
  */
-export const tasksQueuedReducer: SignalReducer<PRDWorkflowState> = (state, signal, ctx) => {
+export const tasksQueuedReducer: SignalReducer<PRDWorkflowState> = (state, signal, _ctx) => {
 	const taskIds = (signal.payload as { taskIds: string[] }).taskIds;
 	for (const taskId of taskIds) {
 		if (!state.planning.taskQueue.includes(taskId)) {

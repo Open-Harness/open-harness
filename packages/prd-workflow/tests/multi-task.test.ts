@@ -15,10 +15,10 @@
  *   bun test packages/prd-workflow/tests/multi-task.test.ts
  */
 
+import { beforeAll, describe, expect, it } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "bun:test";
 import { ClaudeHarness } from "@open-harness/core";
 import { FileSignalStore } from "@open-harness/stores";
 import { createPRDWorkflow } from "../src/workflow.js";
@@ -144,7 +144,7 @@ describe("Multi-Task Milestone", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				const result = await workflow.run(multiTaskPRD, {
@@ -216,7 +216,7 @@ describe("Multi-Task Milestone", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				const result = await workflow.run(multiMilestonePRD, {

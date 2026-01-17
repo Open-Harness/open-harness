@@ -13,7 +13,7 @@ import { createSignal } from "./utils.js";
  * Handle task:ready signal.
  * Picks next task from queue and sets it as current.
  */
-export const taskReadyReducer: SignalReducer<PRDWorkflowState> = (state, signal, _ctx) => {
+export const taskReadyReducer: SignalReducer<PRDWorkflowState> = (state, _signal, _ctx) => {
 	// Pick next task from queue
 	if (state.planning.taskQueue.length > 0) {
 		const taskId = state.planning.taskQueue.shift()!;

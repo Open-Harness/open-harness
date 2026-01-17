@@ -267,7 +267,7 @@ export const taskEscalateReducer: SignalReducer<PRDWorkflowState> = (state, sign
  * Handle milestone:complete signal.
  * Checks if all milestones are done or queues next milestone.
  */
-export const milestoneCompleteReducer: SignalReducer<PRDWorkflowState> = (state, signal, ctx) => {
+export const milestoneCompleteReducer: SignalReducer<PRDWorkflowState> = (state, _signal, ctx) => {
 	const milestoneId = state.review.milestoneUnderReview;
 	if (!milestoneId) return;
 

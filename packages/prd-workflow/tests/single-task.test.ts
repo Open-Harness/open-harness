@@ -13,10 +13,10 @@
  *   bun test packages/prd-workflow/tests/single-task.test.ts
  */
 
+import { beforeAll, describe, expect, it } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "bun:test";
 import { ClaudeHarness } from "@open-harness/core";
 import { FileSignalStore } from "@open-harness/stores";
 import { createPRDWorkflow } from "../src/workflow.js";
@@ -110,7 +110,7 @@ describe("Single Task Flow", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				const result = await workflow.run(simplePRD, {
@@ -182,7 +182,7 @@ describe("Single Task Flow", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				// Use a PRD that's more likely to trigger fixes
@@ -257,7 +257,7 @@ Create a validated calculator function.
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				// Use a PRD that's intentionally ambiguous/impossible

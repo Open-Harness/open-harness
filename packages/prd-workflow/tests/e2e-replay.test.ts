@@ -5,10 +5,10 @@
  * This test validates reducers and workflow logic without real SDK calls.
  */
 
+import { beforeAll, describe, expect, it } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "bun:test";
 import { ClaudeHarness } from "@open-harness/core";
 import { FileSignalStore } from "@open-harness/stores";
 import { createPRDWorkflow } from "../src/workflow.js";
@@ -27,9 +27,7 @@ describe("E2E Replay", () => {
 	it("replays successful workflow from recording", async () => {
 		// Find the recording with structuredOutput
 		const recordings = await store.list({ tags: ["debug"] });
-		const recording = recordings.find(
-			(r) => r.name === "debug-test" && r.signalCount > 0,
-		);
+		const recording = recordings.find((r) => r.name === "debug-test" && r.signalCount > 0);
 
 		if (!recording) {
 			console.warn("No valid recording found. Run debug.test.ts first to create a recording.");
@@ -73,7 +71,10 @@ Create a simple function that adds two numbers.
 		console.log("Phase:", result.state.workflowPhase);
 		console.log("Terminal Failure:", result.state.terminalFailure);
 		console.log("Milestones:", result.state.planning.milestones.length);
-		console.log("History Types:", result.state.history.map((h) => h.type));
+		console.log(
+			"History Types:",
+			result.state.history.map((h) => h.type),
+		);
 
 		// Verify workflow completed successfully
 		expect(result.state.workflowPhase).toBe("complete");

@@ -15,10 +15,10 @@
  *   bun test packages/prd-workflow/tests/task-discovery.test.ts
  */
 
+import { beforeAll, describe, expect, it } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect, beforeAll } from "bun:test";
 import { ClaudeHarness } from "@open-harness/core";
 import { FileSignalStore } from "@open-harness/stores";
 import { createPRDWorkflow } from "../src/workflow.js";
@@ -121,7 +121,7 @@ describe("Task Discovery", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				const result = await workflow.run(gappyPRD, {
@@ -189,7 +189,7 @@ describe("Task Discovery", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				const result = await workflow.run(complexFeaturePRD, {
@@ -260,7 +260,7 @@ describe("Task Discovery", () => {
 						: {
 								mode: "replay" as const,
 								store,
-								recordingId: existingRecording!.id,
+								recordingId: existingRecording?.id,
 							};
 
 				// Use a PRD that might generate many discoveries
