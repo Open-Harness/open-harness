@@ -1,13 +1,11 @@
 /**
  * Agent exports for the PRD workflow
  *
- * This module exports pre-configured agents using the declarative
- * defineAgent pattern with Zod schemas for structured outputs.
+ * This file re-exports from the co-located planner module for backward compatibility.
+ * New code should import directly from "../planner/index.js".
  *
- * Each agent has:
- * - Agent definition (*.agent.ts) - minimal, declarative config
- * - Prompt function (*.prompt.ts) - extracted for testability
+ * @deprecated Import from "../planner/index.js" instead
  */
 
-export { plannerAgent } from "./planner.agent.js";
-export { createPlannerPrompt, type PlannerPromptContext } from "./planner.prompt.js";
+// Re-export from new planner module location (backward compatibility)
+export { createPlannerPrompt, type PlannerPromptContext, plannerAgent } from "../planner/index.js";
