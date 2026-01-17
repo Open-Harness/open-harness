@@ -57,13 +57,17 @@ export interface DiscoveredTask {
 
 /**
  * Planning state slice
+ *
+ * Note: Arrays are NOT marked readonly here because Immer's Draft<T> handles
+ * immutability externally. Using `readonly` on arrays causes type mismatches
+ * when assigning from Zod-parsed payloads (which return mutable arrays).
  */
 export interface PlanningState {
 	phase: PlanningPhase;
 	readonly prd: string;
 	allTasks: Record<string, Task>;
-	milestones: readonly Milestone[];
-	taskOrder: readonly string[];
+	milestones: Milestone[];
+	taskOrder: string[];
 }
 
 /**
@@ -72,7 +76,7 @@ export interface PlanningState {
 export interface ExecutionState {
 	phase: ExecutionPhase;
 	currentTaskId: string | null;
-	pendingDiscoveries: readonly DiscoveredTask[];
+	pendingDiscoveries: DiscoveredTask[];
 }
 
 /**
@@ -81,7 +85,7 @@ export interface ExecutionState {
 export interface ReviewState {
 	phase: ReviewPhase;
 	currentMilestoneId: string | null;
-	passedMilestones: readonly string[];
+	passedMilestones: string[];
 }
 
 /**
@@ -156,7 +160,7 @@ export interface TaskReadyPayload {
 	taskId: string;
 	title: string;
 	description: string;
-	definitionOfDone: readonly string[];
+	definitionOfDone: string[];
 }
 
 /**
@@ -185,7 +189,7 @@ export interface FixRequiredPayload {
  */
 export interface MilestoneTestablePayload {
 	milestoneId: string;
-	taskIds: readonly string[];
+	taskIds: string[];
 }
 
 /**
@@ -328,6 +332,54 @@ export function createHandler<TPayload>(handler: TypedHandler<TPayload>): Signal
 		// This defensive unwrapping bridges the contract between create-workflow.ts and handlers
 		const rawPayload = signal.payload;
 		const payload = isAgentOutputWrapper(rawPayload) ? (rawPayload.output as TPayload) : (rawPayload as TPayload);
+		const draft = state as DraftState;
+		return handler(draft, payload, signal);
+	};
+}
+
+// ============================================================================
+// Signal-Aware Handler Creator (Issue #6 Fix)
+// ============================================================================
+
+/**
+ * Signal names that have registered payloads.
+ */
+export type PRDSignalName = keyof PRDSignalPayloads;
+
+/**
+ * Creates a signal-aware handler with payload type inferred from signal name.
+ *
+ * This utility uses the PRDSignalPayloads registry to automatically infer
+ * the correct payload type based on the signal name, eliminating the need
+ * to manually specify the type parameter.
+ *
+ * @example
+ * ```ts
+ * // Payload type is automatically inferred as TaskReadyPayload
+ * export const taskReadyHandler = createSignalHandler("task:ready", (draft, payload) => {
+ *   draft.execution.currentTaskId = payload.taskId;  // ✅ payload is TaskReadyPayload
+ * });
+ *
+ * // Compare to createHandler which requires explicit type:
+ * export const taskReadyHandler = createHandler<TaskReadyPayload>((draft, payload) => {
+ *   // ...
+ * });
+ * ```
+ *
+ * @typeParam TSignal - The signal name (inferred from first argument)
+ * @param _signalName - The signal name (used for type inference, not at runtime)
+ * @param handler - Handler function receiving typed draft state and payload
+ * @returns A SignalHandler compatible with the reactive workflow system
+ */
+export function createSignalHandler<TSignal extends PRDSignalName>(
+	_signalName: TSignal,
+	handler: TypedHandler<PRDSignalPayloads[TSignal]>,
+): SignalHandler<PRDWorkflowState> {
+	return (state, signal) => {
+		const rawPayload = signal.payload;
+		const payload = isAgentOutputWrapper(rawPayload)
+			? (rawPayload.output as PRDSignalPayloads[TSignal])
+			: (rawPayload as PRDSignalPayloads[TSignal]);
 		const draft = state as DraftState;
 		return handler(draft, payload, signal);
 	};

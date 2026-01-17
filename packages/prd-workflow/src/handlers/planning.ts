@@ -19,17 +19,13 @@
 
 import type { SignalHandler } from "@internal/core";
 import { createSignal } from "@internal/signals-core";
-import type { Draft } from "immer";
 import {
 	createHandler,
-	type DiscoveredTask,
 	type DiscoveryReviewedPayload,
 	type DiscoverySubmittedPayload,
-	type Milestone,
 	type PlanCreatedPayload,
 	type PlanStartPayload,
 	type PRDWorkflowState,
-	type Task,
 } from "../types.js";
 
 /**
@@ -60,11 +56,11 @@ export const planStartHandler = createHandler<PlanStartPayload | undefined>((dra
 export const planCreatedHandler = createHandler<PlanCreatedPayload>((draft, payload) => {
 	// MUTATION: Store tasks as a map by ID for O(1) lookup
 	for (const task of payload.tasks) {
-		draft.planning.allTasks[task.id] = task as Draft<Task>;
+		draft.planning.allTasks[task.id] = task;
 	}
 
 	// Store milestones and task order
-	draft.planning.milestones = payload.milestones as Draft<Milestone>[];
+	draft.planning.milestones = payload.milestones;
 	draft.planning.taskOrder = payload.taskOrder;
 
 	// Transition to plan_complete
@@ -102,7 +98,7 @@ export const planCreatedHandler = createHandler<PlanCreatedPayload>((draft, payl
  */
 export const discoverySubmittedHandler = createHandler<DiscoverySubmittedPayload>((draft, payload) => {
 	// Store discoveries for review
-	draft.execution.pendingDiscoveries = payload.discoveries as Draft<DiscoveredTask>[];
+	draft.execution.pendingDiscoveries = payload.discoveries;
 
 	// Transition to discovery review phase
 	draft.planning.phase = "discovery_review";
@@ -122,7 +118,7 @@ export const discoveryReviewedHandler = createHandler<DiscoveryReviewedPayload>(
 	// MUTATION: Add accepted tasks to the plan
 	if (payload.acceptedTasks) {
 		for (const task of payload.acceptedTasks) {
-			draft.planning.allTasks[task.id] = task as Draft<Task>;
+			draft.planning.allTasks[task.id] = task;
 			draft.planning.taskOrder.push(task.id);
 
 			// Add to appropriate milestone if specified
