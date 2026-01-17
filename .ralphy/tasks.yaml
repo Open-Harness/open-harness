@@ -222,7 +222,7 @@ tasks:
       - "Lint passes"
 
   - title: "1.2: Create defineSignal() function (TR-02)"
-    completed: false
+    completed: true
     parallel_group: 1
     phase: "Phase 1: Core Signal Display Infrastructure"
     details: |

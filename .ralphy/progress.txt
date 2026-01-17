@@ -144,3 +144,47 @@ Extended the Signal<T> interface with optional display metadata to enable intell
 - Phase 1 Task 1 of 4 complete (1.1 done, 1.2, 1.3, 1.G remaining)
 - Next task: 1.2 Create defineSignal() function (TR-02)
 
+
+## Task 1.2: Create defineSignal() function (TR-02) - COMPLETED
+
+### Summary
+Implemented the `defineSignal()` factory function that creates type-safe signal definitions with Zod schema validation and display metadata. This enables reusable signal type definitions with `create()` and `is()` methods.
+
+### Files Created
+- packages/internal/signals-core/src/define-signal.ts - Main implementation
+- packages/internal/signals-core/src/define-signal.test.ts - Comprehensive test suite (25 tests)
+
+### Files Modified
+- packages/internal/signals-core/src/index.ts - Added exports for defineSignal and related types
+
+### New Types Added
+- `SignalDefinition<TPayload, TInput>` - Interface for signal definitions with create/is methods
+- `DefineSignalConfig<TPayload, TInput>` - Configuration options for defineSignal()
+- `SignalDisplayConfig<TPayload>` - Type-safe display config with actual payload type (vs unknown)
+- `SignalMeta` - Metadata for categorization (level, category)
+- `CreateFromDefinitionOptions` - Options for create() method
+
+### Key Design Decisions
+- Two-parameter generics (`TPayload`, `TInput`) to support Zod transforms/defaults
+- `SignalDisplayConfig<TPayload>` uses actual payload type for better DX; converts to `SignalDisplay` (unknown) at runtime
+- Schema validation via Zod `parse()` in `create()` - throws on invalid payloads
+- `is()` type guard validates name by default, optionally validates payload via `validatePayload` parameter
+- Supports all Zod features: transforms, defaults, discriminated unions, optional fields
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors
+- bun test packages/internal/signals-core/src/define-signal.test.ts: All 25 tests pass
+- All 63 tests pass across 3 files in signals-core package
+
+### Acceptance Criteria Met
+- ✓ defineSignal() accepts config with display metadata
+- ✓ Returns SignalDefinition with type-safe create() and is()
+- ✓ Display metadata attached to created signals
+- ✓ Unit tests validate behavior (25 tests)
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 1 Task 2 of 4 complete (1.1, 1.2 done; 1.3, 1.G remaining)
+- Next task: 1.3 Create adapter interface (TR-03)
+
