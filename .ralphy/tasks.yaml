@@ -305,7 +305,7 @@ tasks:
   # Phase 1 Gate: Verify core types compile
   # ───────────────────────────────────────────────────────────────
   - title: "1.G: Phase 1 Gate - Type Safety Verification"
-    completed: false
+    completed: true
     parallel_group: 1
     phase: "Phase 1: Core Signal Display Infrastructure"
     details: |
