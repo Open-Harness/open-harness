@@ -7,9 +7,9 @@
  * - Adapter instances work with real signals
  */
 
+import { describe, expect, it } from "bun:test";
 import { createSignal } from "@internal/signals-core";
 import pino from "pino";
-import { describe, expect, it } from "vitest";
 import {
 	type CreateAdapterConfig,
 	createAdapter,
@@ -184,7 +184,9 @@ describe("adapters/index", () => {
 			const received: unknown[] = [];
 			const adapter = createAdapter({
 				name: "test-adapter",
-				onSignal: (signal) => received.push(signal),
+				onSignal: (signal) => {
+					received.push(signal);
+				},
 			});
 
 			const signal = createSignal("custom:event", { data: "test" });

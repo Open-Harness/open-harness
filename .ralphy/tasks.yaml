@@ -462,7 +462,7 @@ tasks:
   # Phase 2 Gate: Verify adapters work
   # ───────────────────────────────────────────────────────────────
   - title: "2.G: Phase 2 Gate - Adapter Verification"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Adapter Implementations"
     details: |
