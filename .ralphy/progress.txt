@@ -357,3 +357,46 @@ Created the logs adapter that bridges signals to Pino structured logging. The ad
 - Next task: 2.3 Export default adapters (TR-06)
 - Design decision: Logger injection required due to cyclic dependency with @internal/core
 
+
+## Task 2.3: Export default adapters (TR-06) - COMPLETED
+
+### Summary
+Created the central export point for all signal adapters at `packages/internal/signals/src/adapters/index.ts`. Implemented `defaultAdapters()` helper that returns terminal + logs adapters when a logger is provided, or just terminal adapter when no logger is available.
+
+### Files Created
+- packages/internal/signals/src/adapters/index.ts - Central export point for adapters
+- packages/internal/signals/src/adapters/index.test.ts - Comprehensive test suite (18 tests)
+
+### Key Features
+1. **Re-exports**:
+   - `terminalAdapter` and `TerminalAdapterOptions` from ./terminal.js
+   - `logsAdapter` and `LogsAdapterOptions` from ./logs.js
+   - `createAdapter`, `CreateAdapterConfig`, `SignalAdapter` from ../adapter.js
+
+2. **defaultAdapters() Helper**:
+   - Returns `[terminalAdapter()]` when no logger provided
+   - Returns `[terminalAdapter(), logsAdapter()]` when logger provided
+   - Accepts options for customizing both terminal and logs adapters
+   - Provides sensible defaults for standard use cases
+
+3. **Design Decisions**:
+   - Logger is optional in `DefaultAdaptersOptions` to handle cases where logging isn't needed
+   - Options allow customization of both adapters (e.g., `showTimestamp`, `includePayload`)
+   - All adapters subscribe to all signals by default (patterns: ["*"])
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors (14 packages)
+- grep 'export.*defaultAdapters': Function exported
+- bun test packages/internal/signals/src/adapters/index.test.ts: All 18 tests pass
+
+### Acceptance Criteria Met
+- ✓ All adapters exported from index.ts
+- ✓ defaultAdapters() returns array of adapters
+- ✓ TypeScript compilation passes
+- ✓ Lint passes
+
+### Notes
+- Phase 2 Task 3 of 4 complete (2.1, 2.2, 2.3 done; 2.G remaining)
+- Next task: 2.G Phase 2 Gate - Adapter Verification
+
