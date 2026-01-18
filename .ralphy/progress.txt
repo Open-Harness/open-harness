@@ -625,3 +625,56 @@ Successfully verified all Phase 3 tasks are complete. The Phase 3 Gate check pas
 - Adapters are wired through the entire stack: CLI → workflow → runReactive → SignalBus
 
 
+## Task 4.1: Custom adapter integration test (V-04) - COMPLETED
+
+### Summary
+Created comprehensive integration tests that verify users can create custom adapters using `createAdapter()` and correctly receive signals replayed from the SQLite recording. The test uses 230 real agent interaction signals from recording `rec_f0b64b75`.
+
+### Files Created
+- packages/internal/signals/src/adapters/custom.test.ts - Integration test suite (14 tests)
+
+### Key Implementation Details
+1. **Test Structure**: 14 tests across 6 describe blocks covering:
+   - Recording verification (confirms real signals exist)
+   - Custom adapter creation (createAdapter API)
+   - Signal replay through adapters
+   - Async handler support
+   - Multiple adapter scenarios
+   - Signal statistics collection
+
+2. **SQLite Access**: Used Bun's native `bun:sqlite` directly instead of `@open-harness/stores` to avoid cyclic dependency in the monorepo package graph. The `TestSignalStore` class provides read-only access to recordings.
+
+3. **Pattern Testing**: Tests demonstrate:
+   - Adapters with default patterns (["*"])
+   - Adapters with custom patterns (["workflow:*"], ["agent:*"], ["text:*"])
+   - Pattern-filtered replay simulation
+   - Multiple adapters receiving same signals
+
+4. **Lifecycle Testing**: Verifies onStart/onStop hooks work correctly with both sync and async handlers.
+
+### Design Decision: Avoiding Cyclic Dependency
+- Initially attempted to add `@open-harness/stores` as devDependency
+- Turbo detected cyclic dependency: stores → core → signals → stores
+- Solution: Embedded minimal `TestSignalStore` class using `bun:sqlite` directly
+- This is acceptable for testing - production code uses proper store packages
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors (14 packages)
+- bun test packages/internal/signals/src/adapters/custom.test.ts: 14 tests pass
+- grep 'createAdapter' custom.test.ts: Uses createAdapter API (5+ occurrences)
+- bun run test: All 152 tests pass across monorepo
+
+### Acceptance Criteria Met
+- ✓ Custom adapter test passes (14 tests)
+- ✓ Test uses createAdapter() interface
+- ✓ Test uses recorded signals from SQLite (rec_f0b64b75 - 230 signals)
+- ✓ Adapter receives signals correctly
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 4 Task 1 of 5 complete (4.1 done; 4.2, 4.3, 4.4, 4.G remaining)
+- Next task: 4.2 Display inference validation (V-06)
+- Recording contains real workflow signals: workflow:start, agent:activated, harness:start, text:delta, etc.
+
+
