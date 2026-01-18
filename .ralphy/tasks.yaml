@@ -493,7 +493,7 @@ tasks:
   # Phase 3: Workflow Integration
   # ═══════════════════════════════════════════════════════════════
   - title: "3.1: Update runReactive() to accept adapters (TR-07)"
-    completed: false
+    completed: true
     parallel_group: 3
     phase: "Phase 3: Workflow Integration"
     details: |
