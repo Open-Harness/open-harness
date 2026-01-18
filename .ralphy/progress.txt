@@ -307,3 +307,53 @@ Created the terminal adapter that renders signals to stdout with ANSI colors and
 - Phase 2 Task 1 of 4 complete (2.1 done; 2.2, 2.3, 2.G remaining)
 - Next task: 2.2 Create logs adapter (TR-05)
 
+
+## Task 2.2: Create logs adapter (TR-05) - COMPLETED
+
+### Summary
+Created the logs adapter that bridges signals to Pino structured logging. The adapter maps signals to appropriate Pino log levels based on `meta.level` (if set via `defineSignal()`) or infers level from signal naming conventions.
+
+### Files Created
+- packages/internal/signals/src/adapters/logs.ts - Logs adapter implementation
+- packages/internal/signals/src/adapters/logs.test.ts - Comprehensive test suite (30 tests)
+
+### Key Features
+1. **Log Level Mapping**:
+   - Explicit `meta.level` takes priority (from defineSignal())
+   - Convention-based inference from signal name:
+     - *:error, error:* → error
+     - *:fail*, *:abort*, *:timeout → warn
+     - workflow:*, *:done, *:complete → info
+     - *:delta → trace
+     - tool:*, state:* → debug
+     - default → debug
+
+2. **Structured JSONL Output**:
+   - signalId, signalName, signalTimestamp in every entry
+   - Optional payload inclusion (configurable via `includePayload`)
+   - Optional display metadata (configurable via `includeDisplay`)
+   - Source tracking when present
+
+3. **Cyclic Dependency Resolution**:
+   - Cannot import `getLogger` from @internal/core (would create cycle with @internal/signals)
+   - Solution: Logger is required as a constructor option
+   - Duplicated signal-level inference logic locally (mirrors @internal/core/lib/logger/signal-levels.ts)
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- bun test packages/internal/signals/src/adapters/logs.test.ts: All 30 tests pass
+- bun run test: All 202 tests pass across monorepo
+
+### Acceptance Criteria Met
+- ✓ logsAdapter() bridges to Pino logger
+- ✓ Level mapping works correctly (explicit + inferred)
+- ✓ Structured JSONL output maintained
+- ✓ Tests use real Pino logger instances (no mocks)
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 2 Task 2 of 4 complete (2.1, 2.2 done; 2.3, 2.G remaining)
+- Next task: 2.3 Export default adapters (TR-06)
+- Design decision: Logger injection required due to cyclic dependency with @internal/core
+
