@@ -479,3 +479,65 @@ Extended `runReactive()` to accept an optional `adapters` array parameter. Adapt
 - Note: The SQLite recording integration test was not added because runReactive adapter tests don't require workflow-level testing - the adapter wiring is tested independently
 
 
+## Task 3.2: Define PRD workflow signals with display (TR-08) - COMPLETED
+
+### Summary
+Created comprehensive signal definitions for all PRD workflow events using `defineSignal()` with display metadata. Signals are defined in the new `signals/` directory and provide type-safe signal creation, type guards, and display hints for adapters.
+
+### Files Created
+- packages/prd-workflow/src/signals/index.ts - 13 signal definitions with display metadata
+- packages/prd-workflow/src/signals/signals.test.ts - Comprehensive test suite (28 tests)
+
+### Signal Definitions Added
+1. **Planning Phase**:
+   - `PlanStart` - status display, active, "Planning..."
+   - `PlanCreated` - notification display, success, dynamic title showing task count
+
+2. **Discovery Phase**:
+   - `DiscoverySubmitted` - notification display, warning, shows count discovered
+   - `DiscoveryReviewed` - notification display, success, shows accepted/rejected counts
+
+3. **Task Execution**:
+   - `TaskReady` - status display, active, shows task title
+   - `TaskComplete` - notification display, success, shows outcome
+   - `TaskApproved` - notification display, success
+   - `FixRequired` - status display, warning, shows attempt number
+
+4. **Milestones**:
+   - `MilestoneTestable` - status display, active
+   - `MilestonePassed` - notification display, success
+   - `MilestoneFailed` - notification display, error
+   - `MilestoneRetry` - status display, warning
+
+5. **Workflow**:
+   - `WorkflowComplete` - notification display, success, reason-based message
+
+### Key Technical Decisions
+1. **Zod Version Compatibility**: Used `asZodSchema<T>()` helper function with `any` return type to bridge Zod v3 (signals-core) and Zod v4 (prd-workflow) type incompatibilities. Runtime validation works correctly; only TypeScript types differ.
+
+2. **Display Configuration**: Used `as SignalDisplayConfig<T>` assertions instead of `satisfies` to allow subtitle functions that return `undefined` (TypeScript strict mode disallows this with satisfies).
+
+3. **Payload Types**: Defined explicit interface types for all payloads rather than relying on Zod inference, ensuring proper TypeScript support across the Zod version boundary.
+
+4. **Signal Registry**: Added `PRDSignals` object for easy iteration and `PRD_SIGNAL_NAMES` constant for pattern matching.
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- grep 'defineSignal' signals/index.ts: Uses defineSignal function
+- bun test signals/signals.test.ts: All 28 tests pass
+- bun run test: All 152 tests pass across monorepo
+
+### Acceptance Criteria Met
+- ✓ All PRD signals defined with display metadata
+- ✓ Display types match use cases (status, notification)
+- ✓ Payload functions provide title/subtitle
+- ✓ Tests validate signal creation (28 tests)
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 3 Task 2 of 4 complete (3.1, 3.2 done; 3.3, 3.G remaining)
+- Next task: 3.3 Update CLI to use adapters (TR-09)
+- Note: Task 3.2 step 5 ("Update workflow code to use new signal definitions") is deferred - existing handlers still use `createSignal()` directly; migration to signal definitions can be done incrementally
+
+
