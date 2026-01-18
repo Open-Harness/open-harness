@@ -541,3 +541,58 @@ Created comprehensive signal definitions for all PRD workflow events using `defi
 - Note: Task 3.2 step 5 ("Update workflow code to use new signal definitions") is deferred - existing handlers still use `createSignal()` directly; migration to signal definitions can be done incrementally
 
 
+## Task 3.3: Update CLI to use adapters (TR-09) - COMPLETED
+
+### Summary
+Updated the PRD Workflow CLI to use the adapter system for signal rendering. The CLI now passes `terminalAdapter()` and `logsAdapter()` to the workflow, replacing direct `console.log` statements with structured Pino logging for CLI messages.
+
+### Files Modified
+- packages/prd-workflow/src/cli.ts - Complete rewrite using adapters and structured logging
+- packages/prd-workflow/src/workflow.ts - Added `adapters?: SignalAdapter[]` to config
+- packages/internal/core/src/api/create-workflow.ts - Added adapters support to multi-agent `runReactive()`
+- packages/internal/signals/package.json - Added `./adapters` subpath export
+- packages/prd-workflow/tests/cli.test.ts - Updated tests to match new log format
+
+### Key Changes
+1. **CLI Adapter Integration**:
+   - Imports `terminalAdapter` and `logsAdapter` from `@internal/signals/adapters`
+   - Creates adapters array: `[terminalAdapter(), logsAdapter({ logger })]`
+   - Passes adapters to `runPRDWorkflow()` config
+
+2. **Workflow Config Extension**:
+   - Added `adapters?: SignalAdapter[]` to `PRDWorkflowConfig`
+   - Passes adapters through to internal `runReactive()` call
+
+3. **Multi-Agent runReactive Adapter Support**:
+   - Extended `ReactiveWorkflowConfig<TState>` with `adapters` field
+   - Implemented adapter lifecycle management (onStart/onStop)
+   - Wrapped execution in try/finally to ensure adapter cleanup
+
+4. **CLI Output Migration**:
+   - Replaced all `console.log` with `logger.info()` for structured logging
+   - Replaced `console.error` with `process.stderr.write()` for early errors
+   - Help text uses `process.stdout.write()` (not a log event)
+
+5. **Package Export**:
+   - Added `"./adapters": "./src/adapters/index.ts"` to @internal/signals package.json
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors (14 packages)
+- bun run test: All 152 tests pass
+- cd packages/prd-workflow && bun run prd:live --help: Help text displayed correctly
+- grep 'console.log' cli.ts: No console.log found
+
+### Acceptance Criteria Met
+- ✓ CLI passes adapters to workflow
+- ✓ No console.log statements in CLI code (uses structured logger)
+- ✓ CLI flags still work (--help verified)
+- ✓ TypeScript, build, and lint pass
+- ✓ All tests pass
+
+### Notes
+- Phase 3 Task 3 of 4 complete (3.1, 3.2, 3.3 done; 3.G remaining)
+- Next task: 3.G Phase 3 Gate - Integration Verification
+- CLI test assertions updated to match Pino pretty-print format (contains value strings rather than formatted "Key: value" strings)
+
+

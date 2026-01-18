@@ -50,8 +50,14 @@ interface CliArgs {
 	help: boolean;
 }
 
+/**
+ * Print help text to stdout.
+ *
+ * Note: Help text uses process.stdout.write() directly since it's not a log event
+ * and the logger may not be configured yet. This is acceptable for CLI help output.
+ */
 function showHelp(): void {
-	console.log(`
+	process.stdout.write(`
 PRD Workflow CLI
 
 Usage:
@@ -72,7 +78,7 @@ Examples:
   bun run prd:live examples/hello-world.prd.md
   bun run prd:record examples/hello-world.prd.md --name "test"
   bun run prd:replay --recording rec_abc12345
-`);
+\n`);
 }
 
 function parseCliArgs(): CliArgs {
@@ -93,7 +99,7 @@ function parseCliArgs(): CliArgs {
 
 		const mode = values.mode as "live" | "record" | "replay";
 		if (!["live", "record", "replay"].includes(mode)) {
-			console.error(`Invalid mode: ${mode}. Must be one of: live, record, replay`);
+			process.stderr.write(`Invalid mode: ${mode}. Must be one of: live, record, replay\n`);
 			process.exit(1);
 		}
 
@@ -111,7 +117,7 @@ function parseCliArgs(): CliArgs {
 			help: values.help as boolean,
 		};
 	} catch (error) {
-		console.error("Error parsing arguments:", error);
+		process.stderr.write(`Error parsing arguments: ${error}\n`);
 		process.exit(1);
 	}
 }
@@ -123,19 +129,19 @@ function parseCliArgs(): CliArgs {
 function validateArgs(args: CliArgs): void {
 	if (args.mode === "replay") {
 		if (!args.recordingId) {
-			console.error("Error: --recording is required for replay mode");
+			process.stderr.write("Error: --recording is required for replay mode\n");
 			process.exit(1);
 		}
 	} else {
 		// live or record mode requires PRD file
 		if (!args.prdFile) {
-			console.error(`Error: PRD file is required for ${args.mode} mode`);
+			process.stderr.write(`Error: PRD file is required for ${args.mode} mode\n`);
 			showHelp();
 			process.exit(1);
 		}
 
 		if (!existsSync(args.prdFile)) {
-			console.error(`Error: PRD file not found: ${args.prdFile}`);
+			process.stderr.write(`Error: PRD file not found: ${args.prdFile}\n`);
 			process.exit(1);
 		}
 	}
@@ -164,6 +170,16 @@ async function main(): Promise<void> {
 	const { SqliteSignalStore } = await import("@open-harness/stores");
 	const { runPRDWorkflow } = await import("./workflow.js");
 	const { plannerAgent } = await import("./agents/index.js");
+	const { getLogger } = await import("@internal/core");
+	const { terminalAdapter, logsAdapter } = await import("@internal/signals/adapters");
+
+	// Create logger for CLI messages and as adapter dependency
+	const logger = getLogger();
+
+	// Create adapters for signal rendering
+	// - terminalAdapter: renders workflow signals to stdout with ANSI colors
+	// - logsAdapter: bridges signals to Pino for structured JSONL logging
+	const adapters = [terminalAdapter(), logsAdapter({ logger })];
 
 	// Ensure database directory exists
 	const dbDir = dirname(resolve(args.database));
@@ -171,37 +187,47 @@ async function main(): Promise<void> {
 		mkdirSync(dbDir, { recursive: true });
 	}
 
-	console.log(`\n🚀 PRD Workflow CLI`);
-	console.log(`   Mode: ${args.mode}`);
-	console.log(`   Database: ${args.database}`);
+	logger.info(
+		{
+			mode: args.mode,
+			database: args.database,
+		},
+		"PRD Workflow CLI starting",
+	);
 
 	if (args.mode === "replay") {
 		// Replay mode: load signals from recording
-		console.log(`   Recording: ${args.recordingId}`);
+		logger.info({ recordingId: args.recordingId }, "Replay mode");
 
 		const store = new SqliteSignalStore(args.database);
 
 		try {
 			const exists = await store.exists(args.recordingId as string);
 			if (!exists) {
-				console.error(`\n❌ Recording not found: ${args.recordingId}`);
+				logger.error({ recordingId: args.recordingId }, "Recording not found");
 				process.exit(1);
 			}
 
 			const recording = await store.load(args.recordingId as string);
 			if (!recording) {
-				console.error(`\n❌ Failed to load recording: ${args.recordingId}`);
+				logger.error({ recordingId: args.recordingId }, "Failed to load recording");
 				process.exit(1);
 			}
 
-			console.log(`   Signals: ${recording.metadata.signalCount}`);
-			console.log(`\n📼 Replaying recording...`);
+			logger.info(
+				{
+					recordingId: args.recordingId,
+					signalCount: recording.metadata.signalCount,
+				},
+				"Replaying recording",
+			);
 
 			const startTime = performance.now();
 
 			const result = await runPRDWorkflow({
 				prd: "", // PRD comes from the recorded signals
 				agents: { planner: plannerAgent }, // Agents still needed - they react to replayed harness signals
+				adapters,
 				recording: {
 					mode: "replay",
 					store,
@@ -210,18 +236,28 @@ async function main(): Promise<void> {
 			});
 
 			const durationMs = Math.round(performance.now() - startTime);
-			console.log(`\n✅ Replay complete in ${durationMs}ms`);
-			console.log(`   Final phase: ${result.state.review.phase}`);
-			console.log(`   Tasks: ${Object.keys(result.state.planning.allTasks).length}`);
-			console.log(`   Milestones passed: ${result.state.review.passedMilestones.length}`);
+			logger.info(
+				{
+					durationMs,
+					phase: result.state.review.phase,
+					taskCount: Object.keys(result.state.planning.allTasks).length,
+					milestonesPassedCount: result.state.review.passedMilestones.length,
+				},
+				"Replay complete",
+			);
 		} finally {
 			store.close();
 		}
 	} else {
 		// Live or Record mode: run against Claude API
 		const prdContent = readFileSync(args.prdFile as string, "utf-8");
-		console.log(`   PRD: ${args.prdFile}`);
-		console.log(`   Sandbox: ${args.sandbox}`);
+		logger.info(
+			{
+				prdFile: args.prdFile,
+				sandbox: args.sandbox,
+			},
+			"Loading PRD",
+		);
 
 		// Import Claude harness
 		const { ClaudeHarness } = await import("@open-harness/claude");
@@ -239,18 +275,20 @@ async function main(): Promise<void> {
 
 		if (args.mode === "record") {
 			const store = new SqliteSignalStore(args.database);
-			console.log(`   Name: ${args.name ?? "(auto)"}`);
-			if (args.tags) {
-				console.log(`   Tags: ${args.tags.join(", ")}`);
-			}
-
-			console.log(`\n🎬 Recording workflow (calling REAL Claude API)...`);
+			logger.info(
+				{
+					name: args.name ?? "(auto)",
+					tags: args.tags,
+				},
+				"Recording mode - calling Claude API",
+			);
 
 			try {
 				const result = await runPRDWorkflow({
 					prd: prdContent,
 					agents: { planner: plannerAgent },
 					harness,
+					adapters,
 					recording: {
 						mode: "record",
 						store,
@@ -260,35 +298,45 @@ async function main(): Promise<void> {
 				});
 
 				const durationMs = Math.round(performance.now() - startTime);
-				console.log(`\n✅ Recording complete in ${durationMs}ms`);
-				console.log(`   Recording ID: ${result.recordingId ?? "(unknown)"}`);
-				console.log(`   Final phase: ${result.state.review.phase}`);
+				logger.info(
+					{
+						durationMs,
+						recordingId: result.recordingId ?? "(unknown)",
+						phase: result.state.review.phase,
+					},
+					"Recording complete",
+				);
 			} finally {
 				store.close();
 			}
 		} else {
 			// Live mode
-			console.log(`\n⚡ Running workflow (calling REAL Claude API)...`);
+			logger.info({}, "Live mode - calling Claude API");
 
 			const result = await runPRDWorkflow({
 				prd: prdContent,
 				agents: { planner: plannerAgent },
 				harness,
+				adapters,
 			});
 
 			const durationMs = Math.round(performance.now() - startTime);
-			console.log(`\n✅ Workflow complete in ${durationMs}ms`);
-			console.log(`   Final phase: ${result.state.review.phase}`);
-			console.log(`   Tasks: ${Object.keys(result.state.planning.allTasks).length}`);
-			console.log(`   Milestones passed: ${result.state.review.passedMilestones.length}`);
+			logger.info(
+				{
+					durationMs,
+					phase: result.state.review.phase,
+					taskCount: Object.keys(result.state.planning.allTasks).length,
+					milestonesPassedCount: result.state.review.passedMilestones.length,
+				},
+				"Workflow complete",
+			);
 		}
 	}
-
-	console.log("");
 }
 
 // Run the CLI
 main().catch((error) => {
-	console.error("\n❌ CLI Error:", error);
+	// Use stderr for CLI errors since logger may not be initialized
+	process.stderr.write(`\nCLI Error: ${error}\n`);
 	process.exit(1);
 });
