@@ -1,8 +1,8 @@
 ---
 title: "Signal Infrastructure"
-lastUpdated: "2026-01-11T13:09:48.217Z"
-lastCommit: "907d0b728b929259d4b202827743bf044de77fdd"
-lastCommitDate: "2026-01-11T10:45:33Z"
+lastUpdated: "2026-01-19T21:01:16.913Z"
+lastCommit: "e4e02ebd09f142c724081e8542fae27b98569b16"
+lastCommitDate: "2026-01-19T20:56:44Z"
 scope:
   - signals
   - event-bus
@@ -18,6 +18,8 @@ Core signal routing, storage, and playback for Open Harness v0.3.0.
 
 | Module | Description |
 |--------|-------------|
+| `adapter.ts` | `SignalAdapter` — Output rendering interface |
+| `adapters/` | Pre-built adapters (terminal, logs) |
 | `bus.ts` | `SignalBus` — Central event dispatcher |
 | `memory-store.ts` | `MemorySignalStore` — In-memory recording/replay |
 | `player.ts` | `Player` — VCR-style navigation |
@@ -26,6 +28,186 @@ Core signal routing, storage, and playback for Open Harness v0.3.0.
 | `reporter.ts` | Signal reporting interface |
 | `console-reporter.ts` | Debug logging reporter |
 | `metrics-reporter.ts` | Aggregated metrics collection |
+
+## Signal Display System
+
+Signals can carry display metadata that tells adapters how to render them. This enables intelligent presentation across different outputs (terminal, logs, web).
+
+### Display Metadata
+
+Signals have an optional `display` field with rendering hints:
+
+```typescript
+interface SignalDisplay {
+  type?: "status" | "progress" | "notification" | "stream" | "log";
+  title?: string | ((payload: unknown) => string);
+  subtitle?: string | ((payload: unknown) => string);
+  icon?: string;
+  status?: "pending" | "active" | "success" | "error" | "warning";
+  progress?: number | { current: number; total: number };
+  append?: boolean;  // For stream type
+}
+```
+
+### Display Types
+
+| Type | Use Case | Terminal Rendering |
+|------|----------|-------------------|
+| `status` | Persistent state (e.g., "Planning...") | Colored icon + title |
+| `progress` | Progress bars or step counts | `[=====>    ] 60%` or `[3/10]` |
+| `notification` | One-time events | Checkmark/X icon + message |
+| `stream` | Streaming text | Appends content inline |
+| `log` | Structured debug output | `[signal:name] message` |
+
+### Creating Signals with Display
+
+Use `defineSignal()` from `@internal/signals-core`:
+
+```typescript
+import { defineSignal } from "@internal/signals-core";
+import { z } from "zod";
+
+const PlanCreated = defineSignal({
+  name: "plan:created",
+  schema: z.object({
+    taskCount: z.number(),
+  }),
+  display: {
+    type: "notification",
+    title: (p) => `Plan created with ${p.taskCount} tasks`,
+    status: "success",
+    icon: "✓",
+  },
+});
+
+// Create a signal with display metadata attached
+const signal = PlanCreated.create({ taskCount: 5 });
+// signal.display.title(signal.payload) => "Plan created with 5 tasks"
+```
+
+## Signal Adapters
+
+Adapters render signals to outputs. They receive signals, read display metadata, and produce appropriate output.
+
+### Key Difference from Reporters
+
+| Aspect | Reporter | Adapter |
+|--------|----------|---------|
+| Focus | Observation, metrics | Output rendering |
+| Lifecycle | attach/detach | onStart/onStop |
+| Async | Sync only | Sync or async |
+| Display | No awareness | Reads display metadata |
+
+### Built-in Adapters
+
+```typescript
+import { terminalAdapter, logsAdapter, defaultAdapters } from "@internal/signals";
+import { getLogger } from "@internal/core";
+
+// Terminal adapter - renders to stdout with ANSI colors
+const terminal = terminalAdapter({
+  showTimestamp: true,  // Optional: show timestamps
+  useColors: true,      // Optional: enable ANSI colors (default: true)
+});
+
+// Logs adapter - bridges to Pino structured logging
+const logs = logsAdapter({
+  logger: getLogger(),
+  includePayload: true,   // Include signal payload in log entry
+  includeDisplay: false,  // Include display metadata
+});
+
+// Default adapters - convenience helper
+const adapters = defaultAdapters({
+  logger: getLogger(),
+  terminal: { showTimestamp: true },
+});
+```
+
+### Terminal Adapter Colors
+
+| Status | Color | Icon |
+|--------|-------|------|
+| `success` | Green | ✓ |
+| `error` | Red | ✗ |
+| `active` | Yellow | ● |
+| `warning` | Yellow | ⚠ |
+| `pending` | Blue | ○ |
+
+### Convention-Based Inference
+
+When signals don't have explicit display metadata, adapters infer rendering from signal names:
+
+| Signal Name Pattern | Inferred Display |
+|--------------------|------------------|
+| `*:start`, `*:begin` | status (active) |
+| `*:complete`, `*:done`, `*:success` | notification (success) |
+| `*:error`, `*:failed` | notification (error) |
+| `*:warning`, `*:warn` | notification (warning) |
+| `*:delta`, `*:chunk`, `*:stream` | stream (append) |
+| Other | log |
+
+### Creating Custom Adapters
+
+```typescript
+import { createAdapter } from "@internal/signals";
+
+// Simple adapter - receives all signals
+const myAdapter = createAdapter({
+  name: "my-adapter",
+  onSignal: (signal) => {
+    console.log(`[${signal.name}]`, signal.payload);
+  },
+});
+
+// Adapter with lifecycle and filtering
+const taskAdapter = createAdapter({
+  name: "task-tracker",
+  patterns: ["task:*", "milestone:*"],  // Only these signals
+  onStart: async () => {
+    console.log("Starting task tracking...");
+  },
+  onSignal: async (signal) => {
+    const title = signal.display?.title;
+    const resolved = typeof title === "function"
+      ? title(signal.payload)
+      : title ?? signal.name;
+    console.log(`Task: ${resolved}`);
+  },
+  onStop: async () => {
+    console.log("Task tracking complete.");
+  },
+});
+```
+
+### Using Adapters with runReactive()
+
+```typescript
+import { runReactive } from "@internal/core";
+import { terminalAdapter, logsAdapter } from "@internal/signals";
+
+const result = await runReactive({
+  agents,
+  state,
+  defaultProvider: provider,
+  adapters: [
+    terminalAdapter(),
+    logsAdapter({ logger }),
+  ],
+});
+```
+
+### Adapter Interface
+
+```typescript
+interface SignalAdapter {
+  name: string;
+  patterns: SignalPattern[];
+  onSignal(signal: Signal): void | Promise<void>;
+  onStart?(): void | Promise<void>;
+  onStop?(): void | Promise<void>;
+}
+```
 
 ## SignalBus
 

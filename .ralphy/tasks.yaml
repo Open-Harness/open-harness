@@ -778,7 +778,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "4.3: Update package exports and documentation"
-    completed: false
+    completed: true
     parallel_group: 4
     phase: "Phase 4: Verification & Documentation"
     details: |

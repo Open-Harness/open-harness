@@ -742,3 +742,59 @@ Created comprehensive test suite for terminal adapter display type inference log
 - Next task: 4.3 Update package exports and documentation
 
 
+## Task 4.3: Update package exports and documentation - COMPLETED
+
+### Summary
+Updated package exports to properly wire all new signal display system components and updated documentation to explain the display metadata system.
+
+### Files Modified
+- packages/internal/signals/src/index.ts - Added exports for terminalAdapter, logsAdapter, defaultAdapters, and their option types
+- packages/internal/signals/README.md - Added comprehensive documentation for Signal Display System and Adapters
+
+### Key Changes
+
+1. **Package Exports** (signals/src/index.ts):
+   - Added `terminalAdapter` and `TerminalAdapterOptions`
+   - Added `logsAdapter` and `LogsAdapterOptions`
+   - Added `defaultAdapters` and `DefaultAdaptersOptions`
+
+2. **Documentation Updates** (signals/README.md):
+   - Added "Signal Display System" section explaining display metadata structure
+   - Added display types table (status, progress, notification, stream, log)
+   - Added example of creating signals with display using `defineSignal()`
+   - Added "Signal Adapters" section with key differences from reporters
+   - Added built-in adapters usage examples
+   - Added terminal adapter colors table
+   - Added convention-based inference table
+   - Added custom adapter creation examples
+   - Added runReactive() adapter usage examples
+   - Updated module table to include adapters
+
+3. **Pre-existing JSDoc Coverage**:
+   - define-signal.ts already has comprehensive JSDoc
+   - adapter.ts already has comprehensive JSDoc
+   - terminal.ts already has JSDoc header
+   - logs.ts already has JSDoc header
+   - adapters/index.ts already has JSDoc with examples
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors (14 packages, 1 auto-fixed)
+- grep 'defineSignal' signals-core/src/index.ts: "defineSignal" exported
+- grep 'terminalAdapter' signals/src/index.ts: "terminalAdapter" exported
+- test -f signals/README.md: "README exists"
+- bun run test: All 152 tests pass
+
+### Acceptance Criteria Met
+- ✓ All new exports properly wired (terminalAdapter, logsAdapter, defaultAdapters)
+- ✓ Documentation explains display system (comprehensive README updates)
+- ✓ JSDoc comments added to public APIs (all key files already had JSDoc)
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 4 Task 3 of 5 complete (4.1, 4.2, 4.3 done; 4.4, 4.G remaining)
+- Next task: 4.4 Visual validation of terminal adapter output (V-05)
+- signals-core/src/index.ts already exported defineSignal and SignalDisplay (no changes needed)
+- core/src/index.ts uses barrel exports from subdirectories - runReactive changes already exposed
+
+
