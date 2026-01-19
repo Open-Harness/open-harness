@@ -46,3 +46,6 @@ export type {
 } from "./types.js";
 // Factory function
 export { createInitialState } from "./types.js";
+export type { PRDWorkflowConfig } from "./workflow.js";
+// Workflow runner
+export { createPRDWorkflow, runPRDWorkflow } from "./workflow.js";
