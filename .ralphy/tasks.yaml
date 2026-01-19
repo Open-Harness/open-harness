@@ -332,7 +332,7 @@ tasks:
   # Phase 2: Adapter Implementations
   # ═══════════════════════════════════════════════════════════════
   - title: "2.1: Create terminal adapter (TR-04)"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Adapter Implementations"
     details: |

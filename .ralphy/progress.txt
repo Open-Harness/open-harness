@@ -253,3 +253,57 @@ Successfully verified all Phase 1 tasks are complete. The Phase 1 Gate check pas
 - Ready to proceed to Phase 2: Adapter Implementations
 - All type foundations are solid for building terminal and logs adapters
 
+
+## Task 2.1: Create terminal adapter (TR-04) - COMPLETED
+
+### Summary
+Created the terminal adapter that renders signals to stdout with ANSI colors and formatting. The adapter reads `signal.display` metadata to determine rendering strategy and falls back to inferring display type from signal naming conventions.
+
+### Files Created
+- packages/internal/signals/src/adapters/terminal.ts - Terminal adapter implementation
+- packages/internal/signals/src/adapters/terminal.test.ts - Comprehensive test suite (34 tests)
+
+### Key Features
+1. **Display Type Rendering**:
+   - status: Persistent state indicator with colored icon
+   - progress: Progress bar (percentage) or step counts (current/total)
+   - notification: One-time event with icon and color
+   - stream: Streaming text with append mode support
+   - log: Structured log output with signal name prefix
+
+2. **ANSI Color Mapping**:
+   - green for success status
+   - red for error status
+   - yellow for active/warning status
+   - blue for pending status
+
+3. **Convention-Based Inference** (when no explicit display):
+   - *:start → status (active)
+   - *:complete → notification (success)
+   - *:error → notification (error)
+   - *:delta → stream (append)
+
+4. **Additional Features**:
+   - Custom icon support
+   - Dynamic title/subtitle resolution from payload
+   - Timestamp display option
+   - Color toggle option
+   - Custom write function for testing
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- bun test packages/internal/signals/src/adapters/terminal.test.ts: All 34 tests pass
+- bun run test: All 124 tests pass across monorepo
+
+### Acceptance Criteria Met
+- ✓ terminalAdapter() renders all display types correctly
+- ✓ ANSI colors applied based on status
+- ✓ Convention-based inference works for signals without display
+- ✓ Tests use real signal instances (no mocks for signal data)
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 2 Task 1 of 4 complete (2.1 done; 2.2, 2.3, 2.G remaining)
+- Next task: 2.2 Create logs adapter (TR-05)
+
