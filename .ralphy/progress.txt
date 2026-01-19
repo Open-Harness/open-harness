@@ -798,3 +798,72 @@ Updated package exports to properly wire all new signal display system component
 - core/src/index.ts uses barrel exports from subdirectories - runReactive changes already exposed
 
 
+## Task 4.4: Visual validation of terminal adapter output (V-05) - COMPLETED
+
+### Summary
+Created a comprehensive visual test script for the terminal adapter and captured baseline images for visual regression testing. The test verifies all ANSI color mappings and display types render correctly.
+
+### Files Created
+- packages/internal/signals/scripts/visual-test.ts - Visual test script covering all display types
+- packages/internal/signals/tests/visual-baseline.png - PNG screenshot for regression testing
+- packages/internal/signals/tests/visual-baseline.ansi - Raw ANSI output capture
+- packages/internal/signals/tests/visual-baseline.cast - Asciinema recording for playback
+- packages/internal/signals/tests/visual-baseline.gif - Animated GIF demonstration
+
+### Visual Test Coverage
+1. **Status Display Types** (all statuses):
+   - Pending (○) - BLUE
+   - Active (●) - YELLOW
+   - Success (✓) - GREEN
+   - Error (✗) - RED
+   - Warning (⚠) - YELLOW
+
+2. **Notification Display Types** - Same color mapping with subtitles
+
+3. **Progress Display Types**:
+   - Percentage bars [████████░░░░] with fill levels (25%, 50%, 75%, 100%)
+   - Step-based counts (3/10), (10/10)
+
+4. **Stream Display Types**:
+   - Stream icon (→) with append mode for streaming text
+
+5. **Log Display Types**:
+   - Dim [signal:name] prefix in gray
+
+6. **Convention-Based Inference**:
+   - :start → status (active)
+   - :complete → notification (success)
+   - :error → notification (error)
+   - :warning → notification (warning)
+
+7. **Custom Icons**:
+   - 🚀, ☕, ⭐ override default status icons
+
+### Capture Methodology
+Used tttd skill workflow:
+1. Created visual test script emitting sample signals through terminalAdapter
+2. Recorded with asciinema in headless mode (TTY not available)
+3. Generated GIF using agg (asciinema gif generator)
+4. Extracted final frame as PNG using ffmpeg
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- test -f scripts/visual-test.ts: "Script exists"
+- test -f tests/visual-baseline.png: "Baseline exists"
+- bun run test: All 152 tests pass
+
+### Acceptance Criteria Met
+- ✓ Visual test script created covering all display types
+- ✓ tttd skill used to capture terminal output
+- ✓ ANSI colors verified visually (green/red/yellow/blue)
+- ✓ Progress bar rendering verified
+- ✓ Baseline screenshot saved for regression
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 4 Task 4 of 5 complete (4.1, 4.2, 4.3, 4.4 done; 4.G remaining)
+- Next task: 4.G Phase 4 Final Gate - Full Verification
+- Visual baseline includes PNG, ANSI, cast recording, and GIF for comprehensive regression testing
+
+

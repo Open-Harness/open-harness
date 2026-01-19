@@ -822,7 +822,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "4.4: Visual validation of terminal adapter output (V-05)"
-    completed: false
+    completed: true
     parallel_group: 4
     phase: "Phase 4: Verification & Documentation"
     details: |
