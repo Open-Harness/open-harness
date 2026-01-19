@@ -12,7 +12,7 @@
 
 metadata:
   name: "Handler Pattern DX + Signal Display Architecture"
-  total_tasks: 18
+  total_tasks: 19
   total_phases: 5
   recording:
     database: "packages/prd-workflow/.sandbox/recordings.db"
@@ -419,7 +419,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "2.3: Export default adapters (TR-06)"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Adapter Implementations"
     details: |
@@ -821,6 +821,68 @@ tasks:
       - "JSDoc comments added to public APIs"
       - "TypeScript and lint pass"
 
+  - title: "4.4: Visual validation of terminal adapter output (V-05)"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Verification & Documentation"
+    details: |
+      CONTEXT:
+      Terminal adapter produces ANSI-colored output that must be visually validated.
+      Programmatic tests check string content but NOT actual visual appearance.
+      Must use the `tttd` skill to capture and verify terminal rendering.
+
+      IMPORTANT - USE TTTD SKILL:
+      This task MUST use the tttd (TUI Test-Driven Development) skill to:
+      1. Launch a test script in a real terminal
+      2. Capture screenshots/recordings of the output
+      3. Visually verify ANSI colors render correctly
+      4. Save baseline images for regression testing
+
+      STEPS:
+      1. Create packages/internal/signals/scripts/visual-test.ts
+         - Script that emits sample signals through terminalAdapter
+         - Cover all display types: status, progress, notification, stream, log
+         - Cover all statuses: success (green), error (red), active (yellow), pending (blue)
+      2. Use tttd skill to launch the script in a PTY
+      3. Capture screenshot of terminal output
+      4. Visually verify:
+         - Success icons (✓) are GREEN
+         - Error icons (✗) are RED
+         - Active/warning icons are YELLOW
+         - Pending icons are BLUE
+         - Progress bars render correctly [=====>    ]
+         - Streaming text appends properly
+      5. Save screenshot to packages/internal/signals/tests/visual-baseline.png
+      6. Document expected visual output in test file comments
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit visual verification via tttd skill
+      - Per MUST-001: Uses real terminal adapter, real ANSI output
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Zero errors
+      bun run lint       # Zero lint errors
+      test -f packages/internal/signals/scripts/visual-test.ts  # Script exists
+      test -f packages/internal/signals/tests/visual-baseline.png  # Baseline captured
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero errors"
+      - command: "bun run lint"
+        expect: "Zero lint errors"
+      - command: "test -f packages/internal/signals/scripts/visual-test.ts && echo 'Script exists'"
+        expect: "Script exists"
+      - command: "test -f packages/internal/signals/tests/visual-baseline.png && echo 'Baseline exists'"
+        expect: "Baseline exists"
+    acceptance:
+      - "Visual test script created covering all display types"
+      - "tttd skill used to capture terminal output"
+      - "ANSI colors verified visually (green/red/yellow/blue)"
+      - "Progress bar rendering verified"
+      - "Baseline screenshot saved for regression"
+      - "TypeScript and lint pass"
+
   # ───────────────────────────────────────────────────────────────
   # Phase 4 Final Gate: Full Verification
   # ───────────────────────────────────────────────────────────────
@@ -861,6 +923,7 @@ tasks:
       - "V-01: Full typecheck passes"
       - "V-02: All tests pass"
       - "V-03: Code organization complete"
+      - "V-05: Visual validation complete (tttd baseline captured)"
       - "All integration tests used SQLite recording"
       - "No console.log in production code"
       - "Documentation complete"
