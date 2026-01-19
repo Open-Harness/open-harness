@@ -201,7 +201,7 @@ async function main(): Promise<void> {
 
 			const result = await runPRDWorkflow({
 				prd: "", // PRD comes from the recorded signals
-				agents: {}, // No agents needed for replay
+				agents: { planner: plannerAgent }, // Agents still needed - they react to replayed harness signals
 				recording: {
 					mode: "replay",
 					store,

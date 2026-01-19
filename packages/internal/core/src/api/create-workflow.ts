@@ -1141,19 +1141,20 @@ async function executeAgent<TOutput, TState>(
  * Replay recorded harness signals to the bus.
  *
  * Finds harness signals starting from the given index and emits them.
- * Returns the output from the harness:end signal.
+ * Returns the output from the harness:end signal in AgentExecutionResult format.
  *
  * @param bus - SignalBus to emit signals to
  * @param signals - All recorded signals
  * @param startIndex - Index to start searching from
- * @returns Final output from the harness:end signal
+ * @returns AgentExecutionResult with output and structuredOutput
  */
 async function replayHarnessSignals(
 	bus: { emit: (signal: Signal) => void },
 	signals: readonly Signal[],
 	startIndex: number,
-): Promise<unknown> {
+): Promise<AgentExecutionResult> {
 	let output: unknown;
+	let structuredOutput: unknown;
 
 	// Harness signal prefixes to replay
 	const harnessPrefixes = ["harness:", "text:", "tool:", "thinking:"];
@@ -1176,6 +1177,27 @@ async function replayHarnessSignals(
 			if (signal.name === "harness:end") {
 				const payload = signal.payload as { output?: unknown };
 				output = payload.output;
+
+				// Try to extract structuredOutput from the recorded output
+				// This mirrors the JSON fallback parsing in executeAgent
+				const outputObj = output as { content?: string; structuredOutput?: unknown } | undefined;
+				if (outputObj?.structuredOutput) {
+					structuredOutput = outputObj.structuredOutput;
+				} else if (outputObj?.content && typeof outputObj.content === "string") {
+					// Fallback: try to parse JSON from the text content
+					const content = outputObj.content.trim();
+					if (content.startsWith("{") || content.startsWith("[")) {
+						const jsonMatch = content.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+						if (jsonMatch) {
+							try {
+								structuredOutput = JSON.parse(jsonMatch[0]);
+							} catch {
+								// JSON parsing failed, leave structuredOutput undefined
+							}
+						}
+					}
+				}
+
 				break; // Stop at first harness:end
 			}
 		} else if (foundStart) {
@@ -1185,5 +1207,5 @@ async function replayHarnessSignals(
 		}
 	}
 
-	return output;
+	return { output, structuredOutput };
 }
