@@ -80,7 +80,7 @@ tasks:
       All gates passed: typecheck, lint, and 12 tests
 
   - title: "Refactor planning.ts reducer: remove ctx.emit, use Immer mutations"
-    completed: false
+    completed: true
     details: |
       File: packages/prd-workflow/src/reducers/planning.ts
 
@@ -89,6 +89,21 @@ tasks:
       3. Use direct mutations instead of spread operators:
          - Before: state.planning = { ...state.planning, phase: "x" }
          - After:  state.planning.phase = "x"
+    notes: |
+      Created planning reducers following CQRS command-side pattern:
+      - packages/prd-workflow/src/reducers/planning.ts - 4 reducers
+      - packages/prd-workflow/src/reducers/index.ts - Combined exports
+      - packages/prd-workflow/tests/reducers/planning.test.ts - 16 tests
+
+      Reducers implemented (all use Immer Draft pattern for clean mutations):
+      - plan:start → transitions to "planning" phase, optionally updates PRD
+      - plan:created → stores tasks, milestones, taskOrder; transitions to "plan_complete"
+      - discovery:submitted → stores discoveries; transitions to "discovery_review"
+      - discovery:reviewed → adds accepted tasks to plan; clears discoveries; back to "plan_complete"
+
+      Key pattern: Cast state to Draft<PRDWorkflowState> for type-safe direct mutations
+
+      All gates passed: typecheck, lint, and 28 tests (12 process + 16 reducer)
 
   - title: "Refactor execution.ts reducer: remove ctx.emit, use Immer mutations"
     completed: false
