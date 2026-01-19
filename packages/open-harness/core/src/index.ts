@@ -4,6 +4,7 @@ export * from "@internal/core";
 
 // Re-export signal infrastructure for public API
 // v0.3.0: All signal types now exported - old recording types deleted
+// v0.3.2: Renamed SignalHandler → BusSignalHandler to avoid collision with unified Handler pattern
 export {
 	attachReporter,
 	attachReporters,
@@ -29,7 +30,9 @@ export {
 	// SignalBus - Central event dispatcher
 	SignalBus,
 	type SignalBusOptions,
-	type SignalHandler,
+	// Note: SignalHandler from @internal/signals renamed to BusSignalHandler
+	// to avoid collision with the unified SignalHandler from @internal/core
+	type SignalHandler as BusSignalHandler,
 	// Pattern matching
 	type SignalPattern,
 	// Reporters

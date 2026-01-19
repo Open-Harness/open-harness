@@ -465,3 +465,40 @@ await runReactive({
 - `bun run lint` - 14 packages, ZERO warnings
 - `bun run test` - 11 suites, ALL passed (including 11 new SignalHandler tests)
 
+### Task: Phase 1.2 - Export SignalHandler from public packages
+
+**Context**: The `SignalHandler` type from Phase 1.1 needs to be available from the public
+`@open-harness/core` package. However, there was a naming collision: `@internal/signals` already
+exports a `SignalHandler` type (for bus subscription callbacks) with a different signature.
+
+**Issue Discovered**:
+- `@internal/core`: `SignalHandler<TState> = (state: TState, signal: Signal) => Signal[] | void`
+- `@internal/signals`: `SignalHandler<T> = (signal: Signal<T>) => void`
+
+The public package uses `export * from "@internal/core"` followed by explicit re-exports from
+`@internal/signals`. TypeScript's explicit exports take precedence over wildcard exports, which
+would have caused the bus callback type to override the unified handler type.
+
+**Solution**:
+Renamed the `@internal/signals` SignalHandler to `BusSignalHandler` in the public export to
+avoid collision. This allows:
+- `SignalHandler<TState>` - The unified handler pattern (state + signal → signals)
+- `BusSignalHandler<T>` - The bus subscription callback (signal → void)
+
+**Files Modified**:
+
+1. **packages/open-harness/core/src/index.ts**
+   - Added v0.3.2 comment explaining the rename
+   - Changed `type SignalHandler` to `type SignalHandler as BusSignalHandler`
+   - Preserved backward compatibility for bus callback users via the new name
+
+**Verification**:
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 11 suites, ALL passed
+
+**Exports now available from @open-harness/core**:
+- `SignalHandler<TState>` - Unified handler pattern (from @internal/core)
+- `SignalHandlers<TState>` - Map of patterns to handlers (from @internal/core)
+- `BusSignalHandler<T>` - Bus subscription callback (renamed from @internal/signals)
+
