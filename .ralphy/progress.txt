@@ -1,31 +1,57 @@
 # Ralphy Progress Log
-# Iteration started: Mon Jan 19 13:49:38 GMT 2026
+# Iteration started: Mon Jan 19 14:42:31 GMT 2026
 
-## 2026-01-19 13:51 - PRD Created
+## 2026-01-19 14:42 - PRD Created
 
-### Golden Recording Capture
+### Declarative Agent Pattern with Structured Outputs
 
-Created PRD to complete the Definition of Done by:
-1. Running REAL prd:record against Claude API
-2. Capturing golden recording to fixtures
-3. Creating deterministic replay tests
-4. Removing mock-only tests
+Created PRD to fix agent→handler contract mismatch by:
+1. Adding `defineAgent()` utility with Zod→JSON schema conversion
+2. Creating shared schemas for agents and handlers
+3. Wiring structured outputs through workflow
+4. Migrating planner agent as first example
+
+Key insight: ClaudeHarness ALREADY supports structured outputs,
+we just need to wire Zod schemas through agent config.
 
 Next step: /ralphy:tasks
 
 
-## 2026-01-19 14:02 - Tasks Generated
+## 2026-01-19 14:43 - Tasks Generated
 
 ### Validation: PASSED
 
-Generated tasks.yaml with 6 phases, 10 tasks:
-- Phase 1: Verify Infrastructure (1 task)
-- Phase 2: Capture Golden Recording (2 tasks)
-- Phase 3: Verify Replay (1 task)
-- Phase 4: Fixture Factory (3 tasks)
-- Phase 5: Documentation (1 task)
-- Phase 6: Final Verification (2 tasks)
+Generated tasks.yaml with 4 phases, 9 tasks:
+- Phase 1: Dependencies & Core Utility (3 tasks)
+- Phase 2: Shared Schemas (2 tasks)
+- Phase 3: Agent & Workflow Wiring (3 tasks)
+- Phase 4: Verification (1 task)
 
 Constitution check: 0 violations
 
 Next step: /ralphy:run
+
+
+## 2026-01-19 15:04 - Task 1.1 Complete
+
+### Zod 4 Native JSON Schema Support Verified
+
+**Discovery**: The original task specified using `zod-to-json-schema`, but that
+library doesn't support Zod 4.x (returns empty schema object). Zod 4 has native
+JSON Schema conversion via `z.toJSONSchema()`.
+
+**Actions taken**:
+1. Installed zod-to-json-schema to test - confirmed incompatible with zod 4.x
+2. Verified Zod 4's native `z.toJSONSchema()` works correctly
+3. Removed zod-to-json-schema (not needed with native support)
+4. Updated tasks.yaml to reflect the correct approach
+
+**Impact on remaining tasks**:
+- Task 1.2 will use `z.toJSONSchema(schema)` instead of `zodToJsonSchema()`
+- No additional dependency needed
+- Simpler implementation
+
+Tests: PASSED
+Lint: PASSED
+
+Next step: Task 1.2 - Create defineAgent utility
