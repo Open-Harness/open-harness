@@ -115,7 +115,7 @@ tasks:
       - "Structure matches types.ts"
 
   - title: "2.2: Create schemas index and update types.ts"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Shared Schemas"
     details: |
