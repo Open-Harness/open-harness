@@ -283,3 +283,72 @@ Modified `packages/prd-workflow/src/cli.ts` to:
 - Lint passes (14 packages)
 
 Next step: Task 4.1 - Run quality gates and live test
+
+
+## 2026-01-19 19:30 - Task 4.1 Complete (FINAL)
+
+### Quality Gates Passed & Live Test Successful
+
+**Task 4.1: Run quality gates and live test**
+
+All quality checks pass:
+1. `bun run typecheck` - Zero errors (15 packages)
+2. `bun run lint` - Zero warnings (14 packages)
+3. `bun run test` - All 109 tests pass in prd-workflow
+
+Live test with real Claude API:
+```
+⚡ Running workflow (calling REAL Claude API)...
+✅ Workflow complete in 55636ms
+   Final phase: idle
+   Tasks: 2
+   Milestones passed: 0
+```
+
+**Discovery during verification:**
+The Claude Agent SDK's `structured_output` field was not being populated even when
+`outputFormat` with `json_schema` was specified. This appears to be a limitation
+of the SDK or the agentic interface vs direct API calls.
+
+**Solution implemented:**
+Added fallback JSON parsing in `executeAgent()` (create-workflow.ts:1117-1135):
+- When agent has `jsonSchema` but harness doesn't return `structuredOutput`
+- Attempts to extract JSON from the text response via regex
+- Parses and uses it as `structuredOutput`
+
+Also updated the planner agent prompt (planner.agent.ts) to explicitly request
+JSON-only output format, which ensures the model returns parseable JSON.
+
+**Verification**:
+- All quality gates pass
+- Live workflow completes successfully with 2 tasks extracted from PRD
+- Handler receives structured payload without crash
+
+---
+
+## PRD COMPLETE: Declarative Agent Pattern with Structured Outputs
+
+All 9 tasks across 4 phases completed successfully:
+
+**Phase 1: Dependencies & Core Utility** ✅
+- 1.1: Verified Zod 4 native JSON Schema support
+- 1.2: Created defineAgent utility
+- 1.3: Exported defineAgent from @internal/core
+
+**Phase 2: Shared Schemas** ✅
+- 2.1: Created plan.schema.ts with Zod schemas
+- 2.2: Created schemas index and updated types.ts
+
+**Phase 3: Agent & Workflow Wiring** ✅
+- 3.1: Created planner.agent.ts
+- 3.2: Updated create-workflow.ts to wire schemas
+- 3.3: Updated CLI to use planner agent
+
+**Phase 4: Verification** ✅
+- 4.1: Quality gates pass, live test successful
+
+**Key Outcomes:**
+1. `defineAgent()` utility enables Zod schemas for type-safe agent outputs
+2. Shared schemas between agents and handlers eliminate contract mismatches
+3. Structured outputs wired through workflow (with JSON fallback parsing)
+4. Planner agent migrated as first example of declarative pattern

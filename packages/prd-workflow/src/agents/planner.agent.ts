@@ -58,7 +58,16 @@ For each milestone, provide:
 
 Return the complete taskOrder array with all task IDs in execution order.
 
-Be thorough and extract every actionable item from the PRD.`,
+Be thorough and extract every actionable item from the PRD.
+
+IMPORTANT: You MUST respond with ONLY a valid JSON object matching this exact structure:
+{
+  "tasks": [{ "id": string, "title": string, "description": string, "milestoneId": string, "definitionOfDone": string[], "status": "pending", "attempt": 0, "passed": false }],
+  "milestones": [{ "id": string, "title": string, "taskIds": string[], "testCommand": string (optional) }],
+  "taskOrder": string[]
+}
+
+Do not include any text before or after the JSON. Output ONLY the JSON object.`,
 
 	activateOn: ["workflow:start"],
 

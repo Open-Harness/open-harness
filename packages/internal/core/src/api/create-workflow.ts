@@ -1114,6 +1114,26 @@ async function executeAgent<TOutput, TState>(
 		}
 	}
 
+	// Fallback: If agent expects structured output but harness didn't provide it,
+	// try to parse the text content as JSON. This handles cases where the SDK
+	// doesn't return structured_output even when outputFormat is specified.
+	if (structuredOutput === undefined && jsonSchema) {
+		const outputObj = output as { content?: string } | undefined;
+		if (outputObj?.content && typeof outputObj.content === "string") {
+			const content = outputObj.content.trim();
+			// Try to extract JSON from the response
+			// Look for JSON object/array patterns
+			const jsonMatch = content.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+			if (jsonMatch) {
+				try {
+					structuredOutput = JSON.parse(jsonMatch[0]);
+				} catch {
+					// JSON parsing failed, leave structuredOutput undefined
+				}
+			}
+		}
+	}
+
 	return { output, structuredOutput };
 }
 
