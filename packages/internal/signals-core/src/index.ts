@@ -4,6 +4,15 @@
  * Core primitives for the Open Harness signal-based architecture.
  */
 
+// Signal definition factory
+export {
+	type CreateFromDefinitionOptions,
+	type DefineSignalConfig,
+	defineSignal,
+	type SignalDefinition,
+	type SignalDisplayConfig,
+	type SignalMeta,
+} from "./define-signal.js";
 // Harness types
 export {
 	HARNESS_SIGNALS,
