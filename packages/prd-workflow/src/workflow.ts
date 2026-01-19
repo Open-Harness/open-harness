@@ -21,6 +21,7 @@
 
 import type { ScopedReactiveAgent, SignalRecordingOptions } from "@internal/core";
 import { createWorkflow } from "@internal/core";
+import type { SignalAdapter } from "@internal/signals";
 import type { Harness as SignalHarness } from "@internal/signals-core";
 
 import { PRDWorkflowHandlers } from "./handlers/index.js";
@@ -65,6 +66,25 @@ export interface PRDWorkflowConfig {
 	 * Recording options
 	 */
 	recording?: SignalRecordingOptions;
+
+	/**
+	 * Signal adapters for rendering signals to outputs (terminal, logs, etc.)
+	 *
+	 * Adapters receive workflow signals and render them to different destinations.
+	 * Use defaultAdapters() for sensible defaults, or provide custom adapters.
+	 *
+	 * @example
+	 * ```ts
+	 * import { terminalAdapter, logsAdapter } from "@internal/signals/adapters";
+	 *
+	 * await runPRDWorkflow({
+	 *   prd,
+	 *   agents,
+	 *   adapters: [terminalAdapter(), logsAdapter({ logger })],
+	 * });
+	 * ```
+	 */
+	adapters?: SignalAdapter[];
 }
 
 /**
@@ -128,6 +148,8 @@ export async function runPRDWorkflow(config: PRDWorkflowConfig) {
 		timeout: config.timeout,
 		endWhen: config.endWhen,
 		recording: config.recording,
+		// Signal adapters for rendering (terminal, logs, etc.)
+		adapters: config.adapters,
 		// Unified Handler pattern: handlers do both state mutations AND signal emissions
 		handlers: PRDWorkflowHandlers,
 	});

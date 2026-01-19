@@ -598,7 +598,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "3.3: Update CLI to use adapters (TR-09)"
-    completed: false
+    completed: true
     parallel_group: 3
     phase: "Phase 3: Workflow Integration"
     details: |

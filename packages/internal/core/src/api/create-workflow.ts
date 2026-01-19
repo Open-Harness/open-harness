@@ -42,7 +42,7 @@
 
 import type { ZodType } from "zod";
 import type { Signal, Harness as SignalHarness } from "@internal/signals-core";
-import type { SignalPattern, SignalStore, Recording } from "@internal/signals";
+import type { SignalAdapter, SignalPattern, SignalStore, Recording } from "@internal/signals";
 import type { SignalRecordingOptions } from "./run-reactive.js";
 import { produce } from "immer";
 
@@ -356,6 +356,42 @@ export type ReactiveWorkflowConfig<TState> = {
 	 * ```
 	 */
 	handlers?: SignalHandlers<TState>;
+
+	/**
+	 * Signal adapters for rendering signals to outputs.
+	 *
+	 * Adapters receive signals and render them to different destinations
+	 * (terminal, logs, web, etc.). The SignalBus is created internally
+	 * and NOT exposed - adapters are the public API for signal consumption.
+	 *
+	 * Lifecycle:
+	 * - onStart() is called for each adapter before execution begins
+	 * - onSignal() is called for each signal matching the adapter's patterns
+	 * - onStop() is called for each adapter after execution completes (even on error)
+	 *
+	 * @example
+	 * ```ts
+	 * import { terminalAdapter, logsAdapter } from "@internal/signals/adapters"
+	 *
+	 * const result = await runReactive({
+	 *   agents: { analyzer },
+	 *   state: initialState,
+	 *   adapters: [terminalAdapter(), logsAdapter({ logger })],
+	 * })
+	 * ```
+	 *
+	 * @example Using defaultAdapters helper
+	 * ```ts
+	 * import { defaultAdapters } from "@internal/signals/adapters"
+	 *
+	 * const result = await runReactive({
+	 *   agents: { analyzer },
+	 *   state: initialState,
+	 *   adapters: defaultAdapters({ logger: getLogger() }),
+	 * })
+	 * ```
+	 */
+	adapters?: SignalAdapter[];
 };
 
 /**
@@ -714,6 +750,56 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 			});
 		}
 
+		// ========================================================================
+		// Adapter Setup
+		// ========================================================================
+		// Adapters receive signals and render to outputs (terminal, logs, web)
+		// The SignalBus is internal - adapters are the public API
+		const adapters = config.adapters ?? [];
+		const adapterUnsubscribes: (() => void)[] = [];
+
+		// Call onStart() for each adapter before execution
+		for (const adapter of adapters) {
+			if (adapter.onStart) {
+				await adapter.onStart();
+			}
+			// Subscribe adapter to bus based on its patterns
+			const unsubscribe = bus.subscribe(adapter.patterns, (signal) => {
+				// Call onSignal - handle both sync and async handlers
+				const result = adapter.onSignal(signal);
+				// If it's a promise, we don't await it to avoid blocking signal emission
+				// Adapter implementations should handle their own async concerns
+				if (result instanceof Promise) {
+					result.catch((err) => {
+						// Log but don't propagate adapter errors
+						// Note: This is intentional - adapter errors shouldn't break workflow
+						// Using getLogger() would create circular dependency, use console.error
+						process.stderr.write(`[${adapter.name}] Error in signal handler: ${err}\n`);
+					});
+				}
+			});
+			adapterUnsubscribes.push(unsubscribe);
+		}
+
+		// Helper to cleanup adapters (called on success or error)
+		const cleanupAdapters = async () => {
+			// Unsubscribe all adapters from bus
+			for (const unsubscribe of adapterUnsubscribes) {
+				unsubscribe();
+			}
+			// Call onStop() for each adapter
+			for (const adapter of adapters) {
+				if (adapter.onStop) {
+					try {
+						await adapter.onStop();
+					} catch (err) {
+						// Log but don't propagate adapter cleanup errors
+						process.stderr.write(`[${adapter.name}] Error in onStop: ${err}\n`);
+					}
+				}
+			}
+		};
+
 		// Mutable state - will be updated by agents and reducers
 		let state = { ...config.state };
 		let activations = 0;
@@ -951,68 +1037,75 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 			});
 		}
 
-		// Emit workflow:start to trigger subscribed agents
-		bus.emit(
-			createSignal("workflow:start", {
-				agents: Object.keys(config.agents),
-				state,
-			}),
-		);
+		// Execute workflow with cleanup on error
+		// This ensures adapters.onStop() is called even if execution fails
+		try {
+			// Emit workflow:start to trigger subscribed agents
+			bus.emit(
+				createSignal("workflow:start", {
+					agents: Object.keys(config.agents),
+					state,
+				}),
+			);
 
-		// Wait for quiescence: no pending activations
-		// This handles chained activations (agent A triggers agent B)
-		const quiescence = async () => {
-			while (pending.size > 0) {
-				await Promise.all([...pending]);
+			// Wait for quiescence: no pending activations
+			// This handles chained activations (agent A triggers agent B)
+			const quiescence = async () => {
+				while (pending.size > 0) {
+					await Promise.all([...pending]);
+				}
+			};
+
+			// Apply timeout if specified
+			if (config.timeout !== undefined && config.timeout > 0) {
+				const timeoutPromise = new Promise<never>((_, reject) => {
+					setTimeout(() => {
+						reject(
+							new TimeoutError(
+								`Workflow execution exceeded timeout of ${config.timeout}ms`,
+								config.timeout!,
+							),
+						);
+					}, config.timeout);
+				});
+
+				await Promise.race([quiescence(), timeoutPromise]);
+			} else {
+				await quiescence();
 			}
-		};
 
-		// Apply timeout if specified
-		if (config.timeout !== undefined && config.timeout > 0) {
-			const timeoutPromise = new Promise<never>((_, reject) => {
-				setTimeout(() => {
-					reject(
-						new TimeoutError(
-							`Workflow execution exceeded timeout of ${config.timeout}ms`,
-							config.timeout!,
-						),
-					);
-				}, config.timeout);
-			});
+			// Emit workflow:end
+			const durationMs = Date.now() - startTime;
+			bus.emit(
+				createSignal("workflow:end", {
+					durationMs,
+					activations,
+					state,
+				}),
+			);
 
-			await Promise.race([quiescence(), timeoutPromise]);
-		} else {
-			await quiescence();
-		}
-
-		// Emit workflow:end
-		const durationMs = Date.now() - startTime;
-		bus.emit(
-			createSignal("workflow:end", {
-				durationMs,
-				activations,
-				state,
-			}),
-		);
-
-		// Finalize recording - batch append all collected signals
-		if (recordingMode === "record" && store && recordingId) {
-			if (recordedSignals.length > 0) {
-				await store.appendBatch(recordingId, recordedSignals);
+			// Finalize recording - batch append all collected signals
+			if (recordingMode === "record" && store && recordingId) {
+				if (recordedSignals.length > 0) {
+					await store.appendBatch(recordingId, recordedSignals);
+				}
+				await store.finalize(recordingId, durationMs);
 			}
-			await store.finalize(recordingId, durationMs);
-		}
 
-		return {
-			state,
-			signals: bus.history(),
-			metrics: {
-				durationMs,
-				activations,
-			},
-			terminatedEarly: terminated,
-			recordingId,
-		};
+			return {
+				state,
+				signals: bus.history(),
+				metrics: {
+					durationMs,
+					activations,
+				},
+				terminatedEarly: terminated,
+				recordingId,
+			};
+		} finally {
+			// Cleanup adapters - call onStop() for each
+			await cleanupAdapters();
+		}
 	}
 
 	return { agent, runReactive };

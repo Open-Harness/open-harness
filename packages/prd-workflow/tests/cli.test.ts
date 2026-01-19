@@ -204,9 +204,11 @@ Test PRD for CLI testing.
 			const exitCode = await proc.exited;
 
 			expect(exitCode).toBe(0);
-			expect(stdout).toContain("PRD Workflow CLI");
-			expect(stdout).toContain("Mode: replay");
-			expect(stdout).toContain(`Recording: ${recordingId}`);
+			// CLI now uses structured Pino logging instead of console.log
+			// Pino pretty-print includes ANSI codes so we search for key patterns
+			expect(stdout).toContain("PRD Workflow CLI starting");
+			expect(stdout).toContain("replay"); // mode value
+			expect(stdout).toContain(recordingId); // recordingId value
 			expect(stdout).toContain("Replaying recording");
 			expect(stdout).toContain("Replay complete");
 		});
@@ -310,7 +312,9 @@ Test PRD for CLI testing.
 			const exitCode = await proc.exited;
 
 			expect(exitCode).toBe(0);
-			expect(stdout).toContain(`Database: ${deepDbPath}`);
+			// CLI now uses structured Pino logging instead of console.log
+			// Pino pretty-print includes ANSI codes so we search for the path value
+			expect(stdout).toContain(deepDbPath);
 		});
 	});
 
