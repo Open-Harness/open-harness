@@ -328,7 +328,7 @@ tasks:
       git add -A && git commit -m "test(stores): add SqliteSignalStore unit tests"
 
   - title: "Phase 2.3: GATE - Verify SqliteSignalStore works"
-    completed: false
+    completed: true
     details: |
       VERIFICATION GATE: Confirm SqliteSignalStore is working.
 
