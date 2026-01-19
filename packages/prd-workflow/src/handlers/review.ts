@@ -19,32 +19,15 @@
 
 import type { SignalHandler } from "@internal/core";
 import { createSignal } from "@internal/signals-core";
-import type { Draft } from "immer";
-import type { PRDWorkflowState, Task } from "../types.js";
-
-/**
- * Draft state type - Immer removes readonly modifiers
- */
-type DraftState = Draft<PRDWorkflowState>;
-
-/**
- * Signal payload types for review handlers
- */
-interface TaskApprovedPayload {
-	taskId: string | null;
-	hadDiscoveries?: boolean;
-}
-
-interface MilestoneFailedPayload {
-	milestoneId: string;
-	failingTaskId?: string;
-	error?: string;
-}
-
-interface MilestoneRetryPayload {
-	milestoneId: string;
-	error?: string;
-}
+import {
+	createHandler,
+	type MilestoneFailedPayload,
+	type MilestoneRetryPayload,
+	type PRDWorkflowState,
+	type Task,
+	type TaskApprovedPayload,
+	type WorkflowCompletePayload,
+} from "../types.js";
 
 /**
  * Helper: Find the next pending task after the current one
@@ -123,10 +106,7 @@ function allMilestonesPassed(state: Readonly<PRDWorkflowState>): boolean {
  * - Mutation: Clear current task, update phases
  * - Emission: milestone:testable if milestone complete, else task:ready for next
  */
-export const taskApprovedHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as TaskApprovedPayload;
-
+export const taskApprovedHandler = createHandler<TaskApprovedPayload>((draft, payload) => {
 	// Get the task ID (from payload or current execution state)
 	const taskId = payload.taskId ?? draft.execution.currentTaskId;
 
@@ -190,7 +170,7 @@ export const taskApprovedHandler: SignalHandler<PRDWorkflowState> = (state, sign
 	}
 
 	return [];
-};
+});
 
 /**
  * Handler: milestone:failed
@@ -200,10 +180,7 @@ export const taskApprovedHandler: SignalHandler<PRDWorkflowState> = (state, sign
  * - Mutation: Update milestone state, mark failing task for retry
  * - Emission: fix:required for specific task, or milestone:retry for whole milestone
  */
-export const milestoneFailedHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as MilestoneFailedPayload;
-
+export const milestoneFailedHandler = createHandler<MilestoneFailedPayload>((draft, payload) => {
 	// MUTATION: Keep the failing milestone as current
 	draft.review.currentMilestoneId = payload.milestoneId;
 	draft.review.phase = "reviewing_milestone";
@@ -233,7 +210,7 @@ export const milestoneFailedHandler: SignalHandler<PRDWorkflowState> = (state, s
 			error: payload.error,
 		}),
 	];
-};
+});
 
 /**
  * Handler: milestone:retry
@@ -241,10 +218,7 @@ export const milestoneFailedHandler: SignalHandler<PRDWorkflowState> = (state, s
  * Handles when a milestone is being retried.
  * Resets all tasks in the milestone to pending and emits task:ready for first.
  */
-export const milestoneRetryHandler: SignalHandler<PRDWorkflowState> = (state, signal) => {
-	const draft = state as DraftState;
-	const payload = signal.payload as MilestoneRetryPayload;
-
+export const milestoneRetryHandler = createHandler<MilestoneRetryPayload>((draft, payload) => {
 	// MUTATION: Set the milestone we're retrying
 	draft.review.currentMilestoneId = payload.milestoneId;
 	draft.review.phase = "reviewing_milestone";
@@ -279,7 +253,7 @@ export const milestoneRetryHandler: SignalHandler<PRDWorkflowState> = (state, si
 	}
 
 	return [];
-};
+});
 
 /**
  * Handler: workflow:complete
@@ -287,9 +261,7 @@ export const milestoneRetryHandler: SignalHandler<PRDWorkflowState> = (state, si
  * Handles workflow completion.
  * Pure mutation - no signals emitted (terminal state).
  */
-export const workflowCompleteHandler: SignalHandler<PRDWorkflowState> = (state, _signal) => {
-	const draft = state as DraftState;
-
+export const workflowCompleteHandler = createHandler<WorkflowCompletePayload>((draft, _payload) => {
 	// MUTATION: Set terminal state
 	draft.review.phase = "complete";
 	draft.review.currentMilestoneId = null;
@@ -297,7 +269,7 @@ export const workflowCompleteHandler: SignalHandler<PRDWorkflowState> = (state, 
 	draft.execution.currentTaskId = null;
 
 	// No signals to emit - workflow is complete
-};
+});
 
 /**
  * Review handlers map
