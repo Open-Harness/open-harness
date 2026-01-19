@@ -1,14 +1,13 @@
 /**
  * Schema exports - Zod schemas and inferred types for PRD workflow
  *
- * This is the single source of truth for:
- * - Schema definitions (Zod)
- * - Inferred TypeScript types
+ * This file re-exports from the co-located planner module for backward compatibility.
+ * New code should import directly from "../planner/index.js".
  *
- * Both agents (outputSchema) and handlers (type safety) import from here.
+ * @deprecated Import from "../planner/index.js" instead
  */
 
-// Plan-related schemas and types
+// Re-export from new planner module location (backward compatibility)
 export {
 	type AttemptRecord,
 	AttemptRecordSchema,
@@ -18,8 +17,6 @@ export {
 	PlanCreatedPayloadSchema,
 	type Task,
 	TaskSchema,
-	// Inferred types
 	type TaskStatus,
-	// Schemas
 	TaskStatusSchema,
-} from "./plan.schema.js";
+} from "../planner/index.js";
