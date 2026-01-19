@@ -932,3 +932,33 @@ Successfully verified all Phase 4 tasks and the entire PRD feature is complete. 
 - Ready for PR to dev branch
 
 
+## Phase 1: Remove Display from Signal Core - COMPLETED
+
+### Summary
+Removed display-related types and logic from signals-core package to implement the "Signals are data, not presentation" principle. Signals are now pure data structures, and rendering is delegated to adapters via renderer maps.
+
+### Tasks Completed
+- **TR-1.1**: Remove display types from signal.ts
+- **TR-1.2**: Remove display/meta from defineSignal()
+- **TR-1.3**: Update signals-core exports
+
+### Files Modified
+- packages/internal/signals-core/src/signal.ts - Removed SignalDisplayType, SignalDisplayStatus, SignalDisplay interface, display field from Signal and CreateSignalOptions
+- packages/internal/signals-core/src/define-signal.ts - Removed SignalDisplayConfig, SignalMeta, display/meta config from DefineSignalConfig and SignalDefinition, removed convertToSignalDisplay()
+- packages/internal/signals-core/src/index.ts - Removed display-related exports
+- packages/internal/signals-core/tests/signal.test.ts - Updated tests to remove display-related test cases
+- packages/internal/signals-core/src/define-signal.test.ts - Updated tests to remove display-related test cases
+
+### Verification Results
+- signals-core typecheck: Zero errors
+- signals-core tests: 29 tests pass (14 signal.test.ts + 15 define-signal.test.ts)
+- lint: Passes
+- grep 'SignalDisplay' signal.ts: No matches
+- grep 'display:' signal.ts: No matches
+
+### Notes
+- Downstream packages (signals adapters) have errors that will be fixed in Phase 2 (terminal adapter) and Phase 3 (logs adapter)
+- The Signal interface is now a pure data structure with: id, name, payload, timestamp, source
+- defineSignal() now only accepts: name, schema (no more display/meta)
+
+

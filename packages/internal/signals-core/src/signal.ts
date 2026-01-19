@@ -11,85 +11,6 @@ export interface SignalSource {
 }
 
 /**
- * Display types for rendering signals in different contexts
- *
- * - status: Persistent state indicator (e.g., "Planning...", "Running task 3/5")
- * - progress: Shows completion percentage or step counts
- * - notification: One-time event notification (e.g., "Plan created", "Task complete")
- * - stream: Streaming text content with append support
- * - log: Structured log output for debugging/observability
- */
-export type SignalDisplayType = "status" | "progress" | "notification" | "stream" | "log";
-
-/**
- * Display status for visual styling
- *
- * - pending: Not yet started (blue/gray)
- * - active: Currently in progress (yellow/animated)
- * - success: Completed successfully (green)
- * - error: Failed with error (red)
- * - warning: Completed with warnings (orange)
- */
-export type SignalDisplayStatus = "pending" | "active" | "success" | "error" | "warning";
-
-/**
- * SignalDisplay - metadata for rendering signals in adapters
- *
- * Provides hints to adapters (terminal, web, logs) for how to display signals.
- * All fields are optional - adapters use sensible defaults when metadata is absent.
- *
- * Note: title/subtitle functions accept `unknown` for type safety with Signal variance.
- * Use type assertions in adapters when you need typed access to payload.
- *
- * @example
- * ```ts
- * const display: SignalDisplay = {
- *   type: "notification",
- *   title: (payload) => {
- *     const p = payload as { taskCount: number };
- *     return `Plan created with ${p.taskCount} tasks`;
- *   },
- *   status: "success",
- *   icon: "✓"
- * };
- * ```
- */
-export interface SignalDisplay {
-	/** Display type determines rendering strategy */
-	readonly type?: SignalDisplayType;
-
-	/**
-	 * Primary display text - can be static string or function of payload
-	 * Functions receive the payload as unknown (use type assertion if needed)
-	 */
-	readonly title?: string | ((payload: unknown) => string);
-
-	/**
-	 * Secondary display text - additional context below title
-	 * Functions receive the payload as unknown (use type assertion if needed)
-	 */
-	readonly subtitle?: string | ((payload: unknown) => string);
-
-	/** Icon or emoji for visual identification */
-	readonly icon?: string;
-
-	/** Current status for visual styling (colors, animations) */
-	readonly status?: SignalDisplayStatus;
-
-	/**
-	 * Progress information for progress-type displays
-	 * Can be 0-100 percentage or { current, total } for step-based progress
-	 */
-	readonly progress?: number | { current: number; total: number };
-
-	/**
-	 * Whether to append content for stream-type displays
-	 * When true, new content is appended rather than replacing
-	 */
-	readonly append?: boolean;
-}
-
-/**
  * Signal - the fundamental primitive in the reactive architecture
  *
  * Signals are immutable events that flow through the system.
@@ -117,8 +38,6 @@ export interface Signal<T = unknown> {
 	readonly timestamp: string;
 	/** Optional source tracking for debugging and causality */
 	readonly source?: SignalSource;
-	/** Optional display metadata for adapter rendering */
-	readonly display?: SignalDisplay;
 }
 
 /**
@@ -134,8 +53,6 @@ function generateSignalId(): string {
 export interface CreateSignalOptions {
 	/** Source tracking for debugging and causality */
 	source?: SignalSource;
-	/** Display metadata for adapter rendering */
-	display?: SignalDisplay;
 }
 
 /**
@@ -143,30 +60,23 @@ export interface CreateSignalOptions {
  *
  * @param name - Signal name using colon-separated namespacing
  * @param payload - Signal payload data
- * @param options - Optional source and display metadata
+ * @param options - Optional source metadata for causality tracking
  *
  * @example
  * ```ts
  * // Simple signal
  * const sig = createSignal("task:complete", { taskId: "123" });
  *
- * // Signal with display metadata
+ * // Signal with source for causality tracking
  * const sig = createSignal("plan:created", { taskCount: 5 }, {
- *   display: {
- *     type: "notification",
- *     title: (p) => `Plan created with ${p.taskCount} tasks`,
- *     status: "success"
- *   }
+ *   source: { agent: "planner", parent: "sig_abc123" }
  * });
  * ```
  */
 export function createSignal<T>(name: string, payload: T, options?: SignalSource | CreateSignalOptions): Signal<T> {
 	// Handle backward compatibility: if options is SignalSource (has agent/harness/parent), treat as source
 	const isLegacySource =
-		options &&
-		!("source" in options) &&
-		!("display" in options) &&
-		("agent" in options || "harness" in options || "parent" in options);
+		options && !("source" in options) && ("agent" in options || "harness" in options || "parent" in options);
 
 	if (isLegacySource) {
 		return {
@@ -185,7 +95,6 @@ export function createSignal<T>(name: string, payload: T, options?: SignalSource
 		payload,
 		timestamp: new Date().toISOString(),
 		source: opts?.source,
-		display: opts?.display,
 	};
 }
 
