@@ -28,6 +28,7 @@ import {
 	type SignalPattern,
 	type SignalStore,
 	type Recording,
+	type SignalAdapter,
 } from "@internal/signals";
 import {
 	createSignal,
@@ -176,6 +177,40 @@ export type RunReactiveOptions = {
 	 * ```
 	 */
 	logging?: LoggingConfig | false;
+
+	/**
+	 * Signal adapters for rendering signals to outputs.
+	 *
+	 * Adapters receive signals and render them to different destinations
+	 * (terminal, logs, web, etc.). The SignalBus is created internally
+	 * and NOT exposed - adapters are the public API for signal consumption.
+	 *
+	 * Lifecycle:
+	 * - onStart() is called for each adapter before execution begins
+	 * - onSignal() is called for each signal matching the adapter's patterns
+	 * - onStop() is called for each adapter after execution completes (even on error)
+	 *
+	 * @example
+	 * ```ts
+	 * import { terminalAdapter, logsAdapter } from "@internal/signals/adapters"
+	 *
+	 * const result = await runReactive(agent, input, {
+	 *   harness,
+	 *   adapters: [terminalAdapter(), logsAdapter({ logger })],
+	 * })
+	 * ```
+	 *
+	 * @example Using defaultAdapters helper
+	 * ```ts
+	 * import { defaultAdapters } from "@internal/signals/adapters"
+	 *
+	 * const result = await runReactive(agent, input, {
+	 *   harness,
+	 *   adapters: defaultAdapters({ logger: getLogger() }),
+	 * })
+	 * ```
+	 */
+	adapters?: SignalAdapter[];
 };
 
 /**
@@ -265,6 +300,53 @@ export async function runReactive<TOutput>(
 		});
 		unsubscribeLogger = subscribeSignalLogger(bus, logger, { runId });
 	}
+
+	// Setup adapters (v3.2)
+	// Adapters receive signals and render to outputs (terminal, logs, web)
+	// The SignalBus is internal - adapters are the public API
+	const adapters = options?.adapters ?? [];
+	const adapterUnsubscribes: (() => void)[] = [];
+
+	// Call onStart() for each adapter before execution
+	for (const adapter of adapters) {
+		if (adapter.onStart) {
+			await adapter.onStart();
+		}
+		// Subscribe adapter to bus based on its patterns
+		const unsubscribe = bus.subscribe(adapter.patterns, (signal) => {
+			// Call onSignal - handle both sync and async handlers
+			const result = adapter.onSignal(signal);
+			// If it's a promise, we don't await it to avoid blocking signal emission
+			// Adapter implementations should handle their own async concerns
+			if (result instanceof Promise) {
+				result.catch((err) => {
+					// Log but don't propagate adapter errors
+					// Note: This is intentional - adapter errors shouldn't break workflow
+					console.error(`[${adapter.name}] Error in signal handler:`, err);
+				});
+			}
+		});
+		adapterUnsubscribes.push(unsubscribe);
+	}
+
+	// Helper to cleanup adapters (called on success or error)
+	const cleanupAdapters = async () => {
+		// Unsubscribe all adapters from bus
+		for (const unsubscribe of adapterUnsubscribes) {
+			unsubscribe();
+		}
+		// Call onStop() for each adapter
+		for (const adapter of adapters) {
+			if (adapter.onStop) {
+				try {
+					await adapter.onStop();
+				} catch (err) {
+					// Log but don't propagate adapter cleanup errors
+					console.error(`[${adapter.name}] Error in onStop:`, err);
+				}
+			}
+		}
+	};
 
 	// Determine recording mode
 	const recordingMode = options?.recording?.mode ?? "live";
@@ -377,53 +459,60 @@ export async function runReactive<TOutput>(
 		await activationPromise;
 	});
 
-	// Emit workflow:start to trigger subscribed agents
-	bus.emit(
-		createSignal("workflow:start", {
-			input,
-			runId,
-		}),
-	);
+	// Execute workflow with cleanup on error
+	// This ensures adapters.onStop() is called even if execution fails
+	try {
+		// Emit workflow:start to trigger subscribed agents
+		bus.emit(
+			createSignal("workflow:start", {
+				input,
+				runId,
+			}),
+		);
 
-	// Wait for activation to complete
-	// For single agent, we just await the activation promise
-	// Multi-agent quiescence detection will be added in E1
-	if (activationPromise) {
-		await activationPromise;
-	}
-
-	// Calculate duration and emit workflow:end
-	const durationMs = Date.now() - startTime;
-	bus.emit(
-		createSignal("workflow:end", {
-			durationMs,
-			output,
-			runId,
-		}),
-	);
-
-	// Finalize recording - batch append all collected signals
-	if (recordingMode === "record" && store && recordingId) {
-		if (recordedSignals.length > 0) {
-			await store.appendBatch(recordingId, recordedSignals);
+		// Wait for activation to complete
+		// For single agent, we just await the activation promise
+		// Multi-agent quiescence detection will be added in E1
+		if (activationPromise) {
+			await activationPromise;
 		}
-		await store.finalize(recordingId, durationMs);
-	}
 
-	// Cleanup logger subscription
-	if (unsubscribeLogger) {
-		unsubscribeLogger();
-	}
+		// Calculate duration and emit workflow:end
+		const durationMs = Date.now() - startTime;
+		bus.emit(
+			createSignal("workflow:end", {
+				durationMs,
+				output,
+				runId,
+			}),
+		);
 
-	return {
-		output: output as TOutput,
-		signals: bus.history(),
-		metrics: {
-			durationMs,
-			activations,
-		},
-		recordingId,
-	};
+		// Finalize recording - batch append all collected signals
+		if (recordingMode === "record" && store && recordingId) {
+			if (recordedSignals.length > 0) {
+				await store.appendBatch(recordingId, recordedSignals);
+			}
+			await store.finalize(recordingId, durationMs);
+		}
+
+		return {
+			output: output as TOutput,
+			signals: bus.history(),
+			metrics: {
+				durationMs,
+				activations,
+			},
+			recordingId,
+		};
+	} finally {
+		// Cleanup logger subscription
+		if (unsubscribeLogger) {
+			unsubscribeLogger();
+		}
+
+		// Cleanup adapters - call onStop() for each
+		await cleanupAdapters();
+	}
 }
 
 /**

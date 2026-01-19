@@ -430,3 +430,52 @@ Successfully verified all Phase 2 tasks are complete. The Phase 2 Gate check pas
 - The terminal and logs adapters are fully implemented and tested
 
 
+## Task 3.1: Update runReactive() to accept adapters (TR-07) - COMPLETED
+
+### Summary
+Extended `runReactive()` to accept an optional `adapters` array parameter. Adapters are wired to an internal SignalBus with proper lifecycle management (onStart/onStop). The SignalBus is NOT exposed to callers - adapters are the public API for signal consumption.
+
+### Files Modified
+- packages/internal/core/src/api/run-reactive.ts - Added adapters support with lifecycle management
+- packages/internal/core/tests/api/run-reactive.test.ts - Added 10 new adapter integration tests
+
+### Key Implementation Details
+1. **Config Extension**: Added `adapters?: SignalAdapter[]` to `RunReactiveOptions`
+2. **Lifecycle Management**:
+   - `adapter.onStart()` called before workflow execution
+   - `adapter.onSignal()` subscribed to bus based on adapter patterns
+   - `adapter.onStop()` called in finally block (even on error)
+3. **Pattern Matching**: Adapters specify patterns like `["**"]` for all signals or `["workflow:*"]` for specific namespaces
+4. **Async Handler Support**: Both sync and async `onSignal` handlers work correctly
+5. **Error Handling**: Adapter errors are logged but don't break workflow execution
+
+### New Tests Added
+- Adapter onStart called before execution
+- Adapter onStop called after execution
+- Adapter receives signals matching patterns
+- Adapter with specific pattern only receives matching signals
+- Multiple adapters all receive signals
+- Async adapter handlers work correctly
+- Adapter onStop called on successful completion
+- Adapter lifecycle with async onStart and onStop
+- Works with replay mode
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors (14 packages)
+- bun test packages/internal/core/tests/api/run-reactive.test.ts: 28 tests pass
+- grep 'adapters:' run-reactive.ts: Config accepts adapters array
+
+### Acceptance Criteria Met
+- ✓ runReactive() accepts adapters parameter
+- ✓ Adapters wired to internal SignalBus
+- ✓ Lifecycle methods (onStart/onStop) called correctly
+- ✓ TypeScript and lint pass
+- ✓ All tests pass
+
+### Notes
+- Phase 3 Task 1 of 4 complete (3.1 done; 3.2, 3.3, 3.G remaining)
+- Next task: 3.2 Define PRD workflow signals with display (TR-08)
+- Note: The SQLite recording integration test was not added because runReactive adapter tests don't require workflow-level testing - the adapter wiring is tested independently
+
+
