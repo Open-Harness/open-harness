@@ -2,14 +2,13 @@
  * PRD Workflow Package
  *
  * A reference implementation of a PRD-driven development workflow using
- * Open Harness's reactive signal architecture with CQRS pattern.
+ * Open Harness's reactive signal architecture with the unified Handler pattern.
  *
  * @example
  * ```ts
  * import { createWorkflow } from "@internal/core";
  * import {
- *   reducers,
- *   processes,
+ *   PRDWorkflowHandlers,
  *   createInitialState,
  *   type PRDWorkflowState
  * } from "@internal/prd-workflow";
@@ -19,16 +18,13 @@
  * const result = await runReactive({
  *   agents: { planner, coder, reviewer },
  *   state: createInitialState(prdContent),
- *   reducers,
- *   processes,
+ *   handlers: PRDWorkflowHandlers,
  * });
  * ```
  */
 
-// Process managers (CQRS query side - orchestration)
-export { processes } from "./processes/index.js";
-// Reducers (CQRS command side - state mutations)
-export { planningReducers, reducers } from "./reducers/index.js";
+// Unified handlers (Handler pattern - state mutations + signal emissions)
+export { PRDWorkflowHandlers } from "./handlers/index.js";
 // Types
 export type {
 	AttemptRecord,

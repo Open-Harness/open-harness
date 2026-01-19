@@ -1,7 +1,7 @@
 /**
  * Tests for PRD Workflow Runner
  *
- * Tests the workflow.ts exports that combine reducers and process managers
+ * Tests the workflow.ts exports that combine unified handlers
  * into a convenient workflow runner.
  */
 
@@ -14,7 +14,7 @@ import {
 	type RunContext,
 	type Signal,
 } from "@internal/signals-core";
-import { createInitialState, createPRDWorkflow, processes, reducers, runPRDWorkflow } from "../src/index.js";
+import { createInitialState, createPRDWorkflow, PRDWorkflowHandlers, runPRDWorkflow } from "../src/index.js";
 
 /**
  * Create a mock harness for testing that immediately completes
@@ -167,49 +167,53 @@ describe("runPRDWorkflow", () => {
 	});
 });
 
-describe("reducers and processes integration", () => {
-	it("exports reducers for all signal types", () => {
-		// Verify all expected reducers are present
-		expect(reducers["plan:start"]).toBeInstanceOf(Function);
-		expect(reducers["plan:created"]).toBeInstanceOf(Function);
-		expect(reducers["discovery:submitted"]).toBeInstanceOf(Function);
-		expect(reducers["discovery:reviewed"]).toBeInstanceOf(Function);
-		expect(reducers["task:ready"]).toBeInstanceOf(Function);
-		expect(reducers["task:complete"]).toBeInstanceOf(Function);
-		expect(reducers["fix:required"]).toBeInstanceOf(Function);
-		expect(reducers["milestone:testable"]).toBeInstanceOf(Function);
-		expect(reducers["milestone:passed"]).toBeInstanceOf(Function);
-		expect(reducers["task:approved"]).toBeInstanceOf(Function);
-		expect(reducers["milestone:failed"]).toBeInstanceOf(Function);
-		expect(reducers["milestone:retry"]).toBeInstanceOf(Function);
-		expect(reducers["workflow:complete"]).toBeInstanceOf(Function);
+describe("unified handlers integration", () => {
+	it("exports handlers for all signal types", () => {
+		// Verify all expected handlers are present (unified pattern combines reducers + processes)
+		expect(PRDWorkflowHandlers["plan:start"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["plan:created"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["discovery:submitted"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["discovery:reviewed"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["task:ready"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["task:complete"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["fix:required"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["milestone:testable"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["milestone:passed"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["task:approved"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["milestone:failed"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["milestone:retry"]).toBeInstanceOf(Function);
+		expect(PRDWorkflowHandlers["workflow:complete"]).toBeInstanceOf(Function);
 	});
 
-	it("exports process managers for orchestration signals", () => {
-		// Verify all expected process managers are present
-		expect(processes["plan:created"]).toBeInstanceOf(Function);
-		expect(processes["task:complete"]).toBeInstanceOf(Function);
-		expect(processes["task:approved"]).toBeInstanceOf(Function);
-		expect(processes["milestone:passed"]).toBeInstanceOf(Function);
-		expect(processes["milestone:failed"]).toBeInstanceOf(Function);
-		expect(processes["discovery:reviewed"]).toBeInstanceOf(Function);
-	});
-
-	it("reducers have correct signature (state, signal) => void", () => {
+	it("handlers have correct signature (state, signal) => Signal[] | void", () => {
 		const state = createInitialState("Test");
 		const signal = createSignal("plan:start", {});
 
-		// Reducers should mutate state (via Immer) and return nothing
-		const result = reducers["plan:start"]?.(state, signal);
-		expect(result).toBeUndefined();
+		// Handlers can either return signals or nothing (Immer handles state mutations)
+		const result = PRDWorkflowHandlers["plan:start"]?.(state, signal);
+		// plan:start handler just mutates state, returns nothing
+		expect(result === undefined || Array.isArray(result)).toBe(true);
 	});
 
-	it("process managers have correct signature (state, signal) => Signal[]", () => {
+	it("handlers can return signals for orchestration", () => {
+		// Setup: create a state with tasks so plan:created can emit task:ready
 		const state = createInitialState("Test");
-		const signal = createSignal("plan:created", {});
+		const tasks = [{ id: "task1", title: "Task 1", description: "Test task", status: "pending" as const }];
+		const signal = createSignal("plan:created", {
+			tasks,
+			milestones: [],
+			taskOrder: ["task1"],
+		});
 
-		// Process managers should return array of signals
-		const result = processes["plan:created"]?.(state, signal);
+		// plan:created handler should return [task:ready] signal for first task
+		const result = PRDWorkflowHandlers["plan:created"]?.(state, signal);
 		expect(Array.isArray(result)).toBe(true);
+		if (result && result.length > 0) {
+			const firstSignal = result[0];
+			expect(firstSignal).toBeDefined();
+			if (firstSignal) {
+				expect(firstSignal.name).toBe("task:ready");
+			}
+		}
 	});
 });

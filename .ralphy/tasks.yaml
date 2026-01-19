@@ -452,7 +452,7 @@ tasks:
       git add -A && git commit -m "feat(prd-workflow): use unified handlers in workflow.ts"
 
   - title: "Phase 3.3: Remove reducers/ and processes/ directories"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Now that handlers/ is working, remove the old directories.
 
