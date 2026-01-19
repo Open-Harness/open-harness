@@ -4,6 +4,8 @@
  * Signal routing, storage, and playback for the Open Harness reactive architecture.
  */
 
+// SignalAdapter - Output rendering interface
+export { type CreateAdapterConfig, createAdapter, type SignalAdapter } from "./adapter.js";
 // SignalBus - Central event dispatcher
 export {
 	type ISignalBus,
