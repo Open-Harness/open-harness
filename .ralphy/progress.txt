@@ -98,3 +98,35 @@ Updated `packages/internal/core/src/api/index.ts` to export:
 - Lint passes (14 packages)
 
 Next step: Task 2.1 - Create plan.schema.ts with Zod schemas
+
+
+## 2026-01-19 16:30 - Task 2.1 Complete
+
+### Shared Zod Schemas Created
+
+**Task 2.1: Create plan.schema.ts with Zod schemas**
+
+Created `packages/prd-workflow/src/schemas/plan.schema.ts` with:
+- `TaskStatusSchema` - enum for task status
+- `AttemptRecordSchema` - record of task execution attempts
+- `TaskSchema` - full task definition (matches Task interface)
+- `MilestoneSchema` - milestone definition (matches Milestone interface)
+- `PlanCreatedPayloadSchema` - structured output for planner agent
+
+**Key design decisions**:
+1. All schemas use `.describe()` for LLM-friendly documentation
+2. Default values for status/attempt/passed ensure agents can return minimal data
+3. Types exported via `z.infer<>` for single source of truth
+4. Structure exactly matches existing interfaces in types.ts
+
+**Tests**: Created comprehensive test suite with 12 tests covering:
+- Schema validation for all types
+- Default value application
+- JSON Schema generation via `z.toJSONSchema()`
+- Description preservation in generated JSON Schema
+
+**Verification**:
+- All 54 tests pass in prd-workflow (12 new + 42 existing)
+- Lint passes
+
+Next step: Task 2.2 - Create schemas index and update types.ts
