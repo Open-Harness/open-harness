@@ -1262,3 +1262,47 @@ export interface Signal<T = unknown> {
 - Next task: 6.4 Verify replay renders correctly (V-04)
 - The refactored Signal type is now a clean domain primitive without presentation concerns
 
+
+## Task 6.4: Verify replay renders correctly (V-04) - COMPLETED
+
+### Summary
+Verified that PRD workflow replay works correctly with the renderer map pattern. Used the existing SQLite recording `rec_f0b64b75` (230 signals) to confirm that signals with renderers display formatted output while signals without renderers are silently skipped.
+
+### Verification Steps Performed
+1. Located recording database: `packages/prd-workflow/.sandbox/recordings.db`
+2. Confirmed recording `rec_f0b64b75` exists with 230 signals
+3. Ran `bun run prd:replay --recording rec_f0b64b75`
+4. Verified formatted output via renderer map:
+   - `✓ Plan created with 2 tasks (1 milestone)` (green checkmark from `plan:created` renderer)
+   - `▶ Create hello function` (yellow arrow from `task:ready` renderer)
+5. Confirmed signals without renderers (text:delta, harness:*, workflow:*, etc.) were silently skipped
+
+### Signal Breakdown in Recording
+| Signal Type | Count | Rendered |
+|-------------|-------|----------|
+| text:delta | 202 | No (no renderer) |
+| tool:result | 10 | No (no renderer) |
+| tool:call | 10 | No (no renderer) |
+| plan:created | 1 | Yes ✓ |
+| task:ready | 1 | Yes ▶ |
+| workflow:* | 2 | No (no renderer) |
+| harness:* | 2 | No (no renderer) |
+| agent:activated | 1 | No (no renderer) |
+| text:complete | 1 | No (no renderer) |
+
+### Verification Results
+- bun run typecheck: 15 packages successful, 0 errors (FULL TURBO)
+- bun run test: 177 tests pass, 466 expect() calls
+- bun run lint: 14 packages successful, 0 errors
+
+### Acceptance Criteria Met
+- ✓ Replay shows formatted output via renderer map
+- ✓ Signal names like plan:created render with icons and formatted text
+- ✓ No errors during replay
+- ✓ Signals without renderers are silently skipped (correct behavior)
+
+### Notes
+- Phase 6 Task 4 of 6 complete (6.1, 6.2, 6.3, 6.4 done; 6.5-6.6 remaining)
+- Next task: 6.5 Verify unknown signals are skipped (V-05)
+- The renderer map pattern works correctly in replay mode with real recording data
+
