@@ -720,7 +720,7 @@ tasks:
   # ============================================================================
 
   - title: "Phase 5.1: Update dx-integration tests for Handler pattern"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Update existing tests to use handlers instead of reducers/processes.
 
