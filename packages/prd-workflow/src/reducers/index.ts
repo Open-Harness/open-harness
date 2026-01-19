@@ -18,6 +18,7 @@ import type { SignalReducers } from "@internal/core";
 import type { PRDWorkflowState } from "../types.js";
 
 // Import individual reducer modules
+import { executionReducers } from "./execution.js";
 import { planningReducers } from "./planning.js";
 
 /**
@@ -43,10 +44,11 @@ import { planningReducers } from "./planning.js";
  */
 export const reducers: SignalReducers<PRDWorkflowState> = {
 	...planningReducers,
-	// Future: add execution and review reducers
-	// ...executionReducers,
+	...executionReducers,
+	// Future: add review reducers
 	// ...reviewReducers,
 };
 
 // Re-export individual reducer modules for granular testing
+export { executionReducers } from "./execution.js";
 export { planningReducers } from "./planning.js";

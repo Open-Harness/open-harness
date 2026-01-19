@@ -128,3 +128,47 @@ export const myReducer: SignalReducer<PRDWorkflowState> = (state, signal) => {
 - `bun run lint` - 14 packages, no issues
 - `bun run test` - 11 suites, 28 prd-workflow tests (12 process + 16 reducer)
 
+### Task: Refactor execution.ts reducer - remove ctx.emit, use Immer mutations
+
+**Context**: Created the execution reducer module following CQRS command-side pattern.
+Reducers handle state mutations; orchestration signals already handled by process managers.
+
+**Files Created**:
+
+1. **packages/prd-workflow/src/reducers/execution.ts**
+   - 5 reducers using Immer Draft pattern for type-safe direct mutations
+   - `taskReadyReducer` - Sets currentTaskId, transitions to "executing_task", marks task "in_progress"
+   - `taskCompleteReducer` - Marks task complete, records attempt history, transitions to "awaiting_review"
+   - `fixRequiredReducer` - Enters "fixing" phase, resets task to "in_progress", updates attempt count
+   - `milestoneTestableReducer` - Sets milestone for review, transitions to "reviewing_milestone"
+   - `milestonePassedReducer` - Marks milestone passed, adds to passedMilestones, clears currentMilestone
+
+2. **packages/prd-workflow/tests/reducers/execution.test.ts**
+   - 25 tests covering all 5 reducers
+   - Tests for state mutations, phase transitions, attempt tracking
+   - Edge cases: missing tasks, multiple milestone passes, outcome types
+
+**Updated Files**:
+
+1. **packages/prd-workflow/src/reducers/index.ts**
+   - Added import: `import { executionReducers } from "./execution.js";`
+   - Added spread: `...executionReducers` to combined reducers
+   - Added re-export: `export { executionReducers } from "./execution.js";`
+
+**Key Implementation Patterns**:
+
+1. **AttemptRecord tracking** - Task completions record full history with:
+   - Attempt number, timestamp, outcome (success/failure/partial)
+   - Files changed, checkpoint hash for rollback support
+
+2. **Phase state machine** - ExecutionPhase transitions:
+   - idle → executing_task (task:ready)
+   - executing_task → awaiting_review (task:complete)
+   - idle/awaiting_review → fixing (fix:required)
+   - * → idle (milestone:testable - no active task during review)
+
+### GATE: Verification Passed
+- `bun run typecheck` - Passes, 0 errors
+- `bun run lint` - Passes, no issues (fixed 8 noNonNullAssertion warnings)
+- `bun run test` - 53 prd-workflow tests (12 process + 16 planning + 25 execution)
+

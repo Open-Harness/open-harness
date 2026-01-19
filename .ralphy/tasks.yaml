@@ -106,13 +106,28 @@ tasks:
       All gates passed: typecheck, lint, and 28 tests (12 process + 16 reducer)
 
   - title: "Refactor execution.ts reducer: remove ctx.emit, use Immer mutations"
-    completed: false
+    completed: true
     details: |
       File: packages/prd-workflow/src/reducers/execution.ts
 
       1. Remove ctx parameter
       2. Remove ctx.emit() calls
       3. Use Immer mutations
+    notes: |
+      Created execution reducers following CQRS command-side pattern:
+      - packages/prd-workflow/src/reducers/execution.ts - 5 reducers
+      - packages/prd-workflow/tests/reducers/execution.test.ts - 25 tests
+
+      Reducers implemented (all use Immer Draft pattern for clean mutations):
+      - task:ready → sets currentTaskId, phase to "executing_task", task status to "in_progress"
+      - task:complete → marks task complete, records attempt in history, phase to "awaiting_review"
+      - fix:required → enters "fixing" phase, sets task back to "in_progress", updates attempt count
+      - milestone:testable → sets milestone for review, phase to "reviewing_milestone"
+      - milestone:passed → marks milestone passed, adds to passedMilestones, clears currentMilestone
+
+      Updated reducers/index.ts to include executionReducers in combined export
+
+      All gates passed: typecheck, lint, and 53 tests (12 process + 16 planning + 25 execution)
 
   - title: "Refactor review.ts reducer: remove ctx.emit, use Immer mutations"
     completed: false
