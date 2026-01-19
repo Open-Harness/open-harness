@@ -742,7 +742,7 @@ tasks:
       git add -A && git commit -m "test(prd-workflow): update tests for Handler pattern"
 
   - title: "Phase 5.2: Add SqliteSignalStore integration test"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Test recording with SqliteSignalStore.
 

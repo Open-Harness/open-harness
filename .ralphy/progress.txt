@@ -1188,3 +1188,65 @@ the tests because:
 **Conclusion**: Phase 5.1 complete. dx-integration tests work correctly with Handler pattern.
 Ready to proceed with Phase 5.2 (SqliteSignalStore integration tests).
 
+### Task: Phase 5.2 - Add SqliteSignalStore integration test
+
+**Context**: Created comprehensive integration tests for SqliteSignalStore with prd-workflow,
+testing persistent recording and replay functionality.
+
+**Files Created**:
+
+1. **packages/prd-workflow/tests/sqlite-recording.test.ts**
+   - 8 comprehensive tests across 4 describe blocks:
+     - Record mode with SqliteSignalStore (2 tests)
+     - Replay mode with SqliteSignalStore (2 tests)
+     - Persistence across store instances (2 tests)
+     - Error handling (2 tests)
+
+**Test Coverage**:
+
+1. **Record mode tests**:
+   - `saves signals to SQLite database` - Verifies recording ID, signals saved, metadata
+   - `stores multiple signals in correct order` - Verifies signal ordering
+
+2. **Replay mode tests**:
+   - `loads signals correctly from database` - Verifies signal count matches
+   - `produces same state as original recording` - State comparison between record/replay
+
+3. **Persistence tests**:
+   - `recording persists across process restarts` - Close store, create new instance, verify
+   - `multiple recordings coexist in same database` - Multiple recordings in single DB
+
+4. **Error handling tests**:
+   - `validates recording exists before replay` - Rejects nonexistent recording
+   - `can delete recordings from SQLite store` - Delete removes signals too
+
+**Key Implementation Details**:
+
+1. **Temp database isolation** - Each test creates unique temp file:
+   ```typescript
+   dbPath = join(tmpdir(), `test-prd-workflow-${Date.now()}-${Math.random()...}.db`);
+   ```
+
+2. **WAL file cleanup** - SQLite WAL mode creates auxiliary files:
+   ```typescript
+   // Clean up WAL and SHM files if they exist
+   if (existsSync(`${dbPath}-wal`)) unlinkSync(`${dbPath}-wal`);
+   if (existsSync(`${dbPath}-shm`)) unlinkSync(`${dbPath}-shm`);
+   ```
+
+3. **Persistence verification** - Close store, create new instance:
+   ```typescript
+   store.close();
+   const store2 = new SqliteSignalStore(dbPath);
+   // Verify data survives
+   ```
+
+**Verification**:
+- `bun test packages/prd-workflow/tests/sqlite-recording.test.ts` - 8 tests, ALL passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 41 prd-workflow tests, ALL passed
+
+**Conclusion**: Phase 5.2 complete. SqliteSignalStore integration tests added and passing.
+Ready to proceed with Phase 5.3 (GATE - Verify all tests pass).
+
