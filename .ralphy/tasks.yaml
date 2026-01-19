@@ -151,7 +151,7 @@ tasks:
   # Phase 0 Gate: Verify code reorganization
   # ───────────────────────────────────────────────────────────────
   - title: "0.G: Phase 0 Gate - Code Reorganization Verification"
-    completed: false
+    completed: true
     parallel_group: 0
     phase: "Phase 0: Code Reorganization"
     details: |
