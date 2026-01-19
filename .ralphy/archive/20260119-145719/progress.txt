@@ -1,0 +1,84 @@
+# Ralphy Progress Log
+# Iteration started: Mon Jan 19 13:49:38 GMT 2026
+
+## 2026-01-19 13:51 - PRD Created
+
+### Golden Recording Capture
+
+Created PRD to complete the Definition of Done by:
+1. Running REAL prd:record against Claude API
+2. Capturing golden recording to fixtures
+3. Creating deterministic replay tests
+4. Removing mock-only tests
+
+Next step: /ralphy:tasks
+
+
+## 2026-01-19 14:02 - Tasks Generated
+
+### Validation: PASSED
+
+Generated tasks.yaml with 6 phases, 10 tasks:
+- Phase 1: Verify Infrastructure (1 task)
+- Phase 2: Capture Golden Recording (2 tasks)
+- Phase 3: Verify Replay (1 task)
+- Phase 4: Fixture Factory (3 tasks)
+- Phase 5: Documentation (1 task)
+- Phase 6: Final Verification (2 tasks)
+
+Constitution check: 0 violations
+
+Next step: /ralphy:run
+
+
+## 2026-01-19 14:04 - Ralphy Launched
+
+Session: ralphy-1768831440
+Task file: .ralphy/tasks.yaml
+
+Monitor: tmux attach -t ralphy-1768831440
+
+
+## 2026-01-19 14:38 - Task 1.1 Verification: BLOCKING ISSUE
+
+### Task: Verify CLI works end-to-end with real Claude API
+
+**Executed:** `bun run prd:live ../../examples/hello-world.prd.md`
+
+**Results:**
+- ✅ CLI ran without crashing
+- ✅ Real Claude API called (50133ms duration proves real API, not mock)
+- ✅ Agent emitted `plan:created` signal after Claude response
+- ❌ Handler error: `TypeError: undefined is not an object (evaluating 'payload.tasks')`
+- ❌ No generated code in .sandbox/
+
+**Root Cause: Handler-Agent Contract Mismatch**
+
+The workflow system has an impedance mismatch:
+
+1. **What agents emit** (create-workflow.ts:896-907):
+   ```typescript
+   createSignal(signalName, { agent: name, output: result })
+   ```
+   Where `result` is Claude's raw text response.
+
+2. **What handlers expect** (planning.ts:60-68):
+   ```typescript
+   planCreatedHandler expects PlanCreatedPayload:
+   { tasks: Task[], milestones: Milestone[], taskOrder: string[] }
+   ```
+
+The handler tries `payload.tasks.forEach(...)` but payload is actually
+`{ agent: "planner", output: "<Claude's text response>" }`.
+
+**This is an architectural decision, not a simple bug fix.**
+
+Options:
+A) Add `schema` to agent config that parses Claude output into typed payload
+B) Add `outputTransform` function to agent config for custom parsing
+C) Make handlers defensive: check for wrapper format, parse `output` field
+D) Change signal emission to NOT wrap in `{ agent, output }`
+
+**Blocked:** Cannot proceed until architectural decision is made.
+
+Next step: User guidance required

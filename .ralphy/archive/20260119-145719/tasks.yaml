@@ -1,0 +1,250 @@
+# Golden Recording Capture - Task List
+# Generated: 2026-01-19
+# PRD: .ralphy/PRD.md
+# Constitution: .ralphy/constitution.md
+
+metadata:
+  name: "Golden Recording Capture"
+  branch: "feat/handler-pattern-dx-cli"
+  prd: ".ralphy/PRD.md"
+  total_tasks: 12
+  total_phases: 6
+
+tasks:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 1: Verify Infrastructure
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "1.1: Verify CLI works end-to-end with real Claude API"
+    completed: false
+    parallel_group: 1
+    phase: "Phase 1: Verify Infrastructure"
+    details: |
+      Run the CLI in live mode to verify it calls the REAL Claude API
+      and executes a workflow successfully.
+
+      CONTEXT: The CLI was built in the previous cycle but never tested
+      against the real Claude API. This task proves the infrastructure works.
+
+      REQUIRED: Actual Claude API responses must be observed.
+
+      STEPS:
+      1. cd packages/prd-workflow
+      2. bun run prd:live ../../examples/hello-world.prd.md
+      3. Observe: Claude API is called (check logs for API requests)
+      4. Observe: Workflow progresses through planning/execution phases
+      5. Verify: Generated code appears in .sandbox/
+    verify:
+      - command: "ls -la .sandbox/"
+        expect: "Generated files from Claude exist"
+      - command: "cat .open-harness/logs/harness.log | grep -i 'claude\\|api\\|request' | tail -20"
+        expect: "Log entries showing real API calls"
+    acceptance:
+      - "CLI completes with no errors"
+      - "Real Claude API responses received"
+      - "Generated code exists in .sandbox/"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 2: Capture Golden Recording
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "2.1: Run prd:record to capture real Claude signals"
+    completed: false
+    parallel_group: 2
+    phase: "Phase 2: Capture Golden Recording"
+    details: |
+      Execute prd:record to capture a REAL recording from the Claude API.
+      This recording becomes the golden fixture for all future replay tests.
+
+      REQUIRED: Recording contains REAL Claude responses from live API call.
+
+      STEPS:
+      1. cd packages/prd-workflow
+      2. bun run prd:record ../../examples/hello-world.prd.md --name 'hello-world-golden' --tags 'golden,ci'
+      3. Note the recording ID returned (format: rec_XXXXXXXX)
+      4. Verify recording saved to SQLite database
+    verify:
+      - command: "sqlite3 .sandbox/recordings.db 'SELECT id, name, signal_count FROM recordings WHERE name LIKE \"%golden%\"'"
+        expect: "Recording with signal_count > 0"
+    acceptance:
+      - "Recording ID returned in format rec_XXXXXXXX"
+      - "Recording saved to SQLite with signal_count > 0"
+      - "Recording contains actual Claude responses"
+
+  - title: "2.2: Verify recording persistence"
+    completed: false
+    parallel_group: 2
+    phase: "Phase 2: Capture Golden Recording"
+    details: |
+      Verify the recording persists in SQLite and survives process restarts.
+
+      STEPS:
+      1. Query SQLite directly to confirm recording exists
+      2. Restart the process and query again
+      3. Verify all signals preserved
+    verify:
+      - command: "sqlite3 .sandbox/recordings.db 'SELECT COUNT(*) FROM signals WHERE recording_id IN (SELECT id FROM recordings WHERE name LIKE \"%golden%\")'"
+        expect: "Signal count > 0"
+    acceptance:
+      - "Recording persists after process restart"
+      - "All signals preserved in database"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 3: Verify Replay
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "3.1: Run prd:replay and verify identical renderer output"
+    completed: false
+    parallel_group: 3
+    phase: "Phase 3: Verify Replay"
+    details: |
+      Run replay with the golden recording and verify it produces
+      IDENTICAL renderer output to the original run.
+
+      The replay injects signals from the recording, so renderers see
+      exactly the same data as the original live run. No network calls occur.
+
+      STEPS:
+      1. cd packages/prd-workflow
+      2. bun run prd:replay --recording <RECORDING_ID>
+      3. Observe: Same renderer output as original recording
+      4. Verify: ZERO Claude API calls (check network/logs)
+    verify:
+      - command: "cat .open-harness/logs/harness.log | grep -i 'replay' | tail -10"
+        expect: "Replay mode indicators, no API call logs"
+    acceptance:
+      - "Replay completes successfully"
+      - "Renderer output matches original recording"
+      - "Zero Claude API calls during replay"
+      - "Replay is fast (signals injected from recording)"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 4: Fixture Factory
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "4.1: Create loadFixtureHarness factory"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Fixture Factory"
+    details: |
+      Create a factory function that loads fixtures from REAL recordings.
+
+      The factory:
+      1. Loads recording by name from SQLite (or exported JSON)
+      2. Creates a harness that injects recorded signals
+      3. Provides same interface as live harness
+
+      All tests will use this factory to load real recorded data.
+
+      STEPS:
+      1. Create packages/prd-workflow/src/test-utils/fixture-factory.ts
+      2. Implement loadFixtureHarness(recordingName: string)
+      3. Factory loads from SqliteSignalStore
+      4. Returns harness that replays recorded signals
+      5. Export from package
+    verify:
+      - command: "grep -r 'loadFixtureHarness' packages/prd-workflow/src/"
+        expect: "Factory function defined"
+    acceptance:
+      - "Factory function exists at src/test-utils/fixture-factory.ts"
+      - "Loads from real recordings"
+      - "Exported from package"
+
+  - title: "4.2: Remove legacy test utilities"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Fixture Factory"
+    details: |
+      Remove the legacy test utility functions that do not use real recordings.
+
+      Search for and delete any test helpers that generate synthetic data
+      instead of loading from recordings.
+
+      STEPS:
+      1. Search for legacy test utility functions in test files
+      2. Delete the functions and their definitions
+      3. Update all tests to use the new factory
+    verify:
+      - command: "bun run typecheck"
+        expect: "No errors (all references updated)"
+    acceptance:
+      - "Legacy utilities removed"
+      - "No synthetic data generators remain"
+
+  - title: "4.3: Update tests to use fixture factory"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Fixture Factory"
+    details: |
+      Update all tests to use loadFixtureHarness to load real recordings.
+
+      STEPS:
+      1. Find all tests using legacy utilities
+      2. Replace with loadFixtureHarness('hello-world-golden')
+      3. Ensure tests pass with real fixtures
+    verify:
+      - command: "bun test packages/prd-workflow/"
+        expect: "All tests pass"
+    acceptance:
+      - "All tests use factory pattern"
+      - "All tests pass with real fixtures"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 5: Documentation
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "5.1: Document recording/replay workflow in README"
+    completed: false
+    parallel_group: 5
+    phase: "Phase 5: Documentation"
+    details: |
+      Update the prd-workflow README with clear instructions for
+      the recording/replay workflow.
+
+      STEPS:
+      1. Add 'Recording & Replay' section to README
+      2. Document prd:live, prd:record, prd:replay commands
+      3. Explain value proposition (record once, replay forever)
+      4. Document database location and management
+    verify:
+      - command: "grep -A5 'Recording' packages/prd-workflow/README.md"
+        expect: "Recording section exists"
+    acceptance:
+      - "README contains recording/replay section"
+      - "Commands documented with examples"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 6: Final Verification
+  # ═══════════════════════════════════════════════════════════════════════════
+  - title: "6.1: Run full quality suite"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Final Verification"
+    details: |
+      Run all quality gates to ensure everything passes.
+    verify:
+      - command: "bun run typecheck"
+        expect: "ZERO errors"
+      - command: "bun run lint"
+        expect: "ZERO warnings"
+      - command: "bun run test"
+        expect: "ALL tests pass"
+    acceptance:
+      - "Typecheck passes with zero errors"
+      - "Lint passes with zero warnings"
+      - "All tests pass"
+
+  - title: "6.2: Verify Definition of Done"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Final Verification"
+    details: |
+      Final check against DEFINITION_OF_DONE.md criteria.
+
+      CHECKLIST:
+      - Golden recording captured from REAL Claude API
+      - prd:replay shows identical renderer output
+      - All legacy test utilities removed
+      - All quality gates pass
+      - Factory pattern for all fixtures
+    verify:
+      - command: "grep -r 'loadFixtureHarness' packages/prd-workflow/src/"
+        expect: "Factory exists"
+    acceptance:
+      - "All DOD criteria met"
+      - "Ready to merge"
