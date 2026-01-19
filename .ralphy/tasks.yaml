@@ -684,7 +684,7 @@ tasks:
   # Phase 4: Verification & Documentation
   # ═══════════════════════════════════════════════════════════════
   - title: "4.1: Custom adapter integration test (V-04)"
-    completed: false
+    completed: true
     parallel_group: 4
     phase: "Phase 4: Verification & Documentation"
     details: |
