@@ -105,8 +105,19 @@ export type ActivationContext<TState> = {
 export type ReactiveAgentConfig<TOutput, TState> = {
 	/**
 	 * System prompt that defines the agent's behavior.
+	 * Can be a static string or a function that receives the activation context.
+	 *
+	 * @example Static prompt
+	 * ```ts
+	 * prompt: "You are a helpful assistant."
+	 * ```
+	 *
+	 * @example Dynamic prompt (from defineAgent)
+	 * ```ts
+	 * prompt: (ctx) => `Analyze: ${ctx.state.data}`
+	 * ```
 	 */
-	prompt: string;
+	prompt: string | ((ctx: ActivationContext<TState>) => string);
 
 	/**
 	 * Optional output configuration with Zod schema.
@@ -1042,8 +1053,13 @@ async function executeAgent<TOutput, TState>(
 	// Import template engine
 	const { expandTemplate } = await import("./template.js");
 
+	// Resolve prompt: static string or dynamic function (from defineAgent)
+	const rawPrompt = typeof config.prompt === "function"
+		? config.prompt(ctx)
+		: config.prompt;
+
 	// Expand template expressions in prompt
-	const expandedPrompt = expandTemplate(config.prompt, {
+	const expandedPrompt = expandTemplate(rawPrompt, {
 		state: ctx.state as Record<string, unknown>,
 		signal: {
 			name: ctx.signal.name,

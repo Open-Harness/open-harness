@@ -206,7 +206,7 @@ tasks:
       - "Fallback for text-only agents"
 
   - title: "3.3: Update CLI to use planner agent"
-    completed: false
+    completed: true
     parallel_group: 3
     phase: "Phase 3: Agent & Workflow Wiring"
     details: |
