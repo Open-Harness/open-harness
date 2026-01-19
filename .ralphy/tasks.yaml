@@ -374,7 +374,7 @@ tasks:
       - "TypeScript and lint pass"
 
   - title: "2.2: Create logs adapter (TR-05)"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Adapter Implementations"
     details: |
