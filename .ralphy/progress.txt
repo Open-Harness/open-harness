@@ -892,3 +892,62 @@ export const taskReadyHandler = createHandler<TaskReadyPayload>((draft, payload)
 **Conclusion**: Phase 3.4 complete. Type-safe handler pattern implemented.
 Ready to proceed with Phase 3.5 (GATE - Verify prd-workflow refactor).
 
+### Task: Phase 3.5 - GATE - Verify prd-workflow refactor
+
+**Context**: Verification gate to confirm the prd-workflow refactor to Handler pattern is complete.
+
+**Issue Discovered**: TypeScript error with `TypedHandler` return type.
+- `SignalHandler` from `@internal/core` uses `Signal[] | void`
+- `TypedHandler` was defined with `Signal[] | undefined`
+- Handlers that don't return anything have implicit `void` return
+- TypeScript distinguishes `void` from `undefined` strictly
+
+**Fix Applied**: Changed `TypedHandler` to use `Signal[] | void` to match `SignalHandler`.
+Added biome-ignore comment to suppress lint warning about void in union (necessary for type compatibility).
+
+**Files Modified**:
+1. **packages/prd-workflow/src/types.ts**
+   - Updated `TypedHandler` return type from `Signal[] | undefined` to `Signal[] | void`
+   - Added biome-ignore comment with rationale
+
+**Verification Results**:
+
+**STRUCTURAL CHECKS**:
+1. `ls packages/prd-workflow/src/handlers/`
+   - Result: planning.ts, execution.ts, review.ts, index.ts
+   - Status: ✓ All expected files present
+
+2. `ls packages/prd-workflow/src/reducers/`
+   - Result: "No such file or directory"
+   - Status: ✓ Old directory removed
+
+3. `ls packages/prd-workflow/src/processes/`
+   - Result: "No such file or directory"
+   - Status: ✓ Old directory removed
+
+**QUALITY CHECKS**:
+1. `bun run typecheck`
+   - Result: 15 successful, 15 total
+   - Status: ✓ ZERO errors
+
+2. `bun run lint`
+   - Result: 14 successful, 14 total
+   - Status: ✓ ZERO warnings
+
+3. `grep -r "as.*Payload" packages/prd-workflow/src/handlers/`
+   - Result: 0 casts found (only type imports)
+   - Status: ✓ ZERO casts in handlers
+
+4. `bun run test`
+   - Result: 12 test tasks, 19 prd-workflow tests, ALL passed
+   - Status: ✓ ALL tests pass
+
+**Gate Criteria**: ALL PASSED
+- Old directories removed ✓
+- handlers/ exists with all files ✓
+- No type casts remain ✓
+- All quality checks pass ✓
+
+**Conclusion**: Phase 3.5 GATE passed. PRD-workflow refactor to Handler pattern is complete.
+Ready to proceed with Phase 4 (CLI).
+
