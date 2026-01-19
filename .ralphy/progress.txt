@@ -639,3 +639,63 @@ Bun has built-in SQLite support via `bun:sqlite` which provides:
 
 **Conclusion**: Phase 2 (SQLite Signal Store) complete. Ready to proceed with Phase 3 (PRD-Workflow Refactor).
 
+## 2026-01-19 - Phase 3: PRD-Workflow Refactor (IN PROGRESS)
+
+### Task: Phase 3.1 - Create handlers/ directory with unified handlers
+
+**Context**: The prd-workflow package uses the CQRS pattern with separate reducers (state mutations)
+and process managers (signal emissions). The Handler pattern unifies these into single functions
+that can both mutate state and return signals to emit.
+
+**Files Created**:
+
+1. **packages/prd-workflow/src/handlers/planning.ts**
+   - 4 unified handlers using SignalHandler<PRDWorkflowState> type
+   - `planStartHandler` - Transitions to "planning" phase, updates PRD if provided
+   - `planCreatedHandler` - Stores plan AND emits task:ready for first task
+   - `discoverySubmittedHandler` - Stores discoveries for review
+   - `discoveryReviewedHandler` - Adds accepted tasks AND emits task:approved
+
+2. **packages/prd-workflow/src/handlers/execution.ts**
+   - 5 unified handlers for task execution
+   - `taskReadyHandler` - Sets current task, transitions to executing_task
+   - `taskCompleteHandler` - Marks complete AND emits discovery:submitted if discoveries exist
+   - `fixRequiredHandler` - Enters fixing phase for failed task
+   - `milestoneTestableHandler` - Begins milestone testing
+   - `milestonePassedHandler` - Marks passed AND emits next signal (workflow:complete or task:ready)
+
+3. **packages/prd-workflow/src/handlers/review.ts**
+   - 4 unified handlers for review workflow
+   - `taskApprovedHandler` - Clears state AND emits milestone:testable or task:ready
+   - `milestoneFailedHandler` - Updates state AND emits fix:required or milestone:retry
+   - `milestoneRetryHandler` - Resets tasks AND emits task:ready for first
+   - `workflowCompleteHandler` - Sets terminal state (no signal emission)
+
+4. **packages/prd-workflow/src/handlers/index.ts**
+   - Combined PRDWorkflowHandlers map with all 13 handlers
+   - Re-exports individual handlers and handler groups for granular testing
+   - JSDoc examples for usage with runReactive
+
+**Key Changes from CQRS to Handler Pattern**:
+
+| Signal | Old Pattern | New Pattern |
+|--------|-------------|-------------|
+| plan:created | Reducer stores data, Process emits task:ready | Handler does BOTH |
+| milestone:passed | Reducer marks passed, Process emits next signal | Handler does BOTH |
+| task:approved | Reducer clears state, Process determines next | Handler does BOTH |
+
+**Helper Functions Moved**:
+- `findFirstPendingTask`, `findNextUntestedMilestone` → execution.ts
+- `findNextPendingTask`, `isMilestoneComplete`, `findMilestoneForTask`, `allMilestonesPassed` → review.ts
+
+**Note**: The old reducers/ and processes/ directories are NOT deleted yet (per task instructions).
+This allows the handlers to coexist until Phase 3.2 updates workflow.ts to use them.
+
+### GATE: Phase 3.1 Verification Passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 12 test tasks, 96 tests, ALL passed
+
+**Conclusion**: Phase 3.1 complete. handlers/ directory created with unified handlers.
+Ready to proceed with Phase 3.2 (Update workflow.ts to use handlers).
+
