@@ -1,9 +1,9 @@
 /**
  * PRD Workflow Runner
  *
- * Provides a pre-configured workflow runner that combines reducers and process
- * managers following the CQRS pattern. This is the main entry point for running
- * PRD-driven development workflows.
+ * Provides a pre-configured workflow runner using the unified Handler pattern.
+ * Handlers combine state mutations and signal emissions in a single function,
+ * replacing the separate reducers/processes CQRS pattern.
  *
  * @example
  * ```ts
@@ -23,8 +23,7 @@ import type { ScopedReactiveAgent, SignalRecordingOptions } from "@internal/core
 import { createWorkflow } from "@internal/core";
 import type { Harness as SignalHarness } from "@internal/signals-core";
 
-import { processes } from "./processes/index.js";
-import { reducers } from "./reducers/index.js";
+import { PRDWorkflowHandlers } from "./handlers/index.js";
 import type { PRDWorkflowState } from "./types.js";
 import { createInitialState } from "./types.js";
 
@@ -90,13 +89,16 @@ export function createPRDWorkflow() {
 }
 
 /**
- * Run a PRD workflow with pre-configured reducers and process managers.
+ * Run a PRD workflow with pre-configured unified handlers.
  *
  * This is a convenience wrapper that:
  * 1. Creates initial state from the PRD
- * 2. Attaches the CQRS reducers (command side)
- * 3. Attaches the process managers (query side)
- * 4. Runs the reactive workflow
+ * 2. Attaches unified handlers (state mutations + signal emissions)
+ * 3. Runs the reactive workflow
+ *
+ * Handlers replace the old CQRS pattern (separate reducers/processes)
+ * with a unified approach where each handler can both mutate state
+ * and return signals to emit.
  *
  * @example
  * ```ts
@@ -126,8 +128,7 @@ export async function runPRDWorkflow(config: PRDWorkflowConfig) {
 		timeout: config.timeout,
 		endWhen: config.endWhen,
 		recording: config.recording,
-		// CQRS pattern: reducers handle state mutations, processes handle orchestration
-		reducers,
-		processes,
+		// Unified Handler pattern: handlers do both state mutations AND signal emissions
+		handlers: PRDWorkflowHandlers,
 	});
 }
