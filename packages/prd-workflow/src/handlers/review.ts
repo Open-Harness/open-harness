@@ -21,6 +21,7 @@ import type { SignalHandler } from "@internal/core";
 import { createSignal } from "@internal/signals-core";
 import {
 	createHandler,
+	type DraftState,
 	type MilestoneFailedPayload,
 	type MilestoneRetryPayload,
 	type PRDWorkflowState,
@@ -30,9 +31,15 @@ import {
 } from "../types.js";
 
 /**
+ * Readable state type - accepts both PRDWorkflowState and Draft<PRDWorkflowState>
+ * This avoids the need for `as unknown as` casts in handlers.
+ */
+type ReadableState = PRDWorkflowState | DraftState;
+
+/**
  * Helper: Find the next pending task after the current one
  */
-function findNextPendingTask(state: Readonly<PRDWorkflowState>): Task | null {
+function findNextPendingTask(state: ReadableState): Task | null {
 	const currentIdx = state.execution.currentTaskId
 		? state.planning.taskOrder.indexOf(state.execution.currentTaskId)
 		: -1;
@@ -52,7 +59,7 @@ function findNextPendingTask(state: Readonly<PRDWorkflowState>): Task | null {
 /**
  * Helper: Check if all tasks in a milestone are complete
  */
-function isMilestoneComplete(milestone: { taskIds: readonly string[] }, tasks: Record<string, Task>): boolean {
+function isMilestoneComplete(milestone: { taskIds: string[] }, tasks: Record<string, Task>): boolean {
 	return milestone.taskIds.every((taskId) => {
 		const task = tasks[taskId];
 		return task && task.status === "complete";
@@ -62,10 +69,7 @@ function isMilestoneComplete(milestone: { taskIds: readonly string[] }, tasks: R
 /**
  * Helper: Find the milestone that contains a given task
  */
-function findMilestoneForTask(
-	taskId: string,
-	state: Readonly<PRDWorkflowState>,
-): { id: string; taskIds: readonly string[] } | null {
+function findMilestoneForTask(taskId: string, state: ReadableState): { id: string; taskIds: string[] } | null {
 	for (const milestone of state.planning.milestones) {
 		if (milestone.taskIds.includes(taskId)) {
 			return milestone;
@@ -77,9 +81,7 @@ function findMilestoneForTask(
 /**
  * Helper: Find the next untested milestone with all tasks complete
  */
-function findNextUntestedMilestone(
-	state: Readonly<PRDWorkflowState>,
-): { id: string; taskIds: readonly string[] } | null {
+function findNextUntestedMilestone(state: ReadableState): { id: string; taskIds: string[] } | null {
 	for (const milestone of state.planning.milestones) {
 		if (state.review.passedMilestones.includes(milestone.id)) {
 			continue;
@@ -94,7 +96,7 @@ function findNextUntestedMilestone(
 /**
  * Helper: Check if all milestones have passed
  */
-function allMilestonesPassed(state: Readonly<PRDWorkflowState>): boolean {
+function allMilestonesPassed(state: ReadableState): boolean {
 	return state.planning.milestones.every((milestone) => state.review.passedMilestones.includes(milestone.id));
 }
 
@@ -115,18 +117,17 @@ export const taskApprovedHandler = createHandler<TaskApprovedPayload>((draft, pa
 	draft.execution.phase = "idle";
 	draft.review.phase = "idle";
 
-	// EMISSION: Determine next step based on workflow state
-	// Cast to readonly for helper functions
-	const readOnlyState = draft as unknown as PRDWorkflowState;
-
 	if (!taskId) {
 		return [];
 	}
 
-	// Find the milestone for this task
-	const milestone = findMilestoneForTask(taskId, readOnlyState);
+	// EMISSION: Determine next step based on workflow state
+	// Helper functions accept both Draft and regular state - no cast needed
 
-	if (milestone && isMilestoneComplete(milestone, readOnlyState.planning.allTasks)) {
+	// Find the milestone for this task
+	const milestone = findMilestoneForTask(taskId, draft);
+
+	if (milestone && isMilestoneComplete(milestone, draft.planning.allTasks)) {
 		// All tasks in milestone complete - time to test
 		return [
 			createSignal("milestone:testable", {
@@ -137,7 +138,7 @@ export const taskApprovedHandler = createHandler<TaskApprovedPayload>((draft, pa
 	}
 
 	// Find next pending task
-	const nextTask = findNextPendingTask(readOnlyState);
+	const nextTask = findNextPendingTask(draft);
 	if (nextTask) {
 		return [
 			createSignal("task:ready", {
@@ -150,7 +151,7 @@ export const taskApprovedHandler = createHandler<TaskApprovedPayload>((draft, pa
 	}
 
 	// No more tasks - check if all milestones tested
-	if (allMilestonesPassed(readOnlyState)) {
+	if (allMilestonesPassed(draft)) {
 		return [
 			createSignal("workflow:complete", {
 				reason: "all_milestones_passed",
@@ -159,7 +160,7 @@ export const taskApprovedHandler = createHandler<TaskApprovedPayload>((draft, pa
 	}
 
 	// Still have untested milestones
-	const untestedMilestone = findNextUntestedMilestone(readOnlyState);
+	const untestedMilestone = findNextUntestedMilestone(draft);
 	if (untestedMilestone) {
 		return [
 			createSignal("milestone:testable", {
@@ -234,7 +235,7 @@ export const milestoneRetryHandler = createHandler<MilestoneRetryPayload>((draft
 				task.status = "pending";
 				// Track first task for emission
 				if (!firstTask) {
-					firstTask = task as Task;
+					firstTask = task;
 				}
 			}
 		}

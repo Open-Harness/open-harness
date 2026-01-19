@@ -23,6 +23,7 @@ import { createSignal } from "@internal/signals-core";
 import {
 	type AttemptRecord,
 	createHandler,
+	type DraftState,
 	type FixRequiredPayload,
 	type MilestonePassedPayload,
 	type MilestoneTestablePayload,
@@ -33,9 +34,15 @@ import {
 } from "../types.js";
 
 /**
+ * Readable state type - accepts both PRDWorkflowState and Draft<PRDWorkflowState>
+ * This avoids the need for `as unknown as` casts in handlers.
+ */
+type ReadableState = PRDWorkflowState | DraftState;
+
+/**
  * Helper: Find the first pending task in the workflow
  */
-function findFirstPendingTask(state: Readonly<PRDWorkflowState>): Task | null {
+function findFirstPendingTask(state: ReadableState): Task | null {
 	for (const taskId of state.planning.taskOrder) {
 		const task = state.planning.allTasks[taskId];
 		if (task && task.status === "pending") {
@@ -48,9 +55,7 @@ function findFirstPendingTask(state: Readonly<PRDWorkflowState>): Task | null {
 /**
  * Helper: Find the next untested milestone
  */
-function findNextUntestedMilestone(
-	state: Readonly<PRDWorkflowState>,
-): { id: string; taskIds: readonly string[] } | null {
+function findNextUntestedMilestone(state: ReadableState): { id: string; taskIds: string[] } | null {
 	for (const milestone of state.planning.milestones) {
 		// Skip already passed milestones
 		if (state.review.passedMilestones.includes(milestone.id)) {
@@ -116,7 +121,7 @@ export const taskCompleteHandler = createHandler<TaskCompletePayload>((draft, pa
 		};
 
 		// Push to attempt history
-		(task.attemptHistory as AttemptRecord[]).push(attemptRecord);
+		task.attemptHistory.push(attemptRecord);
 	}
 
 	// Transition to awaiting review
@@ -193,15 +198,13 @@ export const milestonePassedHandler = createHandler<MilestonePassedPayload>((dra
 	}
 
 	// Add to passed milestones list
-	(draft.review.passedMilestones as string[]).push(payload.milestoneId);
+	draft.review.passedMilestones.push(payload.milestoneId);
 
 	// Clear current milestone
 	draft.review.currentMilestoneId = null;
 	draft.review.phase = "idle";
 
 	// EMISSION: Check if all milestones have passed
-	// Note: We need to read from state before mutations for accurate check
-	// But since we just pushed to passedMilestones, we can check current state
 	const passedCount = draft.review.passedMilestones.length;
 	const totalCount = draft.planning.milestones.length;
 
@@ -213,10 +216,8 @@ export const milestonePassedHandler = createHandler<MilestonePassedPayload>((dra
 		];
 	}
 
-	// Find next pending task
-	// Cast back to readonly for helper function
-	const readOnlyState = draft as unknown as PRDWorkflowState;
-	const nextTask = findFirstPendingTask(readOnlyState);
+	// Find next pending task - helper accepts both Draft and regular state
+	const nextTask = findFirstPendingTask(draft);
 	if (nextTask) {
 		return [
 			createSignal("task:ready", {
@@ -229,7 +230,7 @@ export const milestonePassedHandler = createHandler<MilestonePassedPayload>((dra
 	}
 
 	// No more tasks but have untested milestones
-	const untestedMilestone = findNextUntestedMilestone(readOnlyState);
+	const untestedMilestone = findNextUntestedMilestone(draft);
 	if (untestedMilestone) {
 		return [
 			createSignal("milestone:testable", {
