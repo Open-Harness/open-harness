@@ -840,7 +840,7 @@ tasks:
       - List any failing criteria with reason
 
   - title: "Phase 6.3: Document remaining work"
-    completed: false
+    completed: true
     details: |
       WRAP-UP: Document any remaining work.
 
