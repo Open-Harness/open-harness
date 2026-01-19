@@ -1,0 +1,38 @@
+# Ralphy Configuration
+# https://github.com/michaelshimeles/ralphy
+
+# Project info
+project:
+  name: "open-harness"
+  language: "TypeScript"
+  framework: "Bun, Zod, Hono"
+  description: "Reactive workflow engine for AI agents with CQRS-inspired architecture"
+
+# Commands
+commands:
+  test: "bun run test"
+  lint: "bun run lint"
+  build: "bun run typecheck"
+
+# Rules - instructions the AI MUST follow
+# These are injected into every prompt
+rules:
+  - "NEVER use console.log/error/warn - use the structured Pino logger from @internal/core"
+  - "All state updates must be immutable - use Immer for clean mutations"
+  - "Reducers must be PURE functions: (state, signal) => void, no ctx.emit()"
+  - "Orchestration logic belongs in ProcessManagers, not reducers"
+  - "Follow the CQRS mental model in docs/internal/MENTAL_MODEL_CQRS.md"
+  - "Use bun (not npm/yarn) for all package management"
+  - "Exports must use .js extension for ESM compatibility"
+  - "Tests go in tests/ directory, not __tests__ or alongside source"
+  - "Never fabricate test fixtures - use real SDK responses"
+  - "Run typecheck before claiming any task is complete"
+
+# Boundaries - files/folders the AI should not modify
+boundaries:
+  never_touch:
+    - "*.lock"
+    - "bun.lockb"
+    - "packages/prd-workflow/**"  # This is the reference implementation, don't modify
+    - ".claude/patterns/**"
+    - "recordings/**"
