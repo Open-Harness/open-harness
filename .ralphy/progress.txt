@@ -3,3 +3,42 @@
 # Branch: feat/immer-signals-state-management
 # Started: 2026-01-18
 
+## 2026-01-19 - Phase 0: Branch Consolidation (COMPLETE)
+
+### Task: Consolidate branches - add Immer + ProcessManager foundation
+
+**Context**: Commit 24106cc referenced in tasks.yaml was not found in repository.
+Implemented the Immer + ProcessManager pattern from scratch.
+
+**Changes Made**:
+
+1. **Added Immer dependency** (`packages/internal/core/package.json`)
+   - `immer@11.1.3` added to dependencies
+
+2. **Created ProcessManager types** (`packages/internal/core/src/api/create-workflow.ts`)
+   - `ProcessManager<TState>` - Function type: `(state: Readonly<TState>, signal: Signal) => Signal[]`
+   - `ProcessManagers<TState>` - Map of signal patterns to process managers
+   - Added comprehensive JSDoc with CQRS explanation and examples
+
+3. **Updated ReactiveWorkflowConfig**
+   - Added `processes?: ProcessManagers<TState>` field
+   - Updated `reducers` documentation to reference Immer
+
+4. **Integrated Immer into reducer execution**
+   - Imported `produce` from immer
+   - Wrapped reducer calls in `produce()` for clean immutable updates
+   - Reducers can now use direct mutations: `state.foo = bar`
+
+5. **Implemented process manager execution**
+   - Process managers run after reducers
+   - Receive read-only state, emit derived signals
+   - CQRS pattern: reducers = command side, processes = query side
+
+6. **Exported new types** (`packages/internal/core/src/api/index.ts`)
+   - SignalReducer, SignalReducers, ProcessManager, ProcessManagers
+
+### GATE: Verification Passed
+- `bun run typecheck` - 14 packages, 0 errors
+- `bun run lint` - 13 packages, no fixes needed
+- `bun run test` - 10 suites, 179+ tests passed
+
