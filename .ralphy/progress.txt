@@ -1306,3 +1306,59 @@ Verified that PRD workflow replay works correctly with the renderer map pattern.
 - Next task: 6.5 Verify unknown signals are skipped (V-05)
 - The renderer map pattern works correctly in replay mode with real recording data
 
+
+## Task 6.5: Verify unknown signals are skipped (V-05) - COMPLETED
+
+### Summary
+Added explicit V-05 verification test to confirm the contract that signals without renderers are silently skipped (no output, no error). While tests already existed covering this behavior, added a specific test using the exact naming convention from the task specification ("test:foo" and "test:bar").
+
+### Files Modified
+- packages/internal/signals/src/adapters/terminal.test.ts - Added V-05 verification test
+
+### New Test Added
+```typescript
+it("skips test:bar when only test:foo has renderer (V-05)", () => {
+  const renderers: RendererMap = {
+    "test:foo": () => "Foo rendered",
+  };
+  const adapter = terminalAdapter({ renderers, write: writeFn });
+
+  // Emit test:bar (not in map) - should not throw
+  expect(() => {
+    adapter.onSignal(createSignal("test:bar", { data: "ignored" }));
+  }).not.toThrow();
+
+  // Should produce no output
+  expect(output).toHaveLength(0);
+
+  // Now emit test:foo (in map) - should render
+  adapter.onSignal(createSignal("test:foo", {}));
+  expect(output).toHaveLength(1);
+  expect(output[0]).toContain("Foo rendered");
+});
+```
+
+### Pre-existing Test Coverage
+The terminal adapter tests already included multiple tests for the skipping behavior:
+1. `"silently skips signal when no renderer exists"` - Basic skipping test
+2. `"only renders signals that have renderers"` - Mix of known/unknown signals
+3. `"does not throw for unknown signal"` - Error behavior verification
+4. `"empty renderer map skips all signals"` - Empty map behavior
+5. `"handles mix of known and unknown signals correctly"` - Integration test
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- bun test terminal.test.ts: 21 tests pass (42 expect() calls)
+- bun run test: 177 tests pass (466 expect() calls)
+
+### Acceptance Criteria Met
+- ✓ Test added for unknown signal skipping (explicit V-05 test with test:foo/test:bar)
+- ✓ Test verifies no output and no error for signals without renderers
+- ✓ Test passes
+
+### Notes
+- Phase 6 Task 5 of 6 complete (6.1, 6.2, 6.3, 6.4, 6.5 done; 6.6 remaining)
+- Next task: 6.6 Verify logs adapter still works (V-06)
+- The renderer map pattern correctly implements the contract: no renderer = silent skip
+
