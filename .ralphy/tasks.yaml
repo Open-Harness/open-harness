@@ -547,7 +547,7 @@ tasks:
   # Phase 6: Verification
   # ═══════════════════════════════════════════════════════════════
   - title: "6.1: Verify typecheck passes (V-01)"
-    completed: false
+    completed: true
     parallel_group: 6
     phase: "Phase 6: Verification"
     details: |
