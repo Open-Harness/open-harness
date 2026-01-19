@@ -275,3 +275,75 @@ Created complete PRD workflow package implementing CQRS pattern:
 - **Workflow Runner**: Convenience API combining reducers + processes
 - **Total**: 86 comprehensive tests covering all functionality
 
+## 2026-01-19 - Phase 2: DX Integration Test (COMPLETE)
+
+### Task: Create dx-integration.test.ts with record/replay test
+
+**Context**: Created comprehensive DX integration tests to verify the recording
+and replay functionality for PRD workflows.
+
+**Files Created**:
+
+1. **packages/prd-workflow/tests/dx-integration.test.ts**
+   - 10 comprehensive tests covering record/replay functionality
+   - Tests organized in two describe blocks:
+     - "DX Integration - Record/Replay" (8 tests)
+     - "DX Integration - Recording Metadata" (2 tests)
+
+**Test Coverage**:
+
+1. **Record Mode Tests**:
+   - `records signals and returns a recordingId` - Verifies recordingId format and storage
+   - `replays recording with identical final state` - State comparison between record/replay
+   - `replays harness signals identically` - Signal-by-signal comparison
+   - `replay is instant (no network delay)` - Performance test (<100ms, low variance)
+   - `replay works without a harness` - Verifies signals are injected from recording
+   - `validates recording exists before replay` - Error handling for missing recording
+   - `requires store for record mode` - Error handling for missing store
+   - `requires recordingId for replay mode` - Error handling for missing recordingId
+
+2. **Recording Metadata Tests**:
+   - `stores recording with metadata for querying` - Verifies name, tags, signalCount, durationMs
+   - `can delete recordings from store` - Verifies exists/delete/exists flow
+
+**Key Implementation Details**:
+
+1. **Mock Harness Pattern**: Two helper functions created:
+   - `createDeterministicMockHarness(plannerOutput)` - For predictable structured output
+   - `createSimpleMockHarness()` - For simple completion tests
+
+2. **Recording API Usage**:
+   - Record mode: `recording: { mode: "record", store, name, tags }`
+   - Replay mode: `recording: { mode: "replay", store, recordingId }`
+   - No harness required for replay (signals injected from recording)
+
+3. **Assertions Pattern**:
+   - State comparison: Compare `planning.prd`, `planning.phase`, etc.
+   - Signal comparison: Filter harness signals, compare names and payloads
+   - Performance: `performance.now()` timing with threshold checks
+
+**Recording Structure Discovery**:
+- `Recording` has nested `metadata` field (not flat properties)
+- Access via `recording.metadata.name`, `recording.metadata.tags`
+- `finalized` is internal state, not exposed on `Recording` interface
+- `durationMs` is set on finalization, can be used to verify finalization
+
+### GATE: Phase 2 Verification Passed
+- `bun run typecheck` - 15 packages, 0 errors
+- `bun run lint` - 14 packages, 21 warnings (all noNonNullAssertion in tests)
+- `bun run test` - 96 prd-workflow tests, all passing
+  - 12 process manager tests
+  - 16 planning reducer tests
+  - 25 execution reducer tests
+  - 23 review reducer tests
+  - 10 workflow runner tests
+  - 10 dx-integration tests
+
+**Phase 2 Summary**:
+Added comprehensive DX integration tests for record/replay functionality:
+- **10 new tests** covering all record/replay scenarios
+- **Deterministic mocks** for predictable test behavior
+- **Performance validation** ensuring replay is instant
+- **Error handling** for missing store/recordingId
+- **Metadata verification** for query-based recording management
+
