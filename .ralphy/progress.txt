@@ -983,3 +983,62 @@ Ready to proceed with Phase 4 (CLI).
 **Conclusion**: Phase 4.1 complete. Sandbox directory and example PRD created.
 Ready to proceed with Phase 4.2 (Create CLI entry point).
 
+### Task: Phase 4.2 - Create CLI entry point
+
+**Context**: Created the CLI script for running PRD workflows with live/record/replay modes.
+
+**Files Created**:
+
+1. **packages/prd-workflow/src/cli.ts**
+   - Full CLI implementation using Node.js `parseArgs`
+   - Three modes: `live`, `record`, `replay`
+   - Options:
+     - `--mode, -m`: Mode selection (default: live)
+     - `--recording`: Recording ID for replay mode
+     - `--sandbox, -s`: Sandbox directory (default: .sandbox)
+     - `--database, -d`: SQLite database path (default: .sandbox/recordings.db)
+     - `--name, -n`: Recording name for record mode
+     - `--tags, -t`: Recording tags, comma-separated
+     - `--help, -h`: Show help
+   - Uses SqliteSignalStore from @open-harness/stores
+   - Dynamic imports to avoid loading heavy dependencies when showing help
+
+2. **packages/prd-workflow/tests/cli.test.ts**
+   - 14 comprehensive tests covering:
+     - Argument parsing (help flags, required arguments, invalid modes)
+     - Replay mode (validates recording exists, replays existing recordings)
+     - Sandbox directory (creation, defaults)
+     - Database path (defaults, directory creation)
+     - Tag parsing
+
+**Files Modified**:
+
+1. **packages/prd-workflow/package.json**
+   - Added `@open-harness/stores` dependency
+   - Added `bin` field for CLI entry point
+   - Added scripts: `prd:live`, `prd:record`, `prd:replay`
+
+**Key Implementation Pattern**:
+```bash
+# Run live workflow
+bun run prd:live examples/hello-world.prd.md
+
+# Record a workflow run
+bun run prd:record examples/hello-world.prd.md --name "test run" --tags "integration,ci"
+
+# Replay a recorded workflow
+bun run prd:replay --recording rec_abc12345
+```
+
+### GATE: Phase 4.2 Verification Passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings (1 file auto-fixed)
+- `bun run test` - 33 prd-workflow tests, ALL passed
+  - 19 existing tests (workflow, dx-integration)
+  - 14 new CLI tests
+- `bun run prd:live --help` - Shows help output correctly
+- `cat packages/prd-workflow/package.json | grep prd:` - Shows all 3 scripts
+
+**Conclusion**: Phase 4.2 complete. CLI entry point created with live/record/replay modes.
+Ready to proceed with Phase 4.3 (Update workflow.ts for CLI options).
+
