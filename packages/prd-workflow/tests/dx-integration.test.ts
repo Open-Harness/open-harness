@@ -22,14 +22,7 @@ import {
 	type RunContext,
 	type Signal,
 } from "@internal/signals-core";
-import {
-	createInitialState,
-	createPRDWorkflow,
-	type PRDWorkflowState,
-	processes,
-	reducers,
-	runPRDWorkflow,
-} from "../src/index.js";
+import { createPRDWorkflow, runPRDWorkflow } from "../src/index.js";
 
 /**
  * Create a deterministic mock harness for testing.
@@ -121,14 +114,16 @@ describe("DX Integration - Record/Replay", () => {
 		expect(result.recordingId).toMatch(/^rec_/);
 
 		// Recording should be saved to store
-		const recording = await store.load(result.recordingId!);
+		expect(result.recordingId).toBeDefined();
+		const recording = await store.load(result.recordingId as string);
 		expect(recording).toBeDefined();
-		expect(recording!.signals.length).toBeGreaterThan(0);
+		if (!recording) throw new Error("Recording should exist");
+		expect(recording.signals.length).toBeGreaterThan(0);
 
 		// Recording metadata should match
-		expect(recording!.metadata.name).toBe("dx-integration-test");
-		expect(recording!.metadata.tags).toContain("test");
-		expect(recording!.metadata.tags).toContain("dx-integration");
+		expect(recording.metadata.name).toBe("dx-integration-test");
+		expect(recording.metadata.tags).toContain("test");
+		expect(recording.metadata.tags).toContain("dx-integration");
 	});
 
 	it("replays recording with identical final state", async () => {
@@ -166,6 +161,7 @@ describe("DX Integration - Record/Replay", () => {
 		});
 
 		expect(recordResult.recordingId).toBeDefined();
+		if (!recordResult.recordingId) throw new Error("Recording ID should exist");
 
 		// Replay with the same recording
 		const replayResult = await runPRDWorkflow({
@@ -176,7 +172,7 @@ describe("DX Integration - Record/Replay", () => {
 			recording: {
 				mode: "replay",
 				store,
-				recordingId: recordResult.recordingId!,
+				recordingId: recordResult.recordingId,
 			},
 		});
 
@@ -211,6 +207,9 @@ describe("DX Integration - Record/Replay", () => {
 			},
 		});
 
+		expect(recordResult.recordingId).toBeDefined();
+		if (!recordResult.recordingId) throw new Error("Recording ID should exist");
+
 		// Replay
 		const replayResult = await runPRDWorkflow({
 			prd: "# Signal Test PRD",
@@ -219,7 +218,7 @@ describe("DX Integration - Record/Replay", () => {
 			recording: {
 				mode: "replay",
 				store,
-				recordingId: recordResult.recordingId!,
+				recordingId: recordResult.recordingId,
 			},
 		});
 
@@ -239,8 +238,9 @@ describe("DX Integration - Record/Replay", () => {
 
 		// Payloads should match (excluding timestamps)
 		for (let i = 0; i < recordHarnessSignals.length; i++) {
-			const recordSignal = recordHarnessSignals[i]!;
-			const replaySignal = replayHarnessSignals[i]!;
+			const recordSignal = recordHarnessSignals[i];
+			const replaySignal = replayHarnessSignals[i];
+			if (!recordSignal || !replaySignal) throw new Error(`Signal at index ${i} should exist`);
 			expect(replaySignal.payload).toEqual(recordSignal.payload);
 		}
 	});
@@ -269,6 +269,9 @@ describe("DX Integration - Record/Replay", () => {
 			},
 		});
 
+		expect(recordResult.recordingId).toBeDefined();
+		if (!recordResult.recordingId) throw new Error("Recording ID should exist");
+
 		// Time multiple replays - they should all be fast
 		const replayDurations: number[] = [];
 
@@ -282,7 +285,7 @@ describe("DX Integration - Record/Replay", () => {
 				recording: {
 					mode: "replay",
 					store,
-					recordingId: recordResult.recordingId!,
+					recordingId: recordResult.recordingId,
 				},
 			});
 
@@ -326,6 +329,9 @@ describe("DX Integration - Record/Replay", () => {
 			},
 		});
 
+		expect(recordResult.recordingId).toBeDefined();
+		if (!recordResult.recordingId) throw new Error("Recording ID should exist");
+
 		// Replay WITHOUT harness - should work because signals are injected
 		const replayResult = await runPRDWorkflow({
 			prd: "# No Harness Test",
@@ -335,7 +341,7 @@ describe("DX Integration - Record/Replay", () => {
 			recording: {
 				mode: "replay",
 				store,
-				recordingId: recordResult.recordingId!,
+				recordingId: recordResult.recordingId,
 			},
 		});
 
@@ -452,14 +458,15 @@ describe("DX Integration - Recording Metadata", () => {
 
 		const ourRecording = recordings.find((r) => r.id === result.recordingId);
 		expect(ourRecording).toBeDefined();
-		expect(ourRecording!.name).toBe("metadata-test-recording");
-		expect(ourRecording!.tags).toContain("integration");
-		expect(ourRecording!.tags).toContain("dx");
-		expect(ourRecording!.tags).toContain("metadata");
-		expect(ourRecording!.signalCount).toBeGreaterThan(0);
+		if (!ourRecording) throw new Error("Our recording should exist in list");
+		expect(ourRecording.name).toBe("metadata-test-recording");
+		expect(ourRecording.tags).toContain("integration");
+		expect(ourRecording.tags).toContain("dx");
+		expect(ourRecording.tags).toContain("metadata");
+		expect(ourRecording.signalCount).toBeGreaterThan(0);
 		// Note: 'finalized' is internal state, not exposed on RecordingMetadata
 		// We can verify finalization by checking that durationMs is set
-		expect(ourRecording!.durationMs).toBeDefined();
+		expect(ourRecording.durationMs).toBeDefined();
 	});
 
 	it("can delete recordings from store", async () => {
@@ -486,15 +493,18 @@ describe("DX Integration - Recording Metadata", () => {
 			},
 		});
 
+		expect(result.recordingId).toBeDefined();
+		if (!result.recordingId) throw new Error("Recording ID should exist");
+
 		// Recording should exist
-		const exists = await store.exists(result.recordingId!);
+		const exists = await store.exists(result.recordingId);
 		expect(exists).toBe(true);
 
 		// Delete recording
-		await store.delete(result.recordingId!);
+		await store.delete(result.recordingId);
 
 		// Recording should not exist
-		const existsAfter = await store.exists(result.recordingId!);
+		const existsAfter = await store.exists(result.recordingId);
 		expect(existsAfter).toBe(false);
 	});
 });
