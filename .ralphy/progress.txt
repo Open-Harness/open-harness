@@ -678,3 +678,67 @@ Created comprehensive integration tests that verify users can create custom adap
 - Recording contains real workflow signals: workflow:start, agent:activated, harness:start, text:delta, etc.
 
 
+## Task 4.2: Display inference validation (V-06) - COMPLETED
+
+### Summary
+Created comprehensive test suite for terminal adapter display type inference logic. The tests validate that signals without explicit display metadata are correctly rendered based on naming conventions.
+
+### Files Created
+- packages/internal/signals/src/adapters/terminal-inference.test.ts - Comprehensive test suite (44 tests)
+
+### Test Coverage
+1. **Start/Begin Conventions** (5 tests):
+   - `:start`, `:started`, `:begin` → status (active) with yellow color
+   - Handles namespaced signals correctly
+
+2. **Complete/Done/Success Conventions** (5 tests):
+   - `:complete`, `:completed`, `:done`, `:success` → notification (success) with green color
+
+3. **Error/Failed/Failure Conventions** (4 tests):
+   - `:error`, `:failed`, `:failure` → notification (error) with red color
+
+4. **Warning/Warn Conventions** (3 tests):
+   - `:warning`, `:warn` → notification (warning) with yellow color
+
+5. **Delta/Chunk/Stream Conventions** (4 tests):
+   - `:delta`, `:chunk`, `:stream` → stream type with append mode
+   - Tests sequential stream signal handling
+
+6. **Progress Convention** (2 tests):
+   - `:progress` → progress type (active status)
+
+7. **Unknown Suffix** (4 tests):
+   - Unrecognized suffixes → log type with [signal:name] format
+
+8. **Case Insensitivity** (3 tests):
+   - Handles uppercase and mixed case suffixes
+
+9. **Explicit Display Overrides** (4 tests):
+   - Explicit display metadata takes precedence over inference
+   - Partial display merges correctly with inferred values
+
+10. **Edge Cases** (7 tests):
+    - Empty signal names, colon-only names, trailing colons
+    - Deeply nested namespaces, undefined/null payloads
+
+11. **Inference vs Explicit Comparison** (3 tests):
+    - Verifies inference produces same output as equivalent explicit display
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero lint errors (14 packages)
+- bun test terminal-inference.test.ts: 44 tests pass (53 expect() calls)
+- grep 'inference' terminal-inference.test.ts: Test file covers inference logic
+
+### Acceptance Criteria Met
+- ✓ Signals without display render correctly
+- ✓ Convention-based inference works for all patterns
+- ✓ Test uses real terminalAdapter instance (no mocks)
+- ✓ All inference conventions covered (start/complete/error/warning/delta/progress/unknown)
+- ✓ TypeScript and lint pass
+
+### Notes
+- Phase 4 Task 2 of 5 complete (4.1, 4.2 done; 4.3, 4.4, 4.G remaining)
+- Next task: 4.3 Update package exports and documentation
+
+
