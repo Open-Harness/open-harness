@@ -404,3 +404,64 @@ with Handler pattern implementation.
 
 **Conclusion**: Codebase is in clean state. Ready to proceed with Phase 1 (SDK Core - Handler Type).
 
+## 2026-01-19 - Phase 1: SDK Core - Handler Type (IN PROGRESS)
+
+### Task: Phase 1.1 - Design SignalHandler type in @internal/core
+
+**Context**: The SDK has two separate concepts - SignalReducer (mutations only) and
+ProcessManager (emissions only). The Handler pattern unifies these into a single
+SignalHandler type that can both mutate state and return signals to emit.
+
+**Files Modified**:
+
+1. **packages/internal/core/src/api/create-workflow.ts**
+   - Added `SignalHandler<TState>` type: `(state: TState, signal: Signal) => Signal[] | void`
+   - Added `SignalHandlers<TState>` type: `Record<string, SignalHandler<TState>>`
+   - Added `handlers` option to `ReactiveWorkflowConfig`
+   - Implemented handler subscription in `runReactive`:
+     - Handlers run AFTER reducers but BEFORE process managers
+     - Handlers execute within Immer's `produce()` for immutable state updates
+     - Handlers can return `Signal[]` to emit follow-up signals
+
+2. **packages/internal/core/src/api/index.ts**
+   - Added exports: `SignalHandler`, `SignalHandlers`
+
+3. **packages/internal/core/tests/api/signal-handler.test.ts** (NEW)
+   - 11 tests covering:
+     - Type-level tests for SignalHandler signature
+     - State mutation via handlers
+     - Signal emission via handlers
+     - Execution order (reducers → handlers → processes)
+     - Chained signal emission
+
+**Key Implementation Pattern**:
+```typescript
+// Unified handler - mutates state AND emits signals
+const handler: SignalHandler<MyState> = (state, signal) => {
+  // MUTATION (Immer handles immutability)
+  state.tasks[signal.payload.taskId].status = "complete";
+
+  // EMISSION (return signals to emit)
+  return [{ name: "review:start", payload: { taskId: signal.payload.taskId } }];
+};
+
+// Usage in runReactive
+await runReactive({
+  agents: { myAgent },
+  state: initialState,
+  handlers: {
+    "task:complete": handler,
+  },
+});
+```
+
+**Execution Order**: reducers → handlers → processes
+- Reducers mutate state (no emissions)
+- Handlers mutate state AND emit signals
+- Process managers emit signals (no mutations)
+
+### GATE: Phase 1.1 Verification Passed
+- `bun run typecheck` - 15 packages, ZERO errors
+- `bun run lint` - 14 packages, ZERO warnings
+- `bun run test` - 11 suites, ALL passed (including 11 new SignalHandler tests)
+

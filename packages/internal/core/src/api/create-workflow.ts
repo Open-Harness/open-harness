@@ -309,6 +309,42 @@ export type ReactiveWorkflowConfig<TState> = {
 	 * ```
 	 */
 	processes?: ProcessManagers<TState>;
+
+	/**
+	 * Signal handlers (unified pattern).
+	 *
+	 * Handlers combine state mutations and signal emission in a single function.
+	 * This is the preferred pattern for workflows where state changes and
+	 * orchestration logic are tightly coupled.
+	 *
+	 * Handlers:
+	 * - Receive mutable state (Immer wraps in produce)
+	 * - Mutate state directly
+	 * - Return Signal[] for follow-up emissions (or undefined/void)
+	 *
+	 * Execution order: reducers → handlers → processes
+	 * (handlers run after reducers but before process managers)
+	 *
+	 * @example
+	 * ```ts
+	 * const result = await runReactive({
+	 *   agents: { planner, executor },
+	 *   state: { tasks: [], currentTask: null },
+	 *   handlers: {
+	 *     "plan:created": (state, signal) => {
+	 *       // MUTATION: Update state
+	 *       state.tasks = signal.payload.tasks;
+	 *       state.phase = "executing";
+	 *
+	 *       // EMISSION: Return signals
+	 *       const first = state.tasks.find(t => t.status === "pending");
+	 *       return first ? [{ name: "task:ready", payload: { taskId: first.id } }] : [];
+	 *     }
+	 *   }
+	 * })
+	 * ```
+	 */
+	handlers?: SignalHandlers<TState>;
 };
 
 /**
@@ -413,6 +449,85 @@ export type ProcessManager<TState> = (
  * ```
  */
 export type ProcessManagers<TState> = Record<string, ProcessManager<TState>>;
+
+// ============================================================================
+// Signal Handler Type (Unified Pattern)
+// ============================================================================
+
+/**
+ * Signal handler function type (unified pattern).
+ *
+ * Handlers are the unified approach to signal handling that combines:
+ * - Reducers: State mutations (command side)
+ * - Process managers: Signal emission (query side)
+ *
+ * Key principles:
+ * - Receive mutable state (Immer handles immutability)
+ * - Receive the triggering signal for context
+ * - Mutate state directly
+ * - Return new signals to emit (or undefined/void for no emissions)
+ *
+ * This unified pattern is preferred over separate reducers/processes
+ * for workflows where state mutation and signal emission are tightly coupled.
+ *
+ * @example
+ * ```ts
+ * const handler: SignalHandler<MyState> = (state, signal) => {
+ *   // Direct mutation (Immer handles immutability)
+ *   state.tasks[signal.payload.taskId].status = "complete";
+ *
+ *   // Return signals to emit
+ *   return [{ name: "review:start", payload: { taskId: signal.payload.taskId } }];
+ * };
+ * ```
+ *
+ * @example No signals to emit
+ * ```ts
+ * const handler: SignalHandler<MyState> = (state, signal) => {
+ *   state.count++;
+ *   // Return undefined/void - no signals to emit
+ * };
+ * ```
+ */
+export type SignalHandler<TState> = (
+	state: TState,
+	signal: Signal,
+) => Signal[] | void;
+
+/**
+ * Map of signal patterns to handler functions.
+ *
+ * Handlers combine state mutations and signal emission in a single function.
+ * This is the preferred pattern for workflows where these concerns are
+ * naturally coupled.
+ *
+ * @example
+ * ```ts
+ * const handlers: SignalHandlers<PRDWorkflowState> = {
+ *   "plan:created": (state, signal) => {
+ *     // MUTATION: Update state
+ *     const { tasks, milestones, taskOrder } = signal.payload;
+ *     state.planning.allTasks = tasks;
+ *     state.planning.milestones = milestones;
+ *     state.planning.taskOrder = taskOrder;
+ *     state.planning.phase = "plan_complete";
+ *
+ *     // EMISSION: Return signals to emit
+ *     const firstTask = taskOrder[0];
+ *     if (firstTask) {
+ *       return [{ name: "task:ready", payload: { taskId: firstTask } }];
+ *     }
+ *     return [];
+ *   },
+ *   "task:complete": (state, signal) => {
+ *     const { taskId, outcome } = signal.payload;
+ *     state.execution.tasks[taskId].status = outcome;
+ *     // No signals to emit
+ *   },
+ * };
+ * ```
+ */
+export type SignalHandlers<TState> = Record<string, SignalHandler<TState>>;
 
 /**
  * Result from running a reactive workflow.
@@ -609,8 +724,29 @@ export function createWorkflow<TState>(): WorkflowFactory<TState> {
 			});
 		}
 
+		// Subscribe unified handlers (Handler pattern)
+		// Handlers run within Immer and can return signals to emit
+		// Execution order: reducers → handlers → processes
+		const handlers = config.handlers ?? {};
+		for (const [signalPattern, handler] of Object.entries(handlers)) {
+			bus.subscribe([signalPattern], (signal) => {
+				// Use Immer's produce and collect returned signals
+				let signalsToEmit: Signal[] = [];
+				state = produce(state, (draft) => {
+					const result = handler(draft as TState, signal);
+					if (Array.isArray(result)) {
+						signalsToEmit = result;
+					}
+				});
+				// Emit any returned signals
+				for (const derivedSignal of signalsToEmit) {
+					bus.emit(derivedSignal);
+				}
+			});
+		}
+
 		// Subscribe process managers for orchestration (CQRS pattern)
-		// Process managers run AFTER reducers and emit derived signals
+		// Process managers run AFTER reducers and handlers, emit derived signals
 		const processes = config.processes ?? {};
 		for (const [signalPattern, processManager] of Object.entries(processes)) {
 			bus.subscribe([signalPattern], (signal) => {

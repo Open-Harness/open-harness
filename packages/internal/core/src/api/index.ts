@@ -85,6 +85,9 @@ export {
 	type SignalReducers,
 	type ProcessManager,
 	type ProcessManagers,
+	// v0.3.2 Unified Handler Pattern
+	type SignalHandler,
+	type SignalHandlers,
 } from "./create-workflow.js";
 
 // v0.3.0 Template Engine (F2)
