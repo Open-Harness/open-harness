@@ -765,7 +765,7 @@ tasks:
       git add -A && git commit -m "test(prd-workflow): add SqliteSignalStore integration tests"
 
   - title: "Phase 5.3: GATE - Verify all tests pass"
-    completed: false
+    completed: true
     details: |
       VERIFICATION GATE: All tests pass.
 
