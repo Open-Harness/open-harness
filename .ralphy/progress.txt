@@ -1088,3 +1088,40 @@ Removed all `meta` and `display` configuration from PRD workflow signal definiti
 - The CLI currently has no terminal output for signals - this is expected until 4.2/4.3 complete the renderer integration
 
 
+## Task 4.3: Update PRD CLI to pass renderers (TR-4.3) - COMPLETED
+
+### Summary
+Updated the PRD Workflow CLI to import and pass `prdRenderers` to the `terminalAdapter()`. This completes the wiring of the renderer map pattern, enabling formatted terminal output for all 13 PRD workflow signals.
+
+### Files Modified
+- packages/prd-workflow/src/cli.ts - Import prdRenderers and pass to terminalAdapter
+- packages/prd-workflow/src/renderers.test.ts - Fixed lint warnings by using helper function instead of non-null assertions
+
+### Key Changes
+1. **CLI Changes**:
+   - Added dynamic import: `const { prdRenderers } = await import("./renderers.js");`
+   - Changed `terminalAdapter({ renderers: {} })` to `terminalAdapter({ renderers: prdRenderers })`
+   - Removed TODO comment that referenced tasks 4.2/4.3
+
+2. **Test Improvements**:
+   - Added `getRenderer()` helper function that throws if renderer not found
+   - Replaced all non-null assertions (`!`) with calls to `getRenderer()` to satisfy linter
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors/warnings (14 packages)
+- bun run test: 177 tests pass (466 expect() calls)
+- grep 'prdRenderers' cli.ts: Found import and usage on lines 175, 183
+
+### Acceptance Criteria Met
+- ✓ prdRenderers imported and passed to terminalAdapter
+- ✓ Typecheck passes
+- ✓ Lint passes (no warnings)
+- ✓ All tests pass
+
+### Notes
+- Phase 4 complete (4.1, 4.2, 4.3 all done)
+- Next phase: Phase 5 (Cleanup) or Phase 6 (Verification)
+- The CLI now renders all 13 PRD workflow signals with formatted output including ANSI colors and icons
+
+

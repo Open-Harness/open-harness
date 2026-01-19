@@ -172,6 +172,7 @@ async function main(): Promise<void> {
 	const { plannerAgent } = await import("./agents/index.js");
 	const { getLogger } = await import("@internal/core");
 	const { terminalAdapter, logsAdapter } = await import("@internal/signals/adapters");
+	const { prdRenderers } = await import("./renderers.js");
 
 	// Create logger for CLI messages and as adapter dependency
 	const logger = getLogger();
@@ -179,9 +180,7 @@ async function main(): Promise<void> {
 	// Create adapters for signal rendering
 	// - terminalAdapter: renders workflow signals to stdout with ANSI colors
 	// - logsAdapter: bridges signals to Pino for structured JSONL logging
-	// NOTE: Empty renderers map - signals are passed through to logsAdapter only
-	// TODO: Task 4.2 will create prdRenderers, Task 4.3 will wire it here
-	const adapters = [terminalAdapter({ renderers: {} }), logsAdapter({ logger })];
+	const adapters = [terminalAdapter({ renderers: prdRenderers }), logsAdapter({ logger })];
 
 	// Ensure database directory exists
 	const dbDir = dirname(resolve(args.database));
