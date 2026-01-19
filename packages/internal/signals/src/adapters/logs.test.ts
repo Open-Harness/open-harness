@@ -112,7 +112,7 @@ describe("logsAdapter", () => {
 		});
 	});
 
-	describe("log level mapping", () => {
+	describe("log level mapping from signal names", () => {
 		it("uses error level for *:error signals", () => {
 			const adapter = logsAdapter({ logger: testLogger });
 			const signal = createSignal("task:error", { message: "something failed" });
@@ -194,137 +194,6 @@ describe("logsAdapter", () => {
 		});
 	});
 
-	describe("explicit meta.level override", () => {
-		it("uses meta.level when explicitly set", () => {
-			const adapter = logsAdapter({ logger: testLogger });
-
-			// Create a signal with explicit meta.level
-			// This simulates what defineSignal() does when meta.level is set
-			const signal = {
-				id: "sig_test123",
-				name: "custom:signal",
-				payload: { data: "test" },
-				timestamp: new Date().toISOString(),
-				meta: { level: "error" as const },
-			};
-
-			adapter.onSignal(signal);
-
-			const entry = getLastLogEntry();
-			// Should be error (50) even though signal name would normally map to debug
-			expect(entry.level).toBe(50);
-		});
-
-		it("meta.level takes priority over name inference", () => {
-			const adapter = logsAdapter({ logger: testLogger });
-
-			// Signal name suggests info (*:complete), but meta says warn
-			const signal = {
-				id: "sig_test123",
-				name: "task:complete",
-				payload: {},
-				timestamp: new Date().toISOString(),
-				meta: { level: "warn" as const },
-			};
-
-			adapter.onSignal(signal);
-
-			const entry = getLastLogEntry();
-			// Should be warn (40) not info (30)
-			expect(entry.level).toBe(40);
-		});
-	});
-
-	describe("display metadata logging", () => {
-		it("omits display metadata by default", () => {
-			const adapter = logsAdapter({ logger: testLogger });
-			const signal = createSignal(
-				"test:signal",
-				{},
-				{
-					display: {
-						type: "notification",
-						status: "success",
-						title: "Test complete",
-					},
-				},
-			);
-
-			adapter.onSignal(signal);
-
-			const entry = getLastLogEntry();
-			expect(entry.display).toBeUndefined();
-		});
-
-		it("includes display metadata when includeDisplay is true", () => {
-			const adapter = logsAdapter({ logger: testLogger, includeDisplay: true });
-			const signal = createSignal(
-				"test:signal",
-				{},
-				{
-					display: {
-						type: "notification",
-						status: "success",
-						title: "Test complete",
-						icon: "✓",
-					},
-				},
-			);
-
-			adapter.onSignal(signal);
-
-			const entry = getLastLogEntry();
-			expect(entry.display).toBeDefined();
-			expect((entry.display as Record<string, unknown>).type).toBe("notification");
-			expect((entry.display as Record<string, unknown>).status).toBe("success");
-			expect((entry.display as Record<string, unknown>).title).toBe("Test complete");
-			expect((entry.display as Record<string, unknown>).icon).toBe("✓");
-		});
-
-		it("excludes function properties from display", () => {
-			const adapter = logsAdapter({ logger: testLogger, includeDisplay: true });
-			const signal = createSignal(
-				"test:signal",
-				{ count: 5 },
-				{
-					display: {
-						type: "notification",
-						title: (p: unknown) => `Count: ${(p as { count: number }).count}`,
-						subtitle: (p: unknown) => `Details for ${(p as { count: number }).count}`,
-					},
-				},
-			);
-
-			adapter.onSignal(signal);
-
-			const entry = getLastLogEntry();
-			// Function properties should NOT be serialized
-			expect(entry.display).toBeDefined();
-			expect((entry.display as Record<string, unknown>).type).toBe("notification");
-			expect((entry.display as Record<string, unknown>).title).toBeUndefined();
-			expect((entry.display as Record<string, unknown>).subtitle).toBeUndefined();
-		});
-
-		it("includes progress metadata", () => {
-			const adapter = logsAdapter({ logger: testLogger, includeDisplay: true });
-			const signal = createSignal(
-				"test:progress",
-				{},
-				{
-					display: {
-						type: "progress",
-						progress: { current: 3, total: 10 },
-					},
-				},
-			);
-
-			adapter.onSignal(signal);
-
-			const entry = getLastLogEntry();
-			expect((entry.display as Record<string, unknown>).progress).toEqual({ current: 3, total: 10 });
-		});
-	});
-
 	describe("lifecycle methods", () => {
 		it("logs adapter start on onStart", () => {
 			const adapter = logsAdapter({ logger: testLogger });
@@ -355,7 +224,7 @@ describe("logsAdapter", () => {
 		it("uses default patterns", () => {
 			const adapter = logsAdapter({ logger: testLogger });
 
-			expect(adapter.patterns).toEqual(["*"]);
+			expect(adapter.patterns).toEqual(["**"]);
 		});
 
 		it("accepts custom patterns", () => {
@@ -475,13 +344,14 @@ describe("logsAdapter", () => {
 			expect(entry.payload).toEqual(complexPayload);
 		});
 
-		it("handles signal without display", () => {
-			const adapter = logsAdapter({ logger: testLogger, includeDisplay: true });
+		it("signals are pure data without display metadata", () => {
+			const adapter = logsAdapter({ logger: testLogger });
 			const signal = createSignal("test:signal", {});
 
 			adapter.onSignal(signal);
 
 			const entry = getLastLogEntry();
+			// Signals are pure data - no display property
 			expect(entry.display).toBeUndefined();
 		});
 	});
