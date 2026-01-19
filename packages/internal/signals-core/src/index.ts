@@ -41,4 +41,13 @@ export {
 	ToolResultSchema,
 } from "./schemas.js";
 // Signal primitives
-export { createSignal, isSignal, type Signal, type SignalSource } from "./signal.js";
+export {
+	type CreateSignalOptions,
+	createSignal,
+	isSignal,
+	type Signal,
+	type SignalDisplay,
+	type SignalDisplayStatus,
+	type SignalDisplayType,
+	type SignalSource,
+} from "./signal.js";

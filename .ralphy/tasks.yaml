@@ -183,7 +183,7 @@ tasks:
   # Phase 1: Core Signal Display Infrastructure
   # ═══════════════════════════════════════════════════════════════
   - title: "1.1: Extend Signal type with display metadata (TR-01)"
-    completed: false
+    completed: true
     parallel_group: 1
     phase: "Phase 1: Core Signal Display Infrastructure"
     details: |
