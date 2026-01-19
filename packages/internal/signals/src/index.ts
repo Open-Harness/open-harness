@@ -6,6 +6,16 @@
 
 // SignalAdapter - Output rendering interface
 export { type CreateAdapterConfig, createAdapter, type SignalAdapter } from "./adapter.js";
+
+// Adapters - Pre-built output renderers
+export {
+	type DefaultAdaptersOptions,
+	defaultAdapters,
+	type LogsAdapterOptions,
+	logsAdapter,
+	type TerminalAdapterOptions,
+	terminalAdapter,
+} from "./adapters/index.js";
 // SignalBus - Central event dispatcher
 export {
 	type ISignalBus,
