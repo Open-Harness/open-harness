@@ -1,8 +1,8 @@
 ---
 title: "Signal Infrastructure"
-lastUpdated: "2026-01-19T21:01:16.913Z"
-lastCommit: "e4e02ebd09f142c724081e8542fae27b98569b16"
-lastCommitDate: "2026-01-19T20:56:44Z"
+lastUpdated: "2026-01-20T11:20:52.022Z"
+lastCommit: "0d7ddca66eccde94f5c4e59bba218209eb24d640"
+lastCommitDate: "2026-01-20T11:15:55Z"
 scope:
   - signals
   - event-bus
@@ -29,65 +29,25 @@ Core signal routing, storage, and playback for Open Harness v0.3.0.
 | `console-reporter.ts` | Debug logging reporter |
 | `metrics-reporter.ts` | Aggregated metrics collection |
 
-## Signal Display System
+## Core Principle: Signals are Pure Data
 
-Signals can carry display metadata that tells adapters how to render them. This enables intelligent presentation across different outputs (terminal, logs, web).
-
-### Display Metadata
-
-Signals have an optional `display` field with rendering hints:
+**Signals carry data, not presentation logic.** The `Signal` interface is a clean data structure:
 
 ```typescript
-interface SignalDisplay {
-  type?: "status" | "progress" | "notification" | "stream" | "log";
-  title?: string | ((payload: unknown) => string);
-  subtitle?: string | ((payload: unknown) => string);
-  icon?: string;
-  status?: "pending" | "active" | "success" | "error" | "warning";
-  progress?: number | { current: number; total: number };
-  append?: boolean;  // For stream type
+interface Signal<T = unknown> {
+  id: string;        // Unique signal ID
+  name: string;      // Colon-separated namespace (e.g., "task:complete")
+  payload: T;        // Signal data
+  timestamp: string; // ISO timestamp
+  source?: SignalSource; // Optional origin tracking
 }
 ```
 
-### Display Types
-
-| Type | Use Case | Terminal Rendering |
-|------|----------|-------------------|
-| `status` | Persistent state (e.g., "Planning...") | Colored icon + title |
-| `progress` | Progress bars or step counts | `[=====>    ] 60%` or `[3/10]` |
-| `notification` | One-time events | Checkmark/X icon + message |
-| `stream` | Streaming text | Appends content inline |
-| `log` | Structured debug output | `[signal:name] message` |
-
-### Creating Signals with Display
-
-Use `defineSignal()` from `@internal/signals-core`:
-
-```typescript
-import { defineSignal } from "@internal/signals-core";
-import { z } from "zod";
-
-const PlanCreated = defineSignal({
-  name: "plan:created",
-  schema: z.object({
-    taskCount: z.number(),
-  }),
-  display: {
-    type: "notification",
-    title: (p) => `Plan created with ${p.taskCount} tasks`,
-    status: "success",
-    icon: "✓",
-  },
-});
-
-// Create a signal with display metadata attached
-const signal = PlanCreated.create({ taskCount: 5 });
-// signal.display.title(signal.payload) => "Plan created with 5 tasks"
-```
+Adapters define how to render signals—signals themselves have no display metadata.
 
 ## Signal Adapters
 
-Adapters render signals to outputs. They receive signals, read display metadata, and produce appropriate output.
+Adapters render signals to outputs. Each adapter defines its own rendering logic via **renderer maps** (for terminal) or **name-based conventions** (for logs).
 
 ### Key Difference from Reporters
 
@@ -96,56 +56,77 @@ Adapters render signals to outputs. They receive signals, read display metadata,
 | Focus | Observation, metrics | Output rendering |
 | Lifecycle | attach/detach | onStart/onStop |
 | Async | Sync only | Sync or async |
-| Display | No awareness | Reads display metadata |
+| Rendering | No rendering | Defines how to render |
 
-### Built-in Adapters
+### Terminal Adapter (Renderer Map Pattern)
+
+The terminal adapter uses a **renderer map** where you explicitly define how each signal type renders:
 
 ```typescript
-import { terminalAdapter, logsAdapter, defaultAdapters } from "@internal/signals";
-import { getLogger } from "@internal/core";
+import { terminalAdapter, type RendererMap } from "@internal/signals/adapters";
 
-// Terminal adapter - renders to stdout with ANSI colors
-const terminal = terminalAdapter({
-  showTimestamp: true,  // Optional: show timestamps
-  useColors: true,      // Optional: enable ANSI colors (default: true)
-});
+// Define renderers for signals you care about
+const renderers: RendererMap = {
+  "plan:start": () => "📋 Planning...",
+  "plan:created": (signal) => `✓ Created ${signal.payload.tasks.length} tasks`,
+  "task:ready": (signal) => `▶ ${signal.payload.title}`,
+  "task:complete": (signal) => {
+    const icon = signal.payload.outcome === "success" ? "✓" : "✗";
+    return `${icon} Task ${signal.payload.taskId} complete`;
+  },
+};
 
-// Logs adapter - bridges to Pino structured logging
-const logs = logsAdapter({
-  logger: getLogger(),
-  includePayload: true,   // Include signal payload in log entry
-  includeDisplay: false,  // Include display metadata
-});
-
-// Default adapters - convenience helper
-const adapters = defaultAdapters({
-  logger: getLogger(),
-  terminal: { showTimestamp: true },
-});
+// Create adapter with your renderers
+const adapter = terminalAdapter({ renderers });
 ```
 
-### Terminal Adapter Colors
+**Key behaviors:**
+- Signals with a renderer in the map are rendered to stdout
+- **Signals without a renderer are silently skipped** (no output, no error)
+- This allows selective rendering of only the signals you care about
 
-| Status | Color | Icon |
-|--------|-------|------|
-| `success` | Green | ✓ |
-| `error` | Red | ✗ |
-| `active` | Yellow | ● |
-| `warning` | Yellow | ⚠ |
-| `pending` | Blue | ○ |
+### Terminal Adapter Options
 
-### Convention-Based Inference
+```typescript
+interface TerminalAdapterOptions {
+  renderers: RendererMap;      // Required: signal name → render function
+  write?: (text: string) => void; // Custom output (default: process.stdout.write)
+  showTimestamp?: boolean;     // Show timestamps (default: false)
+  colors?: boolean;            // ANSI colors in timestamps (default: true)
+  patterns?: string[];         // Subscribe patterns (default: ["*"])
+}
+```
 
-When signals don't have explicit display metadata, adapters infer rendering from signal names:
+### Logs Adapter (Name-Based Routing)
 
-| Signal Name Pattern | Inferred Display |
-|--------------------|------------------|
-| `*:start`, `*:begin` | status (active) |
-| `*:complete`, `*:done`, `*:success` | notification (success) |
-| `*:error`, `*:failed` | notification (error) |
-| `*:warning`, `*:warn` | notification (warning) |
-| `*:delta`, `*:chunk`, `*:stream` | stream (append) |
-| Other | log |
+The logs adapter bridges signals to Pino structured logging using **name-based conventions** to determine log levels:
+
+```typescript
+import { logsAdapter } from "@internal/signals/adapters";
+import { getLogger } from "@internal/core";
+
+const adapter = logsAdapter({ logger: getLogger() });
+```
+
+**Log level routing:**
+
+| Signal Name Pattern | Log Level |
+|--------------------|-----------|
+| `*:error`, `error:*` | error |
+| `*:fail*`, `*:abort*`, `*:timeout` | warn |
+| `workflow:*`, `harness:start`, `harness:end`, `*:done`, `*:complete` | info |
+| `*:delta` | trace |
+| Everything else | debug |
+
+### Logs Adapter Options
+
+```typescript
+interface LogsAdapterOptions {
+  logger: Logger;          // Required: Pino logger instance
+  patterns?: string[];     // Subscribe patterns (default: ["*"])
+  includePayload?: boolean; // Include payload in logs (default: true)
+}
+```
 
 ### Creating Custom Adapters
 
@@ -168,11 +149,8 @@ const taskAdapter = createAdapter({
     console.log("Starting task tracking...");
   },
   onSignal: async (signal) => {
-    const title = signal.display?.title;
-    const resolved = typeof title === "function"
-      ? title(signal.payload)
-      : title ?? signal.name;
-    console.log(`Task: ${resolved}`);
+    // Access typed payload directly
+    console.log(`Signal: ${signal.name}`, signal.payload);
   },
   onStop: async () => {
     console.log("Task tracking complete.");
@@ -184,14 +162,17 @@ const taskAdapter = createAdapter({
 
 ```typescript
 import { runReactive } from "@internal/core";
-import { terminalAdapter, logsAdapter } from "@internal/signals";
+import { terminalAdapter, logsAdapter } from "@internal/signals/adapters";
+
+// Import your renderer map (or define inline)
+import { myRenderers } from "./renderers.js";
 
 const result = await runReactive({
   agents,
   state,
   defaultProvider: provider,
   adapters: [
-    terminalAdapter(),
+    terminalAdapter({ renderers: myRenderers }),
     logsAdapter({ logger }),
   ],
 });
@@ -206,6 +187,32 @@ interface SignalAdapter {
   onSignal(signal: Signal): void | Promise<void>;
   onStart?(): void | Promise<void>;
   onStop?(): void | Promise<void>;
+}
+```
+
+## Defining Signals with defineSignal()
+
+Use `defineSignal()` from `@internal/signals-core` to create type-safe signal definitions:
+
+```typescript
+import { defineSignal } from "@internal/signals-core";
+import { z } from "zod";
+
+// Define a signal with schema validation
+const TaskComplete = defineSignal({
+  name: "task:complete",
+  schema: z.object({
+    taskId: z.string(),
+    outcome: z.enum(["success", "failure"]),
+  }),
+});
+
+// Create a signal instance (validates payload)
+const signal = TaskComplete.create({ taskId: "123", outcome: "success" });
+
+// Type guard for matching signals
+if (TaskComplete.is(signal)) {
+  console.log(signal.payload.taskId); // Type-safe payload access
 }
 ```
 

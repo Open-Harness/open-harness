@@ -506,7 +506,7 @@ tasks:
       - "All tests pass"
 
   - title: "5.3: Update signals README (TR-5.3)"
-    completed: false
+    completed: true
     parallel_group: 5
     phase: "Phase 5: Cleanup"
     details: |

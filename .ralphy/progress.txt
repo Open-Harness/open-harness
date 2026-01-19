@@ -1125,3 +1125,60 @@ Updated the PRD Workflow CLI to import and pass `prdRenderers` to the `terminalA
 - The CLI now renders all 13 PRD workflow signals with formatted output including ANSI colors and icons
 
 
+## Task 5.3: Update signals README (TR-5.3) - COMPLETED
+
+### Summary
+Updated the signals package README to reflect the new "Signals are pure data" architecture. Removed all references to `signal.display` metadata and documented the renderer map pattern for terminal adapter.
+
+### Files Modified
+- packages/internal/signals/README.md - Complete documentation rewrite
+
+### Key Changes
+
+1. **Added "Core Principle: Signals are Pure Data" section**:
+   - Documents that Signal interface has no display field
+   - Shows the clean Signal interface: id, name, payload, timestamp, source
+
+2. **Updated Terminal Adapter documentation**:
+   - Documents the renderer map pattern: `terminalAdapter({ renderers })`
+   - Explains that signals without renderers are silently skipped
+   - Shows RendererMap type and TerminalAdapterOptions interface
+   - Provides code examples with typed renderers
+
+3. **Updated Logs Adapter documentation**:
+   - Documents name-based log level routing (no renderer maps)
+   - Shows log level mapping table
+   - Removed includeDisplay option (no longer exists)
+
+4. **Removed obsolete content**:
+   - Deleted "Signal Display System" section with SignalDisplay interface
+   - Deleted "Display Metadata" and "Display Types" sections
+   - Deleted "Convention-Based Inference" table (terminal no longer infers)
+   - Removed all `signal.display` references from examples
+
+5. **Updated Custom Adapter examples**:
+   - Removed signal.display access in custom adapter examples
+   - Simplified examples to access payload directly
+
+6. **Updated "Defining Signals with defineSignal()" section**:
+   - Removed display config from defineSignal examples
+   - Shows clean signal definition with only name and schema
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages)
+- bun run test: 177 tests pass (466 expect() calls)
+- grep 'renderers:' README.md: Found at lines 67, 90, 173
+- grep 'signal.display' README.md: No matches
+
+### Acceptance Criteria Met
+- ✓ README shows renderer map pattern
+- ✓ No signal.display references in examples
+- ✓ Documentation explains pure data signals
+- ✓ Typecheck passes
+
+### Notes
+- Phase 5 Task 3 of 3 complete (5.1, 5.2, 5.3 all done)
+- Next: Phase 6 (Verification) tasks remain
+- Documentation now accurately reflects the refactored signal system
+
