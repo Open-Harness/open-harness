@@ -201,7 +201,7 @@ tasks:
       git add -A && git commit -m "feat(core): export SignalHandler from public packages"
 
   - title: "Phase 1.3: GATE - Verify SDK Handler type works"
-    completed: false
+    completed: true
     details: |
       VERIFICATION GATE: Confirm the new Handler type is properly integrated.
 
