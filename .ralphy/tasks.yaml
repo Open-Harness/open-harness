@@ -221,7 +221,7 @@ tasks:
   # ============================================================================
 
   - title: "Phase 2.1: Create SqliteSignalStore implementation"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Currently only MemorySignalStore exists (ephemeral).
       We need SqliteSignalStore for persistent recordings.
@@ -296,7 +296,7 @@ tasks:
       git add -A && git commit -m "feat(stores): add SqliteSignalStore for persistent recordings"
 
   - title: "Phase 2.2: Add SqliteSignalStore unit tests"
-    completed: false
+    completed: true
     details: |
       CONTEXT: Test the SqliteSignalStore implementation.
 

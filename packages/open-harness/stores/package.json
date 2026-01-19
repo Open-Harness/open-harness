@@ -17,7 +17,8 @@
 	],
 	"scripts": {
 		"lint": "biome check . --write",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "bun test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
