@@ -5,8 +5,8 @@
 project:
   name: "open-harness"
   language: "TypeScript"
-  framework: "Bun, Zod, Hono"
-  description: "Reactive workflow engine for AI agents with CQRS-inspired architecture"
+  framework: "Bun, Zod, Immer"
+  description: "Reactive workflow engine for AI agents with Handler-based state management"
 
 # Commands
 commands:
@@ -17,22 +17,42 @@ commands:
 # Rules - instructions the AI MUST follow
 # These are injected into every prompt
 rules:
+  # === REQUIRED READING ===
+  - "MUST read CLAUDE.md before starting ANY task - contains project rules"
+  - "MUST read docs/internal/MENTAL_MODEL.md for the Handler pattern"
+
+  # === HANDLER PATTERN (from MENTAL_MODEL.md) ===
+  - "Use Handler pattern: handlers mutate state directly AND return signals to emit"
+  - "Handlers receive (signal, state) and mutate state directly (Immer handles immutability)"
+  - "Handlers return Signal[] for follow-up emissions (or nothing)"
+  - "NO separate Reducers/ProcessManagers - consolidate into Handlers"
+
+  # === TYPE SAFETY ===
+  - "Signal payloads MUST be typed via generics - NO 'as FooPayload' casts"
+  - "Use SignalHandler<TState, TSignal> type from @internal/core"
+  - "TypeScript MUST pass with ZERO errors before claiming any task complete"
+
+  # === TESTING (from CLAUDE.md) ===
+  - "NEVER fabricate test fixtures - use real SDK responses"
+  - "All recordings MUST come from real Claude API interactions"
+  - "Integration tests are MANDATORY - unit tests with mocks prove nothing"
+
+  # === CODE STYLE ===
   - "NEVER use console.log/error/warn - use the structured Pino logger from @internal/core"
-  - "All state updates must be immutable - use Immer for clean mutations"
-  - "Reducers must be PURE functions: (state, signal) => void, no ctx.emit()"
-  - "Orchestration logic belongs in ProcessManagers, not reducers"
-  - "Follow the CQRS mental model in docs/internal/MENTAL_MODEL_CQRS.md"
   - "Use bun (not npm/yarn) for all package management"
   - "Exports must use .js extension for ESM compatibility"
   - "Tests go in tests/ directory, not __tests__ or alongside source"
-  - "Never fabricate test fixtures - use real SDK responses"
-  - "Run typecheck before claiming any task is complete"
+
+  # === QUALITY GATES ===
+  - "Run 'bun run typecheck' after EVERY code change"
+  - "Run 'bun run lint' after EVERY code change"
+  - "All quality gates must pass with ZERO errors/warnings before proceeding"
 
 # Boundaries - files/folders the AI should not modify
 boundaries:
   never_touch:
     - "*.lock"
     - "bun.lockb"
-    - "packages/prd-workflow/**"  # This is the reference implementation, don't modify
     - ".claude/patterns/**"
     - "recordings/**"
+    # NOTE: packages/prd-workflow is NOT in never_touch - we need to refactor it
