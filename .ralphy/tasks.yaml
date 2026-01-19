@@ -166,7 +166,7 @@ tasks:
       - "Prompt instructs structured output"
 
   - title: "3.2: Update create-workflow.ts to wire schemas"
-    completed: false
+    completed: true
     parallel_group: 3
     phase: "Phase 3: Agent & Workflow Wiring"
     details: |
