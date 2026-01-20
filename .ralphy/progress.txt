@@ -10,3 +10,29 @@
 **Verification**: Directory structure matches specs/001-effect-refactor/plan.md exactly
 **Lint**: PASS (no new code to lint)
 
+## 2026-01-21T17:02:30Z - Phase 1 Setup Tasks 2-8
+**Task**: Complete remaining Phase 1 setup (package.json, tsconfig, vitest config, stub files)
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/package.json with:
+  - name: @open-harness/core-v2
+  - dependencies: effect ^3.19.0, @effect/platform ^0.94.0, @anthropic-ai/claude-agent-sdk ^0.2.5, zod ^4.3.4
+  - devDependencies: @effect/vitest ^0.27.0, typescript ^5.9.3, vitest ^3.1.4
+  - NOTE: @effect/schema removed (merged into effect v3.x), zod-to-json-schema removed (using Zod 4 native toJSONSchema)
+- Created packages/core-v2/tsconfig.json extending root config
+- Created packages/core-v2/vitest.config.ts with @effect/vitest support
+- Created packages/core-v2/src/index.ts (public API entry point, Effect-free)
+- Created packages/core-v2/src/react.ts (React subpath export stub)
+- Created packages/core-v2/src/internal/boundary.ts with exitToResult and ManagedRuntime
+- Created packages/core-v2/src/internal/schema.ts with convertZodToJsonSchema using Zod 4 native toJSONSchema
+- Created packages/core-v2/tests/setup.test.ts to verify package setup
+**Verification**:
+- bun install: PASS (48 packages installed)
+- bun run test: PASS (5 tests)
+- bun run typecheck: PASS
+- bun run lint: PASS
+**Notes**:
+- Effect 3.x merged @effect/schema into the main effect package
+- Zod 4 has native toJSONSchema, no need for zod-to-json-schema library
+- TypeScript config extends monorepo root for consistency
+

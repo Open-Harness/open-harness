@@ -21,13 +21,13 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ## Phase 1: Setup
 
 - [x] Create packages/core-v2/ directory with subdirectories: src/event, src/handler, src/agent, src/workflow, src/tape, src/store, src/renderer, src/provider, src/message, src/internal, and tests/integration per specs/001-effect-refactor/plan.md
-- [ ] Create packages/core-v2/package.json with name "@open-harness/core-v2" and dependencies: effect, @effect/schema, @effect/platform, @anthropic-ai/claude-agent-sdk, zod, zod-to-json-schema, and devDependencies: @effect/vitest, typescript. Run bun install.
-- [ ] Create packages/core-v2/tsconfig.json with strict:true, target:ES2022, module:NodeNext for Effect-compatible TypeScript configuration
-- [ ] Create packages/core-v2/vitest.config.ts configured with @effect/vitest plugin for Effect-native testing
-- [ ] Create packages/core-v2/src/index.ts as public API entry point with comment "Public API - NO Effect types here" (placeholder exports for now)
-- [ ] Create packages/core-v2/src/react.ts as React subpath export stub with placeholder for useWorkflow hook and WorkflowProvider
-- [ ] Create packages/core-v2/src/internal/boundary.ts with Effect→Promise utilities: ManagedRuntime wrapper, Exit.match for results, Cause.pretty for error messages
-- [ ] Create packages/core-v2/src/internal/schema.ts with zodToJsonSchema utility function using zod-to-json-schema library for converting Zod schemas to JSON Schema
+- [x] Create packages/core-v2/package.json with name "@open-harness/core-v2" and dependencies: effect, @effect/schema, @effect/platform, @anthropic-ai/claude-agent-sdk, zod, zod-to-json-schema, and devDependencies: @effect/vitest, typescript. Run bun install.
+- [x] Create packages/core-v2/tsconfig.json with strict:true, target:ES2022, module:NodeNext for Effect-compatible TypeScript configuration
+- [x] Create packages/core-v2/vitest.config.ts configured with @effect/vitest plugin for Effect-native testing
+- [x] Create packages/core-v2/src/index.ts as public API entry point with comment "Public API - NO Effect types here" (placeholder exports for now)
+- [x] Create packages/core-v2/src/react.ts as React subpath export stub with placeholder for useWorkflow hook and WorkflowProvider
+- [x] Create packages/core-v2/src/internal/boundary.ts with Effect→Promise utilities: ManagedRuntime wrapper, Exit.match for results, Cause.pretty for error messages
+- [x] Create packages/core-v2/src/internal/schema.ts with zodToJsonSchema utility function using zod-to-json-schema library for converting Zod schemas to JSON Schema
 
 ---
 
