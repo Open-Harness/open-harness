@@ -625,7 +625,7 @@ tasks:
       - "Signal is a pure data structure"
 
   - title: "6.4: Verify replay renders correctly (V-04)"
-    completed: false
+    completed: true
     parallel_group: 6
     phase: "Phase 6: Verification"
     details: |
