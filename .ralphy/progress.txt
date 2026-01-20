@@ -66,3 +66,31 @@
 - EventLog is internal-only, not exported in public API
 - defineEvent provides clean DX without exposing Effect schemas to consumers
 
+## 2026-01-21T17:10:00Z - Phase 2 Handler System
+**Task**: Implement Handler System (2 tasks in Handler System section)
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/handler/Handler.ts with:
+  - HandlerResult<S> interface: { state: S, events: readonly AnyEvent[] }
+  - Handler<E, S> type: pure function (event, state) => HandlerResult<S>
+  - HandlerDefinition<E, S> interface: { name, handles, handler }
+  - DefineHandlerOptions<E, S> interface for factory options
+  - defineHandler(eventDef, options) factory for type-safe handler creation
+  - Utility functions: stateOnly(), emit(), emitEvent()
+- Created packages/core-v2/src/handler/index.ts re-exporting consumer-facing types and factories
+- Created packages/core-v2/tests/handler.test.ts with 22 comprehensive tests covering:
+  - HandlerResult types and structures
+  - Handler function type constraints (pure, deterministic)
+  - HandlerDefinition interface
+  - defineHandler factory with EventDefinition integration
+  - Utility functions (stateOnly, emit, emitEvent)
+  - Handler composition patterns (chaining, multiple events, conditional emission)
+**Verification**:
+- bun run test: PASS (54 tests total, 22 new handler tests)
+- bun run typecheck: PASS
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- Handlers are synchronous-only per spec FR-009 to FR-011 for determinism
+- No Effect types exposed in public API per spec FR-062
+- Utility functions (stateOnly, emit, emitEvent) provide clean DX for handler authors
+

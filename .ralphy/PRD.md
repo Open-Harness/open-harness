@@ -49,8 +49,8 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Handler System
 
-- [ ] Create packages/core-v2/src/handler/Handler.ts with Handler type: (event, state) => { state, events[] }, HandlerResult interface, HandlerDefinition interface per specs/001-effect-refactor/contracts/handler.ts
-- [ ] Create packages/core-v2/src/handler/index.ts re-exporting Handler, HandlerResult, HandlerDefinition
+- [x] Create packages/core-v2/src/handler/Handler.ts with Handler type: (event, state) => { state, events[] }, HandlerResult interface, HandlerDefinition interface per specs/001-effect-refactor/contracts/handler.ts
+- [x] Create packages/core-v2/src/handler/index.ts re-exporting Handler, HandlerResult, HandlerDefinition
 
 ### Agent System
 
