@@ -701,7 +701,7 @@ tasks:
       - "Test passes"
 
   - title: "6.6: Verify logs adapter still works (V-06)"
-    completed: false
+    completed: true
     parallel_group: 6
     phase: "Phase 6: Verification"
     details: |
