@@ -15,34 +15,6 @@ describe("defineSignal", () => {
 			expect(TestSignal.name).toBe("test:event");
 			expect(TestSignal.schema).toBe(PayloadSchema);
 		});
-
-		test("stores meta when provided", () => {
-			const TestSignal = defineSignal({
-				name: "test:event",
-				schema: z.object({}),
-				meta: { level: "info", category: "lifecycle" },
-			});
-
-			expect(TestSignal.meta).toEqual({ level: "info", category: "lifecycle" });
-		});
-
-		test("stores displayConfig when provided", () => {
-			const TestSignal = defineSignal({
-				name: "test:event",
-				schema: z.object({ count: z.number() }),
-				display: {
-					type: "notification",
-					title: (p) => `Count: ${p.count}`,
-					status: "success",
-				},
-			});
-
-			expect(TestSignal.displayConfig?.type).toBe("notification");
-			expect(TestSignal.displayConfig?.status).toBe("success");
-			// Verify title function works
-			const titleFn = TestSignal.displayConfig?.title as (p: { count: number }) => string;
-			expect(titleFn({ count: 42 })).toBe("Count: 42");
-		});
 	});
 
 	describe("create()", () => {
@@ -61,33 +33,6 @@ describe("defineSignal", () => {
 			expect(isSignal(signal)).toBe(true);
 		});
 
-		test("attaches display metadata from definition", () => {
-			const TaskSignal = defineSignal({
-				name: "task:complete",
-				schema: z.object({ taskId: z.string(), duration: z.number() }),
-				display: {
-					type: "notification",
-					title: (p) => `Task ${p.taskId} completed`,
-					subtitle: (p) => `Completed in ${p.duration}ms`,
-					status: "success",
-					icon: "✓",
-				},
-			});
-
-			const signal = TaskSignal.create({ taskId: "T-001", duration: 150 });
-
-			expect(signal.display).toBeDefined();
-			expect(signal.display?.type).toBe("notification");
-			expect(signal.display?.status).toBe("success");
-			expect(signal.display?.icon).toBe("✓");
-
-			// Verify functions work with payload
-			const titleFn = signal.display?.title as (p: unknown) => string;
-			const subtitleFn = signal.display?.subtitle as (p: unknown) => string;
-			expect(titleFn(signal.payload)).toBe("Task T-001 completed");
-			expect(subtitleFn(signal.payload)).toBe("Completed in 150ms");
-		});
-
 		test("attaches source when provided in options", () => {
 			const TestSignal = defineSignal({
 				name: "test:event",
@@ -103,29 +48,6 @@ describe("defineSignal", () => {
 
 			expect(signal.source?.agent).toBe("test-agent");
 			expect(signal.source?.parent).toBe("sig_parent");
-		});
-
-		test("allows display overrides via options", () => {
-			const TestSignal = defineSignal({
-				name: "test:event",
-				schema: z.object({}),
-				display: {
-					type: "notification",
-					status: "pending",
-				},
-			});
-
-			const signal = TestSignal.create(
-				{},
-				{
-					display: { status: "success" },
-				},
-			);
-
-			// Override should take precedence
-			expect(signal.display?.status).toBe("success");
-			// But base type should still be present
-			expect(signal.display?.type).toBe("notification");
 		});
 
 		test("validates payload against schema", () => {
@@ -263,84 +185,6 @@ describe("defineSignal", () => {
 		});
 	});
 
-	describe("display types", () => {
-		test("supports status display type", () => {
-			const StatusSignal = defineSignal({
-				name: "status:update",
-				schema: z.object({ phase: z.string() }),
-				display: {
-					type: "status",
-					title: (p) => `Phase: ${p.phase}`,
-					status: "active",
-				},
-			});
-
-			const signal = StatusSignal.create({ phase: "planning" });
-			expect(signal.display?.type).toBe("status");
-		});
-
-		test("supports progress display type with percentage", () => {
-			const ProgressSignal = defineSignal({
-				name: "build:progress",
-				schema: z.object({ percent: z.number() }),
-				display: {
-					type: "progress",
-					progress: 50,
-				},
-			});
-
-			const signal = ProgressSignal.create({ percent: 50 });
-			expect(signal.display?.type).toBe("progress");
-			expect(signal.display?.progress).toBe(50);
-		});
-
-		test("supports progress display type with steps", () => {
-			const TaskProgress = defineSignal({
-				name: "tasks:progress",
-				schema: z.object({ current: z.number(), total: z.number() }),
-				display: {
-					type: "progress",
-					progress: { current: 3, total: 10 },
-					title: (p) => `Task ${p.current}/${p.total}`,
-				},
-			});
-
-			const signal = TaskProgress.create({ current: 3, total: 10 });
-			expect(signal.display?.progress).toEqual({ current: 3, total: 10 });
-		});
-
-		test("supports stream display type with append", () => {
-			const StreamDelta = defineSignal({
-				name: "stream:delta",
-				schema: z.object({ content: z.string() }),
-				display: {
-					type: "stream",
-					append: true,
-				},
-			});
-
-			const signal = StreamDelta.create({ content: "chunk" });
-			expect(signal.display?.type).toBe("stream");
-			expect(signal.display?.append).toBe(true);
-		});
-
-		test("supports log display type", () => {
-			const LogEvent = defineSignal({
-				name: "log:event",
-				schema: z.object({ message: z.string(), level: z.string() }),
-				meta: { level: "debug" },
-				display: {
-					type: "log",
-					title: (p) => p.message,
-				},
-			});
-
-			const signal = LogEvent.create({ message: "Debug info", level: "debug" });
-			expect(signal.display?.type).toBe("log");
-			expect(LogEvent.meta?.level).toBe("debug");
-		});
-	});
-
 	describe("edge cases", () => {
 		test("handles empty object schema", () => {
 			const EmptySignal = defineSignal({
@@ -409,22 +253,6 @@ describe("defineSignal", () => {
 
 			const signal = TransformSignal.create({ date: "2026-01-19T12:00:00Z" });
 			expect(signal.payload.date).toBeInstanceOf(Date);
-		});
-
-		test("static title and subtitle work correctly", () => {
-			const StaticSignal = defineSignal({
-				name: "static:event",
-				schema: z.object({}),
-				display: {
-					title: "Static Title",
-					subtitle: "Static Subtitle",
-					status: "pending",
-				},
-			});
-
-			const signal = StaticSignal.create({});
-			expect(signal.display?.title).toBe("Static Title");
-			expect(signal.display?.subtitle).toBe("Static Subtitle");
 		});
 	});
 });

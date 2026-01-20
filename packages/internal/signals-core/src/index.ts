@@ -10,8 +10,6 @@ export {
 	type DefineSignalConfig,
 	defineSignal,
 	type SignalDefinition,
-	type SignalDisplayConfig,
-	type SignalMeta,
 } from "./define-signal.js";
 // Harness types
 export {
@@ -55,8 +53,5 @@ export {
 	createSignal,
 	isSignal,
 	type Signal,
-	type SignalDisplay,
-	type SignalDisplayStatus,
-	type SignalDisplayType,
 	type SignalSource,
 } from "./signal.js";

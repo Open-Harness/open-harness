@@ -1,930 +1,737 @@
 # Ralphy Task List
-# Source: /Users/abuusama/projects/open-harness/open-harness/.ralphy/PRD.md
-# Generated: 2026-01-19
-#
-# IMPORTANT: Integration tests MUST use the existing SQLite recording:
-#   Database: packages/prd-workflow/.sandbox/recordings.db
-#   Recording ID: rec_f0b64b75
-#   Recording Name: "structured-output-verification"
-#
-# This recording contains real agent interactions - DO NOT use live API calls
-# for basic integration testing. The recording enables deterministic testing.
+# Source: .ralphy/PRD.md
+# Generated: 2026-01-20
 
 metadata:
-  name: "Handler Pattern DX + Signal Display Architecture"
-  total_tasks: 19
-  total_phases: 5
-  recording:
-    database: "packages/prd-workflow/.sandbox/recordings.db"
-    id: "rec_f0b64b75"
-    name: "structured-output-verification"
+  name: "Signal Adapter Refactor - Pure Data Signals"
+  total_tasks: 18
+  total_phases: 6
 
 tasks:
   # ═══════════════════════════════════════════════════════════════
-  # Phase 0: Code Reorganization (Issue #2 from type safety refactor)
+  # Phase 1: Remove Display from Signal Core
   # ═══════════════════════════════════════════════════════════════
-  - title: "0.1: Create planner module directory structure (TR-00)"
+  - title: "1.1: Remove display types from signal.ts (TR-1.1)"
     completed: true
-    parallel_group: 0
-    phase: "Phase 0: Code Reorganization"
+    parallel_group: 1
+    phase: "Phase 1: Remove Display from Signal Core"
     details: |
       CONTEXT:
-      The current structure scatters agent code across agents/, handlers/, schemas/.
-      We need to co-locate related code by agent for better DX.
+      Current Signal interface couples data with presentation via display field.
+      This violates the principle "Signals are data, not presentation".
+      We need to make Signal a pure data structure.
+
+      LOCATION: packages/internal/signals-core/src/signal.ts
 
       STEPS:
-      1. Create packages/prd-workflow/src/planner/ directory
-      2. Move agents/planner.agent.ts → planner/planner.agent.ts
-      3. Move agents/planner.prompt.ts → planner/planner.prompt.ts
-      4. Move schemas/plan-created.ts → planner/planner.schema.ts
-      5. Create planner/index.ts exporting all module members
-      6. Update import paths in planner.agent.ts to use relative imports
+      1. Read packages/internal/signals-core/src/signal.ts
+      2. Remove SignalDisplayType type
+      3. Remove SignalDisplayStatus type
+      4. Remove SignalDisplay interface
+      5. Remove display field from Signal interface
+      6. Remove display field from CreateSignalOptions
+      7. Remove display-related logic in createSignal()
+      8. Keep SignalSource (still useful for debugging)
 
       CONSTITUTION COMPLIANCE:
       - Per MUST-004: Explicit verification commands below
-      - No mocks needed - this is code reorganization
+      - This is a refactor, not new functionality requiring real API testing
 
       VERIFY:
       ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      test -d packages/prd-workflow/src/planner  # Directory exists
-      test -f packages/prd-workflow/src/planner/planner.agent.ts  # Agent file exists
-      test -f packages/prd-workflow/src/planner/planner.prompt.ts  # Prompt file exists
-      test -f packages/prd-workflow/src/planner/planner.schema.ts  # Schema file exists
+      bun run typecheck  # Must pass with zero errors
+      grep -n "SignalDisplay" packages/internal/signals-core/src/signal.ts  # Should return no matches
+      grep -n "display:" packages/internal/signals-core/src/signal.ts  # Should only match comments if any
       ```
     verify:
       - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "test -d packages/prd-workflow/src/planner && echo 'Directory exists'"
-        expect: "Directory exists"
-      - command: "test -f packages/prd-workflow/src/planner/planner.agent.ts && echo 'Agent exists'"
-        expect: "Agent exists"
+        expect: "Zero type errors"
+      - command: "grep -n 'SignalDisplay' packages/internal/signals-core/src/signal.ts"
+        expect: "No matches (empty output)"
     acceptance:
-      - "planner/ directory created"
-      - "All planner files co-located in planner/"
-      - "planner/index.ts exports all module members"
-      - "TypeScript and lint pass"
+      - "Signal interface has no display field"
+      - "All display-related types removed from signal.ts"
+      - "Typecheck passes with zero errors"
 
-  - title: "0.2: Update handlers to use new planner imports (TR-00b)"
+  - title: "1.2: Remove display/meta from defineSignal() (TR-1.2)"
     completed: true
-    parallel_group: 0
-    phase: "Phase 0: Code Reorganization"
+    parallel_group: 1
+    phase: "Phase 1: Remove Display from Signal Core"
     details: |
       CONTEXT:
-      After moving planner files, handlers need updated import paths.
+      defineSignal() currently accepts display and meta config that gets copied to signals.
+      The meta field is dead code - never actually copied to signals despite logsAdapter casts.
+      Remove both to simplify the API.
+
+      LOCATION: packages/internal/signals-core/src/define-signal.ts
 
       STEPS:
-      1. Update packages/prd-workflow/src/handlers/planning.ts imports
-      2. Change: import from "../agents/" → import from "../planner/"
-      3. Change: import from "../schemas/" → import from "../planner/"
-      4. Verify all handler imports resolve correctly
-      5. Update any other files importing from old locations
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification commands below
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      grep -r "from.*\.\./agents/" packages/prd-workflow/src/handlers/ || echo "No old imports"
-      grep -r "from.*\.\./schemas/plan-created" packages/prd-workflow/src/handlers/ || echo "No old imports"
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "grep -r 'from.*\\.\\./agents/' packages/prd-workflow/src/handlers/ || echo 'No old imports'"
-        expect: "No old imports"
-    acceptance:
-      - "All handlers use new import paths"
-      - "No imports from ../agents/ or ../schemas/plan-created"
-      - "TypeScript and lint pass"
-
-  - title: "0.3: Update package exports and cleanup old dirs (TR-00c)"
-    completed: true
-    parallel_group: 0
-    phase: "Phase 0: Code Reorganization"
-    details: |
-      CONTEXT:
-      Package exports need to be updated to maintain public API.
-      Old directories should be cleaned up.
-
-      STEPS:
-      1. Update packages/prd-workflow/src/index.ts
-      2. Re-export plannerAgent from "./planner/"
-      3. Re-export PlanCreatedPayloadSchema from "./planner/"
-      4. Remove empty agents/ directory (if empty after moves)
-      5. Keep schemas/ if other schemas remain, or remove if empty
-      6. Ensure public API is unchanged
+      1. Read packages/internal/signals-core/src/define-signal.ts
+      2. Remove SignalDisplayConfig interface
+      3. Remove SignalMeta interface (dead code)
+      4. Remove display and meta from DefineSignalConfig
+      5. Remove displayConfig and meta from SignalDefinition
+      6. Remove convertToSignalDisplay() function
+      7. Remove all display-related logic in create() method
 
       CONSTITUTION COMPLIANCE:
       - Per MUST-004: Explicit verification commands below
 
       VERIFY:
       ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun run test       # All tests pass (API unchanged)
-      grep -r "export.*plannerAgent" packages/prd-workflow/src/index.ts  # Exported
+      bun run typecheck  # Must pass with zero errors
+      grep -n "SignalDisplayConfig\|SignalMeta\|convertToSignalDisplay" packages/internal/signals-core/src/define-signal.ts  # No matches
+      grep -n "display:\|meta:" packages/internal/signals-core/src/define-signal.ts  # Only in comments if any
       ```
     verify:
       - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun run test"
-        expect: "All tests pass"
-      - command: "grep -r 'export.*plannerAgent' packages/prd-workflow/src/index.ts"
-        expect: "plannerAgent exported"
+        expect: "Zero type errors"
+      - command: "grep -n 'SignalDisplayConfig\\|SignalMeta\\|convertToSignalDisplay' packages/internal/signals-core/src/define-signal.ts"
+        expect: "No matches"
     acceptance:
-      - "Public API unchanged (plannerAgent, schemas exported)"
-      - "Old empty directories removed"
-      - "All tests pass (no regressions)"
-      - "TypeScript and lint pass"
+      - "defineSignal() has no display or meta config"
+      - "All display/meta types removed"
+      - "Typecheck passes"
 
-  # ───────────────────────────────────────────────────────────────
-  # Phase 0 Gate: Verify code reorganization
-  # ───────────────────────────────────────────────────────────────
-  - title: "0.G: Phase 0 Gate - Code Reorganization Verification"
-    completed: true
-    parallel_group: 0
-    phase: "Phase 0: Code Reorganization"
-    details: |
-      GATE CHECK:
-      All Phase 0 tasks must pass before proceeding to Phase 1.
-      Code structure must be correct, all tests passing.
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors across monorepo
-      bun run lint       # Zero lint errors
-      bun run test       # All tests pass
-      test -d packages/prd-workflow/src/planner  # New structure exists
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors across entire monorepo"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun run test"
-        expect: "All tests pass"
-    acceptance:
-      - "All Phase 0 tasks complete"
-      - "planner/ module structure correct"
-      - "No test regressions"
-      - "Monorepo typecheck and lint pass"
-
-  # ═══════════════════════════════════════════════════════════════
-  # Phase 1: Core Signal Display Infrastructure
-  # ═══════════════════════════════════════════════════════════════
-  - title: "1.1: Extend Signal type with display metadata (TR-01)"
+  - title: "1.3: Update signals-core exports (TR-1.3)"
     completed: true
     parallel_group: 1
-    phase: "Phase 1: Core Signal Display Infrastructure"
+    phase: "Phase 1: Remove Display from Signal Core"
     details: |
       CONTEXT:
-      Signals need to carry display hints so adapters can render them intelligently.
-      Currently signals have no semantic metadata about how they should be displayed.
+      Clean up public exports to remove display-related types.
+
+      LOCATION: packages/internal/signals-core/src/index.ts
 
       STEPS:
-      1. Open packages/internal/signals-core/src/signal.ts
-      2. Add SignalDisplay interface with type, title, subtitle, icon, status, progress, append fields
-      3. Add optional display field to Signal<T> interface
-      4. Ensure all display fields are properly typed (functions use generics for payload)
-      5. Export SignalDisplay interface
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification below (not "verify it works")
-      - No mocks needed - this is type-level only
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      grep -r "SignalDisplay" packages/internal/signals-core/src/signal.ts  # Interface exists
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "grep -r 'interface SignalDisplay' packages/internal/signals-core/src/signal.ts"
-        expect: "Interface definition found"
-    acceptance:
-      - "SignalDisplay interface exported from signal.ts"
-      - "Signal<T> has optional display field"
-      - "TypeScript compilation passes"
-      - "Lint passes"
-
-  - title: "1.2: Create defineSignal() function (TR-02)"
-    completed: true
-    parallel_group: 1
-    phase: "Phase 1: Core Signal Display Infrastructure"
-    details: |
-      CONTEXT:
-      Need a factory function to create signal definitions with display metadata.
-      This provides type-safe signal creation and attaches display config to signals.
-
-      STEPS:
-      1. Create packages/internal/signals-core/src/define-signal.ts
-      2. Define SignalDefinition type with create() and is() methods
-      3. Implement defineSignal() function accepting name, payload schema, meta, display
-      4. Store display config on definition and attach to created signals
-      5. Provide type inference for payload via Zod
-      6. Export defineSignal and SignalDefinition
+      1. Read packages/internal/signals-core/src/index.ts
+      2. Remove SignalDisplay export
+      3. Remove SignalDisplayType export
+      4. Remove SignalDisplayStatus export
+      5. Remove SignalDisplayConfig export
+      6. Remove SignalMeta export
 
       CONSTITUTION COMPLIANCE:
       - Per MUST-004: Explicit verification commands below
-      - No mocks - this is implementation code
 
       VERIFY:
       ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun test packages/internal/signals-core/src/define-signal.test.ts  # All pass
+      bun run typecheck  # Must pass
+      grep -n "SignalDisplay\|SignalDisplayType\|SignalDisplayStatus\|SignalDisplayConfig\|SignalMeta" packages/internal/signals-core/src/index.ts  # No matches
       ```
     verify:
       - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun test packages/internal/signals-core/src/define-signal.test.ts"
-        expect: "All tests pass"
+        expect: "Zero type errors"
+      - command: "grep -n 'SignalDisplay\\|SignalDisplayType\\|SignalDisplayStatus\\|SignalDisplayConfig\\|SignalMeta' packages/internal/signals-core/src/index.ts"
+        expect: "No matches"
     acceptance:
-      - "defineSignal() accepts config with display metadata"
-      - "Returns SignalDefinition with type-safe create() and is()"
-      - "Display metadata attached to created signals"
-      - "Unit tests validate behavior"
-      - "TypeScript and lint pass"
-
-  - title: "1.3: Create adapter interface (TR-03)"
-    completed: true
-    parallel_group: 1
-    phase: "Phase 1: Core Signal Display Infrastructure"
-    details: |
-      CONTEXT:
-      Need a standard interface for adapters to receive and process signals.
-      Adapters will render signals to different outputs (terminal, logs, web).
-
-      STEPS:
-      1. Create packages/internal/signals/src/adapter.ts
-      2. Define SignalAdapter interface with name, patterns, onSignal, onStart, onStop
-      3. Implement createAdapter() helper function
-      4. Ensure onSignal can be sync or async
-      5. Export SignalAdapter and createAdapter
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification below
-      - No mocks needed - interface definition only
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      grep -r "export interface SignalAdapter" packages/internal/signals/src/adapter.ts  # Interface exists
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "grep -r 'export interface SignalAdapter' packages/internal/signals/src/adapter.ts"
-        expect: "Interface exported"
-    acceptance:
-      - "SignalAdapter interface exported"
-      - "createAdapter() helper exists"
-      - "TypeScript compilation passes"
-      - "Lint passes"
-
-  # ───────────────────────────────────────────────────────────────
-  # Phase 1 Gate: Verify core types compile
-  # ───────────────────────────────────────────────────────────────
-  - title: "1.G: Phase 1 Gate - Type Safety Verification"
-    completed: true
-    parallel_group: 1
-    phase: "Phase 1: Core Signal Display Infrastructure"
-    details: |
-      GATE CHECK:
-      All Phase 1 tasks must pass before proceeding to Phase 2.
-      This ensures the core type foundations are solid.
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors across monorepo
-      bun run lint       # Zero lint errors
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors across entire monorepo"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-    acceptance:
-      - "All Phase 1 tasks complete"
-      - "Monorepo typecheck passes"
-      - "Monorepo lint passes"
+      - "No display-related exports in index.ts"
+      - "Typecheck passes"
 
   # ═══════════════════════════════════════════════════════════════
-  # Phase 2: Adapter Implementations
+  # Phase 2: Refactor Terminal Adapter
   # ═══════════════════════════════════════════════════════════════
-  - title: "2.1: Create terminal adapter (TR-04)"
-    completed: true
+  - title: "2.1: Add RendererMap type to terminal adapter (TR-2.1)"
+    completed: false
     parallel_group: 2
-    phase: "Phase 2: Adapter Implementations"
+    phase: "Phase 2: Refactor Terminal Adapter"
     details: |
       CONTEXT:
-      Terminal adapter renders signals to stdout with ANSI colors and formatting.
-      Must read signal.display.type and render appropriately for each type.
+      Invert responsibility: adapters define how to render signals, not signals themselves.
+      Add types for renderer functions and maps.
+
+      LOCATION: packages/internal/signals/src/adapters/terminal.ts
 
       STEPS:
-      1. Create packages/internal/signals/src/adapters/terminal.ts
-      2. Implement terminalAdapter() factory function
-      3. Read signal.display.type: status, progress, notification, stream, log
-      4. Use ANSI colors: green=success, red=error, yellow=active, blue=pending
-      5. Handle streaming text with append mode
-      6. Fall back to inferring type from signal name if no display (conventions: *:start, *:complete, *:error, *:delta)
-      7. Export terminalAdapter
+      1. Read packages/internal/signals/src/adapters/terminal.ts
+      2. Add SignalRenderer<T = unknown> type (receives Signal<T>, returns string)
+      3. Add RendererMap type (Record<string, SignalRenderer>)
+      4. Add JSDoc explaining that renderers are functions mapping signals to terminal strings
+      5. Add JSDoc explaining that signals not in map are silently skipped
 
       CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification with real signals (not mocks)
-      - Per MUST-001: Test must use real signal instances, not fabricated data
+      - Per MUST-004: Explicit verification commands below
 
       VERIFY:
       ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun test packages/internal/signals/src/adapters/terminal.test.ts  # All pass
+      bun run typecheck  # Must pass
+      grep -n "export type SignalRenderer" packages/internal/signals/src/adapters/terminal.ts  # Must find definition
+      grep -n "export type RendererMap" packages/internal/signals/src/adapters/terminal.ts  # Must find definition
       ```
     verify:
       - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
+        expect: "Zero type errors"
+      - command: "grep -n 'export type SignalRenderer' packages/internal/signals/src/adapters/terminal.ts"
+        expect: "Found at least one match"
+      - command: "grep -n 'export type RendererMap' packages/internal/signals/src/adapters/terminal.ts"
+        expect: "Found at least one match"
+    acceptance:
+      - "SignalRenderer and RendererMap types exported"
+      - "Types properly documented"
+      - "Typecheck passes"
+
+  - title: "2.2: Refactor terminalAdapter to accept renderers (TR-2.2)"
+    completed: false
+    parallel_group: 2
+    phase: "Phase 2: Refactor Terminal Adapter"
+    details: |
+      CONTEXT:
+      Change terminalAdapter signature to accept a renderers map.
+      Lookup renderers by signal name - if found, render; if not, skip silently.
+
+      LOCATION: packages/internal/signals/src/adapters/terminal.ts
+
+      STEPS:
+      1. Read packages/internal/signals/src/adapters/terminal.ts
+      2. Define TerminalAdapterOptions interface with:
+         - renderers: RendererMap (required)
+         - write?: (text: string) => void (optional, defaults to console.log)
+         - showTimestamp?: boolean (optional)
+         - colors?: boolean (optional)
+      3. Change terminalAdapter signature to accept TerminalAdapterOptions
+      4. In adapter implementation:
+         - Look up renderers[signal.name]
+         - If found: call renderer(signal), write output
+         - If not found: return early (skip silently, no output, no error)
+      5. Remove signal.display access (no longer exists)
+      6. Keep timestamp/color formatting logic if applicable
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -n "signal.display" packages/internal/signals/src/adapters/terminal.ts  # Should return no matches
+      grep -n "renderers:" packages/internal/signals/src/adapters/terminal.ts  # Should find in options interface
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "grep -n 'signal.display' packages/internal/signals/src/adapters/terminal.ts"
+        expect: "No matches"
+    acceptance:
+      - "terminalAdapter accepts TerminalAdapterOptions with renderers"
+      - "Signals with renderers are rendered and written"
+      - "Signals without renderers are skipped silently"
+      - "No signal.display references remain"
+
+  - title: "2.3: Remove inference logic from terminal adapter (TR-2.3)"
+    completed: false
+    parallel_group: 2
+    phase: "Phase 2: Refactor Terminal Adapter"
+    details: |
+      CONTEXT:
+      Remove all fallback/inference logic - adapters should only use explicit renderers.
+      No more magic behavior.
+
+      LOCATION: packages/internal/signals/src/adapters/terminal.ts
+
+      STEPS:
+      1. Read packages/internal/signals/src/adapters/terminal.ts
+      2. Delete inferDisplayFromName() function
+      3. Delete resolveTitle() function
+      4. Delete resolveSubtitle() function
+      5. Delete formatProgress() function
+      6. Remove all display type/status logic
+      7. Simplify to: renderer returns string → write to output (if renderer exists)
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -n "inferDisplayFromName\|resolveTitle\|resolveSubtitle\|formatProgress" packages/internal/signals/src/adapters/terminal.ts  # No matches
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "grep -n 'inferDisplayFromName\\|resolveTitle\\|resolveSubtitle\\|formatProgress' packages/internal/signals/src/adapters/terminal.ts"
+        expect: "No matches"
+    acceptance:
+      - "All inference functions removed"
+      - "Terminal adapter only uses explicit renderers"
+      - "Typecheck passes"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 3: Refactor Logs Adapter
+  # ═══════════════════════════════════════════════════════════════
+  - title: "3.1: Simplify logsAdapter (TR-3.1)"
+    completed: false
+    parallel_group: 3
+    phase: "Phase 3: Refactor Logs Adapter"
+    details: |
+      CONTEXT:
+      The logsAdapter had a SignalWithMeta interface that was a lie - meta was never
+      actually copied to signals. Remove the lie, keep name-based inference for routing.
+
+      LOCATION: packages/internal/signals/src/adapters/logs.ts
+
+      STEPS:
+      1. Read packages/internal/signals/src/adapters/logs.ts
+      2. Remove SignalWithMeta interface (never actually existed on signals)
+      3. Remove getLogLevel() checks for meta.level (never worked)
+      4. Keep inferLevelFromName() - name-based log level routing is fine for this adapter
+      5. Keep pattern matching (*:error → error level, etc.)
+      6. Ensure adapter routes signals to appropriate Pino log levels based on name patterns
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -n "SignalWithMeta\|meta.level" packages/internal/signals/src/adapters/logs.ts  # No matches
+      grep -n "inferLevelFromName" packages/internal/signals/src/adapters/logs.ts  # Should find - we keep this
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "grep -n 'SignalWithMeta\\|meta.level' packages/internal/signals/src/adapters/logs.ts"
+        expect: "No matches"
+      - command: "grep -n 'inferLevelFromName' packages/internal/signals/src/adapters/logs.ts"
+        expect: "Found at least one match (we keep this)"
+    acceptance:
+      - "SignalWithMeta and meta.level removed"
+      - "inferLevelFromName() retained for name-based routing"
+      - "Typecheck passes"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 4: Update PRD Workflow
+  # ═══════════════════════════════════════════════════════════════
+  - title: "4.1: Remove display from PRD signal definitions (TR-4.1)"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Update PRD Workflow"
+    details: |
+      CONTEXT:
+      PRD workflow has 13 signal definitions with display/meta config.
+      Remove all of that - keep only name and schema.
+
+      LOCATION: packages/prd-workflow/src/signals/index.ts
+
+      STEPS:
+      1. Read packages/prd-workflow/src/signals/index.ts
+      2. For all 13 signal definitions, remove:
+         - meta: { level, category }
+         - display: { type, title, subtitle, icon, status }
+      3. Keep only:
+         - name
+         - schema
+      4. Ensure all signals still have proper Zod schemas for validation
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -n "meta:\|display:" packages/prd-workflow/src/signals/index.ts  # Should return no matches (except in comments)
+      grep -c "defineSignal" packages/prd-workflow/src/signals/index.ts  # Should still be 13
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "grep -n 'meta:\\|display:' packages/prd-workflow/src/signals/index.ts"
+        expect: "No matches or only in comments"
+      - command: "grep -c 'defineSignal' packages/prd-workflow/src/signals/index.ts"
+        expect: "13 (all signal definitions remain)"
+    acceptance:
+      - "All 13 signals have no meta or display config"
+      - "All signals retain name and schema"
+      - "Typecheck passes"
+
+  - title: "4.2: Create renderer map for PRD workflow (TR-4.2)"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Update PRD Workflow"
+    details: |
+      CONTEXT:
+      Create a renderer map that defines how to display PRD workflow signals in terminal.
+      This moves presentation logic from signals to adapter configuration.
+
+      LOCATION: packages/prd-workflow/src/renderers.ts (new file) or packages/prd-workflow/src/cli.ts
+
+      STEPS:
+      1. Create packages/prd-workflow/src/renderers.ts
+      2. Import RendererMap from @internal/signals
+      3. Export prdRenderers: RendererMap with renderers for all 13 signals:
+         - "plan:start": () => "📋 Planning..."
+         - "plan:created": (s) => `✓ Plan created with ${s.payload.tasks.length} tasks (${s.payload.milestones.length} milestones)`
+         - "task:ready": (s) => `▶ ${s.payload.title}`
+         - "task:complete": (s) => `${s.payload.outcome === "success" ? "✓" : "✗"} Task ${s.payload.taskId} ${s.payload.outcome}`
+         - "task:approved": (s) => `✓ Task ${s.payload.taskId ?? ""} approved`
+         - "discovery:submitted": (s) => `🔍 ${s.payload.count} task${s.payload.count === 1 ? "" : "s"} discovered`
+         - "discovery:reviewed": (s) => `✓ ${s.payload.accepted} accepted, ${s.payload.rejected} rejected`
+         - "milestone:testable": (s) => `🧪 Testing milestone ${s.payload.milestoneId}`
+         - "milestone:passed": (s) => `✓ Milestone ${s.payload.milestoneId} passed`
+         - "milestone:failed": (s) => `✗ Milestone ${s.payload.milestoneId} failed`
+         - "milestone:retry": (s) => `🔄 Retrying milestone ${s.payload.milestoneId}`
+         - "fix:required": (s) => `🔧 Fixing task ${s.payload.taskId} (attempt ${s.payload.attempt})`
+         - "workflow:complete": (s) => `🎉 ${s.payload.reason === "all_milestones_passed" ? "All milestones passed!" : s.payload.reason}`
+      4. Use proper TypeScript types for signal payloads
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -c "\"plan:start\"\|\"plan:created\"\|\"task:ready\"" packages/prd-workflow/src/renderers.ts  # At least 3 renderers
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "test -f packages/prd-workflow/src/renderers.ts"
+        expect: "File exists"
+    acceptance:
+      - "prdRenderers exported with all 13 signal renderers"
+      - "Each renderer accesses appropriate payload fields with type safety"
+      - "Typecheck passes"
+
+  - title: "4.3: Update PRD CLI to pass renderers (TR-4.3)"
+    completed: false
+    parallel_group: 4
+    phase: "Phase 4: Update PRD Workflow"
+    details: |
+      CONTEXT:
+      Wire up the renderer map to the terminal adapter in the CLI.
+
+      LOCATION: packages/prd-workflow/src/cli.ts
+
+      STEPS:
+      1. Read packages/prd-workflow/src/cli.ts
+      2. Import prdRenderers from ./renderers.ts
+      3. Find where terminalAdapter() is called
+      4. Update to: terminalAdapter({ renderers: prdRenderers })
+      5. Keep logsAdapter({ logger }) unchanged (it uses name-based routing)
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -n "terminalAdapter.*renderers.*prdRenderers" packages/prd-workflow/src/cli.ts  # Should find the call
+      grep -n "import.*prdRenderers" packages/prd-workflow/src/cli.ts  # Should find the import
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "grep -n 'terminalAdapter.*renderers.*prdRenderers' packages/prd-workflow/src/cli.ts"
+        expect: "Found at least one match"
+    acceptance:
+      - "prdRenderers imported and passed to terminalAdapter"
+      - "Typecheck passes"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 5: Cleanup
+  # ═══════════════════════════════════════════════════════════════
+  - title: "5.1: Delete inference test file (TR-5.1)"
+    completed: false
+    parallel_group: 5
+    phase: "Phase 5: Cleanup"
+    details: |
+      CONTEXT:
+      No more inference logic means no need for inference tests.
+
+      LOCATION: packages/internal/signals/src/adapters/terminal-inference.test.ts
+
+      STEPS:
+      1. Delete packages/internal/signals/src/adapters/terminal-inference.test.ts
+      2. Verify file is gone
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      test ! -f packages/internal/signals/src/adapters/terminal-inference.test.ts  # File should not exist
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "test ! -f packages/internal/signals/src/adapters/terminal-inference.test.ts"
+        expect: "File does not exist (exit code 0)"
+    acceptance:
+      - "terminal-inference.test.ts deleted"
+      - "Typecheck passes"
+
+  - title: "5.2: Update terminal adapter tests (TR-5.2)"
+    completed: false
+    parallel_group: 5
+    phase: "Phase 5: Cleanup"
+    details: |
+      CONTEXT:
+      Rewrite terminal adapter tests to use the new renderer map pattern.
+      Tests should verify that only signals with renderers produce output.
+
+      LOCATION: packages/internal/signals/src/adapters/terminal.test.ts
+
+      STEPS:
+      1. Read packages/internal/signals/src/adapters/terminal.test.ts
+      2. Rewrite tests to:
+         - Create a renderers map with specific signal names
+         - Pass renderers to terminalAdapter()
+         - Emit signals with names in the map → verify output produced
+         - Emit signals with names NOT in map → verify no output, no error
+         - Test custom write function receives correct formatted strings
+         - Test timestamp and color options if applicable
+      3. Remove any tests checking signal.display (no longer exists)
+      4. Remove any tests checking inference behavior
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+      - Per MUST-002: No rationalization language
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      bun test packages/internal/signals/src/adapters/terminal.test.ts  # All tests pass
+      grep -n "signal.display\|inferDisplayFromName" packages/internal/signals/src/adapters/terminal.test.ts  # No matches
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "bun test packages/internal/signals/src/adapters/terminal.test.ts"
+        expect: "All tests pass"
+      - command: "grep -n 'signal.display\\|inferDisplayFromName' packages/internal/signals/src/adapters/terminal.test.ts"
+        expect: "No matches"
+    acceptance:
+      - "Tests verify renderer map behavior"
+      - "Tests verify signals without renderers are skipped"
+      - "No signal.display or inference references"
+      - "All tests pass"
+
+  - title: "5.3: Update signals README (TR-5.3)"
+    completed: false
+    parallel_group: 5
+    phase: "Phase 5: Cleanup"
+    details: |
+      CONTEXT:
+      Update documentation to reflect the new renderer map pattern.
+
+      LOCATION: packages/internal/signals/README.md
+
+      STEPS:
+      1. Read packages/internal/signals/README.md
+      2. Update adapter examples to show renderer map pattern
+      3. Remove any references to signal.display
+      4. Document that signals are pure data
+      5. Document that adapters define rendering via renderer maps
+      6. Add example showing terminalAdapter({ renderers: {...} })
+      7. Explain that signals without renderers are skipped silently
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      grep -n "renderers:" packages/internal/signals/README.md  # Should find examples
+      grep -n "signal.display" packages/internal/signals/README.md  # Should not find (or only in migration notes)
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
+      - command: "grep -n 'renderers:' packages/internal/signals/README.md"
+        expect: "Found at least one example"
+    acceptance:
+      - "README shows renderer map pattern"
+      - "No signal.display references in examples"
+      - "Documentation explains pure data signals"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 6: Verification
+  # ═══════════════════════════════════════════════════════════════
+  - title: "6.1: Verify typecheck passes (V-01)"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Verification"
+    details: |
+      CONTEXT:
+      Gate task to ensure all TypeScript types are correct after refactor.
+
+      STEPS:
+      1. Run full monorepo typecheck
+      2. Verify zero errors
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must complete with zero errors
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors, exit code 0"
+    acceptance:
+      - "Typecheck passes with zero errors across entire monorepo"
+
+  - title: "6.2: Verify unit tests pass (V-02)"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Verification"
+    details: |
+      CONTEXT:
+      Gate task to ensure all tests pass after refactor.
+
+      STEPS:
+      1. Run full test suite
+      2. Verify all tests pass
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run test  # Must complete with all tests passing
+      ```
+    verify:
+      - command: "bun run test"
+        expect: "All tests pass, exit code 0"
+    acceptance:
+      - "All unit tests pass"
+      - "No test failures or errors"
+
+  - title: "6.3: Verify Signal interface is pure (V-03)"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Verification"
+    details: |
+      CONTEXT:
+      Verification task to ensure Signal interface has no display field.
+
+      STEPS:
+      1. Read packages/internal/signals-core/src/signal.ts
+      2. Verify Signal interface definition
+      3. Confirm no display field exists
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      grep -A 10 "interface Signal" packages/internal/signals-core/src/signal.ts | grep "display"  # Should return no matches
+      ```
+    verify:
+      - command: "grep -A 10 'interface Signal' packages/internal/signals-core/src/signal.ts | grep 'display'"
+        expect: "No matches (empty output)"
+    acceptance:
+      - "Signal interface has no display field"
+      - "Signal is a pure data structure"
+
+  - title: "6.4: Verify replay renders correctly (V-04)"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Verification"
+    details: |
+      CONTEXT:
+      Integration verification to ensure PRD workflow replay works with renderer map.
+      Uses REAL recording replay, not mocks.
+
+      LOCATION: packages/prd-workflow
+
+      STEPS:
+      1. Identify an existing recording ID in packages/prd-workflow recordings
+      2. Run prd:replay with that recording
+      3. Verify formatted output appears in terminal (via renderer map)
+      4. Check that all 13 signal types render correctly
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-001: Uses REAL recording replay, NO mocks
+      - Per MUST-004: Explicit verification commands below
+
+      CRITICAL: REAL REPLAY
+      - Must use actual recording from packages/prd-workflow/.open-harness/recordings/
+      - This verifies renderer map works with real workflow data
+
+      VERIFY:
+      ```bash
+      cd packages/prd-workflow
+      # Find a recording: ls .open-harness/recordings/
+      bun run prd:replay --recording <RECORDING_ID>  # Must show formatted output with icons/colors
+      ```
+    verify:
+      - command: "cd packages/prd-workflow && find .open-harness/recordings -name '*.jsonl' | head -1"
+        expect: "At least one recording file exists"
+    acceptance:
+      - "Replay shows formatted output via renderer map"
+      - "Signal names like plan:created render with icons and formatted text"
+      - "No errors during replay"
+
+  - title: "6.5: Verify unknown signals are skipped (V-05)"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Verification"
+    details: |
+      CONTEXT:
+      Create a test to verify that signals without renderers are silently skipped.
+      This is part of the contract: no renderer = no output, no error.
+
+      LOCATION: packages/internal/signals/src/adapters/terminal.test.ts
+
+      STEPS:
+      1. Add a test case:
+         - Create renderers map with only "test:foo"
+         - Emit "test:bar" (not in map)
+         - Verify no output produced
+         - Verify no error thrown
+      2. Run the test
+
+      CONSTITUTION COMPLIANCE:
+      - Per MUST-004: Explicit verification commands below
+
+      VERIFY:
+      ```bash
+      bun run typecheck  # Must pass
+      bun test packages/internal/signals/src/adapters/terminal.test.ts -t "skip"  # Test with "skip" in name should pass
+      ```
+    verify:
+      - command: "bun run typecheck"
+        expect: "Zero type errors"
       - command: "bun test packages/internal/signals/src/adapters/terminal.test.ts"
         expect: "All tests pass"
     acceptance:
-      - "terminalAdapter() renders all display types correctly"
-      - "ANSI colors applied based on status"
-      - "Convention-based inference works for signals without display"
-      - "Tests use real signal instances"
-      - "TypeScript and lint pass"
+      - "Test added for unknown signal skipping"
+      - "Test verifies no output and no error for signals without renderers"
+      - "Test passes"
 
-  - title: "2.2: Create logs adapter (TR-05)"
-    completed: true
-    parallel_group: 2
-    phase: "Phase 2: Adapter Implementations"
+  - title: "6.6: Verify logs adapter still works (V-06)"
+    completed: false
+    parallel_group: 6
+    phase: "Phase 6: Verification"
     details: |
       CONTEXT:
-      Logs adapter bridges signals to Pino logger for structured JSONL output.
-      Must use signal.meta.level or infer from signal name.
+      Ensure logsAdapter still routes signals to correct Pino log levels after refactor.
+
+      LOCATION: packages/internal/signals/src/adapters/logs.test.ts
 
       STEPS:
-      1. Create packages/internal/signals/src/adapters/logs.ts
-      2. Implement logsAdapter() factory function
-      3. Import getLogger from @internal/core
-      4. Map signal.meta.level to Pino levels (trace, debug, info, warn, error)
-      5. Infer level from signal name if meta.level not present (*:error → error, *:start → info)
-      6. Log signal with structured fields (name, payload, timestamp)
-      7. Export logsAdapter
+      1. Read packages/internal/signals/src/adapters/logs.test.ts
+      2. Run logs adapter tests
+      3. Verify name-based routing still works:
+         - Signals with :error → error level
+         - Signals with :warn → warn level
+         - Default signals → info level
 
       CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification with real logger
-      - Per MUST-001: Test must use real Pino logger, not mock
+      - Per MUST-004: Explicit verification commands below
 
       VERIFY:
       ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun test packages/internal/signals/src/adapters/logs.test.ts  # All pass
-      grep -r "getLogger" packages/internal/signals/src/adapters/logs.ts  # Uses real logger
+      bun run typecheck  # Must pass
+      bun test packages/internal/signals/src/adapters/logs.test.ts  # All tests pass
       ```
     verify:
       - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
+        expect: "Zero type errors"
       - command: "bun test packages/internal/signals/src/adapters/logs.test.ts"
         expect: "All tests pass"
-      - command: "grep -r 'getLogger' packages/internal/signals/src/adapters/logs.ts"
-        expect: "Uses @internal/core logger"
     acceptance:
-      - "logsAdapter() bridges to Pino logger"
-      - "Level mapping works correctly"
-      - "Structured JSONL output maintained"
-      - "Test uses real logger instance"
-      - "TypeScript and lint pass"
-
-  - title: "2.3: Export default adapters (TR-06)"
-    completed: true
-    parallel_group: 2
-    phase: "Phase 2: Adapter Implementations"
-    details: |
-      CONTEXT:
-      Need a central export point for all adapters and a defaultAdapters() helper.
-      This makes it easy for consumers to use standard adapters.
-
-      STEPS:
-      1. Create packages/internal/signals/src/adapters/index.ts
-      2. Re-export terminalAdapter from ./terminal.js
-      3. Re-export logsAdapter from ./logs.js
-      4. Re-export createAdapter from ../adapter.js
-      5. Implement defaultAdapters() returning [terminalAdapter(), logsAdapter()]
-      6. Export defaultAdapters
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification below
-      - No mocks needed - this is exports only
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      grep -r "export.*defaultAdapters" packages/internal/signals/src/adapters/index.ts  # Function exists
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "grep -r 'export.*defaultAdapters' packages/internal/signals/src/adapters/index.ts"
-        expect: "Function exported"
-    acceptance:
-      - "All adapters exported from index.ts"
-      - "defaultAdapters() returns array of adapters"
-      - "TypeScript compilation passes"
-      - "Lint passes"
-
-  # ───────────────────────────────────────────────────────────────
-  # Phase 2 Gate: Verify adapters work
-  # ───────────────────────────────────────────────────────────────
-  - title: "2.G: Phase 2 Gate - Adapter Verification"
-    completed: true
-    parallel_group: 2
-    phase: "Phase 2: Adapter Implementations"
-    details: |
-      GATE CHECK:
-      All Phase 2 tasks must pass before proceeding to Phase 3.
-      Adapters must be tested with real signal instances.
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors across monorepo
-      bun run lint       # Zero lint errors
-      bun run test       # All tests pass
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors across entire monorepo"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun run test"
-        expect: "All tests pass"
-    acceptance:
-      - "All Phase 2 tasks complete"
-      - "Monorepo typecheck passes"
-      - "Monorepo lint passes"
-      - "All tests pass"
-
-  # ═══════════════════════════════════════════════════════════════
-  # Phase 3: Workflow Integration
-  # ═══════════════════════════════════════════════════════════════
-  - title: "3.1: Update runReactive() to accept adapters (TR-07)"
-    completed: true
-    parallel_group: 3
-    phase: "Phase 3: Workflow Integration"
-    details: |
-      CONTEXT:
-      runReactive() needs to accept adapters and wire them to SignalBus internally.
-      SignalBus should NOT be exposed - adapters are the public API.
-
-      IMPORTANT - TESTING:
-      Integration tests MUST use the existing SQLite recording:
-        Database: packages/prd-workflow/.sandbox/recordings.db
-        Recording ID: rec_f0b64b75
-        Recording Name: "structured-output-verification"
-
-      Do NOT run live API calls for basic adapter integration testing.
-      The recording provides deterministic signal replay for verification.
-
-      STEPS:
-      1. Open packages/internal/core/src/api/run-reactive.ts
-      2. Add adapters?: SignalAdapter[] to config parameter
-      3. Create internal SignalBus (not exposed to caller)
-      4. For each adapter, call adapter.onStart() before run
-      5. Subscribe each adapter to bus matching its patterns
-      6. Call adapter.onStop() after run completes
-      7. Ensure cleanup happens even on error
-      8. Write integration test using SQLite recording rec_f0b64b75
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification with integration test
-      - Per MUST-001: Test must use real adapters, not mocks
-      - Per MUST-003: Integration test must run real workflow (via recording replay)
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun test packages/internal/core/src/api/run-reactive.test.ts  # All pass
-      grep -r "adapters:" packages/internal/core/src/api/run-reactive.ts  # Config includes adapters
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun test packages/internal/core/src/api/run-reactive.test.ts"
-        expect: "All tests pass"
-      - command: "grep -r 'adapters:' packages/internal/core/src/api/run-reactive.ts"
-        expect: "Config accepts adapters array"
-    acceptance:
-      - "runReactive() accepts adapters parameter"
-      - "Adapters wired to internal SignalBus"
-      - "Lifecycle methods (onStart/onStop) called"
-      - "Integration test uses existing SQLite recording (rec_f0b64b75)"
-      - "TypeScript and lint pass"
-
-  - title: "3.2: Define PRD workflow signals with display (TR-08)"
-    completed: true
-    parallel_group: 3
-    phase: "Phase 3: Workflow Integration"
-    details: |
-      CONTEXT:
-      PRD workflow needs to define all signals using defineSignal() with display hints.
-      Signals should be in the new signals/ directory per our reorganization.
-
-      STEPS:
-      1. Create packages/prd-workflow/src/signals/index.ts
-      2. Import defineSignal from @internal/signals-core
-      3. Define signals using defineSignal():
-         - plan:start (status, active, "Planning...")
-         - plan:created (notification, success, "Plan created with N tasks")
-         - task:ready (status, active, task title from payload)
-         - task:complete (notification, success/error based on outcome)
-         - milestone:passed (notification, success, milestone name)
-         - workflow:complete (notification, success)
-      4. Export all signal definitions
-      5. Update workflow code to use new signal definitions
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification below
-      - No mocks - these are signal definitions
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      grep -r "defineSignal" packages/prd-workflow/src/signals/index.ts  # Uses defineSignal
-      bun test packages/prd-workflow/src/signals.test.ts  # All pass
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "grep -r 'defineSignal' packages/prd-workflow/src/signals/index.ts"
-        expect: "Uses defineSignal function"
-      - command: "bun test packages/prd-workflow/src/signals.test.ts"
-        expect: "All tests pass"
-    acceptance:
-      - "All PRD signals defined with display metadata"
-      - "Display types match use cases (status, notification, etc)"
-      - "Payload functions provide title/subtitle"
-      - "Tests validate signal creation"
-      - "TypeScript and lint pass"
-
-  - title: "3.3: Update CLI to use adapters (TR-09)"
-    completed: true
-    parallel_group: 3
-    phase: "Phase 3: Workflow Integration"
-    details: |
-      CONTEXT:
-      CLI needs to pass adapters to workflow instead of relying on console.log.
-      This makes signal rendering work through the adapter system.
-
-      STEPS:
-      1. Open packages/prd-workflow/src/cli.ts
-      2. Import terminalAdapter, logsAdapter from @internal/signals
-      3. Pass adapters: [terminalAdapter(), logsAdapter()] to workflow config
-      4. Remove any manual console.log statements (adapters handle output)
-      5. Ensure CLI still works with --help, --version flags
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification by running CLI
-      - Per MUST-003: Must run real CLI against real workflow
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      cd packages/prd-workflow && bun run build  # Builds successfully
-      cd packages/prd-workflow && bun run prd:live --help  # Shows help
-      grep -v "console.log" packages/prd-workflow/src/cli.ts  # No console.log
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "cd packages/prd-workflow && bun run build"
-        expect: "Build succeeds"
-      - command: "cd packages/prd-workflow && bun run prd:live --help"
-        expect: "Help text displayed"
-      - command: "grep -v 'console.log' packages/prd-workflow/src/cli.ts || true"
-        expect: "No console.log found"
-    acceptance:
-      - "CLI passes adapters to workflow"
-      - "No console.log statements in CLI code"
-      - "CLI flags still work"
-      - "TypeScript, build, and lint pass"
-
-  # ───────────────────────────────────────────────────────────────
-  # Phase 3 Gate: Integration Verification
-  # ───────────────────────────────────────────────────────────────
-  - title: "3.G: Phase 3 Gate - Integration Verification"
-    completed: true
-    parallel_group: 3
-    phase: "Phase 3: Workflow Integration"
-    details: |
-      GATE CHECK:
-      All Phase 3 tasks must pass before proceeding to Phase 4.
-      Integration tests must use the existing SQLite recording.
-
-      IMPORTANT - TESTING:
-      Integration tests MUST use the existing SQLite recording:
-        Database: packages/prd-workflow/.sandbox/recordings.db
-        Recording ID: rec_f0b64b75
-        Recording Name: "structured-output-verification"
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors across monorepo
-      bun run lint       # Zero lint errors
-      bun run test       # All tests pass (using recording, not live API)
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors across entire monorepo"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun run test"
-        expect: "All tests pass"
-    acceptance:
-      - "All Phase 3 tasks complete"
-      - "Integration tests use SQLite recording rec_f0b64b75"
-      - "Monorepo typecheck passes"
-      - "Monorepo lint passes"
-      - "All tests pass"
-
-  # ═══════════════════════════════════════════════════════════════
-  # Phase 4: Verification & Documentation
-  # ═══════════════════════════════════════════════════════════════
-  - title: "4.1: Custom adapter integration test (V-04)"
-    completed: true
-    parallel_group: 4
-    phase: "Phase 4: Verification & Documentation"
-    details: |
-      CONTEXT:
-      Verify that users can create custom adapters using createAdapter().
-      This proves the adapter interface is extensible.
-
-      IMPORTANT - TESTING:
-      Use the existing SQLite recording for workflow replay:
-        Database: packages/prd-workflow/.sandbox/recordings.db
-        Recording ID: rec_f0b64b75
-        Recording Name: "structured-output-verification"
-
-      STEPS:
-      1. Create packages/internal/signals/src/adapters/custom.test.ts
-      2. Define custom adapter using createAdapter()
-      3. Load signals from SQLite recording rec_f0b64b75
-      4. Replay workflow signals through custom adapter
-      5. Verify adapter received signals
-      6. Ensure test uses recorded signals (not live API)
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification command
-      - Per MUST-001: Test must use real workflow signals from recording
-      - Per MUST-003: Must replay real recorded signals
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun test packages/internal/signals/src/adapters/custom.test.ts  # Pass
-      grep -r "createAdapter" packages/internal/signals/src/adapters/custom.test.ts  # Uses real API
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun test packages/internal/signals/src/adapters/custom.test.ts"
-        expect: "Test passes"
-      - command: "grep -r 'createAdapter' packages/internal/signals/src/adapters/custom.test.ts"
-        expect: "Uses createAdapter API"
-    acceptance:
-      - "Custom adapter test passes"
-      - "Test uses createAdapter() interface"
-      - "Test uses recorded signals from SQLite (rec_f0b64b75)"
-      - "Adapter receives signals"
-      - "TypeScript and lint pass"
-
-  - title: "4.2: Display inference validation (V-06)"
-    completed: true
-    parallel_group: 4
-    phase: "Phase 4: Verification & Documentation"
-    details: |
-      CONTEXT:
-      Terminal adapter must infer display type from signal name when display metadata absent.
-      This ensures backward compatibility and convention-based rendering.
-
-      STEPS:
-      1. Create test signal without explicit display metadata
-      2. Use naming conventions: *:start, *:complete, *:error, *:delta
-      3. Pass signals to terminalAdapter()
-      4. Verify adapter infers correct display type and renders appropriately
-      5. Create test covering all inference conventions
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification command
-      - Per MUST-001: Test must use real adapter, not mock
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      bun test packages/internal/signals/src/adapters/terminal-inference.test.ts  # Pass
-      grep -r "inference" packages/internal/signals/src/adapters/terminal-inference.test.ts  # Tests inference
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun test packages/internal/signals/src/adapters/terminal-inference.test.ts"
-        expect: "All inference tests pass"
-      - command: "grep -r 'inference' packages/internal/signals/src/adapters/terminal-inference.test.ts"
-        expect: "Test file covers inference logic"
-    acceptance:
-      - "Signals without display render correctly"
-      - "Convention-based inference works for all patterns"
-      - "Test uses real terminalAdapter instance"
-      - "All inference conventions covered"
-      - "TypeScript and lint pass"
-
-  - title: "4.3: Update package exports and documentation"
-    completed: true
-    parallel_group: 4
-    phase: "Phase 4: Verification & Documentation"
-    details: |
-      CONTEXT:
-      New modules need to be exported from package entry points.
-      Documentation should explain display metadata system.
-
-      STEPS:
-      1. Update packages/internal/signals-core/src/index.ts to export defineSignal, SignalDisplay
-      2. Update packages/internal/signals/src/index.ts to export adapter types and defaults
-      3. Update packages/internal/core/src/index.ts if needed for runReactive changes
-      4. Create packages/internal/signals/README.md explaining display system
-      5. Add JSDoc comments to key interfaces and functions
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit verification command
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      grep -r "export.*defineSignal" packages/internal/signals-core/src/index.ts  # Exported
-      grep -r "export.*terminalAdapter" packages/internal/signals/src/index.ts  # Exported
-      test -f packages/internal/signals/README.md  # README exists
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "grep -r 'export.*defineSignal' packages/internal/signals-core/src/index.ts"
-        expect: "defineSignal exported"
-      - command: "grep -r 'export.*terminalAdapter' packages/internal/signals/src/index.ts"
-        expect: "terminalAdapter exported"
-      - command: "test -f packages/internal/signals/README.md && echo 'README exists'"
-        expect: "README exists"
-    acceptance:
-      - "All new exports properly wired"
-      - "Documentation explains display system"
-      - "JSDoc comments added to public APIs"
-      - "TypeScript and lint pass"
-
-  - title: "4.4: Visual validation of terminal adapter output (V-05)"
-    completed: true
-    parallel_group: 4
-    phase: "Phase 4: Verification & Documentation"
-    details: |
-      CONTEXT:
-      Terminal adapter produces ANSI-colored output that must be visually validated.
-      Programmatic tests check string content but NOT actual visual appearance.
-      Must use the `tttd` skill to capture and verify terminal rendering.
-
-      IMPORTANT - USE TTTD SKILL:
-      This task MUST use the tttd (TUI Test-Driven Development) skill to:
-      1. Launch a test script in a real terminal
-      2. Capture screenshots/recordings of the output
-      3. Visually verify ANSI colors render correctly
-      4. Save baseline images for regression testing
-
-      STEPS:
-      1. Create packages/internal/signals/scripts/visual-test.ts
-         - Script that emits sample signals through terminalAdapter
-         - Cover all display types: status, progress, notification, stream, log
-         - Cover all statuses: success (green), error (red), active (yellow), pending (blue)
-      2. Use tttd skill to launch the script in a PTY
-      3. Capture screenshot of terminal output
-      4. Visually verify:
-         - Success icons (✓) are GREEN
-         - Error icons (✗) are RED
-         - Active/warning icons are YELLOW
-         - Pending icons are BLUE
-         - Progress bars render correctly [=====>    ]
-         - Streaming text appends properly
-      5. Save screenshot to packages/internal/signals/tests/visual-baseline.png
-      6. Document expected visual output in test file comments
-
-      CONSTITUTION COMPLIANCE:
-      - Per MUST-004: Explicit visual verification via tttd skill
-      - Per MUST-001: Uses real terminal adapter, real ANSI output
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors
-      bun run lint       # Zero lint errors
-      test -f packages/internal/signals/scripts/visual-test.ts  # Script exists
-      test -f packages/internal/signals/tests/visual-baseline.png  # Baseline captured
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "test -f packages/internal/signals/scripts/visual-test.ts && echo 'Script exists'"
-        expect: "Script exists"
-      - command: "test -f packages/internal/signals/tests/visual-baseline.png && echo 'Baseline exists'"
-        expect: "Baseline exists"
-    acceptance:
-      - "Visual test script created covering all display types"
-      - "tttd skill used to capture terminal output"
-      - "ANSI colors verified visually (green/red/yellow/blue)"
-      - "Progress bar rendering verified"
-      - "Baseline screenshot saved for regression"
-      - "TypeScript and lint pass"
-
-  # ───────────────────────────────────────────────────────────────
-  # Phase 4 Final Gate: Full Verification
-  # ───────────────────────────────────────────────────────────────
-  - title: "4.G: Phase 4 Final Gate - Full Verification"
-    completed: true
-    parallel_group: 4
-    phase: "Phase 4: Verification & Documentation"
-    details: |
-      FINAL GATE CHECK:
-      All tasks complete. Full verification of:
-      - Code reorganization (planner/ module)
-      - Signal display architecture
-      - Adapter system
-
-      IMPORTANT - TESTING:
-      All integration tests should have used the existing SQLite recording:
-        Database: packages/prd-workflow/.sandbox/recordings.db
-        Recording ID: rec_f0b64b75
-        Recording Name: "structured-output-verification"
-
-      VERIFY:
-      ```bash
-      bun run typecheck  # Zero errors across entire monorepo (V-01)
-      bun run lint       # Zero lint errors
-      bun run test       # All unit and integration tests pass (V-02)
-      test -d packages/prd-workflow/src/planner  # Code reorg complete (V-03)
-      ```
-    verify:
-      - command: "bun run typecheck"
-        expect: "Zero errors across entire monorepo"
-      - command: "bun run lint"
-        expect: "Zero lint errors"
-      - command: "bun run test"
-        expect: "All tests pass"
-      - command: "test -d packages/prd-workflow/src/planner && echo 'Planner module exists'"
-        expect: "Planner module exists"
-    acceptance:
-      - "V-01: Full typecheck passes"
-      - "V-02: All tests pass"
-      - "V-03: Code organization complete"
-      - "V-05: Visual validation complete (tttd baseline captured)"
-      - "All integration tests used SQLite recording"
-      - "No console.log in production code"
-      - "Documentation complete"
-      - "Feature ready for merge"
+      - "logsAdapter tests pass"
+      - "Name-based log level routing works correctly"
+      - "No errors or failures"
