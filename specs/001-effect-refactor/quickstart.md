@@ -14,7 +14,37 @@ bun add @open-harness/core-v2
 
 ---
 
-## Basic Example: Chat Workflow
+## Core Concept: Domain State
+
+**State is your workflow's domain data, not chat history.**
+
+- State tracks: workflow phase, agent outputs, business entities, retry counts
+- State does NOT track: messages (those are projected from events for React)
+- The event log is the source of truth; state is derived by replaying handlers
+
+```typescript
+// ✅ Good: Domain-focused state
+interface TaskWorkflowState {
+  goal: string;
+  tasks: Array<{ id: string; title: string; status: "pending" | "complete" | "failed" }>;
+  currentPhase: "planning" | "executing" | "reviewing" | "complete";
+  currentTaskIndex: number;
+  retryCount: number;  // Meaningful: how many times have we retried the current task?
+  maxRetries: number;
+}
+
+// ❌ Bad: Chat-focused state (messages belong in events, not state)
+interface BadState {
+  messages: Array<{ role: string; content: string }>;
+  turnCount: number;
+}
+```
+
+---
+
+## Basic Example: Task Executor Workflow
+
+This example shows a two-agent workflow: a **Planner** breaks down a goal into tasks, an **Executor** completes them.
 
 ```typescript
 import {
@@ -25,86 +55,244 @@ import {
 } from "@open-harness/core-v2";
 import { z } from "zod";
 
-// 1. Define your state
-interface ChatState {
-  messages: Array<{ role: "user" | "assistant"; content: string }>;
-  turnCount: number;
+// =============================================================================
+// 1. Define Domain State
+// =============================================================================
+
+interface TaskWorkflowState {
+  goal: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string;
+    status: "pending" | "complete" | "failed";
+  }>;
+  currentPhase: "planning" | "executing" | "complete";
+  currentTaskIndex: number;
+  executionResults: Array<{
+    taskId: string;
+    output: string;
+    success: boolean;
+  }>;
 }
 
-// 2. Define events
-const UserInput = defineEvent("user:input", {
-  text: String,
+const initialState: TaskWorkflowState = {
+  goal: "",
+  tasks: [],
+  currentPhase: "planning",
+  currentTaskIndex: 0,
+  executionResults: [],
+};
+
+// =============================================================================
+// 2. Define Events
+// =============================================================================
+
+const PlanCreated = defineEvent("plan:created", {
+  tasks: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+  })),
 });
 
-const ResponseComplete = defineEvent("response:complete", {
-  content: String,
+const TaskExecuted = defineEvent("task:executed", {
+  taskId: z.string(),
+  output: z.string(),
+  success: z.boolean(),
 });
 
-// 3. Define handlers (pure functions!)
-const handleUserInput = defineHandler(UserInput, (event, state: ChatState) => ({
-  state: {
-    ...state,
-    messages: [...state.messages, { role: "user", content: event.payload.text }],
-    turnCount: state.turnCount + 1,
-  },
-  events: [], // No new events from this handler
-}));
-
-const handleResponse = defineHandler(ResponseComplete, (event, state: ChatState) => ({
-  state: {
-    ...state,
-    messages: [...state.messages, { role: "assistant", content: event.payload.content }],
-  },
-  events: [],
-}));
-
-// 4. Define structured output schema (REQUIRED for all agents)
-const ChatOutput = z.object({
-  response: z.string(),
+const WorkflowComplete = defineEvent("workflow:complete", {
+  summary: z.string(),
 });
 
-// 5. Define an agent with REQUIRED outputSchema and onOutput
-const chatAgent = agent({
-  name: "chat",
-  activatesOn: ["user:input"],
-  emits: ["agent:started", "text:delta", "response:complete", "agent:completed"],
+// =============================================================================
+// 3. Define Handlers (pure functions that update domain state)
+// =============================================================================
 
-  // REQUIRED: Every agent must define structured output
-  outputSchema: ChatOutput,
+const handlePlanCreated = defineHandler(PlanCreated, (event, state: TaskWorkflowState) => {
+  // Update domain state with the plan output
+  const tasks = event.payload.tasks.map(t => ({
+    ...t,
+    status: "pending" as const,
+  }));
 
-  // REQUIRED: Transform LLM output to events
+  return {
+    state: {
+      ...state,
+      tasks,
+      currentPhase: "executing" as const,
+      currentTaskIndex: 0,
+    },
+    // Emit event to start executing first task
+    events: tasks.length > 0
+      ? [{ name: "task:ready", payload: { taskId: tasks[0].id } }]
+      : [{ name: "workflow:complete", payload: { summary: "No tasks to execute" } }],
+  };
+});
+
+const handleTaskExecuted = defineHandler(TaskExecuted, (event, state: TaskWorkflowState) => {
+  // Update task status based on execution result
+  const updatedTasks = state.tasks.map(t =>
+    t.id === event.payload.taskId
+      ? { ...t, status: event.payload.success ? "complete" as const : "failed" as const }
+      : t
+  );
+
+  // Track execution result
+  const executionResults = [
+    ...state.executionResults,
+    {
+      taskId: event.payload.taskId,
+      output: event.payload.output,
+      success: event.payload.success,
+    },
+  ];
+
+  // Check if all tasks are done
+  const nextIndex = state.currentTaskIndex + 1;
+  const allDone = nextIndex >= state.tasks.length;
+
+  if (allDone) {
+    const successCount = executionResults.filter(r => r.success).length;
+    return {
+      state: {
+        ...state,
+        tasks: updatedTasks,
+        executionResults,
+        currentPhase: "complete" as const,
+      },
+      events: [{
+        name: "workflow:complete",
+        payload: { summary: `Completed ${successCount}/${state.tasks.length} tasks` },
+      }],
+    };
+  }
+
+  // Move to next task
+  return {
+    state: {
+      ...state,
+      tasks: updatedTasks,
+      executionResults,
+      currentTaskIndex: nextIndex,
+    },
+    events: [{
+      name: "task:ready",
+      payload: { taskId: state.tasks[nextIndex].id },
+    }],
+  };
+});
+
+// =============================================================================
+// 4. Define Agents with REQUIRED Structured Output
+// =============================================================================
+
+// Planner agent - breaks down goal into tasks
+const PlanOutput = z.object({
+  tasks: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+  })),
+});
+
+const planner = agent({
+  name: "planner",
+  activatesOn: ["workflow:start"],
+  emits: ["agent:started", "text:delta", "plan:created", "agent:completed"],
+
+  // REQUIRED: Structured output schema (using Zod)
+  outputSchema: PlanOutput,
+
+  // REQUIRED: Transform structured output to events
   onOutput: (output, event) => [{
     id: crypto.randomUUID(),
-    name: "response:complete",
-    payload: { content: output.response },
+    name: "plan:created",
+    payload: { tasks: output.tasks },
     timestamp: new Date(),
     causedBy: event.id,
   }],
 
-  prompt: (state, event) => `
-    You are a helpful assistant. Respond to: ${event.payload.text}
+  prompt: (state) => `
+    You are a planning agent. Break down the following goal into 2-4 concrete tasks.
 
-    Previous conversation:
-    ${state.messages.map((m) => `${m.role}: ${m.content}`).join("\n")}
+    Goal: ${state.goal}
+
+    For each task, provide:
+    - id: A unique identifier (TASK-001, TASK-002, etc.)
+    - title: A concise title
+    - description: What needs to be done
+
+    Output as JSON matching the schema.
   `,
 });
 
-// 5. Create the workflow
-const workflow = createWorkflow({
-  name: "chat",
-  initialState: { messages: [], turnCount: 0 },
-  handlers: [handleUserInput, handleResponse],
-  agents: [chatAgent],
-  until: (state) => state.turnCount >= 10, // Stop after 10 turns
+// Executor agent - completes individual tasks
+const ExecutionOutput = z.object({
+  output: z.string(),
+  success: z.boolean(),
 });
 
-// 6. Run it!
+const executor = agent({
+  name: "executor",
+  activatesOn: ["task:ready"],
+  emits: ["agent:started", "text:delta", "task:executed", "agent:completed"],
+
+  outputSchema: ExecutionOutput,
+
+  onOutput: (output, event) => [{
+    id: crypto.randomUUID(),
+    name: "task:executed",
+    payload: {
+      taskId: event.payload.taskId,
+      output: output.output,
+      success: output.success,
+    },
+    timestamp: new Date(),
+    causedBy: event.id,
+  }],
+
+  prompt: (state, event) => {
+    const task = state.tasks.find(t => t.id === event.payload.taskId);
+    return `
+      You are an execution agent. Complete the following task.
+
+      Task: ${task?.title}
+      Description: ${task?.description}
+
+      Provide your output and whether you successfully completed the task.
+    `;
+  },
+
+  // Guard: only execute if we're in executing phase
+  when: (state) => state.currentPhase === "executing",
+});
+
+// =============================================================================
+// 5. Create the Workflow
+// =============================================================================
+
+const workflow = createWorkflow({
+  name: "task-executor",
+  initialState,
+  handlers: [handlePlanCreated, handleTaskExecuted],
+  agents: [planner, executor],
+  // Termination: when we reach the complete phase
+  until: (state) => state.currentPhase === "complete",
+});
+
+// =============================================================================
+// 6. Run It
+// =============================================================================
+
 const result = await workflow.run({
-  input: "Hello! What's the weather like?",
+  input: "Build a simple todo app with add, remove, and list features",
   record: true, // Enable recording for time-travel
 });
 
 console.log("Final state:", result.state);
+console.log("Tasks completed:", result.state.tasks.filter(t => t.status === "complete").length);
 console.log("Session ID:", result.sessionId);
 
 // Cleanup
@@ -162,17 +350,17 @@ const store = createSqliteStore({ path: "./sessions.db" });
 
 // Create workflow with store
 const workflow = createWorkflow({
-  name: "chat",
-  initialState: { messages: [], turnCount: 0 },
-  handlers: [handleUserInput],
-  agents: [chatAgent],
-  until: (state) => state.turnCount >= 10,
+  name: "task-executor",
+  initialState,
+  handlers: [handlePlanCreated, handleTaskExecuted],
+  agents: [planner, executor],
+  until: (state) => state.currentPhase === "complete",
   store, // Attach the store
 });
 
 // Record a session
 const result = await workflow.run({
-  input: "Tell me a joke",
+  input: "Build a REST API",
   record: true,
 });
 
@@ -208,6 +396,16 @@ const terminalRenderer = createRenderer({
     "agent:started": (event, state) => {
       console.log(`\n[${event.payload.agentName}] Starting...`);
     },
+    "plan:created": (event, state) => {
+      console.log(`\nPlan created with ${event.payload.tasks.length} tasks:`);
+      for (const task of event.payload.tasks) {
+        console.log(`  - ${task.title}`);
+      }
+    },
+    "task:executed": (event, state) => {
+      const icon = event.payload.success ? "✓" : "✗";
+      console.log(`\n${icon} Task ${event.payload.taskId}: ${event.payload.output}`);
+    },
     "error:*": (event, state) => {
       console.error(`ERROR: ${event.payload.message}`);
     },
@@ -216,7 +414,7 @@ const terminalRenderer = createRenderer({
 
 // Use the renderer
 await workflow.run({
-  input: "Hello!",
+  input: "Build a CLI tool",
   renderers: [terminalRenderer],
 });
 ```
@@ -225,29 +423,45 @@ await workflow.run({
 
 ## React Integration
 
-Use the `useWorkflow` hook for React apps.
+Use the `useWorkflow` hook for React apps. Note that `messages` is a **projection from events** for chat UIs—it's not stored in state.
 
 ```tsx
 import { useWorkflow, WorkflowProvider } from "@open-harness/core-v2/react";
 
-function Chat() {
+function TaskExecutorUI() {
   const {
-    // AI SDK compatible
+    // AI SDK compatible (messages projected from events)
     messages,
     input,
     setInput,
     handleSubmit,
     isLoading,
     error,
-    // Open Harness unique
-    events,
-    state,
-    tape,
+
+    // Open Harness unique - the real power
+    events,      // Raw event stream
+    state,       // Domain state (tasks, phase, etc.)
+    tape,        // Time-travel controls
   } = useWorkflow(workflow);
 
   return (
     <div>
-      {/* Messages */}
+      {/* Domain state display */}
+      <div className="status">
+        Phase: {state.currentPhase} |
+        Tasks: {state.tasks.filter(t => t.status === "complete").length}/{state.tasks.length}
+      </div>
+
+      {/* Task list from domain state */}
+      <ul className="tasks">
+        {state.tasks.map((task) => (
+          <li key={task.id} className={task.status}>
+            {task.status === "complete" ? "✓" : "○"} {task.title}
+          </li>
+        ))}
+      </ul>
+
+      {/* Messages (projected from events for chat display) */}
       {messages.map((m) => (
         <div key={m.id} className={m.role}>
           {m.name && <span className="agent">[{m.name}]</span>}
@@ -260,11 +474,11 @@ function Chat() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
+          placeholder="Enter a goal..."
           disabled={isLoading}
         />
         <button type="submit" disabled={isLoading}>
-          {isLoading ? "Thinking..." : "Send"}
+          {isLoading ? "Working..." : "Start"}
         </button>
       </form>
 
@@ -275,9 +489,7 @@ function Chat() {
       <div className="tape-controls">
         <button onClick={tape.rewind}>⏮ Rewind</button>
         <button onClick={tape.stepBack}>◀ Back</button>
-        <span>
-          {tape.position} / {tape.length}
-        </span>
+        <span>{tape.position} / {tape.length}</span>
         <button onClick={tape.step}>▶ Forward</button>
         <button onClick={() => tape.play()}>⏵ Play</button>
       </div>
@@ -289,7 +501,7 @@ function Chat() {
 function App() {
   return (
     <WorkflowProvider workflow={workflow}>
-      <Chat />
+      <TaskExecutorUI />
     </WorkflowProvider>
   );
 }
@@ -304,48 +516,41 @@ function App() {
 The SDK enforces structured responses via `outputFormat: { type: "json_schema", schema }`.
 
 ```typescript
-import { agent, defineEvent } from "@open-harness/core-v2";
+import { agent } from "@open-harness/core-v2";
 import { z } from "zod";
 
 // Define structured output schema using Zod
-const ResearchOutput = z.object({
+const AnalysisOutput = z.object({
   findings: z.array(z.string()),
-  confidence: z.number(),
-  sources: z.array(z.string()),
+  confidence: z.number().min(0).max(100),
+  recommendation: z.enum(["proceed", "hold", "abort"]),
 });
 
-// Create event for research results
-const ResearchCompleted = defineEvent("research:completed", {
-  findings: Array,
-  confidence: Number,
-  sources: Array,
-});
-
-// REQUIRED: Every agent must have outputSchema and onOutput
-const researchAgent = agent({
-  name: "researcher",
-  activatesOn: ["task:research"],
-  emits: ["agent:started", "text:delta", "research:completed", "agent:completed"],
+// Agent with required structured output
+const analyst = agent({
+  name: "analyst",
+  activatesOn: ["analysis:requested"],
+  emits: ["agent:started", "text:delta", "analysis:complete", "agent:completed"],
 
   prompt: (state, event) => `
-    Research the topic: ${event.payload.topic}
-
-    Respond with structured findings including confidence level and sources.
+    Analyze the data and provide structured findings.
+    Topic: ${event.payload.topic}
   `,
 
   // REQUIRED: Define what the LLM must output
-  outputSchema: ResearchOutput,
+  outputSchema: AnalysisOutput,
 
   // REQUIRED: Transform structured output to events
-  onOutput: (output, event) => [
-    {
-      id: crypto.randomUUID(),
-      name: "research:completed",
-      payload: output,
-      timestamp: new Date(),
-      causedBy: event.id,
-    },
-  ],
+  onOutput: (output, event) => [{
+    id: crypto.randomUUID(),
+    name: "analysis:complete",
+    payload: output,
+    timestamp: new Date(),
+    causedBy: event.id,
+  }],
+
+  // Optional guard condition
+  when: (state) => state.currentPhase === "analyzing",
 });
 ```
 
@@ -377,8 +582,8 @@ export default app;
 // client.tsx
 import { useWorkflow } from "@open-harness/core-v2/react";
 
-function Chat() {
-  const { messages, input, setInput, handleSubmit } = useWorkflow(workflow, {
+function TaskExecutorUI() {
+  const { messages, input, setInput, handleSubmit, state } = useWorkflow(workflow, {
     api: "/api/workflow", // Connect to server
   });
 
@@ -396,27 +601,28 @@ Use recorded sessions for deterministic tests.
 import { describe, it, expect } from "@effect/vitest";
 import { createMemoryStore } from "@open-harness/core-v2";
 
-describe("Chat Workflow", () => {
-  it("should accumulate messages", async () => {
+describe("Task Executor Workflow", () => {
+  it("should create a plan and execute tasks", async () => {
     const store = createMemoryStore();
 
     const workflow = createWorkflow({
-      name: "test-chat",
-      initialState: { messages: [], turnCount: 0 },
-      handlers: [handleUserInput],
-      agents: [chatAgent],
-      until: (state) => state.turnCount >= 1,
+      name: "test-task-executor",
+      initialState,
+      handlers: [handlePlanCreated, handleTaskExecuted],
+      agents: [planner, executor],
+      until: (state) => state.currentPhase === "complete",
       store,
     });
 
     const result = await workflow.run({
-      input: "Hello!",
+      input: "Build a simple calculator",
       record: true,
     });
 
-    expect(result.state.messages).toHaveLength(2); // user + assistant
-    expect(result.state.messages[0].role).toBe("user");
-    expect(result.state.messages[0].content).toBe("Hello!");
+    // Verify domain state
+    expect(result.state.currentPhase).toBe("complete");
+    expect(result.state.tasks.length).toBeGreaterThan(0);
+    expect(result.state.tasks.every(t => t.status !== "pending")).toBe(true);
 
     await workflow.dispose();
   });
@@ -459,10 +665,10 @@ Track which events caused which.
 // Events include `causedBy` field
 const event = {
   id: "evt-123",
-  name: "text:delta",
-  payload: { delta: "Hello" },
+  name: "task:executed",
+  payload: { taskId: "TASK-001", output: "Done", success: true },
   timestamp: new Date(),
-  causedBy: "evt-100", // This event was caused by evt-100
+  causedBy: "evt-100", // This event was caused by task:ready (evt-100)
 };
 
 // Build a causality graph
@@ -508,10 +714,10 @@ function getEventLineage(events: AnyEvent[], eventId: string): AnyEvent[] {
 
 ## Key Points
 
-1. **Structured output is MANDATORY**: Every agent MUST have `outputSchema` (using Zod) and `onOutput`
-2. **Handlers are pure**: `(event, state) → { state, events[] }` - no side effects
-3. **Events are immutable**: Once created, never modified
-4. **State is derived**: Computed by replaying handlers, not stored
-5. **Time-travel is built-in**: `tape.stepBack()` is the killer feature
-6. **Effect is hidden**: You work with Promises, not Effect types
-7. **React-ready**: `useWorkflow` hook with AI SDK-compatible API
+1. **State is domain data**: Tasks, phases, agent outputs—NOT messages
+2. **Messages are projected**: From events for React UIs, not stored in state
+3. **Structured output is MANDATORY**: Every agent MUST have `outputSchema` and `onOutput`
+4. **Handlers are pure**: `(event, state) → { state, events[] }` - no side effects
+5. **Events are immutable**: Once created, never modified
+6. **Time-travel is built-in**: `tape.stepBack()` is the killer feature
+7. **Effect is hidden**: You work with Promises, not Effect types

@@ -204,20 +204,43 @@ export type StateSnapshot = S.Schema.Type<typeof StateSnapshot>;
 
 ### Example State Schema
 
+**Important**: State is domain data (workflow phase, agent outputs, business entities), NOT chat history. Messages for chat UIs are projected from events via the React integration.
+
 ```typescript
-// Workflow-specific state
-const ChatState = S.Struct({
-  messages: S.Array(S.Struct({
-    role: S.Literal("user", "assistant"),
-    content: S.String,
+// Workflow-specific state - domain focused
+const TaskWorkflowState = S.Struct({
+  // Input/config
+  goal: S.String,
+  maxRetries: S.Number.pipe(S.int(), S.nonNegative()),
+
+  // Domain entities
+  tasks: S.Array(S.Struct({
+    id: S.String,
+    title: S.String,
+    description: S.String,
+    status: S.Literal("pending", "complete", "failed"),
   })),
-  activeAgent: S.optional(S.String),
-  toolResults: S.Record({ key: S.String, value: S.Unknown }),
-  metadata: S.Struct({
-    turnCount: S.Number,
-    startedAt: S.DateFromString,
-  }),
+
+  // Workflow tracking
+  currentPhase: S.Literal("planning", "executing", "reviewing", "complete"),
+  currentTaskIndex: S.Number.pipe(S.int(), S.nonNegative()),
+  retryCount: S.Number.pipe(S.int(), S.nonNegative()), // Meaningful: retry attempts for current task
+
+  // Agent outputs (append-only array for history)
+  executionResults: S.Array(S.Struct({
+    taskId: S.String,
+    output: S.String,
+    success: S.Boolean,
+    timestamp: S.DateFromString,
+  })),
 });
+
+// ❌ Anti-pattern: Do NOT put messages in state
+// Messages are projected from events for React UIs
+// const BadState = S.Struct({
+//   messages: S.Array(...),  // Wrong! This belongs in events
+//   turnCount: S.Number,     // Wrong! Derive from events.length
+// });
 ```
 
 ---
@@ -265,24 +288,38 @@ export interface HandlerDefinition<
 ### Example Handler
 
 ```typescript
-const handleUserInput: HandlerDefinition<UserInputEvent, ChatState> = {
-  name: "user-input-handler",
-  handles: "user:input",
-  handler: (event, state) => ({
-    state: {
-      ...state,
-      messages: [
-        ...state.messages,
-        { role: "user", content: event.payload.text },
-      ],
-      metadata: {
-        ...state.metadata,
-        turnCount: state.metadata.turnCount + 1,
+// Handler updates domain state based on event data
+const handlePlanCreated: HandlerDefinition<PlanCreatedEvent, TaskWorkflowState> = {
+  name: "plan-created-handler",
+  handles: "plan:created",
+  handler: (event, state) => {
+    // Update domain state with the plan output
+    const tasks = event.payload.tasks.map(t => ({
+      ...t,
+      status: "pending" as const,
+    }));
+
+    return {
+      state: {
+        ...state,
+        tasks,
+        currentPhase: "executing" as const,
+        currentTaskIndex: 0,
       },
-    },
-    events: [], // No new events from this handler
-  }),
+      // Emit event to start first task
+      events: tasks.length > 0
+        ? [{ name: "task:ready", payload: { taskId: tasks[0].id } }]
+        : [],
+    };
+  },
 };
+
+// ❌ Anti-pattern: Do NOT duplicate event data into state
+// const badHandler = defineHandler(UserInput, (event, state) => ({
+//   state: { ...state, messages: [...state.messages, event.payload] }, // Wrong!
+//   events: [],
+// }));
+// The event IS the record - no need to duplicate it in state
 ```
 
 ---
@@ -345,33 +382,44 @@ export interface Agent<S, O> {
 ```typescript
 import { z } from "zod";
 
-const ResearchOutput = z.object({
-  findings: z.array(z.string()),
+const ExecutionOutput = z.object({
+  output: z.string(),
+  success: z.boolean(),
 });
 
-const researchAgent: Agent<ChatState, z.infer<typeof ResearchOutput>> = {
-  name: "researcher",
-  activatesOn: ["task:research-requested"],
-  emits: ["agent:started", "text:delta", "text:complete", "agent:completed"],
+const executorAgent: Agent<TaskWorkflowState, z.infer<typeof ExecutionOutput>> = {
+  name: "executor",
+  activatesOn: ["task:ready"],
+  emits: ["agent:started", "text:delta", "task:executed", "agent:completed"],
   model: "claude-sonnet-4-20250514",
 
-  prompt: (state, event) => `
-    You are a research assistant. Based on the conversation:
-    ${state.messages.map(m => `${m.role}: ${m.content}`).join("\n")}
+  prompt: (state, event) => {
+    const task = state.tasks.find(t => t.id === event.payload.taskId);
+    return `
+      You are an execution agent. Complete the following task.
 
-    Research the topic: ${event.payload.topic}
-  `,
+      Task: ${task?.title}
+      Description: ${task?.description}
 
-  when: (state) => state.activeAgent === undefined, // Only if no agent active
+      Provide your output and whether you successfully completed it.
+    `;
+  },
+
+  // Guard: only execute if we're in the executing phase
+  when: (state) => state.currentPhase === "executing",
 
   // Consumer uses Zod - runtime converts to JSON Schema for SDK
-  outputSchema: ResearchOutput,
+  outputSchema: ExecutionOutput,
 
   onOutput: (output, event) => [
     {
       id: generateEventId(),
-      name: "research:completed",
-      payload: { findings: output.findings },
+      name: "task:executed",
+      payload: {
+        taskId: event.payload.taskId,
+        output: output.output,
+        success: output.success,
+      },
       timestamp: new Date(),
       causedBy: event.id,
     },
