@@ -1,0 +1,147 @@
+validation_report:
+  timestamp: "2026-01-20T12:00:00Z"
+  result: PASS
+
+  statistics:
+    must_rules: 6
+    must_violations: 0
+    should_rules: 4
+    should_violations: 0
+    total_tasks: 18
+
+  rule_checks:
+    # MUST Rules
+    - rule_id: "MUST-001"
+      name: "No Fabricated Fixtures"
+      severity: critical
+      status: PASS
+      patterns_checked:
+        - "mock harness"
+        - "createMockHarness"
+        - "createSimpleMockHarness"
+        - "createDeterministicMockHarness"
+        - "fake.*fixture"
+        - "fabricated"
+        - "hand-written.*mock"
+      matches: 0
+      details: "No mock harness or fabricated fixture language found in any of the 18 tasks"
+
+    - rule_id: "MUST-002"
+      name: "No Rationalization Language"
+      severity: critical
+      status: PASS
+      patterns_checked:
+        - "That's OK for"
+        - "acceptable.*mock"
+        - "just for testing"
+        - "temporarily"
+        - "will fix later"
+        - "good enough for now"
+        - "for now"
+        - "OK to use mock"
+        - "fine to use fake"
+      matches: 0
+      details: "No rationalization language found in any tasks"
+
+    - rule_id: "MUST-003"
+      name: "Real API Required"
+      severity: critical
+      status: PASS
+      patterns_checked:
+        - "simulate.*api"
+        - "fake.*server"
+        - "mock.*endpoint"
+        - "skip.*real"
+        - "without.*api"
+        - "bypass.*network"
+      matches: 0
+      details: "All integration tasks (V-04, V-06) require real API/workflow execution via actual recordings"
+
+    - rule_id: "MUST-004"
+      name: "Explicit Verification Commands"
+      severity: critical
+      status: PASS
+      patterns_checked:
+        - "verify it works"
+        - "check that.*works"
+        - "make sure.*correct"
+        - "ensure.*properly"
+        - "test manually"
+        - "should work"
+      matches: 0
+      details: "All 18 tasks include explicit, runnable verification commands with expected outputs in VERIFY sections"
+
+    - rule_id: "MUST-005"
+      name: "Factory Pattern for Fixtures"
+      severity: critical
+      status: PASS
+      patterns_checked:
+        - "manually create.*fixture"
+        - "hand-write.*fixture"
+        - "hardcode.*response"
+        - "inline.*mock"
+      matches: 0
+      details: "No manual fixture creation patterns found. Task V-04 explicitly uses REAL recording replay"
+
+    - rule_id: "MUST-006"
+      name: "CLAUDE.md Fixture Rule"
+      severity: critical
+      status: PASS
+      patterns_checked:
+        - "fabricate.*fixture"
+        - "create.*fake.*data"
+        - "made-up.*data"
+      matches: 0
+      details: "No fabricated fixture language in any of the 18 tasks"
+
+    # SHOULD Rules
+    - rule_id: "SHOULD-001"
+      name: "Reference Source Documentation"
+      severity: medium
+      status: PASS
+      details: "All 18 tasks include CONSTITUTION COMPLIANCE section referencing relevant MUST rules. Tasks reference actual file paths and location contexts"
+
+    - rule_id: "SHOULD-002"
+      name: "Include Context"
+      severity: medium
+      status: PASS
+      details: "All 18 tasks include CONTEXT section explaining why task exists and the problem being solved"
+
+    - rule_id: "SHOULD-003"
+      name: "Atomic Tasks"
+      severity: medium
+      status: PASS
+      details: "All tasks are focused and completable in one session (max 10 steps per task, most are 5-8 steps). No cross-system sprawl"
+
+    - rule_id: "SHOULD-004"
+      name: "Clear Success Criteria"
+      severity: medium
+      status: PASS
+      details: "All 18 tasks include explicit acceptance criteria. Each task defines specific outcomes (e.g., 'Signal interface has no display field', 'Typecheck passes with zero errors')"
+
+  violations: []
+
+  task_structure_analysis:
+    total_tasks_scanned: 18
+    tasks_with_context: 18
+    tasks_with_verify_section: 18
+    tasks_with_acceptance_criteria: 18
+    tasks_with_constitution_compliance_note: 18
+
+  summary: |
+    PASS - Constitution validation complete
+
+    All 18 tasks in the Signal Adapter Refactor PRD comply with project constitution.
+
+    MUST Rules (critical - block on violation): 6 rules, 0 violations ✓
+    SHOULD Rules (medium - warn only): 4 rules, 0 violations ✓
+
+    Task Quality Assessment:
+    - 100% of tasks include CONTEXT sections
+    - 100% of tasks include explicit VERIFY commands (zero vague verification language)
+    - 100% of tasks have clear acceptance criteria
+    - Task structure is consistent across all 18 items
+    - Zero anti-pattern matches (fabricated fixtures, rationalization language, vague verification)
+    - Integration tests (V-04, V-06) explicitly use REAL recordings/execution
+
+    This PRD is ready for execution.
