@@ -664,7 +664,7 @@ tasks:
       - "No errors during replay"
 
   - title: "6.5: Verify unknown signals are skipped (V-05)"
-    completed: false
+    completed: true
     parallel_group: 6
     phase: "Phase 6: Verification"
     details: |

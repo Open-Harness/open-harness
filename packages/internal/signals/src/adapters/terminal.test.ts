@@ -231,6 +231,31 @@ describe("terminalAdapter", () => {
 	});
 
 	describe("signals without renderers are skipped silently", () => {
+		/**
+		 * V-05 Verification Test
+		 * Contract: no renderer = no output, no error
+		 * Uses exact names from task specification: "test:foo" and "test:bar"
+		 */
+		it("skips test:bar when only test:foo has renderer (V-05)", () => {
+			const renderers: RendererMap = {
+				"test:foo": () => "Foo rendered",
+			};
+			const adapter = terminalAdapter({ renderers, write: writeFn });
+
+			// Emit test:bar (not in map) - should not throw
+			expect(() => {
+				adapter.onSignal(createSignal("test:bar", { data: "ignored" }));
+			}).not.toThrow();
+
+			// Should produce no output
+			expect(output).toHaveLength(0);
+
+			// Now emit test:foo (in map) - should render
+			adapter.onSignal(createSignal("test:foo", {}));
+			expect(output).toHaveLength(1);
+			expect(output[0]).toContain("Foo rendered");
+		});
+
 		it("does not throw for unknown signal", () => {
 			const renderers: RendererMap = {
 				"known:signal": () => "Known",
