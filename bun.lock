@@ -198,6 +198,7 @@
         "pino": "^10.1.0",
       },
       "devDependencies": {
+        "@open-harness/stores": "workspace:*",
         "@types/bun": "latest",
         "typescript": "^5",
       },

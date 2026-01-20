@@ -1,6 +1,6 @@
 # Open Harness Mental Model
 
-> **One sentence:** Signals flow in, state updates, signals flow out.
+> **One sentence:** Signals flow in, state updates, signals flow out, adapters render.
 
 ---
 
@@ -12,6 +12,7 @@ You define:
 1. **State** - The shape of your workflow data
 2. **Handlers** - What happens when signals arrive
 3. **Agents** - AI actors that do work and emit signals
+4. **Adapters** - How signals render to outputs (terminal, logs, web)
 
 The framework handles:
 - Immutability (via Immer)
@@ -24,25 +25,29 @@ The framework handles:
 ## The Core Loop
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                                                      │
-│    Signal arrives                                    │
-│         │                                            │
-│         ▼                                            │
-│    ┌─────────┐                                       │
-│    │ Handler │──── Updates state (mutate directly)  │
-│    └─────────┘                                       │
-│         │                                            │
-│         ▼                                            │
-│    Returns new signals ─────────────────────┐       │
-│                                              │       │
-│                                              ▼       │
-│                                         Back to top  │
-│                                                      │
-└──────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                                                                │
+│    Signal emitted                                              │
+│         │                                                      │
+│         ├───────────────────────┐                              │
+│         ▼                       ▼                              │
+│    ┌─────────┐            ┌──────────┐                         │
+│    │ Handler │            │ Adapters │──→ Terminal / Logs / Web│
+│    └─────────┘            └──────────┘                         │
+│         │                                                      │
+│         ▼                                                      │
+│    Updates state (mutate directly)                             │
+│         │                                                      │
+│         ▼                                                      │
+│    Returns new signals ────────────────────────┐              │
+│                                                 │              │
+│                                                 ▼              │
+│                                            Back to top         │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-That's it. Signals in, state updates, signals out. Repeat until done.
+Signals flow through handlers (which update state) AND adapters (which render output) in parallel.
 
 ---
 
@@ -64,13 +69,15 @@ State is **immutable** under the hood, but you **write to it directly**. The fra
 
 ## Concept 2: Signals
 
-Signals are messages that flow through the system. They have:
+Signals are **pure data** that flow through the system. They have:
 - A **name** (string, like `"task:completed"`)
 - A **payload** (any data)
 
 ```typescript
 { name: "task:completed", payload: { taskId: "T001", result: "success" } }
 ```
+
+Signals carry meaning, not presentation. How a signal looks to a user is determined by adapters, not by the signal itself.
 
 ### Signal Naming Convention
 
@@ -182,6 +189,63 @@ const result = await runWorkflow({
 
 ---
 
+## Concept 6: Adapters
+
+Adapters transform signals into visible output. They're the bridge between the signal stream and the user.
+
+### Signals are data, adapters are presentation
+
+The same signal can render differently depending on context:
+- **Terminal**: `✓ Plan created with 5 tasks` (colored text)
+- **Logs**: `{"level":"info","signalName":"plan:created","payload":{...}}` (structured JSON)
+- **Web**: A React component with a green checkmark
+
+### Renderer maps
+
+Each adapter takes a **renderer map** - you specify exactly which signals to render and how:
+
+```typescript
+const renderers = {
+  "plan:created": (signal) => `✓ Plan with ${signal.payload.tasks.length} tasks`,
+  "task:ready": (signal) => `▶ ${signal.payload.title}`,
+  "workflow:complete": () => `🎉 Done`,
+};
+
+const adapter = terminalAdapter({ renderers });
+```
+
+Signals without a renderer are **silently skipped**. This is intentional - not every signal needs user-visible output. Internal signals, debug signals, and housekeeping signals flow through the system without cluttering the UI.
+
+### Adapters are optional
+
+You can run a workflow with:
+- **No adapters** - Headless mode, no output
+- **One adapter** - CLI tool with terminal output
+- **Multiple adapters** - CLI + logs + web dashboard simultaneously
+
+```typescript
+await runWorkflow({
+  // ...
+  adapters: [
+    terminalAdapter({ renderers: terminalRenderers }),
+    logsAdapter({ logger }),
+  ],
+});
+```
+
+### Adapters don't affect flow
+
+Adapters are pure observers. They:
+- ✅ See signals as they flow
+- ✅ Render output to their target
+- ❌ Cannot modify signals
+- ❌ Cannot affect state
+- ❌ Cannot emit new signals
+
+This separation keeps the workflow logic clean and the output layer flexible.
+
+---
+
 ## Recording and Replay
 
 Every signal that flows through the system can be recorded.
@@ -218,6 +282,7 @@ In replay mode:
 - No LLM calls are made
 - Signals are injected from the recording
 - State transitions identically
+- Adapters still render (great for demos)
 - Useful for testing, debugging, demos
 
 ---
@@ -252,7 +317,7 @@ No type casts. The types flow through.
 ## Full Example
 
 ```typescript
-import { createWorkflow, ClaudeHarness, SqliteSignalStore } from "@open-harness/core";
+import { createWorkflow, ClaudeHarness, SqliteSignalStore, terminalAdapter } from "@open-harness/core";
 
 // 1. Define state
 type TodoState = {
@@ -287,7 +352,13 @@ const worker = agent({
   emits: ["item:completed"],
 });
 
-// 4. Run it
+// 4. Define renderers for terminal output
+const renderers = {
+  "item:completed": (s) => `✓ Completed: ${s.payload.itemId}`,
+  "all:completed": () => `🎉 All items done!`,
+};
+
+// 5. Run it
 const result = await runWorkflow({
   state: {
     items: [
@@ -299,6 +370,7 @@ const result = await runWorkflow({
   handlers,
   agents: { worker },
   harness: new ClaudeHarness({ model: "haiku" }),
+  adapters: [terminalAdapter({ renderers })],
   endWhen: (state) => state.summary !== null,
 });
 
@@ -312,11 +384,13 @@ console.log(result.state.summary);
 
 | Term | Definition |
 |------|------------|
-| **Signal** | A message with a name and payload that flows through the system |
+| **Signal** | Pure data: a name and payload that flows through the system |
 | **State** | The current data of your workflow |
 | **Handler** | A function that updates state and returns new signals |
 | **Agent** | An AI actor that activates on signals and calls an LLM |
 | **Harness** | The adapter that executes LLM calls (Claude, OpenAI, etc.) |
+| **Adapter** | Transforms signals into output (terminal, logs, web) via a renderer map |
+| **Renderer Map** | Signal name → render function. Defines what to show and how. |
 | **Recording** | A captured sequence of signals for replay |
 
 ---
@@ -342,6 +416,10 @@ An agent doesn't know about other agents. It just does its job and emits signals
 ### 5. Everything is replayable
 
 If you can record it, you can replay it. This enables testing, debugging, and demos.
+
+### 6. Signals are data, not presentation
+
+Signals carry meaning. How they're displayed is a separate concern handled by adapters. The same signal can render differently in terminal vs web vs logs.
 
 ---
 
@@ -410,19 +488,38 @@ const agent = agent({
 };
 ```
 
+### ❌ Don't put display logic in signals
+
+```typescript
+// Wrong - signal knows how to display itself
+const signal = {
+  name: "plan:created",
+  payload: { tasks },
+  display: { icon: "✓", title: "Plan created" }  // NO!
+};
+```
+
+```typescript
+// Right - adapter defines display
+const renderers = {
+  "plan:created": (s) => `✓ Plan with ${s.payload.tasks.length} tasks`
+};
+```
+
 ---
 
 ## Summary
 
-1. **Signals** flow through the system
+1. **Signals** flow through the system (pure data)
 2. **Handlers** update state and return new signals
 3. **Agents** call LLMs and emit signals
 4. **State** is the truth, mutate it directly
-5. **Recording** captures signals for replay
+5. **Adapters** render signals to outputs (terminal, logs, web)
+6. **Recording** captures signals for replay
 
 That's the mental model. Everything else is implementation details.
 
 ---
 
-*Document Version: 2.0*
-*Last Updated: 2026-01-19*
+*Document Version: 3.0*
+*Last Updated: 2026-01-20*
