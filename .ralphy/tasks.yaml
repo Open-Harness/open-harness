@@ -343,7 +343,7 @@ tasks:
       - "Typecheck passes"
 
   - title: "4.2: Create renderer map for PRD workflow (TR-4.2)"
-    completed: false
+    completed: true
     parallel_group: 4
     phase: "Phase 4: Update PRD Workflow"
     details: |
@@ -391,7 +391,7 @@ tasks:
       - "Typecheck passes"
 
   - title: "4.3: Update PRD CLI to pass renderers (TR-4.3)"
-    completed: false
+    completed: true
     parallel_group: 4
     phase: "Phase 4: Update PRD Workflow"
     details: |
