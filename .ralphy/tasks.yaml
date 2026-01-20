@@ -598,7 +598,7 @@ tasks:
       - "No test failures or errors"
 
   - title: "6.3: Verify Signal interface is pure (V-03)"
-    completed: false
+    completed: true
     parallel_group: 6
     phase: "Phase 6: Verification"
     details: |
