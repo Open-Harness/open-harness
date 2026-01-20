@@ -54,8 +54,8 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Agent System
 
-- [ ] Create packages/core-v2/src/agent/Agent.ts with Agent interface: name, activatesOn, emits, prompt(state,event), outputSchema (REQUIRED), when?, onOutput? per specs/001-effect-refactor/contracts/agent.ts
-- [ ] Create packages/core-v2/src/agent/index.ts re-exporting Agent, AgentOptions
+- [x] Create packages/core-v2/src/agent/Agent.ts with Agent interface: name, activatesOn, emits, prompt(state,event), outputSchema (REQUIRED), when?, onOutput? per specs/001-effect-refactor/contracts/agent.ts
+- [x] Create packages/core-v2/src/agent/index.ts re-exporting Agent, AgentOptions
 
 ### Effect Service Tags
 

@@ -94,3 +94,45 @@
 - No Effect types exposed in public API per spec FR-062
 - Utility functions (stateOnly, emit, emitEvent) provide clean DX for handler authors
 
+## 2026-01-21T17:16:00Z - Phase 2 Agent System
+**Task**: Implement Agent System (2 tasks in Agent System section)
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/agent/Agent.ts with:
+  - PromptPart and PromptTemplate types for flexible prompt generation
+  - Agent<S, O> interface with all required properties:
+    - name: string (unique identifier)
+    - activatesOn: readonly string[] (event names that trigger agent)
+    - emits: readonly string[] (event types agent can produce)
+    - model?: string (optional LLM model override)
+    - prompt: (state, event) => PromptTemplate
+    - when?: (state) => boolean (optional guard condition)
+    - outputSchema: unknown (REQUIRED - Zod schema for structured output)
+    - onOutput: (output, event) => AnyEvent[] (transform output to events)
+  - AgentOptions<S, O> interface for agent() factory
+  - MissingOutputSchemaError class with clear error message
+  - agent() factory function with outputSchema validation (throws if missing)
+  - AgentRegistry<S> type (ReadonlyMap<string, Agent>)
+  - Utility functions:
+    - shouldActivate(agent, eventName, state) - checks if agent should activate
+    - findMatchingAgents(registry, eventName, state) - finds all matching agents
+    - createAgentRegistry(agents) - creates registry from array, validates uniqueness
+- Created packages/core-v2/src/agent/index.ts re-exporting consumer-facing types
+- Created packages/core-v2/tests/agent.test.ts with 29 comprehensive tests covering:
+  - Agent interface with required and optional properties
+  - PromptTemplate (string and array of parts)
+  - agent() factory with validation and error handling
+  - onOutput callback behavior and event emission
+  - shouldActivate() with event matching and guard conditions
+  - findMatchingAgents() with multiple agents and guards
+  - createAgentRegistry() with duplicate name detection
+  - Integration tests for complete agent workflow
+**Verification**:
+- bun run test: PASS (83 tests total, 29 new agent tests)
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- outputSchema is MANDATORY per spec FR-016 - factory throws MissingOutputSchemaError if missing
+- Agents don't directly update state - they emit events that handlers process (event sourcing)
+- Guard conditions (when) allow conditional agent activation based on state
+- createAgentRegistry validates unique agent names, throws on duplicates
+
