@@ -3,29 +3,43 @@
  *
  * Tests that signal definitions:
  * - Create valid signals with correct payloads
- * - Attach display metadata correctly
  * - Provide working type guards via is()
- * - Have appropriate display types and statuses
+ * - Validate payloads against Zod schemas
+ *
+ * Note: Display/rendering is handled by adapters via renderer maps,
+ * not by the signals themselves. Signals are pure data structures.
  */
 
 import { describe, expect, it } from "bun:test";
-import { isSignal } from "@internal/signals-core";
+import { isSignal, type Signal } from "@internal/signals-core";
 import {
 	DiscoveryReviewed,
+	type DiscoveryReviewedPayload,
 	DiscoverySubmitted,
+	type DiscoverySubmittedPayload,
 	FixRequired,
+	type FixRequiredPayload,
 	MilestoneFailed,
+	type MilestoneFailedPayload,
 	MilestonePassed,
+	type MilestonePassedPayload,
 	MilestoneRetry,
+	type MilestoneRetryPayload,
 	MilestoneTestable,
+	type MilestoneTestablePayload,
 	PlanCreated,
+	type PlanCreatedPayload,
 	PlanStart,
 	PRD_SIGNAL_NAMES,
 	PRDSignals,
 	TaskApproved,
+	type TaskApprovedPayload,
 	TaskComplete,
+	type TaskCompletePayload,
 	TaskReady,
+	type TaskReadyPayload,
 	WorkflowComplete,
+	type WorkflowCompletePayload,
 } from "./index.js";
 
 describe("PRD Signal Definitions", () => {
@@ -42,15 +56,6 @@ describe("PRD Signal Definitions", () => {
 			const signal = PlanStart.create({ prd: "# My PRD" });
 
 			expect(signal.payload).toEqual({ prd: "# My PRD" });
-		});
-
-		it("has correct display metadata", () => {
-			const signal = PlanStart.create(undefined);
-
-			expect(signal.display?.type).toBe("status");
-			expect(signal.display?.title).toBe("Planning...");
-			expect(signal.display?.status).toBe("active");
-			expect(signal.display?.icon).toBe("📋");
 		});
 
 		it("is() type guard works", () => {
@@ -92,24 +97,12 @@ describe("PRD Signal Definitions", () => {
 
 			expect(isSignal(signal)).toBe(true);
 			expect(signal.name).toBe("plan:created");
-			expect(signal.payload.tasks).toHaveLength(1);
-			expect(signal.payload.milestones).toHaveLength(1);
-		});
 
-		it("has dynamic display title", () => {
-			const signal = PlanCreated.create(validPayload);
-
-			// Title is a function that resolves from payload
-			expect(signal.display?.type).toBe("notification");
-			expect(signal.display?.status).toBe("success");
-
-			// Resolve dynamic title
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("Plan created with 1 tasks");
-			} else {
-				throw new Error("Expected title to be a function");
-			}
+			// Access payload directly - create() returns typed Signal<PlanCreatedPayload>
+			const payload = signal.payload as PlanCreatedPayload;
+			expect(payload.tasks).toHaveLength(1);
+			expect(payload.milestones).toHaveLength(1);
+			expect(payload.taskOrder).toEqual(["T-001"]);
 		});
 
 		it("validates payload against schema", () => {
@@ -136,22 +129,10 @@ describe("PRD Signal Definitions", () => {
 			const signal = TaskReady.create(validPayload);
 
 			expect(signal.name).toBe("task:ready");
-			expect(signal.payload.taskId).toBe("T-001");
-			expect(signal.payload.title).toBe("Implement feature");
-		});
-
-		it("has active status display", () => {
-			const signal = TaskReady.create(validPayload);
-
-			expect(signal.display?.type).toBe("status");
-			expect(signal.display?.status).toBe("active");
-			expect(signal.display?.icon).toBe("▶");
-
-			// Dynamic title from payload
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("Implement feature");
-			}
+			const payload = signal.payload as TaskReadyPayload;
+			expect(payload.taskId).toBe("T-001");
+			expect(payload.title).toBe("Implement feature");
+			expect(payload.definitionOfDone).toEqual(["Tests pass", "Lint clean"]);
 		});
 	});
 
@@ -164,12 +145,9 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("task:complete");
-			expect(signal.payload.outcome).toBe("success");
-
-			// Display has static values in simplified version
-			expect(signal.display?.type).toBe("notification");
-			expect(signal.display?.status).toBe("success");
-			expect(signal.display?.icon).toBe("✓");
+			const payload = signal.payload as TaskCompletePayload;
+			expect(payload.outcome).toBe("success");
+			expect(payload.summary).toBe("Task completed successfully");
 		});
 
 		it("creates failure signal", () => {
@@ -179,12 +157,8 @@ describe("PRD Signal Definitions", () => {
 				summary: "Tests failed",
 			});
 
-			expect(signal.payload.outcome).toBe("failure");
-			// Title is dynamic and shows outcome
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("Task T-001 failure");
-			}
+			const payload = signal.payload as TaskCompletePayload;
+			expect(payload.outcome).toBe("failure");
 		});
 
 		it("creates partial signal", () => {
@@ -194,7 +168,20 @@ describe("PRD Signal Definitions", () => {
 				summary: "Partial completion",
 			});
 
-			expect(signal.payload.outcome).toBe("partial");
+			const payload = signal.payload as TaskCompletePayload;
+			expect(payload.outcome).toBe("partial");
+		});
+
+		it("includes optional filesChanged", () => {
+			const signal = TaskComplete.create({
+				taskId: "T-001",
+				outcome: "success",
+				summary: "Done",
+				filesChanged: ["src/index.ts", "tests/index.test.ts"],
+			});
+
+			const payload = signal.payload as TaskCompletePayload;
+			expect(payload.filesChanged).toEqual(["src/index.ts", "tests/index.test.ts"]);
 		});
 	});
 
@@ -203,9 +190,8 @@ describe("PRD Signal Definitions", () => {
 			const signal = MilestonePassed.create({ milestoneId: "M-001" });
 
 			expect(signal.name).toBe("milestone:passed");
-			expect(signal.payload.milestoneId).toBe("M-001");
-			expect(signal.display?.type).toBe("notification");
-			expect(signal.display?.status).toBe("success");
+			const payload = signal.payload as MilestonePassedPayload;
+			expect(payload.milestoneId).toBe("M-001");
 		});
 	});
 
@@ -218,8 +204,18 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("milestone:failed");
-			expect(signal.display?.status).toBe("error");
-			expect(signal.display?.icon).toBe("✗");
+			const payload = signal.payload as MilestoneFailedPayload;
+			expect(payload.milestoneId).toBe("M-001");
+			expect(payload.failingTaskId).toBe("T-002");
+			expect(payload.error).toBe("Test assertion failed");
+		});
+
+		it("creates signal with minimal payload", () => {
+			const signal = MilestoneFailed.create({ milestoneId: "M-001" });
+
+			const payload = signal.payload as MilestoneFailedPayload;
+			expect(payload.milestoneId).toBe("M-001");
+			expect(payload.failingTaskId).toBeUndefined();
 		});
 	});
 
@@ -228,29 +224,22 @@ describe("PRD Signal Definitions", () => {
 			const signal = WorkflowComplete.create({ reason: "all_milestones_passed" });
 
 			expect(signal.name).toBe("workflow:complete");
-
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("Workflow complete - all milestones passed");
-			}
+			const payload = signal.payload as WorkflowCompletePayload;
+			expect(payload.reason).toBe("all_milestones_passed");
 		});
 
 		it("creates signal for no_tasks", () => {
 			const signal = WorkflowComplete.create({ reason: "no_tasks" });
 
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("Workflow complete - no tasks to execute");
-			}
+			const payload = signal.payload as WorkflowCompletePayload;
+			expect(payload.reason).toBe("no_tasks");
 		});
 
 		it("creates signal for custom reason", () => {
 			const signal = WorkflowComplete.create({ reason: "user_cancelled" });
 
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("Workflow complete - user_cancelled");
-			}
+			const payload = signal.payload as WorkflowCompletePayload;
+			expect(payload.reason).toBe("user_cancelled");
 		});
 	});
 
@@ -263,19 +252,33 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("discovery:submitted");
-			expect(signal.display?.status).toBe("warning");
+			const payload = signal.payload as DiscoverySubmittedPayload;
+			expect(payload.count).toBe(1);
+			expect(payload.sourceTaskId).toBe("T-001");
+			expect(payload.discoveries).toHaveLength(1);
 		});
 
-		it("DiscoveryReviewed with accepted tasks", () => {
+		it("DiscoverySubmitted allows null sourceTaskId", () => {
+			const signal = DiscoverySubmitted.create({
+				discoveries: [{ title: "Task", description: "Desc" }],
+				count: 1,
+				sourceTaskId: null,
+			});
+
+			const payload = signal.payload as DiscoverySubmittedPayload;
+			expect(payload.sourceTaskId).toBeNull();
+		});
+
+		it("DiscoveryReviewed creates with counts", () => {
 			const signal = DiscoveryReviewed.create({
 				accepted: 2,
 				rejected: 1,
 			});
 
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("2 tasks added to plan");
-			}
+			expect(signal.name).toBe("discovery:reviewed");
+			const payload = signal.payload as DiscoveryReviewedPayload;
+			expect(payload.accepted).toBe(2);
+			expect(payload.rejected).toBe(1);
 		});
 
 		it("DiscoveryReviewed with no accepted tasks", () => {
@@ -284,10 +287,9 @@ describe("PRD Signal Definitions", () => {
 				rejected: 3,
 			});
 
-			const title = signal.display?.title;
-			if (typeof title === "function") {
-				expect(title(signal.payload)).toBe("No tasks added");
-			}
+			const payload = signal.payload as DiscoveryReviewedPayload;
+			expect(payload.accepted).toBe(0);
+			expect(payload.rejected).toBe(3);
 		});
 	});
 
@@ -301,7 +303,10 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("fix:required");
-			expect(signal.display?.status).toBe("warning");
+			const payload = signal.payload as FixRequiredPayload;
+			expect(payload.taskId).toBe("T-001");
+			expect(payload.attempt).toBe(2);
+			expect(payload.error).toBe("Test failed");
 		});
 
 		it("MilestoneRetry creates correctly", () => {
@@ -310,7 +315,18 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("milestone:retry");
-			expect(signal.display?.icon).toBe("🔄");
+			const payload = signal.payload as MilestoneRetryPayload;
+			expect(payload.milestoneId).toBe("M-001");
+		});
+
+		it("MilestoneRetry includes optional error", () => {
+			const signal = MilestoneRetry.create({
+				milestoneId: "M-001",
+				error: "Retry due to flaky test",
+			});
+
+			const payload = signal.payload as MilestoneRetryPayload;
+			expect(payload.error).toBe("Retry due to flaky test");
 		});
 
 		it("MilestoneTestable creates correctly", () => {
@@ -320,7 +336,9 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("milestone:testable");
-			expect(signal.display?.status).toBe("active");
+			const payload = signal.payload as MilestoneTestablePayload;
+			expect(payload.milestoneId).toBe("M-001");
+			expect(payload.taskIds).toEqual(["T-001", "T-002"]);
 		});
 
 		it("TaskApproved creates correctly", () => {
@@ -330,7 +348,18 @@ describe("PRD Signal Definitions", () => {
 			});
 
 			expect(signal.name).toBe("task:approved");
-			expect(signal.display?.status).toBe("success");
+			const payload = signal.payload as TaskApprovedPayload;
+			expect(payload.taskId).toBe("T-001");
+			expect(payload.hadDiscoveries).toBe(true);
+		});
+
+		it("TaskApproved allows null taskId", () => {
+			const signal = TaskApproved.create({
+				taskId: null,
+			});
+
+			const payload = signal.payload as TaskApprovedPayload;
+			expect(payload.taskId).toBeNull();
 		});
 	});
 
@@ -377,6 +406,36 @@ describe("PRD Signal Definitions", () => {
 			expect(PlanCreated.is(undefined)).toBe(false);
 			expect(PlanCreated.is({ name: "plan:created" })).toBe(false);
 			expect(PlanCreated.is("plan:created")).toBe(false);
+		});
+
+		it("validates payload optionally", () => {
+			const signal = PlanCreated.create({
+				tasks: [],
+				milestones: [],
+				taskOrder: [],
+			});
+
+			// Without validation (default)
+			expect(PlanCreated.is(signal)).toBe(true);
+
+			// With validation
+			expect(PlanCreated.is(signal, true)).toBe(true);
+		});
+
+		it("narrows type correctly in conditional", () => {
+			const signal: Signal<unknown> = PlanCreated.create({
+				tasks: [],
+				milestones: [],
+				taskOrder: [],
+			});
+
+			// This demonstrates the type guard narrowing
+			if (PlanCreated.is(signal)) {
+				// Inside this block, TypeScript should know payload is PlanCreatedPayload
+				// Note: Due to Zod v3/v4 differences, we use a type assertion here
+				const payload = signal.payload as PlanCreatedPayload;
+				expect(payload.tasks).toEqual([]);
+			}
 		});
 	});
 });

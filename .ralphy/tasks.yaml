@@ -301,7 +301,7 @@ tasks:
   # Phase 4: Update PRD Workflow
   # ═══════════════════════════════════════════════════════════════
   - title: "4.1: Remove display from PRD signal definitions (TR-4.1)"
-    completed: false
+    completed: true
     parallel_group: 4
     phase: "Phase 4: Update PRD Workflow"
     details: |

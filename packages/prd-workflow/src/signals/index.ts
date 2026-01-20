@@ -1,11 +1,13 @@
 /**
  * PRD Workflow Signal Definitions
  *
- * Defines all PRD workflow signals using defineSignal() with display metadata.
+ * Defines all PRD workflow signals using defineSignal() with Zod schemas.
+ * Signals are pure data structures - rendering is handled by adapters via renderer maps.
+ *
  * These signal definitions provide:
  * - Type-safe signal creation via create()
  * - Type guards for signal matching via is()
- * - Display hints for terminal/log adapters
+ * - Zod schema validation for payloads
  *
  * NOTE: Due to Zod version differences between packages (signals-core uses Zod 3,
  * prd-workflow uses Zod 4), we use type assertions when passing schemas to defineSignal().
@@ -30,7 +32,7 @@
  * ```
  */
 
-import { defineSignal, type SignalDisplayConfig } from "@internal/signals-core";
+import { defineSignal } from "@internal/signals-core";
 import { z } from "zod";
 import { type Milestone, MilestoneSchema, type Task, TaskSchema } from "../planner/index.js";
 
@@ -234,16 +236,6 @@ const WorkflowCompleteSchema = z.object({
 export const PlanStart = defineSignal({
 	name: "plan:start",
 	schema: asZodSchema<PlanStartPayload | undefined>(PlanStartSchema),
-	meta: {
-		level: "info",
-		category: "lifecycle",
-	},
-	display: {
-		type: "status",
-		title: "Planning...",
-		icon: "📋",
-		status: "active",
-	} as SignalDisplayConfig<PlanStartPayload | undefined>,
 });
 
 /**
@@ -255,17 +247,6 @@ export const PlanStart = defineSignal({
 export const PlanCreated = defineSignal({
 	name: "plan:created",
 	schema: asZodSchema<PlanCreatedPayload>(PlanCreatedSchema),
-	meta: {
-		level: "info",
-		category: "lifecycle",
-	},
-	display: {
-		type: "notification",
-		title: (p: PlanCreatedPayload) => `Plan created with ${p.tasks.length} tasks`,
-		subtitle: (p: PlanCreatedPayload) => `${p.milestones.length} milestones`,
-		icon: "✓",
-		status: "success",
-	} as SignalDisplayConfig<PlanCreatedPayload>,
 });
 
 // ============================================================================
@@ -280,16 +261,6 @@ export const PlanCreated = defineSignal({
 export const DiscoverySubmitted = defineSignal({
 	name: "discovery:submitted",
 	schema: asZodSchema<DiscoverySubmittedPayload>(DiscoverySubmittedSchema),
-	meta: {
-		level: "info",
-		category: "discovery",
-	},
-	display: {
-		type: "notification",
-		title: (p: DiscoverySubmittedPayload) => `${p.count} task${p.count === 1 ? "" : "s"} discovered`,
-		icon: "🔍",
-		status: "warning",
-	} as SignalDisplayConfig<DiscoverySubmittedPayload>,
 });
 
 /**
@@ -300,18 +271,6 @@ export const DiscoverySubmitted = defineSignal({
 export const DiscoveryReviewed = defineSignal({
 	name: "discovery:reviewed",
 	schema: asZodSchema<DiscoveryReviewedPayload>(DiscoveryReviewedSchema),
-	meta: {
-		level: "info",
-		category: "discovery",
-	},
-	display: {
-		type: "notification",
-		title: (p: DiscoveryReviewedPayload) =>
-			p.accepted > 0 ? `${p.accepted} task${p.accepted === 1 ? "" : "s"} added to plan` : "No tasks added",
-		subtitle: (p: DiscoveryReviewedPayload) => (p.rejected > 0 ? `${p.rejected} rejected` : undefined),
-		icon: "✓",
-		status: "success",
-	} as SignalDisplayConfig<DiscoveryReviewedPayload>,
 });
 
 // ============================================================================
@@ -326,17 +285,6 @@ export const DiscoveryReviewed = defineSignal({
 export const TaskReady = defineSignal({
 	name: "task:ready",
 	schema: asZodSchema<TaskReadyPayload>(TaskReadySchema),
-	meta: {
-		level: "info",
-		category: "task",
-	},
-	display: {
-		type: "status",
-		title: (p: TaskReadyPayload) => p.title,
-		subtitle: (p: TaskReadyPayload) => `Task ${p.taskId}`,
-		icon: "▶",
-		status: "active",
-	} as SignalDisplayConfig<TaskReadyPayload>,
 });
 
 /**
@@ -347,17 +295,6 @@ export const TaskReady = defineSignal({
 export const TaskComplete = defineSignal({
 	name: "task:complete",
 	schema: asZodSchema<TaskCompletePayload>(TaskCompleteSchema),
-	meta: {
-		level: "info",
-		category: "task",
-	},
-	display: {
-		type: "notification",
-		title: (p: TaskCompletePayload) => `Task ${p.taskId} ${p.outcome}`,
-		subtitle: (p: TaskCompletePayload) => p.summary,
-		icon: "✓",
-		status: "success",
-	} as SignalDisplayConfig<TaskCompletePayload>,
 });
 
 /**
@@ -368,17 +305,6 @@ export const TaskComplete = defineSignal({
 export const TaskApproved = defineSignal({
 	name: "task:approved",
 	schema: asZodSchema<TaskApprovedPayload>(TaskApprovedSchema),
-	meta: {
-		level: "info",
-		category: "task",
-	},
-	display: {
-		type: "notification",
-		title: (p: TaskApprovedPayload) => (p.taskId ? `Task ${p.taskId} approved` : "Task approved"),
-		subtitle: (p: TaskApprovedPayload) => (p.hadDiscoveries ? "Discoveries added to plan" : undefined),
-		icon: "✓",
-		status: "success",
-	} as SignalDisplayConfig<TaskApprovedPayload>,
 });
 
 /**
@@ -389,17 +315,6 @@ export const TaskApproved = defineSignal({
 export const FixRequired = defineSignal({
 	name: "fix:required",
 	schema: asZodSchema<FixRequiredPayload>(FixRequiredSchema),
-	meta: {
-		level: "warn",
-		category: "task",
-	},
-	display: {
-		type: "status",
-		title: (p: FixRequiredPayload) => `Fixing task ${p.taskId}`,
-		subtitle: (p: FixRequiredPayload) => `Attempt ${p.attempt}${p.error ? ` - ${p.error}` : ""}`,
-		icon: "🔧",
-		status: "warning",
-	} as SignalDisplayConfig<FixRequiredPayload>,
 });
 
 // ============================================================================
@@ -414,17 +329,6 @@ export const FixRequired = defineSignal({
 export const MilestoneTestable = defineSignal({
 	name: "milestone:testable",
 	schema: asZodSchema<MilestoneTestablePayload>(MilestoneTestableSchema),
-	meta: {
-		level: "info",
-		category: "milestone",
-	},
-	display: {
-		type: "status",
-		title: (p: MilestoneTestablePayload) => `Testing milestone ${p.milestoneId}`,
-		subtitle: (p: MilestoneTestablePayload) => `${p.taskIds.length} task${p.taskIds.length === 1 ? "" : "s"}`,
-		icon: "🧪",
-		status: "active",
-	} as SignalDisplayConfig<MilestoneTestablePayload>,
 });
 
 /**
@@ -435,16 +339,6 @@ export const MilestoneTestable = defineSignal({
 export const MilestonePassed = defineSignal({
 	name: "milestone:passed",
 	schema: asZodSchema<MilestonePassedPayload>(MilestonePassedSchema),
-	meta: {
-		level: "info",
-		category: "milestone",
-	},
-	display: {
-		type: "notification",
-		title: (p: MilestonePassedPayload) => `Milestone ${p.milestoneId} passed`,
-		icon: "✓",
-		status: "success",
-	} as SignalDisplayConfig<MilestonePassedPayload>,
 });
 
 /**
@@ -455,18 +349,6 @@ export const MilestonePassed = defineSignal({
 export const MilestoneFailed = defineSignal({
 	name: "milestone:failed",
 	schema: asZodSchema<MilestoneFailedPayload>(MilestoneFailedSchema),
-	meta: {
-		level: "error",
-		category: "milestone",
-	},
-	display: {
-		type: "notification",
-		title: (p: MilestoneFailedPayload) => `Milestone ${p.milestoneId} failed`,
-		subtitle: (p: MilestoneFailedPayload) =>
-			p.error || (p.failingTaskId ? `Task ${p.failingTaskId} needs fixing` : undefined),
-		icon: "✗",
-		status: "error",
-	} as SignalDisplayConfig<MilestoneFailedPayload>,
 });
 
 /**
@@ -477,17 +359,6 @@ export const MilestoneFailed = defineSignal({
 export const MilestoneRetry = defineSignal({
 	name: "milestone:retry",
 	schema: asZodSchema<MilestoneRetryPayload>(MilestoneRetrySchema),
-	meta: {
-		level: "warn",
-		category: "milestone",
-	},
-	display: {
-		type: "status",
-		title: (p: MilestoneRetryPayload) => `Retrying milestone ${p.milestoneId}`,
-		subtitle: (p: MilestoneRetryPayload) => p.error,
-		icon: "🔄",
-		status: "warning",
-	} as SignalDisplayConfig<MilestoneRetryPayload>,
 });
 
 // ============================================================================
@@ -502,21 +373,6 @@ export const MilestoneRetry = defineSignal({
 export const WorkflowComplete = defineSignal({
 	name: "workflow:complete",
 	schema: asZodSchema<WorkflowCompletePayload>(WorkflowCompleteSchema),
-	meta: {
-		level: "info",
-		category: "lifecycle",
-	},
-	display: {
-		type: "notification",
-		title: (p: WorkflowCompletePayload) =>
-			p.reason === "all_milestones_passed"
-				? "Workflow complete - all milestones passed"
-				: p.reason === "no_tasks"
-					? "Workflow complete - no tasks to execute"
-					: `Workflow complete - ${p.reason}`,
-		icon: "🎉",
-		status: "success",
-	} as SignalDisplayConfig<WorkflowCompletePayload>,
 });
 
 // ============================================================================

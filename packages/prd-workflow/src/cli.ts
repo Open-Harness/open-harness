@@ -179,7 +179,9 @@ async function main(): Promise<void> {
 	// Create adapters for signal rendering
 	// - terminalAdapter: renders workflow signals to stdout with ANSI colors
 	// - logsAdapter: bridges signals to Pino for structured JSONL logging
-	const adapters = [terminalAdapter(), logsAdapter({ logger })];
+	// NOTE: Empty renderers map - signals are passed through to logsAdapter only
+	// TODO: Task 4.2 will create prdRenderers, Task 4.3 will wire it here
+	const adapters = [terminalAdapter({ renderers: {} }), logsAdapter({ logger })];
 
 	// Ensure database directory exists
 	const dbDir = dirname(resolve(args.database));

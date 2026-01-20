@@ -1040,3 +1040,51 @@ Deleted the obsolete inference test file and updated terminal adapter tests for 
 - grep 'signal.display|inferDisplayFromName' terminal.test.ts: No matches
 
 
+## Task 4.1: Remove display from PRD signal definitions (TR-4.1) - COMPLETED
+
+### Summary
+Removed all `meta` and `display` configuration from PRD workflow signal definitions. Signals are now pure data structures, following the principle "Signals are data, not presentation." Rendering is delegated to adapters via renderer maps.
+
+### Files Modified
+- packages/prd-workflow/src/signals/index.ts - Removed meta/display from all 13 signal definitions, removed SignalDisplayConfig import
+- packages/prd-workflow/src/signals/signals.test.ts - Complete rewrite to remove all display-related assertions, use type assertions for payload access
+- packages/prd-workflow/src/cli.ts - Temporary fix: pass empty renderers map to terminalAdapter (full implementation in Task 4.2/4.3)
+
+### Key Changes
+1. **Removed from all 13 signals**:
+   - `meta: { level, category }` config
+   - `display: { type, title, subtitle, icon, status }` config
+   - `SignalDisplayConfig<T>` type assertions
+
+2. **Signals now only contain**:
+   - `name` - Signal name with namespace (e.g., "plan:created")
+   - `schema` - Zod schema for payload validation
+
+3. **Updated tests**:
+   - Removed all `signal.display` assertions
+   - Use explicit type assertions for payload access (due to Zod v3/v4 type differences)
+   - Maintained all signal creation and type guard tests
+
+4. **CLI temporary fix**:
+   - Changed `terminalAdapter()` to `terminalAdapter({ renderers: {} })`
+   - With empty renderers, no signals are rendered to terminal (only logged via logsAdapter)
+   - Task 4.2 will create proper renderer map, Task 4.3 will wire it up
+
+### Verification Results
+- bun run typecheck: Zero errors (15 packages)
+- bun run lint: Zero errors (14 packages, 1 auto-fix)
+- bun run test: 156 tests pass (379 expect() calls)
+- grep 'meta:|display:' signals/index.ts: No matches
+- grep -c 'export const .* = defineSignal' signals/index.ts: 13 (all signal definitions remain)
+
+### Acceptance Criteria Met
+- ✓ All 13 signals have no meta or display config
+- ✓ All signals retain name and schema
+- ✓ Typecheck passes
+
+### Notes
+- Phase 4 Task 1 of 3 complete (4.1 done; 4.2, 4.3 remaining)
+- Next task: 4.2 Create renderer map for PRD workflow
+- The CLI currently has no terminal output for signals - this is expected until 4.2/4.3 complete the renderer integration
+
+
