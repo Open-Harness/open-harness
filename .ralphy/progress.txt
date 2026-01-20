@@ -1,0 +1,12 @@
+# Ralphy Progress Log
+
+## 2026-01-21T16:56:13Z - Phase 1 Setup Task 1
+**Task**: Create packages/core-v2/ directory structure
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/ directory
+- Created src/ subdirectories: event, handler, agent, workflow, tape, store, renderer, provider, message, internal
+- Created tests/integration/ directory
+**Verification**: Directory structure matches specs/001-effect-refactor/plan.md exactly
+**Lint**: PASS (no new code to lint)
+
