@@ -35,17 +35,17 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Event Primitives
 
-- [ ] Create packages/core-v2/src/event/Event.ts with: EventId branded string type, Event interface (id, name, payload, timestamp, causedBy?), EventSchema using @effect/schema, createEvent factory function per specs/001-effect-refactor/contracts/event.ts
-- [ ] Create packages/core-v2/src/event/index.ts re-exporting Event, EventId, createEvent (NO @effect/schema internals)
-- [ ] Add UserInputEvent schema to src/event/Event.ts with content payload for user input events
-- [ ] Add TextDeltaEvent schema to src/event/Event.ts with delta payload for streaming text
-- [ ] Add TextCompleteEvent schema to src/event/Event.ts with text payload for finalized text
-- [ ] Add AgentStartedEvent schema to src/event/Event.ts with agentName payload
-- [ ] Add AgentCompletedEvent schema to src/event/Event.ts with agentName and output payload
-- [ ] Add ToolCalledEvent schema to src/event/Event.ts with toolName and args payload
-- [ ] Add ToolResultEvent schema to src/event/Event.ts with toolName and result payload
-- [ ] Add ErrorOccurredEvent schema to src/event/Event.ts with error and context payload
-- [ ] Create packages/core-v2/src/event/EventLog.ts with append-only event log using Effect Ref for internal use
+- [x] Create packages/core-v2/src/event/Event.ts with: EventId branded string type, Event interface (id, name, payload, timestamp, causedBy?), EventSchema using @effect/schema, createEvent factory function per specs/001-effect-refactor/contracts/event.ts
+- [x] Create packages/core-v2/src/event/index.ts re-exporting Event, EventId, createEvent (NO @effect/schema internals)
+- [x] Add UserInputEvent schema to src/event/Event.ts with content payload for user input events
+- [x] Add TextDeltaEvent schema to src/event/Event.ts with delta payload for streaming text
+- [x] Add TextCompleteEvent schema to src/event/Event.ts with text payload for finalized text
+- [x] Add AgentStartedEvent schema to src/event/Event.ts with agentName payload
+- [x] Add AgentCompletedEvent schema to src/event/Event.ts with agentName and output payload
+- [x] Add ToolCalledEvent schema to src/event/Event.ts with toolName and args payload
+- [x] Add ToolResultEvent schema to src/event/Event.ts with toolName and result payload
+- [x] Add ErrorOccurredEvent schema to src/event/Event.ts with error and context payload
+- [x] Create packages/core-v2/src/event/EventLog.ts with append-only event log using Effect Ref for internal use
 
 ### Handler System
 

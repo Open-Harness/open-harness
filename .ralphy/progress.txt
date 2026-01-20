@@ -36,3 +36,33 @@
 - Zod 4 has native toJSONSchema, no need for zod-to-json-schema library
 - TypeScript config extends monorepo root for consistency
 
+## 2026-01-21T17:06:50Z - Phase 2 Event Primitives
+**Task**: Implement Event Primitives (all 11 tasks in Event Primitives section)
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/event/Event.ts with:
+  - EventId branded type using Schema.UUID.pipe(Schema.brand("EventId"))
+  - Event interface (id, name, payload, timestamp, causedBy?)
+  - EventSchema factory function for creating typed event schemas
+  - createEvent factory function for creating events with auto-generated ID/timestamp
+  - defineEvent factory for developer-friendly event definitions with create() and is() methods
+  - All built-in event schemas and interfaces:
+    - UserInputEvent (text, sessionId?)
+    - TextDeltaEvent (delta, agentName?)
+    - TextCompleteEvent (fullText, agentName?)
+    - AgentStartedEvent (agentName, reason?)
+    - AgentCompletedEvent (agentName, outcome: success|failure|interrupted)
+    - ToolCalledEvent (toolName, toolId, input)
+    - ToolResultEvent (toolId, output, isError)
+    - ErrorOccurredEvent (code, message, recoverable, context?)
+- Created packages/core-v2/src/event/index.ts re-exporting consumer-facing types (NO @effect/schema internals)
+- Created packages/core-v2/src/event/EventLog.ts with append-only event log using Effect Ref
+- Created packages/core-v2/tests/event.test.ts with 27 comprehensive tests
+**Verification**:
+- bun run test: PASS (32 tests total, 27 new event tests)
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- Effect 3.x has Schema merged into main package (import { Schema } from "effect")
+- EventLog is internal-only, not exported in public API
+- defineEvent provides clean DX without exposing Effect schemas to consumers
+
