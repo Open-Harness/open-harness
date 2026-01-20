@@ -4,21 +4,29 @@
  * Adapters receive signals and render them to different outputs (terminal, logs, web).
  * This module provides pre-built adapters and a factory for creating custom ones.
  *
+ * The terminal adapter uses a renderer map pattern where you define how each signal
+ * type should be rendered. Signals without a renderer are silently skipped.
+ *
  * @example
  * ```ts
  * import {
  *   terminalAdapter,
  *   logsAdapter,
  *   createAdapter,
- *   defaultAdapters,
+ *   type RendererMap,
  * } from "@internal/signals/adapters";
  * import { getLogger } from "@internal/core";
  *
- * // Use default adapters (terminal + logs)
- * const adapters = defaultAdapters({ logger: getLogger() });
+ * // Define renderers for your signals
+ * const renderers: RendererMap = {
+ *   "task:start": (s) => `▶ Starting ${s.payload.title}`,
+ *   "task:complete": (s) => `✓ ${s.payload.title} done`,
+ * };
  *
- * // Use individual adapters
- * const terminal = terminalAdapter();
+ * // Use terminal adapter with renderers
+ * const terminal = terminalAdapter({ renderers });
+ *
+ * // Use logs adapter (name-based log level routing)
  * const logs = logsAdapter({ logger: getLogger() });
  *
  * // Create a custom adapter
@@ -32,36 +40,53 @@
 import type { Logger } from "pino";
 import type { SignalAdapter } from "../adapter.js";
 import { type LogsAdapterOptions, logsAdapter } from "./logs.js";
-import { type TerminalAdapterOptions, terminalAdapter } from "./terminal.js";
+import { type RendererMap, type TerminalAdapterOptions, terminalAdapter } from "./terminal.js";
 
 // Re-export createAdapter from parent for convenience
 export { type CreateAdapterConfig, createAdapter, type SignalAdapter } from "../adapter.js";
 export { type LogsAdapterOptions, logsAdapter } from "./logs.js";
-// Re-export adapters
-export { type TerminalAdapterOptions, terminalAdapter } from "./terminal.js";
+// Re-export adapters and types
+export { type RendererMap, type SignalRenderer, type TerminalAdapterOptions, terminalAdapter } from "./terminal.js";
 
 /**
  * Configuration options for defaultAdapters()
  */
 export interface DefaultAdaptersOptions {
 	/**
+	 * Renderer map for the terminal adapter.
+	 *
+	 * Defines how each signal type should be rendered to the terminal.
+	 * Signals without a renderer are silently skipped.
+	 *
+	 * @example
+	 * ```ts
+	 * const renderers: RendererMap = {
+	 *   "task:start": (s) => `▶ ${s.payload.title}`,
+	 *   "task:complete": (s) => `✓ ${s.payload.title}`,
+	 * };
+	 * const adapters = defaultAdapters({ renderers });
+	 * ```
+	 */
+	renderers: RendererMap;
+
+	/**
 	 * Pino logger instance for the logs adapter.
 	 *
-	 * Required for the logs adapter to be included.
-	 * If not provided, only the terminal adapter is returned.
+	 * If provided, a logs adapter is included that routes signals
+	 * to appropriate log levels based on signal name conventions.
 	 *
 	 * @example
 	 * ```ts
 	 * import { getLogger } from "@internal/core";
-	 * const adapters = defaultAdapters({ logger: getLogger() });
+	 * const adapters = defaultAdapters({ renderers, logger: getLogger() });
 	 * ```
 	 */
 	logger?: Logger;
 
 	/**
-	 * Options for the terminal adapter
+	 * Additional options for the terminal adapter (besides renderers)
 	 */
-	terminal?: Omit<TerminalAdapterOptions, "patterns">;
+	terminal?: Omit<TerminalAdapterOptions, "renderers" | "patterns">;
 
 	/**
 	 * Options for the logs adapter
@@ -75,25 +100,34 @@ export interface DefaultAdaptersOptions {
  * Returns [terminalAdapter, logsAdapter] when a logger is provided,
  * or just [terminalAdapter] when no logger is available.
  *
- * This is a convenience function for getting a sensible default set of
- * adapters that covers terminal output and structured logging.
+ * The terminal adapter requires a renderer map to define how signals
+ * are rendered. Signals without a renderer are silently skipped.
  *
- * @param options - Configuration options (logger required for logs adapter)
+ * @param options - Configuration options (renderers required, logger optional)
  * @returns Array of SignalAdapter instances
  *
  * @example
  * ```ts
  * import { getLogger } from "@internal/core";
- * import { defaultAdapters } from "@internal/signals/adapters";
+ * import { defaultAdapters, type RendererMap } from "@internal/signals/adapters";
  *
- * // Full default adapters with logging
- * const adapters = defaultAdapters({ logger: getLogger() });
+ * const renderers: RendererMap = {
+ *   "plan:start": () => "📋 Planning...",
+ *   "plan:created": (s) => `✓ Plan with ${s.payload.tasks.length} tasks`,
+ *   "task:ready": (s) => `▶ ${s.payload.title}`,
+ *   "task:complete": (s) => `✓ Task done`,
+ *   "workflow:complete": () => "🎉 All done!",
+ * };
  *
- * // Terminal only (no logger available)
- * const terminalOnly = defaultAdapters({});
+ * // Terminal with renderers only
+ * const terminalOnly = defaultAdapters({ renderers });
+ *
+ * // Full adapters with logging
+ * const adapters = defaultAdapters({ renderers, logger: getLogger() });
  *
  * // With custom options
  * const custom = defaultAdapters({
+ *   renderers,
  *   logger: getLogger(),
  *   terminal: { showTimestamp: true },
  *   logs: { includePayload: false },
@@ -103,13 +137,13 @@ export interface DefaultAdaptersOptions {
  * await runReactive({ adapters, ... });
  * ```
  */
-export function defaultAdapters(options: DefaultAdaptersOptions = {}): SignalAdapter[] {
-	const { logger, terminal: terminalOptions, logs: logsOptions } = options;
+export function defaultAdapters(options: DefaultAdaptersOptions): SignalAdapter[] {
+	const { renderers, logger, terminal: terminalOptions, logs: logsOptions } = options;
 
 	const adapters: SignalAdapter[] = [];
 
-	// Always include terminal adapter
-	adapters.push(terminalAdapter(terminalOptions));
+	// Always include terminal adapter with the provided renderers
+	adapters.push(terminalAdapter({ renderers, ...terminalOptions }));
 
 	// Include logs adapter only when logger is provided
 	if (logger) {

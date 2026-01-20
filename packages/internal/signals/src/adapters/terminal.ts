@@ -1,222 +1,90 @@
 /**
  * Terminal Adapter - Renders signals to stdout with ANSI colors
  *
- * Reads signal.display metadata to determine rendering:
- * - status: Persistent state with spinner/check
- * - progress: Progress bar or step counts
- * - notification: One-time event with icon
- * - stream: Streaming text (append mode)
- * - log: Structured log output
- *
- * Falls back to inferring display type from signal naming conventions:
- * - *:start → status (active)
- * - *:complete → notification (success)
- * - *:error → notification (error)
- * - *:delta → stream (append)
+ * Uses a renderer map pattern where the adapter defines how to render each signal type.
+ * Signals without a renderer in the map are silently skipped (no output, no error).
  *
  * @example
  * ```ts
- * import { terminalAdapter } from "@internal/signals/adapters";
+ * import { terminalAdapter, type RendererMap } from "@internal/signals/adapters";
  *
- * const adapter = terminalAdapter();
+ * const renderers: RendererMap = {
+ *   "task:start": (signal) => `▶ Starting ${signal.payload.title}`,
+ *   "task:complete": (signal) => `✓ Completed ${signal.payload.title}`,
+ * };
+ *
+ * const adapter = terminalAdapter({ renderers });
  * // Use with runReactive() or SignalBus
+ * // Signals not in the renderers map are silently skipped
  * ```
  */
 
-import type { Signal, SignalDisplay, SignalDisplayStatus, SignalDisplayType } from "@internal/signals-core";
+import type { Signal } from "@internal/signals-core";
 import { createAdapter, type SignalAdapter } from "../adapter.js";
 
-/**
- * ANSI color codes for terminal output
- */
-const ANSI = {
-	reset: "\x1b[0m",
-	bold: "\x1b[1m",
-	dim: "\x1b[2m",
-
-	// Foreground colors
-	green: "\x1b[32m",
-	red: "\x1b[31m",
-	yellow: "\x1b[33m",
-	blue: "\x1b[34m",
-	cyan: "\x1b[36m",
-	gray: "\x1b[90m",
-	white: "\x1b[37m",
-} as const;
+// ============================================================================
+// Renderer Types
+// ============================================================================
 
 /**
- * Status icons for terminal display
- */
-const ICONS = {
-	pending: "○",
-	active: "●",
-	success: "✓",
-	error: "✗",
-	warning: "⚠",
-	info: "ℹ",
-	stream: "→",
-} as const;
-
-/**
- * Map display status to ANSI color
- */
-function statusToColor(status: SignalDisplayStatus | undefined): string {
-	switch (status) {
-		case "success":
-			return ANSI.green;
-		case "error":
-			return ANSI.red;
-		case "active":
-			return ANSI.yellow;
-		case "warning":
-			return ANSI.yellow;
-		case "pending":
-			return ANSI.blue;
-		default:
-			return ANSI.white;
-	}
-}
-
-/**
- * Get icon for display status
- */
-function statusToIcon(status: SignalDisplayStatus | undefined, type?: SignalDisplayType): string {
-	if (type === "stream") {
-		return ICONS.stream;
-	}
-	switch (status) {
-		case "success":
-			return ICONS.success;
-		case "error":
-			return ICONS.error;
-		case "warning":
-			return ICONS.warning;
-		case "active":
-			return ICONS.active;
-		case "pending":
-			return ICONS.pending;
-		default:
-			return ICONS.info;
-	}
-}
-
-/**
- * Infer display type from signal name conventions
+ * A function that renders a signal to a terminal string.
  *
- * Naming conventions:
- * - *:start → status (active)
- * - *:complete → notification (success)
- * - *:error → notification (error)
- * - *:delta → stream (append)
- */
-function inferDisplayFromName(signalName: string): Partial<SignalDisplay> {
-	// Extract suffix after last colon
-	const suffix = signalName.split(":").pop()?.toLowerCase();
-
-	switch (suffix) {
-		case "start":
-		case "started":
-		case "begin":
-			return { type: "status", status: "active" };
-
-		case "complete":
-		case "completed":
-		case "done":
-		case "success":
-			return { type: "notification", status: "success" };
-
-		case "error":
-		case "failed":
-		case "failure":
-			return { type: "notification", status: "error" };
-
-		case "warning":
-		case "warn":
-			return { type: "notification", status: "warning" };
-
-		case "delta":
-		case "chunk":
-		case "stream":
-			return { type: "stream", append: true };
-
-		case "progress":
-			return { type: "progress", status: "active" };
-
-		default:
-			return { type: "log" };
-	}
-}
-
-/**
- * Resolve title from signal display config
+ * Renderers receive the full Signal object and return a string that will be
+ * written to the terminal. The adapter handles adding newlines and formatting.
  *
- * Title can be a static string or a function of payload
+ * @typeParam T - The payload type of the signal (defaults to unknown)
+ *
+ * @example
+ * ```ts
+ * // Simple renderer
+ * const taskStartRenderer: SignalRenderer = (signal) =>
+ *   `▶ Starting task: ${signal.name}`;
+ *
+ * // Typed renderer with payload access
+ * const taskCompleteRenderer: SignalRenderer<{ title: string; outcome: string }> = (signal) =>
+ *   `${signal.payload.outcome === "success" ? "✓" : "✗"} ${signal.payload.title}`;
+ * ```
  */
-function resolveTitle(signal: Signal): string {
-	const display = signal.display;
-
-	if (!display?.title) {
-		return signal.name;
-	}
-
-	if (typeof display.title === "function") {
-		try {
-			return display.title(signal.payload);
-		} catch {
-			return signal.name;
-		}
-	}
-
-	return display.title;
-}
+export type SignalRenderer<T = unknown> = (signal: Signal<T>) => string;
 
 /**
- * Resolve subtitle from signal display config
+ * A map of signal names to their renderer functions.
+ *
+ * Signals are looked up by their exact name. If a signal's name is not in the
+ * map, it is silently skipped (no output, no error). This allows adapters to
+ * be selective about which signals they render.
+ *
+ * @example
+ * ```ts
+ * const renderers: RendererMap = {
+ *   "plan:start": () => "📋 Planning...",
+ *   "plan:created": (s) => `✓ Created plan with ${s.payload.tasks.length} tasks`,
+ *   "task:ready": (s) => `▶ ${s.payload.title}`,
+ *   "task:complete": (s) => `${s.payload.outcome === "success" ? "✓" : "✗"} Done`,
+ * };
+ *
+ * // Pass to terminalAdapter
+ * const adapter = terminalAdapter({ renderers });
+ * ```
  */
-function resolveSubtitle(signal: Signal): string | undefined {
-	const display = signal.display;
+export type RendererMap = Record<string, SignalRenderer>;
 
-	if (!display?.subtitle) {
-		return undefined;
-	}
-
-	if (typeof display.subtitle === "function") {
-		try {
-			return display.subtitle(signal.payload);
-		} catch {
-			return undefined;
-		}
-	}
-
-	return display.subtitle;
-}
-
-/**
- * Format progress for display
- */
-function formatProgress(progress: number | { current: number; total: number } | undefined): string {
-	if (progress === undefined) {
-		return "";
-	}
-
-	if (typeof progress === "number") {
-		// Percentage progress
-		const percent = Math.round(progress);
-		const filled = Math.round(percent / 5); // 20 chars total
-		const empty = 20 - filled;
-		const bar = "█".repeat(filled) + "░".repeat(empty);
-		return ` [${bar}] ${percent}%`;
-	}
-
-	// Step-based progress
-	const { current, total } = progress;
-	return ` (${current}/${total})`;
-}
+// ============================================================================
+// Terminal Adapter Options
+// ============================================================================
 
 /**
  * Configuration options for terminalAdapter
  */
 export interface TerminalAdapterOptions {
+	/**
+	 * Map of signal names to renderer functions.
+	 *
+	 * Signals without a renderer in this map are silently skipped.
+	 * This is the primary way to control what gets rendered to the terminal.
+	 */
+	renderers: RendererMap;
+
 	/**
 	 * Custom write function for output.
 	 * Defaults to process.stdout.write
@@ -224,13 +92,14 @@ export interface TerminalAdapterOptions {
 	write?: (text: string) => void;
 
 	/**
-	 * Whether to include timestamp in output.
+	 * Whether to include timestamp prefix in output.
 	 * @default false
 	 */
 	showTimestamp?: boolean;
 
 	/**
-	 * Whether to use ANSI colors.
+	 * Whether to use ANSI colors in timestamp (when showTimestamp is true).
+	 * Note: Color formatting within rendered strings is the renderer's responsibility.
 	 * @default true
 	 */
 	colors?: boolean;
@@ -242,22 +111,51 @@ export interface TerminalAdapterOptions {
 	patterns?: string[];
 }
 
+// ============================================================================
+// ANSI Formatting (for timestamps only)
+// ============================================================================
+
+/**
+ * ANSI color codes for timestamp formatting
+ */
+const ANSI = {
+	reset: "\x1b[0m",
+	dim: "\x1b[2m",
+} as const;
+
+// ============================================================================
+// Terminal Adapter
+// ============================================================================
+
 /**
  * Create a terminal signal adapter
  *
- * Renders signals to stdout with ANSI colors and formatting based on
- * signal display metadata or naming convention inference.
+ * Renders signals to stdout using a renderer map pattern. Signals are looked up
+ * by exact name in the renderers map. If a renderer exists, it's called and the
+ * result is written to stdout. If no renderer exists, the signal is silently skipped.
  *
- * @param options - Configuration options
+ * @param options - Configuration options including the required renderers map
  * @returns A SignalAdapter for terminal output
  *
  * @example
  * ```ts
- * // Basic usage
- * const adapter = terminalAdapter();
+ * // Define renderers for signals you care about
+ * const renderers: RendererMap = {
+ *   "plan:start": () => "📋 Planning...",
+ *   "plan:created": (s) => `✓ Created plan with ${s.payload.tasks.length} tasks`,
+ *   "task:ready": (s) => `▶ ${s.payload.title}`,
+ *   "task:complete": (s) => {
+ *     const icon = s.payload.outcome === "success" ? "✓" : "✗";
+ *     return `${icon} Task ${s.payload.taskId} ${s.payload.outcome}`;
+ *   },
+ * };
  *
- * // Custom options
+ * // Create adapter with renderers
+ * const adapter = terminalAdapter({ renderers });
+ *
+ * // With options
  * const adapter = terminalAdapter({
+ *   renderers,
  *   showTimestamp: true,
  *   colors: process.stdout.isTTY,
  * });
@@ -266,127 +164,45 @@ export interface TerminalAdapterOptions {
  * bus.subscribe("*", adapter.onSignal);
  * ```
  */
-export function terminalAdapter(options: TerminalAdapterOptions = {}): SignalAdapter {
+export function terminalAdapter(options: TerminalAdapterOptions): SignalAdapter {
 	const {
+		renderers,
 		write = (text: string) => process.stdout.write(text),
 		showTimestamp = false,
 		colors = true,
-		patterns = ["*"],
+		patterns = ["**"],
 	} = options;
-
-	// Track streaming state per signal name for append mode
-	const streamingState = new Map<string, boolean>();
-
-	/**
-	 * Format a signal for terminal output
-	 */
-	function formatSignal(signal: Signal): string {
-		// Get display metadata or infer from name
-		const explicitDisplay = signal.display ?? {};
-		const inferredDisplay = inferDisplayFromName(signal.name);
-		const display = { ...inferredDisplay, ...explicitDisplay };
-
-		const type = display.type ?? "log";
-		const status = display.status;
-		const icon = display.icon ?? statusToIcon(status, type);
-		const color = colors ? statusToColor(status) : "";
-		const reset = colors ? ANSI.reset : "";
-		const dim = colors ? ANSI.dim : "";
-
-		const title = resolveTitle(signal);
-		const subtitle = resolveSubtitle(signal);
-		const progress = formatProgress(display.progress);
-
-		// Build output parts
-		const parts: string[] = [];
-
-		// Timestamp (optional)
-		if (showTimestamp) {
-			const time = new Date(signal.timestamp).toLocaleTimeString();
-			parts.push(`${dim}[${time}]${reset}`);
-		}
-
-		// Format based on display type
-		switch (type) {
-			case "status": {
-				parts.push(`${color}${icon}${reset} ${title}${progress}`);
-				break;
-			}
-
-			case "progress": {
-				parts.push(`${color}${icon}${reset} ${title}${progress}`);
-				break;
-			}
-
-			case "notification": {
-				parts.push(`${color}${icon}${reset} ${title}`);
-				break;
-			}
-
-			case "stream": {
-				// For streaming, check if this is continuation (append mode)
-				const isAppending = streamingState.get(signal.name);
-				if (display.append && isAppending) {
-					// Just append content without prefix for continuation
-					return String(signal.payload ?? "");
-				}
-				// First stream signal - mark as streaming and output with icon
-				streamingState.set(signal.name, true);
-				parts.push(`${color}${icon}${reset} ${title}`);
-				break;
-			}
-
-			default: {
-				// Includes "log" type and any unrecognized types
-				parts.push(`${dim}[${signal.name}]${reset} ${title}`);
-				break;
-			}
-		}
-
-		// Add subtitle if present
-		if (subtitle) {
-			parts.push(`\n  ${dim}${subtitle}${reset}`);
-		}
-
-		return parts.join(" ");
-	}
 
 	return createAdapter({
 		name: "terminal",
 		patterns,
 
-		onStart() {
-			streamingState.clear();
-		},
-
 		onSignal(signal: Signal) {
-			// Check streaming state BEFORE formatting (formatSignal will update it)
-			const wasStreaming = streamingState.get(signal.name);
+			// Look up renderer by exact signal name
+			const renderer = renderers[signal.name];
 
-			const output = formatSignal(signal);
-
-			// Determine line ending
-			const display = signal.display ?? {};
-			const inferredDisplay = inferDisplayFromName(signal.name);
-			const effectiveDisplay = { ...inferredDisplay, ...display };
-
-			// Stream signals in append mode don't get newlines (caller controls spacing)
-			const isStreamAppend = effectiveDisplay.type === "stream" && effectiveDisplay.append;
-
-			if (isStreamAppend && wasStreaming) {
-				// Just write content directly for streaming continuation
-				write(output);
-			} else {
-				// Normal output with newline
-				write(`${output}\n`);
+			// If no renderer exists, skip silently (no output, no error)
+			if (!renderer) {
+				return;
 			}
-		},
 
-		onStop() {
-			// Ensure any pending streams get a final newline
-			if (streamingState.size > 0) {
-				streamingState.clear();
+			// Call the renderer to get the output string
+			const output = renderer(signal);
+
+			// Build the final output with optional timestamp
+			const parts: string[] = [];
+
+			if (showTimestamp) {
+				const time = new Date(signal.timestamp).toLocaleTimeString();
+				const dim = colors ? ANSI.dim : "";
+				const reset = colors ? ANSI.reset : "";
+				parts.push(`${dim}[${time}]${reset}`);
 			}
+
+			parts.push(output);
+
+			// Write with newline
+			write(`${parts.join(" ")}\n`);
 		},
 	});
 }

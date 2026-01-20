@@ -962,3 +962,81 @@ Removed display-related types and logic from signals-core package to implement t
 - defineSignal() now only accepts: name, schema (no more display/meta)
 
 
+## Phase 2: Refactor Terminal Adapter - COMPLETED
+
+### Summary
+Refactored the terminal adapter to use the renderer map pattern. The adapter now accepts a `RendererMap` that defines how each signal type should be rendered. Signals without a renderer are silently skipped.
+
+### Tasks Completed
+- **TR-2.1**: Add RendererMap type (already existed)
+- **TR-2.2**: Refactor terminalAdapter to accept renderers
+- **TR-2.3**: Remove inference logic
+
+### Files Modified
+- packages/internal/signals/src/adapters/terminal.ts - Complete rewrite with renderer map pattern
+- packages/internal/signals/src/adapters/terminal.test.ts - Rewritten tests for renderer map behavior
+- packages/internal/signals/src/adapters/index.ts - Updated exports and defaultAdapters() to require renderers
+- packages/internal/signals/src/adapters/index.test.ts - Updated tests for new API
+- packages/internal/signals/tests/adapter.test.ts - Updated tests to remove display references
+
+### Files Deleted
+- packages/internal/signals/src/adapters/terminal-inference.test.ts - No longer needed (no inference logic)
+
+### Key Design Changes
+1. **Renderer map pattern**: terminalAdapter({ renderers }) where renderers is Record<string, SignalRenderer>
+2. **Silent skip**: Signals without a renderer produce no output and no error
+3. **No more inference**: Removed all magic behavior (inferDisplayFromName, resolveTitle, etc.)
+4. **Required renderers**: defaultAdapters() now requires renderers parameter
+
+### Verification Results
+- signals package typecheck: Zero errors (other packages have downstream errors to fix)
+- signals tests: All 214 tests pass
+- lint: Passes
+
+
+## Phase 3: Refactor Logs Adapter - COMPLETED
+
+### Summary
+Simplified the logs adapter by removing the fake SignalWithMeta interface that never actually worked. Kept the name-based log level inference which is the correct approach for the logs adapter.
+
+### Tasks Completed
+- **TR-3.1**: Simplify logsAdapter
+
+### Files Modified
+- packages/internal/signals/src/adapters/logs.ts - Removed SignalWithMeta, getLogLevel() meta checks, includeDisplay option
+- packages/internal/signals/src/adapters/logs.test.ts - Removed tests for meta.level and display metadata
+
+### Key Changes
+1. Removed SignalWithMeta interface (was never populated on signals)
+2. Removed getLogLevel() checks for meta.level (never worked)
+3. Removed includeDisplay option (signals no longer have display)
+4. Kept inferLevelFromName() for name-based log level routing
+
+### Verification Results
+- signals package typecheck: Zero errors
+- signals tests: All 214 tests pass
+- grep 'SignalWithMeta' logs.ts: No matches
+- grep 'inferLevelFromName' logs.ts: Found (retained for name-based routing)
+
+
+## Phase 5 (Partial): Cleanup - COMPLETED
+
+### Summary
+Deleted the obsolete inference test file and updated terminal adapter tests for the new pattern.
+
+### Tasks Completed
+- **TR-5.1**: Delete inference test file
+- **TR-5.2**: Update terminal adapter tests
+
+### Files Deleted
+- packages/internal/signals/src/adapters/terminal-inference.test.ts
+
+### Files Modified
+- packages/internal/signals/src/adapters/terminal.test.ts - Complete rewrite for renderer map pattern
+
+### Verification Results
+- signals package typecheck: Zero errors
+- terminal.test.ts: All tests pass
+- grep 'signal.display|inferDisplayFromName' terminal.test.ts: No matches
+
+

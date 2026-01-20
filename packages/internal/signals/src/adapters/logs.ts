@@ -1,14 +1,12 @@
 /**
  * Logs Adapter - Bridges signals to Pino structured logging
  *
- * Maps signals to appropriate Pino log levels:
- * - Uses signal.meta.level if explicitly set (from defineSignal())
- * - Falls back to inferring level from signal name conventions:
- *   - *:error → error
- *   - *:fail*, *:abort*, *:timeout → warn
- *   - workflow:*, harness:start, harness:end, *:done, *:complete → info
- *   - *:delta → trace
- *   - default → debug
+ * Maps signals to appropriate Pino log levels using name-based inference:
+ * - *:error → error
+ * - *:fail*, *:abort*, *:timeout → warn
+ * - workflow:*, harness:start, harness:end, *:done, *:complete → info
+ * - *:delta → trace
+ * - default → debug
  *
  * @example
  * ```ts
@@ -23,22 +21,6 @@
 import type { Signal } from "@internal/signals-core";
 import type { Level, Logger } from "pino";
 import { createAdapter, type SignalAdapter } from "../adapter.js";
-
-/**
- * Valid Pino log levels
- */
-type PinoLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
-
-/**
- * Signal meta interface for level extraction
- * Signals created with defineSignal() can have meta.level set
- */
-interface SignalWithMeta extends Signal {
-	meta?: {
-		level?: PinoLevel;
-		[key: string]: unknown;
-	};
-}
 
 /**
  * Pattern rule for signal-to-level mapping
@@ -165,33 +147,6 @@ export interface LogsAdapterOptions {
 	 * @default true
 	 */
 	includePayload?: boolean;
-
-	/**
-	 * Whether to include display metadata in log output.
-	 * @default false
-	 */
-	includeDisplay?: boolean;
-}
-
-/**
- * Get log level for a signal
- *
- * Priority:
- * 1. Explicit meta.level from signal definition
- * 2. Inferred from signal name conventions
- *
- * @param signal - The signal to get level for
- * @returns Pino log level
- */
-function getLogLevel(signal: Signal): Level {
-	// Check for explicit meta.level from defineSignal()
-	const signalWithMeta = signal as SignalWithMeta;
-	if (signalWithMeta.meta?.level) {
-		return signalWithMeta.meta.level;
-	}
-
-	// Fall back to convention-based inference from signal name
-	return inferLevelFromName(signal.name);
 }
 
 /**
@@ -199,6 +154,8 @@ function getLogLevel(signal: Signal): Level {
  *
  * Bridges signals to Pino structured logging with appropriate log levels.
  * Signals are logged as structured JSONL with name, payload, and timestamp.
+ *
+ * Log levels are determined by signal name conventions - no magic metadata.
  *
  * @param options - Configuration options (logger is required)
  * @returns A SignalAdapter for Pino logging
@@ -230,14 +187,15 @@ function getLogLevel(signal: Signal): Level {
  * ```
  */
 export function logsAdapter(options: LogsAdapterOptions): SignalAdapter {
-	const { logger, patterns = ["*"], includePayload = true, includeDisplay = false } = options;
+	const { logger, patterns = ["**"], includePayload = true } = options;
 
 	return createAdapter({
 		name: "logs",
 		patterns,
 
 		onSignal(signal: Signal) {
-			const level = getLogLevel(signal);
+			// Determine log level from signal name conventions
+			const level = inferLevelFromName(signal.name);
 
 			// Build structured log object
 			const logObj: Record<string, unknown> = {
@@ -254,24 +212,6 @@ export function logsAdapter(options: LogsAdapterOptions): SignalAdapter {
 			// Include source if present
 			if (signal.source) {
 				logObj.source = signal.source;
-			}
-
-			// Include display metadata if enabled and present
-			if (includeDisplay && signal.display) {
-				// Only include serializable display properties
-				// (skip function properties like title/subtitle functions)
-				const displayObj: Record<string, unknown> = {};
-				if (signal.display.type) displayObj.type = signal.display.type;
-				if (signal.display.status) displayObj.status = signal.display.status;
-				if (signal.display.icon) displayObj.icon = signal.display.icon;
-				if (signal.display.progress) displayObj.progress = signal.display.progress;
-				if (signal.display.append !== undefined) displayObj.append = signal.display.append;
-				if (typeof signal.display.title === "string") displayObj.title = signal.display.title;
-				if (typeof signal.display.subtitle === "string") displayObj.subtitle = signal.display.subtitle;
-
-				if (Object.keys(displayObj).length > 0) {
-					logObj.display = displayObj;
-				}
 			}
 
 			// Log at the determined level

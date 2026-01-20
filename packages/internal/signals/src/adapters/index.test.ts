@@ -17,7 +17,9 @@ import {
 	defaultAdapters,
 	type LogsAdapterOptions,
 	logsAdapter,
+	type RendererMap,
 	type SignalAdapter,
+	type SignalRenderer,
 	type TerminalAdapterOptions,
 	terminalAdapter,
 } from "./index.js";
@@ -46,9 +48,16 @@ describe("adapters/index", () => {
 
 		it("exports types correctly (type inference test)", () => {
 			// These are compile-time type checks - if they compile, types are exported correctly
-			const terminalOpts: TerminalAdapterOptions = { showTimestamp: true };
+			const renderers: RendererMap = {
+				test: () => "output",
+			};
+			const renderer: SignalRenderer = (s) => s.name;
+			const terminalOpts: TerminalAdapterOptions = { renderers, showTimestamp: true };
 			const logsOpts: LogsAdapterOptions = { logger: pino({ level: "silent" }) };
-			const defaultOpts: DefaultAdaptersOptions = { logger: pino({ level: "silent" }) };
+			const defaultOpts: DefaultAdaptersOptions = {
+				renderers,
+				logger: pino({ level: "silent" }),
+			};
 			const createConfig: CreateAdapterConfig = {
 				name: "test",
 				onSignal: () => {},
@@ -59,27 +68,23 @@ describe("adapters/index", () => {
 			expect(logsOpts).toBeDefined();
 			expect(defaultOpts).toBeDefined();
 			expect(adapter).toBeDefined();
+			expect(renderer).toBeDefined();
 		});
 	});
 
 	describe("defaultAdapters()", () => {
 		it("returns only terminal adapter when no logger provided", () => {
-			const adapters = defaultAdapters({});
-
-			expect(adapters).toHaveLength(1);
-			expect(adapters[0].name).toBe("terminal");
-		});
-
-		it("returns only terminal adapter with empty options", () => {
-			const adapters = defaultAdapters();
+			const renderers: RendererMap = { test: () => "output" };
+			const adapters = defaultAdapters({ renderers });
 
 			expect(adapters).toHaveLength(1);
 			expect(adapters[0].name).toBe("terminal");
 		});
 
 		it("returns terminal and logs adapters when logger provided", () => {
+			const renderers: RendererMap = { test: () => "output" };
 			const logger = pino({ level: "silent" });
-			const adapters = defaultAdapters({ logger });
+			const adapters = defaultAdapters({ renderers, logger });
 
 			expect(adapters).toHaveLength(2);
 			expect(adapters[0].name).toBe("terminal");
@@ -88,7 +93,11 @@ describe("adapters/index", () => {
 
 		it("passes terminal options to terminal adapter", () => {
 			const output: string[] = [];
+			const renderers: RendererMap = {
+				"test:start": () => "Test output",
+			};
 			const adapters = defaultAdapters({
+				renderers,
 				terminal: {
 					write: (text: string) => output.push(text),
 					showTimestamp: true,
@@ -117,8 +126,10 @@ describe("adapters/index", () => {
 					},
 				},
 			);
+			const renderers: RendererMap = { test: () => "output" };
 
 			const adapters = defaultAdapters({
+				renderers,
 				logger,
 				logs: { includePayload: false },
 			});
@@ -136,19 +147,24 @@ describe("adapters/index", () => {
 		});
 
 		it("returns adapters that subscribe to all signals by default", () => {
+			const renderers: RendererMap = { test: () => "output" };
 			const logger = pino({ level: "silent" });
-			const adapters = defaultAdapters({ logger });
+			const adapters = defaultAdapters({ renderers, logger });
 
 			for (const adapter of adapters) {
-				expect(adapter.patterns).toContain("*");
+				expect(adapter.patterns).toContain("**");
 			}
 		});
 	});
 
 	describe("integration - adapters process signals", () => {
-		it("terminal adapter processes real signals", () => {
+		it("terminal adapter renders signals with matching renderer", () => {
 			const output: string[] = [];
+			const renderers: RendererMap = {
+				"task:complete": (s) => `Task ${(s.payload as { taskId: string }).taskId} done`,
+			};
 			const adapter = terminalAdapter({
+				renderers,
 				write: (text: string) => output.push(text),
 				colors: false,
 			});
@@ -157,7 +173,25 @@ describe("adapters/index", () => {
 			adapter.onSignal(signal);
 
 			expect(output.length).toBe(1);
-			expect(output[0]).toContain("task:complete");
+			expect(output[0]).toContain("Task 123 done");
+		});
+
+		it("terminal adapter skips signals without renderer", () => {
+			const output: string[] = [];
+			const renderers: RendererMap = {
+				"task:complete": () => "Done",
+			};
+			const adapter = terminalAdapter({
+				renderers,
+				write: (text: string) => output.push(text),
+				colors: false,
+			});
+
+			const signal = createSignal("unknown:signal", { taskId: "123" });
+			adapter.onSignal(signal);
+
+			// No output for signals without renderer
+			expect(output.length).toBe(0);
 		});
 
 		it("logs adapter processes real signals", () => {
@@ -208,7 +242,12 @@ describe("adapters/index", () => {
 				},
 			);
 
+			const renderers: RendererMap = {
+				"plan:created": (s) => `Plan with ${(s.payload as { tasks: number }).tasks} tasks`,
+			};
+
 			const adapters = defaultAdapters({
+				renderers,
 				logger,
 				terminal: {
 					write: (text: string) => terminalOutput.push(text),
@@ -227,8 +266,8 @@ describe("adapters/index", () => {
 			expect(terminalOutput.length).toBeGreaterThan(0);
 			expect(logMessages.length).toBeGreaterThan(0);
 
-			// Verify terminal output contains signal info
-			expect(terminalOutput[0]).toContain("plan:created");
+			// Verify terminal output contains rendered string
+			expect(terminalOutput[0]).toContain("Plan with 5 tasks");
 
 			// Verify log contains structured signal data
 			const lastLog = logMessages[logMessages.length - 1] as Record<string, unknown>;
@@ -236,30 +275,35 @@ describe("adapters/index", () => {
 		});
 	});
 
-	describe("lifecycle methods", () => {
-		it("terminal adapter has lifecycle methods", () => {
-			const adapter = terminalAdapter();
+	describe("adapter configuration", () => {
+		it("terminal adapter has correct name", () => {
+			const renderers: RendererMap = {};
+			const adapter = terminalAdapter({ renderers });
 
-			expect(adapter.onStart).toBeDefined();
-			expect(adapter.onStop).toBeDefined();
+			expect(adapter.name).toBe("terminal");
 		});
 
 		it("logs adapter has lifecycle methods", () => {
 			const logger = pino({ level: "silent" });
 			const adapter = logsAdapter({ logger });
 
+			// Logs adapter has lifecycle methods for logging start/stop
 			expect(adapter.onStart).toBeDefined();
 			expect(adapter.onStop).toBeDefined();
 		});
 
-		it("defaultAdapters all have lifecycle methods", () => {
+		it("defaultAdapters can be called with optional lifecycle methods", async () => {
+			const renderers: RendererMap = {};
 			const logger = pino({ level: "silent" });
-			const adapters = defaultAdapters({ logger });
+			const adapters = defaultAdapters({ renderers, logger });
 
+			// All adapters support optional lifecycle via ?.
 			for (const adapter of adapters) {
-				expect(adapter.onStart).toBeDefined();
-				expect(adapter.onStop).toBeDefined();
+				await adapter.onStart?.();
+				await adapter.onStop?.();
 			}
+			// No error should be thrown
+			expect(true).toBe(true);
 		});
 	});
 });

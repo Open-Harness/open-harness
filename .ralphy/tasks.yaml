@@ -132,7 +132,7 @@ tasks:
   # Phase 2: Refactor Terminal Adapter
   # ═══════════════════════════════════════════════════════════════
   - title: "2.1: Add RendererMap type to terminal adapter (TR-2.1)"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Refactor Terminal Adapter"
     details: |
@@ -171,7 +171,7 @@ tasks:
       - "Typecheck passes"
 
   - title: "2.2: Refactor terminalAdapter to accept renderers (TR-2.2)"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Refactor Terminal Adapter"
     details: |
@@ -217,7 +217,7 @@ tasks:
       - "No signal.display references remain"
 
   - title: "2.3: Remove inference logic from terminal adapter (TR-2.3)"
-    completed: false
+    completed: true
     parallel_group: 2
     phase: "Phase 2: Refactor Terminal Adapter"
     details: |
@@ -258,7 +258,7 @@ tasks:
   # Phase 3: Refactor Logs Adapter
   # ═══════════════════════════════════════════════════════════════
   - title: "3.1: Simplify logsAdapter (TR-3.1)"
-    completed: false
+    completed: true
     parallel_group: 3
     phase: "Phase 3: Refactor Logs Adapter"
     details: |
@@ -429,7 +429,7 @@ tasks:
   # Phase 5: Cleanup
   # ═══════════════════════════════════════════════════════════════
   - title: "5.1: Delete inference test file (TR-5.1)"
-    completed: false
+    completed: true
     parallel_group: 5
     phase: "Phase 5: Cleanup"
     details: |
@@ -460,7 +460,7 @@ tasks:
       - "Typecheck passes"
 
   - title: "5.2: Update terminal adapter tests (TR-5.2)"
-    completed: false
+    completed: true
     parallel_group: 5
     phase: "Phase 5: Cleanup"
     details: |

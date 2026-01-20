@@ -226,87 +226,65 @@ describe("SignalAdapter", () => {
 		});
 	});
 
-	describe("adapter with display metadata", () => {
-		it("receives signals with display metadata", () => {
-			let receivedDisplay: unknown;
+	describe("adapter receives pure data signals", () => {
+		it("receives signals with payload data", () => {
+			let receivedPayload: unknown;
 
 			const adapter = createAdapter({
-				name: "display-test",
+				name: "payload-test",
 				onSignal: (signal) => {
-					receivedDisplay = signal.display;
+					receivedPayload = signal.payload;
 				},
 			});
 
-			const signal = createSignal(
-				"plan:created",
-				{ taskCount: 5 },
-				{
-					display: {
-						type: "notification",
-						title: "Plan created",
-						status: "success",
-						icon: "✓",
-					},
-				},
-			);
+			const signal = createSignal("plan:created", { taskCount: 5, milestones: ["M1", "M2"] });
 
 			adapter.onSignal(signal);
 
-			expect(receivedDisplay).toEqual({
-				type: "notification",
-				title: "Plan created",
-				status: "success",
-				icon: "✓",
-			});
+			expect(receivedPayload).toEqual({ taskCount: 5, milestones: ["M1", "M2"] });
 		});
 
-		it("handles signals without display metadata", () => {
-			let receivedDisplay: unknown = "not-set";
+		it("receives signal metadata (id, name, timestamp)", () => {
+			let receivedSignal: unknown;
 
 			const adapter = createAdapter({
-				name: "no-display-test",
+				name: "metadata-test",
 				onSignal: (signal) => {
-					receivedDisplay = signal.display;
+					receivedSignal = signal;
+				},
+			});
+
+			const signal = createSignal("task:complete", { taskName: "Deploy" });
+			adapter.onSignal(signal);
+
+			const sig = receivedSignal as { id: string; name: string; timestamp: string };
+			expect(sig.id).toBeDefined();
+			expect(sig.name).toBe("task:complete");
+			// Timestamp is an ISO string
+			expect(typeof sig.timestamp).toBe("string");
+			expect(sig.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}/); // ISO date format
+		});
+
+		it("signals are pure data without display metadata", () => {
+			let receivedSignal: unknown;
+
+			const adapter = createAdapter({
+				name: "pure-data-test",
+				onSignal: (signal) => {
+					receivedSignal = signal;
 				},
 			});
 
 			const signal = createSignal("simple:signal", { data: "test" });
 			adapter.onSignal(signal);
 
-			expect(receivedDisplay).toBeUndefined();
-		});
-
-		it("receives dynamic title function in display", () => {
-			let receivedSignal: unknown;
-
-			const adapter = createAdapter({
-				name: "dynamic-title-test",
-				onSignal: (signal) => {
-					receivedSignal = signal;
-				},
-			});
-
-			const signal = createSignal(
-				"task:complete",
-				{ taskName: "Deploy" },
-				{
-					display: {
-						type: "notification",
-						title: (payload: unknown) => `Completed: ${(payload as { taskName: string }).taskName}`,
-						status: "success",
-					},
-				},
-			);
-
-			adapter.onSignal(signal);
-
-			// Verify the signal has the display with function
-			const sig = receivedSignal as { display?: { title?: unknown } };
-			expect(typeof sig.display?.title).toBe("function");
-
-			// Verify function works correctly
-			const titleFn = sig.display?.title as (p: unknown) => string;
-			expect(titleFn({ taskName: "Deploy" })).toBe("Completed: Deploy");
+			// Signals are pure data - no display property exists
+			const sig = receivedSignal as Record<string, unknown>;
+			expect(sig).not.toHaveProperty("display");
+			expect(sig).toHaveProperty("id");
+			expect(sig).toHaveProperty("name");
+			expect(sig).toHaveProperty("payload");
+			expect(sig).toHaveProperty("timestamp");
 		});
 	});
 });
