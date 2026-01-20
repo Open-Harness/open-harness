@@ -23,6 +23,8 @@ READ packages/sdk/docs/*
 - N/A (no persistence layer in this package) (013-anthropic-refactor)
 - TypeScript 5.x (strict mode enabled in tsconfig.json) + @anthropic-ai/claude-agent-sdk ^0.1.76, zod ^4.2.1, yaml ^2.4.5 (016-pause-resume)
 - In-memory (Map-based session state store, no persistence to disk per spec assumptions) (016-pause-resume)
+- TypeScript 5.x (strict mode enabled) + `effect`, `@effect/schema`, `@effect/platform`, `@anthropic-ai/claude-agent-sdk` (001-effect-refactor)
+- Built-in via Effect Service/Layer pattern (memory default, SQLite adapter) (001-effect-refactor)
 
 - TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod (002-sdk-validation)
 
@@ -53,9 +55,9 @@ bun run test:live   # Integration tests (requires auth)
 TypeScript 5.x (strict mode): Follow standard conventions
 
 ## Recent Changes
+- 001-effect-refactor: Added TypeScript 5.x (strict mode enabled) + `effect`, `@effect/schema`, `@effect/platform`, `@anthropic-ai/claude-agent-sdk`
 - 016-pause-resume: Added TypeScript 5.x (strict mode enabled in tsconfig.json) + @anthropic-ai/claude-agent-sdk ^0.1.76, zod ^4.2.1, yaml ^2.4.5
 - 013-anthropic-refactor: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod
-- 010-transport-architecture: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod
 
 
 <!-- MANUAL ADDITIONS START -->

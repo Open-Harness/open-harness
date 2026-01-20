@@ -1,66 +1,67 @@
-# Project Constitution
+# Project Constitution: Effect Workflow System (core-v2)
 
 Machine-checkable rules for Ralphy task validation. MUST rules block execution, SHOULD rules warn.
 
-> Project: open-harness
-> Created: 2026-01-19
+> Based on `.specify/memory/constitution.md` - Open Harness Core Principles
 
 ---
 
 ## MUST Rules (Critical - Block on Violation)
 
-### MUST-001: No Fabricated Fixtures
+### MUST-001: Event-Based Architecture
 
-Tasks MUST NOT allow fabricated fixtures, mock harnesses, or hand-written fake data.
+All state changes MUST flow through immutable events. Events are typed facts about what happened.
 
 **Grep patterns that indicate violation:**
-- `mock harness`
-- `createMockHarness`
-- `createSimpleMockHarness`
-- `createDeterministicMockHarness`
-- `fake.*fixture`
-- `fabricated`
-- `hand-written.*mock`
+- `state\s*=`
+- `state\..*\s*=`
+- `mutate`
+- `Object\.assign.*state`
+- `\.push\(`
+- `\.pop\(`
+- `\.splice\(`
 
 **Why this matters:**
-Fabricated fixtures prove nothing about real SDK behavior. All fixtures must come from real recordings.
+Event sourcing requires immutability. Direct state mutation breaks time-travel debugging and deterministic replay.
 
 ---
 
-### MUST-002: No Rationalization Language
+### MUST-002: Pure Handlers
 
-Tasks MUST NOT contain language that rationalizes rule violations.
+Handlers MUST be pure functions with no side effects. They receive (event, state) and return { state, events[] }.
 
 **Grep patterns that indicate violation:**
-- `That's OK for`
-- `acceptable.*mock`
-- `just for testing`
-- `temporarily`
-- `will fix later`
-- `good enough for now`
-- `for now`
-- `OK to use mock`
-- `fine to use fake`
+- `fetch\(`
+- `axios`
+- `http\.`
+- `fs\.(read|write)`
+- `console\.(log|error|warn)`
+- `Math\.random`
+- `Date\.now`
+- `new Date\(\)`
+- `setTimeout`
+- `setInterval`
 
 **Why this matters:**
-If you know it's wrong, don't do it. Rationalization indicates awareness of violation.
+Handler purity enables deterministic replay. Same inputs must always produce same outputs.
 
 ---
 
-### MUST-003: Real API Required
+### MUST-003: Effect Stays Internal
 
-Tasks involving SDK/API integration MUST run against the real system.
+Effect types MUST NOT appear in public API exports. Consumers see Promises and plain objects.
 
-**Grep patterns that indicate violation:**
-- `simulate.*api`
-- `fake.*server`
-- `mock.*endpoint`
-- `skip.*real`
-- `without.*api`
-- `bypass.*network`
+**Grep patterns that indicate violation in index.ts:**
+- `export.*Effect`
+- `export.*Layer`
+- `export.*Context\.Tag`
+- `export.*Stream`
+- `export.*Exit`
+- `export.*Cause`
+- `export.*Fiber`
 
 **Why this matters:**
-Simulated systems hide integration bugs that only appear with real APIs.
+Clean DX is essential for adoption. Consumers should not need to learn Effect to use the library.
 
 ---
 
@@ -74,25 +75,75 @@ Tasks MUST include specific, runnable verification commands.
 - `make sure.*correct`
 - `ensure.*properly`
 - `test manually`
-- `should work`
 
 **Why this matters:**
 Vague verification leads to incomplete testing. Every task needs a provable command.
 
 ---
 
-### MUST-005: Factory Pattern for Fixtures
+### MUST-005: No Mock Fixtures for Integration
 
-Tasks that create fixtures MUST use a factory pattern loading from real recordings.
+Integration tests MUST NOT use fabricated fixtures. All fixtures MUST come from real SDK/system interactions.
 
 **Grep patterns that indicate violation:**
-- `manually create.*fixture`
-- `hand-write.*fixture`
-- `hardcode.*response`
-- `inline.*mock`
+- `mock harness`
+- `mock.*fixture`
+- `fake.*fixture`
+- `stub.*response`
+- `fabricated.*data`
+- `manually.*created.*fixture`
 
 **Why this matters:**
-Factory pattern ensures all fixtures are traceable to real recordings.
+Mock-based integration tests prove nothing about real system behavior. They mask bugs that only appear with real SDK responses.
+
+---
+
+### MUST-006: No Console Output
+
+Production code MUST NOT use console.log/error/warn. Use Effect logger or structured output functions.
+
+**Grep patterns that indicate violation:**
+- `console\.log`
+- `console\.error`
+- `console\.warn`
+- `console\.debug`
+- `console\.info`
+
+**Why this matters:**
+Structured output is queryable, testable, and maintainable. Raw console calls create noise and indicate sloppy design.
+
+---
+
+### MUST-007: Structured Output Required for Agents
+
+All agents MUST have an `outputSchema` defined using Zod. This is not optional.
+
+**Grep patterns that indicate violation:**
+- `outputSchema\?\s*:`
+- `outputSchema:\s*undefined`
+- `agent\({[^}]*}\)`
+
+**Why this matters:**
+Structured output ensures workflow state updates are predictable and type-safe. Handler logic can rely on known output shapes.
+
+---
+
+### MUST-008: No Rationalization Language
+
+Tasks MUST NOT contain language that rationalizes rule violations.
+
+**Grep patterns that indicate violation:**
+- `That's OK for`
+- `acceptable.*mock`
+- `just for testing`
+- `temporarily`
+- `will fix later`
+- `good enough for now`
+- `we can skip`
+- `not needed for now`
+
+**Why this matters:**
+If you know it's wrong, don't do it. Rationalization indicates awareness of violation.
 
 ---
 
@@ -100,7 +151,19 @@ Factory pattern ensures all fixtures are traceable to real recordings.
 
 ### SHOULD-001: Reference Source Documentation
 
-Tasks SHOULD reference relevant docs (CLAUDE.md, README, DEFINITION_OF_DONE.md) where applicable.
+Tasks SHOULD reference the original spec documents where applicable.
+
+**Good:**
+```yaml
+details: |
+  Per spec.md FR-028: Tape MUST provide rewind()
+```
+
+**Bad:**
+```yaml
+details: |
+  Add a rewind function
+```
 
 ---
 
@@ -117,6 +180,7 @@ Tasks SHOULD be atomic - completable in one focused session.
 **Indicators of non-atomic:**
 - Tasks with more than 10 steps
 - Tasks spanning multiple systems
+- Tasks requiring multiple agent calls
 
 ---
 
@@ -126,36 +190,71 @@ Tasks SHOULD define explicit success criteria beyond "it works."
 
 **Good:**
 ```yaml
-VERIFY:
-- bun test passes with 0 failures
-- Recording file exists in database
+verify:
+  - command: "bun run typecheck"
+    expect: "Zero errors"
+  - command: "bun test src/tape/Tape.test.ts"
+    expect: "All tests pass"
 ```
 
 **Bad:**
 ```yaml
-VERIFY:
-- It works
-- Tests pass
+verify:
+  - command: "bun test"
+    expect: "It works"
 ```
+
+---
+
+### SHOULD-005: Cross-Reference Spec Requirements
+
+Tasks SHOULD link to specific FR-XXX requirements from spec.md.
+
+**Good:**
+```yaml
+title: "3.3: Implement stepBack() (FR-030)"
+```
+
+---
+
+### SHOULD-006: Group Related Tasks
+
+Tasks in the same logical unit SHOULD share `parallel_group` numbers.
 
 ---
 
 ## Project-Specific Rules
 
-### MUST-006: CLAUDE.md Fixture Rule
+### MUST-009: Branch from dev
 
-Tasks MUST NOT violate the CLAUDE.md rule about fixtures.
-
-**Grep patterns that indicate violation:**
-- `fabricate.*fixture`
-- `create.*fake.*data`
-- `made-up.*data`
+All feature work MUST branch from `dev`, not `master`.
 
 **Why this matters:**
-CLAUDE.md explicitly states: "You are NOT allowed to fabricate fixtures"
+`master` is the stable production branch. Branching from `master` causes severe merge conflicts.
+
+---
+
+### MUST-010: Beads Sync Before Session End
+
+ALWAYS run `bd sync` before ending any session. Unpushed beads changes cause problems for other agents.
+
+**Grep patterns that indicate violation:**
+- `skip.*sync`
+- `no need.*sync`
+
+---
+
+### MUST-011: Claude Code Auth Only
+
+NEVER set or look for `ANTHROPIC_API_KEY`. Use Claude Code subscription auth.
+
+**Grep patterns that indicate violation:**
+- `ANTHROPIC_API_KEY`
+- `process\.env\.ANTHROPIC`
+- `apiKey`
 
 ---
 
 ## Changelog
 
-- 2026-01-19: Initial constitution for golden recording PRD cycle
+- 2026-01-21: Initial constitution from Speckit constitution adapted for 001-effect-refactor
