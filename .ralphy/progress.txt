@@ -418,3 +418,57 @@
 - stepBack() is THE key feature - enables debugging by reversing through history
 - Deterministic replay verified: 100 runs produce identical state
 
+## 2026-01-21T18:04:00Z - Phase 4 WorkflowRuntime Context.Tag
+**Task**: Create WorkflowRuntime Context.Tag and WorkflowRuntimeService interface (first task of Phase 4)
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/workflow/WorkflowRuntime.ts with:
+  - WorkflowRuntimeErrorCode type: HANDLER_NOT_FOUND, HANDLER_FAILED, AGENT_FAILED, STORE_UNAVAILABLE, EXECUTION_FAILED, TERMINATED, ABORTED
+  - WorkflowRuntimeError class with typed codes and cause preservation
+  - RuntimeCallbacks<S> interface: onEvent, onStateChange, onError
+  - RuntimeRunOptions<S> interface: initialEvent, initialState, handlers, agents, until, record, sessionId, callbacks, abortSignal, model
+  - RuntimeResult<S> interface: state, events, sessionId, terminated, aborted
+  - WorkflowRuntimeService interface with Effect-based methods:
+    - run(options) → Effect<RuntimeResult, WorkflowRuntimeError | StoreError | ProviderError>
+    - processEvent(event, state, handlers) → Effect<{ state, events }, WorkflowRuntimeError>
+  - WorkflowRuntime Context.Tag("@core-v2/WorkflowRuntime") for Effect dependency injection
+  - makeWorkflowRuntimeService Effect factory that:
+    - Depends on LLMProvider, Store, EventBus (via yield*)
+    - Implements full event loop with Queue for event sequencing
+    - Implements sequential event processing (FR-003)
+    - Implements handler execution with error recovery (emits error:occurred events)
+    - Implements agent activation with guard conditions (FR-015)
+    - Implements termination condition checking (FR-040)
+    - Implements recording to Store when record:true (FR-042)
+    - Implements callbacks for event/state change notifications
+  - WorkflowRuntimeLive Layer using Layer.effect(WorkflowRuntime, makeWorkflowRuntimeService)
+  - PublicWorkflowRuntime interface for Promise-based public API (Effect-free)
+- Created packages/core-v2/src/workflow/index.ts re-exporting consumer-facing types:
+  - WorkflowRuntimeError, WorkflowRuntimeErrorCode (error handling)
+  - RuntimeCallbacks, RuntimeRunOptions, RuntimeResult (configuration types)
+  - PublicWorkflowRuntime (consumer-facing Promise-based interface)
+- Created packages/core-v2/tests/workflow-runtime.test.ts with 30 comprehensive tests covering:
+  - WorkflowRuntimeError class with all error codes and cause preservation
+  - WorkflowRuntime Context.Tag service identifier and dependency injection
+  - Event loop execution (initial event, chain of events, termination)
+  - Sequential event processing (FR-003 compliance)
+  - Handler processing (found, not found, throwing handlers)
+  - Callback notifications (onEvent, onStateChange, onError)
+  - Agent activation (event matching, guard conditions, onOutput events)
+  - Recording integration (record:true persists events, record:false does not)
+  - EventBus integration (events emitted to subscribers)
+  - Layer integration and service composition
+  - Edge cases (empty handlers, immediate termination, many events)
+**Verification**:
+- bun run test: PASS (349 tests total, 30 new workflow-runtime tests)
+- bun run typecheck: PASS
+- bun run lint: PASS (2 expected warnings for `any` types in Tape.ts and test file)
+**Notes**:
+- WorkflowRuntime is the heart of the event-sourcing system
+- Implements the core loop: Event → Handler → (State + Events) → Next Event
+- Uses Effect Queue for bounded event backpressure (1000 events max)
+- Uses Effect Ref for thread-safe state management
+- Depends on LLMProvider, Store, EventBus (injected via Effect Layer pattern)
+- Handler errors are caught and converted to error:occurred events (graceful degradation)
+- Agent execution includes structured output via Zod→JSON Schema conversion
+

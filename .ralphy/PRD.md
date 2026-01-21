@@ -87,7 +87,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### WorkflowRuntime (Event Loop)
 
-- [ ] Create packages/core-v2/src/workflow/WorkflowRuntime.ts with WorkflowRuntime Context.Tag("@core-v2/WorkflowRuntime") and WorkflowRuntimeService interface
+- [x] Create packages/core-v2/src/workflow/WorkflowRuntime.ts with WorkflowRuntime Context.Tag("@core-v2/WorkflowRuntime") and WorkflowRuntimeService interface
 - [ ] Implement event loop in WorkflowRuntime: dequeue event → find handler → execute handler(event, state) → get new state + emitted events → queue emitted events → repeat per spec FR-001
 - [ ] Implement event routing in WorkflowRuntime that matches event.name to registered handler via HandlerRegistry per spec FR-002
 - [ ] Implement sequential event processing in WorkflowRuntime - one event fully processed before next using Effect.forEach with concurrency:1 per spec FR-003
