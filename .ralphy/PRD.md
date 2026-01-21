@@ -69,17 +69,17 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 3: User Story 1 - Time-Travel Debugging (THE killer feature)
 
-- [ ] Create packages/core-v2/src/tape/Tape.ts with Tape interface: position, length, current, state, events, and TapeStatus type ("idle"|"playing"|"paused"|"recording") per specs/001-effect-refactor/contracts/tape.ts
-- [ ] Implement rewind() method in src/tape/Tape.ts that returns to position 0 with initial state per spec FR-028
-- [ ] Implement step() method in src/tape/Tape.ts that advances one event forward, clamping at end per spec FR-029
-- [ ] Implement stepBack() method in src/tape/Tape.ts - THE KEY FEATURE - goes backward one event, clamps at 0, recomputes state to previous position per spec FR-030
-- [ ] Implement stepTo(n) method in src/tape/Tape.ts that jumps to any position with clamping [0, length-1] per spec FR-031
-- [ ] Implement stateAt(n) method in src/tape/Tape.ts that computes state at position n WITHOUT changing current position
-- [ ] Implement computeState(events, handlers, initialState, toPosition) utility in src/tape/Tape.ts that replays handlers from position 0 to derive state at any position per spec FR-038
-- [ ] Add isRecording and isReplaying computed flags to Tape based on status per spec FR-037
-- [ ] Create packages/core-v2/src/tape/TapeControls.ts with TapeControls subset interface for React (control methods only) per specs/001-effect-refactor/contracts/tape.ts
-- [ ] Create packages/core-v2/src/tape/index.ts re-exporting Tape, TapeControls, TapeStatus
-- [ ] Create packages/core-v2/tests/tape.test.ts with tests for: stepBack at position 0 stays at 0, step past end stays at end, stepTo clamps correctly, state recomputation is deterministic
+- [x] Create packages/core-v2/src/tape/Tape.ts with Tape interface: position, length, current, state, events, and TapeStatus type ("idle"|"playing"|"paused"|"recording") per specs/001-effect-refactor/contracts/tape.ts
+- [x] Implement rewind() method in src/tape/Tape.ts that returns to position 0 with initial state per spec FR-028
+- [x] Implement step() method in src/tape/Tape.ts that advances one event forward, clamping at end per spec FR-029
+- [x] Implement stepBack() method in src/tape/Tape.ts - THE KEY FEATURE - goes backward one event, clamps at 0, recomputes state to previous position per spec FR-030
+- [x] Implement stepTo(n) method in src/tape/Tape.ts that jumps to any position with clamping [0, length-1] per spec FR-031
+- [x] Implement stateAt(n) method in src/tape/Tape.ts that computes state at position n WITHOUT changing current position
+- [x] Implement computeState(events, handlers, initialState, toPosition) utility in src/tape/Tape.ts that replays handlers from position 0 to derive state at any position per spec FR-038
+- [x] Add isRecording and isReplaying computed flags to Tape based on status per spec FR-037
+- [x] Create packages/core-v2/src/tape/TapeControls.ts with TapeControls subset interface for React (control methods only) per specs/001-effect-refactor/contracts/tape.ts
+- [x] Create packages/core-v2/src/tape/index.ts re-exporting Tape, TapeControls, TapeStatus
+- [x] Create packages/core-v2/tests/tape.test.ts with tests for: stepBack at position 0 stays at 0, step past end stays at end, stepTo clamps correctly, state recomputation is deterministic
 
 ---
 

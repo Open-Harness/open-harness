@@ -351,3 +351,70 @@
 - Uses Map storage keyed by agent name for O(1) lookup
 - findMatching() combines activatesOn check with when guard evaluation
 
+## 2026-01-21T17:54:00Z - Phase 3 Tape System (Complete Phase)
+**Task**: Implement complete Tape time-travel debugging system (all 11 Phase 3 tasks)
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/tape/Tape.ts with:
+  - TapeStatus type: "idle" | "playing" | "paused" | "recording"
+  - TapeMetadata interface: sessionId, eventCount, duration?, status
+  - Tape<S> interface with all properties:
+    - position (current 0-based index)
+    - length (total events)
+    - current (event at position)
+    - state (computed state via handler replay)
+    - events (readonly event array)
+    - isRecording, isReplaying (computed flags from status)
+    - status (TapeStatus)
+  - VCR Controls (immutable - return new Tape instances):
+    - rewind() - returns to position 0, status idle
+    - step() - advances 1, clamps at end (FR-029)
+    - stepBack() - THE KEY FEATURE - goes back 1, clamps at 0 (FR-030)
+    - stepTo(n) - jumps to any position, clamps [0, length-1] (FR-031)
+    - play() - async play to end, sets status paused
+    - playTo(n) - async play to position n
+    - pause() - sets status to paused
+  - Inspection Methods:
+    - stateAt(n) - compute state at position WITHOUT changing current
+    - eventAt(n) - get event at position WITHOUT changing current
+  - TapeControls<S> interface (React hook subset with void returns)
+  - TapeConfig<S> interface for factory configuration
+  - computeState() utility - event sourcing core (FR-038):
+    - Replays handlers from position 0 to derive state
+    - Handles negative positions (returns initial state)
+    - Skips events without registered handlers
+    - Clamps to valid range
+  - createTape() factory function
+  - createTapeFromDefinitions() convenience factory
+  - TapeImpl class with state caching for performance
+- Created packages/core-v2/src/tape/index.ts re-exporting all types and factories
+- Created packages/core-v2/tests/tape.test.ts with 84 comprehensive tests:
+  - TapeStatus and TapeMetadata type tests
+  - computeState utility tests (determinism, clamping, empty handling)
+  - createTape and createTapeFromDefinitions factory tests
+  - Position & length tests
+  - Current event tests
+  - State computation and caching tests
+  - Events array tests
+  - Status flags tests (isRecording, isReplaying)
+  - VCR Controls: rewind (FR-028), step (FR-029), stepBack (FR-030), stepTo (FR-031)
+  - play (FR-032) and playTo (FR-033) tests
+  - pause (FR-034) tests
+  - stateAt and eventAt inspection tests
+  - TapeControls interface tests
+  - Edge cases from spec (position 0 stepBack, past end step, clamping)
+  - Deterministic replay (SC-004) - 100x same state
+  - Immutability tests
+  - Full time-travel debugging workflow tests
+**Verification**:
+- bun run test: PASS (319 tests total, 84 new tape tests)
+- bun run typecheck: PASS
+- bun run lint: PASS (1 expected warning for `any` type in createTapeFromDefinitions)
+**Notes**:
+- All VCR controls return NEW Tape instances (immutable pattern)
+- State is computed via event sourcing - replay handlers to derive state
+- Caching prevents recomputation for current position
+- TapeControls subset for React returns void (state updates trigger re-render)
+- stepBack() is THE key feature - enables debugging by reversing through history
+- Deterministic replay verified: 100 runs produce identical state
+
