@@ -136,3 +136,39 @@
 - Guard conditions (when) allow conditional agent activation based on state
 - createAgentRegistry validates unique agent names, throws on duplicates
 
+## 2026-01-21T17:22:19Z - Phase 2 Effect Service Tags: Store
+**Task**: Create Store Context.Tag and StoreService interface
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/store/Store.ts with:
+  - SessionIdSchema branded type using Schema.String.pipe(Schema.brand("SessionId"))
+  - SessionId type and utility functions: makeSessionId(), generateSessionId()
+  - SessionMetadata interface: id, createdAt, lastEventAt?, eventCount, workflowName?
+  - StateSnapshot<S> interface: data, position, lastEventId?
+  - StoreError class with typed codes: NOT_FOUND, WRITE_FAILED, READ_FAILED, CORRUPTED
+  - StoreService interface with Effect-based methods:
+    - append(sessionId, event) → Effect<void, StoreError>
+    - events(sessionId) → Effect<readonly AnyEvent[], StoreError>
+    - sessions() → Effect<readonly SessionMetadata[], StoreError>
+    - clear(sessionId) → Effect<void, StoreError>
+    - snapshot(sessionId, position) → Effect<StateSnapshot | undefined, StoreError>
+  - Store Context.Tag("@core-v2/Store") for Effect dependency injection
+  - PublicStore interface for Promise-based public API (Effect-free)
+- Created packages/core-v2/src/store/index.ts re-exporting consumer-facing types (NO Effect internals)
+- Created packages/core-v2/tests/store.test.ts with 23 comprehensive tests covering:
+  - SessionId creation and UUID generation
+  - StoreError class with all error codes
+  - Store Context.Tag service identifier and dependency injection
+  - SessionMetadata and StateSnapshot interfaces
+  - StoreService interface contract (all methods)
+  - Error propagation and recovery with Effect.catchAll
+  - Service composition with Effect.gen
+**Verification**:
+- bun run test: PASS (106 tests total, 23 new store tests)
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- Store Context.Tag uses Effect Layer pattern for dependency injection
+- StoreError.cause uses `override readonly` to properly extend Error in ES2022+
+- PublicStore provides Effect-free interface for consumers
+- Implementations (MemoryStore, SqliteStore) will be added in Phase 5
+

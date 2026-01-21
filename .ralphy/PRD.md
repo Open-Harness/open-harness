@@ -59,7 +59,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Effect Service Tags
 
-- [ ] Create packages/core-v2/src/store/Store.ts with Store Context.Tag("@core-v2/Store") and StoreService interface: append, events, sessions, clear, snapshot? per specs/001-effect-refactor/contracts/store.ts
+- [x] Create packages/core-v2/src/store/Store.ts with Store Context.Tag("@core-v2/Store") and StoreService interface: append, events, sessions, clear, snapshot? per specs/001-effect-refactor/contracts/store.ts
 - [ ] Create packages/core-v2/src/provider/Provider.ts with LLMProvider Context.Tag("@core-v2/LLMProvider") and LLMProviderService interface with query, stream methods
 - [ ] Create packages/core-v2/src/event/EventBus.ts with EventBus Context.Tag("@core-v2/EventBus") and EventBusService interface: emit, subscribe, unsubscribe
 - [ ] Create packages/core-v2/src/handler/HandlerRegistry.ts with HandlerRegistry Context.Tag("@core-v2/HandlerRegistry") and HandlerRegistryService interface: register, get, has
