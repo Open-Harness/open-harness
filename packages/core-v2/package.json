@@ -15,11 +15,13 @@
 	"dependencies": {
 		"@anthropic-ai/claude-agent-sdk": "^0.2.5",
 		"@effect/platform": "^0.94.0",
+		"better-sqlite3": "^12.6.2",
 		"effect": "^3.19.0",
 		"zod": "^4.3.4"
 	},
 	"devDependencies": {
 		"@effect/vitest": "^0.27.0",
+		"@types/better-sqlite3": "^7.6.13",
 		"@types/bun": "latest",
 		"typescript": "^5.9.3",
 		"vitest": "^3.1.4"

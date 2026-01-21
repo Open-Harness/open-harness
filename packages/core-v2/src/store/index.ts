@@ -9,6 +9,13 @@
 
 // MemoryStore implementation
 export { createMemoryStore, MemoryStoreLive } from "./MemoryStore.js";
+// SqliteStore implementation
+export {
+	createSqliteStore,
+	makeSqliteStoreLive,
+	type SqliteStoreConfig,
+	SqliteStoreMemoryLive,
+} from "./SqliteStore.js";
 // Types and interfaces
 // SessionId utilities
 export type {

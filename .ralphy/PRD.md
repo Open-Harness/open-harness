@@ -123,7 +123,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### Store Implementations
 
 - [x] Create packages/core-v2/src/store/MemoryStore.ts with MemoryStoreLive Layer using Map<sessionId, Event[]> for in-memory storage
-- [ ] Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer using better-sqlite3 or @effect/sql for persistent storage
+- [x] Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer using better-sqlite3 or @effect/sql for persistent storage
 - [ ] Implement Store.append(sessionId, event) in both MemoryStore and SqliteStore that appends event to session's event list, creates session if not exists per spec FR-022
 - [ ] Implement Store.events(sessionId) in both stores that retrieves all events in order, returns empty array if session not found per spec FR-023
 - [ ] Implement Store.sessions() in both stores that returns session metadata (id, eventCount, timestamps) per spec FR-024

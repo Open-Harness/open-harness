@@ -543,3 +543,48 @@
 - Events preserved in chronological order (append-only array)
 - Follows same Layer.effect pattern as EventBusLive and HandlerRegistryLive
 
+## 2026-01-21T18:20:00Z - Phase 5 SqliteStore Implementation
+**Task**: Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/store/SqliteStore.ts with:
+  - SqliteStoreConfig interface for path and WAL mode configuration
+  - SQL schema with events table (id, session_id, name, payload, timestamp, caused_by, position)
+  - Index on session_id + position for efficient queries
+  - Event serialization: JSON.stringify for payload, ISO string for timestamp
+  - Event deserialization: JSON.parse for payload, Date constructor for timestamp
+  - Session metadata derived from GROUP BY queries (no separate sessions table)
+  - makeSqliteStoreService Effect factory using better-sqlite3
+  - makeSqliteStoreLive Layer factory for custom database paths
+  - SqliteStoreMemoryLive pre-configured Layer for in-memory testing
+  - createSqliteStore factory for direct service access
+  - Full StoreService interface implementation:
+    - append(sessionId, event) - auto-positions events, creates session if needed
+    - events(sessionId) - returns events in order, empty array if session not found
+    - sessions() - returns metadata via aggregate query
+    - clear(sessionId) - deletes all events for session
+    - snapshot() - returns undefined (not implemented)
+- Updated packages/core-v2/src/store/index.ts to export SqliteStore types and factories
+- Added better-sqlite3 and @types/better-sqlite3 as dependencies
+- Created packages/core-v2/tests/sqlite-store.test.ts with 31 comprehensive tests:
+  - Append operation tests (new session, multiple events, separate sessions)
+  - Events operation tests (non-existent session, chronological order, property preservation, causedBy)
+  - Sessions operation tests (empty, all sessions, createdAt, lastEventAt, eventCount updates)
+  - Clear operation tests (FR-025, no-op on non-existent, isolation)
+  - Snapshot operation tests (returns undefined)
+  - createSqliteStore factory tests (independent instances, isolation)
+  - File-based persistence tests (across instances, WAL mode, makeSqliteStoreLive)
+  - Edge case tests (1000 events, 100 sessions, empty payloads, complex nested, unicode, special chars)
+  - Layer isolation tests (fresh store per run, composition)
+  - Error handling tests (duplicate event ID → WRITE_FAILED)
+**Verification**:
+- bun run test: PASS (430 tests total, 31 new sqlite-store tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Single table design (events only) - session metadata derived via queries
+- Position field maintains explicit event ordering within sessions
+- JSON serialization for payloads - SQLite doesn't have native JSON column type
+- WAL mode enabled by default for file-based databases (better concurrency)
+- Prepared statements for better performance
+- Timestamps stored as ISO strings, parsed back to Date objects on read
+
