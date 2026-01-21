@@ -7,6 +7,8 @@
  * @module @core-v2/store
  */
 
+// MemoryStore implementation
+export { createMemoryStore, MemoryStoreLive } from "./MemoryStore.js";
 // Types and interfaces
 // SessionId utilities
 export type {

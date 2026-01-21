@@ -507,3 +507,39 @@
 - Tape is included in WorkflowResult for immediate time-travel debugging access
 - Workflow.load() fetches events from Store and creates Tape for replay
 
+## 2026-01-21T18:15:00Z - Phase 5 MemoryStore Implementation
+**Task**: Create packages/core-v2/src/store/MemoryStore.ts with MemoryStoreLive Layer
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/store/MemoryStore.ts with:
+  - SessionState internal interface tracking events and metadata per session
+  - StoreState type using ReadonlyMap<SessionId, SessionState> for immutability
+  - makeMemoryStoreService Effect factory using Ref for thread-safe storage
+  - MemoryStoreLive Layer using Layer.effect(Store, makeMemoryStoreService)
+  - createMemoryStore() factory function for direct access without Layer system
+  - Full StoreService interface implementation:
+    - append(sessionId, event) - creates session if not exists, appends event, updates metadata
+    - events(sessionId) - returns events in order, empty array if session not found (FR-023)
+    - sessions() - returns metadata for all sessions with eventCount, timestamps
+    - clear(sessionId) - removes session and all events, no-op if not exists (FR-025)
+    - snapshot() - returns undefined (MemoryStore does not implement snapshot caching)
+- Updated packages/core-v2/src/store/index.ts to export MemoryStoreLive and createMemoryStore
+- Created packages/core-v2/tests/memory-store.test.ts with 24 comprehensive tests:
+  - Append operation tests (new session, multiple events, separate sessions)
+  - Events operation tests (non-existent session, chronological order, property preservation)
+  - Sessions operation tests (empty, all sessions, createdAt, lastEventAt, eventCount updates)
+  - Clear operation tests (FR-025, no-op on non-existent, isolation)
+  - Snapshot operation tests (returns undefined)
+  - createMemoryStore factory tests (independent instances, isolation)
+  - Edge case tests (1000 events, 100 sessions, concurrent appends, empty/complex payloads)
+  - Layer isolation tests (fresh store per run, composition with other Effects)
+**Verification**:
+- bun run test: PASS (399 tests total, 24 new memory-store tests)
+- bun run lint: PASS (2 pre-existing warnings for `any` types in other files)
+**Notes**:
+- Uses Effect Ref for thread-safe mutable state in functional context
+- Sessions are created lazily on first append
+- Metadata automatically tracks createdAt (first event), lastEventAt (most recent), eventCount
+- Events preserved in chronological order (append-only array)
+- Follows same Layer.effect pattern as EventBusLive and HandlerRegistryLive
+
