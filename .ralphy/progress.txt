@@ -260,3 +260,43 @@
 - Pattern filter supports spec FR-020 pattern matching for event names
 - Layer.effect() is the correct Effect 3.x API (not Effect.toLayer)
 
+## 2026-01-21T17:37:00Z - Phase 2 Effect Service Tags: HandlerRegistry
+**Task**: Create HandlerRegistry Context.Tag and HandlerRegistryService interface
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/handler/HandlerRegistry.ts with:
+  - HandlerRegistryErrorCode type: HANDLER_NOT_FOUND, DUPLICATE_HANDLER, REGISTRATION_FAILED
+  - HandlerRegistryError class with typed codes and cause preservation
+  - HandlerRegistryService<S> interface with Effect-based methods:
+    - register(definition) → Effect<void, HandlerRegistryError> (enforces single handler per event)
+    - get(eventName) → Effect<Handler | undefined>
+    - has(eventName) → Effect<boolean>
+    - getAll() → Effect<readonly HandlerDefinition[]> (for replay/debugging)
+    - count() → Effect<number>
+  - HandlerRegistry Context.Tag("@core-v2/HandlerRegistry") for Effect dependency injection
+  - makeHandlerRegistryService<S>() Effect factory using Ref for thread-safe handler storage
+  - HandlerRegistryLive Layer using Layer.effect(HandlerRegistry, makeHandlerRegistryService())
+  - PublicHandlerRegistry<S> interface for Promise-based public API (Effect-free)
+- Updated packages/core-v2/src/handler/index.ts to export consumer-facing types:
+  - HandlerRegistryErrorCode, PublicHandlerRegistry (types)
+  - HandlerRegistryError (class)
+- Created packages/core-v2/tests/handler-registry.test.ts with 27 comprehensive tests covering:
+  - HandlerRegistryError class with all error codes and cause preservation
+  - HandlerRegistry Context.Tag service identifier and dependency injection
+  - Register operation (success, multiple handlers, duplicate detection)
+  - Get operation (found, not found, correct handler retrieval)
+  - Has operation (registered, unregistered, empty registry)
+  - GetAll operation (empty, all definitions, complete properties)
+  - Count operation (empty, incremental)
+  - HandlerRegistryLive Layer integration (fresh registry per run, composition)
+  - Service composition with Effect.gen and error recovery
+  - Retrieved handler execution (basic and with event emission)
+**Verification**:
+- bun run test: PASS (200 tests total, 27 new handler-registry tests)
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- Follows same Context.Tag + Layer.effect pattern as EventBus and Store
+- Enforces one handler per event type (fails with DUPLICATE_HANDLER if already registered)
+- Uses Map storage keyed by event name for O(1) lookup
+- getAll() method added for replay scenarios where all handlers need to be applied
+

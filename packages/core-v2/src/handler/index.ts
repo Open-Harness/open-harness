@@ -12,3 +12,7 @@ export type { DefineHandlerOptions, Handler, HandlerDefinition, HandlerResult } 
 
 // Factories and utilities
 export { defineHandler, emit, emitEvent, stateOnly } from "./Handler.js";
+
+// HandlerRegistry (consumer-facing only, no Effect internals)
+export type { HandlerRegistryErrorCode, PublicHandlerRegistry } from "./HandlerRegistry.js";
+export { HandlerRegistryError } from "./HandlerRegistry.js";
