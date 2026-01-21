@@ -216,3 +216,47 @@
 - Implementation (ClaudeProvider) will be added in Phase 9
 - All types derived from specs/001-effect-refactor/contracts/provider.ts
 
+## 2026-01-21T17:30:00Z - Phase 2 Effect Service Tags: EventBus
+**Task**: Create EventBus Context.Tag and EventBusService interface
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/event/EventBus.ts with:
+  - SubscriptionId branded type for unique subscription identification
+  - Utility functions: makeSubscriptionId(), generateSubscriptionId()
+  - EventFilter type for filtering events by criteria
+  - SubscriberCallback type returning Effect<void> for async subscribers
+  - Subscription interface: { id, filter?, callback }
+  - EventBusError class with typed codes: SUBSCRIPTION_NOT_FOUND, EMIT_FAILED
+  - EventBusService interface with Effect-based methods:
+    - emit(event) → Effect<void> - publish event to all matching subscribers
+    - subscribe(callback, filter?) → Effect<SubscriptionId> - register subscription
+    - unsubscribe(subscriptionId) → Effect<void> - remove subscription
+    - subscriptionCount() → Effect<number> - get current subscription count
+  - EventBus Context.Tag("@core-v2/EventBus") for Effect dependency injection
+  - makeEventBusService Effect factory using Ref for thread-safe subscriber storage
+  - EventBusLive Layer using Layer.effect(EventBus, makeEventBusService)
+  - PublicEventBus interface for Promise-based public API (Effect-free)
+  - Pattern matching utilities:
+    - createPatternFilter(pattern) - supports exact, wildcard suffix (error:*), wildcard prefix (*:completed), and catch-all (*)
+    - createMultiPatternFilter(patterns) - matches if ANY pattern matches
+- Updated packages/core-v2/src/event/index.ts to export EventBus types (consumer-facing only)
+- Created packages/core-v2/tests/eventbus.test.ts with 33 comprehensive tests covering:
+  - SubscriptionId creation and UUID generation
+  - EventBusError class with all error codes
+  - EventBus Context.Tag service identifier and dependency injection
+  - Subscribe/unsubscribe operations
+  - Event emission to multiple subscribers
+  - Filter-based event delivery
+  - Pattern matching (exact, wildcard prefix/suffix, catch-all)
+  - createMultiPatternFilter for OR logic patterns
+  - EventBusLive Layer integration
+  - Rapid emit/unsubscribe cycles
+**Verification**:
+- bun run test: PASS (173 tests total, 33 new eventbus tests)
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- Uses Effect Ref for thread-safe subscriber management
+- Subscriber callbacks are forked and joined (fire-and-complete semantics)
+- Pattern filter supports spec FR-020 pattern matching for event names
+- Layer.effect() is the correct Effect 3.x API (not Effect.toLayer)
+

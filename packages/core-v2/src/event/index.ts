@@ -25,3 +25,17 @@ export type {
 	UserInputEvent,
 } from "./Event.js";
 export { createEvent, defineEvent } from "./Event.js";
+
+// EventBus service and types (consumer-facing only)
+export type {
+	EventFilter,
+	PublicEventBus,
+	SubscriptionId,
+} from "./EventBus.js";
+export {
+	createMultiPatternFilter,
+	createPatternFilter,
+	EventBusError,
+	generateSubscriptionId,
+	makeSubscriptionId,
+} from "./EventBus.js";
