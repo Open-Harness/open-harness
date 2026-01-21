@@ -88,33 +88,33 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### WorkflowRuntime (Event Loop)
 
 - [x] Create packages/core-v2/src/workflow/WorkflowRuntime.ts with WorkflowRuntime Context.Tag("@core-v2/WorkflowRuntime") and WorkflowRuntimeService interface
-- [ ] Implement event loop in WorkflowRuntime: dequeue event → find handler → execute handler(event, state) → get new state + emitted events → queue emitted events → repeat per spec FR-001
-- [ ] Implement event routing in WorkflowRuntime that matches event.name to registered handler via HandlerRegistry per spec FR-002
-- [ ] Implement sequential event processing in WorkflowRuntime - one event fully processed before next using Effect.forEach with concurrency:1 per spec FR-003
-- [ ] Implement agent activation in WorkflowRuntime: after handler, check AgentRegistry.findMatching(event.name), check agent.when(state) guard if present, execute agent via LLMProvider per spec FR-012/FR-015
-- [ ] Implement termination condition in WorkflowRuntime: after each event, call until(state), stop if true per spec FR-040
+- [x] Implement event loop in WorkflowRuntime: dequeue event → find handler → execute handler(event, state) → get new state + emitted events → queue emitted events → repeat per spec FR-001
+- [x] Implement event routing in WorkflowRuntime that matches event.name to registered handler via HandlerRegistry per spec FR-002
+- [x] Implement sequential event processing in WorkflowRuntime - one event fully processed before next using Effect.forEach with concurrency:1 per spec FR-003
+- [x] Implement agent activation in WorkflowRuntime: after handler, check AgentRegistry.findMatching(event.name), check agent.when(state) guard if present, execute agent via LLMProvider per spec FR-012/FR-015
+- [x] Implement termination condition in WorkflowRuntime: after each event, call until(state), stop if true per spec FR-040
 
 ### Workflow Definition & Factory
 
-- [ ] Create packages/core-v2/src/workflow/Workflow.ts with WorkflowDefinition interface: state, handlers, agents, until, store per specs/001-effect-refactor/contracts/workflow.ts
-- [ ] Implement createWorkflow(definition) factory function in src/workflow/Workflow.ts that returns Workflow class instance per spec FR-039
-- [ ] Implement Workflow.run(options: RunOptions) method that executes event loop via Effect internally, returns Promise<WorkflowResult> per spec FR-041
+- [x] Create packages/core-v2/src/workflow/Workflow.ts with WorkflowDefinition interface: state, handlers, agents, until, store per specs/001-effect-refactor/contracts/workflow.ts
+- [x] Implement createWorkflow(definition) factory function in src/workflow/Workflow.ts that returns Workflow class instance per spec FR-039
+- [x] Implement Workflow.run(options: RunOptions) method that executes event loop via Effect internally, returns Promise<WorkflowResult> per spec FR-041
 
 ### Layer Implementations
 
-- [ ] Implement EventBusLive Layer in src/event/EventBus.ts using Effect.Ref for subscriber storage with emit, subscribe, unsubscribe methods
-- [ ] Implement HandlerRegistryLive Layer in src/handler/HandlerRegistry.ts using Map for handler storage with register, get, has methods
-- [ ] Implement AgentRegistryLive Layer in src/agent/AgentService.ts using Map for agent storage with register, get, findMatching methods
-- [ ] Implement WorkflowRuntimeLive Layer in src/workflow/WorkflowRuntime.ts that depends on LLMProvider, Store, EventBus, HandlerRegistry, AgentRegistry via Effect.gen
-- [ ] Implement ManagedRuntime composition in Workflow class constructor: compose all Layers, create ManagedRuntime, use runtime.runPromise for public methods per specs/001-effect-refactor/plan.md
+- [x] Implement EventBusLive Layer in src/event/EventBus.ts using Effect.Ref for subscriber storage with emit, subscribe, unsubscribe methods
+- [x] Implement HandlerRegistryLive Layer in src/handler/HandlerRegistry.ts using Map for handler storage with register, get, has methods
+- [x] Implement AgentRegistryLive Layer in src/agent/AgentService.ts using Map for agent storage with register, get, findMatching methods
+- [x] Implement WorkflowRuntimeLive Layer in src/workflow/WorkflowRuntime.ts that depends on LLMProvider, Store, EventBus, HandlerRegistry, AgentRegistry via Effect.gen
+- [x] Implement ManagedRuntime composition in Workflow class constructor: compose all Layers, create ManagedRuntime, use runtime.runPromise for public methods per specs/001-effect-refactor/plan.md
 
 ### Developer Experience APIs
 
-- [ ] Implement defineEvent(name, zodSchema) factory in src/event/Event.ts that returns EventDefinition with type-safe create() and is() methods per spec FR-043
-- [ ] Implement defineHandler(eventDef, handlerFn) factory in src/handler/Handler.ts that accepts EventDefinition and handler function, returns HandlerDefinition per spec FR-044
-- [ ] Implement agent({name, activatesOn, emits, prompt, outputSchema, when?, onOutput?}) factory in src/agent/Agent.ts with REQUIRED outputSchema (throw clear error if missing) per spec FR-045
-- [ ] Create packages/core-v2/src/workflow/index.ts re-exporting Workflow, WorkflowDefinition, createWorkflow, WorkflowResult, RunOptions
-- [ ] Create packages/core-v2/tests/workflow.test.ts with tests for: event routing, sequential processing, agent activation, termination condition
+- [x] Implement defineEvent(name, zodSchema) factory in src/event/Event.ts that returns EventDefinition with type-safe create() and is() methods per spec FR-043
+- [x] Implement defineHandler(eventDef, handlerFn) factory in src/handler/Handler.ts that accepts EventDefinition and handler function, returns HandlerDefinition per spec FR-044
+- [x] Implement agent({name, activatesOn, emits, prompt, outputSchema, when?, onOutput?}) factory in src/agent/Agent.ts with REQUIRED outputSchema (throw clear error if missing) per spec FR-045
+- [x] Create packages/core-v2/src/workflow/index.ts re-exporting Workflow, WorkflowDefinition, createWorkflow, WorkflowResult, RunOptions
+- [x] Create packages/core-v2/tests/workflow.test.ts with tests for: event routing, sequential processing, agent activation, termination condition
 
 ---
 

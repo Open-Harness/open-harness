@@ -3,12 +3,24 @@
  *
  * This module exports the workflow-related types and utilities.
  * Effect types are intentionally NOT exported - consumers use the
- * Promise-based PublicWorkflowRuntime interface.
+ * Promise-based interfaces.
  *
  * @module @core-v2/workflow
  */
 
-// WorkflowRuntime service exports
+// Workflow exports (consumer-facing)
+export {
+	// Factory function
+	createWorkflow,
+	type RunOptions,
+	// Interfaces
+	type Workflow,
+	type WorkflowCallbacks,
+	type WorkflowDefinition,
+	type WorkflowResult,
+} from "./Workflow.js";
+
+// WorkflowRuntime service exports (for advanced users)
 export {
 	// Consumer-facing interface (Promise-based)
 	type PublicWorkflowRuntime,

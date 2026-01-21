@@ -472,3 +472,38 @@
 - Handler errors are caught and converted to error:occurred events (graceful degradation)
 - Agent execution includes structured output via Zod→JSON Schema conversion
 
+## 2026-01-21T18:10:00Z - Phase 4 Workflow Definition & Factory
+**Task**: Implement Workflow.ts with WorkflowDefinition, createWorkflow, and Workflow.run/load/dispose
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/workflow/Workflow.ts with:
+  - WorkflowCallbacks<S> interface: onEvent, onStateChange, onError
+  - RunOptions<S> interface: input, record?, sessionId?, callbacks?, abortSignal?
+  - WorkflowResult<S> interface: state, events, sessionId, tape, terminated
+  - WorkflowDefinition<S> interface: name, initialState, handlers, agents, until, store?, model?
+  - Workflow<S> interface: name, run(options), load(sessionId), dispose()
+  - WorkflowImpl<S> class using ManagedRuntime for Effect lifecycle management
+  - createWorkflow<S>(definition) factory function
+  - Noop services for Store and LLMProvider when not provided
+- Updated packages/core-v2/src/workflow/index.ts to export all Workflow types and factory
+- Created packages/core-v2/tests/workflow.test.ts with 26 comprehensive tests:
+  - WorkflowDefinition interface tests
+  - createWorkflow factory tests
+  - Workflow.run() tests (input processing, Tape creation, termination, callbacks, sequential processing)
+  - Workflow.load() tests (session loading, time-travel capabilities)
+  - Workflow.dispose() tests
+  - Edge case tests (empty handlers, empty input, immediate termination, many events)
+  - Tape from result tests (stepBack debugging, stateAt inspection)
+- Verified all Layer implementations already complete (EventBusLive, HandlerRegistryLive, AgentRegistryLive, WorkflowRuntimeLive)
+- Verified all Developer Experience APIs already complete (defineEvent, defineHandler, agent factories)
+**Verification**:
+- bun run test: PASS (375 tests total, 26 new workflow tests)
+- bun run typecheck: PASS
+- bun run lint: PASS (2 pre-existing warnings for `any` types)
+**Notes**:
+- ManagedRuntime pattern ensures proper resource cleanup on dispose()
+- Layer composition: Store + LLMProvider + EventBus → WorkflowRuntimeLive
+- All public methods return Promises (Effect internals hidden per FR-062)
+- Tape is included in WorkflowResult for immediate time-travel debugging access
+- Workflow.load() fetches events from Store and creates Tape for replay
+
