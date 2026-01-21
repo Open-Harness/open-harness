@@ -14,6 +14,7 @@ import { createEvent } from "../event/Event.js";
 import { type EventBus, EventBusLive } from "../event/EventBus.js";
 import type { HandlerDefinition } from "../handler/Handler.js";
 import { LLMProvider, type LLMProviderService, type ProviderInfo } from "../provider/Provider.js";
+import type { Renderer } from "../renderer/Renderer.js";
 import type { SessionId, StoreService } from "../store/Store.js";
 import { Store } from "../store/Store.js";
 import { createTapeFromDefinitions, type Tape } from "../tape/Tape.js";
@@ -109,6 +110,8 @@ export interface WorkflowDefinition<S> {
 	readonly handlers: readonly HandlerDefinition<AnyEvent, S>[];
 	/** AI agents that produce events */
 	readonly agents: readonly Agent<S, unknown>[];
+	/** Renderers that observe events (executed in parallel, FR-004) */
+	readonly renderers?: readonly Renderer<S, unknown>[];
 	/** Termination condition - returns true when workflow should stop */
 	readonly until: (state: S) => boolean;
 	/** Optional store for persistence */
@@ -248,6 +251,7 @@ class WorkflowImpl<S> implements Workflow<S> {
 					initialState: this._definition.initialState,
 					handlers: this._definition.handlers,
 					agents: this._definition.agents,
+					renderers: this._definition.renderers,
 					until: this._definition.until,
 					record,
 					sessionId,

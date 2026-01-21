@@ -123,27 +123,27 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### Store Implementations
 
 - [x] Create packages/core-v2/src/store/MemoryStore.ts with MemoryStoreLive Layer using Map<sessionId, Event[]> for in-memory storage
-- [ ] Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer using better-sqlite3 or @effect/sql for persistent storage
-- [ ] Implement Store.append(sessionId, event) in both MemoryStore and SqliteStore that appends event to session's event list, creates session if not exists per spec FR-022
-- [ ] Implement Store.events(sessionId) in both stores that retrieves all events in order, returns empty array if session not found per spec FR-023
-- [ ] Implement Store.sessions() in both stores that returns session metadata (id, eventCount, timestamps) per spec FR-024
-- [ ] Implement Store.clear(sessionId) in both stores that removes session and all its events per spec FR-025
+- [x] Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer using better-sqlite3 or @effect/sql for persistent storage
+- [x] Implement Store.append(sessionId, event) in both MemoryStore and SqliteStore that appends event to session's event list, creates session if not exists per spec FR-022
+- [x] Implement Store.events(sessionId) in both stores that retrieves all events in order, returns empty array if session not found per spec FR-023
+- [x] Implement Store.sessions() in both stores that returns session metadata (id, eventCount, timestamps) per spec FR-024
+- [x] Implement Store.clear(sessionId) in both stores that removes session and all its events per spec FR-025
 
 ### Recording Integration
 
-- [ ] Add record:boolean and sessionId?:string options to RunOptions in Workflow.run()
-- [ ] Implement recording logic in WorkflowRuntime: when record:true, call Store.append(sessionId, event) for each event per spec FR-042
-- [ ] Implement automatic sessionId generation (UUID v4) when record:true and no sessionId provided, return sessionId in WorkflowResult
+- [x] Add record:boolean and sessionId?:string options to RunOptions in Workflow.run()
+- [x] Implement recording logic in WorkflowRuntime: when record:true, call Store.append(sessionId, event) for each event per spec FR-042
+- [x] Implement automatic sessionId generation (UUID v4) when record:true and no sessionId provided, return sessionId in WorkflowResult
 
 ### Replay via Tape
 
-- [ ] Implement Workflow.load(sessionId) method that fetches events from Store, creates Tape with events and handlers, returns Tape instance per spec FR-027
-- [ ] Implement play() method in Tape that plays from current position to end with configurable delay, sets status to "playing" per spec FR-032
-- [ ] Implement playTo(n) method in Tape that plays from current position to position n, stops at n per spec FR-033
-- [ ] Implement pause() method in Tape that stops playback, sets status to "paused" per spec FR-034
-- [ ] Ensure replay mode does NOT call LLMProvider - events come from recording only, agents don't execute (their events are already recorded)
-- [ ] Create packages/core-v2/src/store/index.ts re-exporting Store, MemoryStore, SqliteStore, createMemoryStore, createSqliteStore
-- [ ] Create packages/core-v2/tests/store.test.ts with tests for: append, events, sessions, clear, and Store unavailable fails fast
+- [x] Implement Workflow.load(sessionId) method that fetches events from Store, creates Tape with events and handlers, returns Tape instance per spec FR-027
+- [x] Implement play() method in Tape that plays from current position to end with configurable delay, sets status to "playing" per spec FR-032
+- [x] Implement playTo(n) method in Tape that plays from current position to position n, stops at n per spec FR-033
+- [x] Implement pause() method in Tape that stops playback, sets status to "paused" per spec FR-034
+- [x] Ensure replay mode does NOT call LLMProvider - events come from recording only, agents don't execute (their events are already recorded)
+- [x] Create packages/core-v2/src/store/index.ts re-exporting Store, MemoryStore, SqliteStore, createMemoryStore, createSqliteStore
+- [x] Create packages/core-v2/tests/store.test.ts with tests for: append, events, sessions, clear, and Store unavailable fails fast
 
 ---
 
@@ -152,7 +152,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Create packages/core-v2/src/renderer/Renderer.ts with Renderer interface: name, patterns, render per specs/001-effect-refactor/contracts/renderer.ts ensuring renderers CANNOT modify events or state per spec FR-018/FR-019
 - [x] Implement pattern matching for event names in Renderer: exact match "text:delta", wildcard "error:*", "*:completed", catch-all "*" per spec FR-020
 - [x] Implement createRenderer({name, renderers: {[pattern]: renderFn}}) factory function in src/renderer/Renderer.ts per spec FR-046
-- [ ] Integrate renderers into WorkflowRuntime: send events to all registered renderers in parallel with handler processing using Effect.fork per spec FR-004
+- [x] Integrate renderers into WorkflowRuntime: send events to all registered renderers in parallel with handler processing using Effect.fork per spec FR-004
 - [x] Ensure renderer.render returns void (no new events), events passed to renderers are readonly
 - [x] Create packages/core-v2/src/renderer/index.ts re-exporting Renderer, createRenderer, EventPattern
 - [x] Create packages/core-v2/tests/renderer.test.ts with tests for: pattern matching, parallel execution, pure observer enforcement

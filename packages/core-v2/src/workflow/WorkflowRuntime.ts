@@ -18,6 +18,7 @@ import { EventBus } from "../event/EventBus.js";
 import type { HandlerDefinition } from "../handler/Handler.js";
 import { convertZodToJsonSchema } from "../internal/schema.js";
 import { LLMProvider, type ProviderError, type QueryOptions } from "../provider/Provider.js";
+import { matchesAnyPattern, type Renderer } from "../renderer/Renderer.js";
 import type { SessionId } from "../store/Store.js";
 import { generateSessionId, Store, type StoreError } from "../store/Store.js";
 
@@ -86,6 +87,8 @@ export interface RuntimeRunOptions<S = unknown> {
 	readonly handlers: readonly HandlerDefinition<AnyEvent, S>[];
 	/** Agents to register */
 	readonly agents: readonly Agent<S, unknown>[];
+	/** Renderers to receive events (executed in parallel with handlers per FR-004) */
+	readonly renderers?: readonly Renderer<S, unknown>[];
 	/** Termination condition - returns true when workflow should stop */
 	readonly until: (state: S) => boolean;
 	/** Whether to record this session (default: false) */
@@ -244,6 +247,7 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 					initialState,
 					handlers,
 					agents,
+					renderers = [],
 					until,
 					record = false,
 					sessionId: providedSessionId,
@@ -283,6 +287,28 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 				// Helper: Record event to store if recording
 				const maybeRecord = (event: AnyEvent) => (record ? store.append(sessionId, event) : Effect.void);
 
+				// Helper: Send event to all matching renderers (non-blocking, FR-004)
+				// Renderers execute in parallel with handler processing
+				const renderEvent = (event: AnyEvent, state: S) =>
+					Effect.gen(function* () {
+						for (const renderer of renderers) {
+							// Check if this renderer's patterns match the event
+							if (matchesAnyPattern(event.name, renderer.patterns)) {
+								// Fork renderer execution - runs in parallel, doesn't block
+								yield* Effect.fork(
+									Effect.sync(() => {
+										try {
+											renderer.render(event, state);
+										} catch {
+											// Swallow renderer errors - they should not affect event processing
+											// Per FR-018/FR-019, renderers are pure observers
+										}
+									}),
+								);
+							}
+						}
+					});
+
 				// Helper: Check abort signal
 				const checkAbort = Effect.gen(function* () {
 					if (abortSignal?.aborted) {
@@ -297,6 +323,10 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 					Effect.gen(function* () {
 						// Get current state
 						const currentState = yield* Ref.get(stateRef);
+
+						// Send to renderers IN PARALLEL with handler processing (FR-004)
+						// Forked so it doesn't block - renderers run concurrently
+						yield* renderEvent(event, currentState);
 
 						// Find handler for this event
 						const handlerDef = handlerMap.get(event.name);

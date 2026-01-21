@@ -631,3 +631,38 @@
 - Pattern matching supports four modes per FR-020: exact, suffix wildcard, prefix wildcard, catch-all
 - WorkflowRuntime integration still pending (separate task)
 
+
+## 2026-01-21T18:35:00Z - Phase 6 Renderer WorkflowRuntime Integration
+**Task**: Integrate renderers into WorkflowRuntime with Effect.fork (FR-004)
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/workflow/WorkflowRuntime.ts:
+  - Added Renderer import from ../renderer/Renderer.js
+  - Added `renderers?: readonly Renderer<S, unknown>[]` to RuntimeRunOptions interface
+  - Added `renderEvent` helper that uses Effect.fork for parallel execution
+  - Each matching renderer is forked using Effect.fork so it runs concurrently
+  - Renderer errors are swallowed to prevent affecting event processing (per FR-018/FR-019)
+  - renderEvent is called BEFORE handler execution for true parallel execution
+- Updated packages/core-v2/src/workflow/Workflow.ts:
+  - Added Renderer import from ../renderer/Renderer.js
+  - Added `renderers?: readonly Renderer<S, unknown>[]` to WorkflowDefinition interface
+  - Updated WorkflowImpl.run() to pass renderers to WorkflowRuntime
+- Added 7 new tests in packages/core-v2/tests/workflow-runtime.test.ts:
+  - "should call renderers for matching events"
+  - "should only call renderers for matching patterns"
+  - "should call multiple renderers for the same event"
+  - "should not block handler processing if renderer throws"
+  - "should receive current state at time of event"
+  - "should work with empty renderers array"
+  - "should work without renderers option (undefined)"
+**Verification**:
+- bun run typecheck: PASS
+- bun run test: PASS (482 tests total, 7 new renderer integration tests)
+- bun run lint: PASS (2 pre-existing warnings)
+**Notes**:
+- Effect.fork creates non-blocking parallel execution - handlers don't wait for renderers
+- Pattern matching uses matchesAnyPattern from Renderer module
+- Renderers receive state at the time the event was received (before handler modifies it)
+- Phase 6 User Story 4 (Event Rendering) is now COMPLETE
+- PRD also updated to mark Phase 5 tasks that were previously implemented as complete
+

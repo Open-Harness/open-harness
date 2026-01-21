@@ -21,6 +21,7 @@ import { createEvent } from "../src/event/Event.js";
 import { EventBus, EventBusLive } from "../src/event/EventBus.js";
 import type { HandlerDefinition } from "../src/handler/Handler.js";
 import { LLMProvider, type LLMProviderService, type ProviderInfo, type QueryResult } from "../src/provider/Provider.js";
+import type { Renderer } from "../src/renderer/Renderer.js";
 import { generateSessionId, type SessionMetadata, Store, type StoreService } from "../src/store/Store.js";
 import {
 	WorkflowRuntime,
@@ -972,5 +973,289 @@ describe("WorkflowRuntime edge cases", () => {
 		// 1 (trigger) + 10 (batch) = 11 events processed
 		expect(result.events.length).toBe(11);
 		expect(result.state.count).toBe(11);
+	});
+});
+
+// ============================================================================
+// Renderer Integration Tests (FR-004)
+// ============================================================================
+
+describe("Renderer Integration", () => {
+	it("should call renderers for matching events", async () => {
+		const renderedEvents: Array<{ eventName: string; state: TestState }> = [];
+
+		const testRenderer: Renderer<TestState, void> = {
+			name: "test-renderer",
+			patterns: ["user:input", "count:*"],
+			render: (event, state) => {
+				renderedEvents.push({ eventName: event.name, state: { ...state } as TestState });
+			},
+		};
+
+		const handler = createTestHandler("counter", "user:input", (event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [createEvent("count:incremented", { value: state.count + 1 }, event.id)],
+		}));
+
+		const countHandler = createTestHandler("count-handler", "count:incremented", (_event, state) => ({
+			state,
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler, countHandler],
+				agents: [],
+				renderers: [testRenderer],
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// Give time for forked renderers to complete
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		expect(result.events.length).toBe(2); // user:input + count:incremented
+		expect(renderedEvents.length).toBe(2); // Both events match the patterns
+		expect(renderedEvents[0]?.eventName).toBe("user:input");
+		expect(renderedEvents[1]?.eventName).toBe("count:incremented");
+	});
+
+	it("should only call renderers for matching patterns", async () => {
+		const renderedEvents: string[] = [];
+
+		const testRenderer: Renderer<TestState, void> = {
+			name: "error-only-renderer",
+			patterns: ["error:*"],
+			render: (event, _state) => {
+				renderedEvents.push(event.name);
+			},
+		};
+
+		const handler = createTestHandler("counter", "user:input", (_event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				renderers: [testRenderer],
+				until: () => false,
+			});
+		});
+
+		const testLayers = createTestLayers();
+		await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// Give time for forked renderers to complete
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// user:input doesn't match error:* pattern
+		expect(renderedEvents.length).toBe(0);
+	});
+
+	it("should call multiple renderers for the same event", async () => {
+		const renderer1Events: string[] = [];
+		const renderer2Events: string[] = [];
+
+		const renderer1: Renderer<TestState, void> = {
+			name: "renderer-1",
+			patterns: ["*"], // Catch-all
+			render: (event, _state) => {
+				renderer1Events.push(event.name);
+			},
+		};
+
+		const renderer2: Renderer<TestState, void> = {
+			name: "renderer-2",
+			patterns: ["user:*"],
+			render: (event, _state) => {
+				renderer2Events.push(event.name);
+			},
+		};
+
+		const handler = createTestHandler("counter", "user:input", (_event, state) => ({
+			state,
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				renderers: [renderer1, renderer2],
+				until: () => false,
+			});
+		});
+
+		const testLayers = createTestLayers();
+		await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// Give time for forked renderers to complete
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Both renderers should receive the event
+		expect(renderer1Events).toContain("user:input");
+		expect(renderer2Events).toContain("user:input");
+	});
+
+	it("should not block handler processing if renderer throws", async () => {
+		let handlerCalled = false;
+
+		const errorRenderer: Renderer<TestState, void> = {
+			name: "error-renderer",
+			patterns: ["user:input"],
+			render: (_event, _state) => {
+				throw new Error("Renderer error!");
+			},
+		};
+
+		const handler = createTestHandler("counter", "user:input", (_event, state) => {
+			handlerCalled = true;
+			return {
+				state: { ...state, count: state.count + 1 },
+				events: [],
+			};
+		});
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				renderers: [errorRenderer],
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// Handler should still execute even if renderer throws
+		expect(handlerCalled).toBe(true);
+		expect(result.state.count).toBe(1);
+	});
+
+	it("should receive current state at time of event", async () => {
+		const statesReceived: number[] = [];
+
+		const testRenderer: Renderer<TestState, void> = {
+			name: "state-tracker",
+			patterns: ["*"],
+			render: (_event, state) => {
+				statesReceived.push((state as TestState).count);
+			},
+		};
+
+		const handler = createTestHandler("counter", "user:input", (event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [createEvent("test:event", {}, event.id)],
+		}));
+
+		const testHandler = createTestHandler("test", "test:event", (_event, state) => ({
+			state: { ...state, count: state.count + 10 },
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler, testHandler],
+				agents: [],
+				renderers: [testRenderer],
+				until: () => false,
+			});
+		});
+
+		const testLayers = createTestLayers();
+		await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// Give time for forked renderers to complete
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// First event (user:input) sees initial state (count: 0)
+		// Second event (test:event) sees state after first handler (count: 1)
+		expect(statesReceived).toContain(0);
+		expect(statesReceived).toContain(1);
+	});
+
+	it("should work with empty renderers array", async () => {
+		const handler = createTestHandler("counter", "user:input", (_event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				renderers: [], // Empty array
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		expect(result.state.count).toBe(1);
+	});
+
+	it("should work without renderers option (undefined)", async () => {
+		const handler = createTestHandler("counter", "user:input", (_event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run({
+				initialEvent: createEvent("user:input", { text: "hello" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				// renderers not provided - should default to []
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		expect(result.state.count).toBe(1);
 	});
 });
