@@ -588,3 +588,46 @@
 - Prepared statements for better performance
 - Timestamps stored as ISO strings, parsed back to Date objects on read
 
+## 2026-01-21T18:25:00Z - Phase 6 Renderer Module
+**Task**: Create Renderer module with pattern matching and createRenderer factory
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/renderer/Renderer.ts with:
+  - EventPattern type supporting wildcards (exact, suffix *, prefix *, catch-all *)
+  - RenderFunction<State, Output> type for render callbacks
+  - Renderer<State, Output> interface with name, patterns, render
+  - MultiRenderer interface for pattern-specific render functions
+  - RendererRegistry type (ReadonlyMap of renderers)
+  - Pattern matching utilities:
+    - matchesPattern(eventName, pattern) - single pattern match
+    - matchesAnyPattern(eventName, patterns) - any pattern match
+    - findMatchingPatterns(eventName, patterns) - all matching patterns
+  - createRenderer(options) factory function per spec FR-046
+  - createRendererRegistry(renderers) factory function
+  - renderEvent(event, state, renderers) - sync rendering
+  - renderEventAsync(event, state, renderers) - async parallel rendering
+- Created packages/core-v2/src/renderer/index.ts re-exporting:
+  - Types: EventPattern, RenderFunction, Renderer, MultiRenderer, RendererRegistry, CreateRendererOptions
+  - Factories: createRenderer, createRendererRegistry
+  - Utilities: matchesPattern, matchesAnyPattern, findMatchingPatterns, renderEvent, renderEventAsync
+- Created packages/core-v2/tests/renderer.test.ts with 45 comprehensive tests:
+  - Pattern matching (exact, wildcard suffix, wildcard prefix, catch-all)
+  - matchesAnyPattern and findMatchingPatterns utilities
+  - Renderer interface tests
+  - RenderFunction type tests
+  - createRenderer factory tests
+  - CreateRendererOptions tests
+  - Renderer registry tests (creation, duplicate detection)
+  - renderEvent execution tests
+  - renderEventAsync parallel execution tests
+  - Pure observer constraint tests (FR-018, FR-019)
+  - Integration tests (real event types, terminal-like rendering)
+**Verification**:
+- bun run test: PASS (475 tests total, 45 new renderer tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Renderers receive Readonly<AnyEvent> and Readonly<State> to enforce pure observer pattern
+- renderEventAsync uses queueMicrotask for non-blocking parallel execution (FR-004)
+- Pattern matching supports four modes per FR-020: exact, suffix wildcard, prefix wildcard, catch-all
+- WorkflowRuntime integration still pending (separate task)
+

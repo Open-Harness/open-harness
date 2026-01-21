@@ -123,7 +123,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### Store Implementations
 
 - [x] Create packages/core-v2/src/store/MemoryStore.ts with MemoryStoreLive Layer using Map<sessionId, Event[]> for in-memory storage
-- [x] Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer using better-sqlite3 or @effect/sql for persistent storage
+- [ ] Create packages/core-v2/src/store/SqliteStore.ts with SqliteStoreLive Layer using better-sqlite3 or @effect/sql for persistent storage
 - [ ] Implement Store.append(sessionId, event) in both MemoryStore and SqliteStore that appends event to session's event list, creates session if not exists per spec FR-022
 - [ ] Implement Store.events(sessionId) in both stores that retrieves all events in order, returns empty array if session not found per spec FR-023
 - [ ] Implement Store.sessions() in both stores that returns session metadata (id, eventCount, timestamps) per spec FR-024
@@ -149,13 +149,13 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 6: User Story 4 - Event Rendering
 
-- [ ] Create packages/core-v2/src/renderer/Renderer.ts with Renderer interface: name, patterns, render per specs/001-effect-refactor/contracts/renderer.ts ensuring renderers CANNOT modify events or state per spec FR-018/FR-019
-- [ ] Implement pattern matching for event names in Renderer: exact match "text:delta", wildcard "error:*", "*:completed", catch-all "*" per spec FR-020
-- [ ] Implement createRenderer({name, renderers: {[pattern]: renderFn}}) factory function in src/renderer/Renderer.ts per spec FR-046
+- [x] Create packages/core-v2/src/renderer/Renderer.ts with Renderer interface: name, patterns, render per specs/001-effect-refactor/contracts/renderer.ts ensuring renderers CANNOT modify events or state per spec FR-018/FR-019
+- [x] Implement pattern matching for event names in Renderer: exact match "text:delta", wildcard "error:*", "*:completed", catch-all "*" per spec FR-020
+- [x] Implement createRenderer({name, renderers: {[pattern]: renderFn}}) factory function in src/renderer/Renderer.ts per spec FR-046
 - [ ] Integrate renderers into WorkflowRuntime: send events to all registered renderers in parallel with handler processing using Effect.fork per spec FR-004
-- [ ] Ensure renderer.render returns void (no new events), events passed to renderers are readonly
-- [ ] Create packages/core-v2/src/renderer/index.ts re-exporting Renderer, createRenderer, EventPattern
-- [ ] Create packages/core-v2/tests/renderer.test.ts with tests for: pattern matching, parallel execution, pure observer enforcement
+- [x] Ensure renderer.render returns void (no new events), events passed to renderers are readonly
+- [x] Create packages/core-v2/src/renderer/index.ts re-exporting Renderer, createRenderer, EventPattern
+- [x] Create packages/core-v2/tests/renderer.test.ts with tests for: pattern matching, parallel execution, pure observer enforcement
 
 ---
 
