@@ -30,11 +30,16 @@ interface TestState {
 	messages: string[];
 }
 
-const createTestHandler = (name: string, handles: string): HandlerDefinition<AnyEvent, TestState> => ({
+/**
+ * Create a test handler.
+ * Returns as HandlerDefinition<AnyEvent, unknown> to work with the generic registry service.
+ * In real code, the workflow would have a typed state and all handlers would share it.
+ */
+const createTestHandler = (name: string, handles: string): HandlerDefinition<AnyEvent, unknown> => ({
 	name,
 	handles,
-	handler: (_event: AnyEvent, state: TestState): HandlerResult<TestState> => ({
-		state: { ...state, count: state.count + 1 },
+	handler: (_event: AnyEvent, state: unknown): HandlerResult<unknown> => ({
+		state: { ...(state as TestState), count: (state as TestState).count + 1 },
 		events: [],
 	}),
 });
@@ -195,13 +200,13 @@ describe("HandlerRegistryService.get", () => {
 	});
 
 	it("should return correct handler when multiple are registered", async () => {
-		const handler1 = (_event: AnyEvent, state: TestState): HandlerResult<TestState> => ({
-			state: { ...state, count: 1 },
+		const handler1 = (_event: AnyEvent, state: unknown): HandlerResult<unknown> => ({
+			state: { ...(state as TestState), count: 1 },
 			events: [],
 		});
 
-		const handler2 = (_event: AnyEvent, state: TestState): HandlerResult<TestState> => ({
-			state: { ...state, count: 2 },
+		const handler2 = (_event: AnyEvent, state: unknown): HandlerResult<unknown> => ({
+			state: { ...(state as TestState), count: 2 },
 			events: [],
 		});
 
@@ -311,9 +316,10 @@ describe("HandlerRegistryService.getAll", () => {
 			expect(all).toHaveLength(1);
 
 			const retrieved = all[0];
-			expect(retrieved.name).toBe("completeHandler");
-			expect(retrieved.handles).toBe("complete:event");
-			expect(retrieved.handler).toBe(definition.handler);
+			expect(retrieved).toBeDefined();
+			expect(retrieved?.name).toBe("completeHandler");
+			expect(retrieved?.handles).toBe("complete:event");
+			expect(retrieved?.handler).toBe(definition.handler);
 		});
 
 		await Effect.runPromise(program.pipe(Effect.provide(HandlerRegistryLive)));
@@ -473,7 +479,7 @@ describe("Retrieved handler execution", () => {
 
 			if (handler) {
 				const result = handler(testEvent, initialState);
-				expect(result.state.count).toBe(1);
+				expect((result.state as TestState).count).toBe(1);
 				expect(result.events).toEqual([]);
 			}
 		});
@@ -482,11 +488,11 @@ describe("Retrieved handler execution", () => {
 	});
 
 	it("should work with handlers that emit events", async () => {
-		const emittingHandler: HandlerDefinition<AnyEvent, TestState> = {
+		const emittingHandler: HandlerDefinition<AnyEvent, unknown> = {
 			name: "emitting",
 			handles: "trigger:event",
 			handler: (_event, state) => ({
-				state: { ...state, messages: [...state.messages, "processed"] },
+				state: { ...(state as TestState), messages: [...(state as TestState).messages, "processed"] },
 				events: [
 					{
 						id: "emitted-id" as AnyEvent["id"],
@@ -516,9 +522,9 @@ describe("Retrieved handler execution", () => {
 					{ count: 0, messages: [] },
 				);
 
-				expect(result.state.messages).toContain("processed");
+				expect((result.state as TestState).messages).toContain("processed");
 				expect(result.events).toHaveLength(1);
-				expect(result.events[0].name).toBe("response:event");
+				expect(result.events[0]?.name).toBe("response:event");
 			}
 		});
 

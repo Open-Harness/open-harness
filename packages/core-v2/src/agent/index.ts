@@ -18,3 +18,9 @@ export {
 	MissingOutputSchemaError,
 	shouldActivate,
 } from "./Agent.js";
+
+// AgentRegistry Service types (consumer-facing only - NO Effect types)
+export type { AgentRegistryErrorCode, PublicAgentRegistry } from "./AgentService.js";
+
+// AgentRegistry Error class (needed for instanceof checks)
+export { AgentRegistryError } from "./AgentService.js";

@@ -300,3 +300,54 @@
 - Uses Map storage keyed by event name for O(1) lookup
 - getAll() method added for replay scenarios where all handlers need to be applied
 
+## 2026-01-21T17:47:00Z - Phase 2 Effect Service Tags: AgentRegistry
+**Task**: Create AgentRegistry Context.Tag and AgentRegistryService interface
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/agent/AgentService.ts with:
+  - AgentRegistryErrorCode type: AGENT_NOT_FOUND, DUPLICATE_AGENT, REGISTRATION_FAILED
+  - AgentRegistryError class with typed codes and cause preservation
+  - AgentRegistryService<S> interface with Effect-based methods:
+    - register(agent) → Effect<void, AgentRegistryError> (enforces unique agent names)
+    - get(name) → Effect<Agent | undefined>
+    - findMatching(eventName, state) → Effect<readonly Agent[]> (checks activatesOn and when guard)
+    - has(name) → Effect<boolean>
+    - getAll() → Effect<readonly Agent[]>
+    - count() → Effect<number>
+  - AgentRegistry Context.Tag("@core-v2/AgentRegistry") for Effect dependency injection
+  - makeAgentRegistryService<S>() Effect factory using Ref for thread-safe agent storage
+  - AgentRegistryLive Layer using Layer.effect(AgentRegistry, makeAgentRegistryService())
+  - PublicAgentRegistry<S> interface for Promise-based public API (Effect-free)
+- Updated packages/core-v2/src/agent/index.ts to export consumer-facing types:
+  - AgentRegistryErrorCode, PublicAgentRegistry (types)
+  - AgentRegistryError (class)
+- Updated packages/core-v2/src/agent/Agent.ts utility functions:
+  - Changed shouldActivate, findMatchingAgents, createAgentRegistry to accept Agent<S, any>
+  - This fixes TypeScript type variance issue with generic output types
+- Created packages/core-v2/tests/agent-service.test.ts with 35 comprehensive tests covering:
+  - AgentRegistryError class with all error codes and cause preservation
+  - AgentRegistry Context.Tag service identifier and dependency injection
+  - Register operation (success, multiple agents, duplicate detection)
+  - Get operation (found, not found, correct agent retrieval)
+  - FindMatching operation (event matching, multiple matching, guard conditions)
+  - Has operation (registered, unregistered, empty registry)
+  - GetAll operation (empty, all agents, complete properties)
+  - Count operation (empty, incremental)
+  - AgentRegistryLive Layer integration (fresh registry per run, composition)
+  - Service composition with Effect.gen and error recovery
+  - Retrieved agent prompt/onOutput behavior
+  - Complex guard scenarios (currentAgent checks, AND conditions)
+- Fixed TypeScript strict mode issues in existing tests:
+  - Updated test helpers to use unknown types with proper assertions
+  - Added optional chaining for array access in tests
+**Verification**:
+- bun run test: PASS (235 tests total, 35 new agent-service tests)
+- bun run typecheck: PASS
+- bun run lint: PASS (no errors)
+**Notes**:
+- Follows same Context.Tag + Layer.effect pattern as EventBus, Store, HandlerRegistry
+- Uses existing shouldActivate() utility from Agent.ts for guard evaluation
+- Enforces unique agent names (fails with DUPLICATE_AGENT if already registered)
+- Uses Map storage keyed by agent name for O(1) lookup
+- findMatching() combines activatesOn check with when guard evaluation
+

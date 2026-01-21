@@ -216,7 +216,7 @@ describe("EventBus", () => {
 
 				const received = await Effect.runPromise(program);
 				expect(received).toHaveLength(1);
-				expect(received[0].name).toBe("test:event");
+				expect(received[0]?.name).toBe("test:event");
 			});
 
 			it("should call all subscribers", async () => {
@@ -466,9 +466,15 @@ describe("EventBus", () => {
 
 	describe("integration", () => {
 		it("should support complex subscription patterns", async () => {
+			interface ResultsState {
+				errors: string[];
+				completions: string[];
+				all: string[];
+			}
+
 			const program = Effect.gen(function* () {
 				const bus = yield* makeEventBusService;
-				const results = yield* Ref.make<Record<string, string[]>>({
+				const results = yield* Ref.make<ResultsState>({
 					errors: [],
 					completions: [],
 					all: [],

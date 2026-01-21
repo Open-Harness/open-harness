@@ -328,10 +328,10 @@ describe("onOutput callback", () => {
 		const emitted = agentDef.onOutput(output, triggerEvent);
 
 		expect(emitted).toHaveLength(3);
-		expect(emitted[0].name).toBe("plan:created");
-		expect((emitted[0].payload as { taskCount: number }).taskCount).toBe(2);
-		expect(emitted[1].name).toBe("task:added");
-		expect(emitted[2].name).toBe("task:added");
+		expect(emitted[0]?.name).toBe("plan:created");
+		expect((emitted[0]?.payload as { taskCount: number }).taskCount).toBe(2);
+		expect(emitted[1]?.name).toBe("task:added");
+		expect(emitted[2]?.name).toBe("task:added");
 	});
 
 	it("can return empty array when no events needed", () => {
@@ -361,7 +361,7 @@ describe("onOutput callback", () => {
 		const triggerEvent = createTestEvent("start");
 		const emitted = agentDef.onOutput({ tasks: [] }, triggerEvent);
 
-		expect(emitted[0].causedBy).toBe(triggerEvent.id);
+		expect(emitted[0]?.causedBy).toBe(triggerEvent.id);
 	});
 });
 
@@ -497,7 +497,7 @@ describe("findMatchingAgents()", () => {
 			completedTasks: [],
 		});
 		expect(matchingNoGuard).toHaveLength(1);
-		expect(matchingNoGuard[0].name).toBe("planner");
+		expect(matchingNoGuard[0]?.name).toBe("planner");
 
 		// Guard passes - both match
 		const matchingWithGuard = findMatchingAgents(registry, "workflow:start", {
@@ -630,10 +630,13 @@ describe("Agent Integration", () => {
 
 		const matching = findMatchingAgents(registry, "user:message", state);
 		expect(matching).toHaveLength(1);
-		expect(matching[0].name).toBe("chat-responder");
+		expect(matching[0]?.name).toBe("chat-responder");
 
 		// 5. Test prompt generation
-		const prompt = matching[0].prompt(state, userMessage);
+		const firstAgent = matching[0];
+		expect(firstAgent).toBeDefined();
+		// biome-ignore lint/style/noNonNullAssertion: test context, we just asserted defined
+		const prompt = firstAgent!.prompt(state, userMessage);
 		expect(prompt).toContain("How are you?");
 		expect(prompt).toContain("Hello");
 
@@ -643,12 +646,13 @@ describe("Agent Integration", () => {
 			confidence: 0.95,
 		};
 
-		const emittedEvents = matching[0].onOutput(output, userMessage);
+		// biome-ignore lint/style/noNonNullAssertion: test context, we just asserted defined
+		const emittedEvents = firstAgent!.onOutput(output, userMessage);
 
 		expect(emittedEvents).toHaveLength(1);
-		expect(emittedEvents[0].name).toBe("chat:response");
-		expect((emittedEvents[0].payload as { text: string }).text).toBe("I am doing well!");
-		expect(emittedEvents[0].causedBy).toBe(userMessage.id);
+		expect(emittedEvents[0]?.name).toBe("chat:response");
+		expect((emittedEvents[0]?.payload as { text: string }).text).toBe("I am doing well!");
+		expect(emittedEvents[0]?.causedBy).toBe(userMessage.id);
 	});
 
 	it("multiple agents can listen to same event", () => {

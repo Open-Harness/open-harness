@@ -253,7 +253,8 @@ export type AgentRegistry<S> = ReadonlyMap<string, Agent<S, unknown>>;
  * @param state - Current workflow state
  * @returns True if the agent should activate
  */
-export function shouldActivate<S>(agent: Agent<S, unknown>, eventName: string, state: S): boolean {
+// biome-ignore lint/suspicious/noExplicitAny: Output type is not needed for activation check
+export function shouldActivate<S>(agent: Agent<S, any>, eventName: string, state: S): boolean {
 	// Check if agent listens for this event
 	if (!agent.activatesOn.includes(eventName)) {
 		return false;
@@ -279,8 +280,10 @@ export function findMatchingAgents<S>(
 	registry: AgentRegistry<S>,
 	eventName: string,
 	state: S,
-): readonly Agent<S, unknown>[] {
-	const matching: Agent<S, unknown>[] = [];
+	// biome-ignore lint/suspicious/noExplicitAny: Output type is not needed for matching
+): readonly Agent<S, any>[] {
+	// biome-ignore lint/suspicious/noExplicitAny: Output type is not needed for matching
+	const matching: Agent<S, any>[] = [];
 
 	for (const agent of registry.values()) {
 		if (shouldActivate(agent, eventName, state)) {
@@ -298,7 +301,8 @@ export function findMatchingAgents<S>(
  * @returns A read-only Map of agent name → agent
  * @throws Error if duplicate agent names are found
  */
-export function createAgentRegistry<S>(agents: readonly Agent<S, unknown>[]): AgentRegistry<S> {
+// biome-ignore lint/suspicious/noExplicitAny: Output type is not needed for registry creation
+export function createAgentRegistry<S>(agents: readonly Agent<S, any>[]): AgentRegistry<S> {
 	const registry = new Map<string, Agent<S, unknown>>();
 
 	for (const agentDef of agents) {

@@ -63,7 +63,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Create packages/core-v2/src/provider/Provider.ts with LLMProvider Context.Tag("@core-v2/LLMProvider") and LLMProviderService interface with query, stream methods
 - [x] Create packages/core-v2/src/event/EventBus.ts with EventBus Context.Tag("@core-v2/EventBus") and EventBusService interface: emit, subscribe, unsubscribe
 - [x] Create packages/core-v2/src/handler/HandlerRegistry.ts with HandlerRegistry Context.Tag("@core-v2/HandlerRegistry") and HandlerRegistryService interface: register, get, has
-- [ ] Create packages/core-v2/src/agent/AgentService.ts with AgentRegistry Context.Tag("@core-v2/AgentRegistry") and AgentRegistryService interface: register, get, findMatching
+- [x] Create packages/core-v2/src/agent/AgentService.ts with AgentRegistry Context.Tag("@core-v2/AgentRegistry") and AgentRegistryService interface: register, get, findMatching
 
 ---
 
