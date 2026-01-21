@@ -172,3 +172,47 @@
 - PublicStore provides Effect-free interface for consumers
 - Implementations (MemoryStore, SqliteStore) will be added in Phase 5
 
+## 2026-01-21T17:26:30Z - Phase 2 Effect Service Tags: LLMProvider
+**Task**: Create LLMProvider Context.Tag and LLMProviderService interface
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/provider/Provider.ts with:
+  - ProviderErrorCode type: RATE_LIMITED, CONTEXT_LENGTH_EXCEEDED, INVALID_REQUEST, NETWORK_ERROR, AUTHENTICATION_FAILED, PROVIDER_ERROR
+  - ProviderError class with typed codes, retryable flag, and optional retryAfter hint
+  - ProviderMessage interface: role (user|assistant|system), content
+  - QueryOptions interface with all SDK-compatible options:
+    - messages (required), sessionId?, model?, abortController?, maxTurns?
+    - persistSession?, includePartialMessages?, permissionMode?, outputFormat?
+  - StreamChunk interface: type (text|tool_use|stop), text?, toolCall?, stopReason?
+  - QueryResult interface: events, text?, output?, sessionId?, stopReason?
+  - ClaudeProviderConfig interface for provider configuration
+  - ProviderType type: "claude" | "custom"
+  - ProviderInfo interface for metadata: type, name, model, connected
+  - LLMProviderService interface with Effect-based methods:
+    - query(options) → Effect<QueryResult, ProviderError>
+    - stream(options) → Stream<StreamChunk, ProviderError>
+    - info() → Effect<ProviderInfo, ProviderError>
+  - LLMProvider Context.Tag("@core-v2/LLMProvider") for Effect dependency injection
+  - PublicLLMProvider interface for Promise-based public API (Effect-free)
+- Created packages/core-v2/src/provider/index.ts re-exporting consumer-facing types (NO Effect internals)
+- Created packages/core-v2/tests/provider.test.ts with 34 comprehensive tests covering:
+  - ProviderError class with all error codes and retryable/retryAfter handling
+  - ProviderMessage interface for all roles
+  - QueryOptions with required and optional fields
+  - StreamChunk for text, tool_use, and stop types
+  - QueryResult interface
+  - ClaudeProviderConfig and ProviderInfo interfaces
+  - LLMProvider Context.Tag service identifier and dependency injection
+  - LLMProviderService interface contract (query, stream, info)
+  - Error propagation and recovery for both query and stream
+  - Service composition with Effect.gen
+  - PublicLLMProvider Promise-based interface
+**Verification**:
+- bun run test: PASS (140 tests total, 34 new provider tests)
+- bun run lint: PASS (no errors or warnings)
+**Notes**:
+- LLMProvider uses Effect Stream for streaming responses (Effect.Stream<StreamChunk, ProviderError>)
+- PublicLLMProvider.stream returns AsyncIterable for consumer-friendly API
+- Implementation (ClaudeProvider) will be added in Phase 9
+- All types derived from specs/001-effect-refactor/contracts/provider.ts
+
