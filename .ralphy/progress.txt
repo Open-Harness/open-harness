@@ -1008,3 +1008,48 @@
 - Pre-existing typecheck issues in the codebase unrelated to this task
 - Phase 8 User Story 6 (React Integration) is now COMPLETE
 
+
+## 2026-01-21T19:42:00Z - Phase 9 ClaudeProvider Implementation
+**Task**: Create packages/core-v2/src/provider/ClaudeProvider.ts with ClaudeProviderLive Layer
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/provider/ClaudeProvider.ts with:
+  - makeClaudeProviderService(config, queryFn) factory function for creating LLMProviderService
+  - ClaudeProviderLive Layer using Layer.succeed() for Effect dependency injection
+  - makeClaudeProviderLive(config) factory for custom configuration Layers
+  - createClaudeProvider(config) Promise-based factory for consumer API (Effect-free)
+  - Full LLMProviderService interface implementation:
+    - query(options) → Effect<QueryResult, ProviderError> using Effect.tryPromise
+    - stream(options) → Stream<StreamChunk, ProviderError> using Stream.fromAsyncIterable
+    - info() → Effect<ProviderInfo, ProviderError>
+  - SDK message mapping to internal Event types:
+    - stream_event/text_delta → text:delta event
+    - assistant/tool_use → tool:called event
+    - user/tool_use_result → tool:result event
+    - text:complete event on query completion with accumulated text
+  - SDK message mapping to StreamChunks for streaming:
+    - text delta → { type: "text", text }
+    - tool use → { type: "tool_use", toolCall: { id, name, input } }
+    - result → { type: "stop", stopReason }
+  - Configuration passthrough: model, maxTurns, persistSession, permissionMode, outputFormat
+  - Session ID extraction and resume support
+  - Error handling: ProviderError conversion, AbortError detection
+- Created packages/core-v2/tests/claude-provider.test.ts with 37 comprehensive tests:
+  - query method tests (11 tests): text deltas, session ID, structured output, tool calls, errors
+  - stream method tests (4 tests): text chunks, tool_use chunks, stop chunks, error conversion
+  - info method tests (2 tests): default model, configured model
+  - Configuration tests (6 tests): model inheritance, outputFormat, sessionId, maxTurns, permissionMode
+  - ClaudeProviderLive Layer tests (3 tests): service provision, Effect.provide usage, querying
+  - createClaudeProvider tests (2 tests): Promise-based API, info method
+  - Event Mapping tests (3 tests): event structure, text accumulation, assistant message handling
+  - Edge Cases tests (4 tests): empty messages, multiple tool calls, tool errors, no text result
+**Verification**:
+- bun run test: PASS (740 tests total, 37 new claude-provider tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Uses Effect.tryPromise for async SDK operations (not Effect.gen with for-await)
+- Stream.fromAsyncIterable converts SDK async generator to Effect Stream
+- Error conversion uses Cause.failureOption for proper Effect error extraction in tests
+- biome-ignore lint/correctness/useYield added for error testing generator function
+- Phase 9 User Story (LLM Provider Integration) first task COMPLETE
+

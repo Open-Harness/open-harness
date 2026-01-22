@@ -202,7 +202,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 9: LLM Provider Integration
 
-- [ ] Create packages/core-v2/src/provider/ClaudeProvider.ts with ClaudeProviderLive Layer using @anthropic-ai/claude-agent-sdk
+- [x] Create packages/core-v2/src/provider/ClaudeProvider.ts with ClaudeProviderLive Layer using @anthropic-ai/claude-agent-sdk
 - [ ] Implement Stream.fromAsyncIterable in ClaudeProvider to convert SDK async iterator to Effect Stream for streaming responses
 - [ ] Implement Effect.acquireRelease in ClaudeProvider for SDK connection cleanup on abort/error per spec FR-064
 - [ ] Implement structured output conversion in ClaudeProvider: use src/internal/schema.ts to convert Zod outputSchema → JSON Schema → SDK outputFormat: {type:"json_schema", schema} per spec FR-067
