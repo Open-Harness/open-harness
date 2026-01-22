@@ -768,3 +768,31 @@
 - Workflow.run(), Workflow.load(), Workflow.dispose() already return Promises
 - Phase 7 User Story 5 (Clean Public API) third task COMPLETE
 
+
+## 2026-01-21T18:56:00Z - Phase 7 JSDoc Documentation
+**Task**: Add JSDoc documentation to all public types in src/index.ts with @example where helpful
+**Status**: COMPLETE (already implemented)
+**Analysis**:
+- Reviewed all source files (Event.ts, Handler.ts, Agent.ts, Workflow.ts, Tape.ts, Store.ts, Provider.ts, Renderer.ts)
+- All public types already have comprehensive JSDoc documentation with @example blocks
+- The index.ts file has extensive module-level and section-level documentation with examples
+- When TypeScript re-exports types, the JSDoc from source files is preserved for IDE consumers
+**Source files with JSDoc documentation**:
+- Event.ts: EventId, Event, EventPayload, AnyEvent, createEvent, EventDefinition, defineEvent, all built-in events
+- Handler.ts: HandlerResult, Handler, HandlerDefinition, DefineHandlerOptions, defineHandler, stateOnly, emit, emitEvent
+- Agent.ts: PromptPart, PromptTemplate, Agent, AgentOptions, MissingOutputSchemaError, agent, AgentRegistry, utilities
+- Workflow.ts: WorkflowCallbacks, RunOptions, WorkflowResult, WorkflowDefinition, Workflow, createWorkflow
+- Tape.ts: TapeStatus, TapeMetadata, Tape, TapeControls, TapeConfig, computeState, createTape, createTapeFromDefinitions
+- Store.ts: SessionId, SessionMetadata, StateSnapshot, StoreError, StoreService, Store, PublicStore
+- Provider.ts: ProviderError, ProviderMessage, QueryOptions, StreamChunk, QueryResult, ClaudeProviderConfig, ProviderInfo, LLMProviderService, LLMProvider, PublicLLMProvider
+- Renderer.ts: EventPattern, RenderFunction, Renderer, MultiRenderer, RendererRegistry, pattern utilities, createRenderer, createRendererRegistry, renderEvent, renderEventAsync
+**Verification**:
+- bun run typecheck: PASS
+- bun run test: PASS (562 tests)
+- bun run lint: PASS (2 pre-existing warnings)
+**Notes**:
+- Task was essentially already complete - source files have comprehensive JSDoc
+- TypeScript preserves JSDoc through re-exports for IDE intellisense
+- index.ts has module-level documentation with usage examples
+- Phase 7 User Story 5 (Clean Public API) fourth task COMPLETE
+
