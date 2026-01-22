@@ -207,7 +207,33 @@ function* mapToEvents(
 // ============================================================================
 
 /**
+ * Converts an error to a ProviderError.
+ * Used in both query and stream methods for consistent error handling.
+ */
+function toProviderError(error: unknown): ProviderError {
+	if (error instanceof ProviderError) {
+		return error;
+	}
+
+	if (error instanceof Error && error.name === "AbortError") {
+		return new ProviderError("PROVIDER_ERROR", "Request was aborted", false, undefined, error);
+	}
+
+	return new ProviderError(
+		"PROVIDER_ERROR",
+		error instanceof Error ? error.message : String(error),
+		true,
+		undefined,
+		error,
+	);
+}
+
+/**
  * Creates the Claude provider service implementation.
+ *
+ * This service uses Effect.acquireRelease to ensure proper resource cleanup (FR-064).
+ * When the Effect fiber is interrupted (e.g., workflow aborted), the SDK's AbortController
+ * is automatically triggered to cancel any in-flight requests.
  *
  * @param config - Optional configuration for the provider
  * @param queryFn - Optional query function (for testing)
@@ -221,148 +247,145 @@ export function makeClaudeProviderService(
 
 	const service: LLMProviderService = {
 		query: (options: QueryOptions) =>
-			Effect.tryPromise({
-				try: async () => {
-					const sdkMessages = toClaudeMessages(options.messages);
-					const sdkOptions = buildSdkOptions(config, options);
+			// FR-064: Use Effect.acquireRelease for resource safety
+			// This ensures the AbortController is triggered on fiber interruption
+			Effect.acquireUseRelease(
+				// Acquire: Create or use provided AbortController
+				Effect.sync(() => options.abortController ?? new AbortController()),
+				// Use: Execute the SDK query with the controller
+				(controller) =>
+					Effect.tryPromise({
+						try: async () => {
+							const sdkMessages = toClaudeMessages(options.messages);
+							const sdkOptions = buildSdkOptions(config, { ...options, abortController: controller });
 
-					const events: AnyEvent[] = [];
-					const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown }>();
-					let sessionId = options.sessionId;
-					let text = "";
-					let structuredOutput: unknown;
-					let stopReason: QueryResult["stopReason"];
+							const events: AnyEvent[] = [];
+							const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown }>();
+							let sessionId = options.sessionId;
+							let text = "";
+							let structuredOutput: unknown;
+							let stopReason: QueryResult["stopReason"];
 
-					const queryStream = queryFn({ prompt: sdkMessages, options: sdkOptions });
+							const queryStream = queryFn({ prompt: sdkMessages, options: sdkOptions });
 
-					for await (const message of queryStream) {
-						const sdkMessage = message as SDKMessage;
+							for await (const message of queryStream) {
+								const sdkMessage = message as SDKMessage;
 
-						// Extract session ID
-						const msgSessionId = extractSessionId(sdkMessage);
-						if (msgSessionId) {
-							sessionId = msgSessionId;
-						}
+								// Extract session ID
+								const msgSessionId = extractSessionId(sdkMessage);
+								if (msgSessionId) {
+									sessionId = msgSessionId;
+								}
 
-						// Map to events
-						for (const event of mapToEvents(sdkMessage, pendingToolUses, "claude")) {
-							events.push(event);
-						}
+								// Map to events
+								for (const event of mapToEvents(sdkMessage, pendingToolUses, "claude")) {
+									events.push(event);
+								}
 
-						// Accumulate text from stream events
-						if (sdkMessage.type === "stream_event") {
-							const streamEvent = sdkMessage.event as {
-								type?: string;
-								delta?: { type?: string; text?: string };
-							};
-							if (streamEvent?.type === "content_block_delta") {
-								const delta = streamEvent.delta;
-								if (delta?.type === "text_delta" && delta.text) {
-									text += delta.text;
+								// Accumulate text from stream events
+								if (sdkMessage.type === "stream_event") {
+									const streamEvent = sdkMessage.event as {
+										type?: string;
+										delta?: { type?: string; text?: string };
+									};
+									if (streamEvent?.type === "content_block_delta") {
+										const delta = streamEvent.delta;
+										if (delta?.type === "text_delta" && delta.text) {
+											text += delta.text;
+										}
+									}
+								}
+
+								// Handle result
+								if (sdkMessage.type === "result") {
+									const result = sdkMessage as SDKResultMessage;
+									sessionId = result.session_id ?? sessionId;
+									structuredOutput = result.structured_output;
+									stopReason = result.subtype === "success" ? "end_turn" : undefined;
+
+									if (result.subtype !== "success") {
+										const errors = "errors" in result ? (result.errors as string[]) : [];
+										throw new ProviderError(
+											"PROVIDER_ERROR",
+											errors.length > 0 ? errors.join("; ") : `Claude agent failed: ${result.subtype}`,
+											false,
+											undefined,
+										);
+									}
+
+									// Final text from result
+									if (typeof result.result === "string") {
+										text = result.result;
+									}
 								}
 							}
-						}
 
-						// Handle result
-						if (sdkMessage.type === "result") {
-							const result = sdkMessage as SDKResultMessage;
-							sessionId = result.session_id ?? sessionId;
-							structuredOutput = result.structured_output;
-							stopReason = result.subtype === "success" ? "end_turn" : undefined;
-
-							if (result.subtype !== "success") {
-								const errors = "errors" in result ? (result.errors as string[]) : [];
-								throw new ProviderError(
-									"PROVIDER_ERROR",
-									errors.length > 0 ? errors.join("; ") : `Claude agent failed: ${result.subtype}`,
-									false,
-									undefined,
-								);
+							// Add text:complete event if we accumulated text
+							if (text.length > 0) {
+								events.push(createEvent("text:complete", { fullText: text, agentName: "claude" }));
 							}
 
-							// Final text from result
-							if (typeof result.result === "string") {
-								text = result.result;
-							}
+							return {
+								events,
+								text: text || undefined,
+								output: structuredOutput,
+								sessionId,
+								stopReason,
+							} satisfies QueryResult;
+						},
+						catch: toProviderError,
+					}),
+				// Release: Abort the controller on interruption/failure (FR-064 resource safety)
+				(controller, exit) =>
+					Effect.sync(() => {
+						// Only abort if we created our own controller (not user-provided)
+						// AND the exit was not a success (failure or interruption)
+						if (!options.abortController && !exit._tag.startsWith("Success")) {
+							controller.abort();
 						}
-					}
-
-					// Add text:complete event if we accumulated text
-					if (text.length > 0) {
-						events.push(createEvent("text:complete", { fullText: text, agentName: "claude" }));
-					}
-
-					return {
-						events,
-						text: text || undefined,
-						output: structuredOutput,
-						sessionId,
-						stopReason,
-					} satisfies QueryResult;
-				},
-				catch: (error) => {
-					if (error instanceof ProviderError) {
-						return error;
-					}
-
-					if (error instanceof Error && error.name === "AbortError") {
-						return new ProviderError("PROVIDER_ERROR", "Request was aborted", false, undefined, error);
-					}
-
-					return new ProviderError(
-						"PROVIDER_ERROR",
-						error instanceof Error ? error.message : String(error),
-						true,
-						undefined,
-						error,
-					);
-				},
-			}),
+					}),
+			),
 
 		stream: (options: QueryOptions) => {
-			const sdkMessages = toClaudeMessages(options.messages);
-			const sdkOptions = buildSdkOptions(config, options);
-			const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown }>();
-
-			// Create async iterable from SDK query
-			const asyncIterable: AsyncIterable<StreamChunk> = {
-				async *[Symbol.asyncIterator]() {
-					try {
-						const queryStream = queryFn({ prompt: sdkMessages, options: sdkOptions });
-
-						for await (const message of queryStream) {
-							const sdkMessage = message as SDKMessage;
-							yield* mapToStreamChunks(sdkMessage, pendingToolUses);
+			// FR-064: Use Stream.acquireRelease for resource safety in streaming
+			// This ensures the AbortController is triggered when the stream is interrupted
+			return Stream.acquireRelease(
+				// Acquire: Create or use provided AbortController
+				Effect.sync(() => options.abortController ?? new AbortController()),
+				// Release: Abort the controller on interruption (FR-064 resource safety)
+				(controller) =>
+					Effect.sync(() => {
+						// Only abort if we created our own controller (not user-provided)
+						if (!options.abortController) {
+							controller.abort();
 						}
-					} catch (error) {
-						if (error instanceof Error && error.name === "AbortError") {
-							throw new ProviderError("PROVIDER_ERROR", "Request was aborted", false, undefined, error);
-						}
+					}),
+			).pipe(
+				Stream.flatMap((controller) => {
+					const sdkMessages = toClaudeMessages(options.messages);
+					const sdkOptions = buildSdkOptions(config, { ...options, abortController: controller });
+					const pendingToolUses = new Map<string, { toolName: string; toolInput: unknown }>();
 
-						throw new ProviderError(
-							"PROVIDER_ERROR",
-							error instanceof Error ? error.message : String(error),
-							true,
-							undefined,
-							error,
-						);
-					}
-				},
-			};
+					// Create async iterable from SDK query
+					const asyncIterable: AsyncIterable<StreamChunk> = {
+						async *[Symbol.asyncIterator]() {
+							try {
+								const queryStream = queryFn({ prompt: sdkMessages, options: sdkOptions });
 
-			// Convert async iterable to Effect Stream
-			return Stream.fromAsyncIterable(asyncIterable, (error) => {
-				if (error instanceof ProviderError) {
-					return error;
-				}
-				return new ProviderError(
-					"PROVIDER_ERROR",
-					error instanceof Error ? error.message : String(error),
-					true,
-					undefined,
-					error,
-				);
-			});
+								for await (const message of queryStream) {
+									const sdkMessage = message as SDKMessage;
+									yield* mapToStreamChunks(sdkMessage, pendingToolUses);
+								}
+							} catch (error) {
+								throw toProviderError(error);
+							}
+						},
+					};
+
+					// Convert async iterable to Effect Stream
+					return Stream.fromAsyncIterable(asyncIterable, toProviderError);
+				}),
+			);
 		},
 
 		info: () =>

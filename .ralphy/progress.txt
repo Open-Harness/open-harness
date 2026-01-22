@@ -1053,3 +1053,32 @@
 - biome-ignore lint/correctness/useYield added for error testing generator function
 - Phase 9 User Story (LLM Provider Integration) first task COMPLETE
 
+
+## 2026-01-21T19:51:00Z - Phase 9 Effect.acquireRelease for FR-064 Resource Safety
+**Task**: Implement Effect.acquireRelease in ClaudeProvider for SDK connection cleanup on abort/error per spec FR-064
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/provider/ClaudeProvider.ts with:
+  - Added `toProviderError()` helper function for consistent error conversion
+  - Refactored `query()` method to use `Effect.acquireUseRelease`:
+    - Acquire: Creates internal AbortController if none provided by user
+    - Use: Executes SDK query with controller for cancellation support
+    - Release: Aborts internal controller on fiber interruption/failure (not on success)
+  - Refactored `stream()` method to use `Stream.acquireRelease`:
+    - Same acquire/release pattern for streaming operations
+    - Flattens into SDK stream using Stream.flatMap
+  - User-provided AbortControllers are NOT aborted by core-v2 (user owns lifecycle)
+  - Internal AbortControllers are aborted on interruption to cancel SDK requests
+- Created 9 new FR-064 Resource Safety tests in tests/claude-provider.test.ts:
+  - query method tests (5 tests): internal controller creation, user-provided controller usage, abort on interruption, no abort for user controllers, no abort on success
+  - stream method tests (4 tests): internal controller creation, user-provided controller usage, abort on interruption, no abort for user controllers
+**Verification**:
+- bun run test: PASS (46 claude-provider tests, 9 new FR-064 tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Effect.acquireUseRelease ensures cleanup happens regardless of exit state (success, failure, interruption)
+- Stream.acquireRelease provides same guarantees for streaming operations
+- Exit._tag check determines if cleanup needed (not "Success" = needs cleanup)
+- Pre-existing TypeScript errors in ClaudeProvider.ts unchanged (SDK type mismatches)
+- Phase 9 Task 3 (FR-064 Resource Safety) COMPLETE
+

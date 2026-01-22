@@ -6,7 +6,7 @@
  */
 
 import type { SDKMessage, SDKResultMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
-import { Cause, Effect, Exit, Layer, Stream } from "effect";
+import { Cause, Effect, Exit, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 import {
 	ClaudeProviderLive,
@@ -834,5 +834,245 @@ describe("Edge Cases", () => {
 
 		expect(result.text).toBeUndefined();
 		expect(result.output).toEqual({ data: "only structured" });
+	});
+});
+
+// ============================================================================
+// FR-064 Resource Safety Tests (Effect.acquireRelease)
+// ============================================================================
+
+describe("FR-064 Resource Safety", () => {
+	describe("query method", () => {
+		it("should create AbortController when none provided", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			await Effect.runPromise(service.query({ messages: [{ role: "user", content: "Hi" }] }));
+
+			expect((capturedOptions as { abortController: AbortController }).abortController).toBeInstanceOf(AbortController);
+		});
+
+		it("should use provided AbortController", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield successResult;
+			};
+
+			const providedController = new AbortController();
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			await Effect.runPromise(
+				service.query({
+					messages: [{ role: "user", content: "Hi" }],
+					abortController: providedController,
+				}),
+			);
+
+			expect((capturedOptions as { abortController: AbortController }).abortController).toBe(providedController);
+		});
+
+		it("should abort internal controller on fiber interruption", async () => {
+			let capturedController: AbortController | undefined;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedController = (args.options as { abortController: AbortController }).abortController;
+				// Simulate a slow response that can be interrupted
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			// Start the query and then interrupt it
+			const fiber = await Effect.runFork(service.query({ messages: [{ role: "user", content: "Hi" }] }));
+
+			// Wait a bit for the query to start
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Interrupt the fiber
+			await Effect.runPromise(Fiber.interrupt(fiber));
+
+			// The controller should have been aborted
+			expect(capturedController).toBeDefined();
+			expect(capturedController?.signal.aborted).toBe(true);
+		});
+
+		it("should not abort user-provided controller on fiber interruption", async () => {
+			let queryStarted = false;
+			const mockQuery: MockQueryFn = async function* () {
+				queryStarted = true;
+				// Simulate a slow response
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				yield successResult;
+			};
+
+			const providedController = new AbortController();
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const fiber = await Effect.runFork(
+				service.query({
+					messages: [{ role: "user", content: "Hi" }],
+					abortController: providedController,
+				}),
+			);
+
+			// Wait for query to start
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(queryStarted).toBe(true);
+
+			// Interrupt the fiber
+			await Effect.runPromise(Fiber.interrupt(fiber));
+
+			// The user-provided controller should NOT be aborted
+			// (user owns it and may want to reuse or handle it differently)
+			expect(providedController.signal.aborted).toBe(false);
+		});
+
+		it("should not abort controller on success", async () => {
+			let capturedController: AbortController | undefined;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedController = (args.options as { abortController: AbortController }).abortController;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			await Effect.runPromise(service.query({ messages: [{ role: "user", content: "Hi" }] }));
+
+			// Controller should exist but NOT be aborted on success
+			expect(capturedController).toBeDefined();
+			expect(capturedController?.signal.aborted).toBe(false);
+		});
+	});
+
+	describe("stream method", () => {
+		it("should create AbortController when none provided", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield textDeltaStreamEvent;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			await Effect.runPromise(Stream.runCollect(service.stream({ messages: [{ role: "user", content: "Hi" }] })));
+
+			expect((capturedOptions as { abortController: AbortController }).abortController).toBeInstanceOf(AbortController);
+		});
+
+		it("should use provided AbortController for stream", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield textDeltaStreamEvent;
+				yield successResult;
+			};
+
+			const providedController = new AbortController();
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			await Effect.runPromise(
+				Stream.runCollect(
+					service.stream({
+						messages: [{ role: "user", content: "Hi" }],
+						abortController: providedController,
+					}),
+				),
+			);
+
+			expect((capturedOptions as { abortController: AbortController }).abortController).toBe(providedController);
+		});
+
+		it("should abort internal controller on stream interruption", async () => {
+			let capturedController: AbortController | undefined;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedController = (args.options as { abortController: AbortController }).abortController;
+				yield textDeltaStreamEvent;
+				// Simulate slow streaming
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				yield textDeltaStreamEvent2;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const fiber = await Effect.runFork(
+				Stream.runCollect(service.stream({ messages: [{ role: "user", content: "Hi" }] })),
+			);
+
+			// Wait for stream to start
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Interrupt the fiber
+			await Effect.runPromise(Fiber.interrupt(fiber));
+
+			// The controller should have been aborted
+			expect(capturedController).toBeDefined();
+			expect(capturedController?.signal.aborted).toBe(true);
+		});
+
+		it("should not abort user-provided controller on stream interruption", async () => {
+			let streamStarted = false;
+			const mockQuery: MockQueryFn = async function* () {
+				streamStarted = true;
+				yield textDeltaStreamEvent;
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				yield textDeltaStreamEvent2;
+				yield successResult;
+			};
+
+			const providedController = new AbortController();
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const fiber = await Effect.runFork(
+				Stream.runCollect(
+					service.stream({
+						messages: [{ role: "user", content: "Hi" }],
+						abortController: providedController,
+					}),
+				),
+			);
+
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(streamStarted).toBe(true);
+
+			await Effect.runPromise(Fiber.interrupt(fiber));
+
+			// User-provided controller should NOT be aborted
+			expect(providedController.signal.aborted).toBe(false);
+		});
 	});
 });
