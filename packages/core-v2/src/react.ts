@@ -706,6 +706,400 @@ export function useWorkflowContext<S = unknown>(): UseWorkflowReturn<S> {
 }
 
 // ============================================================================
+// WorkflowChat Component (FR-058)
+// ============================================================================
+
+/**
+ * Props for WorkflowChat component.
+ *
+ * @typeParam S - The workflow state type
+ */
+export interface WorkflowChatProps<S = unknown> {
+	/** The workflow to use */
+	readonly workflow: Workflow<S>;
+	/** CSS class name for the root container */
+	readonly className?: string;
+	/** Placeholder text for input field */
+	readonly placeholder?: string;
+	/** Whether to show tape controls (default: false) */
+	readonly showTapeControls?: boolean;
+	/** Hook options passed to internal useWorkflow */
+	readonly options?: UseWorkflowOptions;
+}
+
+/**
+ * Internal component that renders the chat UI using context.
+ * @internal
+ */
+function WorkflowChatInner<S = unknown>({
+	className,
+	placeholder = "Type a message...",
+	showTapeControls = false,
+}: Omit<WorkflowChatProps<S>, "workflow" | "options">): ReactNode {
+	const { messages, input, setInput, handleSubmit, isLoading, error, tape } = useWorkflowContext<S>();
+
+	// Build children array for the container
+	const children: ReactNode[] = [];
+
+	// Messages container
+	const messageElements: ReactNode[] = [];
+	for (let i = 0; i < messages.length; i++) {
+		const message = messages[i];
+		if (!message) continue;
+
+		const messageStyle: Record<string, string> = {
+			padding: "8px 12px",
+			marginBottom: "8px",
+			borderRadius: "8px",
+			backgroundColor: message.role === "user" ? "#e3f2fd" : "#f5f5f5",
+			alignSelf: message.role === "user" ? "flex-end" : "flex-start",
+			maxWidth: "80%",
+		};
+
+		messageElements.push(
+			createElement(
+				"div",
+				{
+					key: message.id,
+					style: messageStyle,
+					"data-role": message.role,
+					"data-testid": `message-${message.role}`,
+				},
+				// Message name (agent name) if present
+				message.name
+					? createElement(
+							"div",
+							{
+								style: {
+									fontSize: "12px",
+									color: "#666",
+									marginBottom: "4px",
+								},
+							},
+							message.name,
+						)
+					: null,
+				// Message content
+				createElement("div", null, message.content),
+				// Tool invocations if present
+				message.toolInvocations && message.toolInvocations.length > 0
+					? createElement(
+							"div",
+							{
+								style: {
+									fontSize: "12px",
+									color: "#888",
+									marginTop: "4px",
+								},
+							},
+							`Tools: ${message.toolInvocations.map((t) => t.toolName).join(", ")}`,
+						)
+					: null,
+			),
+		);
+	}
+
+	const messagesContainerStyle: Record<string, string> = {
+		display: "flex",
+		flexDirection: "column",
+		flex: "1",
+		overflowY: "auto",
+		padding: "16px",
+		gap: "8px",
+	};
+
+	children.push(
+		createElement(
+			"div",
+			{
+				key: "messages",
+				style: messagesContainerStyle,
+				"data-testid": "messages-container",
+			},
+			...messageElements,
+			// Loading indicator
+			isLoading
+				? createElement(
+						"div",
+						{
+							key: "loading",
+							style: {
+								padding: "8px 12px",
+								color: "#666",
+								fontStyle: "italic",
+							},
+							"data-testid": "loading-indicator",
+						},
+						"Loading...",
+					)
+				: null,
+		),
+	);
+
+	// Error display
+	if (error) {
+		children.push(
+			createElement(
+				"div",
+				{
+					key: "error",
+					style: {
+						padding: "8px 12px",
+						backgroundColor: "#ffebee",
+						color: "#c62828",
+						borderRadius: "4px",
+						margin: "0 16px",
+					},
+					"data-testid": "error-display",
+				},
+				error.message,
+			),
+		);
+	}
+
+	// Input form
+	const formStyle: Record<string, string> = {
+		display: "flex",
+		gap: "8px",
+		padding: "16px",
+		borderTop: "1px solid #eee",
+	};
+
+	const inputStyle: Record<string, string> = {
+		flex: "1",
+		padding: "8px 12px",
+		borderRadius: "4px",
+		border: "1px solid #ddd",
+		fontSize: "14px",
+	};
+
+	const buttonStyle: Record<string, string> = {
+		padding: "8px 16px",
+		borderRadius: "4px",
+		border: "none",
+		backgroundColor: isLoading ? "#ccc" : "#1976d2",
+		color: "white",
+		cursor: isLoading ? "not-allowed" : "pointer",
+		fontSize: "14px",
+	};
+
+	children.push(
+		createElement(
+			"form",
+			{
+				key: "form",
+				onSubmit: handleSubmit,
+				style: formStyle,
+				"data-testid": "chat-form",
+			},
+			createElement("input", {
+				type: "text",
+				value: input,
+				onChange: (e: { target: { value: string } }) => setInput(e.target.value),
+				placeholder,
+				disabled: isLoading,
+				style: inputStyle,
+				"data-testid": "chat-input",
+			}),
+			createElement(
+				"button",
+				{
+					type: "submit",
+					disabled: isLoading || !input.trim(),
+					style: buttonStyle,
+					"data-testid": "submit-button",
+				},
+				"Send",
+			),
+		),
+	);
+
+	// Tape controls (optional)
+	if (showTapeControls) {
+		const tapeControlsStyle: Record<string, string> = {
+			display: "flex",
+			alignItems: "center",
+			gap: "8px",
+			padding: "8px 16px",
+			borderTop: "1px solid #eee",
+			backgroundColor: "#fafafa",
+		};
+
+		const tapeButtonStyle: Record<string, string> = {
+			padding: "4px 8px",
+			borderRadius: "4px",
+			border: "1px solid #ddd",
+			backgroundColor: "white",
+			cursor: "pointer",
+			fontSize: "12px",
+		};
+
+		children.push(
+			createElement(
+				"div",
+				{
+					key: "tape-controls",
+					style: tapeControlsStyle,
+					"data-testid": "tape-controls",
+				},
+				createElement(
+					"button",
+					{
+						type: "button",
+						onClick: tape.rewind,
+						style: tapeButtonStyle,
+						"data-testid": "rewind-button",
+						title: "Rewind to start",
+					},
+					"⏮",
+				),
+				createElement(
+					"button",
+					{
+						type: "button",
+						onClick: tape.stepBack,
+						style: tapeButtonStyle,
+						"data-testid": "step-back-button",
+						title: "Step back",
+					},
+					"◀",
+				),
+				createElement(
+					"span",
+					{
+						style: {
+							fontSize: "12px",
+							color: "#666",
+							minWidth: "60px",
+							textAlign: "center",
+						},
+						"data-testid": "position-indicator",
+					},
+					`${tape.position + 1} / ${tape.length}`,
+				),
+				createElement(
+					"button",
+					{
+						type: "button",
+						onClick: tape.step,
+						style: tapeButtonStyle,
+						"data-testid": "step-button",
+						title: "Step forward",
+					},
+					"▶",
+				),
+				createElement(
+					"button",
+					{
+						type: "button",
+						onClick: tape.play,
+						style: tapeButtonStyle,
+						"data-testid": "play-button",
+						title: tape.status === "playing" ? "Playing..." : "Play",
+					},
+					tape.status === "playing" ? "⏸" : "▶▶",
+				),
+			),
+		);
+	}
+
+	// Container styles
+	const containerStyle: Record<string, string> = {
+		display: "flex",
+		flexDirection: "column",
+		height: "100%",
+		fontFamily: "system-ui, -apple-system, sans-serif",
+	};
+
+	return createElement(
+		"div",
+		{
+			className,
+			style: containerStyle,
+			"data-testid": "workflow-chat",
+		},
+		...children,
+	);
+}
+
+/**
+ * Zero-config chat UI component for workflows.
+ *
+ * Provides a complete chat interface with messages list, input field,
+ * submit button, and optional tape controls for time-travel debugging.
+ *
+ * @typeParam S - The workflow state type
+ *
+ * @remarks
+ * **FR-058 Compliance**: This component provides a "zero-config chat UI"
+ * that works out of the box with any workflow.
+ *
+ * The component uses `WorkflowProvider` internally, so the workflow state
+ * is properly managed without requiring external state management.
+ *
+ * **Features:**
+ * - Messages list with user/assistant styling
+ * - Input field with placeholder
+ * - Submit button with loading state
+ * - Error display
+ * - Optional tape controls for time-travel debugging
+ *
+ * @example
+ * ```tsx
+ * import { WorkflowChat } from "@open-harness/core-v2/react";
+ * import { createWorkflow } from "@open-harness/core-v2";
+ *
+ * const workflow = createWorkflow({
+ *   name: "chat",
+ *   initialState: { messages: [], terminated: false },
+ *   handlers: [userInputHandler],
+ *   agents: [chatAgent],
+ *   until: (s) => s.terminated,
+ * });
+ *
+ * function App() {
+ *   return (
+ *     <WorkflowChat
+ *       workflow={workflow}
+ *       placeholder="Ask me anything..."
+ *       showTapeControls
+ *     />
+ *   );
+ * }
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // With custom styling via className
+ * <WorkflowChat
+ *   workflow={workflow}
+ *   className="my-chat-container"
+ *   placeholder="Type here..."
+ *   showTapeControls={false}
+ * />
+ * ```
+ */
+export function WorkflowChat<S = unknown>({
+	workflow,
+	className,
+	placeholder,
+	showTapeControls,
+	options,
+}: WorkflowChatProps<S>): ReactNode {
+	// Use WorkflowProvider to manage state internally
+	// Pass children as third argument per React convention
+	return createElement(
+		WorkflowProvider,
+		{ workflow, options } as WorkflowProviderProps<S>,
+		createElement(WorkflowChatInner, {
+			className,
+			placeholder,
+			showTapeControls,
+		}),
+	);
+}
+
+// ============================================================================
 // Re-exports for convenience
 // ============================================================================
 

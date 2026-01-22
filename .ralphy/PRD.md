@@ -195,7 +195,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Add tape object to useWorkflow return with all Tape controls that update React state when used per spec FR-056
 - [x] Implement useEffect cleanup in useWorkflow that calls workflow.dispose() on unmount
 - [x] Implement WorkflowProvider component in src/react.ts using React.createContext for shared workflow context per spec FR-057
-- [ ] Implement WorkflowChat convenience component in src/react.ts with messages list, input field, and submit button per spec FR-058
+- [x] Implement WorkflowChat convenience component in src/react.ts with messages list, input field, and submit button per spec FR-058
 - [x] Create packages/core-v2/tests/react.test.ts with tests for: AI SDK compatible values, tape controls, cleanup on unmount
 
 ---

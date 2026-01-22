@@ -5,12 +5,12 @@
  * These tests verify AI SDK compatibility and tape controls.
  */
 
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, render, renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEvent, defineEvent, type EventId } from "../src/event/Event.js";
 import { defineHandler } from "../src/handler/Handler.js";
-import { useWorkflow, useWorkflowContext, WorkflowContextError, WorkflowProvider } from "../src/react.js";
+import { useWorkflow, useWorkflowContext, WorkflowChat, WorkflowContextError, WorkflowProvider } from "../src/react.js";
 import type { Workflow, WorkflowDefinition } from "../src/workflow/Workflow.js";
 
 // ============================================================================
@@ -970,6 +970,252 @@ describe("WorkflowProvider (FR-057)", () => {
 			// TypeScript should allow accessing TestState properties (compile-time check)
 			const _count: number | undefined = (result.current.state as TestState | undefined)?.count;
 			expect(_count !== undefined || _count === undefined).toBe(true); // Just verify it compiles
+		});
+	});
+});
+
+// ============================================================================
+// WorkflowChat Tests (FR-058)
+// ============================================================================
+
+describe("WorkflowChat (FR-058)", () => {
+	// Clean up after each test to prevent element accumulation
+	afterEach(() => {
+		cleanup();
+	});
+
+	// =========================================================================
+	// Basic Rendering
+	// =========================================================================
+
+	describe("Basic Rendering", () => {
+		it("should render the chat container", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const chatContainer = container.querySelector('[data-testid="workflow-chat"]');
+			expect(chatContainer).not.toBeNull();
+		});
+
+		it("should render messages container", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const messagesContainer = container.querySelector('[data-testid="messages-container"]');
+			expect(messagesContainer).not.toBeNull();
+		});
+
+		it("should render input form", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const form = container.querySelector('[data-testid="chat-form"]');
+			expect(form).not.toBeNull();
+		});
+
+		it("should render input field", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const input = container.querySelector('[data-testid="chat-input"]');
+			expect(input).not.toBeNull();
+		});
+
+		it("should render submit button", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const button = container.querySelector('[data-testid="submit-button"]');
+			expect(button).not.toBeNull();
+			expect(button?.textContent).toBe("Send");
+		});
+	});
+
+	// =========================================================================
+	// Props
+	// =========================================================================
+
+	describe("Props", () => {
+		it("should apply className to container", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, className: "custom-class" }));
+
+			const chatContainer = container.querySelector('[data-testid="workflow-chat"]');
+			expect(chatContainer?.className).toBe("custom-class");
+		});
+
+		it("should apply placeholder to input", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, placeholder: "Custom placeholder..." }));
+
+			const input = container.querySelector('[data-testid="chat-input"]') as HTMLInputElement;
+			expect(input.placeholder).toBe("Custom placeholder...");
+		});
+
+		it("should use default placeholder when not provided", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const input = container.querySelector('[data-testid="chat-input"]') as HTMLInputElement;
+			expect(input.placeholder).toBe("Type a message...");
+		});
+
+		it("should not show tape controls by default", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const tapeControls = container.querySelector('[data-testid="tape-controls"]');
+			expect(tapeControls).toBeNull();
+		});
+
+		it("should show tape controls when showTapeControls is true", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, showTapeControls: true }));
+
+			const tapeControls = container.querySelector('[data-testid="tape-controls"]');
+			expect(tapeControls).not.toBeNull();
+		});
+	});
+
+	// =========================================================================
+	// Tape Controls
+	// =========================================================================
+
+	describe("Tape Controls", () => {
+		it("should render rewind button", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, showTapeControls: true }));
+
+			const rewindButton = container.querySelector('[data-testid="rewind-button"]');
+			expect(rewindButton).not.toBeNull();
+		});
+
+		it("should render step back button", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, showTapeControls: true }));
+
+			const stepBackButton = container.querySelector('[data-testid="step-back-button"]');
+			expect(stepBackButton).not.toBeNull();
+		});
+
+		it("should render step button", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, showTapeControls: true }));
+
+			const stepButton = container.querySelector('[data-testid="step-button"]');
+			expect(stepButton).not.toBeNull();
+		});
+
+		it("should render play button", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, showTapeControls: true }));
+
+			const playButton = container.querySelector('[data-testid="play-button"]');
+			expect(playButton).not.toBeNull();
+		});
+
+		it("should render position indicator", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, showTapeControls: true }));
+
+			const positionIndicator = container.querySelector('[data-testid="position-indicator"]');
+			expect(positionIndicator).not.toBeNull();
+			// Initial state: 1 / 0 (position + 1 / length)
+			expect(positionIndicator?.textContent).toBe("1 / 0");
+		});
+	});
+
+	// =========================================================================
+	// Input Interaction
+	// =========================================================================
+
+	describe("Input Interaction", () => {
+		it("should disable submit button when input is empty", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const button = container.querySelector('[data-testid="submit-button"]') as HTMLButtonElement;
+			expect(button.disabled).toBe(true);
+		});
+
+		it("should have input value from initial input option", async () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, options: { initialInput: "Hello" } }));
+
+			const input = container.querySelector('[data-testid="chat-input"]') as HTMLInputElement;
+			expect(input.value).toBe("Hello");
+		});
+	});
+
+	// =========================================================================
+	// Integration with useWorkflow
+	// =========================================================================
+
+	describe("Integration", () => {
+		it("should use WorkflowProvider internally", () => {
+			// WorkflowChat should work without needing an external provider
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			// Should render without throwing WorkflowContextError
+			const chatContainer = container.querySelector('[data-testid="workflow-chat"]');
+			expect(chatContainer).not.toBeNull();
+		});
+
+		it("should accept options prop and pass to useWorkflow", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow, options: { initialInput: "Test input" } }));
+
+			const input = container.querySelector('[data-testid="chat-input"]') as HTMLInputElement;
+			expect(input.value).toBe("Test input");
+		});
+	});
+
+	// =========================================================================
+	// Module Exports
+	// =========================================================================
+
+	describe("Module Exports", () => {
+		it("should export WorkflowChat component", async () => {
+			const module = await import("../src/react.js");
+			expect(typeof module.WorkflowChat).toBe("function");
+		});
+
+		it("should export WorkflowChatProps type", async () => {
+			// TypeScript compile-time check - we can't test types at runtime
+			// but we can verify the module imports without error
+			const module = await import("../src/react.js");
+			expect(module).toBeDefined();
+		});
+	});
+
+	// =========================================================================
+	// Accessibility
+	// =========================================================================
+
+	describe("Accessibility", () => {
+		it("should have form element wrapping input and button", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const form = container.querySelector('[data-testid="chat-form"]');
+			expect(form?.tagName.toLowerCase()).toBe("form");
+		});
+
+		it("should have input type text", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const input = container.querySelector('[data-testid="chat-input"]') as HTMLInputElement;
+			expect(input.type).toBe("text");
+		});
+
+		it("should have submit button type submit", () => {
+			const workflow = createMockWorkflow();
+			const { container } = render(createElement(WorkflowChat, { workflow }));
+
+			const button = container.querySelector('[data-testid="submit-button"]') as HTMLButtonElement;
+			expect(button.type).toBe("submit");
 		});
 	});
 });

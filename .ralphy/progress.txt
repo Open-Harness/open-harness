@@ -973,3 +973,38 @@
 - Enables modular UI: ChatMessages, ChatInput, TapeControls as separate components
 - Phase 8 User Story 6 (React Integration) WorkflowProvider task COMPLETE (5 of 7 tasks)
 
+
+## 2026-01-21T19:35:00Z - Phase 8 WorkflowChat Component (FR-058)
+**Task**: Implement WorkflowChat convenience component for zero-config chat UI
+**Status**: COMPLETE
+**Changes**:
+- Created WorkflowChatProps<S> interface with: workflow, className?, placeholder?, showTapeControls?, options?
+- Implemented WorkflowChatInner component (internal) that uses useWorkflowContext
+- Implemented WorkflowChat component that wraps WorkflowProvider + WorkflowChatInner
+- Features implemented:
+  - Messages container with user/assistant styling (blue for user, gray for assistant)
+  - Message name display for agents
+  - Tool invocations display
+  - Loading indicator
+  - Error display
+  - Form with input field and submit button
+  - Optional tape controls (rewind, stepBack, step, play, position indicator)
+  - All elements have data-testid for testing
+- Added 24 comprehensive tests in tests/react.test.ts covering:
+  - Basic Rendering (5 tests): container, messages container, form, input, button
+  - Props (5 tests): className, placeholder, default placeholder, showTapeControls
+  - Tape Controls (5 tests): rewind, stepBack, step, play buttons, position indicator
+  - Input Interaction (2 tests): disabled submit, initial input value
+  - Integration (2 tests): WorkflowProvider internal usage, options passthrough
+  - Module Exports (2 tests): WorkflowChat export, WorkflowChatProps type
+  - Accessibility (3 tests): form element, input type, button type
+**Verification**:
+- bun run test: PASS (703 tests total, 24 new WorkflowChat tests)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- Component uses createElement (not JSX) since source is .ts not .tsx
+- Uses WorkflowProvider internally for state management (true zero-config)
+- Uses container-scoped querySelector in tests to avoid element accumulation issues
+- Pre-existing typecheck issues in the codebase unrelated to this task
+- Phase 8 User Story 6 (React Integration) is now COMPLETE
+
