@@ -727,3 +727,44 @@
 - Cause.failures() and Cause.defects() return iterables in Effect 3.x
 - Phase 7 User Story 5 (Clean Public API) second task COMPLETE
 
+
+## 2026-01-21T18:55:00Z - Phase 7 Promise-based Public API
+**Task**: Verify all public methods return Promise<T>, not Effect<T>
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/store/MemoryStore.ts:
+  - Renamed `createMemoryStore` to `createMemoryStoreEffect` (Effect-based internal API)
+  - New `createMemoryStore` async function returns `Promise<PublicStore>` (public API)
+  - Added `wrapStoreService` helper that wraps StoreService methods with `Effect.runPromise`
+- Updated packages/core-v2/src/store/SqliteStore.ts:
+  - Renamed `createSqliteStore` to `createSqliteStoreEffect` (Effect-based internal API)
+  - New `createSqliteStore` async function returns `Promise<PublicStore>` (public API)
+  - Added `wrapStoreService` helper for Promise-based method wrapping
+- Updated packages/core-v2/src/store/index.ts:
+  - Export both `createMemoryStore` (Promise) and `createMemoryStoreEffect` (Effect)
+  - Export both `createSqliteStore` (Promise) and `createSqliteStoreEffect` (Effect)
+- Updated packages/core-v2/src/index.ts:
+  - Removed Layer exports (`MemoryStoreLive`, `SqliteStoreMemoryLive`, `makeSqliteStoreLive`)
+  - Only Promise-based factories are now part of the public API
+- Updated packages/core-v2/tests/memory-store.test.ts:
+  - Added Promise-based tests for `createMemoryStore`
+  - Added Effect-based tests for `createMemoryStoreEffect`
+- Updated packages/core-v2/tests/sqlite-store.test.ts:
+  - Added Promise-based tests for `createSqliteStore`
+  - Added Effect-based tests for `createSqliteStoreEffect`
+  - Updated file-based tests to use Promise API
+- Updated packages/core-v2/tests/public-api.test.ts:
+  - Removed tests for Layer exports (no longer public)
+  - Updated consumer tests to verify Promise-based store factories
+  - Fixed event definition tests to use correct TypeScript generic syntax
+**Verification**:
+- bun run test: PASS (562 tests total)
+- bun run typecheck: PASS
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Public API now returns `Promise<PublicStore>` not `Effect<StoreService>`
+- Effect-based factories still available as `*Effect` for internal use
+- Layer exports removed from public API (expose Effect types)
+- Workflow.run(), Workflow.load(), Workflow.dispose() already return Promises
+- Phase 7 User Story 5 (Clean Public API) third task COMPLETE
+

@@ -144,17 +144,9 @@ describe("Public API Audit (FR-062)", () => {
 			expect(PublicAPI.createSqliteStore).toBeTypeOf("function");
 		});
 
-		it("should export makeSqliteStoreLive factory", () => {
-			expect(PublicAPI.makeSqliteStoreLive).toBeTypeOf("function");
-		});
-
-		it("should export MemoryStoreLive Layer", () => {
-			expect(PublicAPI.MemoryStoreLive).toBeDefined();
-		});
-
-		it("should export SqliteStoreMemoryLive Layer", () => {
-			expect(PublicAPI.SqliteStoreMemoryLive).toBeDefined();
-		});
+		// Note: Layer exports (MemoryStoreLive, SqliteStoreMemoryLive, makeSqliteStoreLive)
+		// are NOT part of the public API as they expose Effect types.
+		// Use createMemoryStore() and createSqliteStore() instead.
 
 		it("should export session ID utilities", () => {
 			expect(PublicAPI.makeSessionId).toBeTypeOf("function");
@@ -202,15 +194,13 @@ describe("Public API Audit (FR-062)", () => {
 			expect(event.timestamp).toBeInstanceOf(Date);
 		});
 
-		it("should allow defining events with Zod schemas", async () => {
-			const { z } = await import("zod");
-			const TestEvent = PublicAPI.defineEvent(
-				"test:typed",
-				z.object({
-					message: z.string(),
-					count: z.number(),
-				}),
-			);
+		it("should allow defining events with type parameters", () => {
+			// defineEvent uses TypeScript generics for type safety
+			interface TestPayload {
+				message: string;
+				count: number;
+			}
+			const TestEvent = PublicAPI.defineEvent<"test:typed", TestPayload>("test:typed");
 
 			const event = TestEvent.create({ message: "hello", count: 42 });
 			expect(event.name).toBe("test:typed");
@@ -219,13 +209,16 @@ describe("Public API Audit (FR-062)", () => {
 			expect(TestEvent.is(event)).toBe(true);
 		});
 
-		it("should allow creating handlers with utility functions", async () => {
-			const { z } = await import("zod");
+		it("should allow creating handlers with utility functions", () => {
 			interface TestState {
 				count: number;
 			}
 
-			const CounterEvent = PublicAPI.defineEvent("counter:increment", z.object({ amount: z.number() }));
+			interface CounterPayload {
+				amount: number;
+			}
+
+			const CounterEvent = PublicAPI.defineEvent<"counter:increment", CounterPayload>("counter:increment");
 
 			const handler = PublicAPI.defineHandler(CounterEvent, {
 				name: "counter-handler", // name is required per DefineHandlerOptions
@@ -243,19 +236,17 @@ describe("Public API Audit (FR-062)", () => {
 		it("should allow creating agents with outputSchema", async () => {
 			const { z } = await import("zod");
 
-			const testAgent = PublicAPI.agent({
+			const outputSchema = z.object({ response: z.string() });
+			type OutputType = { response: string };
+
+			const testAgent = PublicAPI.agent<{ messages: string[] }, OutputType>({
 				name: "test-agent",
 				activatesOn: ["user:input"],
 				emits: ["agent:response"],
-				outputSchema: z.object({ response: z.string() }),
+				outputSchema,
 				prompt: () => "Test prompt",
-				onOutput: (output, event) => [
-					{
-						name: "agent:response",
-						payload: { text: output.response },
-						causedBy: event.id,
-					},
-				],
+				// onOutput MUST return full Event objects (with id, timestamp) via createEvent
+				onOutput: (output, event) => [PublicAPI.createEvent("agent:response", { text: output.response }, event.id)],
 			});
 
 			expect(testAgent.name).toBe("test-agent");
@@ -279,24 +270,36 @@ describe("Public API Audit (FR-062)", () => {
 			).toThrow(PublicAPI.MissingOutputSchemaError);
 		});
 
-		it("should allow creating memory store (returns Effect for now)", () => {
-			// NOTE: Current implementation returns Effect<StoreService>
-			// This will be wrapped in Promise-based API in a later Phase 7 task:
-			// "Verify all public methods return Promise<T>, not Effect<T>"
-			const storeEffect = PublicAPI.createMemoryStore();
-			expect(storeEffect).toBeDefined();
-			// The returned value is an Effect, which has pipe method
-			// We verify it's callable (factory works) but don't test internal Effect structure
+		it("should allow creating memory store (Promise-based)", async () => {
+			// Public API returns Promise<PublicStore> - no Effect types exposed
+			const store = await PublicAPI.createMemoryStore();
+			expect(store).toBeDefined();
+			expect(store.append).toBeTypeOf("function");
+			expect(store.events).toBeTypeOf("function");
+			expect(store.sessions).toBeTypeOf("function");
+			expect(store.clear).toBeTypeOf("function");
+
+			// Verify it works
+			const sessionId = PublicAPI.generateSessionId();
+			await store.append(sessionId, PublicAPI.createEvent("test:event", { data: 1 }));
+			const events = await store.events(sessionId);
+			expect(events).toHaveLength(1);
 		});
 
-		it("should allow creating sqlite store (returns Effect for now)", () => {
-			// NOTE: Current implementation returns Effect<StoreService>
-			// This will be wrapped in Promise-based API in a later Phase 7 task:
-			// "Verify all public methods return Promise<T>, not Effect<T>"
-			const storeEffect = PublicAPI.createSqliteStore({ path: ":memory:" });
-			expect(storeEffect).toBeDefined();
-			// The returned value is an Effect, which has pipe method
-			// We verify it's callable (factory works) but don't test internal Effect structure
+		it("should allow creating sqlite store (Promise-based)", async () => {
+			// Public API returns Promise<PublicStore> - no Effect types exposed
+			const store = await PublicAPI.createSqliteStore({ path: ":memory:" });
+			expect(store).toBeDefined();
+			expect(store.append).toBeTypeOf("function");
+			expect(store.events).toBeTypeOf("function");
+			expect(store.sessions).toBeTypeOf("function");
+			expect(store.clear).toBeTypeOf("function");
+
+			// Verify it works
+			const sessionId = PublicAPI.generateSessionId();
+			await store.append(sessionId, PublicAPI.createEvent("test:event", { data: 2 }));
+			const events = await store.events(sessionId);
+			expect(events).toHaveLength(1);
 		});
 
 		it("should allow creating renderers with pattern matching", () => {

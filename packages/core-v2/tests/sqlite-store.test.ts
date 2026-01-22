@@ -12,7 +12,12 @@ import * as path from "node:path";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createEvent } from "../src/event/Event.js";
-import { createSqliteStore, makeSqliteStoreLive, SqliteStoreMemoryLive } from "../src/store/SqliteStore.js";
+import {
+	createSqliteStore,
+	createSqliteStoreEffect,
+	makeSqliteStoreLive,
+	SqliteStoreMemoryLive,
+} from "../src/store/SqliteStore.js";
 import { generateSessionId, makeSessionId, Store, StoreError } from "../src/store/Store.js";
 
 // ============================================================================
@@ -369,13 +374,48 @@ describe("SqliteStoreMemoryLive", () => {
 });
 
 // ============================================================================
-// createSqliteStore Factory Tests
+// createSqliteStore Factory Tests (Promise-based Public API)
 // ============================================================================
 
-describe("createSqliteStore factory", () => {
+describe("createSqliteStore factory (Promise-based)", () => {
+	it("should create an independent store instance", async () => {
+		const store = await createSqliteStore({ path: ":memory:" });
+		const sessionId = generateSessionId();
+
+		await store.append(sessionId, createEvent("test:event", { value: 42 }));
+
+		const events = await store.events(sessionId);
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.name).toBe("test:event");
+	});
+
+	it("should create separate isolated instances", async () => {
+		const store1 = await createSqliteStore({ path: ":memory:" });
+		const store2 = await createSqliteStore({ path: ":memory:" });
+		const sessionId = makeSessionId("shared-id");
+
+		await store1.append(sessionId, createEvent("store1:event", {}));
+		await store2.append(sessionId, createEvent("store2:event", {}));
+
+		const events1 = await store1.events(sessionId);
+		const events2 = await store2.events(sessionId);
+
+		expect(events1).toHaveLength(1);
+		expect(events1[0]?.name).toBe("store1:event");
+		expect(events2).toHaveLength(1);
+		expect(events2[0]?.name).toBe("store2:event");
+	});
+});
+
+// ============================================================================
+// createSqliteStoreEffect Factory Tests (Effect-based Internal API)
+// ============================================================================
+
+describe("createSqliteStoreEffect factory (Effect-based)", () => {
 	it("should create an independent store instance", async () => {
 		const program = Effect.gen(function* () {
-			const store = yield* createSqliteStore({ path: ":memory:" });
+			const store = yield* createSqliteStoreEffect({ path: ":memory:" });
 			const sessionId = generateSessionId();
 
 			yield* store.append(sessionId, createEvent("test:event", { value: 42 }));
@@ -392,8 +432,8 @@ describe("createSqliteStore factory", () => {
 
 	it("should create separate isolated instances", async () => {
 		const program = Effect.gen(function* () {
-			const store1 = yield* createSqliteStore({ path: ":memory:" });
-			const store2 = yield* createSqliteStore({ path: ":memory:" });
+			const store1 = yield* createSqliteStoreEffect({ path: ":memory:" });
+			const store2 = yield* createSqliteStoreEffect({ path: ":memory:" });
 			const sessionId = makeSessionId("shared-id");
 
 			yield* store1.append(sessionId, createEvent("store1:event", {}));
@@ -441,18 +481,12 @@ describe("File-based SqliteStore", () => {
 		const event = createEvent("persistent:event", { data: "test" });
 
 		// Write with first instance
-		const writeProgram = Effect.gen(function* () {
-			const store = yield* createSqliteStore({ path: dbPath });
-			yield* store.append(sessionId, event);
-		});
-		await Effect.runPromise(writeProgram);
+		const store1 = await createSqliteStore({ path: dbPath });
+		await store1.append(sessionId, event);
 
 		// Read with second instance
-		const readProgram = Effect.gen(function* () {
-			const store = yield* createSqliteStore({ path: dbPath });
-			return yield* store.events(sessionId);
-		});
-		const result = await Effect.runPromise(readProgram);
+		const store2 = await createSqliteStore({ path: dbPath });
+		const result = await store2.events(sessionId);
 
 		expect(result).toHaveLength(1);
 		expect(result[0]?.id).toBe(event.id);
@@ -461,24 +495,15 @@ describe("File-based SqliteStore", () => {
 	});
 
 	it("should create database file on first write", async () => {
-		const program = Effect.gen(function* () {
-			const store = yield* createSqliteStore({ path: dbPath });
-			yield* store.append(generateSessionId(), createEvent("test:event", {}));
-		});
-
-		await Effect.runPromise(program);
+		const store = await createSqliteStore({ path: dbPath });
+		await store.append(generateSessionId(), createEvent("test:event", {}));
 
 		expect(fs.existsSync(dbPath)).toBe(true);
 	});
 
 	it("should support WAL mode for file databases by default", async () => {
-		const program = Effect.gen(function* () {
-			const store = yield* createSqliteStore({ path: dbPath });
-			yield* store.append(generateSessionId(), createEvent("test:event", {}));
-			return "success";
-		});
-
-		await Effect.runPromise(program);
+		const store = await createSqliteStore({ path: dbPath });
+		await store.append(generateSessionId(), createEvent("test:event", {}));
 
 		// WAL mode creates a -wal file
 		expect(fs.existsSync(dbPath)).toBe(true);

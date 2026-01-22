@@ -8,10 +8,11 @@
  */
 
 // MemoryStore implementation
-export { createMemoryStore, MemoryStoreLive } from "./MemoryStore.js";
+export { createMemoryStore, createMemoryStoreEffect, MemoryStoreLive } from "./MemoryStore.js";
 // SqliteStore implementation
 export {
 	createSqliteStore,
+	createSqliteStoreEffect,
 	makeSqliteStoreLive,
 	type SqliteStoreConfig,
 	SqliteStoreMemoryLive,

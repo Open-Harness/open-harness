@@ -8,7 +8,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { createEvent } from "../src/event/Event.js";
-import { createMemoryStore, MemoryStoreLive } from "../src/store/MemoryStore.js";
+import { createMemoryStore, createMemoryStoreEffect, MemoryStoreLive } from "../src/store/MemoryStore.js";
 import { generateSessionId, makeSessionId, Store } from "../src/store/Store.js";
 
 // ============================================================================
@@ -342,13 +342,48 @@ describe("MemoryStoreLive", () => {
 });
 
 // ============================================================================
-// createMemoryStore Factory Tests
+// createMemoryStore Factory Tests (Promise-based Public API)
 // ============================================================================
 
-describe("createMemoryStore factory", () => {
+describe("createMemoryStore factory (Promise-based)", () => {
+	it("should create an independent store instance", async () => {
+		const store = await createMemoryStore();
+		const sessionId = generateSessionId();
+
+		await store.append(sessionId, createEvent("test:event", { value: 42 }));
+
+		const events = await store.events(sessionId);
+
+		expect(events).toHaveLength(1);
+		expect(events[0]?.name).toBe("test:event");
+	});
+
+	it("should create separate isolated instances", async () => {
+		const store1 = await createMemoryStore();
+		const store2 = await createMemoryStore();
+		const sessionId = makeSessionId("shared-id");
+
+		await store1.append(sessionId, createEvent("store1:event", {}));
+		await store2.append(sessionId, createEvent("store2:event", {}));
+
+		const events1 = await store1.events(sessionId);
+		const events2 = await store2.events(sessionId);
+
+		expect(events1).toHaveLength(1);
+		expect(events1[0]?.name).toBe("store1:event");
+		expect(events2).toHaveLength(1);
+		expect(events2[0]?.name).toBe("store2:event");
+	});
+});
+
+// ============================================================================
+// createMemoryStoreEffect Factory Tests (Effect-based Internal API)
+// ============================================================================
+
+describe("createMemoryStoreEffect factory (Effect-based)", () => {
 	it("should create an independent store instance", async () => {
 		const program = Effect.gen(function* () {
-			const store = yield* createMemoryStore();
+			const store = yield* createMemoryStoreEffect();
 			const sessionId = generateSessionId();
 
 			yield* store.append(sessionId, createEvent("test:event", { value: 42 }));
@@ -365,8 +400,8 @@ describe("createMemoryStore factory", () => {
 
 	it("should create separate isolated instances", async () => {
 		const program = Effect.gen(function* () {
-			const store1 = yield* createMemoryStore();
-			const store2 = yield* createMemoryStore();
+			const store1 = yield* createMemoryStoreEffect();
+			const store2 = yield* createMemoryStoreEffect();
 			const sessionId = makeSessionId("shared-id");
 
 			yield* store1.append(sessionId, createEvent("store1:event", {}));

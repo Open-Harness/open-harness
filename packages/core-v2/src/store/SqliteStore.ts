@@ -12,6 +12,7 @@ import { Effect, Layer } from "effect";
 import type { AnyEvent, EventId } from "../event/Event.js";
 import {
 	makeSessionId,
+	type PublicStore,
 	type SessionId,
 	type SessionMetadata,
 	type StateSnapshot,
@@ -347,11 +348,11 @@ export const SqliteStoreMemoryLive = makeSqliteStoreLive({ path: ":memory:" });
 // ============================================================================
 
 /**
- * Creates a new SqliteStore instance wrapped in an Effect.
+ * Creates a new SqliteStore instance for Effect composition.
  *
  * @remarks
- * This factory is useful for testing or when you need direct access
- * to the store service without going through the Layer system.
+ * This factory returns an Effect and is useful for internal Effect programs.
+ * For the Promise-based public API, use `createSqliteStore()`.
  *
  * @param config - Configuration for the SQLite database
  * @returns Effect that produces a StoreService
@@ -359,12 +360,53 @@ export const SqliteStoreMemoryLive = makeSqliteStoreLive({ path: ":memory:" });
  * @example
  * ```typescript
  * const program = Effect.gen(function* () {
- *   const store = yield* createSqliteStore({ path: ":memory:" });
+ *   const store = yield* createSqliteStoreEffect({ path: ":memory:" });
  *   yield* store.append(sessionId, event);
  * });
  *
  * await Effect.runPromise(program);
  * ```
  */
-export const createSqliteStore = (config: SqliteStoreConfig): Effect.Effect<StoreService> =>
+export const createSqliteStoreEffect = (config: SqliteStoreConfig): Effect.Effect<StoreService> =>
 	makeSqliteStoreService(config);
+
+/**
+ * Creates a new SqliteStore instance with a Promise-based API.
+ *
+ * @remarks
+ * This is the public API factory that hides all Effect types.
+ * Returns a PublicStore interface that consumers can use directly.
+ *
+ * @param config - Configuration for the SQLite database
+ * @returns Promise resolving to a PublicStore instance
+ *
+ * @example
+ * ```typescript
+ * const store = await createSqliteStore({ path: "./sessions.db" });
+ * await store.append(sessionId, event);
+ * const events = await store.events(sessionId);
+ * ```
+ */
+export async function createSqliteStore(config: SqliteStoreConfig): Promise<PublicStore> {
+	// Run the Effect to get the internal service
+	const service = await Effect.runPromise(makeSqliteStoreService(config));
+
+	// Wrap in Promise-based PublicStore interface
+	return wrapStoreService(service);
+}
+
+/**
+ * Wraps an internal StoreService with the public Promise-based API.
+ *
+ * @param service - Internal Effect-based store service
+ * @returns Public Promise-based store interface
+ */
+function wrapStoreService(service: StoreService): PublicStore {
+	return {
+		append: (sessionId, event) => Effect.runPromise(service.append(sessionId, event)),
+		events: (sessionId) => Effect.runPromise(service.events(sessionId)),
+		sessions: () => Effect.runPromise(service.sessions()),
+		clear: (sessionId) => Effect.runPromise(service.clear(sessionId)),
+		snapshot: (sessionId, position) => Effect.runPromise(service.snapshot(sessionId, position)),
+	};
+}

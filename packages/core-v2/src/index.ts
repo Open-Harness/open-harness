@@ -352,17 +352,16 @@ export type {
 	StateSnapshot,
 	StoreErrorCode,
 } from "./store/index.js";
-// Store implementations
+// Store implementations (Promise-based public API)
 export {
 	createMemoryStore,
 	createSqliteStore,
 	generateSessionId,
-	MemoryStoreLive,
 	makeSessionId,
-	makeSqliteStoreLive,
-	SqliteStoreMemoryLive,
 	StoreError,
 } from "./store/index.js";
+// Effect-based exports kept internal (MemoryStoreLive, SqliteStoreMemoryLive, makeSqliteStoreLive)
+// These are Layer types which expose Effect internals - use createMemoryStore/createSqliteStore instead
 
 // =============================================================================
 // PROVIDER MODULE
