@@ -796,3 +796,28 @@
 - index.ts has module-level documentation with usage examples
 - Phase 7 User Story 5 (Clean Public API) fourth task COMPLETE
 
+
+## 2026-01-21T18:59:00Z - Phase 7 EventDefinition Consumer-Friendly Type
+**Task**: Ensure defineEvent() returns consumer-friendly EventDefinition type (no @effect/schema internals)
+**Status**: COMPLETE
+**Changes**:
+- Verified existing `defineEvent()` implementation already returns consumer-friendly `EventDefinition<Name, Payload>`
+- EventDefinition interface contains ONLY: `name`, `create()`, `is()` - no Schema internals
+- Fixed incorrect JSDoc examples in packages/core-v2/src/index.ts:
+  - Main example incorrectly showed `defineEvent("name", z.object({...}))` with Zod schema
+  - Corrected to show TypeScript generics: `defineEvent<"name", PayloadType>("name")`
+  - Added `stateOnly` import to example for complete handler usage
+- Added 4 new tests in packages/core-v2/tests/public-api.test.ts:
+  - "should return EventDefinition with only name, create, and is properties" - verifies no Schema internals
+  - "should expose only plain TypeScript types on EventDefinition" - verifies types are plain
+  - "should work entirely without importing Effect or Schema" - complete consumer workflow test
+  - "should not leak Effect Schema brand types through EventId" - verifies EventId is plain string
+**Verification**:
+- bun run test: PASS (566 tests total, 4 new EventDefinition tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- The `defineEvent()` function was ALREADY consumer-friendly - no code changes needed
+- TypeScript generics provide compile-time type safety without runtime Schema dependency
+- JSDoc examples now correctly demonstrate the actual API signature
+- Phase 7 User Story 5 (Clean Public API) fifth task COMPLETE
+

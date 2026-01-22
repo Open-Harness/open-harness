@@ -13,26 +13,29 @@
  *   defineHandler,
  *   agent,
  *   createMemoryStore,
+ *   stateOnly,
  * } from "@open-harness/core-v2";
  *
- * // Define events
- * const TaskCreated = defineEvent("task:created", z.object({
- *   id: z.string(),
- *   title: z.string(),
- * }));
+ * // Define event types (TypeScript generics, no runtime schema needed)
+ * interface TaskPayload {
+ *   id: string;
+ *   title: string;
+ * }
+ * const TaskCreated = defineEvent<"task:created", TaskPayload>("task:created");
  *
  * // Define handlers
  * const taskHandler = defineHandler(TaskCreated, {
- *   handler: (event, state) => ({
- *     state: { ...state, tasks: [...state.tasks, event.payload] },
- *     events: [],
+ *   name: "task-handler",
+ *   handler: (event, state) => stateOnly({
+ *     ...state,
+ *     tasks: [...state.tasks, event.payload],
  *   }),
  * });
  *
  * // Create workflow
  * const workflow = createWorkflow({
  *   name: "task-manager",
- *   initialState: { tasks: [] },
+ *   initialState: { tasks: [] as TaskPayload[] },
  *   handlers: [taskHandler],
  *   agents: [],
  *   until: (state) => state.tasks.length >= 10,
@@ -56,13 +59,14 @@
  * @example
  * ```typescript
  * import { defineEvent, createEvent } from "@open-harness/core-v2";
- * import { z } from "zod";
  *
- * // Type-safe event definition
- * const UserLoggedIn = defineEvent("user:logged-in", z.object({
- *   userId: z.string(),
- *   timestamp: z.date(),
- * }));
+ * // Type-safe event definition using TypeScript generics
+ * // NOTE: No Zod schema needed - payload type is compile-time only
+ * interface UserLoggedInPayload {
+ *   userId: string;
+ *   timestamp: Date;
+ * }
+ * const UserLoggedIn = defineEvent<"user:logged-in", UserLoggedInPayload>("user:logged-in");
  *
  * // Create events with auto-generated ID and timestamp
  * const event = UserLoggedIn.create({ userId: "123", timestamp: new Date() });
@@ -71,6 +75,9 @@
  * if (UserLoggedIn.is(event)) {
  *   console.log(event.payload.userId); // Type-safe access
  * }
+ *
+ * // Low-level event creation (for dynamic scenarios)
+ * const rawEvent = createEvent("custom:event", { data: "hello" });
  * ```
  */
 // EventBus types (for advanced usage)

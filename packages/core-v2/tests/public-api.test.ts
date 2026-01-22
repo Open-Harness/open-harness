@@ -185,6 +185,99 @@ describe("Public API Audit (FR-062)", () => {
 		});
 	});
 
+	describe("EventDefinition consumer-friendly type (FR-062 compliance)", () => {
+		it("should return EventDefinition with only name, create, and is properties", () => {
+			interface TestPayload {
+				value: number;
+			}
+			const TestEvent = PublicAPI.defineEvent<"test:event", TestPayload>("test:event");
+
+			// EventDefinition should have exactly these properties - no Schema internals
+			expect(TestEvent).toHaveProperty("name");
+			expect(TestEvent).toHaveProperty("create");
+			expect(TestEvent).toHaveProperty("is");
+
+			// Verify no @effect/schema internals are exposed
+			expect(TestEvent).not.toHaveProperty("schema");
+			expect(TestEvent).not.toHaveProperty("Schema");
+			expect(TestEvent).not.toHaveProperty("Type");
+			expect(TestEvent).not.toHaveProperty("Encoded");
+			expect(TestEvent).not.toHaveProperty("Context");
+			expect(TestEvent).not.toHaveProperty("ast");
+			expect(TestEvent).not.toHaveProperty("annotations");
+			expect(TestEvent).not.toHaveProperty("pipe");
+		});
+
+		it("should expose only plain TypeScript types on EventDefinition", () => {
+			interface MyPayload {
+				data: string;
+			}
+			const MyEvent = PublicAPI.defineEvent<"my:event", MyPayload>("my:event");
+
+			// name is a plain string
+			expect(typeof MyEvent.name).toBe("string");
+			expect(MyEvent.name).toBe("my:event");
+
+			// create is a plain function
+			expect(typeof MyEvent.create).toBe("function");
+
+			// is is a plain function (type guard)
+			expect(typeof MyEvent.is).toBe("function");
+		});
+
+		it("should work entirely without importing Effect or Schema", () => {
+			// This test demonstrates that consumers can use defineEvent
+			// without any knowledge of Effect or @effect/schema
+
+			// 1. Define event with TypeScript types only
+			interface OrderPayload {
+				orderId: string;
+				items: string[];
+				total: number;
+			}
+			const OrderPlaced = PublicAPI.defineEvent<"order:placed", OrderPayload>("order:placed");
+
+			// 2. Create event - returns plain Event object
+			const event = OrderPlaced.create({
+				orderId: "ORD-123",
+				items: ["item1", "item2"],
+				total: 99.99,
+			});
+
+			// 3. Verify all properties are plain JavaScript types
+			expect(typeof event.id).toBe("string");
+			expect(typeof event.name).toBe("string");
+			expect(typeof event.payload).toBe("object");
+			expect(event.timestamp instanceof Date).toBe(true);
+
+			// 4. Type guard works with plain boolean return
+			expect(typeof OrderPlaced.is(event)).toBe("boolean");
+			expect(OrderPlaced.is(event)).toBe(true);
+
+			// 5. Type guard correctly rejects non-matching events
+			const otherEvent = PublicAPI.createEvent("other:event", {});
+			expect(OrderPlaced.is(otherEvent)).toBe(false);
+		});
+
+		it("should not leak Effect Schema brand types through EventId", () => {
+			const event = PublicAPI.createEvent("test:event", {});
+
+			// EventId should be a plain string at runtime
+			expect(typeof event.id).toBe("string");
+
+			// Should be a valid UUID format
+			expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+
+			// EventId should not have any special Symbol properties from Effect Schema branding
+			// Effect Schema brands typically add Symbol.for("effect/schema/Brand") or similar
+			const symbolKeys = Object.getOwnPropertySymbols(event.id);
+			expect(symbolKeys).toHaveLength(0);
+
+			// Verify it's truly a primitive string, not a String object
+			expect(event.id.constructor).toBe(String);
+		});
+	});
+
 	describe("Consumer usage patterns", () => {
 		it("should allow creating events without Effect knowledge", () => {
 			const event = PublicAPI.createEvent("test:event", { data: "hello" });

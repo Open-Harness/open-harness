@@ -165,7 +165,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Implement Error conversion in src/internal/boundary.ts: convert Effect Cause to standard Error using Cause.pretty for error messages per spec FR-063
 - [x] Verify all public methods return Promise<T>, not Effect<T> - use ManagedRuntime.runPromise internally
 - [x] Add JSDoc documentation to all public types in src/index.ts with @example where helpful
-- [ ] Ensure defineEvent() returns consumer-friendly EventDefinition type (no @effect/schema internals)
+- [x] Ensure defineEvent() returns consumer-friendly EventDefinition type (no @effect/schema internals)
 - [ ] Ensure defineHandler() accepts plain (event, state) => result function, returns HandlerDefinition
 - [ ] Ensure agent() factory validates outputSchema is present and throws clear error: "outputSchema is required for all agents - it ensures reliable workflow state"
 - [ ] Implement Workflow.dispose() method that calls ManagedRuntime.dispose() for resource cleanup per spec FR-064
