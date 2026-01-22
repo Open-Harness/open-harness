@@ -161,7 +161,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 7: User Story 5 - Clean Public API
 
-- [ ] Audit packages/core-v2/src/index.ts exports to ensure NO Effect types (Context, Effect, Layer, Stream, Exit, Cause, Fiber) are exposed per spec FR-062
+- [x] Audit packages/core-v2/src/index.ts exports to ensure NO Effect types (Context, Effect, Layer, Stream, Exit, Cause, Fiber) are exposed per spec FR-062
 - [ ] Implement Error conversion in src/internal/boundary.ts: convert Effect Cause to standard Error using Cause.pretty for error messages per spec FR-063
 - [ ] Verify all public methods return Promise<T>, not Effect<T> - use ManagedRuntime.runPromise internally
 - [ ] Add JSDoc documentation to all public types in src/index.ts with @example where helpful

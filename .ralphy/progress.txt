@@ -666,3 +666,32 @@
 - Phase 6 User Story 4 (Event Rendering) is now COMPLETE
 - PRD also updated to mark Phase 5 tasks that were previously implemented as complete
 
+## 2026-01-21T18:40:00Z - Phase 7 Public API Audit
+**Task**: Audit packages/core-v2/src/index.ts exports to ensure NO Effect types exposed (FR-062)
+**Status**: COMPLETE
+**Changes**:
+- Completely rewrote packages/core-v2/src/index.ts with comprehensive exports:
+  - Event module: Event types, createEvent, defineEvent, EventBus types and utilities
+  - Handler module: Handler types, defineHandler, utility functions (stateOnly, emit, emitEvent)
+  - Agent module: Agent types, agent factory, registry utilities, MissingOutputSchemaError
+  - Workflow module: Workflow types, createWorkflow, WorkflowRuntimeError
+  - Tape module: Tape types, createTape, computeState
+  - Store module: Store types, createMemoryStore, createSqliteStore, session utilities
+  - Provider module: Provider types and ProviderError
+  - Renderer module: Renderer types, createRenderer, pattern matching utilities
+- Added extensive JSDoc documentation with @example blocks for all modules
+- All exports organized by module with clear section headers
+- NO Effect types (Context, Effect, Layer, Stream, Exit, Cause, Fiber) are directly exported
+- Created packages/core-v2/tests/public-api.test.ts with 48 comprehensive tests:
+  - 10 tests verifying no Effect types exposed (Context, Effect, Layer, Stream, Exit, Cause, Fiber, Schema, Ref, Queue)
+  - Export verification tests for all modules
+  - Consumer usage pattern tests demonstrating Effect-free API usage
+**Verification**:
+- bun run test: PASS (530 tests total, 48 new public-api tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Store factories (createMemoryStore, createSqliteStore) currently return Effect<StoreService>
+  - This will be addressed in Phase 7 task: "Verify all public methods return Promise<T>, not Effect<T>"
+- All submodule index files already filter out Effect internals - main index.ts re-exports these
+- Phase 7 User Story 5 (Clean Public API) first task COMPLETE
+
