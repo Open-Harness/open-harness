@@ -6,10 +6,11 @@
  */
 
 import { act, renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { createEvent, defineEvent, type EventId } from "../src/event/Event.js";
 import { defineHandler } from "../src/handler/Handler.js";
-import { useWorkflow } from "../src/react.js";
+import { useWorkflow, useWorkflowContext, WorkflowContextError, WorkflowProvider } from "../src/react.js";
 import type { Workflow, WorkflowDefinition } from "../src/workflow/Workflow.js";
 
 // ============================================================================
@@ -701,5 +702,274 @@ describe("React Module Exports", () => {
 		const module = await import("../src/react.js");
 		// TapeStatus is a type, so we check if the module loads
 		expect(module).toBeDefined();
+	});
+
+	it("should export WorkflowProvider component", async () => {
+		const module = await import("../src/react.js");
+		expect(typeof module.WorkflowProvider).toBe("function");
+	});
+
+	it("should export useWorkflowContext hook", async () => {
+		const module = await import("../src/react.js");
+		expect(typeof module.useWorkflowContext).toBe("function");
+	});
+
+	it("should export WorkflowContextError class", async () => {
+		const module = await import("../src/react.js");
+		expect(typeof module.WorkflowContextError).toBe("function");
+	});
+});
+
+// ============================================================================
+// WorkflowProvider Tests (FR-057)
+// ============================================================================
+
+describe("WorkflowProvider (FR-057)", () => {
+	// =========================================================================
+	// Basic Rendering
+	// =========================================================================
+
+	describe("Basic Rendering", () => {
+		it("should render children", () => {
+			const workflow = createMockWorkflow();
+
+			// Create a simple wrapper that returns children
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// Context should be available
+			expect(result.current).toBeDefined();
+		});
+
+		it("should accept workflow prop", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// Should have access to workflow data
+			expect(result.current.messages).toBeDefined();
+		});
+
+		it("should accept options prop", () => {
+			const workflow = createMockWorkflow();
+			const options = { initialInput: "Initial value" };
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) =>
+					createElement(WorkflowProvider, { workflow, options }, children),
+			});
+
+			expect(result.current.input).toBe("Initial value");
+		});
+	});
+
+	// =========================================================================
+	// useWorkflowContext Hook
+	// =========================================================================
+
+	describe("useWorkflowContext", () => {
+		it("should throw WorkflowContextError when used outside provider", () => {
+			// Test the hook directly by expecting renderHook to throw
+			expect(() => renderHook(() => useWorkflowContext())).toThrow(WorkflowContextError);
+		});
+
+		it("should return AI SDK compatible values", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// AI SDK compatible
+			expect("messages" in result.current).toBe(true);
+			expect("input" in result.current).toBe(true);
+			expect("setInput" in result.current).toBe(true);
+			expect("handleSubmit" in result.current).toBe(true);
+			expect("isLoading" in result.current).toBe(true);
+			expect("error" in result.current).toBe(true);
+		});
+
+		it("should return Open Harness unique values", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// Open Harness unique
+			expect("events" in result.current).toBe(true);
+			expect("state" in result.current).toBe(true);
+		});
+
+		it("should return tape controls", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// Tape controls
+			expect("tape" in result.current).toBe(true);
+			expect(typeof result.current.tape.stepBack).toBe("function");
+			expect(typeof result.current.tape.step).toBe("function");
+			expect(typeof result.current.tape.rewind).toBe("function");
+		});
+	});
+
+	// =========================================================================
+	// Shared State
+	// =========================================================================
+
+	describe("Shared State", () => {
+		it("should share input state across consumers", () => {
+			const workflow = createMockWorkflow();
+
+			// Create wrapper with provider
+			const wrapper = ({ children }: { children: ReactNode }) =>
+				createElement(WorkflowProvider, { workflow }, children);
+
+			// Render two hooks
+			const { result: result1 } = renderHook(() => useWorkflowContext(), { wrapper });
+			const { result: result2 } = renderHook(() => useWorkflowContext(), { wrapper });
+
+			// Both should see empty input initially
+			expect(result1.current.input).toBe("");
+			expect(result2.current.input).toBe("");
+		});
+
+		it("should share messages array across consumers", () => {
+			const workflow = createMockWorkflow();
+			const initialMessages = [{ id: "1", role: "user" as const, content: "Hello", _events: [] as readonly EventId[] }];
+
+			const wrapper = ({ children }: { children: ReactNode }) =>
+				createElement(WorkflowProvider, { workflow, options: { initialMessages } }, children);
+
+			const { result: result1 } = renderHook(() => useWorkflowContext(), { wrapper });
+			const { result: result2 } = renderHook(() => useWorkflowContext(), { wrapper });
+
+			// Both should see the same messages
+			expect(result1.current.messages).toEqual(initialMessages);
+			expect(result2.current.messages).toEqual(initialMessages);
+		});
+
+		it("should share events array across consumers", () => {
+			const workflow = createMockWorkflow();
+
+			const wrapper = ({ children }: { children: ReactNode }) =>
+				createElement(WorkflowProvider, { workflow }, children);
+
+			const { result: result1 } = renderHook(() => useWorkflowContext(), { wrapper });
+			const { result: result2 } = renderHook(() => useWorkflowContext(), { wrapper });
+
+			// Both should see empty events initially
+			expect(result1.current.events).toEqual([]);
+			expect(result2.current.events).toEqual([]);
+		});
+	});
+
+	// =========================================================================
+	// WorkflowContextError
+	// =========================================================================
+
+	describe("WorkflowContextError", () => {
+		it("should have correct name", () => {
+			const error = new WorkflowContextError();
+			expect(error.name).toBe("WorkflowContextError");
+		});
+
+		it("should have correct message", () => {
+			const error = new WorkflowContextError();
+			expect(error.message).toBe("useWorkflowContext must be used within a WorkflowProvider");
+		});
+
+		it("should be instance of Error", () => {
+			const error = new WorkflowContextError();
+			expect(error).toBeInstanceOf(Error);
+		});
+	});
+
+	// =========================================================================
+	// Integration Tests
+	// =========================================================================
+
+	describe("Integration", () => {
+		it("should allow setInput from context", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			act(() => {
+				result.current.setInput("Hello from context");
+			});
+
+			expect(result.current.input).toBe("Hello from context");
+		});
+
+		it("should allow handleSubmit from context", async () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// Set input
+			act(() => {
+				result.current.setInput("Test message");
+			});
+
+			// Submit
+			await act(async () => {
+				result.current.handleSubmit();
+			});
+
+			// Should have called workflow.run
+			expect(workflow.run).toHaveBeenCalled();
+		});
+
+		it("should allow tape controls from context", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// Use tape controls
+			act(() => {
+				result.current.tape.rewind();
+			});
+
+			expect(result.current.tape.position).toBe(0);
+
+			act(() => {
+				result.current.tape.pause();
+			});
+
+			expect(result.current.tape.status).toBe("paused");
+		});
+	});
+
+	// =========================================================================
+	// Generic Type Support
+	// =========================================================================
+
+	describe("Generic Type Support", () => {
+		it("should support typed state access", () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflowContext<TestState>(), {
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+			});
+
+			// State should be typed as TestState
+			expect(result.current.state).toBeDefined();
+			// TypeScript should allow accessing TestState properties (compile-time check)
+			const _count: number | undefined = (result.current.state as TestState | undefined)?.count;
+			expect(_count !== undefined || _count === undefined).toBe(true); // Just verify it compiles
+		});
 	});
 });

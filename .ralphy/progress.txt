@@ -942,3 +942,34 @@
 - jsdom environment required for React Testing Library to work
 - Phase 8 User Story 6 (React Integration) useWorkflow Hook tasks COMPLETE (4 of 7 tasks)
 
+
+## 2026-01-21T19:25:00Z - Phase 8 WorkflowProvider Component (FR-057)
+**Task**: Implement WorkflowProvider component for shared workflow context
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/react.ts with:
+  - WorkflowContext using createContext<WorkflowContextValue | null>(null)
+  - WorkflowContextValue internal interface: { workflow, hookValue }
+  - WorkflowProviderProps interface: { workflow, options?, children }
+  - WorkflowProvider component using createElement (not JSX, since .ts file)
+  - WorkflowContextError class with descriptive message
+  - useWorkflowContext() hook that throws WorkflowContextError if used outside provider
+  - Comprehensive JSDoc documentation with examples showing modular UI pattern
+- Added 20 new tests in packages/core-v2/tests/react.test.ts:
+  - Basic Rendering tests (3 tests): children, workflow prop, options prop
+  - useWorkflowContext tests (4 tests): throws outside provider, AI SDK values, OH values, tape controls
+  - Shared State tests (3 tests): input state, messages array, events array
+  - WorkflowContextError tests (3 tests): name, message, instanceof Error
+  - Integration tests (3 tests): setInput, handleSubmit, tape controls
+  - Generic Type Support tests (1 test)
+  - Module Exports tests (3 tests): WorkflowProvider, useWorkflowContext, WorkflowContextError
+**Verification**:
+- bun run test: PASS (679 tests total, 20 new WorkflowProvider tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Uses createElement instead of JSX since source is .ts not .tsx
+- WorkflowProvider wraps useWorkflow internally, sharing state across consumers
+- useWorkflowContext provides same interface as useWorkflow
+- Enables modular UI: ChatMessages, ChatInput, TapeControls as separate components
+- Phase 8 User Story 6 (React Integration) WorkflowProvider task COMPLETE (5 of 7 tasks)
+

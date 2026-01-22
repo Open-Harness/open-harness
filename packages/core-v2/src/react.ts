@@ -7,7 +7,17 @@
  * @module @open-harness/core-v2/react
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	createContext,
+	createElement,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import type { AnyEvent } from "./event/Event.js";
 import type { Message } from "./message/Message.js";
 import { projectEventsToMessages } from "./message/projection.js";
@@ -507,6 +517,192 @@ export function useWorkflow<S = unknown>(
 		// Tape Controls (FR-056)
 		tape,
 	};
+}
+
+// ============================================================================
+// WorkflowProvider Context (FR-057)
+// ============================================================================
+
+/**
+ * Context value for WorkflowProvider.
+ * @internal
+ */
+interface WorkflowContextValue<S = unknown> {
+	/** The shared workflow instance */
+	readonly workflow: Workflow<S>;
+	/** Shared hook return value (state is shared across consumers) */
+	readonly hookValue: UseWorkflowReturn<S>;
+}
+
+/**
+ * React Context for sharing workflow state across components.
+ * @internal
+ */
+const WorkflowContext = createContext<WorkflowContextValue | null>(null);
+
+/**
+ * Props for WorkflowProvider component.
+ */
+export interface WorkflowProviderProps<S = unknown> {
+	/** The workflow instance to share */
+	readonly workflow: Workflow<S>;
+	/** Hook options passed to useWorkflow */
+	readonly options?: UseWorkflowOptions;
+	/** Child components */
+	readonly children: ReactNode;
+}
+
+/**
+ * Provider component for sharing workflow state across components.
+ *
+ * Wraps children with a shared workflow context, allowing any nested
+ * component to access the workflow via `useWorkflowContext()`.
+ *
+ * @typeParam S - The workflow state type
+ *
+ * @remarks
+ * **FR-057 Compliance**: This component provides React context for shared workflow access.
+ *
+ * All components using `useWorkflowContext()` within this provider share:
+ * - The same events array
+ * - The same workflow state
+ * - The same messages (projected from events)
+ * - The same tape controls
+ *
+ * This enables building modular UIs where different components
+ * can display different aspects of the workflow (messages, tape controls, etc.)
+ * without prop drilling.
+ *
+ * @example
+ * ```tsx
+ * import { WorkflowProvider, useWorkflowContext } from "@open-harness/core-v2/react";
+ * import { createWorkflow } from "@open-harness/core-v2";
+ *
+ * const workflow = createWorkflow({
+ *   name: "chat",
+ *   initialState: { messages: [], terminated: false },
+ *   handlers: [userInputHandler],
+ *   agents: [chatAgent],
+ *   until: (s) => s.terminated,
+ * });
+ *
+ * function App() {
+ *   return (
+ *     <WorkflowProvider workflow={workflow}>
+ *       <ChatMessages />
+ *       <ChatInput />
+ *       <TapeControls />
+ *     </WorkflowProvider>
+ *   );
+ * }
+ *
+ * function ChatMessages() {
+ *   const { messages } = useWorkflowContext();
+ *   return (
+ *     <div>
+ *       {messages.map((m) => (
+ *         <div key={m.id}>{m.content}</div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ *
+ * function ChatInput() {
+ *   const { input, setInput, handleSubmit, isLoading } = useWorkflowContext();
+ *   return (
+ *     <form onSubmit={handleSubmit}>
+ *       <input value={input} onChange={(e) => setInput(e.target.value)} />
+ *       <button disabled={isLoading}>Send</button>
+ *     </form>
+ *   );
+ * }
+ *
+ * function TapeControls() {
+ *   const { tape } = useWorkflowContext();
+ *   return (
+ *     <div>
+ *       <button onClick={tape.stepBack}>Back</button>
+ *       <span>{tape.position} / {tape.length}</span>
+ *       <button onClick={tape.step}>Forward</button>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function WorkflowProvider<S = unknown>({
+	workflow,
+	options = {},
+	children,
+}: WorkflowProviderProps<S>): ReactNode {
+	// Use the workflow hook to get shared state
+	const hookValue = useWorkflow(workflow, options);
+
+	// Create stable context value
+	const contextValue = useMemo<WorkflowContextValue<S>>(
+		() => ({
+			workflow,
+			hookValue,
+		}),
+		[workflow, hookValue],
+	);
+
+	// Use createElement instead of JSX since this is a .ts file
+	return createElement(WorkflowContext.Provider, { value: contextValue as WorkflowContextValue }, children);
+}
+
+/**
+ * Error thrown when useWorkflowContext is used outside WorkflowProvider.
+ */
+export class WorkflowContextError extends Error {
+	constructor() {
+		super("useWorkflowContext must be used within a WorkflowProvider");
+		this.name = "WorkflowContextError";
+	}
+}
+
+/**
+ * Hook to access the shared workflow context from WorkflowProvider.
+ *
+ * Must be used within a `WorkflowProvider`. Throws `WorkflowContextError`
+ * if used outside of a provider.
+ *
+ * @typeParam S - The workflow state type
+ * @returns The shared UseWorkflowReturn value from the provider
+ * @throws WorkflowContextError if used outside WorkflowProvider
+ *
+ * @remarks
+ * This hook provides the same return type as `useWorkflow()`, but the
+ * state is shared across all components using `useWorkflowContext()`
+ * within the same `WorkflowProvider`.
+ *
+ * @example
+ * ```tsx
+ * function ChatMessages() {
+ *   const { messages, isLoading, error } = useWorkflowContext();
+ *
+ *   if (error) return <div>Error: {error.message}</div>;
+ *
+ *   return (
+ *     <div>
+ *       {messages.map((m) => (
+ *         <div key={m.id} className={m.role}>
+ *           {m.content}
+ *         </div>
+ *       ))}
+ *       {isLoading && <div>Loading...</div>}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useWorkflowContext<S = unknown>(): UseWorkflowReturn<S> {
+	const context = useContext(WorkflowContext);
+
+	if (context === null) {
+		throw new WorkflowContextError();
+	}
+
+	return context.hookValue as UseWorkflowReturn<S>;
 }
 
 // ============================================================================
