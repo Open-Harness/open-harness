@@ -905,3 +905,40 @@
 - _events array enables time-travel debugging: given a message, find source events
 - Phase 8 User Story 6 (React Integration) first 10 tasks COMPLETE
 
+
+## 2026-01-21T19:19:00Z - Phase 8 useWorkflow Hook (FR-054 to FR-056)
+**Task**: Implement useWorkflow hook with AI SDK compatible interface
+**Status**: COMPLETE
+**Changes**:
+- Rewrote packages/core-v2/src/react.ts with complete useWorkflow hook implementation:
+  - AI SDK Compatible values (FR-054): messages, input, setInput, handleSubmit, isLoading, error
+  - Open Harness Unique values (FR-055): events, state
+  - Tape Controls (FR-056): tape object with rewind, step, stepBack, stepTo, play, playTo, pause
+  - useEffect cleanup that calls workflow.dispose() on unmount
+  - Messages projected from events via projectEventsToMessages()
+  - TapeControls bridge between immutable Tape and React state via setState
+- Added React as peer dependency (^18.0.0 || ^19.0.0)
+- Added dev dependencies: react, @types/react, @testing-library/react, jsdom
+- Updated vitest.config.ts to use jsdom environment for React testing
+- Created packages/core-v2/tests/react.test.ts with 46 comprehensive tests:
+  - AI SDK Compatible Values tests (9 tests)
+  - Open Harness Unique Values tests (2 tests)
+  - Tape Controls interface tests (11 tests)
+  - handleSubmit Behavior tests (8 tests)
+  - Cleanup on Unmount tests (1 test)
+  - Tape Controls Behavior tests (5 tests)
+  - Message Projection tests (1 test)
+  - Return Type Verification tests (2 tests)
+  - Effect-Free Verification tests (1 test)
+  - Module Exports tests (6 tests)
+- Type exports: UseWorkflowOptions, UseWorkflowReturn, Message, TapeControls, TapeStatus, Workflow, WorkflowDefinition, WorkflowResult, RunOptions, WorkflowCallbacks
+**Verification**:
+- bun run test: PASS (659 tests total, 46 new react tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Messages are projected from events, NOT stored separately - events remain single source of truth
+- TapeControls uses void-returning functions that call setWorkflowState internally to trigger re-renders
+- useMemo dependencies extracted to avoid capturing entire workflowState object
+- jsdom environment required for React Testing Library to work
+- Phase 8 User Story 6 (React Integration) useWorkflow Hook tasks COMPLETE (4 of 7 tasks)
+

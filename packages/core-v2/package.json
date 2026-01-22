@@ -21,9 +21,21 @@
 	},
 	"devDependencies": {
 		"@effect/vitest": "^0.27.0",
+		"@testing-library/react": "^16.2.0",
 		"@types/better-sqlite3": "^7.6.13",
 		"@types/bun": "latest",
+		"@types/react": "^19.1.5",
+		"jsdom": "^26.1.0",
+		"react": "^19.1.0",
 		"typescript": "^5.9.3",
 		"vitest": "^3.1.4"
+	},
+	"peerDependencies": {
+		"react": "^18.0.0 || ^19.0.0"
+	},
+	"peerDependenciesMeta": {
+		"react": {
+			"optional": true
+		}
 	}
 }
