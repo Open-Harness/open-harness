@@ -695,3 +695,35 @@
 - All submodule index files already filter out Effect internals - main index.ts re-exports these
 - Phase 7 User Story 5 (Clean Public API) first task COMPLETE
 
+
+## 2026-01-21T18:45:00Z - Phase 7 Error Conversion (FR-063)
+**Task**: Implement Error conversion in src/internal/boundary.ts
+**Status**: COMPLETE
+**Changes**:
+- Enhanced packages/core-v2/src/internal/boundary.ts with:
+  - New causeToError<E>(cause: Cause.Cause<E>): Error function for FR-063 compliance
+  - Preserves domain error classes (StoreError, ProviderError, WorkflowRuntimeError) when possible
+  - Handles three Effect failure modes:
+    1. Typed failures (Cause.fail) - Error subclasses preserved directly
+    2. Defects (Cause.die) - Wrapped with "DefectError" name, original cause preserved
+    3. Interruptions (Cause.interrupt) - Converted to InterruptedError
+  - Non-Error failures wrapped with Cause.pretty for debugging context
+  - exitToResult now uses causeToError internally for consistent error conversion
+- Created packages/core-v2/tests/boundary.test.ts with 31 comprehensive tests:
+  - Typed failure preservation (domain errors, standard errors)
+  - Defect handling (Error defects, non-Error defects, stack trace preservation)
+  - Interruption handling
+  - Empty and complex cause handling
+  - Edge cases (undefined failures, Error with cause chain)
+  - exitToResult integration tests
+  - Consumer integration patterns (instanceof checks, error chain preservation)
+**Verification**:
+- bun run test: PASS (561 tests total, 31 new boundary tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Error conversion strategy: Domain errors passed through unchanged, allowing instanceof checks
+- DefectError wraps unexpected errors with original error as cause for debugging
+- InterruptedError provides clear indication when fibers are interrupted
+- Cause.failures() and Cause.defects() return iterables in Effect 3.x
+- Phase 7 User Story 5 (Clean Public API) second task COMPLETE
+

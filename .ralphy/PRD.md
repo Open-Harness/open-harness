@@ -162,7 +162,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ## Phase 7: User Story 5 - Clean Public API
 
 - [x] Audit packages/core-v2/src/index.ts exports to ensure NO Effect types (Context, Effect, Layer, Stream, Exit, Cause, Fiber) are exposed per spec FR-062
-- [ ] Implement Error conversion in src/internal/boundary.ts: convert Effect Cause to standard Error using Cause.pretty for error messages per spec FR-063
+- [x] Implement Error conversion in src/internal/boundary.ts: convert Effect Cause to standard Error using Cause.pretty for error messages per spec FR-063
 - [ ] Verify all public methods return Promise<T>, not Effect<T> - use ManagedRuntime.runPromise internally
 - [ ] Add JSDoc documentation to all public types in src/index.ts with @example where helpful
 - [ ] Ensure defineEvent() returns consumer-friendly EventDefinition type (no @effect/schema internals)
@@ -235,6 +235,96 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ---
 
+## Phase 11: Real SDK Fixture Recording
+
+**CRITICAL: No fabricated fixtures. All test fixtures MUST come from real Claude SDK interactions.**
+
+### Fixture Recording Infrastructure
+
+- [ ] Create packages/core-v2/scripts/record-fixtures.ts script that runs a live Claude SDK session and captures all events to JSON
+- [ ] Implement fixture recording for: simple text response, streaming text deltas, tool calls with results, structured output with outputSchema, multi-turn conversation
+- [ ] Save recorded fixtures to packages/core-v2/tests/fixtures/golden/ directory with descriptive names (e.g., text-streaming.json, tool-use-roundtrip.json)
+- [ ] Run the record-fixtures script against LIVE Claude SDK to capture real responses - do NOT manually create fixture files
+- [ ] Create packages/core-v2/tests/fixtures/README.md documenting how fixtures were recorded and when (include date and model version)
+
+### Real Integration Tests
+
+- [ ] Create packages/core-v2/tests/integration/claude-live.test.ts that runs against the REAL Claude SDK (not mocked) with describe.skip for CI
+- [ ] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted correctly
+- [ ] Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior
+- [ ] Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly
+- [ ] Add npm script "test:live" to package.json that runs only live integration tests (requires auth)
+
+---
+
+## Phase 12: E2E Demo Application
+
+**Build a real Next.js app in apps/ that uses core-v2 to prove the React integration works end-to-end.**
+
+### App Setup
+
+- [ ] Create apps/core-v2-demo/ directory with Next.js 15 App Router using: bun create next-app apps/core-v2-demo --ts --tailwind --app --src-dir
+- [ ] Add @open-harness/core-v2 as workspace dependency in apps/core-v2-demo/package.json
+- [ ] Add React peer dependency to packages/core-v2/package.json: "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }
+- [ ] Create apps/core-v2-demo/src/lib/workflow.ts that defines a simple TaskExecutor workflow using core-v2 (based on quickstart.md example)
+
+### UI Components
+
+- [ ] Create apps/core-v2-demo/src/app/page.tsx as the main demo page with "Core V2 Demo" heading
+- [ ] Create apps/core-v2-demo/src/components/ChatUI.tsx component that uses useWorkflow hook from @open-harness/core-v2/react
+- [ ] Implement ChatUI to display: messages list, input field, submit button, loading indicator, error display
+- [ ] Add tape controls to ChatUI: stepBack button, step button, rewind button, position indicator showing "Position X of Y"
+- [ ] Style the UI with Tailwind CSS for clear visual feedback (different colors for user/assistant messages, loading spinner, etc.)
+
+### Server Integration
+
+- [ ] Create apps/core-v2-demo/src/app/api/workflow/route.ts using createWorkflowHandler() from core-v2 for server-side execution
+- [ ] Configure ChatUI to connect via api: '/api/workflow' option in useWorkflow
+- [ ] Verify the app builds with: cd apps/core-v2-demo && bun run build
+- [ ] Verify the app runs with: cd apps/core-v2-demo && bun run dev
+
+---
+
+## Phase 13: Visual Verification with Browser Automation
+
+**Use Claude-in-Chrome MCP to actually see and verify the app renders correctly.**
+
+### App Startup Verification
+
+- [ ] Start the core-v2-demo app on localhost:3000 using: cd apps/core-v2-demo && bun run dev (run in background)
+- [ ] Use mcp__claude-in-chrome__tabs_create_mcp to create a new browser tab
+- [ ] Use mcp__claude-in-chrome__navigate to go to http://localhost:3000
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture the initial page render
+- [ ] Verify screenshot shows: "Core V2 Demo" heading, input field, submit button visible
+
+### Interactive Testing
+
+- [ ] Use mcp__claude-in-chrome__find to locate the chat input field
+- [ ] Use mcp__claude-in-chrome__form_input to type a test message: "What is 2 + 2?"
+- [ ] Use mcp__claude-in-chrome__find to locate the submit button
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click submit
+- [ ] Use mcp__claude-in-chrome__computer with action:"wait" for 3 seconds to allow response
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture the response
+- [ ] Verify screenshot shows: user message "What is 2 + 2?", assistant response with answer, no error messages
+
+### Time-Travel Verification
+
+- [ ] Use mcp__claude-in-chrome__find to locate the stepBack button
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click stepBack
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture after stepBack
+- [ ] Verify screenshot shows: position indicator changed, previous state displayed
+- [ ] Use mcp__claude-in-chrome__find to locate the step (forward) button
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click step forward
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture after step forward
+- [ ] Verify screenshot shows: position returned to latest, full conversation visible again
+
+### Cleanup
+
+- [ ] Stop the dev server process
+- [ ] Report visual verification results: all screenshots captured, UI renders correctly, tape controls work
+
+---
+
 ## Success Criteria
 
 When complete, verify:
@@ -243,3 +333,6 @@ When complete, verify:
 3. Replay produces identical state 100x in a row
 4. React useWorkflow hook works without Effect knowledge
 5. Recording persists events, replay loads without API calls
+6. **NEW: All test fixtures recorded from REAL Claude SDK (no fabrication)**
+7. **NEW: Demo app builds and runs showing working React integration**
+8. **NEW: Visual verification via browser automation confirms UI renders and tape controls work**
