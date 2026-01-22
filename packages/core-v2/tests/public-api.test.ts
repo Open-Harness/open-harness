@@ -91,6 +91,157 @@ describe("Public API Audit (FR-062)", () => {
 		});
 	});
 
+	describe("defineHandler consumer-friendly verification", () => {
+		it("should accept plain (event, state) => result function", () => {
+			interface TestState {
+				items: string[];
+			}
+			interface ItemPayload {
+				item: string;
+			}
+
+			const ItemAdded = PublicAPI.defineEvent<"item:added", ItemPayload>("item:added");
+
+			// Define handler with a plain function - NO Effect types in signature
+			const plainHandler = (
+				event: PublicAPI.Event<"item:added", ItemPayload>,
+				state: TestState,
+			): PublicAPI.HandlerResult<TestState> => {
+				return {
+					state: { items: [...state.items, event.payload.item] },
+					events: [],
+				};
+			};
+
+			const handlerDef = PublicAPI.defineHandler(ItemAdded, {
+				name: "item-handler",
+				handler: plainHandler,
+			});
+
+			// The handler should be callable as a plain function
+			const event = ItemAdded.create({ item: "test-item" });
+			const result = handlerDef.handler(event, { items: [] });
+
+			expect(result.state.items).toContain("test-item");
+			expect(result.events).toHaveLength(0);
+		});
+
+		it("should return HandlerDefinition with only name, handles, and handler properties", () => {
+			interface SimpleState {
+				value: number;
+			}
+			const TestEvent = PublicAPI.defineEvent<"test:event", { n: number }>("test:event");
+
+			const handlerDef = PublicAPI.defineHandler(TestEvent, {
+				name: "simple-handler",
+				handler: (event, state: SimpleState) => PublicAPI.stateOnly({ value: state.value + event.payload.n }),
+			});
+
+			// Verify HandlerDefinition has ONLY these three properties
+			const keys = Object.keys(handlerDef);
+			expect(keys).toHaveLength(3);
+			expect(keys).toContain("name");
+			expect(keys).toContain("handles");
+			expect(keys).toContain("handler");
+
+			// Verify the types of each property
+			expect(typeof handlerDef.name).toBe("string");
+			expect(typeof handlerDef.handles).toBe("string");
+			expect(typeof handlerDef.handler).toBe("function");
+
+			// Verify no Effect internals (no Symbol properties from Effect)
+			const symbolKeys = Object.getOwnPropertySymbols(handlerDef);
+			expect(symbolKeys).toHaveLength(0);
+		});
+
+		it("should allow handler to be called directly without Effect runtime", () => {
+			interface CounterState {
+				count: number;
+			}
+			const Increment = PublicAPI.defineEvent<"counter:increment", { by: number }>("counter:increment");
+
+			const handlerDef = PublicAPI.defineHandler(Increment, {
+				name: "increment-handler",
+				handler: (event, state: CounterState) => ({
+					state: { count: state.count + event.payload.by },
+					events: [PublicAPI.emitEvent("counter:incremented", { newValue: state.count + event.payload.by }, event.id)],
+				}),
+			});
+
+			// Call handler directly - no Effect.runSync, no ManagedRuntime
+			const event = Increment.create({ by: 5 });
+			const initialState: CounterState = { count: 10 };
+			const result = handlerDef.handler(event, initialState);
+
+			// Verify the result is a plain object with state and events
+			expect(result.state.count).toBe(15);
+			expect(Array.isArray(result.events)).toBe(true);
+			expect(result.events).toHaveLength(1);
+			expect(result.events[0]?.name).toBe("counter:incremented");
+		});
+
+		it("should work entirely without importing Effect", () => {
+			// This test proves consumers can use defineHandler with zero Effect knowledge
+
+			// 1. Define state type (plain TypeScript interface)
+			interface TodoState {
+				todos: Array<{ id: string; text: string; done: boolean }>;
+			}
+
+			// 2. Define event type (plain TypeScript interface for payload)
+			interface AddTodoPayload {
+				text: string;
+			}
+			const AddTodo = PublicAPI.defineEvent<"todo:add", AddTodoPayload>("todo:add");
+
+			// 3. Define handler with plain function
+			const addTodoHandler = PublicAPI.defineHandler(AddTodo, {
+				name: "add-todo-handler",
+				handler: (event, state: TodoState) => {
+					const newTodo = {
+						id: event.id, // use event id as todo id
+						text: event.payload.text,
+						done: false,
+					};
+					return PublicAPI.stateOnly({
+						todos: [...state.todos, newTodo],
+					});
+				},
+			});
+
+			// 4. Use handler directly - completely synchronous, no async, no Effect
+			const event = AddTodo.create({ text: "Buy groceries" });
+			const state: TodoState = { todos: [] };
+			const result = addTodoHandler.handler(event, state);
+
+			// 5. Verify result is plain JavaScript object
+			expect(result.state.todos).toHaveLength(1);
+			expect(result.state.todos[0]?.text).toBe("Buy groceries");
+			expect(result.state.todos[0]?.done).toBe(false);
+			expect(result.events).toEqual([]);
+
+			// All of the above works with ZERO knowledge of Effect
+		});
+
+		it("should preserve handler function identity", () => {
+			interface EmptyState {
+				empty: boolean;
+			}
+			const TestEvent = PublicAPI.defineEvent<"test:identity", Record<string, never>>("test:identity");
+
+			const originalHandler = (_event: PublicAPI.Event<"test:identity", Record<string, never>>, state: EmptyState) =>
+				PublicAPI.stateOnly(state);
+
+			const handlerDef = PublicAPI.defineHandler(TestEvent, {
+				name: "identity-test",
+				handler: originalHandler,
+			});
+
+			// The handler in the definition should be the exact same function reference
+			expect(handlerDef.handler).toBe(originalHandler);
+		});
+	});
+
 	describe("Agent module exports", () => {
 		it("should export agent factory", () => {
 			expect(PublicAPI.agent).toBeTypeOf("function");
