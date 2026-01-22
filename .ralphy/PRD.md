@@ -167,9 +167,9 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Add JSDoc documentation to all public types in src/index.ts with @example where helpful
 - [x] Ensure defineEvent() returns consumer-friendly EventDefinition type (no @effect/schema internals)
 - [x] Ensure defineHandler() accepts plain (event, state) => result function, returns HandlerDefinition
-- [ ] Ensure agent() factory validates outputSchema is present and throws clear error: "outputSchema is required for all agents - it ensures reliable workflow state"
-- [ ] Implement Workflow.dispose() method that calls ManagedRuntime.dispose() for resource cleanup per spec FR-064
-- [ ] Add WorkflowCallbacks (onEvent, onStateChange, onError) to RunOptions in Workflow.run()
+- [x] Ensure agent() factory validates outputSchema is present and throws clear error: "outputSchema is required for all agents - it ensures reliable workflow state"
+- [x] Implement Workflow.dispose() method that calls ManagedRuntime.dispose() for resource cleanup per spec FR-064
+- [x] Add WorkflowCallbacks (onEvent, onStateChange, onError) to RunOptions in Workflow.run()
 
 ---
 
@@ -177,16 +177,16 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Message Projection
 
-- [ ] Create packages/core-v2/src/message/Message.ts with Message interface: id, role, content, name?, toolInvocations?, _events per specs/001-effect-refactor/contracts/message.ts
-- [ ] Create packages/core-v2/src/message/projection.ts with projectEventsToMessages(events) function
-- [ ] Implement user:input event → { role: "user", content } message projection per spec FR-047
-- [ ] Implement text:delta event accumulation into current assistant message content per spec FR-048
-- [ ] Implement text:complete event finalization of assistant message per spec FR-049
-- [ ] Implement agent:started event → new Message with role:"assistant" and name from agent per spec FR-052
-- [ ] Implement tool:called event → add to message.toolInvocations[] with state:"pending" per spec FR-050
-- [ ] Implement tool:result event → update matching toolInvocation.result and state per spec FR-051
-- [ ] Ensure all messages include _events array with source event IDs for traceability per spec FR-053
-- [ ] Create packages/core-v2/src/message/index.ts re-exporting Message, projectEventsToMessages
+- [x] Create packages/core-v2/src/message/Message.ts with Message interface: id, role, content, name?, toolInvocations?, _events per specs/001-effect-refactor/contracts/message.ts
+- [x] Create packages/core-v2/src/message/projection.ts with projectEventsToMessages(events) function
+- [x] Implement user:input event → { role: "user", content } message projection per spec FR-047
+- [x] Implement text:delta event accumulation into current assistant message content per spec FR-048
+- [x] Implement text:complete event finalization of assistant message per spec FR-049
+- [x] Implement agent:started event → new Message with role:"assistant" and name from agent per spec FR-052
+- [x] Implement tool:called event → add to message.toolInvocations[] with state:"pending" per spec FR-050
+- [x] Implement tool:result event → update matching toolInvocation.result and state per spec FR-051
+- [x] Ensure all messages include _events array with source event IDs for traceability per spec FR-053
+- [x] Create packages/core-v2/src/message/index.ts re-exporting Message, projectEventsToMessages
 
 ### useWorkflow Hook
 

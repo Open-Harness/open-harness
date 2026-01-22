@@ -847,3 +847,61 @@
 - Tests verify no Symbol properties from Effect branding leak through
 - Phase 7 User Story 5 (Clean Public API) sixth task COMPLETE
 
+
+## 2026-01-21T19:10:00Z - Phase 7 Remaining Tasks (Already Implemented)
+**Task**: Mark Phase 7 tasks as complete that were already implemented
+**Status**: COMPLETE
+**Analysis**:
+- Verified `agent()` factory validates outputSchema (lines 216-218 of Agent.ts) - throws MissingOutputSchemaError
+- Verified `Workflow.dispose()` implemented (lines 306-309 of Workflow.ts) - calls ManagedRuntime.dispose()
+- Verified `WorkflowCallbacks` added to RunOptions (lines 31-38 and 55 of Workflow.ts)
+- All three Phase 7 tasks were already implemented but not marked in PRD
+**Changes**:
+- Updated PRD to mark these 3 tasks as complete
+**Notes**:
+- Phase 7 User Story 5 (Clean Public API) is now COMPLETE
+
+
+## 2026-01-21T19:11:00Z - Phase 8 Message Projection (First 10 Tasks)
+**Task**: Implement Message module with projectEventsToMessages function
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/src/message/Message.ts with:
+  - MessageRole type: "user" | "assistant" | "system" | "tool"
+  - ToolInvocationState type: "pending" | "result" | "error"
+  - ToolInvocation interface: toolCallId, toolName, args, result?, state
+  - Message interface: id, role, content, name?, toolInvocations?, _events
+  - ProjectionOptions interface: includeEventIds?, generateId?
+  - generateMessageId() and resetMessageIdCounter() utilities
+- Created packages/core-v2/src/message/projection.ts with:
+  - Type guards for all event types (user:input, text:delta, text:complete, agent:started, tool:called, tool:result)
+  - MessageBuilder internal type for accumulating content during projection
+  - finalizeMessage() helper that builds immutable Message from builder
+  - projectEventsToMessages(events, options) main function implementing:
+    - FR-047: user:input → { role: "user", content: payload.text }
+    - FR-048: text:delta → Append payload.delta to current assistant message
+    - FR-049: text:complete → Finalize assistant message with payload.fullText
+    - FR-050: tool:called → Add to toolInvocations[] with state: "pending"
+    - FR-051: tool:result → Update matching toolInvocation.result and state
+    - FR-052: agent:started → Start new assistant message with agent name
+    - FR-053: All messages include _events array with source EventIds
+- Created packages/core-v2/src/message/index.ts re-exporting all types and functions
+- Created packages/core-v2/tests/message.test.ts with 42 comprehensive tests:
+  - MessageRole and ToolInvocationState type tests
+  - ToolInvocation interface tests
+  - Message interface tests
+  - generateMessageId utility tests
+  - projectEventsToMessages tests for all projection rules (FR-047 through FR-053)
+  - ProjectionOptions customization tests
+  - Complex conversation flow tests (multi-turn, tool use)
+  - Edge case tests (empty input, unicode, special characters, unknown events)
+**Verification**:
+- bun run test: PASS (613 tests total, 42 new message tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+**Notes**:
+- Fixed bug in finalizeMessage: Early return after adding name was skipping toolInvocations
+- Message projection handles streaming: accumulates text:delta events until text:complete
+- Tool invocations follow state machine: pending → result/error
+- _events array enables time-travel debugging: given a message, find source events
+- Phase 8 User Story 6 (React Integration) first 10 tasks COMPLETE
+
