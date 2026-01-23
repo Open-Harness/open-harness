@@ -1115,3 +1115,25 @@
 - FR-067 now supported at both levels: WorkflowRuntime (agent execution) and ClaudeProvider (direct usage)
 - Phase 9 Task 4 (FR-067 Structured Output Conversion) COMPLETE
 
+
+## 2026-01-21T20:03:22Z - Phase 10 Edge Case: stepBack() at position 0
+**Task**: Handle stepBack() at position 0: remain at position 0 with initial state, do not go negative per spec edge cases
+**Status**: COMPLETE
+**Analysis**:
+- The implementation in Tape.ts (line 408-411) already correctly handles this edge case via `Math.max(0, this.position - 1)`
+- Existing tests at lines 638-647 and 1052-1060 in tape.test.ts already verified this behavior
+- This was a "verification" task in Phase 10 (Polish & Edge Cases)
+**Changes**:
+- Added comprehensive test "stepBack at position 0 preserves state and does not go negative (Phase 10 edge case)" in tests/tape.test.ts that:
+  - Verifies position remains at 0 after multiple stepBack() calls
+  - Verifies state is preserved correctly (count=1 after first event)
+  - Verifies tape remains usable (can step forward afterward)
+  - Verifies current event is still accessible
+**Verification**:
+- bun run test: PASS (755 tests total, 1 new comprehensive edge case test)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- The implementation was already correct per spec FR-030
+- "Initial state" in the spec context means the state at that position (position 0 = state after first event)
+- Phase 10 Edge Case Handling (task 1 of 5) COMPLETE
+

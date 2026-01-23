@@ -1060,6 +1060,40 @@ describe("Edge Cases (from spec)", () => {
 		expect(steppedBack.state).toEqual(tape.state);
 	});
 
+	it("stepBack at position 0 preserves state and does not go negative (Phase 10 edge case)", () => {
+		const events = createTestEvents();
+		const handlers = createHandlerMap();
+
+		const tape = createTape({ events, handlers, initialState, position: 0 });
+
+		// State at position 0 is after first event (count:incremented by 1)
+		expect(tape.state.count).toBe(1);
+		expect(tape.state.values).toEqual([]);
+
+		// Call stepBack multiple times - should never go negative or corrupt state
+		const t1 = tape.stepBack();
+		expect(t1.position).toBe(0);
+		expect(t1.state.count).toBe(1);
+		expect(t1.state.values).toEqual([]);
+
+		const t2 = t1.stepBack();
+		expect(t2.position).toBe(0);
+		expect(t2.state.count).toBe(1);
+
+		const t3 = t2.stepBack();
+		expect(t3.position).toBe(0);
+		expect(t3.state.count).toBe(1);
+
+		// Verify tape is still usable - can step forward from position 0
+		const t4 = t3.step();
+		expect(t4.position).toBe(1);
+		expect(t4.state.count).toBe(3); // 1 + 2
+
+		// Verify current event is still accessible
+		expect(t3.current).toBeDefined();
+		expect(t3.current?.name).toBe("count:incremented");
+	});
+
 	it("step past end stays at end (FR-029)", () => {
 		const events = createTestEvents();
 		const handlers = createHandlerMap();

@@ -216,7 +216,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Edge Case Handling
 
-- [ ] Handle stepBack() at position 0: remain at position 0 with initial state, do not go negative per spec edge cases
+- [x] Handle stepBack() at position 0: remain at position 0 with initial state, do not go negative per spec edge cases
 - [ ] Handle step() past last event: stay at final position, do not exceed length-1 per spec edge cases
 - [ ] Handle handler exceptions in WorkflowRuntime: catch exception, emit ErrorOccurredEvent with error details, continue processing per spec edge cases
 - [ ] Handle unknown event type in replay: skip gracefully with warning log, continue to next event per spec edge cases
