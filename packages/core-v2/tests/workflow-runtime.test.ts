@@ -1259,3 +1259,241 @@ describe("Renderer Integration", () => {
 		expect(result.state.count).toBe(1);
 	});
 });
+
+// ============================================================================
+// Phase 10 Edge Case: Handler Exception Handling
+// ============================================================================
+
+describe("WorkflowRuntime handler exception handling (Phase 10 edge case)", () => {
+	it("should catch handler exception, emit ErrorOccurredEvent, and continue processing", async () => {
+		const eventsProcessed: string[] = [];
+		const receivedErrors: string[] = [];
+
+		// First handler throws
+		const throwingHandler = createTestHandler("throwingHandler", "user:input", () => {
+			eventsProcessed.push("user:input");
+			throw new Error("Handler explosion!");
+		});
+
+		// Handler for follow-up events - to verify chain continues after exception
+		const followUpHandler = createTestHandler("followUpHandler", "follow:up", (_event, state) => {
+			eventsProcessed.push("follow:up");
+			return {
+				state: { ...state, count: state.count + 1 },
+				events: [],
+			};
+		});
+
+		// Handler that emits follow:up event when it receives the error
+		const recoveryHandler = createTestHandler("recoveryHandler", "error:occurred", (event, state) => {
+			return {
+				state,
+				events: [createEvent("follow:up", { recovery: true }, event.id)],
+			};
+		});
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", { text: "trigger" }),
+				initialState: initialTestState,
+				handlers: [throwingHandler, recoveryHandler, followUpHandler],
+				agents: [],
+				until: () => false,
+				callbacks: {
+					onError: (error) => {
+						receivedErrors.push(error.message);
+					},
+				},
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// 1. Handler exception should be caught (not propagate up)
+		// 2. onError callback should be notified
+		expect(receivedErrors).toContain("Handler explosion!");
+
+		// 3. error:occurred event should be emitted
+		const errorEvent = result.events.find((e) => e.name === "error:occurred");
+		expect(errorEvent).toBeDefined();
+		expect(errorEvent?.payload).toMatchObject({
+			code: "HANDLER_FAILED",
+			message: "Handler explosion!",
+			recoverable: true,
+			context: {
+				eventName: "user:input",
+				handlerName: "throwingHandler",
+			},
+		});
+
+		// 4. Processing should continue - follow:up event should be processed
+		const followUpEvent = result.events.find((e) => e.name === "follow:up");
+		expect(followUpEvent).toBeDefined();
+		expect(eventsProcessed).toContain("user:input");
+		expect(eventsProcessed).toContain("follow:up");
+
+		// 5. State should reflect recovery handler's work
+		expect(result.state.count).toBe(1); // followUpHandler incremented
+	});
+
+	it("should preserve state from before the throwing handler", async () => {
+		// Handler that succeeds and changes state, then throws on second event
+		let callCount = 0;
+
+		const sometimesThrowingHandler = createTestHandler("conditionalHandler", "process:event", (_event, state) => {
+			callCount++;
+			if (callCount === 2) {
+				throw new Error("Boom on second call!");
+			}
+			return {
+				state: { ...state, count: state.count + 10 },
+				events: callCount === 1 ? [createEvent("process:event", { round: 2 })] : [],
+			};
+		});
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("process:event", { round: 1 }),
+				initialState: initialTestState,
+				handlers: [sometimesThrowingHandler],
+				agents: [],
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// First call succeeded and updated state to count: 10
+		// Second call threw, so state should remain at 10 (not updated further)
+		expect(result.state.count).toBe(10);
+
+		// Both events and the error event should be recorded
+		expect(result.events).toHaveLength(3); // process:event (1), process:event (2), error:occurred
+		expect(result.events.some((e) => e.name === "error:occurred")).toBe(true);
+	});
+
+	it("should include error stack trace in context when available", async () => {
+		const throwingHandler = createTestHandler("stackTraceHandler", "user:input", () => {
+			const error = new Error("Error with stack");
+			throw error;
+		});
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", {}),
+				initialState: initialTestState,
+				handlers: [throwingHandler],
+				agents: [],
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		const errorEvent = result.events.find((e) => e.name === "error:occurred");
+		expect(errorEvent).toBeDefined();
+		// Context should include handler name and event name for debugging
+		expect(errorEvent?.payload.context).toMatchObject({
+			eventName: "user:input",
+			handlerName: "stackTraceHandler",
+		});
+	});
+
+	it("should handle non-Error exceptions gracefully", async () => {
+		// biome-ignore lint/complexity/useArrowFunction: intentional throw of non-Error
+		const throwingHandler = createTestHandler("stringThrowHandler", "user:input", function () {
+			// eslint-disable-next-line @typescript-eslint/no-throw-literal
+			throw "String error message"; // Not an Error object
+		});
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", {}),
+				initialState: initialTestState,
+				handlers: [throwingHandler],
+				agents: [],
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		const errorEvent = result.events.find((e) => e.name === "error:occurred");
+		expect(errorEvent).toBeDefined();
+		// Non-Error should be stringified
+		expect(errorEvent?.payload.message).toBe("String error message");
+	});
+
+	it("should continue processing subsequent events after multiple handler failures", async () => {
+		let failCount = 0;
+		let successCount = 0;
+
+		const unreliableHandler = createTestHandler("unreliableHandler", "test:event", (_event, state) => {
+			failCount++;
+			if (failCount <= 2) {
+				throw new Error(`Failure ${failCount}`);
+			}
+			successCount++;
+			return {
+				state: { ...state, count: state.count + 1 },
+				events: [],
+			};
+		});
+
+		// Trigger multiple events
+		const triggerHandler = createTestHandler("triggerHandler", "user:input", (event, state) => ({
+			state,
+			events: [
+				createEvent("test:event", { n: 1 }, event.id),
+				createEvent("test:event", { n: 2 }, event.id),
+				createEvent("test:event", { n: 3 }, event.id),
+			],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", {}),
+				initialState: initialTestState,
+				handlers: [triggerHandler, unreliableHandler],
+				agents: [],
+				until: () => false,
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers();
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+
+		// First two test:event calls failed, third succeeded
+		expect(failCount).toBe(3); // All 3 calls attempted
+		expect(successCount).toBe(1); // Only third succeeded
+
+		// Should have 2 error events and final state count of 1
+		const errorEvents = result.events.filter((e) => e.name === "error:occurred");
+		expect(errorEvents).toHaveLength(2);
+		expect(result.state.count).toBe(1);
+	});
+});

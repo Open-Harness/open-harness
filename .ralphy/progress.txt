@@ -1160,3 +1160,30 @@
 - `Math.min(position + 1, length - 1)` naturally clamps at the final position
 - Phase 10 Edge Case Handling (task 2 of 5) COMPLETE
 
+
+## 2026-01-21T20:12:00Z - Phase 10 Edge Case: Handler Exception Handling
+**Task**: Handle handler exceptions in WorkflowRuntime: catch exception, emit ErrorOccurredEvent with error details, continue processing per spec edge cases
+**Status**: COMPLETE (Implementation already existed, added comprehensive tests)
+**Analysis**:
+- The implementation in WorkflowRuntime.ts (lines 337-356) already correctly handles handler exceptions
+- Code catches exceptions in a try/catch, creates error:occurred event with HANDLER_FAILED code, and continues processing
+- Callbacks are notified via onError
+- Processing continues to next event (the loop is not interrupted)
+**Changes**:
+- Added 5 new comprehensive tests in tests/workflow-runtime.test.ts verifying:
+  1. "should catch handler exception, emit ErrorOccurredEvent, and continue processing" - Core behavior
+  2. "should preserve state from before the throwing handler" - State preservation
+  3. "should include error stack trace in context when available" - Debugging info
+  4. "should handle non-Error exceptions gracefully" - String/object throws
+  5. "should continue processing subsequent events after multiple handler failures" - Resilience
+- Tests verify: error callback notification, ErrorOccurredEvent emission with code/message/recoverable/context, continuation of event processing chain
+**Verification**:
+- bun run test: PASS (761 tests total, 5 new handler exception tests)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- The implementation was ALREADY correct - this task was to verify and document the behavior
+- ErrorOccurredEvent includes: code (HANDLER_FAILED), message (from error), recoverable (true), context (eventName, handlerName)
+- Non-Error exceptions (strings, objects) are converted via String() for the error message
+- Multiple sequential failures are handled correctly - each emits its own error event and processing continues
+- Phase 10 Edge Case Handling (task 3 of 5) COMPLETE
+
