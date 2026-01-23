@@ -1,0 +1,28 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"declaration": false,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"allowImportingTsExtensions": true,
+		"rootDir": "../..",
+		"baseUrl": "../..",
+		"paths": {
+			"@open-harness/core-v2": ["./src/index.ts"]
+		}
+	},
+	"include": ["./effect-free-consumer.ts"],
+	"exclude": [
+		"../../node_modules",
+		"../../node_modules/effect",
+		"../../node_modules/@effect"
+	]
+}

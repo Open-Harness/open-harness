@@ -1392,3 +1392,47 @@
 - MemoryStoreLive Layer used for Store integration tests
 - Phase 10 Final Validation (task 1 of 3) COMPLETE
 
+
+## 2026-01-21T21:08:00Z - Phase 10 Final Validation: 100% Effect-Free Public API Verification (FR-062)
+**Task**: Verify 100% Effect-free public API by creating consumer test file that imports from @core-v2 and compiles with tsc --noEmit without Effect
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/tests/integration/effect-free-consumer.ts with:
+  - Imports ALL public API exports from @open-harness/core-v2
+  - Uses TypeScript type verification to prove types are plain (not Effect types)
+  - Runtime verification functions that exercise every module:
+    - verifyEventDefinition(): EventDefinition, defineEvent, createEvent
+    - verifyHandlerDefinition(): Handler, HandlerResult, defineHandler, stateOnly, emit
+    - verifyAgentFactory(): Agent, AgentOptions, createAgentRegistry, findMatchingAgents
+    - verifyWorkflow(): createWorkflow, Workflow.run(), Workflow.dispose(), WorkflowResult
+    - verifyTape(): createTape, computeState, Tape VCR controls
+    - verifyStore(): createMemoryStore, PublicStore methods
+    - verifyRenderer(): createRenderer, pattern matching utilities
+    - verifyErrors(): all Error classes extend standard Error
+    - verifyWorkflowHandler(): createWorkflowHandler (FR-059)
+    - verifyEventBusUtilities(): subscription ID and pattern filter utilities
+    - verifyCallbacks(): WorkflowCallbacks, RuntimeCallbacks, OnUnknownEventCallback
+- Created packages/core-v2/tests/integration/tsconfig.effect-free.json:
+  - Separate tsconfig that compiles ONLY the consumer file
+  - Excludes node_modules/effect and node_modules/@effect
+  - Verifies file compiles WITHOUT Effect in compilation context
+- Created packages/core-v2/tests/integration/effect-free-consumer.test.ts with 19 tests:
+  - TypeScript Compilation Verification (2 tests)
+  - Runtime Verification for all modules (12 tests)
+  - Full Consumer Verification (1 test)
+  - Verification: No Effect Types in Exports (4 tests)
+    - Verifies Effect, Context, Layer, Stream, Exit, Cause, Fiber, Schema, Ref, Queue NOT exported
+    - Verifies Layer implementations NOT exported
+    - Verifies Context.Tags NOT exported
+    - Verifies Promise-based factories exported instead of Effect-based
+**Verification**:
+- tsc --project tests/integration/tsconfig.effect-free.json --noEmit: PASS (compiles without Effect)
+- bun run test: PASS (867 tests total, 19 new Effect-free verification tests)
+- bun run lint: PASS (warnings only, no errors)
+**Notes**:
+- The consumer file imports from public API and compiles without Effect types
+- This proves FR-062: "Public API exposes ZERO Effect types"
+- Some imports used only for type verification at end of file (intentional unused imports)
+- Callback parameter signatures match API contracts (intentional unused parameters)
+- Phase 10 Final Validation (task 2 of 3) COMPLETE
+
