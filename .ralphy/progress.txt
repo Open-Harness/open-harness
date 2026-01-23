@@ -1137,3 +1137,26 @@
 - "Initial state" in the spec context means the state at that position (position 0 = state after first event)
 - Phase 10 Edge Case Handling (task 1 of 5) COMPLETE
 
+
+## 2026-01-21T20:06:00Z - Phase 10 Edge Case: step() past last event
+**Task**: Handle step() at last position: remain at final position, do not exceed length-1 per spec edge cases
+**Status**: COMPLETE
+**Analysis**:
+- The implementation in Tape.ts (lines 402-406) already correctly handles this edge case via `Math.min(this.position + 1, Math.max(0, this.length - 1))`
+- Existing tests at lines 583-591 and 1097-1105 already verified basic behavior
+- This was a "verification" task in Phase 10 (Polish & Edge Cases)
+**Changes**:
+- Added comprehensive test "step past last event preserves state and does not exceed length-1 (Phase 10 edge case)" in tests/tape.test.ts that:
+  - Verifies position remains at length-1 (4) after multiple step() calls
+  - Verifies state is preserved correctly (count=6, values=["hello", "world"])
+  - Verifies tape remains usable (can step backward afterward)
+  - Verifies current event is still accessible
+  - Verifies stepping forward again returns to end
+**Verification**:
+- bun run test: PASS (756 tests total, 1 new comprehensive edge case test)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- The implementation was already correct per spec FR-029
+- `Math.min(position + 1, length - 1)` naturally clamps at the final position
+- Phase 10 Edge Case Handling (task 2 of 5) COMPLETE
+

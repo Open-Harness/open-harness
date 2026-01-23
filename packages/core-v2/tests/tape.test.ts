@@ -1104,6 +1104,47 @@ describe("Edge Cases (from spec)", () => {
 		expect(stepped.position).toBe(4);
 	});
 
+	it("step past last event preserves state and does not exceed length-1 (Phase 10 edge case)", () => {
+		const events = createTestEvents();
+		const handlers = createHandlerMap();
+
+		// Start at the last position (position 4, which is length-1 for 5 events)
+		const tape = createTape({ events, handlers, initialState, position: 4 });
+
+		// State at position 4 (final state after all events)
+		expect(tape.state.count).toBe(6); // 1 + 2 + 3
+		expect(tape.state.values).toEqual(["hello", "world"]);
+		expect(tape.position).toBe(4);
+		expect(tape.length).toBe(5);
+
+		// Call step multiple times - should never exceed length-1 or corrupt state
+		const t1 = tape.step();
+		expect(t1.position).toBe(4); // Stays at 4 (length-1)
+		expect(t1.state.count).toBe(6);
+		expect(t1.state.values).toEqual(["hello", "world"]);
+
+		const t2 = t1.step();
+		expect(t2.position).toBe(4);
+		expect(t2.state.count).toBe(6);
+
+		const t3 = t2.step();
+		expect(t3.position).toBe(4);
+		expect(t3.state.count).toBe(6);
+
+		// Verify tape is still usable - can step backward from final position
+		const t4 = t3.stepBack();
+		expect(t4.position).toBe(3);
+		expect(t4.state.count).toBe(6); // Still 6 (values events don't change count)
+
+		// Verify current event is still accessible at end
+		expect(t3.current).toBeDefined();
+		expect(t3.current?.name).toBe("value:added");
+
+		// Verify stepping forward again returns to end
+		const t5 = t4.step();
+		expect(t5.position).toBe(4);
+	});
+
 	it("stepTo clamps correctly (FR-031)", () => {
 		const events = createTestEvents();
 		const handlers = createHandlerMap();
