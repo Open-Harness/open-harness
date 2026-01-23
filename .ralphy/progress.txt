@@ -1469,3 +1469,36 @@
 - Both tests prove determinism at the workflow level (not just Tape level)
 - Phase 10 Final Validation (task 3 of 3) COMPLETE - PHASE 10 COMPLETE
 
+## 2026-01-21T21:20:00Z - Phase 11 Fixture Recording Infrastructure (Task 1)
+**Task**: Create packages/core-v2/scripts/record-fixtures.ts script that runs a live Claude SDK session and captures all events to JSON
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/scripts/record-fixtures.ts with:
+  - RecordedMessage interface: message (SDKMessage), relativeTimestamp (ms since start), index
+  - Fixture interface: metadata (scenario, recordedAt, model, durationMs, messageCount, sdkVersion, description), prompt, messages[], result
+  - ScenarioDefinition interface for defining recording scenarios
+  - 4 pre-defined scenarios: text-simple, text-streaming, text-multiline, structured-output
+  - recordScenario() function that queries live Claude SDK and captures all messages with timing
+  - saveFixture() function that writes fixtures to tests/fixtures/golden/
+  - CLI with --all and --scenario flags
+  - Console output with progress indicators and summary
+- Created packages/core-v2/tests/fixtures/golden/ directory for fixture storage
+- Created packages/core-v2/tests/record-fixtures.test.ts with 12 tests:
+  - Script file existence and structure tests
+  - Fixtures directory existence test
+  - Fixture type structure tests
+  - CLI arguments handling tests
+  - Fixture loading helper tests
+- Added "record-fixtures" script to package.json: "bun run scripts/record-fixtures.ts"
+**Verification**:
+- bun run test: PASS (883 tests total, 12 new record-fixtures tests)
+- bun run lint: PASS (pre-existing warnings only, no new errors)
+**Notes**:
+- Script imports directly from @anthropic-ai/claude-agent-sdk
+- Captures ALL SDK message types: stream_event, assistant, user, result
+- RelativeTimestamp enables understanding streaming behavior timing
+- Metadata includes model and SDK version for future debugging
+- CLI supports recording all scenarios or a specific one
+- Fixture format designed for easy test consumption
+- Phase 11 Fixture Recording Infrastructure (task 1 of 5) COMPLETE
+
