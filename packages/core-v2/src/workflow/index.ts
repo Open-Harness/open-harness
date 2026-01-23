@@ -10,13 +10,18 @@
 
 // Workflow exports (consumer-facing)
 export {
+	type CorsOptions,
+	type CreateWorkflowHandlerOptions,
 	// Factory function
 	createWorkflow,
+	// Server Integration (FR-059)
+	createWorkflowHandler,
 	type RunOptions,
 	// Interfaces
 	type Workflow,
 	type WorkflowCallbacks,
 	type WorkflowDefinition,
+	type WorkflowHandler,
 	type WorkflowResult,
 } from "./Workflow.js";
 

@@ -1260,3 +1260,44 @@
 - When record:false, Store failures are irrelevant (maybeRecord returns Effect.void)
 - Phase 10 Edge Case Handling (task 5 of 5) COMPLETE - ALL PHASE 10 EDGE CASES DONE
 
+
+
+## 2026-01-21T20:35:00Z - Phase 10 Server Integration: createWorkflowHandler (FR-059)
+**Task**: Implement createWorkflowHandler(workflow) in src/workflow/Workflow.ts that returns HTTP handler function for server-side execution
+**Status**: COMPLETE
+**Changes**:
+- Created `createWorkflowHandler<S>(options)` function in packages/core-v2/src/workflow/Workflow.ts:
+  - Accepts `CreateWorkflowHandlerOptions<S>` with: workflow, cors?, record?
+  - Returns `WorkflowHandler` with `handle(request: Request): Promise<Response>` method
+  - Uses Server-Sent Events (SSE) for streaming workflow events to client
+  - CORS support with configurable origins (string, array, or wildcard), methods, and preflight handling
+  - HTTP validation: rejects non-POST, invalid JSON, missing/invalid input field
+  - SSE event types: "event" (workflow events), "state" (state changes), "done" (completion), "error" (failures)
+  - Proper SSE headers: Content-Type: text/event-stream, Cache-Control: no-cache, Connection: keep-alive
+  - Callbacks integration for streaming events and state changes
+  - Error handling converts workflow failures to SSE error events
+- Created new types:
+  - `WorkflowHandler` interface with handle method
+  - `CorsOptions` interface with origin and methods
+  - `CreateWorkflowHandlerOptions<S>` interface with workflow, cors, record
+- Updated packages/core-v2/src/workflow/index.ts to export new types and function
+- Updated packages/core-v2/src/index.ts to include server integration exports
+- Created packages/core-v2/tests/workflow-handler.test.ts with 35 comprehensive tests:
+  - Basic Functionality (6 tests): WorkflowHandler creation, POST handling, method/body validation
+  - SSE Response Format (4 tests): event streaming, headers, format verification
+  - CORS Options Handling (7 tests): preflight, origins, methods, wildcard, rejection
+  - Session Recording (4 tests): sessionId handling, record option, store error detection
+  - Workflow Result (2 tests): terminated status, final state in done event
+  - Interface Type Tests (4 tests): type verification
+  - Module Exports (4 tests): export verification
+**Verification**:
+- bun run test: PASS (811 tests total, 35 new workflow-handler tests)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- SSE provides real-time event streaming to clients without polling
+- CORS is fully configurable: single origin, multiple origins, wildcard (*), or disabled
+- Error handling follows fail-fast principle: Store unavailable errors are sent as SSE error events
+- Session ID is only used from request when record:true (per WorkflowRuntime implementation)
+- Handler is framework-agnostic: works with any framework that supports standard Request/Response
+- Phase 10 Server Integration (task 1 of 2) COMPLETE
+

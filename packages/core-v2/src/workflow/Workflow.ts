@@ -403,3 +403,288 @@ function createNoopProvider(): LLMProviderService {
 export function createWorkflow<S>(definition: WorkflowDefinition<S>): Workflow<S> {
 	return new WorkflowImpl(definition);
 }
+
+// ============================================================================
+// Server Integration Types
+// ============================================================================
+
+/**
+ * Server-side workflow handler for HTTP endpoints.
+ *
+ * @remarks
+ * Created with `createWorkflowHandler(options)` for server integration.
+ * Uses Server-Sent Events (SSE) for streaming workflow events to the client.
+ *
+ * @example
+ * ```typescript
+ * const handler = createWorkflowHandler({
+ *   workflow,
+ *   cors: { origin: "http://localhost:3000" },
+ * });
+ *
+ * // With Hono
+ * app.post("/api/workflow", (c) => handler.handle(c.req.raw));
+ *
+ * // With raw Node.js/Bun
+ * const response = await handler.handle(request);
+ * ```
+ */
+export interface WorkflowHandler {
+	/**
+	 * Handle an HTTP request.
+	 *
+	 * @param request - The incoming HTTP request (standard Fetch API Request)
+	 * @returns Response with SSE stream for events
+	 */
+	handle(request: Request): Promise<Response>;
+}
+
+/**
+ * CORS configuration options.
+ */
+export interface CorsOptions {
+	/** Allowed origin(s) */
+	readonly origin?: string | readonly string[];
+	/** Allowed HTTP methods */
+	readonly methods?: readonly string[];
+}
+
+/**
+ * Options for creating a workflow handler.
+ */
+export interface CreateWorkflowHandlerOptions<S = unknown> {
+	/** The workflow to handle */
+	readonly workflow: Workflow<S>;
+	/** CORS settings */
+	readonly cors?: CorsOptions;
+	/** Whether to record sessions by default (default: false) */
+	readonly record?: boolean;
+}
+
+/**
+ * Request body format for workflow handler.
+ */
+interface WorkflowRequestBody {
+	/** User input text */
+	input: string;
+	/** Optional session ID for recording */
+	sessionId?: string;
+	/** Whether to record this session */
+	record?: boolean;
+}
+
+/**
+ * SSE event data format.
+ */
+interface SSEEventData {
+	/** Event type: "event", "state", "done", "error" */
+	type: "event" | "state" | "done" | "error";
+	/** Event payload */
+	data: unknown;
+}
+
+// ============================================================================
+// Server Handler Implementation
+// ============================================================================
+
+/**
+ * Creates an HTTP handler for server-side workflow execution.
+ *
+ * @typeParam S - The workflow state type
+ * @param options - Handler configuration including workflow and CORS settings
+ * @returns A WorkflowHandler that can process HTTP requests
+ *
+ * @remarks
+ * The handler:
+ * - Accepts POST requests with JSON body `{ input: string, sessionId?: string, record?: boolean }`
+ * - Returns Server-Sent Events (SSE) stream with events, state changes, and completion
+ * - Handles CORS if configured
+ * - Supports preflight OPTIONS requests
+ *
+ * SSE events are formatted as:
+ * ```
+ * data: { "type": "event", "data": {...} }
+ *
+ * data: { "type": "state", "data": {...} }
+ *
+ * data: { "type": "done", "data": { "sessionId": "...", "terminated": true } }
+ * ```
+ *
+ * @example
+ * ```typescript
+ * import { createWorkflow, createWorkflowHandler } from "@open-harness/core-v2";
+ *
+ * const workflow = createWorkflow({
+ *   name: "chat",
+ *   initialState: { messages: [] },
+ *   handlers: [...],
+ *   agents: [...],
+ *   until: (state) => state.done,
+ * });
+ *
+ * const handler = createWorkflowHandler({
+ *   workflow,
+ *   cors: { origin: "http://localhost:3000" },
+ * });
+ *
+ * // Use with any framework
+ * const response = await handler.handle(request);
+ * ```
+ */
+export function createWorkflowHandler<S>(options: CreateWorkflowHandlerOptions<S>): WorkflowHandler {
+	const { workflow, cors, record: defaultRecord = false } = options;
+
+	/**
+	 * Build CORS headers based on configuration.
+	 */
+	function buildCorsHeaders(requestOrigin: string | null): Record<string, string> {
+		const headers: Record<string, string> = {};
+
+		if (!cors) {
+			return headers;
+		}
+
+		// Handle origin
+		if (cors.origin) {
+			const allowedOrigins = Array.isArray(cors.origin) ? cors.origin : [cors.origin];
+			if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+				headers["Access-Control-Allow-Origin"] = requestOrigin;
+			} else if (allowedOrigins.includes("*")) {
+				headers["Access-Control-Allow-Origin"] = "*";
+			}
+		}
+
+		// Handle methods
+		const methods = cors.methods ?? ["POST", "OPTIONS"];
+		headers["Access-Control-Allow-Methods"] = methods.join(", ");
+		headers["Access-Control-Allow-Headers"] = "Content-Type";
+		headers["Access-Control-Max-Age"] = "86400"; // 24 hours
+
+		return headers;
+	}
+
+	/**
+	 * Format an SSE event for transmission.
+	 */
+	function formatSSEEvent(data: SSEEventData): string {
+		return `data: ${JSON.stringify(data)}\n\n`;
+	}
+
+	return {
+		async handle(request: Request): Promise<Response> {
+			const requestOrigin = request.headers.get("Origin");
+			const corsHeaders = buildCorsHeaders(requestOrigin);
+
+			// Handle CORS preflight
+			if (request.method === "OPTIONS") {
+				return new Response(null, {
+					status: 204,
+					headers: corsHeaders,
+				});
+			}
+
+			// Only accept POST
+			if (request.method !== "POST") {
+				return new Response(JSON.stringify({ error: "Method not allowed" }), {
+					status: 405,
+					headers: {
+						...corsHeaders,
+						"Content-Type": "application/json",
+					},
+				});
+			}
+
+			// Parse request body
+			let body: WorkflowRequestBody;
+			try {
+				body = (await request.json()) as WorkflowRequestBody;
+			} catch {
+				return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+					status: 400,
+					headers: {
+						...corsHeaders,
+						"Content-Type": "application/json",
+					},
+				});
+			}
+
+			// Validate input
+			if (!body.input || typeof body.input !== "string") {
+				return new Response(JSON.stringify({ error: "Missing or invalid 'input' field" }), {
+					status: 400,
+					headers: {
+						...corsHeaders,
+						"Content-Type": "application/json",
+					},
+				});
+			}
+
+			// Create SSE stream
+			const stream = new ReadableStream({
+				async start(controller) {
+					const encoder = new TextEncoder();
+
+					try {
+						// Run the workflow with callbacks that stream events
+						const result = await workflow.run({
+							input: body.input,
+							record: body.record ?? defaultRecord,
+							sessionId: body.sessionId as SessionId | undefined,
+							callbacks: {
+								onEvent: (event) => {
+									const sseData: SSEEventData = { type: "event", data: event };
+									controller.enqueue(encoder.encode(formatSSEEvent(sseData)));
+								},
+								onStateChange: (state) => {
+									const sseData: SSEEventData = { type: "state", data: state };
+									controller.enqueue(encoder.encode(formatSSEEvent(sseData)));
+								},
+								onError: (error) => {
+									const sseData: SSEEventData = {
+										type: "error",
+										data: { message: error.message, name: error.name },
+									};
+									controller.enqueue(encoder.encode(formatSSEEvent(sseData)));
+								},
+							},
+						});
+
+						// Send completion event
+						const doneData: SSEEventData = {
+							type: "done",
+							data: {
+								sessionId: result.sessionId,
+								terminated: result.terminated,
+								finalState: result.state,
+							},
+						};
+						controller.enqueue(encoder.encode(formatSSEEvent(doneData)));
+						controller.close();
+					} catch (error) {
+						// Send error event
+						const errorData: SSEEventData = {
+							type: "error",
+							data: {
+								message: error instanceof Error ? error.message : "Unknown error",
+								name: error instanceof Error ? error.name : "Error",
+							},
+						};
+						controller.enqueue(encoder.encode(formatSSEEvent(errorData)));
+						controller.close();
+					}
+				},
+			});
+
+			// Return SSE response
+			return new Response(stream, {
+				status: 200,
+				headers: {
+					...corsHeaders,
+					"Content-Type": "text/event-stream",
+					"Cache-Control": "no-cache",
+					Connection: "keep-alive",
+				},
+			});
+		},
+	};
+}

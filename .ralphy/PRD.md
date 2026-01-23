@@ -224,7 +224,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Server Integration
 
-- [ ] Implement createWorkflowHandler(workflow) in src/workflow/Workflow.ts that returns HTTP handler function for server-side execution per spec FR-059
+- [x] Implement createWorkflowHandler(workflow) in src/workflow/Workflow.ts that returns HTTP handler function for server-side execution per spec FR-059
 - [ ] Add api option to useWorkflow in src/react.ts for client-server connection per spec FR-060
 
 ### Final Validation

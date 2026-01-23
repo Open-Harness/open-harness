@@ -262,6 +262,8 @@ export {
  */
 // WorkflowRuntime types (for advanced usage)
 export type {
+	CorsOptions,
+	CreateWorkflowHandlerOptions,
 	PublicWorkflowRuntime,
 	RunOptions,
 	RuntimeCallbacks,
@@ -270,10 +272,12 @@ export type {
 	Workflow,
 	WorkflowCallbacks,
 	WorkflowDefinition,
+	// Server Integration (FR-059)
+	WorkflowHandler,
 	WorkflowResult,
 	WorkflowRuntimeErrorCode,
 } from "./workflow/index.js";
-export { createWorkflow, WorkflowRuntimeError } from "./workflow/index.js";
+export { createWorkflow, createWorkflowHandler, WorkflowRuntimeError } from "./workflow/index.js";
 
 // =============================================================================
 // TAPE MODULE
