@@ -308,12 +308,22 @@ describe("Workflow.run()", () => {
 	it("should use provided sessionId when given", async () => {
 		const customSessionId = generateSessionId();
 
+		// Need a mock store since record: true requires a configured store
+		const mockStore: StoreService = {
+			append: () => Effect.void,
+			events: () => Effect.succeed([]),
+			sessions: () => Effect.succeed([]),
+			clear: () => Effect.void,
+			snapshot: () => Effect.succeed(undefined),
+		};
+
 		const workflow = createWorkflow<TestState>({
 			name: "custom-session-test",
 			initialState: initialTestState,
 			handlers: [],
 			agents: [],
 			until: () => false,
+			store: mockStore,
 		});
 		workflows.push(workflow);
 

@@ -1230,3 +1230,33 @@
 - Callback is preserved across all VCR control methods (step, stepBack, stepTo, etc.)
 - Phase 10 Edge Case Handling (task 4 of 5) COMPLETE
 
+
+## 2026-01-21T20:28:00Z - Phase 10 Edge Case: Store Unavailable During Recording
+**Task**: Handle Store unavailable during recording: fail fast with clear error, do not lose events silently
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/workflow/WorkflowRuntime.ts:
+  - Modified maybeRecord helper to NOT swallow Store errors
+  - When record:true and Store.append() fails, converts StoreError to WorkflowRuntimeError with code "STORE_UNAVAILABLE"
+  - Error message includes: event name that would be lost, original error message
+  - StoreError is preserved as cause for debugging
+- Updated packages/core-v2/tests/workflow.test.ts:
+  - Fixed "should use provided sessionId when given" test to provide mock store when using record:true
+- Added 6 comprehensive tests in packages/core-v2/tests/workflow-runtime.test.ts:
+  1. "should fail fast with STORE_UNAVAILABLE when Store.append fails during recording"
+  2. "should include event name in STORE_UNAVAILABLE error message"
+  3. "should preserve original StoreError as cause"
+  4. "should NOT fail when record is false even if Store would fail"
+  5. "should fail fast on first event when Store fails (no partial recording)"
+  6. "should fail fast mid-session if Store becomes unavailable"
+**Verification**:
+- bun run test: PASS (776 tests total, 6 new Store unavailable tests)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- Previous behavior: Store errors were silently swallowed (catchAll → Effect.void)
+- New behavior: Store errors fail fast with STORE_UNAVAILABLE code
+- Event name included in error message for debugging ("Event X would be lost")
+- Original StoreError preserved as cause for error chain inspection
+- When record:false, Store failures are irrelevant (maybeRecord returns Effect.void)
+- Phase 10 Edge Case Handling (task 5 of 5) COMPLETE - ALL PHASE 10 EDGE CASES DONE
+

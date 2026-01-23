@@ -12,7 +12,7 @@
  * - Error handling and recovery
  */
 
-import { Effect, Layer, Stream } from "effect";
+import { Cause, Effect, Layer, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { Agent } from "../src/agent/Agent.js";
@@ -22,7 +22,7 @@ import { EventBus, EventBusLive } from "../src/event/EventBus.js";
 import type { HandlerDefinition } from "../src/handler/Handler.js";
 import { LLMProvider, type LLMProviderService, type ProviderInfo, type QueryResult } from "../src/provider/Provider.js";
 import type { Renderer } from "../src/renderer/Renderer.js";
-import { generateSessionId, type SessionMetadata, Store, type StoreService } from "../src/store/Store.js";
+import { generateSessionId, type SessionMetadata, Store, StoreError, type StoreService } from "../src/store/Store.js";
 import {
 	WorkflowRuntime,
 	WorkflowRuntimeError,
@@ -1495,5 +1495,248 @@ describe("WorkflowRuntime handler exception handling (Phase 10 edge case)", () =
 		const errorEvents = result.events.filter((e) => e.name === "error:occurred");
 		expect(errorEvents).toHaveLength(2);
 		expect(result.state.count).toBe(1);
+	});
+});
+
+// ============================================================================
+// Phase 10 Edge Case: Store Unavailable During Recording
+// ============================================================================
+
+describe("WorkflowRuntime Store unavailable during recording (Phase 10 edge case)", () => {
+	it("should fail fast with STORE_UNAVAILABLE when Store.append fails during recording", async () => {
+		// Create a mock store that fails on append
+		const failingStore: StoreService = {
+			...createMockStore(),
+			append: () => Effect.fail(new StoreError("WRITE_FAILED", "Database connection lost")),
+		};
+
+		const handler = createTestHandler("handleInput", "user:input", (_event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", { text: "test" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				until: () => false,
+				record: true, // Recording enabled - Store failure should fail fast
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers(failingStore);
+
+		// Use Effect.runPromiseExit to extract the failure properly
+		const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(testLayers)));
+
+		expect(exit._tag).toBe("Failure");
+		if (exit._tag === "Failure") {
+			// Extract the error from the cause
+			const failures = [...Cause.failures(exit.cause)];
+			expect(failures.length).toBeGreaterThan(0);
+			const error = failures[0];
+			expect(error).toBeInstanceOf(WorkflowRuntimeError);
+			expect((error as WorkflowRuntimeError).code).toBe("STORE_UNAVAILABLE");
+			expect((error as WorkflowRuntimeError).message).toContain("Store unavailable");
+			expect((error as WorkflowRuntimeError).message).toContain("cannot record session");
+		}
+	});
+
+	it("should include event name in STORE_UNAVAILABLE error message", async () => {
+		const failingStore: StoreService = {
+			...createMockStore(),
+			append: () => Effect.fail(new StoreError("WRITE_FAILED", "Disk full")),
+		};
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", { text: "test" }),
+				initialState: initialTestState,
+				handlers: [],
+				agents: [],
+				until: () => false,
+				record: true,
+			});
+		});
+
+		const testLayers = createTestLayers(failingStore);
+
+		try {
+			await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+			expect.fail("Should have thrown");
+		} catch (error) {
+			expect((error as WorkflowRuntimeError).message).toContain("user:input");
+			expect((error as WorkflowRuntimeError).message).toContain("would be lost");
+		}
+	});
+
+	it("should preserve original StoreError as cause", async () => {
+		const originalError = new StoreError("WRITE_FAILED", "Original store failure");
+
+		const failingStore: StoreService = {
+			...createMockStore(),
+			append: () => Effect.fail(originalError),
+		};
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", {}),
+				initialState: initialTestState,
+				handlers: [],
+				agents: [],
+				until: () => false,
+				record: true,
+			});
+		});
+
+		const testLayers = createTestLayers(failingStore);
+
+		const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(testLayers)));
+
+		expect(exit._tag).toBe("Failure");
+		if (exit._tag === "Failure") {
+			const failures = [...Cause.failures(exit.cause)];
+			expect(failures.length).toBeGreaterThan(0);
+			const error = failures[0] as WorkflowRuntimeError;
+			expect(error.cause).toBe(originalError);
+		}
+	});
+
+	it("should NOT fail when record is false even if Store would fail", async () => {
+		// This store always fails - but since record:false, it should never be called
+		const failingStore: StoreService = {
+			...createMockStore(),
+			append: () => Effect.fail(new StoreError("WRITE_FAILED", "Should not be called")),
+		};
+
+		const handler = createTestHandler("handleInput", "user:input", (_event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			const result = yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", { text: "test" }),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				until: () => false,
+				record: false, // Recording disabled - Store failures should be irrelevant
+			});
+
+			return result;
+		});
+
+		const testLayers = createTestLayers(failingStore);
+
+		// Should succeed - Store.append is never called when record:false
+		const result = await Effect.runPromise(program.pipe(Effect.provide(testLayers)));
+		expect(result.state.count).toBe(1);
+	});
+
+	it("should fail fast on first event when Store fails (no partial recording)", async () => {
+		let appendCallCount = 0;
+
+		const failingStore: StoreService = {
+			...createMockStore(),
+			append: () => {
+				appendCallCount++;
+				return Effect.fail(new StoreError("WRITE_FAILED", "Connection refused"));
+			},
+		};
+
+		// Handler that would emit multiple events - but should fail on first
+		const handler = createTestHandler("multiEmit", "user:input", (event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [createEvent("event:2", {}, event.id), createEvent("event:3", {}, event.id)],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", {}),
+				initialState: initialTestState,
+				handlers: [handler],
+				agents: [],
+				until: () => false,
+				record: true,
+			});
+		});
+
+		const testLayers = createTestLayers(failingStore);
+
+		await expect(Effect.runPromise(program.pipe(Effect.provide(testLayers)))).rejects.toThrow();
+
+		// Should only try once - fail fast, don't continue processing
+		expect(appendCallCount).toBe(1);
+	});
+
+	it("should fail fast mid-session if Store becomes unavailable", async () => {
+		let appendCallCount = 0;
+
+		// Store works for first 2 events, then fails
+		const intermittentStore: StoreService = {
+			...createMockStore(),
+			append: (_sessionId, _event) => {
+				appendCallCount++;
+				if (appendCallCount > 2) {
+					return Effect.fail(new StoreError("WRITE_FAILED", "Connection dropped"));
+				}
+				return Effect.void;
+			},
+		};
+
+		const handler = createTestHandler("chainHandler", "user:input", (event, state) => ({
+			state: { ...state, count: state.count + 1 },
+			events: [createEvent("chain:event", {}, event.id)],
+		}));
+
+		const chainHandler = createTestHandler("chainContinue", "chain:event", (event, state) => ({
+			state: { ...state, count: state.count + 10 },
+			events: [createEvent("final:event", {}, event.id)],
+		}));
+
+		const program = Effect.gen(function* () {
+			const runtime = yield* WorkflowRuntime;
+
+			yield* runtime.run<TestState>({
+				initialEvent: createEvent("user:input", {}),
+				initialState: initialTestState,
+				handlers: [handler, chainHandler],
+				agents: [],
+				until: () => false,
+				record: true,
+			});
+		});
+
+		const testLayers = createTestLayers(intermittentStore);
+
+		const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(testLayers)));
+
+		expect(exit._tag).toBe("Failure");
+		if (exit._tag === "Failure") {
+			// Should fail on third event
+			expect(appendCallCount).toBe(3);
+
+			const failures = [...Cause.failures(exit.cause)];
+			expect(failures.length).toBeGreaterThan(0);
+			const error = failures[0] as WorkflowRuntimeError;
+			expect(error.code).toBe("STORE_UNAVAILABLE");
+			// Error should mention the event that couldn't be recorded
+			expect(error.message).toContain("final:event");
+		}
 	});
 });

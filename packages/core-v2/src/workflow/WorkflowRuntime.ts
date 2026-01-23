@@ -285,7 +285,24 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 				yield* Queue.offer(eventQueue, initialEvent);
 
 				// Helper: Record event to store if recording
-				const maybeRecord = (event: AnyEvent) => (record ? store.append(sessionId, event) : Effect.void);
+				// CRITICAL: When record:true, Store failures MUST fail fast per spec edge case FR-xxx
+				// We do NOT swallow errors here - events must not be lost silently
+				const maybeRecord = (event: AnyEvent) =>
+					record
+						? store
+								.append(sessionId, event)
+								.pipe(
+									Effect.catchAll((storeError) =>
+										Effect.fail(
+											new WorkflowRuntimeError(
+												"STORE_UNAVAILABLE",
+												`Store unavailable - cannot record session. Event "${event.name}" would be lost. Original error: ${storeError.message}`,
+												storeError,
+											),
+										),
+									),
+								)
+						: Effect.void;
 
 				// Helper: Send event to all matching renderers (non-blocking, FR-004)
 				// Renderers execute in parallel with handler processing
@@ -361,8 +378,8 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 						// Notify state change callback
 						callbacks?.onStateChange?.(newState);
 
-						// Record event if recording
-						yield* maybeRecord(event).pipe(Effect.catchAll(() => Effect.void));
+						// Record event if recording (fails fast if Store unavailable per spec edge case)
+						yield* maybeRecord(event);
 
 						// Track event
 						yield* Ref.update(allEventsRef, (events) => [...events, event]);
