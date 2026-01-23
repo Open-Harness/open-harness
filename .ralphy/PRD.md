@@ -231,7 +231,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 - [x] Create packages/core-v2/tests/integration/quickstart.test.ts that runs examples from specs/001-effect-refactor/quickstart.md as integration tests
 - [x] Verify 100% Effect-free public API by creating consumer test file that imports from @core-v2 and compiles with tsc --noEmit without Effect
-- [ ] Verify deterministic replay by recording a session, replaying 100 times, asserting state is identical at each position every time per spec SC-004
+- [x] Verify deterministic replay by recording a session, replaying 100 times, asserting state is identical at each position every time per spec SC-004
 
 ---
 

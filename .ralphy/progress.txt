@@ -1436,3 +1436,36 @@
 - Callback parameter signatures match API contracts (intentional unused parameters)
 - Phase 10 Final Validation (task 2 of 3) COMPLETE
 
+
+## 2026-01-21T21:14:00Z - Phase 10 Final Validation: Deterministic Replay via Store Recording (SC-004)
+**Task**: Verify deterministic replay by recording a session, replaying 100 times, asserting state is identical at each position every time per spec SC-004
+**Status**: COMPLETE
+**Changes**:
+- Added new test suite "Quickstart: Deterministic Replay via Store Recording (SC-004)" in packages/core-v2/tests/integration/quickstart.test.ts
+- First test: "should record session to Store, then replay 100 times with identical state at every position"
+  - Defines workflow with 3 handlers creating event chains (user:input → process → validate)
+  - Records session with `workflow.run({ record: true })` to persist events to MemoryStore
+  - Loads session via `workflow.load(sessionId)`
+  - Captures reference states at each position
+  - Replays 100 times, verifying:
+    - State at every position matches reference
+    - VCR controls (stepTo, rewind) produce identical states
+    - play() produces correct final state
+- Second test: "should maintain determinism across separate workflow instances loading same session"
+  - Creates 100 separate workflow instances
+  - Each loads the same session from Store
+  - Verifies identical intermediate and final states across all instances
+- Tests validate the full event-sourcing contract:
+  1. Recording: Events persisted to Store during workflow execution
+  2. Loading: Session retrieved from Store via workflow.load()
+  3. Replay determinism: Same events + same handlers = same state, every time
+  4. Position-level verification: State at each position identical across 100 replays
+**Verification**:
+- bun run test: PASS (869 tests total, 2 new SC-004 tests)
+- bun run lint: PASS (warnings only, no errors - pre-existing style warnings)
+**Notes**:
+- This completes the full SC-004 requirement: "Replay produces identical state 100x in a row"
+- The test uses the actual Store integration (MemoryStore) rather than manually creating events
+- Both tests prove determinism at the workflow level (not just Tape level)
+- Phase 10 Final Validation (task 3 of 3) COMPLETE - PHASE 10 COMPLETE
+

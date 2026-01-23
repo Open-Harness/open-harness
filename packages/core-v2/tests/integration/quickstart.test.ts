@@ -1252,3 +1252,238 @@ describe("Quickstart: computeState Utility", () => {
 		expect(stateAt2.balance).toBe(120); // After deposit 50
 	});
 });
+
+// ============================================================================
+// Deterministic Replay via Store Recording (SC-004)
+// This is the full requirement: record session → load from Store → replay 100 times
+// ============================================================================
+
+describe("Quickstart: Deterministic Replay via Store Recording (SC-004)", () => {
+	it("should record session to Store, then replay 100 times with identical state at every position", async () => {
+		const program = Effect.gen(function* () {
+			const store = yield* Store;
+
+			// Define a workflow with multiple handlers that produce multiple events
+			// This creates a more realistic scenario with event chains
+			interface CounterState {
+				count: number;
+				history: string[];
+			}
+
+			const handlers = [
+				{
+					name: "handleInput",
+					handles: "user:input",
+					handler: (_event: AnyEvent, state: CounterState) => ({
+						state: {
+							count: state.count + 1,
+							history: [...state.history, `input:${state.count + 1}`],
+						},
+						events: [createEvent("process", { step: 1 }, _event.id)],
+					}),
+				},
+				{
+					name: "handleProcess",
+					handles: "process",
+					handler: (_event: AnyEvent, state: CounterState) => ({
+						state: {
+							count: state.count * 2,
+							history: [...state.history, `process:${state.count * 2}`],
+						},
+						events: [createEvent("validate", { step: 2 }, _event.id)],
+					}),
+				},
+				{
+					name: "handleValidate",
+					handles: "validate",
+					handler: (_event: AnyEvent, state: CounterState) => ({
+						state: {
+							count: state.count + 5,
+							history: [...state.history, `validate:${state.count + 5}`],
+						},
+						events: [] as AnyEvent[],
+					}),
+				},
+			];
+
+			const initialState: CounterState = { count: 0, history: [] };
+
+			const workflow = createWorkflow<CounterState>({
+				name: "deterministic-replay-sc004-test",
+				initialState,
+				handlers,
+				agents: [],
+				until: () => false,
+				store,
+			});
+			workflows.push(workflow);
+
+			// ==================== PHASE 1: RECORD SESSION ====================
+			// Run the workflow with recording enabled - events are persisted to Store
+			const recordResult = yield* Effect.promise(() =>
+				workflow.run({
+					input: "test-input",
+					record: true,
+				}),
+			);
+
+			// Verify the recording happened
+			const sessionId = recordResult.sessionId;
+			expect(sessionId).toBeDefined();
+			expect(typeof sessionId).toBe("string");
+
+			// Verify events were stored
+			const storedEvents = yield* store.events(sessionId);
+			expect(storedEvents.length).toBeGreaterThan(0);
+
+			// ==================== PHASE 2: CAPTURE REFERENCE STATES ====================
+			// Load the session and capture the "golden" reference states at each position
+			const referenceTape = yield* Effect.promise(() => workflow.load(sessionId));
+			const referenceStates: CounterState[] = [];
+			const eventCount = referenceTape.length;
+
+			for (let pos = 0; pos < eventCount; pos++) {
+				referenceStates.push(referenceTape.stateAt(pos) as CounterState);
+			}
+
+			// Verify we have meaningful reference data
+			expect(eventCount).toBe(3); // user:input → process → validate
+			expect(referenceStates[0]).toEqual({ count: 1, history: ["input:1"] });
+			expect(referenceStates[1]).toEqual({ count: 2, history: ["input:1", "process:2"] });
+			expect(referenceStates[2]).toEqual({ count: 7, history: ["input:1", "process:2", "validate:7"] });
+
+			// ==================== PHASE 3: REPLAY 100 TIMES ====================
+			// Each replay must produce identical state at every position
+			for (let iteration = 0; iteration < 100; iteration++) {
+				// Load fresh from Store each time
+				const tape = yield* Effect.promise(() => workflow.load(sessionId));
+
+				// Verify length matches
+				expect(tape.length).toBe(eventCount);
+
+				// Verify state at EVERY position matches reference
+				for (let pos = 0; pos < eventCount; pos++) {
+					const stateAtPos = tape.stateAt(pos);
+					expect(stateAtPos).toEqual(referenceStates[pos]);
+				}
+
+				// Also verify by stepping through with VCR controls
+				let currentTape = tape.rewind();
+				for (let pos = 0; pos < eventCount; pos++) {
+					const t = currentTape.stepTo(pos);
+					expect(t.state).toEqual(referenceStates[pos]);
+					currentTape = t;
+				}
+
+				// Verify play() produces correct final state
+				const playedTape = yield* Effect.promise(() => tape.play());
+				expect(playedTape.state).toEqual(referenceStates[eventCount - 1]);
+			}
+		});
+
+		await Effect.runPromise(program.pipe(Effect.provide(MemoryStoreLive)));
+	});
+
+	it("should maintain determinism across separate workflow instances loading same session", async () => {
+		const program = Effect.gen(function* () {
+			const store = yield* Store;
+
+			interface TaskState {
+				tasks: string[];
+				completed: number;
+			}
+
+			const handlers = [
+				{
+					name: "handleAdd",
+					handles: "task:add",
+					handler: (_event: AnyEvent, state: TaskState) => ({
+						state: {
+							tasks: [...state.tasks, (_event.payload as { name: string }).name],
+							completed: state.completed,
+						},
+						events: [] as AnyEvent[],
+					}),
+				},
+				{
+					name: "handleComplete",
+					handles: "task:complete",
+					handler: (_event: AnyEvent, state: TaskState) => ({
+						state: {
+							tasks: state.tasks,
+							completed: state.completed + 1,
+						},
+						events: [] as AnyEvent[],
+					}),
+				},
+			];
+
+			// Create first workflow instance to record session
+			const workflow1 = createWorkflow<TaskState>({
+				name: "determinism-across-instances-1",
+				initialState: { tasks: [], completed: 0 },
+				handlers,
+				agents: [],
+				until: () => false,
+				store,
+			});
+			workflows.push(workflow1);
+
+			// Record a multi-step session
+			const result1 = yield* Effect.promise(() => workflow1.run({ input: "task1", record: true }));
+
+			// Now we need to manually add more events to simulate a richer session
+			// Use a custom session ID and manually build events for the test
+			const sessionId = generateSessionId();
+			const events: AnyEvent[] = [
+				createEvent("task:add", { name: "task-A" }),
+				createEvent("task:add", { name: "task-B" }),
+				createEvent("task:complete", {}),
+				createEvent("task:add", { name: "task-C" }),
+				createEvent("task:complete", {}),
+			];
+
+			// Store events manually
+			for (const event of events) {
+				yield* store.append(sessionId, event);
+			}
+
+			// Expected final state: tasks: ["task-A", "task-B", "task-C"], completed: 2
+
+			// Now create 100 separate workflow instances and load the session
+			const referenceState: TaskState = { tasks: ["task-A", "task-B", "task-C"], completed: 2 };
+
+			for (let i = 0; i < 100; i++) {
+				// Create a NEW workflow instance each time
+				const workflowN = createWorkflow<TaskState>({
+					name: `determinism-instance-${i}`,
+					initialState: { tasks: [], completed: 0 },
+					handlers,
+					agents: [],
+					until: () => false,
+					store,
+				});
+				workflows.push(workflowN);
+
+				// Load the same session from this new instance
+				const tape = yield* Effect.promise(() => workflowN.load(sessionId));
+
+				// Verify length
+				expect(tape.length).toBe(events.length);
+
+				// Verify final state matches
+				const finalTape = yield* Effect.promise(() => tape.play());
+				expect(finalTape.state).toEqual(referenceState);
+
+				// Verify intermediate states
+				expect(tape.stateAt(0)).toEqual({ tasks: ["task-A"], completed: 0 });
+				expect(tape.stateAt(1)).toEqual({ tasks: ["task-A", "task-B"], completed: 0 });
+				expect(tape.stateAt(2)).toEqual({ tasks: ["task-A", "task-B"], completed: 1 });
+				expect(tape.stateAt(3)).toEqual({ tasks: ["task-A", "task-B", "task-C"], completed: 1 });
+				expect(tape.stateAt(4)).toEqual(referenceState);
+			}
+		});
+
+		await Effect.runPromise(program.pipe(Effect.provide(MemoryStoreLive)));
+	});
+});
