@@ -312,7 +312,9 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 							// Check if this renderer's patterns match the event
 							if (matchesAnyPattern(event.name, renderer.patterns)) {
 								// Fork renderer execution - runs in parallel, doesn't block
-								yield* Effect.fork(
+								// Using forkDaemon to ensure the fiber survives parent scope completion
+								// This is important when running via ManagedRuntime
+								yield* Effect.forkDaemon(
 									Effect.sync(() => {
 										try {
 											renderer.render(event, state);

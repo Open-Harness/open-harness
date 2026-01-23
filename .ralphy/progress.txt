@@ -1354,3 +1354,41 @@
 - SessionId from server is cast to branded type for type compatibility
 - Phase 10 Server Integration is now COMPLETE (both tasks done)
 
+
+## 2026-01-22T05:04:00Z - Phase 10 Final Validation: quickstart.test.ts Integration Tests
+**Task**: Create packages/core-v2/tests/integration/quickstart.test.ts that runs examples from specs/001-effect-refactor/quickstart.md as integration tests
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/tests/integration/quickstart.test.ts with 25 comprehensive integration tests:
+  - Domain State tests (2 tests): state structure, Task Executor workflow
+  - Task Executor Workflow tests (2 tests): plan:created processing, complete workflow execution
+  - Time-Travel Debugging tests (7 tests): step forward, stepBack, stepTo, rewind, play, stateAt, position/length
+  - Recording & Replay tests (3 tests): Store integration, session loading, deterministic replay across instances
+  - Custom Renderers tests (2 tests): pattern matching, wildcard patterns
+  - Event Causality Tracking tests (3 tests): causedBy field, causality graph, event lineage
+  - Deterministic Replay tests (1 test): 100x identical state verification per SC-004
+  - Agent Definition Patterns tests (3 tests): outputSchema requirement, agent factory, guard conditions
+  - Handler Utility Functions tests (2 tests): stateOnly, emit
+  - computeState Utility tests (1 test): direct utility usage
+- Bug fix in packages/core-v2/src/workflow/WorkflowRuntime.ts:
+  - Changed `Effect.fork()` to `Effect.forkDaemon()` for renderer execution
+  - This ensures forked fibers survive parent scope completion in ManagedRuntime
+  - Renderers now work correctly when using the public Workflow API
+- Fixed all TypeScript strict mode issues:
+  - Added non-null assertions (`!`) for array access where length is verified
+  - Added explicit type annotations for handler arrays using `as unknown as HandlerDefinition<AnyEvent, S>[]`
+  - Properly typed agent factories with generic parameters
+  - Imported EventId branded type for lineage function parameter
+**Verification**:
+- bun run test: PASS (848 tests total, 25 new quickstart integration tests)
+- bun run typecheck: No errors in quickstart.test.ts
+- bun run lint: PASS (pre-existing warnings in other files only)
+**Notes**:
+- Tests cover all major features from quickstart.md documentation
+- Effect.forkDaemon fix ensures renderers work reliably with ManagedRuntime
+- Deterministic replay verified: 100 runs produce identical state at every position
+- Tests use createTapeFromDefinitions when working with handler arrays
+- Effect.promise() used inside Effect.gen for async operations
+- MemoryStoreLive Layer used for Store integration tests
+- Phase 10 Final Validation (task 1 of 3) COMPLETE
+
