@@ -9,11 +9,14 @@
 
 // Types (consumer-facing, no Effect internals)
 export type {
+	ComputeStateOptions,
+	OnUnknownEventCallback,
 	Tape,
 	TapeConfig,
 	TapeControls,
 	TapeMetadata,
 	TapeStatus,
+	UnknownEventWarning,
 } from "./Tape.js";
 
 // Factories and utilities

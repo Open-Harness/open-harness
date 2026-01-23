@@ -238,6 +238,28 @@ export interface TapeControls<_S = unknown> {
 }
 
 // ============================================================================
+// Warning Callback
+// ============================================================================
+
+/**
+ * Information about an unknown event encountered during replay.
+ */
+export interface UnknownEventWarning {
+	/** The event that has no registered handler */
+	readonly event: AnyEvent;
+	/** The position of the event in the tape */
+	readonly position: number;
+	/** Human-readable message */
+	readonly message: string;
+}
+
+/**
+ * Callback invoked when an unknown event type is encountered during replay.
+ * This allows consumers to log or handle unknown events as needed.
+ */
+export type OnUnknownEventCallback = (warning: UnknownEventWarning) => void;
+
+// ============================================================================
 // Tape Configuration
 // ============================================================================
 
@@ -257,6 +279,12 @@ export interface TapeConfig<S> {
 	readonly status?: TapeStatus;
 	/** Delay between events during play (ms, defaults to 0) */
 	readonly playDelay?: number;
+	/**
+	 * Callback for unknown event types during replay.
+	 * If not provided, a warning is logged to console.warn.
+	 * Set to null to suppress warnings entirely.
+	 */
+	readonly onUnknownEvent?: OnUnknownEventCallback | null;
 }
 
 // ============================================================================
@@ -264,15 +292,39 @@ export interface TapeConfig<S> {
 // ============================================================================
 
 /**
+ * Options for computeState function.
+ */
+export interface ComputeStateOptions {
+	/**
+	 * Callback for unknown event types during replay.
+	 * If not provided, a warning is logged to console.warn.
+	 * Set to null to suppress warnings entirely.
+	 */
+	readonly onUnknownEvent?: OnUnknownEventCallback | null;
+}
+
+/**
+ * Default warning callback that logs to console.warn.
+ */
+const defaultOnUnknownEvent: OnUnknownEventCallback = (warning) => {
+	console.warn(warning.message);
+};
+
+/**
  * Computes state at a given position by replaying handlers from position 0.
  *
  * This is the core of event sourcing: state is derived by replaying
  * all events through their handlers up to the target position.
  *
+ * Unknown event types (events with no registered handler) are skipped gracefully
+ * with a warning. By default, warnings are logged to console.warn. You can provide
+ * a custom callback or suppress warnings by passing null.
+ *
  * @param events - All events in the tape
  * @param handlers - Map of event name to handler function
  * @param initialState - State before any events
  * @param toPosition - Target position (inclusive, -1 means no events applied)
+ * @param options - Optional configuration for warning handling
  * @returns The computed state after replaying events [0, toPosition]
  *
  * @example
@@ -282,6 +334,16 @@ export interface TapeConfig<S> {
  *
  * // Initial state (no events applied)
  * const initial = computeState(events, handlers, initialState, -1);
+ *
+ * // Custom warning handler
+ * const state = computeState(events, handlers, initial, 10, {
+ *   onUnknownEvent: (warning) => myLogger.warn(warning.message)
+ * });
+ *
+ * // Suppress warnings
+ * const state = computeState(events, handlers, initial, 10, {
+ *   onUnknownEvent: null
+ * });
  * ```
  */
 export function computeState<S>(
@@ -289,6 +351,7 @@ export function computeState<S>(
 	handlers: ReadonlyMap<string, Handler<AnyEvent, S>>,
 	initialState: S,
 	toPosition: number,
+	options?: ComputeStateOptions,
 ): S {
 	// Clamp to valid range
 	const endPos = Math.min(Math.max(-1, toPosition), events.length - 1);
@@ -297,6 +360,12 @@ export function computeState<S>(
 	if (endPos < 0) {
 		return initialState;
 	}
+
+	// Determine warning callback:
+	// - undefined: use default (console.warn)
+	// - null: suppress warnings
+	// - callback: use custom callback
+	const onUnknownEvent = options?.onUnknownEvent === undefined ? defaultOnUnknownEvent : options.onUnknownEvent;
 
 	// Replay handlers from 0 to endPos
 	let state = initialState;
@@ -310,6 +379,13 @@ export function computeState<S>(
 			state = result.state;
 			// Note: emitted events are not processed during replay
 			// They are already in the event log
+		} else if (onUnknownEvent !== null) {
+			// Unknown event type - skip gracefully with warning per spec edge cases
+			onUnknownEvent({
+				event,
+				position: i,
+				message: `Unknown event type "${event.name}" at position ${i} during replay - skipping gracefully`,
+			});
 		}
 	}
 
@@ -334,6 +410,7 @@ class TapeImpl<S> implements Tape<S> {
 	private readonly _handlers: ReadonlyMap<string, Handler<AnyEvent, S>>;
 	private readonly _initialState: S;
 	private readonly _playDelay: number;
+	private readonly _onUnknownEvent: OnUnknownEventCallback | null | undefined;
 
 	// Cached state to avoid recomputation
 	private _cachedState: S | undefined;
@@ -344,6 +421,7 @@ class TapeImpl<S> implements Tape<S> {
 		this._handlers = config.handlers;
 		this._initialState = config.initialState;
 		this._playDelay = config.playDelay ?? 0;
+		this._onUnknownEvent = config.onUnknownEvent;
 
 		// Position defaults to 0, clamped to valid range
 		this.length = config.events.length;
@@ -371,7 +449,9 @@ class TapeImpl<S> implements Tape<S> {
 		// Compute and cache
 		// Note: position is the index of the last processed event
 		// So we compute state through position (inclusive)
-		const computed = computeState(this.events, this._handlers, this._initialState, this.position);
+		const computed = computeState(this.events, this._handlers, this._initialState, this.position, {
+			onUnknownEvent: this._onUnknownEvent,
+		});
 		// TypeScript doesn't allow assigning to readonly properties, but we need caching
 		// Use Object.assign to update the mutable cache fields
 		Object.assign(this, { _cachedState: computed, _cachedStatePosition: this.position });
@@ -458,7 +538,9 @@ class TapeImpl<S> implements Tape<S> {
 	stateAt(position: number): S {
 		// Clamp position
 		const clampedPos = Math.max(-1, Math.min(position, this.length - 1));
-		return computeState(this.events, this._handlers, this._initialState, clampedPos);
+		return computeState(this.events, this._handlers, this._initialState, clampedPos, {
+			onUnknownEvent: this._onUnknownEvent,
+		});
 	}
 
 	eventAt(position: number): AnyEvent | undefined {
@@ -483,6 +565,7 @@ class TapeImpl<S> implements Tape<S> {
 			position: newPosition,
 			status: newStatus ?? this.status,
 			playDelay: this._playDelay,
+			onUnknownEvent: this._onUnknownEvent,
 		});
 	}
 }

@@ -1280,3 +1280,265 @@ describe("Time Travel Debugging Workflow", () => {
 		// Bug found! The increment by 3 at position 3 caused the issue
 	});
 });
+
+// ============================================================================
+// Unknown Event Type Handling (Phase 10 Edge Case)
+// ============================================================================
+
+describe("Unknown event type handling during replay (Phase 10 edge case)", () => {
+	// Create events with an unknown type
+	function createEventsWithUnknown(): AnyEvent[] {
+		const e1 = CountIncremented.create({ by: 1 });
+		const e2 = createEvent("unknown:event", { data: "test" }, e1.id); // No handler for this
+		const e3 = CountIncremented.create({ by: 2 }, e2.id);
+		const e4 = createEvent("another:unknown", { foo: "bar" }, e3.id); // Also no handler
+		const e5 = ValueAdded.create({ value: "hello" }, e4.id);
+		return [e1, e2, e3, e4, e5];
+	}
+
+	it("should skip unknown events gracefully and continue processing", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		// Suppress warnings for this test
+		const tape = createTape({
+			events,
+			handlers,
+			initialState,
+			position: 4,
+			onUnknownEvent: null, // Suppress warnings
+		});
+
+		// State should be correctly computed from known events only
+		// e1: count +1 = 1
+		// e2: unknown - skipped
+		// e3: count +2 = 3
+		// e4: unknown - skipped
+		// e5: value added = ["hello"]
+		expect(tape.state.count).toBe(3);
+		expect(tape.state.values).toEqual(["hello"]);
+	});
+
+	it("should log warning to console.warn by default for unknown events", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		// Capture console.warn calls
+		const warnings: string[] = [];
+		const originalWarn = console.warn;
+		console.warn = (msg: string) => warnings.push(msg);
+
+		try {
+			const tape = createTape({
+				events,
+				handlers,
+				initialState,
+				position: 4,
+				// No onUnknownEvent - uses default console.warn
+			});
+
+			// Access state to trigger computation
+			const _state = tape.state;
+
+			// Should have logged 2 warnings for the 2 unknown events
+			expect(warnings.length).toBe(2);
+			expect(warnings[0]).toContain("unknown:event");
+			expect(warnings[0]).toContain("position 1");
+			expect(warnings[1]).toContain("another:unknown");
+			expect(warnings[1]).toContain("position 3");
+		} finally {
+			console.warn = originalWarn;
+		}
+	});
+
+	it("should call custom onUnknownEvent callback when provided", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		// Track callback invocations
+		const unknownEvents: Array<{ name: string; position: number }> = [];
+
+		const tape = createTape({
+			events,
+			handlers,
+			initialState,
+			position: 4,
+			onUnknownEvent: (warning) => {
+				unknownEvents.push({
+					name: warning.event.name,
+					position: warning.position,
+				});
+			},
+		});
+
+		// Access state to trigger computation
+		const _state = tape.state;
+
+		// Should have received 2 warnings
+		expect(unknownEvents.length).toBe(2);
+		expect(unknownEvents[0]).toEqual({ name: "unknown:event", position: 1 });
+		expect(unknownEvents[1]).toEqual({ name: "another:unknown", position: 3 });
+	});
+
+	it("should suppress warnings when onUnknownEvent is null", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		// Capture console.warn calls to verify no logging
+		const warnings: string[] = [];
+		const originalWarn = console.warn;
+		console.warn = (msg: string) => warnings.push(msg);
+
+		try {
+			const tape = createTape({
+				events,
+				handlers,
+				initialState,
+				position: 4,
+				onUnknownEvent: null, // Explicitly suppress
+			});
+
+			// Access state to trigger computation
+			const _state = tape.state;
+
+			// Should NOT have logged any warnings
+			expect(warnings.length).toBe(0);
+		} finally {
+			console.warn = originalWarn;
+		}
+	});
+
+	it("should preserve onUnknownEvent callback across VCR controls", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		const unknownEvents: string[] = [];
+		const callback = (warning: { event: AnyEvent }) => {
+			unknownEvents.push(warning.event.name);
+		};
+
+		const tape = createTape({
+			events,
+			handlers,
+			initialState,
+			position: 0,
+			onUnknownEvent: callback,
+		});
+
+		// Step forward through the tape - callback should be preserved
+		const t1 = tape.step(); // pos 1 - unknown:event
+		t1.state; // trigger computation
+		expect(unknownEvents).toContain("unknown:event");
+
+		// Continue stepping
+		unknownEvents.length = 0; // Reset
+		const t2 = t1.stepTo(3); // jump to pos 3 - recomputes from start
+		t2.state;
+		expect(unknownEvents).toContain("unknown:event");
+		expect(unknownEvents).toContain("another:unknown");
+	});
+
+	it("should handle stateAt with unknown events", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		const unknownEvents: number[] = [];
+
+		const tape = createTape({
+			events,
+			handlers,
+			initialState,
+			position: 0,
+			onUnknownEvent: (warning) => {
+				unknownEvents.push(warning.position);
+			},
+		});
+
+		// Compute state at position 2 (should encounter unknown at position 1)
+		const stateAt2 = tape.stateAt(2);
+		expect(stateAt2.count).toBe(3); // 1 + 2 from events 0 and 2
+
+		// Should have warned about the unknown event at position 1
+		expect(unknownEvents).toContain(1);
+	});
+
+	it("should work with computeState function directly", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		const unknownEvents: number[] = [];
+
+		// Use computeState directly with custom callback
+		const state = computeState(events, handlers, initialState, 4, {
+			onUnknownEvent: (warning) => {
+				unknownEvents.push(warning.position);
+			},
+		});
+
+		// State should be correct
+		expect(state.count).toBe(3);
+		expect(state.values).toEqual(["hello"]);
+
+		// Should have warned about positions 1 and 3
+		expect(unknownEvents).toEqual([1, 3]);
+	});
+
+	it("should include event and position in UnknownEventWarning", () => {
+		const events = createEventsWithUnknown();
+		const handlers = createHandlerMap();
+
+		let capturedWarning: { event: AnyEvent; position: number; message: string } | null = null;
+
+		const tape = createTape({
+			events,
+			handlers,
+			initialState,
+			position: 1, // Stop at first unknown event
+			onUnknownEvent: (warning) => {
+				if (!capturedWarning) {
+					capturedWarning = warning;
+				}
+			},
+		});
+
+		tape.state; // Trigger computation
+
+		// Verify warning structure
+		expect(capturedWarning).not.toBeNull();
+		expect(capturedWarning?.event.name).toBe("unknown:event");
+		expect(capturedWarning?.event.payload).toEqual({ data: "test" });
+		expect(capturedWarning?.position).toBe(1);
+		expect(capturedWarning?.message).toContain("unknown:event");
+		expect(capturedWarning?.message).toContain("position 1");
+		expect(capturedWarning?.message).toContain("skipping gracefully");
+	});
+
+	it("should handle tape with all unknown events", () => {
+		// Create a tape with only unknown event types
+		const unknownOnlyEvents: AnyEvent[] = [
+			createEvent("first:unknown", { a: 1 }),
+			createEvent("second:unknown", { b: 2 }),
+			createEvent("third:unknown", { c: 3 }),
+		];
+		const handlers = createHandlerMap(); // Has no handlers for these
+
+		const warnings: string[] = [];
+
+		const tape = createTape({
+			events: unknownOnlyEvents,
+			handlers,
+			initialState,
+			position: 2,
+			onUnknownEvent: (warning) => {
+				warnings.push(warning.event.name);
+			},
+		});
+
+		// State should remain unchanged (initial state)
+		expect(tape.state).toEqual(initialState);
+
+		// Should have warned about all 3 events
+		expect(warnings.length).toBe(3);
+		expect(warnings).toEqual(["first:unknown", "second:unknown", "third:unknown"]);
+	});
+});

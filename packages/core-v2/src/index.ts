@@ -315,7 +315,16 @@ export { createWorkflow, WorkflowRuntimeError } from "./workflow/index.js";
  * console.log(tape.position); // Still at current position
  * ```
  */
-export type { Tape, TapeConfig, TapeControls, TapeMetadata, TapeStatus } from "./tape/index.js";
+export type {
+	ComputeStateOptions,
+	OnUnknownEventCallback,
+	Tape,
+	TapeConfig,
+	TapeControls,
+	TapeMetadata,
+	TapeStatus,
+	UnknownEventWarning,
+} from "./tape/index.js";
 
 export { computeState, createTape, createTapeFromDefinitions } from "./tape/index.js";
 

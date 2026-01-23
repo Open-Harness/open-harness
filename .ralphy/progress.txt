@@ -1187,3 +1187,46 @@
 - Multiple sequential failures are handled correctly - each emits its own error event and processing continues
 - Phase 10 Edge Case Handling (task 3 of 5) COMPLETE
 
+
+## 2026-01-21T20:17:00Z - Phase 10 Edge Case: Unknown Event Type in Replay
+**Task**: Handle unknown event type in replay: skip gracefully with warning log, continue to next event per spec edge cases
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/tape/Tape.ts with:
+  - New UnknownEventWarning interface: event, position, message
+  - New OnUnknownEventCallback type for custom warning handlers
+  - New ComputeStateOptions interface with onUnknownEvent callback option
+  - defaultOnUnknownEvent function that logs to console.warn
+  - Updated computeState() to accept optional ComputeStateOptions:
+    - undefined: uses default console.warn
+    - null: suppresses warnings entirely
+    - callback: uses custom callback
+  - Updated TapeConfig to include onUnknownEvent option
+  - Updated TapeImpl to preserve and use onUnknownEvent callback:
+    - state getter passes callback to computeState
+    - stateAt() passes callback to computeState
+    - _withPosition() preserves callback across VCR controls
+- Updated packages/core-v2/src/tape/index.ts to export new types:
+  - ComputeStateOptions, OnUnknownEventCallback, UnknownEventWarning
+- Updated packages/core-v2/src/index.ts to export new types in public API
+- Added 10 comprehensive tests in tests/tape.test.ts:
+  1. "should skip unknown events gracefully and continue processing"
+  2. "should log warning to console.warn by default for unknown events"
+  3. "should call custom onUnknownEvent callback when provided"
+  4. "should suppress warnings when onUnknownEvent is null"
+  5. "should preserve onUnknownEvent callback across VCR controls"
+  6. "should handle stateAt with unknown events"
+  7. "should work with computeState function directly"
+  8. "should include event and position in UnknownEventWarning"
+  9. "should handle tape with all unknown events"
+**Verification**:
+- bun run test: PASS (770 tests total, 10 new unknown event tests)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- Unknown events (events with no handler) are skipped gracefully during replay
+- Warning includes: event object, position, descriptive message
+- Three modes: default (console.warn), custom callback, or null (suppress)
+- State computation continues correctly - unknown events have no effect on state
+- Callback is preserved across all VCR control methods (step, stepBack, stepTo, etc.)
+- Phase 10 Edge Case Handling (task 4 of 5) COMPLETE
+
