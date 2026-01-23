@@ -32,7 +32,25 @@ import type { Workflow, WorkflowResult } from "./workflow/Workflow.js";
  * Options for the useWorkflow hook.
  */
 export interface UseWorkflowOptions {
-	/** API endpoint URL for server-side workflow (future) */
+	/**
+	 * API endpoint URL for server-side workflow execution.
+	 *
+	 * When provided, the hook connects to this endpoint via Server-Sent Events (SSE)
+	 * instead of running the workflow locally. The endpoint should be created with
+	 * `createWorkflowHandler()`.
+	 *
+	 * @remarks
+	 * **FR-060 Compliance**: This enables client-server separation where the
+	 * workflow runs on the server and streams events to the client.
+	 *
+	 * @example
+	 * ```tsx
+	 * // Connect to server endpoint
+	 * const { messages, handleSubmit } = useWorkflow(workflow, {
+	 *   api: '/api/workflow',
+	 * });
+	 * ```
+	 */
 	readonly api?: string;
 	/** Initial input value (default: "") */
 	readonly initialInput?: string;
@@ -42,6 +60,8 @@ export interface UseWorkflowOptions {
 	readonly onFinish?: (result: WorkflowResult<unknown>) => void;
 	/** Callback on error */
 	readonly onError?: (error: Error) => void;
+	/** Whether to record the session (for server-side execution, default: false) */
+	readonly record?: boolean;
 }
 
 /**
@@ -144,6 +164,193 @@ interface WorkflowState<S> {
 }
 
 // ============================================================================
+// SSE Client Helper (FR-060)
+// ============================================================================
+
+/**
+ * SSE event data format (matches server's SSEEventData).
+ * @internal
+ */
+interface SSEEventData {
+	type: "event" | "state" | "done" | "error";
+	data: unknown;
+}
+
+/**
+ * Parse SSE message from raw text.
+ * SSE format: "data: {...}\n\n"
+ * @internal
+ */
+function parseSSEMessage(message: string): SSEEventData | null {
+	const dataPrefix = "data: ";
+	if (!message.startsWith(dataPrefix)) {
+		return null;
+	}
+
+	const jsonStr = message.slice(dataPrefix.length).trim();
+	if (!jsonStr) {
+		return null;
+	}
+
+	try {
+		return JSON.parse(jsonStr) as SSEEventData;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * State setter type for workflow state.
+ * @internal
+ */
+type WorkflowStateSetter<S> = (value: WorkflowState<S> | ((prev: WorkflowState<S>) => WorkflowState<S>)) => void;
+
+/**
+ * Execute workflow via server-side API endpoint using SSE.
+ * @internal
+ */
+async function executeViaApi<S>(
+	apiUrl: string,
+	input: string,
+	abortController: AbortController,
+	record: boolean,
+	setWorkflowState: WorkflowStateSetter<S>,
+	setError: (value: Error | null | ((prev: Error | null) => Error | null)) => void,
+	onError: ((error: Error) => void) | undefined,
+	onFinish: ((result: WorkflowResult<unknown>) => void) | undefined,
+): Promise<void> {
+	// Send POST request to initiate workflow
+	const response = await fetch(apiUrl, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ input, record }),
+		signal: abortController.signal,
+	});
+
+	// Check for HTTP errors
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`Server error: ${response.status} - ${errorText}`);
+	}
+
+	// Check for SSE content type
+	const contentType = response.headers.get("Content-Type");
+	if (!contentType?.includes("text/event-stream")) {
+		throw new Error(`Expected text/event-stream, got ${contentType}`);
+	}
+
+	// Read SSE stream
+	const reader = response.body?.getReader();
+	if (!reader) {
+		throw new Error("Response body is not readable");
+	}
+
+	const decoder = new TextDecoder();
+	let buffer = "";
+	let collectedEvents: AnyEvent[] = [];
+	let finalState: S | undefined;
+	let sessionId: string | undefined;
+	let terminated = false;
+
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+
+			if (done) {
+				break;
+			}
+
+			// Decode chunk and add to buffer
+			buffer += decoder.decode(value, { stream: true });
+
+			// Process complete messages (separated by double newlines)
+			const messages = buffer.split("\n\n");
+			buffer = messages.pop() ?? ""; // Keep incomplete message in buffer
+
+			for (const message of messages) {
+				const trimmedMessage = message.trim();
+				if (!trimmedMessage) continue;
+
+				const sseEvent = parseSSEMessage(trimmedMessage);
+				if (!sseEvent) continue;
+
+				switch (sseEvent.type) {
+					case "event": {
+						const event = sseEvent.data as AnyEvent;
+						collectedEvents = [...collectedEvents, event];
+						setWorkflowState((prev) => ({
+							...prev,
+							events: [...prev.events, event],
+							position: prev.events.length,
+						}));
+						break;
+					}
+					case "state": {
+						const newState = sseEvent.data as S;
+						finalState = newState;
+						setWorkflowState((prev) => ({
+							...prev,
+							state: newState,
+						}));
+						break;
+					}
+					case "done": {
+						const doneData = sseEvent.data as {
+							sessionId?: string;
+							terminated?: boolean;
+							finalState?: S;
+						};
+						sessionId = doneData.sessionId;
+						terminated = doneData.terminated ?? false;
+						if (doneData.finalState !== undefined) {
+							finalState = doneData.finalState;
+						}
+
+						// Update final state
+						setWorkflowState((prev) => ({
+							...prev,
+							events: collectedEvents,
+							state: finalState ?? prev.state,
+							position: collectedEvents.length > 0 ? collectedEvents.length - 1 : 0,
+							status: "idle",
+						}));
+
+						// Call onFinish callback
+						if (onFinish) {
+							// Create a minimal result object for the callback
+							// Note: sessionId comes from server as a plain string, cast to branded type
+							// Note: Tape is not available in client-side API mode
+							onFinish({
+								state: finalState,
+								events: collectedEvents,
+								// biome-ignore lint/suspicious/noExplicitAny: SessionId from server is a plain string
+								sessionId: (sessionId ?? "") as any,
+								terminated,
+								// biome-ignore lint/suspicious/noExplicitAny: Tape not available in API mode
+								tape: undefined as any,
+							});
+						}
+						break;
+					}
+					case "error": {
+						const errorData = sseEvent.data as { message?: string; name?: string };
+						const error = new Error(errorData.message ?? "Unknown server error");
+						error.name = errorData.name ?? "ServerError";
+						setError(error);
+						onError?.(error);
+						break;
+					}
+				}
+			}
+		}
+	} finally {
+		reader.releaseLock();
+	}
+}
+
+// ============================================================================
 // useWorkflow Hook
 // ============================================================================
 
@@ -156,10 +363,14 @@ interface WorkflowState<S> {
  *
  * @typeParam S - The workflow state type
  * @param workflow - The workflow instance to use
- * @param options - Hook options
+ * @param options - Hook options including optional `api` for server-side execution
  * @returns AI SDK-compatible values plus Open Harness unique values
  *
  * @remarks
+ * **Local vs Server Execution (FR-060)**:
+ * - Without `api`: Workflow runs locally in the browser
+ * - With `api`: Workflow runs on server, events streamed via SSE
+ *
  * **Messages are projected from events** - they are not stored separately.
  * This ensures events remain the single source of truth.
  *
@@ -221,7 +432,7 @@ export function useWorkflow<S = unknown>(
 	workflow: Workflow<S>,
 	options: UseWorkflowOptions = {},
 ): UseWorkflowReturn<S> {
-	const { initialInput = "", initialMessages = [], onFinish, onError } = options;
+	const { api, initialInput = "", initialMessages = [], onFinish, onError, record = false } = options;
 
 	// =========================================================================
 	// State
@@ -293,44 +504,62 @@ export function useWorkflow<S = unknown>(
 			setError(null);
 
 			try {
-				// Run the workflow
-				const result = await workflow.run({
-					input: trimmedInput,
-					abortSignal: abortController.signal,
-					callbacks: {
-						onEvent: (event) => {
-							// Update events and state on each event
-							setWorkflowState((prev) => ({
-								...prev,
-								events: [...prev.events, event],
-								position: prev.events.length, // Position at latest event
-							}));
+				// =====================================================================
+				// Server-side execution via API (FR-060)
+				// =====================================================================
+				if (api) {
+					await executeViaApi(
+						api,
+						trimmedInput,
+						abortController,
+						record,
+						setWorkflowState,
+						setError,
+						onError,
+						onFinish,
+					);
+				} else {
+					// =================================================================
+					// Local workflow execution
+					// =================================================================
+					const result = await workflow.run({
+						input: trimmedInput,
+						abortSignal: abortController.signal,
+						callbacks: {
+							onEvent: (event) => {
+								// Update events and state on each event
+								setWorkflowState((prev) => ({
+									...prev,
+									events: [...prev.events, event],
+									position: prev.events.length, // Position at latest event
+								}));
+							},
+							onStateChange: (newState) => {
+								// Update state when it changes
+								setWorkflowState((prev) => ({
+									...prev,
+									state: newState,
+								}));
+							},
+							onError: (err) => {
+								// Report non-fatal errors
+								onError?.(err);
+							},
 						},
-						onStateChange: (newState) => {
-							// Update state when it changes
-							setWorkflowState((prev) => ({
-								...prev,
-								state: newState,
-							}));
-						},
-						onError: (err) => {
-							// Report non-fatal errors
-							onError?.(err);
-						},
-					},
-				});
+					});
 
-				// Update final state from result
-				setWorkflowState((prev) => ({
-					...prev,
-					events: result.events,
-					state: result.state,
-					position: result.events.length > 0 ? result.events.length - 1 : 0,
-					status: "idle",
-				}));
+					// Update final state from result
+					setWorkflowState((prev) => ({
+						...prev,
+						events: result.events,
+						state: result.state,
+						position: result.events.length > 0 ? result.events.length - 1 : 0,
+						status: "idle",
+					}));
 
-				// Call onFinish callback
-				onFinish?.(result as WorkflowResult<unknown>);
+					// Call onFinish callback
+					onFinish?.(result as WorkflowResult<unknown>);
+				}
 			} catch (err) {
 				// Handle abort specially
 				if (err instanceof Error && err.name === "AbortError") {
@@ -347,7 +576,7 @@ export function useWorkflow<S = unknown>(
 				abortControllerRef.current = null;
 			}
 		},
-		[input, isLoading, workflow, onFinish, onError],
+		[input, isLoading, workflow, onFinish, onError, api, record],
 	);
 
 	// =========================================================================

@@ -1301,3 +1301,56 @@
 - Handler is framework-agnostic: works with any framework that supports standard Request/Response
 - Phase 10 Server Integration (task 1 of 2) COMPLETE
 
+
+## 2026-01-21T20:40:58Z - Phase 10 Server Integration: useWorkflow API Option (FR-060)
+**Task**: Add api option to useWorkflow in src/react.ts for client-server connection per spec FR-060
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/react.ts with:
+  - Enhanced UseWorkflowOptions interface with:
+    - `api?: string` option for server-side workflow execution endpoint
+    - `record?: boolean` option for recording sessions server-side
+    - Comprehensive JSDoc documentation with examples
+  - Added SSEEventData interface matching server format (event, state, done, error types)
+  - Added parseSSEMessage() helper for parsing SSE format ("data: {...}\n\n")
+  - Added WorkflowStateSetter<S> type for clean type signatures
+  - Added executeViaApi<S>() function that:
+    - Sends POST request with { input, record } body
+    - Validates Content-Type is text/event-stream
+    - Uses ReadableStream.getReader() for SSE consumption
+    - Handles event buffering and parsing (double newline delimiters)
+    - Processes 4 SSE event types:
+      1. "event" → updates events array and position
+      2. "state" → updates workflow state
+      3. "done" → finalizes state, calls onFinish callback
+      4. "error" → sets error state, calls onError callback
+    - Properly releases reader on completion
+  - Updated handleSubmit callback to:
+    - Check for api option and route to executeViaApi if present
+    - Fall back to local workflow.run() if api not provided
+    - Pass record option to server request
+  - Updated JSDoc for useWorkflow to document local vs server execution modes
+- Added 13 comprehensive tests in packages/core-v2/tests/react.test.ts covering:
+  - should accept api option in UseWorkflowOptions
+  - should call fetch with correct URL and body when api is provided
+  - should update events state from SSE event messages
+  - should update state from SSE state messages
+  - should call onFinish callback when SSE done event is received
+  - should set error state when SSE error event is received
+  - should handle HTTP errors from server
+  - should pass record option to server request body
+  - should NOT call workflow.run when api option is provided
+  - should call workflow.run when api option is NOT provided
+  - should set isLoading false after request completes
+  - should handle missing Content-Type header gracefully
+**Verification**:
+- bun run test: PASS (102 react tests, 13 new API option tests)
+- bun run lint: PASS (2 pre-existing warnings in Tape.ts and workflow-runtime.test.ts)
+**Notes**:
+- SSE client implementation follows same format as createWorkflowHandler server
+- When api is provided, workflow.run() is NOT called (server handles execution)
+- ReadableStream reader pattern handles chunked SSE delivery correctly
+- Tape is not available in API mode (server doesn't send full tape)
+- SessionId from server is cast to branded type for type compatibility
+- Phase 10 Server Integration is now COMPLETE (both tasks done)
+

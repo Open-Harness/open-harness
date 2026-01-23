@@ -1218,4 +1218,352 @@ describe("WorkflowChat (FR-058)", () => {
 			expect(button.type).toBe("submit");
 		});
 	});
+
+	// =========================================================================
+	// API Option (FR-060) - Server-Side Execution via SSE
+	// =========================================================================
+
+	describe("API Option (FR-060)", () => {
+		/**
+		 * Helper to create a mock SSE stream response.
+		 */
+		function createMockSSEResponse(events: Array<{ type: string; data: unknown }>): Response {
+			const encoder = new TextEncoder();
+			const chunks = events.map((event) => `data: ${JSON.stringify(event)}\n\n`);
+
+			let chunkIndex = 0;
+			const stream = new ReadableStream({
+				pull(controller) {
+					if (chunkIndex < chunks.length) {
+						controller.enqueue(encoder.encode(chunks[chunkIndex]));
+						chunkIndex++;
+					} else {
+						controller.close();
+					}
+				},
+			});
+
+			return new Response(stream, {
+				status: 200,
+				headers: { "Content-Type": "text/event-stream" },
+			});
+		}
+
+		it("should accept api option in UseWorkflowOptions", () => {
+			const workflow = createMockWorkflow();
+			// This should compile and not throw
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+			expect(result.current.messages).toBeDefined();
+		});
+
+		it("should call fetch with correct URL and body when api is provided", async () => {
+			const workflow = createMockWorkflow();
+			const mockFetch = vi.fn().mockResolvedValue(
+				createMockSSEResponse([
+					{
+						type: "event",
+						data: { id: "e1", name: "user:input", payload: { text: "Hello" }, timestamp: new Date().toISOString() },
+					},
+					{ type: "state", data: { count: 1, messages: ["Hello"], terminated: false } },
+					{ type: "done", data: { sessionId: "test-123", terminated: false } },
+				]),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+
+			// Set input and submit
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify fetch was called correctly
+			expect(mockFetch).toHaveBeenCalledWith(
+				"/api/workflow",
+				expect.objectContaining({
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ input: "Hello", record: false }),
+				}),
+			);
+		});
+
+		it("should update events state from SSE event messages", async () => {
+			const workflow = createMockWorkflow();
+			const testEvent = {
+				id: "e1",
+				name: "user:input",
+				payload: { text: "Hello" },
+				timestamp: new Date().toISOString(),
+			};
+			const mockFetch = vi.fn().mockResolvedValue(
+				createMockSSEResponse([
+					{ type: "event", data: testEvent },
+					{ type: "state", data: { count: 1, messages: ["Hello"], terminated: false } },
+					{ type: "done", data: { sessionId: "test-123", terminated: false } },
+				]),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify events were updated
+			expect(result.current.events.length).toBeGreaterThan(0);
+			expect(result.current.events[0]?.name).toBe("user:input");
+		});
+
+		it("should update state from SSE state messages", async () => {
+			const workflow = createMockWorkflow();
+			const newState = { count: 1, messages: ["Hello"], terminated: false };
+			const mockFetch = vi.fn().mockResolvedValue(
+				createMockSSEResponse([
+					{
+						type: "event",
+						data: { id: "e1", name: "user:input", payload: { text: "Hello" }, timestamp: new Date().toISOString() },
+					},
+					{ type: "state", data: newState },
+					{ type: "done", data: { sessionId: "test-123", terminated: false, finalState: newState } },
+				]),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow<TestState>(workflow, { api: "/api/workflow" }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify state was updated
+			expect(result.current.state.count).toBe(1);
+			expect(result.current.state.messages).toContain("Hello");
+		});
+
+		it("should call onFinish callback when SSE done event is received", async () => {
+			const workflow = createMockWorkflow();
+			const onFinish = vi.fn();
+			const mockFetch = vi.fn().mockResolvedValue(
+				createMockSSEResponse([
+					{
+						type: "event",
+						data: { id: "e1", name: "user:input", payload: { text: "Hello" }, timestamp: new Date().toISOString() },
+					},
+					{ type: "state", data: { count: 1, messages: ["Hello"], terminated: false } },
+					{
+						type: "done",
+						data: {
+							sessionId: "test-session",
+							terminated: true,
+							finalState: { count: 1, messages: ["Hello"], terminated: true },
+						},
+					},
+				]),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow", onFinish }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify onFinish was called
+			expect(onFinish).toHaveBeenCalled();
+			expect(onFinish).toHaveBeenCalledWith(
+				expect.objectContaining({
+					terminated: true,
+				}),
+			);
+		});
+
+		it("should set error state when SSE error event is received", async () => {
+			const workflow = createMockWorkflow();
+			const onError = vi.fn();
+			const mockFetch = vi
+				.fn()
+				.mockResolvedValue(
+					createMockSSEResponse([{ type: "error", data: { message: "Server error occurred", name: "ServerError" } }]),
+				);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow", onError }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify error state was set
+			expect(result.current.error).not.toBeNull();
+			expect(result.current.error?.message).toBe("Server error occurred");
+			expect(onError).toHaveBeenCalled();
+		});
+
+		it("should handle HTTP errors from server", async () => {
+			const workflow = createMockWorkflow();
+			const mockFetch = vi.fn().mockResolvedValue(
+				new Response(JSON.stringify({ error: "Not found" }), {
+					status: 404,
+					headers: { "Content-Type": "application/json" },
+				}),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify error was set
+			expect(result.current.error).not.toBeNull();
+			expect(result.current.error?.message).toContain("404");
+		});
+
+		it("should pass record option to server request body", async () => {
+			const workflow = createMockWorkflow();
+			const mockFetch = vi
+				.fn()
+				.mockResolvedValue(
+					createMockSSEResponse([{ type: "done", data: { sessionId: "test-123", terminated: false } }]),
+				);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow", record: true }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify record was passed to server
+			expect(mockFetch).toHaveBeenCalledWith(
+				"/api/workflow",
+				expect.objectContaining({
+					body: expect.stringContaining('"record":true'),
+				}),
+			);
+		});
+
+		it("should NOT call workflow.run when api option is provided", async () => {
+			const workflow = createMockWorkflow();
+			const mockFetch = vi
+				.fn()
+				.mockResolvedValue(
+					createMockSSEResponse([{ type: "done", data: { sessionId: "test-123", terminated: false } }]),
+				);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify workflow.run was NOT called (server handles execution)
+			expect(workflow.run).not.toHaveBeenCalled();
+		});
+
+		it("should call workflow.run when api option is NOT provided", async () => {
+			const workflow = createMockWorkflow();
+
+			const { result } = renderHook(() => useWorkflow(workflow));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Verify workflow.run WAS called (local execution)
+			expect(workflow.run).toHaveBeenCalled();
+		});
+
+		it("should set isLoading false after request completes", async () => {
+			const workflow = createMockWorkflow();
+			const mockFetch = vi.fn().mockResolvedValue(
+				createMockSSEResponse([
+					{
+						type: "event",
+						data: { id: "e1", name: "user:input", payload: { text: "Hello" }, timestamp: new Date().toISOString() },
+					},
+					{ type: "done", data: { sessionId: "test-123", terminated: false } },
+				]),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Should no longer be loading after completion
+			expect(result.current.isLoading).toBe(false);
+		});
+
+		it("should handle missing Content-Type header gracefully", async () => {
+			const workflow = createMockWorkflow();
+			const mockFetch = vi.fn().mockResolvedValue(
+				new Response("plain text", {
+					status: 200,
+					headers: { "Content-Type": "text/plain" },
+				}),
+			);
+			global.fetch = mockFetch;
+
+			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
+
+			await act(async () => {
+				result.current.setInput("Hello");
+			});
+
+			await act(async () => {
+				await result.current.handleSubmit();
+			});
+
+			// Should set an error for unexpected content type
+			expect(result.current.error).not.toBeNull();
+			expect(result.current.error?.message).toContain("text/event-stream");
+		});
+	});
 });
