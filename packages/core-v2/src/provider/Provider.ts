@@ -92,11 +92,41 @@ export interface QueryOptions {
 	/**
 	 * Structured output format - REQUIRED for workflow state reliability.
 	 * Maps to SDK `outputFormat: { type: "json_schema", schema }`.
+	 *
+	 * @remarks
+	 * You can provide either:
+	 * 1. A pre-converted JSON Schema via `outputFormat`
+	 * 2. A Zod schema via `zodSchema` which will be auto-converted (FR-067)
+	 *
+	 * If both are provided, `outputFormat` takes precedence.
 	 */
 	readonly outputFormat?: {
 		readonly type: "json_schema";
 		readonly schema: unknown; // JSON Schema (converted from Zod at runtime)
 	};
+	/**
+	 * Zod schema for structured output (auto-converted to JSON Schema per FR-067).
+	 *
+	 * @remarks
+	 * Convenience option that automatically converts the Zod schema to JSON Schema
+	 * format for the SDK. If `outputFormat` is also provided, it takes precedence.
+	 *
+	 * @example
+	 * ```typescript
+	 * import { z } from "zod";
+	 *
+	 * const schema = z.object({
+	 *   name: z.string(),
+	 *   age: z.number(),
+	 * });
+	 *
+	 * const result = await provider.query({
+	 *   messages: [{ role: "user", content: "Extract user info" }],
+	 *   zodSchema: schema,
+	 * });
+	 * ```
+	 */
+	readonly zodSchema?: unknown; // Zod schema (converted via convertZodToJsonSchema)
 }
 
 /**

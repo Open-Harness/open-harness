@@ -205,7 +205,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Create packages/core-v2/src/provider/ClaudeProvider.ts with ClaudeProviderLive Layer using @anthropic-ai/claude-agent-sdk
 - [x] Implement Stream.fromAsyncIterable in ClaudeProvider to convert SDK async iterator to Effect Stream for streaming responses
 - [x] Implement Effect.acquireRelease in ClaudeProvider for SDK connection cleanup on abort/error per spec FR-064
-- [ ] Implement structured output conversion in ClaudeProvider: use src/internal/schema.ts to convert Zod outputSchema → JSON Schema → SDK outputFormat: {type:"json_schema", schema} per spec FR-067
+- [x] Implement structured output conversion in ClaudeProvider: use src/internal/schema.ts to convert Zod outputSchema → JSON Schema → SDK outputFormat: {type:"json_schema", schema} per spec FR-067
 - [x] Map Claude SDK messages to internal Event types in ClaudeProvider: text delta → TextDeltaEvent, tool call → ToolCalledEvent, complete → TextCompleteEvent
 - [x] Implement abort handling in ClaudeProvider via AbortController passthrough to SDK per spec FR-068
 - [x] Create packages/core-v2/src/provider/index.ts re-exporting ClaudeProviderLive, ClaudeProviderConfig

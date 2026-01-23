@@ -1082,3 +1082,36 @@
 - Pre-existing TypeScript errors in ClaudeProvider.ts unchanged (SDK type mismatches)
 - Phase 9 Task 3 (FR-064 Resource Safety) COMPLETE
 
+
+## 2026-01-21T20:00:00Z - Phase 9 FR-067 Structured Output Conversion
+**Task**: Implement structured output conversion in ClaudeProvider: Zod → JSON Schema → SDK outputFormat
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/src/provider/Provider.ts:
+  - Added `zodSchema` optional field to QueryOptions interface
+  - Added JSDoc documentation explaining the two options (outputFormat vs zodSchema)
+  - When both are provided, outputFormat takes precedence
+- Updated packages/core-v2/src/provider/ClaudeProvider.ts:
+  - Imported `convertZodToJsonSchema` from internal/schema.js
+  - Added `resolveOutputFormat()` helper function that:
+    - Returns outputFormat if provided (already JSON Schema)
+    - Converts zodSchema to JSON Schema via convertZodToJsonSchema if provided (FR-067)
+    - Returns undefined if neither is provided
+  - Updated `buildSdkOptions()` to use resolveOutputFormat
+- Added 5 new tests in packages/core-v2/tests/claude-provider.test.ts:
+  - "should convert Zod schema to JSON Schema format"
+  - "should convert complex Zod schema with nested objects"
+  - "should prefer outputFormat over zodSchema when both provided"
+  - "should not set outputFormat when neither zodSchema nor outputFormat provided"
+  - "should convert Zod schema for streaming queries"
+**Verification**:
+- bun run test: PASS (754 tests total, 5 new FR-067 tests)
+- bun run lint: PASS (2 pre-existing warnings in other files)
+- bun run typecheck: Pre-existing errors (SDK type mismatches, DOM types in tests)
+**Notes**:
+- Conversion already worked via WorkflowRuntime for agent execution
+- This adds a convenience API for direct provider usage with Zod schemas
+- The zodSchema option allows consumers to pass Zod schemas directly without manual conversion
+- FR-067 now supported at both levels: WorkflowRuntime (agent execution) and ClaudeProvider (direct usage)
+- Phase 9 Task 4 (FR-067 Structured Output Conversion) COMPLETE
+

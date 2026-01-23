@@ -12,6 +12,7 @@ import type { Options, SDKMessage, SDKResultMessage, SDKUserMessage } from "@ant
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { Effect, Layer, Stream } from "effect";
 import { type AnyEvent, createEvent, type EventId } from "../event/Event.js";
+import { convertZodToJsonSchema } from "../internal/schema.js";
 import {
 	type ClaudeProviderConfig,
 	LLMProvider,
@@ -420,9 +421,40 @@ function* toClaudeMessages(messages: readonly { role: string; content: string }[
 }
 
 /**
+ * Resolves the output format from query options.
+ *
+ * Per FR-067, this function handles Zod schema conversion:
+ * 1. If `outputFormat` is provided, use it directly (already JSON Schema)
+ * 2. If `zodSchema` is provided, convert it to JSON Schema format
+ * 3. Otherwise, no output format is used
+ *
+ * @param options - Query options that may contain outputFormat or zodSchema
+ * @returns The resolved output format or undefined
+ */
+function resolveOutputFormat(options: QueryOptions): { type: "json_schema"; schema: unknown } | undefined {
+	// outputFormat takes precedence (already JSON Schema)
+	if (options.outputFormat) {
+		return options.outputFormat;
+	}
+
+	// Convert zodSchema to JSON Schema if provided (FR-067)
+	if (options.zodSchema) {
+		const jsonSchema = convertZodToJsonSchema(options.zodSchema as Parameters<typeof convertZodToJsonSchema>[0]);
+		return {
+			type: "json_schema",
+			schema: jsonSchema,
+		};
+	}
+
+	return undefined;
+}
+
+/**
  * Builds SDK options from config and query options.
  */
 function buildSdkOptions(config: ClaudeProviderConfig, options: QueryOptions): Options {
+	const outputFormat = resolveOutputFormat(options);
+
 	return {
 		resume: options.sessionId,
 		model: options.model ?? config.model ?? DEFAULT_MODEL,
@@ -432,11 +464,7 @@ function buildSdkOptions(config: ClaudeProviderConfig, options: QueryOptions): O
 		includePartialMessages: options.includePartialMessages ?? config.includePartialMessages ?? true,
 		permissionMode: options.permissionMode ?? config.permissionMode ?? "bypassPermissions",
 		allowDangerouslySkipPermissions: true,
-		...(options.outputFormat
-			? {
-					outputFormat: options.outputFormat,
-				}
-			: {}),
+		...(outputFormat ? { outputFormat } : {}),
 	};
 }
 

@@ -8,6 +8,7 @@
 import type { SDKMessage, SDKResultMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { Cause, Effect, Exit, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
 	ClaudeProviderLive,
 	createClaudeProvider,
@@ -1073,6 +1074,184 @@ describe("FR-064 Resource Safety", () => {
 
 			// User-provided controller should NOT be aborted
 			expect(providedController.signal.aborted).toBe(false);
+		});
+	});
+});
+
+// ============================================================================
+// FR-067 Structured Output Conversion Tests (Zod → JSON Schema)
+// ============================================================================
+
+describe("FR-067 Structured Output Conversion", () => {
+	describe("zodSchema option", () => {
+		it("should convert Zod schema to JSON Schema format", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const zodSchema = z.object({
+				name: z.string(),
+				age: z.number(),
+			});
+
+			await Effect.runPromise(
+				service.query({
+					messages: [{ role: "user", content: "Extract user info" }],
+					zodSchema,
+				}),
+			);
+
+			const capturedFormat = (capturedOptions as { outputFormat: unknown }).outputFormat;
+			expect(capturedFormat).toBeDefined();
+			expect((capturedFormat as { type: string }).type).toBe("json_schema");
+
+			const schema = (capturedFormat as { schema: Record<string, unknown> }).schema;
+			expect(schema.type).toBe("object");
+			expect(schema.properties).toBeDefined();
+			expect((schema.properties as Record<string, unknown>).name).toBeDefined();
+			expect((schema.properties as Record<string, unknown>).age).toBeDefined();
+		});
+
+		it("should convert complex Zod schema with nested objects", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const zodSchema = z.object({
+				user: z.object({
+					name: z.string(),
+					email: z.string(),
+				}),
+				items: z.array(
+					z.object({
+						id: z.number(),
+						quantity: z.number(),
+					}),
+				),
+			});
+
+			await Effect.runPromise(
+				service.query({
+					messages: [{ role: "user", content: "Extract order" }],
+					zodSchema,
+				}),
+			);
+
+			const capturedFormat = (capturedOptions as { outputFormat: unknown }).outputFormat;
+			const schema = (capturedFormat as { schema: Record<string, unknown> }).schema;
+
+			expect(schema.type).toBe("object");
+			expect((schema.properties as Record<string, unknown>).user).toBeDefined();
+			expect((schema.properties as Record<string, unknown>).items).toBeDefined();
+		});
+
+		it("should prefer outputFormat over zodSchema when both provided", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const zodSchema = z.object({ name: z.string() });
+			const jsonSchema = { type: "object", properties: { custom: { type: "boolean" } } };
+
+			await Effect.runPromise(
+				service.query({
+					messages: [{ role: "user", content: "Test" }],
+					zodSchema, // Should be ignored
+					outputFormat: {
+						type: "json_schema",
+						schema: jsonSchema, // This should take precedence
+					},
+				}),
+			);
+
+			const capturedFormat = (capturedOptions as { outputFormat: unknown }).outputFormat;
+			const schema = (capturedFormat as { schema: Record<string, unknown> }).schema;
+
+			// Should use the explicitly provided JSON Schema, not the converted Zod schema
+			expect(schema).toEqual(jsonSchema);
+			expect((schema as Record<string, unknown>).properties).toEqual({ custom: { type: "boolean" } });
+		});
+
+		it("should not set outputFormat when neither zodSchema nor outputFormat provided", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			await Effect.runPromise(
+				service.query({
+					messages: [{ role: "user", content: "No schema" }],
+				}),
+			);
+
+			const capturedFormat = (capturedOptions as { outputFormat?: unknown }).outputFormat;
+			expect(capturedFormat).toBeUndefined();
+		});
+	});
+
+	describe("stream method with zodSchema", () => {
+		it("should convert Zod schema for streaming queries", async () => {
+			let capturedOptions: unknown = null;
+			const mockQuery: MockQueryFn = async function* (args) {
+				capturedOptions = args.options;
+				yield textDeltaStreamEvent;
+				yield successResult;
+			};
+
+			const service = makeClaudeProviderService(
+				{},
+				mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
+			);
+
+			const zodSchema = z.object({
+				summary: z.string(),
+				score: z.number(),
+			});
+
+			await Effect.runPromise(
+				Stream.runCollect(
+					service.stream({
+						messages: [{ role: "user", content: "Analyze" }],
+						zodSchema,
+					}),
+				),
+			);
+
+			const capturedFormat = (capturedOptions as { outputFormat: unknown }).outputFormat;
+			expect(capturedFormat).toBeDefined();
+			expect((capturedFormat as { type: string }).type).toBe("json_schema");
+
+			const schema = (capturedFormat as { schema: Record<string, unknown> }).schema;
+			expect(schema.type).toBe("object");
+			expect((schema.properties as Record<string, unknown>).summary).toBeDefined();
+			expect((schema.properties as Record<string, unknown>).score).toBeDefined();
 		});
 	});
 });
