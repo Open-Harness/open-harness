@@ -1534,3 +1534,26 @@
 - SDK Version: 0.2.5
 - All fixtures contain real SDK message types, timing, and structure
 
+
+
+## 2026-01-21T21:40:00Z - Phase 11 Fixture Documentation
+**Task**: Create packages/core-v2/tests/fixtures/README.md documenting how fixtures were recorded and when
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/tests/fixtures/README.md with:
+  - Overview explaining fixtures are from REAL Claude SDK sessions
+  - Recording Information table: Date (2026-01-21), Model (claude-sonnet-4-20250514), SDK Version (0.2.5)
+  - Fixture Files section listing all 6 golden fixtures with descriptions and message counts
+  - Fixture Structure documentation with TypeScript interfaces (Fixture, RecordedMessage)
+  - How to Re-record Fixtures section with CLI commands
+  - Usage in Tests code example showing import and iteration
+  - Maintenance section for updating fixtures
+**Verification**:
+- bun run test: PASS (883 tests)
+- bun run lint: PASS (15 packages)
+**Notes**:
+- All three Phase 11 Fixture Recording Infrastructure tasks are now COMPLETE:
+  1. [x] Save recorded fixtures to packages/core-v2/tests/fixtures/golden/
+  2. [x] Run record-fixtures script against LIVE Claude SDK
+  3. [x] Create fixtures README.md documenting recording details
+- Next: Phase 11 Real Integration Tests
