@@ -1636,3 +1636,24 @@
 - Tailwind CSS 4 uses new @tailwindcss/postcss plugin instead of PostCSS plugin
 - Biome replaced ESLint as default linter in Next.js 16
 - Next: Add @open-harness/core-v2 as workspace dependency
+
+## 2026-01-22T09:25:00Z - Phase 12 App Setup Tasks 2-3
+**Task**: Add @open-harness/core-v2 as workspace dependency and verify React peer dependency
+**Status**: COMPLETE
+**Changes**:
+- Updated apps/core-v2-demo/package.json to add:
+  - "@open-harness/core-v2": "workspace:*" in dependencies
+- Verified packages/core-v2/package.json already has correct peerDependencies:
+  - "react": "^18.0.0 || ^19.0.0" with optional: true
+  - This was done in a previous session (Phase 8 React Integration)
+- Ran bun install to verify workspace resolution (success, 818 packages)
+**Verification**:
+- bun install: PASS (workspace dependency resolved correctly)
+- bun run test (core-v2): PASS (884 tests, 10 skipped)
+- bun run lint: PASS (demo app: 8 files, no issues)
+- TypeScript errors in core-v2/tests are pre-existing (not introduced by this change)
+**Notes**:
+- PRD task 268 (React peer dependency) was already complete from Phase 8
+- Updated PRD to mark both tasks 267 and 268 as complete
+- Workspace dependency allows demo app to import from local @open-harness/core-v2 package
+- Next: Create apps/core-v2-demo/src/lib/workflow.ts

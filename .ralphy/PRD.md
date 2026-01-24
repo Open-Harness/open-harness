@@ -237,23 +237,38 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 11: Real SDK Fixture Recording
 
-**CRITICAL: No fabricated fixtures. All test fixtures MUST come from real Claude SDK interactions.**
+**CRITICAL ANTI-CHEATING RULES:**
+1. **DO NOT use `describe.skip` or `it.skip`** - Tests MUST actually execute
+2. **DO NOT fabricate fixtures** - All fixtures MUST come from real Claude SDK calls
+3. **MUST use SqliteStore** - Recording goes to SQLite, not just memory
+4. **MUST verify replay** - Recordings must be replayable with identical state
+5. **MUST run tests** - Execute `bun run test:live` and see PASSING output, not skipped
 
 ### Fixture Recording Infrastructure
 
-- [x] Create packages/core-v2/scripts/record-fixtures.ts script that runs a live Claude SDK session and captures all events to JSON
-- [x] Implement fixture recording for: simple text response, streaming text deltas, tool calls with results, structured output with outputSchema, multi-turn conversation
-- [x] Save recorded fixtures to packages/core-v2/tests/fixtures/golden/ directory with descriptive names (e.g., text-streaming.json, tool-use-roundtrip.json)
-- [x] Run the record-fixtures script against LIVE Claude SDK to capture real responses - do NOT manually create fixture files
-- [x] Create packages/core-v2/tests/fixtures/README.md documenting how fixtures were recorded and when (include date and model version)
+- [ ] Create packages/core-v2/scripts/record-fixtures.ts script that runs a live Claude SDK session and captures all events to JSON
+- [ ] Implement fixture recording for: simple text response, streaming text deltas, tool calls with results, structured output with outputSchema, multi-turn conversation
+- [ ] Save recorded fixtures to packages/core-v2/tests/fixtures/golden/ directory with descriptive names (e.g., text-streaming.json, tool-use-roundtrip.json)
+- [ ] ACTUALLY RUN the record-fixtures script against LIVE Claude SDK - execute: `bun run packages/core-v2/scripts/record-fixtures.ts` and verify JSON files are created with real SDK response data
+- [ ] Create packages/core-v2/tests/fixtures/README.md documenting: exact command used, date recorded, model version, file checksums
 
-### Real Integration Tests
+### Real Integration Tests (MUST ACTUALLY RUN)
 
-- [x] Create packages/core-v2/tests/integration/claude-live.test.ts that runs against the REAL Claude SDK (not mocked) with describe.skip for CI
-- [x] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted correctly
-- [x] Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior
-- [x] Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly
-- [x] Add npm script "test:live" to package.json that runs only live integration tests (requires auth)
+- [ ] Remove `describe.skip` from packages/core-v2/tests/integration/claude-live.test.ts - tests MUST execute, NOT skip
+- [ ] Run `bun run test:live` and verify tests PASS (not skip) - capture terminal output showing "X passed"
+- [ ] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted - test MUST PASS
+- [ ] Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior - test MUST PASS
+- [ ] Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly - test MUST PASS
+- [ ] Add npm script "test:live" to package.json that runs integration tests with proper vitest config (no skip)
+
+### SQLite Store Recording & Replay (NEW - CRITICAL)
+
+- [ ] Create a live SDK test that uses SqliteStoreLive to record a session: run workflow with record:true and SqliteStore configured
+- [ ] After recording, verify SQLite database file exists at the configured path and contains events
+- [ ] Implement replay test: load the recorded session via workflow.load(sessionId), verify Tape has correct event count
+- [ ] Verify replay produces IDENTICAL state: replay session, compare final state to original recorded state, assert deep equality
+- [ ] Run replay test 10 times in a row, assert all 10 produce identical state (determinism check)
+- [ ] Document the recording/replay workflow in packages/core-v2/tests/fixtures/RECORDING-WORKFLOW.md with exact commands
 
 ---
 
@@ -264,8 +279,8 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### App Setup
 
 - [x] Create apps/core-v2-demo/ directory with Next.js 15 App Router using: bun create next-app apps/core-v2-demo --ts --tailwind --app --src-dir
-- [ ] Add @open-harness/core-v2 as workspace dependency in apps/core-v2-demo/package.json
-- [ ] Add React peer dependency to packages/core-v2/package.json: "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }
+- [x] Add @open-harness/core-v2 as workspace dependency in apps/core-v2-demo/package.json
+- [x] Add React peer dependency to packages/core-v2/package.json: "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }
 - [ ] Create apps/core-v2-demo/src/lib/workflow.ts that defines a simple TaskExecutor workflow using core-v2 (based on quickstart.md example)
 
 ### UI Components

@@ -10,6 +10,7 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@open-harness/core-v2": "workspace:*",
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3"
