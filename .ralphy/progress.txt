@@ -1778,3 +1778,45 @@
 - shasum -a 256 verified all checksums match
 **Notes**:
 - Phase 11 Fixture Recording Infrastructure documentation task COMPLETE
+
+## 2026-01-22T09:47:00Z - Phase 11 Live SDK Tests
+**Task**: Run `bun run test:live` and verify tests PASS (not skip) - capture terminal output showing "X passed"
+**Status**: COMPLETE
+**Changes**:
+- Ran `bun run test:live` which executes `vitest run tests/integration/claude-live.test.ts`
+- All 11 live integration tests PASSED against the real Claude SDK
+- Tests verified:
+  - Simple Text Response: streaming response with text:delta and text:complete events
+  - Tool Use Integration: tool:called and tool:result events for Bash tool
+  - Structured Output: JSON output with outputSchema
+  - Event Sequence Verification: correct order system → stream_events → assistant → result
+  - Error Handling: normal completion without errors
+  - Multi-turn Conversations: multi-turn with tool use
+**Test Output**:
+```
+ RUN  v3.2.4 /Users/abuusama/projects/open-harness/open-harness/packages/core-v2
+
+ ✓ tests/integration/claude-live.test.ts (11 tests) 98666ms
+   ✓ Claude SDK Live Integration Tests > Simple Text Response > should send prompt and receive streaming response  5984ms
+   ✓ Claude SDK Live Integration Tests > Simple Text Response > should emit text_delta events for streaming text  7214ms
+   ✓ Claude SDK Live Integration Tests > Tool Use Integration > should emit tool:called and tool:result events  14542ms
+   ✓ Claude SDK Live Integration Tests > Tool Use Integration > should correctly stream tool input via input_json_delta  10588ms
+   ✓ Claude SDK Live Integration Tests > Structured Output > should return structured JSON output  8816ms
+   ✓ Claude SDK Live Integration Tests > Structured Output > should emit correct message sequence  13790ms
+   ✓ Claude SDK Live Integration Tests > Event Sequence Verification > should emit events in correct order  7109ms
+   ✓ Claude SDK Live Integration Tests > Event Sequence Verification > should include session_id  6576ms
+   ✓ Claude SDK Live Integration Tests > Error Handling > should handle normal completion  6793ms
+   ✓ Claude SDK Live Integration Tests > Multi-turn Conversations > should handle multi-turn with tool use  17231ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Duration  99.36s
+```
+**Verification**:
+- Tests: 11 passed (ALL live SDK tests)
+- Lint: PASS (exit code 0, 29 warnings are all style suggestions, no errors)
+**Notes**:
+- test:live script already existed in package.json
+- No describe.skip in the tests - they run against the REAL Claude SDK
+- Tests use 2-minute timeout for live API calls
+- Model: claude-sonnet-4-20250514
