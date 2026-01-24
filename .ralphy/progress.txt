@@ -1702,3 +1702,28 @@
 - bun run lint (claude-live.test.ts): PASS (no errors)
 **Key Insight**: The Claude SDK's structured output feature uses an internal `StructuredOutput` tool, requiring at least 2 turns. Tests with `maxTurns: 1` fail because the model can't complete the structured output flow.
 **Duration**: Tests take ~114 seconds to run against the real Claude API with streaming responses
+
+## 2026-01-22T01:30:00Z - Phase 11 Fixture Recording Infrastructure Task 1
+**Task**: Create packages/core-v2/scripts/record-fixtures.ts script
+**Status**: COMPLETE (verified existing script works correctly)
+**Changes**:
+- Verified packages/core-v2/scripts/record-fixtures.ts already exists with full implementation
+- Script captures REAL Claude SDK sessions and saves to JSON fixture files
+- Verified via live execution: `bun run scripts/record-fixtures.ts --scenario text-simple`
+- Recorded text-simple.json fixture (9 messages, 4869ms duration)
+- Fixture contains authentic SDK data: system init, stream_events, assistant, result messages
+- Script features:
+  - 6 scenarios defined: text-simple, text-streaming, text-multiline, tool-use-roundtrip, structured-output, multi-turn
+  - Captures timestamps relative to recording start
+  - Records all SDK message types including streaming deltas
+  - Saves metadata: model, SDK version, duration, message count
+- Package.json already has "record-fixtures" script (line 15)
+- README.md already exists documenting fixture structure and usage
+**Verification**:
+- bun run test: PASS (894 tests)
+- bun run lint: PASS (29 warnings, no errors - pre-existing)
+- Live script execution: PASS (recorded text-simple.json successfully)
+**Notes**:
+- Script was created in a previous session but PRD task was not marked complete
+- Golden fixture files were deleted (git status shows them as deleted)
+- Next task: Implement fixture recording for all scenarios (line 257)

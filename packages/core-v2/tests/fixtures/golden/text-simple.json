@@ -1,10 +1,10 @@
 {
 	"metadata": {
 		"scenario": "text-simple",
-		"recordedAt": "2026-01-21T21:28:35.117Z",
+		"recordedAt": "2026-01-22T01:30:12.241Z",
 		"model": "claude-sonnet-4-20250514",
-		"durationMs": 304663,
-		"messageCount": 3,
+		"durationMs": 4869,
+		"messageCount": 9,
 		"sdkVersion": "0.2.5",
 		"description": "Simple text response without streaming deltas"
 	},
@@ -15,7 +15,7 @@
 				"type": "system",
 				"subtype": "init",
 				"cwd": "/Users/abuusama/projects/open-harness/open-harness/packages/core-v2",
-				"session_id": "0496939c-cf69-4d1f-96c9-328bcb58b78e",
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
 				"tools": [
 					"Task",
 					"TaskOutput",
@@ -61,17 +61,86 @@
 				],
 				"skills": [],
 				"plugins": [],
-				"uuid": "3bf8625a-f927-441b-bb35-0f74956e7e3c"
+				"uuid": "23c21ebe-9acb-48ac-934f-9d9915e2fb27"
 			},
-			"relativeTimestamp": 873,
+			"relativeTimestamp": 2080,
 			"index": 0
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "message_start",
+					"message": {
+						"model": "claude-sonnet-4-20250514",
+						"id": "msg_01YN1Q9JbbFJM6ULjqVP1tZW",
+						"type": "message",
+						"role": "assistant",
+						"content": [],
+						"stop_reason": null,
+						"stop_sequence": null,
+						"usage": {
+							"input_tokens": 3,
+							"cache_creation_input_tokens": 0,
+							"cache_read_input_tokens": 15044,
+							"cache_creation": {
+								"ephemeral_5m_input_tokens": 0,
+								"ephemeral_1h_input_tokens": 0
+							},
+							"output_tokens": 1,
+							"service_tier": "standard"
+						}
+					}
+				},
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"parent_tool_use_id": null,
+				"uuid": "27d6c69d-cce8-45ea-9ba3-576d5c06aa8e"
+			},
+			"relativeTimestamp": 3579,
+			"index": 1
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_start",
+					"index": 0,
+					"content_block": {
+						"type": "text",
+						"text": ""
+					}
+				},
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"parent_tool_use_id": null,
+				"uuid": "b6a22cc7-e82c-4e79-b8ec-f293f18583d5"
+			},
+			"relativeTimestamp": 3686,
+			"index": 2
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": "4"
+					}
+				},
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"parent_tool_use_id": null,
+				"uuid": "2be660c3-8eaa-42b7-91ad-b6db6d2843f0"
+			},
+			"relativeTimestamp": 3686,
+			"index": 3
 		},
 		{
 			"message": {
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_015fjbKFFSdzmQpGCQaTPEDf",
+					"id": "msg_01YN1Q9JbbFJM6ULjqVP1tZW",
 					"type": "message",
 					"role": "assistant",
 					"content": [
@@ -80,7 +149,7 @@
 							"text": "4"
 						}
 					],
-					"stop_reason": "end_turn",
+					"stop_reason": null,
 					"stop_sequence": null,
 					"usage": {
 						"input_tokens": 3,
@@ -90,34 +159,84 @@
 							"ephemeral_5m_input_tokens": 0,
 							"ephemeral_1h_input_tokens": 0
 						},
-						"output_tokens": 5,
+						"output_tokens": 1,
 						"service_tier": "standard"
 					},
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "0496939c-cf69-4d1f-96c9-328bcb58b78e",
-				"uuid": "961c7633-c35c-4c18-8084-83d12324b3cc"
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"uuid": "940ce7ac-d825-4c26-b573-a2e7b240fdf6"
 			},
-			"relativeTimestamp": 303868,
-			"index": 1
+			"relativeTimestamp": 3926,
+			"index": 4
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_stop",
+					"index": 0
+				},
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"parent_tool_use_id": null,
+				"uuid": "e95dcb76-93dd-480b-b51e-2b0aef297d4a"
+			},
+			"relativeTimestamp": 3926,
+			"index": 5
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "message_delta",
+					"delta": {
+						"stop_reason": "end_turn",
+						"stop_sequence": null
+					},
+					"usage": {
+						"input_tokens": 3,
+						"cache_creation_input_tokens": 0,
+						"cache_read_input_tokens": 15044,
+						"output_tokens": 5
+					}
+				},
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"parent_tool_use_id": null,
+				"uuid": "20152643-575b-493d-a71a-81afdb349011"
+			},
+			"relativeTimestamp": 3942,
+			"index": 6
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "message_stop"
+				},
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"parent_tool_use_id": null,
+				"uuid": "7f8a6dae-ec4b-42e4-8169-93bbd587c090"
+			},
+			"relativeTimestamp": 3942,
+			"index": 7
 		},
 		{
 			"message": {
 				"type": "result",
 				"subtype": "success",
 				"is_error": false,
-				"duration_ms": 303006,
-				"duration_api_ms": 605189,
+				"duration_ms": 1881,
+				"duration_api_ms": 1861,
 				"num_turns": 1,
 				"result": "4",
-				"session_id": "0496939c-cf69-4d1f-96c9-328bcb58b78e",
-				"total_cost_usd": 0,
+				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"total_cost_usd": 0.0045972,
 				"usage": {
-					"input_tokens": 0,
+					"input_tokens": 3,
 					"cache_creation_input_tokens": 0,
-					"cache_read_input_tokens": 0,
-					"output_tokens": 0,
+					"cache_read_input_tokens": 15044,
+					"output_tokens": 5,
 					"server_tool_use": {
 						"web_search_requests": 0,
 						"web_fetch_requests": 0
@@ -128,17 +247,28 @@
 						"ephemeral_5m_input_tokens": 0
 					}
 				},
-				"modelUsage": {},
+				"modelUsage": {
+					"claude-sonnet-4-20250514": {
+						"inputTokens": 3,
+						"outputTokens": 5,
+						"cacheReadInputTokens": 15044,
+						"cacheCreationInputTokens": 0,
+						"webSearchRequests": 0,
+						"costUSD": 0.0045972,
+						"contextWindow": 200000,
+						"maxOutputTokens": 64000
+					}
+				},
 				"permission_denials": [],
-				"uuid": "5d71d9e9-4785-4dcc-b9a3-c2cf99c1393a"
+				"uuid": "97568acb-644b-4af5-93c1-79818abf7797"
 			},
-			"relativeTimestamp": 303870,
-			"index": 2
+			"relativeTimestamp": 3951,
+			"index": 8
 		}
 	],
 	"result": {
 		"text": "4",
-		"sessionId": "0496939c-cf69-4d1f-96c9-328bcb58b78e",
+		"sessionId": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
 		"hasStructuredOutput": false,
 		"toolCallsMade": []
 	}
