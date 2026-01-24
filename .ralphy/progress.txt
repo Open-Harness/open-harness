@@ -1752,3 +1752,29 @@
 - Fixtures contain authentic SDK message structure (system, stream_event, assistant, user, result)
 - Tool-use fixture includes actual Bash tool execution (echo $((7 * 6)) = 42)
 - Structured output fixture demonstrates JSON schema validation working with SDK
+
+## 2026-01-22T01:44:00Z - Phase 11 Fixture README Documentation
+**Task**: Create packages/core-v2/tests/fixtures/README.md documenting: exact command used, date recorded, model version, file checksums
+**Status**: COMPLETE
+**Changes**:
+- Updated packages/core-v2/tests/fixtures/README.md with comprehensive documentation:
+  - Exact command used: `bun run packages/core-v2/scripts/record-fixtures.ts --all`
+  - Recording date: 2026-01-22
+  - Model version: claude-sonnet-4-20250514
+  - SDK version: @anthropic-ai/claude-agent-sdk 0.2.5
+  - Added SHA-256 checksums for all 6 fixture files:
+    - multi-turn.json: d1ebf9398d1407b7cfe98868b9b285f3fd91e43475c3d49bce11a0aa4782a0c1
+    - structured-output.json: c044fcbb27757f840a5da4a4d175febac6da54b82cdcc07a4ef407164a89cbb2
+    - text-multiline.json: 56114782a15318770d9a7368a2f30cc8a73805e9d0f26ba9fb90757cd9c25614
+    - text-simple.json: 1b9df4cef5f8bda646943fd3c81a77abf209e4069aa49890c4736aa6d71c2a7a
+    - text-streaming.json: d95b79e9cef94964213bcbfabdd9cae754d0edfb98d8d19bf6038ae162fecb5e
+    - tool-use-roundtrip.json: cce13e90fcf1937f26c3f5c3e3fd78a28b731ca79fe0acde2eefd8bbcff668a2
+  - Added duration column to fixture table showing real API response times
+  - Added checksum verification command for integrity checking
+  - Updated lastUpdated metadata in YAML frontmatter
+**Verification**:
+- bun run test: PASS (894 tests total)
+- bun run lint: PASS (29 pre-existing warnings, no errors)
+- shasum -a 256 verified all checksums match
+**Notes**:
+- Phase 11 Fixture Recording Infrastructure documentation task COMPLETE
