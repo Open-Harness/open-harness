@@ -263,7 +263,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### App Setup
 
-- [ ] Create apps/core-v2-demo/ directory with Next.js 15 App Router using: bun create next-app apps/core-v2-demo --ts --tailwind --app --src-dir
+- [x] Create apps/core-v2-demo/ directory with Next.js 15 App Router using: bun create next-app apps/core-v2-demo --ts --tailwind --app --src-dir
 - [ ] Add @open-harness/core-v2 as workspace dependency in apps/core-v2-demo/package.json
 - [ ] Add React peer dependency to packages/core-v2/package.json: "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }
 - [ ] Create apps/core-v2-demo/src/lib/workflow.ts that defines a simple TaskExecutor workflow using core-v2 (based on quickstart.md example)

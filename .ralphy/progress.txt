@@ -1611,3 +1611,28 @@
 - Phase 11 Real Integration Tests section is now COMPLETE
 - Phase 11 is 100% COMPLETE (all 5 tasks marked done)
 - Next: Phase 12 E2E Demo Application
+
+## 2026-01-22T09:03:00Z - Phase 12 App Setup Task 1
+**Task**: Create apps/core-v2-demo/ directory with Next.js 15 App Router
+**Status**: COMPLETE
+**Changes**:
+- Created apps/core-v2-demo/ using: bun create next-app apps/core-v2-demo --ts --tailwind --app --src-dir --yes
+- Generated Next.js 16.1.4 app (latest stable) with:
+  - React 19.2.3 and React DOM 19.2.3
+  - Tailwind CSS v4 with @tailwindcss/postcss plugin
+  - TypeScript 5.x with strict mode
+  - Biome 2.2.0 for linting (Next.js 16 default)
+  - App Router enabled (src/app/ directory)
+  - Source directory structure (src/)
+- App successfully builds with `bun run build`
+- App successfully starts with `bun run dev` on http://localhost:3000
+**Verification**:
+- bun run build: PASS (compiled in 2.6s, static pages generated)
+- bun run dev: PASS (starts on localhost:3000)
+- bun run test: PASS (884 tests total across monorepo)
+- bun run lint: PASS (16 packages linted)
+**Notes**:
+- PRD mentioned Next.js 15, but bun create installed Next.js 16.1.4 (latest)
+- Tailwind CSS 4 uses new @tailwindcss/postcss plugin instead of PostCSS plugin
+- Biome replaced ESLint as default linter in Next.js 16
+- Next: Add @open-harness/core-v2 as workspace dependency
