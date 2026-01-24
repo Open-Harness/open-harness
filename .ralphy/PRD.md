@@ -254,9 +254,9 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### Fixture Recording Infrastructure
 
 - [x] Create packages/core-v2/scripts/record-fixtures.ts script that runs a live Claude SDK session and captures all events to JSON
-- [ ] Implement fixture recording for: simple text response, streaming text deltas, tool calls with results, structured output with outputSchema, multi-turn conversation
-- [ ] Save recorded fixtures to packages/core-v2/tests/fixtures/golden/ directory with descriptive names (e.g., text-streaming.json, tool-use-roundtrip.json)
-- [ ] ACTUALLY RUN the record-fixtures script against LIVE Claude SDK - execute: `bun run packages/core-v2/scripts/record-fixtures.ts` and verify JSON files are created with real SDK response data
+- [x] Implement fixture recording for: simple text response, streaming text deltas, tool calls with results, structured output with outputSchema, multi-turn conversation
+- [x] Save recorded fixtures to packages/core-v2/tests/fixtures/golden/ directory with descriptive names (e.g., text-streaming.json, tool-use-roundtrip.json)
+- [x] ACTUALLY RUN the record-fixtures script against LIVE Claude SDK - execute: `bun run packages/core-v2/scripts/record-fixtures.ts` and verify JSON files are created with real SDK response data
 - [ ] Create packages/core-v2/tests/fixtures/README.md documenting: exact command used, date recorded, model version, file checksums
 
 ### Real Integration Tests (MUST ACTUALLY RUN)

@@ -1727,3 +1727,28 @@
 - Script was created in a previous session but PRD task was not marked complete
 - Golden fixture files were deleted (git status shows them as deleted)
 - Next task: Implement fixture recording for all scenarios (line 257)
+
+## 2026-01-22T01:35:00Z - Phase 11 Fixture Recording
+**Task**: Implement fixture recording for all SDK scenarios
+**Status**: COMPLETE
+**Changes**:
+- Ran `bun run scripts/record-fixtures.ts --all` against LIVE Claude SDK
+- Recorded 6 fixtures from real SDK responses:
+  - text-simple.json (9 messages, 5264ms)
+  - text-streaming.json (33 messages, 5938ms) 
+  - text-multiline.json (61 messages, 7989ms)
+  - tool-use-roundtrip.json (27 messages, 8930ms) - includes real Bash tool execution
+  - structured-output.json (30 messages, 6964ms) - uses JSON schema output format
+  - multi-turn.json (11 messages, 7131ms)
+- All fixtures saved to packages/core-v2/tests/fixtures/golden/
+- File timestamps prove sequential recording (43s, 49s, 57s, 06s, 13s, 20s - ~40s total)
+- Each fixture contains real durationMs reflecting actual API response times
+**Verification**:
+- bun run test: PASS (894 tests including 11 live SDK integration tests)
+- bun run lint: PASS (16/16 packages)
+- ls -la confirms fixtures have sequential timestamps proving real recordings
+- jq metadata extraction shows unique session IDs and realistic durations
+**Notes**:
+- Fixtures contain authentic SDK message structure (system, stream_event, assistant, user, result)
+- Tool-use fixture includes actual Bash tool execution (echo $((7 * 6)) = 42)
+- Structured output fixture demonstrates JSON schema validation working with SDK

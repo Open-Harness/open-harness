@@ -1,10 +1,10 @@
 {
 	"metadata": {
 		"scenario": "structured-output",
-		"recordedAt": "2026-01-21T21:31:10.946Z",
+		"recordedAt": "2026-01-22T01:35:13.692Z",
 		"model": "claude-sonnet-4-20250514",
-		"durationMs": 17403,
-		"messageCount": 31,
+		"durationMs": 6964,
+		"messageCount": 30,
 		"sdkVersion": "0.2.5",
 		"description": "Response with structured JSON output using outputSchema"
 	},
@@ -15,7 +15,7 @@
 				"type": "system",
 				"subtype": "init",
 				"cwd": "/Users/abuusama/projects/open-harness/open-harness/packages/core-v2",
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"tools": [
 					"Task",
 					"TaskOutput",
@@ -62,9 +62,9 @@
 				],
 				"skills": [],
 				"plugins": [],
-				"uuid": "e1cbae38-460e-4ab9-b12f-8ad4f98b765b"
+				"uuid": "8cf0dafa-f283-452f-8a2c-fbb0307db86c"
 			},
-			"relativeTimestamp": 884,
+			"relativeTimestamp": 1436,
 			"index": 0
 		},
 		{
@@ -74,7 +74,7 @@
 					"type": "message_start",
 					"message": {
 						"model": "claude-sonnet-4-20250514",
-						"id": "msg_017rAUMfMjL4HAe8bzqrTCmq",
+						"id": "msg_01TrfQB8T2L6owwMjjwyjv4B",
 						"type": "message",
 						"role": "assistant",
 						"content": [
@@ -98,11 +98,11 @@
 						}
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "c50ea338-1e85-48b0-9deb-c72f15f210ad"
+				"uuid": "2bd1c715-f3fe-4719-a3bc-d206608a4e68"
 			},
-			"relativeTimestamp": 12143,
+			"relativeTimestamp": 4148,
 			"index": 1
 		},
 		{
@@ -116,11 +116,11 @@
 						"text": ""
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "95930789-6b72-4bff-8194-41bce9ed0c3b"
+				"uuid": "41528d10-de85-4a47-b758-0a8178dfccfa"
 			},
-			"relativeTimestamp": 12144,
+			"relativeTimestamp": 4149,
 			"index": 2
 		},
 		{
@@ -134,11 +134,11 @@
 						"text": "I"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "70fbc6f5-9ffb-43a6-9526-4f36e09b2135"
+				"uuid": "9a713bdb-4658-4854-9e96-a5d6af9a4604"
 			},
-			"relativeTimestamp": 12144,
+			"relativeTimestamp": 4149,
 			"index": 3
 		},
 		{
@@ -152,11 +152,11 @@
 						"text": "'ll extract the person's name and age"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "881530fc-91cf-4b64-a11e-43b123a237c6"
+				"uuid": "b521c471-9313-4397-95dd-0e5183d1c21f"
 			},
-			"relativeTimestamp": 13217,
+			"relativeTimestamp": 5075,
 			"index": 4
 		},
 		{
@@ -170,11 +170,11 @@
 						"text": " from the"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "ba2c2697-c29e-4893-be26-9b573df7cf32"
+				"uuid": "e43a4a95-b1a3-40dc-886f-011ae1c2bcc0"
 			},
-			"relativeTimestamp": 13217,
+			"relativeTimestamp": 5076,
 			"index": 5
 		},
 		{
@@ -185,33 +185,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " provide"
+						"text": " text you provided.\n\nFrom"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "fa676179-5ccc-4eb5-b045-0ade858a8cc3"
+				"uuid": "be2fee50-8ec7-4309-b098-223bcf1a9b7c"
 			},
-			"relativeTimestamp": 13217,
+			"relativeTimestamp": 5079,
 			"index": 6
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": "d text.\n\nFrom"
-					}
-				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"parent_tool_use_id": null,
-				"uuid": "d5876ffc-ba22-4d72-8bf3-bb65cff85af2"
-			},
-			"relativeTimestamp": 13217,
-			"index": 7
 		},
 		{
 			"message": {
@@ -224,12 +206,12 @@
 						"text": " the text \""
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "a3ddd26a-a7c4-408e-89ad-77ffef3ece45"
+				"uuid": "87ed3dcb-5132-41d4-87ee-e3ea0b249676"
 			},
-			"relativeTimestamp": 13217,
-			"index": 8
+			"relativeTimestamp": 5079,
+			"index": 7
 		},
 		{
 			"message": {
@@ -242,12 +224,12 @@
 						"text": "John Smith is 30 years ol"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "a624238f-634a-432d-9959-47e52cb69e77"
+				"uuid": "21290248-c2b2-442c-a3d8-22cbe80a559a"
 			},
-			"relativeTimestamp": 13217,
-			"index": 9
+			"relativeTimestamp": 5080,
+			"index": 8
 		},
 		{
 			"message": {
@@ -260,12 +242,12 @@
 						"text": "d,\""
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "be477f86-51c3-4fe0-bf16-c0d28f679000"
+				"uuid": "d5d9e27b-cd28-4b2a-8919-d056749c3768"
 			},
-			"relativeTimestamp": 13218,
-			"index": 10
+			"relativeTimestamp": 5088,
+			"index": 9
 		},
 		{
 			"message": {
@@ -278,11 +260,29 @@
 						"text": " I can identify"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "e523f9dc-fd7b-4022-814e-26d0ac9fa537"
+				"uuid": "e3cb085e-981f-46be-8b6b-5b2b3e9dbbb9"
 			},
-			"relativeTimestamp": 13218,
+			"relativeTimestamp": 5088,
+			"index": 10
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": ":\n- Name"
+					}
+				},
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
+				"parent_tool_use_id": null,
+				"uuid": "3c3ca4ae-e655-4244-8fad-6111dd954bf3"
+			},
+			"relativeTimestamp": 5088,
 			"index": 11
 		},
 		{
@@ -293,14 +293,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": ":"
+						"text": ": John Smith\n- Age: "
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "ee7e0aa8-e21a-46be-845f-72ffc5291e8a"
+				"uuid": "a736e45f-861f-4c2f-87e8-8c16f36a39ea"
 			},
-			"relativeTimestamp": 13218,
+			"relativeTimestamp": 5088,
 			"index": 12
 		},
 		{
@@ -311,46 +311,28 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "\n- Name: John Smith\n-"
+						"text": "30"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "a30867e0-8cc4-4814-a9ce-c95d49500c4f"
+				"uuid": "09372656-e5a3-4cca-8837-c7b8f37b1c63"
 			},
-			"relativeTimestamp": 13218,
+			"relativeTimestamp": 5088,
 			"index": 13
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": " Age: 30"
-					}
-				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"parent_tool_use_id": null,
-				"uuid": "e3fa4765-e7e3-4c22-bdc5-3b66dbbcd709"
-			},
-			"relativeTimestamp": 13218,
-			"index": 14
 		},
 		{
 			"message": {
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_017rAUMfMjL4HAe8bzqrTCmq",
+					"id": "msg_01TrfQB8T2L6owwMjjwyjv4B",
 					"type": "message",
 					"role": "assistant",
 					"content": [
 						{
 							"type": "text",
-							"text": "I'll extract the person's name and age from the provided text.\n\nFrom the text \"John Smith is 30 years old,\" I can identify:\n- Name: John Smith\n- Age: 30"
+							"text": "I'll extract the person's name and age from the text you provided.\n\nFrom the text \"John Smith is 30 years old,\" I can identify:\n- Name: John Smith\n- Age: 30"
 						}
 					],
 					"stop_reason": null,
@@ -369,11 +351,11 @@
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"uuid": "6ac30a30-092d-4e4c-b8d3-f6a0ea2c3f47"
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
+				"uuid": "a07a3983-c131-4b24-b5c9-54713468e467"
 			},
-			"relativeTimestamp": 13219,
-			"index": 15
+			"relativeTimestamp": 5090,
+			"index": 14
 		},
 		{
 			"message": {
@@ -382,12 +364,12 @@
 					"type": "content_block_stop",
 					"index": 0
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "d8fbd888-70f8-4171-a5b6-0ca9938bc9a5"
+				"uuid": "50759999-8695-420b-914d-9448ed69570a"
 			},
-			"relativeTimestamp": 13219,
-			"index": 16
+			"relativeTimestamp": 5091,
+			"index": 15
 		},
 		{
 			"message": {
@@ -397,17 +379,17 @@
 					"index": 1,
 					"content_block": {
 						"type": "tool_use",
-						"id": "toolu_01ENKDrd2c8xEGwnbaEF6ACV",
+						"id": "toolu_01D173zYukNp2U5PGzKV1uYC",
 						"name": "StructuredOutput",
 						"input": {}
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "9e0984de-549f-4fbc-a60d-59f48a86341f"
+				"uuid": "190f2532-c7a7-4e68-b508-8e361efdf9b5"
 			},
-			"relativeTimestamp": 13219,
-			"index": 17
+			"relativeTimestamp": 5091,
+			"index": 16
 		},
 		{
 			"message": {
@@ -420,11 +402,29 @@
 						"partial_json": ""
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "1441c05f-1625-48df-9a88-5b005e302dfd"
+				"uuid": "f1794e39-d1d8-4497-9d03-f7eee6778647"
 			},
-			"relativeTimestamp": 13219,
+			"relativeTimestamp": 5091,
+			"index": 17
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 1,
+					"delta": {
+						"type": "input_json_delta",
+						"partial_json": "{\"na"
+					}
+				},
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
+				"parent_tool_use_id": null,
+				"uuid": "b95e3d98-9f8a-4c73-819a-b0a9aecb4551"
+			},
+			"relativeTimestamp": 5212,
 			"index": 18
 		},
 		{
@@ -435,14 +435,14 @@
 					"index": 1,
 					"delta": {
 						"type": "input_json_delta",
-						"partial_json": "{\"name"
+						"partial_json": "me\": \""
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "9849b247-d431-4399-b0fe-43c55ff98231"
+				"uuid": "855b0218-1028-4050-8b59-891ecc8d4949"
 			},
-			"relativeTimestamp": 13445,
+			"relativeTimestamp": 5212,
 			"index": 19
 		},
 		{
@@ -453,14 +453,14 @@
 					"index": 1,
 					"delta": {
 						"type": "input_json_delta",
-						"partial_json": "\": \""
+						"partial_json": "Jo"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "1db82065-7a80-44d2-a2f6-c5a94bced650"
+				"uuid": "ee1780fd-361d-477e-ac1d-2250b9d23841"
 			},
-			"relativeTimestamp": 13476,
+			"relativeTimestamp": 5213,
 			"index": 20
 		},
 		{
@@ -471,14 +471,14 @@
 					"index": 1,
 					"delta": {
 						"type": "input_json_delta",
-						"partial_json": "John Smit"
+						"partial_json": "hn Smith\""
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "835a0fc9-73e5-4c56-a844-cd0ab3e65391"
+				"uuid": "ad4ac1ff-21e1-46ed-a241-083c3e4ae51d"
 			},
-			"relativeTimestamp": 13477,
+			"relativeTimestamp": 5215,
 			"index": 21
 		},
 		{
@@ -489,14 +489,14 @@
 					"index": 1,
 					"delta": {
 						"type": "input_json_delta",
-						"partial_json": "h\""
+						"partial_json": ", \"age\": 3"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "df82ffcf-ba7f-4e31-996c-af90b82044f1"
+				"uuid": "43e8cde4-cb8d-4539-b874-efb5c0e6e4b1"
 			},
-			"relativeTimestamp": 13477,
+			"relativeTimestamp": 5375,
 			"index": 22
 		},
 		{
@@ -507,46 +507,28 @@
 					"index": 1,
 					"delta": {
 						"type": "input_json_delta",
-						"partial_json": ", \"age"
+						"partial_json": "0}"
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "360c9088-49ca-4465-87bf-994144523644"
+				"uuid": "02dd96c3-b185-49b3-94e6-bab02fd942e7"
 			},
-			"relativeTimestamp": 13478,
+			"relativeTimestamp": 5375,
 			"index": 23
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 1,
-					"delta": {
-						"type": "input_json_delta",
-						"partial_json": "\": 30}"
-					}
-				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"parent_tool_use_id": null,
-				"uuid": "56a9e285-c94b-4f6b-959c-4c051ef0ef59"
-			},
-			"relativeTimestamp": 13478,
-			"index": 24
 		},
 		{
 			"message": {
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_017rAUMfMjL4HAe8bzqrTCmq",
+					"id": "msg_01TrfQB8T2L6owwMjjwyjv4B",
 					"type": "message",
 					"role": "assistant",
 					"content": [
 						{
 							"type": "tool_use",
-							"id": "toolu_01ENKDrd2c8xEGwnbaEF6ACV",
+							"id": "toolu_01D173zYukNp2U5PGzKV1uYC",
 							"name": "StructuredOutput",
 							"input": {
 								"name": "John Smith",
@@ -554,7 +536,7 @@
 							}
 						}
 					],
-					"stop_reason": "tool_use",
+					"stop_reason": null,
 					"stop_sequence": null,
 					"usage": {
 						"input_tokens": 3,
@@ -564,17 +546,17 @@
 							"ephemeral_5m_input_tokens": 1960,
 							"ephemeral_1h_input_tokens": 0
 						},
-						"output_tokens": 117,
+						"output_tokens": 1,
 						"service_tier": "standard"
 					},
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"uuid": "917b1fe1-c457-4e3f-80be-d86f8833b3b6"
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
+				"uuid": "c96265d8-5d64-4aa2-91f6-cab4a6a56a94"
 			},
-			"relativeTimestamp": 13479,
-			"index": 25
+			"relativeTimestamp": 5375,
+			"index": 24
 		},
 		{
 			"message": {
@@ -583,12 +565,12 @@
 					"type": "content_block_stop",
 					"index": 1
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "5d1e05e4-4dfc-42dc-acb9-6221f2bc0792"
+				"uuid": "3f375ca2-be42-4ffb-a09c-4f30b90f528f"
 			},
-			"relativeTimestamp": 13479,
-			"index": 26
+			"relativeTimestamp": 5375,
+			"index": 25
 		},
 		{
 			"message": {
@@ -603,15 +585,15 @@
 						"input_tokens": 3,
 						"cache_creation_input_tokens": 1960,
 						"cache_read_input_tokens": 13205,
-						"output_tokens": 117
+						"output_tokens": 118
 					}
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "8cb8bc3e-3047-41b1-893d-b9546fe029d7"
+				"uuid": "959a575d-d54d-4737-9512-321c5ef388c1"
 			},
-			"relativeTimestamp": 13480,
-			"index": 27
+			"relativeTimestamp": 5391,
+			"index": 26
 		},
 		{
 			"message": {
@@ -619,12 +601,12 @@
 				"event": {
 					"type": "message_stop"
 				},
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 				"parent_tool_use_id": null,
-				"uuid": "96dfde8b-f7c8-4dfc-9866-90d5c0929d15"
+				"uuid": "9ec6d941-9791-4f3b-aab6-5d62af01d3a8"
 			},
-			"relativeTimestamp": 13480,
-			"index": 28
+			"relativeTimestamp": 5391,
+			"index": 27
 		},
 		{
 			"message": {
@@ -633,35 +615,35 @@
 					"role": "user",
 					"content": [
 						{
-							"tool_use_id": "toolu_01ENKDrd2c8xEGwnbaEF6ACV",
+							"tool_use_id": "toolu_01D173zYukNp2U5PGzKV1uYC",
 							"type": "tool_result",
 							"content": "Structured output provided successfully"
 						}
 					]
 				},
 				"parent_tool_use_id": null,
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"uuid": "a0347820-0557-4fa8-b0a4-6aeb6a905f2a",
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
+				"uuid": "5ffd1e8d-1659-417e-a189-cb257f93f7bb",
 				"tool_use_result": "Structured output provided successfully"
 			},
-			"relativeTimestamp": 13494,
-			"index": 29
+			"relativeTimestamp": 5399,
+			"index": 28
 		},
 		{
 			"message": {
 				"type": "result",
 				"subtype": "error_max_turns",
-				"duration_ms": 12623,
-				"duration_api_ms": 12590,
+				"duration_ms": 3974,
+				"duration_api_ms": 7514,
 				"is_error": false,
 				"num_turns": 2,
-				"session_id": "7e5367b6-756a-4fa7-82e8-fa618304984b",
-				"total_cost_usd": 0.0130755,
+				"session_id": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
+				"total_cost_usd": 0.016708349999999997,
 				"usage": {
 					"input_tokens": 3,
 					"cache_creation_input_tokens": 1960,
 					"cache_read_input_tokens": 13205,
-					"output_tokens": 117,
+					"output_tokens": 118,
 					"server_tool_use": {
 						"web_search_requests": 0,
 						"web_fetch_requests": 0
@@ -673,28 +655,38 @@
 					}
 				},
 				"modelUsage": {
+					"claude-haiku-4-5-20251001": {
+						"inputTokens": 3,
+						"outputTokens": 175,
+						"cacheReadInputTokens": 9986,
+						"cacheCreationInputTokens": 1393,
+						"webSearchRequests": 0,
+						"costUSD": 0.0036178499999999997,
+						"contextWindow": 200000,
+						"maxOutputTokens": 64000
+					},
 					"claude-sonnet-4-20250514": {
 						"inputTokens": 3,
-						"outputTokens": 117,
+						"outputTokens": 118,
 						"cacheReadInputTokens": 13205,
 						"cacheCreationInputTokens": 1960,
 						"webSearchRequests": 0,
-						"costUSD": 0.0130755,
+						"costUSD": 0.013090499999999998,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					}
 				},
 				"permission_denials": [],
-				"uuid": "3eb1671d-6006-4f4a-aca3-5168130b6a0e",
+				"uuid": "e3272193-9e80-4a40-9497-f576bd580c17",
 				"errors": []
 			},
-			"relativeTimestamp": 13496,
-			"index": 30
+			"relativeTimestamp": 5400,
+			"index": 29
 		}
 	],
 	"result": {
-		"text": "I'll extract the person's name and age from the provided text.\n\nFrom the text \"John Smith is 30 years old,\" I can identify:\n- Name: John Smith\n- Age: 30",
-		"sessionId": "7e5367b6-756a-4fa7-82e8-fa618304984b",
+		"text": "I'll extract the person's name and age from the text you provided.\n\nFrom the text \"John Smith is 30 years old,\" I can identify:\n- Name: John Smith\n- Age: 30",
+		"sessionId": "98a8d11f-2912-48c0-8ee2-e5b722d09bdc",
 		"hasStructuredOutput": false,
 		"toolCallsMade": ["StructuredOutput"]
 	}

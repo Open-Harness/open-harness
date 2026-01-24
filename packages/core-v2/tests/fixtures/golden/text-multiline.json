@@ -1,10 +1,10 @@
 {
 	"metadata": {
 		"scenario": "text-multiline",
-		"recordedAt": "2026-01-21T21:30:12.526Z",
+		"recordedAt": "2026-01-22T01:34:57.792Z",
 		"model": "claude-sonnet-4-20250514",
-		"durationMs": 33794,
-		"messageCount": 53,
+		"durationMs": 7989,
+		"messageCount": 61,
 		"sdkVersion": "0.2.5",
 		"description": "Multi-line text response with formatting"
 	},
@@ -15,7 +15,7 @@
 				"type": "system",
 				"subtype": "init",
 				"cwd": "/Users/abuusama/projects/open-harness/open-harness/packages/core-v2",
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"tools": [
 					"Task",
 					"TaskOutput",
@@ -61,9 +61,9 @@
 				],
 				"skills": [],
 				"plugins": [],
-				"uuid": "d434de99-ad5e-4c5e-b21e-68b56519dc2a"
+				"uuid": "7b2485ba-f187-405e-afd6-6c0a6c86adc9"
 			},
-			"relativeTimestamp": 835,
+			"relativeTimestamp": 1311,
 			"index": 0
 		},
 		{
@@ -73,7 +73,7 @@
 					"type": "message_start",
 					"message": {
 						"model": "claude-sonnet-4-20250514",
-						"id": "msg_019ACozWNoZMJ6twJyi1F8ZJ",
+						"id": "msg_01JKdvQ7ZmkH6wALvgpqqRGr",
 						"type": "message",
 						"role": "assistant",
 						"content": [
@@ -97,11 +97,11 @@
 						}
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "fc6048c6-2fee-4450-96ae-02f71791f03b"
+				"uuid": "7636c6e1-29b4-46e2-82b5-ade2e2049e6f"
 			},
-			"relativeTimestamp": 24124,
+			"relativeTimestamp": 3866,
 			"index": 1
 		},
 		{
@@ -115,11 +115,11 @@
 						"text": ""
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "cfb3f756-b4cb-42f4-aebf-b7943e6cda44"
+				"uuid": "62e4c97f-208f-4525-a44b-e68fd7b25e2e"
 			},
-			"relativeTimestamp": 24124,
+			"relativeTimestamp": 3866,
 			"index": 2
 		},
 		{
@@ -133,11 +133,11 @@
 						"text": "Here"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "70379330-c49e-44fa-b00d-d20201b528bd"
+				"uuid": "a4f3e2e9-362c-4669-8f15-2de3bc523127"
 			},
-			"relativeTimestamp": 24124,
+			"relativeTimestamp": 3866,
 			"index": 3
 		},
 		{
@@ -151,11 +151,11 @@
 						"text": " are exactly"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "c6f85d72-ff82-4ae5-8ced-1992442d9382"
+				"uuid": "9424dd65-7797-4120-9590-3f273f9a42b0"
 			},
-			"relativeTimestamp": 25567,
+			"relativeTimestamp": 4073,
 			"index": 4
 		},
 		{
@@ -169,11 +169,11 @@
 						"text": " 3 benefits of unit testing:"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "e8a55c50-00b9-4448-88cb-74c77a3652eb"
+				"uuid": "0f122042-de3d-4250-9ad3-dfa8be354427"
 			},
-			"relativeTimestamp": 27691,
+			"relativeTimestamp": 4460,
 			"index": 5
 		},
 		{
@@ -184,15 +184,33 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "\n\n1. **Early"
+						"text": "\n\n1"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "b2b65eb5-6c6c-4a57-a89d-b4f6e249fa2a"
+				"uuid": "bad6e4f5-2355-42d8-8e2f-1d16cc8b881e"
 			},
-			"relativeTimestamp": 27691,
+			"relativeTimestamp": 4461,
 			"index": 6
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": ". **Early"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "7995cb92-2e8e-4480-951f-29a89019a34a"
+			},
+			"relativeTimestamp": 4462,
+			"index": 7
 		},
 		{
 			"message": {
@@ -205,29 +223,11 @@
 						"text": " Bug Detection**"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "29cb1bfa-3f7c-4dae-985e-2a189f667a26"
+				"uuid": "3aaf4166-142d-4802-adba-3ef10a86a9cb"
 			},
-			"relativeTimestamp": 27691,
-			"index": 7
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": " - Unit tests catch"
-					}
-				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"parent_tool_use_id": null,
-				"uuid": "6ef2e19d-bc46-4df4-a287-dc9b38ad1902"
-			},
-			"relativeTimestamp": 27691,
+			"relativeTimestamp": 4463,
 			"index": 8
 		},
 		{
@@ -238,14 +238,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " bugs an"
+						"text": " - Unit tests catch def"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "e4f51d28-1b88-44bb-b9e4-1a2e5761ff0c"
+				"uuid": "d4b768f4-915f-459d-8a9f-d200fd4074f0"
 			},
-			"relativeTimestamp": 27691,
+			"relativeTimestamp": 4464,
 			"index": 9
 		},
 		{
@@ -256,33 +256,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "d issues"
+						"text": "ects at"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "638ddb92-fd88-400b-8a6b-5d83fd081211"
+				"uuid": "bf8dff9b-68f6-4397-bf10-55a1768eb8b6"
 			},
-			"relativeTimestamp": 27691,
+			"relativeTimestamp": 4464,
 			"index": 10
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": " at"
-					}
-				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"parent_tool_use_id": null,
-				"uuid": "fa029326-75ab-42e0-9e0b-ca01b0cf5620"
-			},
-			"relativeTimestamp": 27691,
-			"index": 11
 		},
 		{
 			"message": {
@@ -295,11 +277,29 @@
 						"text": " the smallest"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "47796de2-0ec5-402b-9c65-96b61cebea4f"
+				"uuid": "0f18d5ca-5bb1-4c34-819c-83760250203b"
 			},
-			"relativeTimestamp": 27692,
+			"relativeTimestamp": 4465,
+			"index": 11
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " level"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "dfbd2d2e-b6af-4cec-b507-3b08b5ddf495"
+			},
+			"relativeTimestamp": 4488,
 			"index": 12
 		},
 		{
@@ -310,14 +310,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " code"
+						"text": " of"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "7dfd786a-da09-4873-9879-92f1536e7c9d"
+				"uuid": "74eb65fd-ed9f-4563-9dec-46d9107842ac"
 			},
-			"relativeTimestamp": 27694,
+			"relativeTimestamp": 4555,
 			"index": 13
 		},
 		{
@@ -328,14 +328,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " unit level before"
+						"text": " code ("
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "5dfe9403-bfff-4405-8eb9-2f2acda031a3"
+				"uuid": "408a3e63-741e-4a6b-bde1-b05069d9cf50"
 			},
-			"relativeTimestamp": 27694,
+			"relativeTimestamp": 4631,
 			"index": 14
 		},
 		{
@@ -346,14 +346,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " they propag"
+						"text": "individual"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "532ae13e-8f2a-4113-8068-3d47f45f24d2"
+				"uuid": "0125a4a6-5dd8-41b7-8b18-9977b2edf62d"
 			},
-			"relativeTimestamp": 27715,
+			"relativeTimestamp": 4673,
 			"index": 15
 		},
 		{
@@ -364,15 +364,51 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "ate to other parts of the system,"
+						"text": " functions/methods) before they propag"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "867bb040-7720-4617-8cfc-0071fc1bab6e"
+				"uuid": "23b2a41d-81dc-4256-801c-4079ba3e6f32"
 			},
-			"relativeTimestamp": 27715,
+			"relativeTimestamp": 4953,
 			"index": 16
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": "ate to other"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "d66c9ce7-70a1-4d07-aba5-7835f2f17f6d"
+			},
+			"relativeTimestamp": 4968,
+			"index": 17
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " parts of the system,"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "eda929be-e2ca-45fe-b452-3e0569ddf4ba"
+			},
+			"relativeTimestamp": 4972,
+			"index": 18
 		},
 		{
 			"message": {
@@ -385,12 +421,12 @@
 						"text": " making"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "de7a0ca1-aa89-4c2e-b4e2-1292107a6d4c"
+				"uuid": "c2a624f4-516b-4450-9be3-9884917f17da"
 			},
-			"relativeTimestamp": 27715,
-			"index": 17
+			"relativeTimestamp": 4974,
+			"index": 19
 		},
 		{
 			"message": {
@@ -400,15 +436,33 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " them cheaper"
+						"text": " bugs"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "d47fbcf5-8269-45e3-86e6-b98050ed3a58"
+				"uuid": "68de9c8e-adad-4ce7-8a6f-38c8c13ce6ca"
 			},
-			"relativeTimestamp": 27764,
-			"index": 18
+			"relativeTimestamp": 4990,
+			"index": 20
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " cheaper"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "c1e1f12c-575c-4ffa-9408-198cee63ee02"
+			},
+			"relativeTimestamp": 5016,
+			"index": 21
 		},
 		{
 			"message": {
@@ -421,12 +475,12 @@
 						"text": " an"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "5282c7a6-f586-4cfb-8b02-cc53123e3834"
+				"uuid": "24b91533-d91f-4080-b208-209614b96274"
 			},
-			"relativeTimestamp": 27764,
-			"index": 19
+			"relativeTimestamp": 5097,
+			"index": 22
 		},
 		{
 			"message": {
@@ -439,12 +493,12 @@
 						"text": "d easier to fix.\n\n2. **"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "92d2381c-4a9c-436c-ab85-97b5fd83da12"
+				"uuid": "cda1de6d-240e-40df-ab66-bd6f9ad2375c"
 			},
-			"relativeTimestamp": 27991,
-			"index": 20
+			"relativeTimestamp": 5306,
+			"index": 23
 		},
 		{
 			"message": {
@@ -457,65 +511,11 @@
 						"text": "Code"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "af1decef-c553-4147-b2b0-50bf40cfae8f"
+				"uuid": "621e0829-ec94-4e6c-b135-e161ec7c833f"
 			},
-			"relativeTimestamp": 27991,
-			"index": 21
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": " Quality an"
-					}
-				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"parent_tool_use_id": null,
-				"uuid": "a61f5a03-c645-485e-90f9-a69f8baccf42"
-			},
-			"relativeTimestamp": 27991,
-			"index": 22
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": "d Maintainability** - Writing"
-					}
-				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"parent_tool_use_id": null,
-				"uuid": "f9c76fc6-a2b4-46e1-8f75-2da21aefe407"
-			},
-			"relativeTimestamp": 28255,
-			"index": 23
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": " unit tests encourag"
-					}
-				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"parent_tool_use_id": null,
-				"uuid": "82ef09f2-44ff-48bf-a882-19bf0100ab96"
-			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5306,
 			"index": 24
 		},
 		{
@@ -526,14 +526,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "es better"
+						"text": " Quality and Design"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "63e7c683-7a61-49ab-aa1e-e636a8b06af1"
+				"uuid": "400174ce-2fb2-4acf-b881-529d33f31d3b"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5306,
 			"index": 25
 		},
 		{
@@ -544,14 +544,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " code design with"
+						"text": " Improvement"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "9f45aa8e-d6ce-4bc6-8243-46b862768cf1"
+				"uuid": "de978c9b-5746-4840-8dfc-d83d3303cf0b"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5376,
 			"index": 26
 		},
 		{
@@ -562,14 +562,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " loose"
+						"text": "** - Writing"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "80071f0d-ee93-477f-b432-7a896012b9f5"
+				"uuid": "d0de14c9-9c25-41e2-8cb6-aae0c9a0a6e7"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5475,
 			"index": 27
 		},
 		{
@@ -580,14 +580,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " coupling and high cohesion,"
+						"text": " unit"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "af0870fc-439d-4a4b-b532-e6e65b810284"
+				"uuid": "dd90eee8-44e2-4595-bd48-ec5ee0c23297"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5483,
 			"index": 28
 		},
 		{
@@ -598,14 +598,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " while"
+						"text": " tests forces"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "6c9a558f-c369-49c2-b6d6-1603578fa199"
+				"uuid": "07e9cfe8-2b7b-40f5-9469-774b5d6558e0"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5568,
 			"index": 29
 		},
 		{
@@ -616,14 +616,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " also serving"
+						"text": " developers to write"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "b1b787a7-cc79-4227-a130-279e82af37f2"
+				"uuid": "33e36e8d-3b99-43bd-b5fb-48abe623f3bf"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5666,
 			"index": 30
 		},
 		{
@@ -634,14 +634,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " as living"
+						"text": " more"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "cf7d7022-99e0-440f-9afd-fb37dfcadefe"
+				"uuid": "55ffbdb9-8e77-4e7b-b400-f497e5a00d37"
 			},
-			"relativeTimestamp": 28256,
+			"relativeTimestamp": 5668,
 			"index": 31
 		},
 		{
@@ -652,14 +652,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " documentation that"
+						"text": " mo"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "fda1adc3-00bb-42a5-9327-f0cd243a6035"
+				"uuid": "48a64d29-d289-4d0f-ba06-5e1fc671b0d5"
 			},
-			"relativeTimestamp": 28923,
+			"relativeTimestamp": 5735,
 			"index": 32
 		},
 		{
@@ -670,14 +670,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " helps developers understand how"
+						"text": "dular, loos"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "4baea5a6-120f-4947-a12c-5a71d2fe77dd"
+				"uuid": "bed55848-0771-4e6f-af5e-e2751eb5b2fb"
 			},
-			"relativeTimestamp": 29048,
+			"relativeTimestamp": 5831,
 			"index": 33
 		},
 		{
@@ -688,14 +688,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " code"
+						"text": "ely coupled code with"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "6a7ac0ac-9a26-44f1-8955-9b7f110d5cb5"
+				"uuid": "1ae9f89d-8194-40cc-a7cc-755c881a9ba9"
 			},
-			"relativeTimestamp": 29048,
+			"relativeTimestamp": 5922,
 			"index": 34
 		},
 		{
@@ -706,14 +706,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " should beh"
+						"text": " clear interfaces,"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "081a3706-7535-4659-9875-90f98ce9d464"
+				"uuid": "0ce915e5-4444-4de2-b9cf-84f433e1ee9f"
 			},
-			"relativeTimestamp": 29162,
+			"relativeTimestamp": 5953,
 			"index": 35
 		},
 		{
@@ -724,15 +724,105 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "ave.\n\n3. **Confidence"
+						"text": " leading"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "849d8b25-c075-4ffa-b360-634272451794"
+				"uuid": "e70fdc6b-0b0b-41b6-8309-4287741bcd77"
 			},
-			"relativeTimestamp": 29441,
+			"relativeTimestamp": 5954,
 			"index": 36
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " to better overall software"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "dbc5cd14-dac8-4044-b70e-b6af1896b7db"
+			},
+			"relativeTimestamp": 6096,
+			"index": 37
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " architecture"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "a44db4c6-c9fc-4a82-9742-ca4c7ba7c3aa"
+			},
+			"relativeTimestamp": 6096,
+			"index": 38
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " and maint"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "473e9804-ecd5-4ba9-b964-8638cee65143"
+			},
+			"relativeTimestamp": 6157,
+			"index": 39
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": "ainability.\n\n3. **"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "2568ea1e-773e-45ca-9c4f-7473b5e5d26b"
+			},
+			"relativeTimestamp": 6371,
+			"index": 40
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": "Confidence"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "12aceafd-e50b-4126-b327-fc56b4416026"
+			},
+			"relativeTimestamp": 6371,
+			"index": 41
 		},
 		{
 			"message": {
@@ -745,12 +835,12 @@
 						"text": " in"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "02f78803-9151-48d5-821f-69c858ef3910"
+				"uuid": "eddcf8b7-f2f4-4741-aed8-12720c0a5585"
 			},
-			"relativeTimestamp": 29441,
-			"index": 37
+			"relativeTimestamp": 6371,
+			"index": 42
 		},
 		{
 			"message": {
@@ -763,12 +853,12 @@
 						"text": " Refactoring** - Unit"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "ae71c3b8-632b-4cae-87b1-979dc671ee5a"
+				"uuid": "96937f54-d471-4781-bebe-94b15858dc76"
 			},
-			"relativeTimestamp": 29442,
-			"index": 38
+			"relativeTimestamp": 6485,
+			"index": 43
 		},
 		{
 			"message": {
@@ -778,15 +868,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " tests provide a safety net that"
+						"text": " tests provide a"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "b7ec8b8b-042d-4d65-a548-d649d21d4054"
+				"uuid": "68b9bf04-6dc5-43ba-9a43-80ac4d41423c"
 			},
-			"relativeTimestamp": 29442,
-			"index": 39
+			"relativeTimestamp": 6486,
+			"index": 44
 		},
 		{
 			"message": {
@@ -796,15 +886,51 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " allows developers to ref"
+						"text": " safety net that"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "79b237ba-eec7-4304-bc1f-b1067a97cbf7"
+				"uuid": "c8e47699-2511-4046-8167-56a2491edc18"
 			},
-			"relativeTimestamp": 29449,
-			"index": 40
+			"relativeTimestamp": 6532,
+			"index": 45
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " allows"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "141067a8-badc-4860-83a6-60c108d3b72d"
+			},
+			"relativeTimestamp": 6560,
+			"index": 46
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " developers to ref"
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "a3817d22-0dc7-467d-9716-b8278c8ce14e"
+			},
+			"relativeTimestamp": 6650,
+			"index": 47
 		},
 		{
 			"message": {
@@ -817,12 +943,12 @@
 						"text": "actor an"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "3b6a3953-05ba-41c4-b6cb-bb4a2339ba78"
+				"uuid": "2a71fe6e-187b-4889-9183-18240228d8f7"
 			},
-			"relativeTimestamp": 29449,
-			"index": 41
+			"relativeTimestamp": 6686,
+			"index": 48
 		},
 		{
 			"message": {
@@ -832,15 +958,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "d modify code with confidence, knowing that any"
+						"text": "d improve code with"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "9c63dc37-3353-4251-9c9d-dcda961b8d59"
+				"uuid": "71795853-5132-407a-b366-f07c0944365d"
 			},
-			"relativeTimestamp": 29651,
-			"index": 42
+			"relativeTimestamp": 6766,
+			"index": 49
 		},
 		{
 			"message": {
@@ -850,15 +976,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " breaking"
+						"text": " confidence, knowing that any breaking"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "2150287f-3ade-4973-a25f-2335822b9165"
+				"uuid": "7525b1ca-d153-4a22-81fb-403d35998eff"
 			},
-			"relativeTimestamp": 29651,
-			"index": 43
+			"relativeTimestamp": 6895,
+			"index": 50
 		},
 		{
 			"message": {
@@ -871,12 +997,12 @@
 						"text": " changes will be immediately"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "0c42c593-28c9-4403-9e9a-0bdb21a16477"
+				"uuid": "c99da29b-dd98-4c5c-8ef4-8104a528bf68"
 			},
-			"relativeTimestamp": 29651,
-			"index": 44
+			"relativeTimestamp": 6905,
+			"index": 51
 		},
 		{
 			"message": {
@@ -889,12 +1015,12 @@
 						"text": " detecte"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "e7db9414-fbfe-4c5b-9f27-aff465b555bf"
+				"uuid": "1891f7b3-83b8-4ae1-ab05-e314053aad78"
 			},
-			"relativeTimestamp": 29651,
-			"index": 45
+			"relativeTimestamp": 6905,
+			"index": 52
 		},
 		{
 			"message": {
@@ -904,15 +1030,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "d by failing"
+						"text": "d by"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "09cb0bd0-fe9f-4672-a52d-e36f47324641"
+				"uuid": "0f7af43f-d2cb-4e74-852b-66bda7bf641f"
 			},
-			"relativeTimestamp": 29651,
-			"index": 46
+			"relativeTimestamp": 6956,
+			"index": 53
 		},
 		{
 			"message": {
@@ -922,28 +1048,46 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " tests."
+						"text": " the test"
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "93428a89-555f-48dd-a11c-94f90b7f30e9"
+				"uuid": "3b92299c-dbfa-4976-970e-fdfe35814f3f"
 			},
-			"relativeTimestamp": 29799,
-			"index": 47
+			"relativeTimestamp": 7037,
+			"index": 54
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " suite."
+					}
+				},
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"parent_tool_use_id": null,
+				"uuid": "cb677885-e71e-499f-bfd7-13c514b29694"
+			},
+			"relativeTimestamp": 7177,
+			"index": 55
 		},
 		{
 			"message": {
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_019ACozWNoZMJ6twJyi1F8ZJ",
+					"id": "msg_01JKdvQ7ZmkH6wALvgpqqRGr",
 					"type": "message",
 					"role": "assistant",
 					"content": [
 						{
 							"type": "text",
-							"text": "Here are exactly 3 benefits of unit testing:\n\n1. **Early Bug Detection** - Unit tests catch bugs and issues at the smallest code unit level before they propagate to other parts of the system, making them cheaper and easier to fix.\n\n2. **Code Quality and Maintainability** - Writing unit tests encourages better code design with loose coupling and high cohesion, while also serving as living documentation that helps developers understand how code should behave.\n\n3. **Confidence in Refactoring** - Unit tests provide a safety net that allows developers to refactor and modify code with confidence, knowing that any breaking changes will be immediately detected by failing tests."
+							"text": "Here are exactly 3 benefits of unit testing:\n\n1. **Early Bug Detection** - Unit tests catch defects at the smallest level of code (individual functions/methods) before they propagate to other parts of the system, making bugs cheaper and easier to fix.\n\n2. **Code Quality and Design Improvement** - Writing unit tests forces developers to write more modular, loosely coupled code with clear interfaces, leading to better overall software architecture and maintainability.\n\n3. **Confidence in Refactoring** - Unit tests provide a safety net that allows developers to refactor and improve code with confidence, knowing that any breaking changes will be immediately detected by the test suite."
 						}
 					],
 					"stop_reason": null,
@@ -956,17 +1100,17 @@
 							"ephemeral_5m_input_tokens": 168,
 							"ephemeral_1h_input_tokens": 0
 						},
-						"output_tokens": 144,
+						"output_tokens": 1,
 						"service_tier": "standard"
 					},
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"uuid": "85f44544-3a21-440d-81f7-460c788e5299"
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"uuid": "ed831d1e-26ef-4419-81db-8f4a02b1b232"
 			},
-			"relativeTimestamp": 29804,
-			"index": 48
+			"relativeTimestamp": 7177,
+			"index": 56
 		},
 		{
 			"message": {
@@ -975,12 +1119,12 @@
 					"type": "content_block_stop",
 					"index": 0
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "3e4f3547-f88d-4504-9ecf-04cb9179a973"
+				"uuid": "d5d19832-72d6-4be5-adfb-07ee502e2d52"
 			},
-			"relativeTimestamp": 29804,
-			"index": 49
+			"relativeTimestamp": 7177,
+			"index": 57
 		},
 		{
 			"message": {
@@ -995,15 +1139,15 @@
 						"input_tokens": 3,
 						"cache_creation_input_tokens": 168,
 						"cache_read_input_tokens": 14892,
-						"output_tokens": 144
+						"output_tokens": 146
 					}
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "f9549c9b-abbb-4fbb-8b86-73c7c58db3d4"
+				"uuid": "bc64080b-3672-41bc-9e4b-135ef1750755"
 			},
-			"relativeTimestamp": 29805,
-			"index": 50
+			"relativeTimestamp": 7196,
+			"index": 58
 		},
 		{
 			"message": {
@@ -1011,29 +1155,29 @@
 				"event": {
 					"type": "message_stop"
 				},
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
 				"parent_tool_use_id": null,
-				"uuid": "003749dd-079a-4ff4-8e65-125988a6e091"
+				"uuid": "781f814d-8527-4fea-b5c6-bf49c0d70ef6"
 			},
-			"relativeTimestamp": 29805,
-			"index": 51
+			"relativeTimestamp": 7196,
+			"index": 59
 		},
 		{
 			"message": {
 				"type": "result",
 				"subtype": "success",
 				"is_error": false,
-				"duration_ms": 28982,
-				"duration_api_ms": 56362,
+				"duration_ms": 5895,
+				"duration_api_ms": 18370,
 				"num_turns": 1,
-				"result": "Here are exactly 3 benefits of unit testing:\n\n1. **Early Bug Detection** - Unit tests catch bugs and issues at the smallest code unit level before they propagate to other parts of the system, making them cheaper and easier to fix.\n\n2. **Code Quality and Maintainability** - Writing unit tests encourages better code design with loose coupling and high cohesion, while also serving as living documentation that helps developers understand how code should behave.\n\n3. **Confidence in Refactoring** - Unit tests provide a safety net that allows developers to refactor and modify code with confidence, knowing that any breaking changes will be immediately detected by failing tests.",
-				"session_id": "ce3c4303-265e-4006-84b7-27b81e198714",
-				"total_cost_usd": 0.009265599999999999,
+				"result": "Here are exactly 3 benefits of unit testing:\n\n1. **Early Bug Detection** - Unit tests catch defects at the smallest level of code (individual functions/methods) before they propagate to other parts of the system, making bugs cheaper and easier to fix.\n\n2. **Code Quality and Design Improvement** - Writing unit tests forces developers to write more modular, loosely coupled code with clear interfaces, leading to better overall software architecture and maintainability.\n\n3. **Confidence in Refactoring** - Unit tests provide a safety net that allows developers to refactor and improve code with confidence, knowing that any breaking changes will be immediately detected by the test suite.",
+				"session_id": "6ab202cd-668e-4acb-88b1-99e662401829",
+				"total_cost_usd": 0.0646612,
 				"usage": {
 					"input_tokens": 3,
 					"cache_creation_input_tokens": 168,
 					"cache_read_input_tokens": 14892,
-					"output_tokens": 144,
+					"output_tokens": 146,
 					"server_tool_use": {
 						"web_search_requests": 0,
 						"web_fetch_requests": 0
@@ -1047,35 +1191,45 @@
 				"modelUsage": {
 					"claude-haiku-4-5-20251001": {
 						"inputTokens": 3,
-						"outputTokens": 173,
-						"cacheReadInputTokens": 11310,
-						"cacheCreationInputTokens": 0,
+						"outputTokens": 166,
+						"cacheReadInputTokens": 9986,
+						"cacheCreationInputTokens": 1393,
 						"webSearchRequests": 0,
-						"costUSD": 0.001999,
+						"costUSD": 0.00357285,
+						"contextWindow": 200000,
+						"maxOutputTokens": 64000
+					},
+					"claude-opus-4-5-20251101": {
+						"inputTokens": 6,
+						"outputTokens": 485,
+						"cacheReadInputTokens": 9986,
+						"cacheCreationInputTokens": 5863,
+						"webSearchRequests": 0,
+						"costUSD": 0.05379175,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					},
 					"claude-sonnet-4-20250514": {
 						"inputTokens": 3,
-						"outputTokens": 144,
+						"outputTokens": 146,
 						"cacheReadInputTokens": 14892,
 						"cacheCreationInputTokens": 168,
 						"webSearchRequests": 0,
-						"costUSD": 0.0072666,
+						"costUSD": 0.0072966,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					}
 				},
 				"permission_denials": [],
-				"uuid": "89413ed4-65df-43da-b5e6-bb533d155335"
+				"uuid": "731cd0be-315d-4802-8018-9fbbe436a06e"
 			},
-			"relativeTimestamp": 29807,
-			"index": 52
+			"relativeTimestamp": 7197,
+			"index": 60
 		}
 	],
 	"result": {
-		"text": "Here are exactly 3 benefits of unit testing:\n\n1. **Early Bug Detection** - Unit tests catch bugs and issues at the smallest code unit level before they propagate to other parts of the system, making them cheaper and easier to fix.\n\n2. **Code Quality and Maintainability** - Writing unit tests encourages better code design with loose coupling and high cohesion, while also serving as living documentation that helps developers understand how code should behave.\n\n3. **Confidence in Refactoring** - Unit tests provide a safety net that allows developers to refactor and modify code with confidence, knowing that any breaking changes will be immediately detected by failing tests.",
-		"sessionId": "ce3c4303-265e-4006-84b7-27b81e198714",
+		"text": "Here are exactly 3 benefits of unit testing:\n\n1. **Early Bug Detection** - Unit tests catch defects at the smallest level of code (individual functions/methods) before they propagate to other parts of the system, making bugs cheaper and easier to fix.\n\n2. **Code Quality and Design Improvement** - Writing unit tests forces developers to write more modular, loosely coupled code with clear interfaces, leading to better overall software architecture and maintainability.\n\n3. **Confidence in Refactoring** - Unit tests provide a safety net that allows developers to refactor and improve code with confidence, knowing that any breaking changes will be immediately detected by the test suite.",
+		"sessionId": "6ab202cd-668e-4acb-88b1-99e662401829",
 		"hasStructuredOutput": false,
 		"toolCallsMade": []
 	}

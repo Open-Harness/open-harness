@@ -1,10 +1,10 @@
 {
 	"metadata": {
 		"scenario": "multi-turn",
-		"recordedAt": "2026-01-21T21:31:43.446Z",
+		"recordedAt": "2026-01-22T01:35:20.824Z",
 		"model": "claude-sonnet-4-20250514",
-		"durationMs": 32500,
-		"messageCount": 12,
+		"durationMs": 7131,
+		"messageCount": 11,
 		"sdkVersion": "0.2.5",
 		"description": "Multi-turn conversation maintaining context"
 	},
@@ -15,7 +15,7 @@
 				"type": "system",
 				"subtype": "init",
 				"cwd": "/Users/abuusama/projects/open-harness/open-harness/packages/core-v2",
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"tools": [
 					"Task",
 					"TaskOutput",
@@ -61,9 +61,9 @@
 				],
 				"skills": [],
 				"plugins": [],
-				"uuid": "57649408-9e6e-44c7-980d-ae7ba36c3b21"
+				"uuid": "28a43fce-16b1-4df3-84b0-71405fc9872d"
 			},
-			"relativeTimestamp": 841,
+			"relativeTimestamp": 1316,
 			"index": 0
 		},
 		{
@@ -73,7 +73,7 @@
 					"type": "message_start",
 					"message": {
 						"model": "claude-sonnet-4-20250514",
-						"id": "msg_01PNGnYEJYwdzcD2J4pEnfDu",
+						"id": "msg_01TNZVk8NFirwATovzTyfvo9",
 						"type": "message",
 						"role": "assistant",
 						"content": [
@@ -92,16 +92,16 @@
 								"ephemeral_5m_input_tokens": 151,
 								"ephemeral_1h_input_tokens": 0
 							},
-							"output_tokens": 4,
+							"output_tokens": 1,
 							"service_tier": "standard"
 						}
 					}
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "e2c3cd39-b6e6-4f4b-9f64-128478f126fc"
+				"uuid": "49c21047-cc82-4de5-ab15-190bae3a9285"
 			},
-			"relativeTimestamp": 21702,
+			"relativeTimestamp": 5662,
 			"index": 1
 		},
 		{
@@ -115,11 +115,11 @@
 						"text": ""
 					}
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "4abfd39a-8e42-4268-ad4d-03dec5a5ff9e"
+				"uuid": "8d340a8a-d86b-4396-9579-e275d8f56820"
 			},
-			"relativeTimestamp": 21702,
+			"relativeTimestamp": 5662,
 			"index": 2
 		},
 		{
@@ -130,14 +130,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "I've remembered the"
+						"text": "I"
 					}
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "bd33850b-4f0b-4b16-80ec-4d2cf10bf2a4"
+				"uuid": "ed402693-fb33-485d-9a77-ea5e0a38c017"
 			},
-			"relativeTimestamp": 21702,
+			"relativeTimestamp": 5662,
 			"index": 3
 		},
 		{
@@ -148,14 +148,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " number 42. I'll keep"
+						"text": "'ve"
 					}
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "1c8f5fd4-22b5-42ee-bd40-0a1c750a0ee4"
+				"uuid": "c5b8b451-f6d6-4c9a-8cb9-485737dc8fe7"
 			},
-			"relativeTimestamp": 21703,
+			"relativeTimestamp": 5877,
 			"index": 4
 		},
 		{
@@ -166,49 +166,31 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " that in mind for our"
+						"text": " remembered the number 42."
 					}
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "ea9f9710-9d20-4150-8d6e-dab7e4e740e6"
+				"uuid": "87d17882-df52-46f8-8050-77282050d312"
 			},
-			"relativeTimestamp": 21703,
+			"relativeTimestamp": 6441,
 			"index": 5
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": " conversation."
-					}
-				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
-				"parent_tool_use_id": null,
-				"uuid": "e34a3c86-e8a9-4a27-ace8-4c0aae8f4713"
-			},
-			"relativeTimestamp": 21708,
-			"index": 6
 		},
 		{
 			"message": {
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_01PNGnYEJYwdzcD2J4pEnfDu",
+					"id": "msg_01TNZVk8NFirwATovzTyfvo9",
 					"type": "message",
 					"role": "assistant",
 					"content": [
 						{
 							"type": "text",
-							"text": "I've remembered the number 42. I'll keep that in mind for our conversation."
+							"text": "I've remembered the number 42."
 						}
 					],
-					"stop_reason": "end_turn",
+					"stop_reason": null,
 					"stop_sequence": null,
 					"usage": {
 						"input_tokens": 3,
@@ -218,17 +200,17 @@
 							"ephemeral_5m_input_tokens": 151,
 							"ephemeral_1h_input_tokens": 0
 						},
-						"output_tokens": 21,
+						"output_tokens": 1,
 						"service_tier": "standard"
 					},
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
-				"uuid": "5f611e9b-7557-4009-b72d-b7e81b052974"
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
+				"uuid": "2ea9679d-6a64-4400-92a0-b2f23061a5ec"
 			},
-			"relativeTimestamp": 21709,
-			"index": 7
+			"relativeTimestamp": 6442,
+			"index": 6
 		},
 		{
 			"message": {
@@ -237,12 +219,12 @@
 					"type": "content_block_stop",
 					"index": 0
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "52f8e6ca-99a9-40cb-8166-05507b7631c9"
+				"uuid": "9b1df7d4-0e59-494c-bfcd-080d99baaade"
 			},
-			"relativeTimestamp": 21709,
-			"index": 8
+			"relativeTimestamp": 6442,
+			"index": 7
 		},
 		{
 			"message": {
@@ -257,15 +239,15 @@
 						"input_tokens": 3,
 						"cache_creation_input_tokens": 151,
 						"cache_read_input_tokens": 14892,
-						"output_tokens": 21
+						"output_tokens": 11
 					}
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "89fe5ef4-3c43-4a18-a890-6ab6fcbc7cbd"
+				"uuid": "a3081f6d-2c81-410c-a232-617b1c843d64"
 			},
-			"relativeTimestamp": 21709,
-			"index": 9
+			"relativeTimestamp": 6468,
+			"index": 8
 		},
 		{
 			"message": {
@@ -273,29 +255,29 @@
 				"event": {
 					"type": "message_stop"
 				},
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 				"parent_tool_use_id": null,
-				"uuid": "0f98c5e7-6c50-4604-8547-28e6cb22986e"
+				"uuid": "0aba84a2-dc0e-473f-bbf5-2b1607fbcf23"
 			},
-			"relativeTimestamp": 21710,
-			"index": 10
+			"relativeTimestamp": 6468,
+			"index": 9
 		},
 		{
 			"message": {
 				"type": "result",
 				"subtype": "success",
 				"is_error": false,
-				"duration_ms": 20882,
-				"duration_api_ms": 40302,
+				"duration_ms": 5161,
+				"duration_api_ms": 18013,
 				"num_turns": 1,
-				"result": "I've remembered the number 42. I'll keep that in mind for our conversation.",
-				"session_id": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
-				"total_cost_usd": 0.00696765,
+				"result": "I've remembered the number 42.",
+				"session_id": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
+				"total_cost_usd": 0.058412450000000005,
 				"usage": {
 					"input_tokens": 3,
 					"cache_creation_input_tokens": 151,
 					"cache_read_input_tokens": 14892,
-					"output_tokens": 21,
+					"output_tokens": 11,
 					"server_tool_use": {
 						"web_search_requests": 0,
 						"web_fetch_requests": 0
@@ -307,37 +289,47 @@
 					}
 				},
 				"modelUsage": {
-					"claude-sonnet-4-5-20250929": {
+					"claude-haiku-4-5-20251001": {
 						"inputTokens": 3,
-						"outputTokens": 21,
-						"cacheReadInputTokens": 4286,
-						"cacheCreationInputTokens": 0,
+						"outputTokens": 204,
+						"cacheReadInputTokens": 9986,
+						"cacheCreationInputTokens": 1393,
 						"webSearchRequests": 0,
-						"costUSD": 0.0016097999999999998,
+						"costUSD": 0.00376285,
+						"contextWindow": 200000,
+						"maxOutputTokens": 64000
+					},
+					"claude-opus-4-5-20251101": {
+						"inputTokens": 6,
+						"outputTokens": 311,
+						"cacheReadInputTokens": 9986,
+						"cacheCreationInputTokens": 5863,
+						"webSearchRequests": 0,
+						"costUSD": 0.04944175,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					},
 					"claude-sonnet-4-20250514": {
 						"inputTokens": 3,
-						"outputTokens": 21,
+						"outputTokens": 11,
 						"cacheReadInputTokens": 14892,
 						"cacheCreationInputTokens": 151,
 						"webSearchRequests": 0,
-						"costUSD": 0.00535785,
+						"costUSD": 0.00520785,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					}
 				},
 				"permission_denials": [],
-				"uuid": "a2464be4-3c04-4d59-92f8-a0761d63236d"
+				"uuid": "e23c9aec-d5ca-4f7f-be49-48710145c5ba"
 			},
-			"relativeTimestamp": 21711,
-			"index": 11
+			"relativeTimestamp": 6469,
+			"index": 10
 		}
 	],
 	"result": {
-		"text": "I've remembered the number 42. I'll keep that in mind for our conversation.",
-		"sessionId": "2822a809-d3bd-4ce3-9431-1075937c1c6b",
+		"text": "I've remembered the number 42.",
+		"sessionId": "5db9e570-a1ac-4eaa-9543-d9d7a7eb579f",
 		"hasStructuredOutput": false,
 		"toolCallsMade": []
 	}

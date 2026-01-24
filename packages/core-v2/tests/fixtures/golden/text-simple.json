@@ -1,9 +1,9 @@
 {
 	"metadata": {
 		"scenario": "text-simple",
-		"recordedAt": "2026-01-22T01:30:12.241Z",
+		"recordedAt": "2026-01-22T01:34:43.865Z",
 		"model": "claude-sonnet-4-20250514",
-		"durationMs": 4869,
+		"durationMs": 5264,
 		"messageCount": 9,
 		"sdkVersion": "0.2.5",
 		"description": "Simple text response without streaming deltas"
@@ -15,7 +15,7 @@
 				"type": "system",
 				"subtype": "init",
 				"cwd": "/Users/abuusama/projects/open-harness/open-harness/packages/core-v2",
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"tools": [
 					"Task",
 					"TaskOutput",
@@ -61,9 +61,9 @@
 				],
 				"skills": [],
 				"plugins": [],
-				"uuid": "23c21ebe-9acb-48ac-934f-9d9915e2fb27"
+				"uuid": "87a9df3e-db48-40b5-9ba7-fa30de9a9c73"
 			},
-			"relativeTimestamp": 2080,
+			"relativeTimestamp": 2154,
 			"index": 0
 		},
 		{
@@ -73,10 +73,15 @@
 					"type": "message_start",
 					"message": {
 						"model": "claude-sonnet-4-20250514",
-						"id": "msg_01YN1Q9JbbFJM6ULjqVP1tZW",
+						"id": "msg_018YaT1MSdWey48iXBvJcacq",
 						"type": "message",
 						"role": "assistant",
-						"content": [],
+						"content": [
+							{
+								"type": "text",
+								"text": ""
+							}
+						],
 						"stop_reason": null,
 						"stop_sequence": null,
 						"usage": {
@@ -92,11 +97,11 @@
 						}
 					}
 				},
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"parent_tool_use_id": null,
-				"uuid": "27d6c69d-cce8-45ea-9ba3-576d5c06aa8e"
+				"uuid": "31e1158d-f070-45f8-aa13-4d2df6d7ef7b"
 			},
-			"relativeTimestamp": 3579,
+			"relativeTimestamp": 4070,
 			"index": 1
 		},
 		{
@@ -110,11 +115,11 @@
 						"text": ""
 					}
 				},
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"parent_tool_use_id": null,
-				"uuid": "b6a22cc7-e82c-4e79-b8ec-f293f18583d5"
+				"uuid": "9ae261ad-e4a1-473e-b90f-13d67a7e3fd5"
 			},
-			"relativeTimestamp": 3686,
+			"relativeTimestamp": 4071,
 			"index": 2
 		},
 		{
@@ -128,11 +133,11 @@
 						"text": "4"
 					}
 				},
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"parent_tool_use_id": null,
-				"uuid": "2be660c3-8eaa-42b7-91ad-b6db6d2843f0"
+				"uuid": "6ea9bd4a-a864-4e56-ab63-29a78db413fd"
 			},
-			"relativeTimestamp": 3686,
+			"relativeTimestamp": 4071,
 			"index": 3
 		},
 		{
@@ -140,7 +145,7 @@
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_01YN1Q9JbbFJM6ULjqVP1tZW",
+					"id": "msg_018YaT1MSdWey48iXBvJcacq",
 					"type": "message",
 					"role": "assistant",
 					"content": [
@@ -165,10 +170,10 @@
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
-				"uuid": "940ce7ac-d825-4c26-b573-a2e7b240fdf6"
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
+				"uuid": "e3acb0a9-af75-4881-b733-8ef535d1511e"
 			},
-			"relativeTimestamp": 3926,
+			"relativeTimestamp": 4228,
 			"index": 4
 		},
 		{
@@ -178,11 +183,11 @@
 					"type": "content_block_stop",
 					"index": 0
 				},
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"parent_tool_use_id": null,
-				"uuid": "e95dcb76-93dd-480b-b51e-2b0aef297d4a"
+				"uuid": "357bdf88-d5ff-4dc5-ac86-0a417df55044"
 			},
-			"relativeTimestamp": 3926,
+			"relativeTimestamp": 4228,
 			"index": 5
 		},
 		{
@@ -201,11 +206,11 @@
 						"output_tokens": 5
 					}
 				},
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"parent_tool_use_id": null,
-				"uuid": "20152643-575b-493d-a71a-81afdb349011"
+				"uuid": "2d3aafc9-b993-4d4a-ac71-4ba794349e69"
 			},
-			"relativeTimestamp": 3942,
+			"relativeTimestamp": 4248,
 			"index": 6
 		},
 		{
@@ -214,11 +219,11 @@
 				"event": {
 					"type": "message_stop"
 				},
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"parent_tool_use_id": null,
-				"uuid": "7f8a6dae-ec4b-42e4-8169-93bbd587c090"
+				"uuid": "53cb0e96-1414-4786-968b-980c657e8009"
 			},
-			"relativeTimestamp": 3942,
+			"relativeTimestamp": 4248,
 			"index": 7
 		},
 		{
@@ -226,11 +231,11 @@
 				"type": "result",
 				"subtype": "success",
 				"is_error": false,
-				"duration_ms": 1881,
-				"duration_api_ms": 1861,
+				"duration_ms": 2120,
+				"duration_api_ms": 2094,
 				"num_turns": 1,
 				"result": "4",
-				"session_id": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+				"session_id": "df3c95d8-b526-4538-ae49-1daceba79542",
 				"total_cost_usd": 0.0045972,
 				"usage": {
 					"input_tokens": 3,
@@ -260,15 +265,15 @@
 					}
 				},
 				"permission_denials": [],
-				"uuid": "97568acb-644b-4af5-93c1-79818abf7797"
+				"uuid": "1da5e1d7-c97f-4b83-a4d6-5113bc669b69"
 			},
-			"relativeTimestamp": 3951,
+			"relativeTimestamp": 4252,
 			"index": 8
 		}
 	],
 	"result": {
 		"text": "4",
-		"sessionId": "8e2473d7-21a5-4809-bde4-d3fa93e625d6",
+		"sessionId": "df3c95d8-b526-4538-ae49-1daceba79542",
 		"hasStructuredOutput": false,
 		"toolCallsMade": []
 	}

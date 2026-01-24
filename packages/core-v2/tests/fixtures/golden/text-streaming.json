@@ -1,10 +1,10 @@
 {
 	"metadata": {
 		"scenario": "text-streaming",
-		"recordedAt": "2026-01-21T21:29:38.731Z",
+		"recordedAt": "2026-01-22T01:34:49.803Z",
 		"model": "claude-sonnet-4-20250514",
-		"durationMs": 63613,
-		"messageCount": 30,
+		"durationMs": 5938,
+		"messageCount": 33,
 		"sdkVersion": "0.2.5",
 		"description": "Text response with streaming deltas (longer response)"
 	},
@@ -15,7 +15,7 @@
 				"type": "system",
 				"subtype": "init",
 				"cwd": "/Users/abuusama/projects/open-harness/open-harness/packages/core-v2",
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"tools": [
 					"Task",
 					"TaskOutput",
@@ -33,7 +33,8 @@
 					"KillShell",
 					"AskUserQuestion",
 					"Skill",
-					"EnterPlanMode"
+					"EnterPlanMode",
+					"MCPSearch"
 				],
 				"mcp_servers": [],
 				"model": "claude-sonnet-4-20250514",
@@ -60,9 +61,9 @@
 				],
 				"skills": [],
 				"plugins": [],
-				"uuid": "83a9c42d-7941-4925-9e68-a27aff81a272"
+				"uuid": "3f7b6dad-34c3-4e57-9d51-1f1330f15e32"
 			},
-			"relativeTimestamp": 834,
+			"relativeTimestamp": 1352,
 			"index": 0
 		},
 		{
@@ -72,7 +73,7 @@
 					"type": "message_start",
 					"message": {
 						"model": "claude-sonnet-4-20250514",
-						"id": "msg_01KnJiN2wAn2cnTZFidJkgn5",
+						"id": "msg_011qVgCkNTwJdHfvsx9v2znj",
 						"type": "message",
 						"role": "assistant",
 						"content": [
@@ -91,16 +92,16 @@
 								"ephemeral_5m_input_tokens": 159,
 								"ephemeral_1h_input_tokens": 0
 							},
-							"output_tokens": 1,
+							"output_tokens": 5,
 							"service_tier": "standard"
 						}
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "53381f0a-39a6-4d80-a9b7-48e4b9ad0faf"
+				"uuid": "c9c2ad64-2af0-4c4c-8cf0-1bfc3dea4484"
 			},
-			"relativeTimestamp": 40980,
+			"relativeTimestamp": 3440,
 			"index": 1
 		},
 		{
@@ -114,11 +115,11 @@
 						"text": ""
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "35656a5a-72a2-44fa-8b70-5c178562808c"
+				"uuid": "354634bd-26ec-44da-bed5-96f9809af7c6"
 			},
-			"relativeTimestamp": 40981,
+			"relativeTimestamp": 3440,
 			"index": 2
 		},
 		{
@@ -129,14 +130,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "The"
+						"text": "The Fibonacci sequence is"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "be501435-96a6-43b4-9d4a-ade05a6848a8"
+				"uuid": "5550c0fd-1871-413c-8eb5-076fd44a8916"
 			},
-			"relativeTimestamp": 40981,
+			"relativeTimestamp": 3440,
 			"index": 3
 		},
 		{
@@ -147,14 +148,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " Fibonacci sequence is a series of"
+						"text": " a mathematical"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "cd42caa6-1800-4e04-abc2-874c5dfb679a"
+				"uuid": "aa76579e-e2dd-4d3d-b6d6-af99e531ee20"
 			},
-			"relativeTimestamp": 51549,
+			"relativeTimestamp": 3481,
 			"index": 4
 		},
 		{
@@ -165,14 +166,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " numbers where each number is the sum of"
+						"text": " series where each number is the sum of"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "321672aa-2471-407e-ab50-43b77aaed3da"
+				"uuid": "bb1bf9ef-9e3e-4f23-9bc8-7da0767a9660"
 			},
-			"relativeTimestamp": 51550,
+			"relativeTimestamp": 3679,
 			"index": 5
 		},
 		{
@@ -183,33 +184,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " the two preceding numbers"
+						"text": " the two preceding ones, typically"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "44548cb7-53fc-4ec5-a2e4-a7e174d50c5b"
+				"uuid": "973bf67d-f135-4c79-a9e3-2e72c14711a7"
 			},
-			"relativeTimestamp": 51550,
+			"relativeTimestamp": 3679,
 			"index": 6
-		},
-		{
-			"message": {
-				"type": "stream_event",
-				"event": {
-					"type": "content_block_delta",
-					"index": 0,
-					"delta": {
-						"type": "text_delta",
-						"text": ", typically"
-					}
-				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
-				"parent_tool_use_id": null,
-				"uuid": "5c73df24-2868-45fa-909e-df22a459611a"
-			},
-			"relativeTimestamp": 51550,
-			"index": 7
 		},
 		{
 			"message": {
@@ -222,11 +205,29 @@
 						"text": " starting with 0 and 1"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "d7bfbfd0-b10a-4ad6-a97d-76517a206382"
+				"uuid": "36e6fdf0-84d7-4832-8d33-a9f00dba4fff"
 			},
-			"relativeTimestamp": 51550,
+			"relativeTimestamp": 3765,
+			"index": 7
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": "."
+					}
+				},
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
+				"parent_tool_use_id": null,
+				"uuid": "85b080b1-3d5f-49f7-a6ed-23a9d7ff176b"
+			},
+			"relativeTimestamp": 3766,
 			"index": 8
 		},
 		{
@@ -237,14 +238,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": "."
+						"text": " The sequence follows"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "0795ff38-b79e-46ec-a2d8-cd18e53700ab"
+				"uuid": "6c5a5998-0b14-4967-bec6-833c922b3dbd"
 			},
-			"relativeTimestamp": 51550,
+			"relativeTimestamp": 3884,
 			"index": 9
 		},
 		{
@@ -255,14 +256,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " This"
+						"text": " the"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "55d0cf0b-7ea0-4f3a-b9fe-682672d28275"
+				"uuid": "f43bd568-ee68-42e6-a729-25ad37ea7405"
 			},
-			"relativeTimestamp": 51551,
+			"relativeTimestamp": 3884,
 			"index": 10
 		},
 		{
@@ -273,14 +274,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " mathematical sequence appears"
+						"text": " pattern"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "f9a5d035-facc-4793-85fb-84a80ece9e4b"
+				"uuid": "aaf3cf5b-b82b-471e-9ec6-1ce927a58eb1"
 			},
-			"relativeTimestamp": 51551,
+			"relativeTimestamp": 3901,
 			"index": 11
 		},
 		{
@@ -291,14 +292,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " frequently"
+						"text": " where"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "18f78452-1f3f-4ebe-a485-d6a069d8f4de"
+				"uuid": "5d6920e7-a10f-4c68-9bf3-fc9784e0e6ca"
 			},
-			"relativeTimestamp": 51551,
+			"relativeTimestamp": 3947,
 			"index": 12
 		},
 		{
@@ -309,14 +310,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " in nature, from"
+						"text": " F"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "b501cb0a-416b-4e3a-b21b-774d80296a9e"
+				"uuid": "49bf64f2-893f-4af7-a840-e31da3c3201a"
 			},
-			"relativeTimestamp": 51551,
+			"relativeTimestamp": 4001,
 			"index": 13
 		},
 		{
@@ -327,14 +328,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " the spiral"
+						"text": "(n) = F(n-"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "71bc8640-e3e8-4f73-8287-60c6abd01cd5"
+				"uuid": "70e4e098-b343-4e9d-b5b5-b34e647d7afc"
 			},
-			"relativeTimestamp": 51551,
+			"relativeTimestamp": 4196,
 			"index": 14
 		},
 		{
@@ -345,14 +346,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " patterns of shells"
+						"text": "1) + F(n-2"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "ad170b82-28f4-4550-a00a-73314486a284"
+				"uuid": "be6eb345-72a2-43a1-806e-11859c5a62ca"
 			},
-			"relativeTimestamp": 51559,
+			"relativeTimestamp": 4249,
 			"index": 15
 		},
 		{
@@ -363,14 +364,14 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " to the arrangement"
+						"text": "),"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "88c50732-8286-4bc5-8e1a-607689e34f17"
+				"uuid": "bc52a7d7-2403-4143-82e6-12a30d7d37d6"
 			},
-			"relativeTimestamp": 51560,
+			"relativeTimestamp": 4249,
 			"index": 16
 		},
 		{
@@ -381,15 +382,69 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " of leaves on plants"
+						"text": " creating"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "7c43f852-7e31-4e43-afad-8b6cf86198c3"
+				"uuid": "6789f52b-cedb-456b-a438-ae4fdee52d4b"
 			},
-			"relativeTimestamp": 51560,
+			"relativeTimestamp": 4253,
 			"index": 17
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " a sequence that"
+					}
+				},
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
+				"parent_tool_use_id": null,
+				"uuid": "c89eeeba-d73a-44c0-b84e-4ad03b3a33f1"
+			},
+			"relativeTimestamp": 4334,
+			"index": 18
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " appears"
+					}
+				},
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
+				"parent_tool_use_id": null,
+				"uuid": "4a741104-74a3-4a8b-a634-1f203009f8c4"
+			},
+			"relativeTimestamp": 4357,
+			"index": 19
+		},
+		{
+			"message": {
+				"type": "stream_event",
+				"event": {
+					"type": "content_block_delta",
+					"index": 0,
+					"delta": {
+						"type": "text_delta",
+						"text": " frequently in nature and mathematical applications"
+					}
+				},
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
+				"parent_tool_use_id": null,
+				"uuid": "0510e218-270b-441d-9ea4-0b581bcc354f"
+			},
+			"relativeTimestamp": 4511,
+			"index": 20
 		},
 		{
 			"message": {
@@ -402,12 +457,12 @@
 						"text": "."
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "9ec5c49b-f7b6-4da1-85d0-32e6bf59c25e"
+				"uuid": "194374ca-384d-4607-9c5f-97191b4b7d3a"
 			},
-			"relativeTimestamp": 51560,
-			"index": 18
+			"relativeTimestamp": 4511,
+			"index": 21
 		},
 		{
 			"message": {
@@ -420,12 +475,12 @@
 						"text": " The first"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "9009915f-e44d-4836-a14f-351440b2ba2f"
+				"uuid": "846bfe1f-7b89-484b-ad81-385cc4893876"
 			},
-			"relativeTimestamp": 51560,
-			"index": 19
+			"relativeTimestamp": 4557,
+			"index": 22
 		},
 		{
 			"message": {
@@ -438,12 +493,12 @@
 						"text": " five"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "62fc6d87-3db1-4bdd-91a0-c678118cf2e3"
+				"uuid": "9dc8a7c2-3b44-45ab-9a96-31719862cc52"
 			},
-			"relativeTimestamp": 51560,
-			"index": 20
+			"relativeTimestamp": 4592,
+			"index": 23
 		},
 		{
 			"message": {
@@ -453,15 +508,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " numbers"
+						"text": " numbers in the"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "dd7e5362-f7b3-4fa0-bb81-4421c70580f9"
+				"uuid": "ae1cfd9a-1413-48d2-a574-38403a14a2cc"
 			},
-			"relativeTimestamp": 51560,
-			"index": 21
+			"relativeTimestamp": 4702,
+			"index": 24
 		},
 		{
 			"message": {
@@ -471,15 +526,15 @@
 					"index": 0,
 					"delta": {
 						"type": "text_delta",
-						"text": " in the Fibonacci sequence are:"
+						"text": " Fibonacci sequence are:"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "d7fdcff3-5e30-4b5f-ad40-e3fd4ceccfe1"
+				"uuid": "123f6a00-815f-4260-9c5e-88b0baf87e86"
 			},
-			"relativeTimestamp": 51560,
-			"index": 22
+			"relativeTimestamp": 4762,
+			"index": 25
 		},
 		{
 			"message": {
@@ -492,12 +547,12 @@
 						"text": " 0, 1, 1"
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "bb2905b9-753e-4fe0-80d7-740e7077e3ba"
+				"uuid": "a36a9cb0-f083-49b8-a55d-9b7c6fa83caf"
 			},
-			"relativeTimestamp": 51560,
-			"index": 23
+			"relativeTimestamp": 4894,
+			"index": 26
 		},
 		{
 			"message": {
@@ -510,25 +565,25 @@
 						"text": ", 2, 3."
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "ccb5a055-1ec4-4192-97af-a09b20e683d7"
+				"uuid": "ee7be200-0c61-47c6-aaea-9a02f0721527"
 			},
-			"relativeTimestamp": 51560,
-			"index": 24
+			"relativeTimestamp": 4965,
+			"index": 27
 		},
 		{
 			"message": {
 				"type": "assistant",
 				"message": {
 					"model": "claude-sonnet-4-20250514",
-					"id": "msg_01KnJiN2wAn2cnTZFidJkgn5",
+					"id": "msg_011qVgCkNTwJdHfvsx9v2znj",
 					"type": "message",
 					"role": "assistant",
 					"content": [
 						{
 							"type": "text",
-							"text": "The Fibonacci sequence is a series of numbers where each number is the sum of the two preceding numbers, typically starting with 0 and 1. This mathematical sequence appears frequently in nature, from the spiral patterns of shells to the arrangement of leaves on plants. The first five numbers in the Fibonacci sequence are: 0, 1, 1, 2, 3."
+							"text": "The Fibonacci sequence is a mathematical series where each number is the sum of the two preceding ones, typically starting with 0 and 1. The sequence follows the pattern where F(n) = F(n-1) + F(n-2), creating a sequence that appears frequently in nature and mathematical applications. The first five numbers in the Fibonacci sequence are: 0, 1, 1, 2, 3."
 						}
 					],
 					"stop_reason": "end_turn",
@@ -541,17 +596,17 @@
 							"ephemeral_5m_input_tokens": 159,
 							"ephemeral_1h_input_tokens": 0
 						},
-						"output_tokens": 82,
+						"output_tokens": 95,
 						"service_tier": "standard"
 					},
 					"context_management": null
 				},
 				"parent_tool_use_id": null,
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
-				"uuid": "b2194512-e42b-452a-87c2-b9538cb34ede"
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
+				"uuid": "2408f9cc-785c-402a-94af-ec9f47243ba5"
 			},
-			"relativeTimestamp": 51560,
-			"index": 25
+			"relativeTimestamp": 4966,
+			"index": 28
 		},
 		{
 			"message": {
@@ -560,12 +615,12 @@
 					"type": "content_block_stop",
 					"index": 0
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "c8269217-10cc-41bc-baa2-2c2436d7b3fd"
+				"uuid": "295935b3-a594-49c1-90ce-29af8910623c"
 			},
-			"relativeTimestamp": 51560,
-			"index": 26
+			"relativeTimestamp": 4966,
+			"index": 29
 		},
 		{
 			"message": {
@@ -580,15 +635,15 @@
 						"input_tokens": 3,
 						"cache_creation_input_tokens": 159,
 						"cache_read_input_tokens": 14892,
-						"output_tokens": 82
+						"output_tokens": 95
 					}
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "16349903-c0b6-4048-9da8-b06aa2f73866"
+				"uuid": "23f65a18-69d7-448d-9e8f-1326b71e6fad"
 			},
-			"relativeTimestamp": 51560,
-			"index": 27
+			"relativeTimestamp": 4966,
+			"index": 30
 		},
 		{
 			"message": {
@@ -596,29 +651,29 @@
 				"event": {
 					"type": "message_stop"
 				},
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 				"parent_tool_use_id": null,
-				"uuid": "0e455490-678f-43df-b045-5f6b5f4f8ae4"
+				"uuid": "0f5628da-f336-48ad-89ef-563de53edbfa"
 			},
-			"relativeTimestamp": 51561,
-			"index": 28
+			"relativeTimestamp": 4966,
+			"index": 31
 		},
 		{
 			"message": {
 				"type": "result",
 				"subtype": "success",
 				"is_error": false,
-				"duration_ms": 50744,
-				"duration_api_ms": 167097,
+				"duration_ms": 3625,
+				"duration_api_ms": 10833,
 				"num_turns": 1,
-				"result": "The Fibonacci sequence is a series of numbers where each number is the sum of the two preceding numbers, typically starting with 0 and 1. This mathematical sequence appears frequently in nature, from the spiral patterns of shells to the arrangement of leaves on plants. The first five numbers in the Fibonacci sequence are: 0, 1, 1, 2, 3.",
-				"session_id": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
-				"total_cost_usd": 0.027564700000000004,
+				"result": "The Fibonacci sequence is a mathematical series where each number is the sum of the two preceding ones, typically starting with 0 and 1. The sequence follows the pattern where F(n) = F(n-1) + F(n-2), creating a sequence that appears frequently in nature and mathematical applications. The first five numbers in the Fibonacci sequence are: 0, 1, 1, 2, 3.",
+				"session_id": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
+				"total_cost_usd": 0.04000695,
 				"usage": {
 					"input_tokens": 3,
 					"cache_creation_input_tokens": 159,
 					"cache_read_input_tokens": 14892,
-					"output_tokens": 82,
+					"output_tokens": 95,
 					"server_tool_use": {
 						"web_search_requests": 0,
 						"web_fetch_requests": 0
@@ -632,45 +687,45 @@
 				"modelUsage": {
 					"claude-haiku-4-5-20251001": {
 						"inputTokens": 3,
-						"outputTokens": 135,
+						"outputTokens": 199,
 						"cacheReadInputTokens": 9986,
-						"cacheCreationInputTokens": 1324,
+						"cacheCreationInputTokens": 1393,
 						"webSearchRequests": 0,
-						"costUSD": 0.0033316000000000005,
+						"costUSD": 0.00373785,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					},
-					"claude-sonnet-4-5-20250929": {
-						"inputTokens": 6,
-						"outputTokens": 329,
-						"cacheReadInputTokens": 13320,
-						"cacheCreationInputTokens": 2395,
+					"claude-opus-4-5-20251101": {
+						"inputTokens": 3,
+						"outputTokens": 102,
+						"cacheReadInputTokens": 0,
+						"cacheCreationInputTokens": 4353,
 						"webSearchRequests": 0,
-						"costUSD": 0.017930250000000002,
+						"costUSD": 0.029771250000000003,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					},
 					"claude-sonnet-4-20250514": {
 						"inputTokens": 3,
-						"outputTokens": 82,
+						"outputTokens": 95,
 						"cacheReadInputTokens": 14892,
 						"cacheCreationInputTokens": 159,
 						"webSearchRequests": 0,
-						"costUSD": 0.0063028500000000005,
+						"costUSD": 0.0064978499999999995,
 						"contextWindow": 200000,
 						"maxOutputTokens": 64000
 					}
 				},
 				"permission_denials": [],
-				"uuid": "76b34b5a-7838-4e4f-b70f-6dd16c428b76"
+				"uuid": "8f938fdc-1cb8-4d73-8e71-78039ed1b39c"
 			},
-			"relativeTimestamp": 51565,
-			"index": 29
+			"relativeTimestamp": 4967,
+			"index": 32
 		}
 	],
 	"result": {
-		"text": "The Fibonacci sequence is a series of numbers where each number is the sum of the two preceding numbers, typically starting with 0 and 1. This mathematical sequence appears frequently in nature, from the spiral patterns of shells to the arrangement of leaves on plants. The first five numbers in the Fibonacci sequence are: 0, 1, 1, 2, 3.",
-		"sessionId": "05e68c5c-bb80-4408-8714-9acbcfb39b48",
+		"text": "The Fibonacci sequence is a mathematical series where each number is the sum of the two preceding ones, typically starting with 0 and 1. The sequence follows the pattern where F(n) = F(n-1) + F(n-2), creating a sequence that appears frequently in nature and mathematical applications. The first five numbers in the Fibonacci sequence are: 0, 1, 1, 2, 3.",
+		"sessionId": "b77f989d-ef6a-4c5b-b333-dc6eae3a061b",
 		"hasStructuredOutput": false,
 		"toolCallsMade": []
 	}
