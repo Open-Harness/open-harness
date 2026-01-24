@@ -1502,3 +1502,35 @@
 - Fixture format designed for easy test consumption
 - Phase 11 Fixture Recording Infrastructure (task 1 of 5) COMPLETE
 
+
+## 2026-01-21T21:32:00Z - Phase 11 Fixture Recording Implementation
+**Task**: Implement fixture recording for: simple text response, streaming text deltas, tool calls with results, structured output with outputSchema, multi-turn conversation
+**Status**: COMPLETE
+**Changes**:
+- Added `tool-use-roundtrip` scenario to packages/core-v2/scripts/record-fixtures.ts
+  - Prompts Claude to use Bash tool for arithmetic calculation
+  - Uses maxTurns: 3 to allow tool call + response flow
+- Ran record-fixtures.ts against LIVE Claude SDK to capture real responses
+- Generated 6 fixture files in packages/core-v2/tests/fixtures/golden/:
+  - text-simple.json (3.8 KB) - Simple text response
+  - text-streaming.json (19 KB) - Text with streaming deltas
+  - text-multiline.json (30 KB) - Multi-line formatted response
+  - tool-use-roundtrip.json (19 KB) - Bash tool call with result
+  - structured-output.json (19 KB) - JSON schema output extraction
+  - multi-turn.json (9.5 KB) - Conversation context maintenance
+**Verification**:
+- All 6 scenarios recorded successfully from LIVE Claude SDK
+- tool-use-roundtrip.json contains:
+  - content_block_start with tool_use type
+  - input_json_delta events streaming tool input
+  - assistant message with tool_use block (name: "Bash", command: "echo $((7 * 6))")
+  - user message with tool_use_result (stdout: "42")
+  - Final text response "42"
+- bun run test: PASS (883 tests)
+- bun run lint: PASS (15 packages)
+**Notes**:
+- Fixtures recorded at 2026-01-21T21:30 UTC
+- Model: claude-sonnet-4-20250514
+- SDK Version: 0.2.5
+- All fixtures contain real SDK message types, timing, and structure
+

@@ -119,6 +119,15 @@ const SCENARIOS: ScenarioDefinition[] = [
 3. (third benefit)`,
 	},
 	{
+		name: "tool-use-roundtrip",
+		description: "Tool call with result - triggers a Bash tool call to run a simple calculation",
+		prompt:
+			"Use the Bash tool to run: echo $((7 * 6)). Show me only the result of running that command. Do NOT explain what you're doing, just run the command and tell me the answer.",
+		options: {
+			maxTurns: 3, // Allow tool call + response
+		},
+	},
+	{
 		name: "structured-output",
 		description: "Response with structured JSON output using outputSchema",
 		prompt: "Extract the person's name and age from this text: 'John Smith is 30 years old.'",
