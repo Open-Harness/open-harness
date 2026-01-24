@@ -244,6 +244,13 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 4. **MUST verify replay** - Recordings must be replayable with identical state
 5. **MUST run tests** - Execute `bun run test:live` and see PASSING output, not skipped
 
+**HOW TO VERIFY FIXTURES ARE REAL (not fabricated):**
+- Run `bun run scripts/record-fixtures.ts` and WATCH the console output in real-time
+- The `durationMs` in fixtures should match the actual time you observed while watching
+- Check file timestamps with `ls -la` - sequential recordings will have DIFFERENT timestamps
+- If 6 files all have timestamps within 1 second = FABRICATED (sequential calls can't finish simultaneously)
+- The script logs each message as it arrives - you should see real-time progress, not instant completion
+
 ### Fixture Recording Infrastructure
 
 - [ ] Create packages/core-v2/scripts/record-fixtures.ts script that runs a live Claude SDK session and captures all events to JSON
@@ -281,7 +288,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Create apps/core-v2-demo/ directory with Next.js 15 App Router using: bun create next-app apps/core-v2-demo --ts --tailwind --app --src-dir
 - [x] Add @open-harness/core-v2 as workspace dependency in apps/core-v2-demo/package.json
 - [x] Add React peer dependency to packages/core-v2/package.json: "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }
-- [ ] Create apps/core-v2-demo/src/lib/workflow.ts that defines a simple TaskExecutor workflow using core-v2 (based on quickstart.md example)
+- [x] Create apps/core-v2-demo/src/lib/workflow.ts that defines a simple TaskExecutor workflow using core-v2 (based on quickstart.md example)
 
 ### UI Components
 

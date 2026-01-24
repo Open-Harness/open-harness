@@ -13,7 +13,8 @@
     "@open-harness/core-v2": "workspace:*",
     "next": "16.1.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "^4.3.4"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",

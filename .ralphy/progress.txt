@@ -1657,3 +1657,31 @@
 - Updated PRD to mark both tasks 267 and 268 as complete
 - Workspace dependency allows demo app to import from local @open-harness/core-v2 package
 - Next: Create apps/core-v2-demo/src/lib/workflow.ts
+
+## 2026-01-22T09:20:00Z - Phase 12 Workflow Definition
+**Task**: Create apps/core-v2-demo/src/lib/workflow.ts with TaskExecutor workflow
+**Status**: COMPLETE
+**Changes**:
+- Created apps/core-v2-demo/src/lib/workflow.ts implementing the TaskExecutor workflow from quickstart.md
+- Added zod dependency to apps/core-v2-demo/package.json for Zod schemas
+- Workflow structure:
+  - **Domain State**: TaskWorkflowState with goal, tasks, currentPhase, currentTaskIndex, executionResults
+  - **Events**: WorkflowStart, PlanCreated, TaskReady, TaskExecuted, WorkflowComplete (all with TypeScript generics)
+  - **Handlers**: handleWorkflowStart, handlePlanCreated, handleTaskExecuted (using emitEvent() for proper event creation)
+  - **Agents**: planner (activates on workflow:start, outputs plan:created) and executor (activates on task:ready, outputs task:executed)
+  - **Termination**: until: (state) => state.currentPhase === "complete"
+- Key implementation details:
+  - Handlers use emitEvent() (not just { name, payload }) to create full Event objects with id/timestamp
+  - Handlers cast to HandlerDefinition<AnyEvent, S>[] due to TypeScript handler contravariance
+  - Agents use Zod schemas (PlanOutput, ExecutionOutput) for structured output
+  - Agent onOutput functions use createEvent() with causedBy linking
+  - No store configured (ephemeral events for demo)
+**Verification**:
+- bun x tsc --noEmit: PASS (no type errors)
+- bun run test: PASS (884 tests)
+- bun run lint: PASS (all 16 packages)
+- bun run build: PASS (demo app builds successfully)
+**Notes**:
+- The core-v2 API requires careful type casting for handler arrays due to handler contravariance
+- Events emitted from handlers MUST be full Event objects (use emitEvent or createEvent, not just { name, payload })
+- Phase 12 App Setup (task 4 of 4) COMPLETE - next is UI Components
