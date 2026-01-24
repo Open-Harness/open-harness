@@ -9,7 +9,7 @@
 	"scripts": {
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:live": "vitest run tests/integration/claude-live.test.ts --no-skip",
+		"test:live": "vitest run tests/integration/claude-live.test.ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check . --write",
 		"record-fixtures": "bun run scripts/record-fixtures.ts"

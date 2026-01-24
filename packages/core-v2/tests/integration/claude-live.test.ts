@@ -9,6 +9,7 @@
  * These tests verify that core-v2 correctly integrates with the actual Claude SDK
  * behavior, including streaming, tool use, and structured output.
  *
+ * @vitest-environment node
  * @module @core-v2/tests/integration/claude-live
  */
 
@@ -42,12 +43,14 @@ async function collectMessages(
 	finalText: string;
 	toolCalls: Array<{ name: string; input: unknown }>;
 	sessionId?: string;
+	structuredOutput?: unknown;
 }> {
 	const messages: SDKMessage[] = [];
 	const textDeltas: string[] = [];
 	let finalText = "";
 	const toolCalls: Array<{ name: string; input: unknown }> = [];
 	let sessionId: string | undefined;
+	let structuredOutput: unknown;
 
 	const queryStream = query({
 		prompt,
@@ -102,16 +105,19 @@ async function collectMessages(
 			}
 		}
 
-		// Extract final text from result
+		// Extract final text and structured output from result
 		if (sdkMessage.type === "result") {
-			const result = sdkMessage as { result?: string };
+			const result = sdkMessage as { result?: string; structured_output?: unknown };
 			if (result.result) {
 				finalText = result.result;
+			}
+			if (result.structured_output !== undefined) {
+				structuredOutput = result.structured_output;
 			}
 		}
 	}
 
-	return { messages, textDeltas, finalText, toolCalls, sessionId };
+	return { messages, textDeltas, finalText, toolCalls, sessionId, structuredOutput };
 }
 
 /**
@@ -135,10 +141,13 @@ function hasEventTypes(messages: SDKMessage[], expectedTypes: string[]): boolean
 // ============================================================================
 
 /**
- * NOTE: These tests are skipped by default for CI.
- * Run with `bun run test:live` to execute them locally.
+ * NOTE: These tests require live Claude SDK authentication.
+ * Run with: bun run test:live
+ *
+ * IMPORTANT: These tests are NOT skipped. They execute against the REAL Claude SDK.
+ * Ensure you have proper authentication configured before running.
  */
-describe.skip("Claude SDK Live Integration Tests", () => {
+describe("Claude SDK Live Integration Tests", () => {
 	describe("Simple Text Response", () => {
 		it(
 			"should send prompt and receive streaming response with text:delta and text:complete events",
@@ -241,6 +250,7 @@ describe.skip("Claude SDK Live Integration Tests", () => {
 				};
 
 				const result = await collectMessages("Extract info: 'Alice is 25 years old.'", {
+					maxTurns: 3, // Structured output uses a tool internally, requiring > 1 turn
 					outputFormat: {
 						type: "json_schema",
 						schema,
@@ -250,12 +260,23 @@ describe.skip("Claude SDK Live Integration Tests", () => {
 				// Should have a result
 				expect(result.messages.some((m) => m.type === "result")).toBe(true);
 
-				// Final text should be valid JSON or contain the extracted info
-				// The SDK may return the structured output differently
-				expect(result.finalText.length).toBeGreaterThan(0);
+				// When using outputFormat, the SDK returns structured_output instead of text
+				// Either finalText or structuredOutput should contain valid data
+				const hasStructuredOutput = result.structuredOutput !== undefined;
+				const hasTextOutput = result.finalText.length > 0;
 
-				// Try to parse as JSON if it looks like JSON
-				if (result.finalText.trim().startsWith("{")) {
+				// At least one output format should be present
+				expect(hasStructuredOutput || hasTextOutput).toBe(true);
+
+				// If structured output is present, verify its shape
+				if (hasStructuredOutput) {
+					const output = result.structuredOutput as { name?: string; age?: number };
+					expect(output).toHaveProperty("name");
+					expect(output).toHaveProperty("age");
+				}
+
+				// If text output is present and looks like JSON, verify its shape
+				if (hasTextOutput && result.finalText.trim().startsWith("{")) {
 					const parsed = JSON.parse(result.finalText);
 					expect(parsed).toHaveProperty("name");
 					expect(parsed).toHaveProperty("age");
@@ -276,6 +297,7 @@ describe.skip("Claude SDK Live Integration Tests", () => {
 				};
 
 				const result = await collectMessages("Extract: 'The sky is blue.' Return as JSON with color field.", {
+					maxTurns: 3, // Structured output uses a tool internally, requiring > 1 turn
 					outputFormat: {
 						type: "json_schema",
 						schema,

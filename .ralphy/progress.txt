@@ -1685,3 +1685,20 @@
 - The core-v2 API requires careful type casting for handler arrays due to handler contravariance
 - Events emitted from handlers MUST be full Event objects (use emitEvent or createEvent, not just { name, payload })
 - Phase 12 App Setup (task 4 of 4) COMPLETE - next is UI Components
+
+## 2026-01-22T01:26:00Z - Phase 11 Live SDK Integration Tests
+**Task**: Remove `describe.skip` from packages/core-v2/tests/integration/claude-live.test.ts
+**Status**: COMPLETE
+**Changes**:
+- Removed `describe.skip` from claude-live.test.ts, replacing with `describe` so tests execute
+- Added `@vitest-environment node` comment to use Node.js environment (jsdom doesn't support AbortSignal setMaxListeners)
+- Fixed package.json `test:live` script to remove invalid `--no-skip` flag
+- Updated `collectMessages` helper to extract `structuredOutput` from SDK result messages
+- Fixed structured output tests to use `maxTurns: 3` (SDK uses internal tool requiring 2 turns)
+- Updated structured output test assertions to properly check for `structuredOutput` field
+**Verification**:
+- bun run test:live: PASS (11/11 tests pass against LIVE Claude SDK)
+- bun run test: PASS (894 tests total)
+- bun run lint (claude-live.test.ts): PASS (no errors)
+**Key Insight**: The Claude SDK's structured output feature uses an internal `StructuredOutput` tool, requiring at least 2 turns. Tests with `maxTurns: 1` fail because the model can't complete the structured output flow.
+**Duration**: Tests take ~114 seconds to run against the real Claude API with streaming responses
