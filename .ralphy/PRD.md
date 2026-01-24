@@ -250,9 +250,9 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 ### Real Integration Tests
 
 - [x] Create packages/core-v2/tests/integration/claude-live.test.ts that runs against the REAL Claude SDK (not mocked) with describe.skip for CI
-- [ ] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted correctly
-- [ ] Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior
-- [ ] Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly
+- [x] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted correctly
+- [x] Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior
+- [x] Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly
 - [x] Add npm script "test:live" to package.json that runs only live integration tests (requires auth)
 
 ---
