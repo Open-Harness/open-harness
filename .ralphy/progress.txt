@@ -2007,3 +2007,28 @@ bun run test tests/integration/sqlite-recording.test.ts
 - Imports are properly sorted per Biome organizeImports rule
 - SVG has role="img" and aria-label for accessibility compliance
 - Component is ready for use but not yet integrated into main page (next task)
+
+## 2026-01-22T02:30:25Z - Phase 12 ChatUI Implementation Verification
+**Task**: Implement ChatUI to display: messages list, input field, submit button, loading indicator, error display
+**Status**: COMPLETE (verification - component was already fully implemented)
+**Analysis**:
+The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already contains all required features:
+- **Messages list**: Lines 76-111 - maps over messages array with user/assistant styling (blue for user, gray for assistant)
+- **Input field**: Lines 225-232 - controlled input with value binding, onChange handler, placeholder, and disabled state
+- **Submit button**: Lines 234-241 - with disabled states for loading and empty input, text changes to "Processing..." when loading
+- **Loading indicator**: Lines 114-142 - animated SVG spinner with "Processing..." text, shown when isLoading is true
+- **Error display**: Lines 146-153 - red-styled error box showing error.message when error is present
+- **Bonus features already implemented**:
+  - Agent name display for assistant messages (lines 94-96)
+  - Tool invocations display (lines 102-108)
+  - Workflow state display panel (lines 156-177)
+  - Tape controls for time-travel debugging (lines 179-217)
+**Verification**:
+- bun run build (apps/core-v2-demo): PASS - compiled successfully
+- bun run test (packages/core-v2): PASS (903 tests)
+- bun run lint: PASS (29 warnings, 0 errors)
+**Notes**:
+- This task was already completed in a previous session but not marked in the PRD
+- The component uses Tailwind CSS for all styling with dark mode support
+- Full AI SDK compatible pattern (messages, input, setInput, handleSubmit, isLoading, error)
+
