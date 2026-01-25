@@ -2108,3 +2108,28 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
 - Webpack with `extensionAlias` configuration handles this correctly
 - The `createWorkflowHandler` returns SSE-streaming handler compatible with Web Standard Request/Response
 - Route follows Next.js App Router convention: named exports for HTTP methods (POST, OPTIONS)
+
+## 2026-01-22T02:48:00Z - Phase 12 Server Integration: Configure ChatUI API Connection
+**Task**: Configure ChatUI to connect via api: '/api/workflow' option in useWorkflow
+**Status**: COMPLETE
+**Changes**:
+- Updated apps/core-v2-demo/src/app/page.tsx:
+  - Added "use client" directive to make it a Client Component (required for hooks)
+  - Imported ChatUI component from @/components/ChatUI
+  - Rendered ChatUI with api="/api/workflow" prop for server-side workflow execution
+  - Updated description text from placeholder to reflect actual functionality
+**How it works**:
+- The ChatUI component passes the api prop to useWorkflow hook
+- useWorkflow detects the api option and uses SSE-based communication instead of local execution
+- handleSubmit sends POST to /api/workflow with input in JSON body
+- Server executes workflow and streams events back via SSE (text/event-stream)
+- Client parses SSE messages and updates React state (events, state, messages)
+**Verification**:
+- bun run test (packages/core-v2): PASS (903 tests)
+- bun run lint: PASS (no new errors)
+**Notes**:
+- The api prop enables server-side workflow execution which is critical for:
+  - Running workflows with LLM API keys on server (security)
+  - Offloading compute from client browser
+  - Recording sessions to server-side SQLite store
+- The SSE protocol matches the server's createWorkflowHandler implementation
