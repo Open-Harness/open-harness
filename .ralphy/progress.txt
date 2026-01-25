@@ -2032,3 +2032,26 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
 - The component uses Tailwind CSS for all styling with dark mode support
 - Full AI SDK compatible pattern (messages, input, setInput, handleSubmit, isLoading, error)
 
+
+## 2026-01-22T02:35:00Z - Phase 12 ChatUI Tape Controls Verification
+**Task**: Add tape controls to ChatUI: stepBack button, step button, rewind button, position indicator showing "Position X of Y"
+**Status**: COMPLETE (feature was already implemented, PRD not updated)
+**Discovery**:
+- ChatUI.tsx (apps/core-v2-demo/src/components/ChatUI.tsx) already contains all required tape controls:
+  - Rewind button with `tape.rewind` (lines 184-192) with data-testid="rewind-button"
+  - Step Back button with `tape.stepBack` (lines 193-201) with data-testid="step-back-button"  
+  - Position indicator showing "Position X of Y" (lines 202-207) with data-testid="position-indicator"
+  - Step (forward) button with `tape.step` (lines 208-216) with data-testid="step-button"
+- The `useWorkflow` hook in packages/core-v2/src/react.ts provides the tape controls interface (FR-056)
+- Comprehensive tests in packages/core-v2/tests/react.test.ts verify:
+  - Tape control functions exist (stepBack, step, rewind)
+  - Position and length tracking
+  - Button rendering with correct data-testid attributes
+  - Position indicator rendering
+**Verification**:
+- bun run test: PASS (903 tests, including tape control tests)
+- bun run lint: PASS (16 packages)
+**Notes**:
+- This task was already completed in a previous iteration but PRD was not updated
+- TypeScript errors exist in core-v2 package (pre-existing, not related to this task)
+- ChatUI uses Tailwind CSS for styling with proper hover states and transitions
