@@ -1878,3 +1878,31 @@
 - text:delta events captured via stream_event with delta.type === "text_delta"
 - text:complete equivalent is the "result" message type with final text
 - Phase 11 Real Integration Tests first task COMPLETE
+
+## 2026-01-22T02:05:00Z - Phase 11 PRD Update (Tool Use, Structured Output, test:live Script)
+**Task**: Update PRD to mark completed Phase 11 tasks as done
+**Status**: COMPLETE
+**Analysis**:
+- Verified all three tasks were already implemented and passing in `claude-live.test.ts`:
+  1. Tool Use Integration (lines 187-236): "should emit tool:called and tool:result events for Bash tool" - PASSED
+  2. Structured Output (lines 239-311): "should return structured JSON output when outputSchema is provided" - PASSED
+  3. test:live script (package.json line 12): `"test:live": "vitest run tests/integration/claude-live.test.ts"` - EXISTS
+- Progress log from 2026-01-22T09:47:00Z confirms all 11 tests passed against LIVE Claude SDK:
+  ```
+  ✓ Claude SDK Live Integration Tests > Tool Use Integration > should emit tool:called and tool:result events  14542ms
+  ✓ Claude SDK Live Integration Tests > Tool Use Integration > should correctly stream tool input via input_json_delta  10588ms
+  ✓ Claude SDK Live Integration Tests > Structured Output > should return structured JSON output  8816ms
+  ✓ Claude SDK Live Integration Tests > Structured Output > should emit correct message sequence  13790ms
+  ```
+**Changes**:
+- Updated .ralphy/PRD.md to mark 3 Phase 11 tasks as [x] complete:
+  - Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior
+  - Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly
+  - Add npm script "test:live" to package.json that runs integration tests
+**Verification**:
+- bun run test: PASS (903 tests, 0 failures)
+- bun run lint: PASS (16 packages, warnings only in pre-existing files)
+**Notes**:
+- PRD tracking had fallen behind actual implementation
+- Phase 11 Real Integration Tests section is now COMPLETE
+- Next: Phase 11 SQLite Store Recording & Replay tasks
