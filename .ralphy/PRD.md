@@ -272,10 +272,10 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 - [x] Create a live SDK test that uses SqliteStoreLive to record a session: run workflow with record:true and SqliteStore configured
 - [x] After recording, verify SQLite database file exists at the configured path and contains events
-- [ ] Implement replay test: load the recorded session via workflow.load(sessionId), verify Tape has correct event count
-- [ ] Verify replay produces IDENTICAL state: replay session, compare final state to original recorded state, assert deep equality
-- [ ] Run replay test 10 times in a row, assert all 10 produce identical state (determinism check)
-- [ ] Document the recording/replay workflow in packages/core-v2/tests/fixtures/RECORDING-WORKFLOW.md with exact commands
+- [x] Implement replay test: load the recorded session via workflow.load(sessionId), verify Tape has correct event count
+- [x] Verify replay produces IDENTICAL state: replay session, compare final state to original recorded state, assert deep equality
+- [x] Run replay test 10 times in a row, assert all 10 produce identical state (determinism check)
+- [x] Document the recording/replay workflow in packages/core-v2/tests/fixtures/RECORDING-WORKFLOW.md with exact commands
 
 ---
 

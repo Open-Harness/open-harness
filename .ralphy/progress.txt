@@ -1930,3 +1930,26 @@ bun run test tests/integration/sqlite-recording.test.ts
 **Notes**:
 - PRD task was already implemented, just needed marking complete
 - Test "should record a workflow session to SQLite database file" covers this requirement
+
+## 2026-01-22T02:15:00Z - Phase 11 SQLite Store Recording & Replay Documentation
+**Task**: Document the recording/replay workflow in packages/core-v2/tests/fixtures/RECORDING-WORKFLOW.md with exact commands
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/tests/fixtures/RECORDING-WORKFLOW.md with comprehensive documentation:
+  - Overview of recording and replay capabilities
+  - Prerequisites and setup instructions
+  - Step-by-step recording workflow with code examples
+  - Replay workflow with Tape API usage
+  - Time-travel debugging examples (step, stepBack, stepTo, rewind)
+  - Deterministic replay verification guide
+  - Test commands for running SQLite recording tests
+  - Complete API reference for Store and Tape methods
+  - Troubleshooting section for common issues
+**Verification**:
+- bun run test: PASS (903 tests, 0 failures)
+- bun run lint: PASS (Markdown files ignored by Biome)
+- sqlite-recording.test.ts: 9 tests PASS
+**Notes**:
+- This completes all 6 tasks in Phase 11 "SQLite Store Recording & Replay" section
+- Phase 11 is now COMPLETE
+- Next phase: Phase 12 E2E Demo Application
