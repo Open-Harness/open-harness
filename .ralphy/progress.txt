@@ -1973,3 +1973,37 @@ bun run test tests/integration/sqlite-recording.test.ts
 - Page is a simple foundation for subsequent ChatUI integration tasks
 - Subsequent tasks (PRD lines 296-299) will add ChatUI component with workflow integration
 - Used Tailwind CSS classes consistent with existing demo app styling
+
+## 2026-01-22T02:40:00Z - Phase 12 UI Components Task 2 - ChatUI Component
+**Task**: Create apps/core-v2-demo/src/components/ChatUI.tsx component that uses useWorkflow hook from @open-harness/core-v2/react
+**Status**: COMPLETE
+**Changes**:
+- Created apps/core-v2-demo/src/components/ directory
+- Created apps/core-v2-demo/src/components/ChatUI.tsx with:
+  - "use client" directive for client-side React hooks
+  - Import of useWorkflow hook from @open-harness/core-v2/react
+  - Import of createTaskExecutorWorkflow from lib/workflow.ts
+  - useMemo for workflow instance to prevent recreation
+  - Full AI SDK-compatible API usage: messages, input, setInput, handleSubmit, isLoading, error
+  - Open Harness unique values: state (TaskWorkflowState)
+  - Tape controls: rewind, stepBack, step, position indicator
+  - Features implemented:
+    - Messages container with user/assistant styling (Tailwind)
+    - Empty state message for when no messages exist
+    - Loading indicator with animated spinner (aria-labeled for accessibility)
+    - Error display with red styling
+    - Workflow state display (phase, tasks count, completed count)
+    - Tape controls bar with Rewind, Step Back, Position X of Y, Step buttons
+    - Input form with disabled states during loading
+    - All data-testid attributes for testing
+  - Accessibility: role="img" and aria-label on SVG spinner
+  - Tailwind dark mode support throughout
+**Verification**:
+- bun run lint: PASS (ChatUI.tsx passes Biome checks)
+- bun run test: PASS (903 tests, 0 failures)
+- bun run build: PASS (Next.js 16.1.4 compiled successfully)
+**Notes**:
+- Component uses useMemo to ensure workflow is created only once per component lifecycle
+- Imports are properly sorted per Biome organizeImports rule
+- SVG has role="img" and aria-label for accessibility compliance
+- Component is ready for use but not yet integrated into main page (next task)
