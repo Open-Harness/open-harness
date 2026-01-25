@@ -292,7 +292,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### UI Components
 
-- [ ] Create apps/core-v2-demo/src/app/page.tsx as the main demo page with "Core V2 Demo" heading
+- [x] Create apps/core-v2-demo/src/app/page.tsx as the main demo page with "Core V2 Demo" heading
 - [ ] Create apps/core-v2-demo/src/components/ChatUI.tsx component that uses useWorkflow hook from @open-harness/core-v2/react
 - [ ] Implement ChatUI to display: messages list, input field, submit button, loading indicator, error display
 - [ ] Add tape controls to ChatUI: stepBack button, step button, rewind button, position indicator showing "Position X of Y"

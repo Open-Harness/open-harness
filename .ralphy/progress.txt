@@ -1953,3 +1953,23 @@ bun run test tests/integration/sqlite-recording.test.ts
 - This completes all 6 tasks in Phase 11 "SQLite Store Recording & Replay" section
 - Phase 11 is now COMPLETE
 - Next phase: Phase 12 E2E Demo Application
+
+## 2026-01-22T02:18:57Z - Phase 12 UI Components Task 1
+**Task**: Create apps/core-v2-demo/src/app/page.tsx as the main demo page with "Core V2 Demo" heading
+**Status**: COMPLETE
+**Changes**:
+- Updated apps/core-v2-demo/src/app/page.tsx:
+  - Replaced default Next.js boilerplate with Core V2 Demo page
+  - Added "Core V2 Demo" h1 heading with proper Tailwind styling
+  - Added placeholder text for workflow integration demo
+  - Uses responsive dark mode compatible styling
+- Updated apps/core-v2-demo/src/app/layout.tsx metadata:
+  - Changed title from "Create Next App" to "Core V2 Demo"
+  - Updated description to reflect core-v2 workflow demo purpose
+**Verification**:
+- bun run lint: PASS (no errors or warnings)
+- bun run build: PASS (compiled successfully, 4 routes generated)
+**Notes**:
+- Page is a simple foundation for subsequent ChatUI integration tasks
+- Subsequent tasks (PRD lines 296-299) will add ChatUI component with workflow integration
+- Used Tailwind CSS classes consistent with existing demo app styling
