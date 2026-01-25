@@ -2079,3 +2079,32 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
 - Added 4 helper components: LoadingSpinner, RewindIcon, StepBackIcon, StepForwardIcon, ToolBadge
 - All SVG icons have proper accessibility attributes to pass Biome a11y/noSvgWithoutTitle lint rule
 - Responsive design with hidden text labels on small screens (sm:inline pattern)
+
+## 2026-01-22T03:15:00Z - Phase 12 Server Integration: API Route Handler
+**Task**: Create apps/core-v2-demo/src/app/api/workflow/route.ts using createWorkflowHandler() from core-v2 for server-side execution
+**Status**: COMPLETE
+**Changes**:
+1. Created `apps/core-v2-demo/src/app/api/workflow/route.ts`:
+   - Imports `createWorkflowHandler` from `@open-harness/core-v2`
+   - Imports `createTaskExecutorWorkflow` from local workflow module
+   - Creates workflow instance at module level (singleton for server reuse)
+   - Creates HTTP handler with CORS configuration for localhost:3000 and localhost:3001
+   - Exports `POST` and `OPTIONS` functions for Next.js App Router route handler pattern
+   - POST handler returns SSE stream with workflow events
+   - OPTIONS handler supports CORS preflight requests
+2. Updated `apps/core-v2-demo/next.config.ts`:
+   - Added `transpilePackages: ["@open-harness/core-v2"]` for workspace dependency
+   - Added `webpack.resolve.extensionAlias` configuration to map `.js` → `.ts` imports
+   - This fixes Turbopack/Webpack's module resolution for TypeScript ESM pattern
+3. Updated `apps/core-v2-demo/package.json`:
+   - Changed build script to `next build --webpack` (Turbopack has issues with .js→.ts mapping)
+**Verification**:
+- bun run lint: PASS (11 files checked, no errors)
+- bun run build: PASS (compiled successfully, API route shows as dynamic `/api/workflow`)
+- bun run test: PASS (all tests across monorepo pass)
+**Technical Notes**:
+- The core-v2 package uses TypeScript ESM pattern (importing with `.js` extension from `.ts` files)
+- Turbopack in Next.js 16.1.4 doesn't properly resolve `.js` → `.ts` for server-side code
+- Webpack with `extensionAlias` configuration handles this correctly
+- The `createWorkflowHandler` returns SSE-streaming handler compatible with Web Standard Request/Response
+- Route follows Next.js App Router convention: named exports for HTTP methods (POST, OPTIONS)
