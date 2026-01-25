@@ -2055,3 +2055,27 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
 - This task was already completed in a previous iteration but PRD was not updated
 - TypeScript errors exist in core-v2 package (pre-existing, not related to this task)
 - ChatUI uses Tailwind CSS for styling with proper hover states and transitions
+
+## 2026-01-22T02:42:00Z - Phase 12 ChatUI Tailwind Styling
+**Task**: Style the UI with Tailwind CSS for clear visual feedback
+**Status**: COMPLETE
+**Changes**:
+- Enhanced ChatUI.tsx with polished Tailwind CSS styling:
+  - **User messages**: Blue gradient background (from-blue-500 to-blue-600), rounded corners with asymmetric radius (rounded-tr-sm for chat bubble effect), shadow-md
+  - **Assistant messages**: White background with subtle border, rounded corners with asymmetric radius (rounded-tl-sm), shadow-sm, dark mode support
+  - **Loading indicator**: Bouncing dots animation instead of spinner, "AI is thinking..." message in chat bubble style
+  - **Tool status badges**: Color-coded badges showing tool state (amber=pending with spinner, emerald=result with checkmark, red=error with X)
+  - **Tape controls**: VCR-style SVG icons (RewindIcon, StepBackIcon, StepForwardIcon), improved position indicator with slash divider
+  - **Empty state**: Welcome message with chat icon, clearer onboarding instructions
+  - **Error display**: Alert-style with error icon, red border and background
+  - **Submit button**: Gradient background, send arrow icon, loading spinner state
+  - **All SVGs**: Added role="img" and aria-label for accessibility compliance
+  - **Dark mode**: Full dark mode support throughout all components
+**Verification**:
+- bun x tsc --noEmit: PASS (no type errors)
+- bun run lint: PASS (no linting errors in demo app)
+- bun run test (core-v2): PASS (all tests passing)
+**Notes**:
+- Added 4 helper components: LoadingSpinner, RewindIcon, StepBackIcon, StepForwardIcon, ToolBadge
+- All SVG icons have proper accessibility attributes to pass Biome a11y/noSvgWithoutTitle lint rule
+- Responsive design with hidden text labels on small screens (sm:inline pattern)
