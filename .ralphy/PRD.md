@@ -263,7 +263,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 - [x] Remove `describe.skip` from packages/core-v2/tests/integration/claude-live.test.ts - tests MUST execute, NOT skip
 - [x] Run `bun run test:live` and verify tests PASS (not skip) - capture terminal output showing "X passed"
-- [ ] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted - test MUST PASS
+- [x] Test live SDK: send simple prompt, receive streaming response, verify text:delta and text:complete events are emitted - test MUST PASS
 - [ ] Test live SDK: send prompt requiring tool use, verify tool:called and tool:result events match SDK behavior - test MUST PASS
 - [ ] Test live SDK: send prompt with outputSchema, verify structured output is returned and parsed correctly - test MUST PASS
 - [ ] Add npm script "test:live" to package.json that runs integration tests with proper vitest config (no skip)
