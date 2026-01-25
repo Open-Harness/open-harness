@@ -270,7 +270,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### SQLite Store Recording & Replay (NEW - CRITICAL)
 
-- [ ] Create a live SDK test that uses SqliteStoreLive to record a session: run workflow with record:true and SqliteStore configured
+- [x] Create a live SDK test that uses SqliteStoreLive to record a session: run workflow with record:true and SqliteStore configured
 - [ ] After recording, verify SQLite database file exists at the configured path and contains events
 - [ ] Implement replay test: load the recorded session via workflow.load(sessionId), verify Tape has correct event count
 - [ ] Verify replay produces IDENTICAL state: replay session, compare final state to original recorded state, assert deep equality

@@ -1820,3 +1820,32 @@
 - No describe.skip in the tests - they run against the REAL Claude SDK
 - Tests use 2-minute timeout for live API calls
 - Model: claude-sonnet-4-20250514
+## 2026-01-22T01:57:00Z - Phase 11 SQLite Store Recording Test
+**Task**: Create a live SDK test that uses SqliteStoreLive to record a session
+**Status**: COMPLETE
+**Changes**:
+- Created packages/core-v2/tests/integration/sqlite-recording.test.ts with 9 comprehensive tests:
+  - Recording with SqliteStore:
+    - should record a workflow session to SQLite database file
+    - should persist events across store instances (file persistence)
+  - Replay from SQLite Store:
+    - should load a recorded session and create a Tape with correct event count
+    - should produce IDENTICAL state when replaying recorded session
+  - Deterministic Replay (10x verification):
+    - should produce identical state across 10 consecutive replays
+    - should produce identical intermediate states at every position across replays
+  - Tape Time-Travel with SQLite Store:
+    - should support stepBack after loading from SQLite
+    - should support stepTo arbitrary positions after loading from SQLite
+    - should rewind to initial state after loading from SQLite
+- Tests use Effect-based StoreService for Workflow configuration and Promise-based PublicStore for test assertions
+- File-based SQLite persistence verified (not just in-memory)
+- Tests properly clean up temp directories in afterEach
+**Verification**:
+- Tests: 9 passed (all SQLite recording tests)
+- Full test suite: 903 passed
+- Lint: PASS (existing style warnings in other files, not new)
+**Notes**:
+- Task also covers next 4 PRD items (verify file exists, replay test, identical state, 10x determinism)
+- Only marked first item complete per SINGLE TASK requirement
+- Pre-existing type errors in codebase unrelated to this change
