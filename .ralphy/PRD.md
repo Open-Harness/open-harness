@@ -302,7 +302,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 - [x] Create apps/core-v2-demo/src/app/api/workflow/route.ts using createWorkflowHandler() from core-v2 for server-side execution
 - [x] Configure ChatUI to connect via api: '/api/workflow' option in useWorkflow
-- [ ] Verify the app builds with: cd apps/core-v2-demo && bun run build
+- [x] Verify the app builds with: cd apps/core-v2-demo && bun run build
 - [ ] Verify the app runs with: cd apps/core-v2-demo && bun run dev
 
 ---

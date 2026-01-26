@@ -2133,3 +2133,42 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
   - Offloading compute from client browser
   - Recording sessions to server-side SQLite store
 - The SSE protocol matches the server's createWorkflowHandler implementation
+
+## 2026-01-22T03:55:00Z - Phase 12 Server Integration: Build Verification
+**Task**: Verify the app builds with: cd apps/core-v2-demo && bun run build
+**Status**: COMPLETE
+**Problem**:
+- Initial build failed with "Module not found: Can't resolve 'fs'" error
+- The error traced back to better-sqlite3 (SqliteStore dependency) being bundled for browser
+- Root cause: @open-harness/core-v2's main entry point exports SqliteStore which imports better-sqlite3
+- Next.js was bundling everything from the main entry point for client-side code
+**Solution**:
+1. Created browser-safe entry points:
+   - `packages/core-v2/src/store/index.browser.ts` - Exports MemoryStore only, excludes SqliteStore
+   - `packages/core-v2/src/index.browser.ts` - Main entry that uses index.browser.ts for store exports
+2. Updated `packages/core-v2/package.json` with conditional exports:
+   ```json
+   "exports": {
+     ".": {
+       "browser": "./src/index.browser.ts",
+       "default": "./src/index.ts"
+     },
+     "./react": "./src/react.ts",
+     "./server": "./src/index.ts"
+   }
+   ```
+3. Updated `apps/core-v2-demo/next.config.ts` to enable browser condition:
+   ```typescript
+   if (!isServer) {
+     config.resolve.conditionNames = ["browser", "import", "module", "default"];
+   }
+   ```
+**Verification**:
+- bun run build: PASS (compiled successfully with only a harmless warning about better-sqlite3 on server-side)
+- bun run test: PASS (903 tests)
+- bun run lint: PASS (after fixing formatting)
+**Technical Notes**:
+- Webpack doesn't automatically use "browser" condition from package.json exports
+- We had to explicitly set config.resolve.conditionNames for client bundles
+- Server-side routes (/api/workflow) still use the default entry point with SqliteStore (correct behavior)
+- The warning about better-sqlite3 dynamic require on server-side is harmless
