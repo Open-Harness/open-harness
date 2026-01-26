@@ -1505,12 +1505,13 @@ describe("Unknown event type handling during replay (Phase 10 edge case)", () =>
 
 		// Verify warning structure
 		expect(capturedWarning).not.toBeNull();
-		expect(capturedWarning?.event.name).toBe("unknown:event");
-		expect(capturedWarning?.event.payload).toEqual({ data: "test" });
-		expect(capturedWarning?.position).toBe(1);
-		expect(capturedWarning?.message).toContain("unknown:event");
-		expect(capturedWarning?.message).toContain("position 1");
-		expect(capturedWarning?.message).toContain("skipping gracefully");
+		const warning = capturedWarning!;
+		expect(warning.event.name).toBe("unknown:event");
+		expect(warning.event.payload).toEqual({ data: "test" });
+		expect(warning.position).toBe(1);
+		expect(warning.message).toContain("unknown:event");
+		expect(warning.message).toContain("position 1");
+		expect(warning.message).toContain("skipping gracefully");
 	});
 
 	it("should handle tape with all unknown events", () => {

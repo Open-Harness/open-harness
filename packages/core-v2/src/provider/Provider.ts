@@ -88,7 +88,7 @@ export interface QueryOptions {
 	/** Include partial messages in streaming (default: true) */
 	readonly includePartialMessages?: boolean;
 	/** Permission mode for tool execution */
-	readonly permissionMode?: "bypassPermissions" | "askUser";
+	readonly permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "delegate" | "dontAsk";
 	/**
 	 * Structured output format - REQUIRED for workflow state reliability.
 	 * Maps to SDK `outputFormat: { type: "json_schema", schema }`.
@@ -200,7 +200,7 @@ export interface ClaudeProviderConfig {
 	/** Include partial messages in streaming (default: true) */
 	readonly includePartialMessages?: boolean;
 	/** Permission mode for tool execution (default: bypassPermissions) */
-	readonly permissionMode?: "bypassPermissions" | "askUser";
+	readonly permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "delegate" | "dontAsk";
 }
 
 /**

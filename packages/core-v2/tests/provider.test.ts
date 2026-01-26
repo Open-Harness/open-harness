@@ -239,14 +239,14 @@ describe("ClaudeProviderConfig", () => {
 			maxTurns: 5,
 			persistSession: false,
 			includePartialMessages: true,
-			permissionMode: "askUser",
+			permissionMode: "default",
 		};
 
 		expect(config.model).toBe("claude-sonnet-4-20250514");
 		expect(config.maxTurns).toBe(5);
 		expect(config.persistSession).toBe(false);
 		expect(config.includePartialMessages).toBe(true);
-		expect(config.permissionMode).toBe("askUser");
+		expect(config.permissionMode).toBe("default");
 	});
 });
 

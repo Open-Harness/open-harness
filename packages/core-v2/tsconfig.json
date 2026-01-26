@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"rootDir": ".",
 		"outDir": "./dist",
-		"types": ["bun"]
+		"types": ["bun"],
+		"lib": ["ESNext", "DOM", "DOM.Iterable"]
 	},
 	"include": ["src/**/*.ts", "tests/**/*.ts"],
 	"exclude": ["node_modules", "dist"]

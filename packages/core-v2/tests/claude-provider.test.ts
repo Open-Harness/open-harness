@@ -579,12 +579,12 @@ describe("Configuration", () => {
 		};
 
 		const service = makeClaudeProviderService(
-			{ permissionMode: "askUser" },
+			{ permissionMode: "default" },
 			mockQuery as unknown as typeof import("@anthropic-ai/claude-agent-sdk").query,
 		);
 		await Effect.runPromise(service.query({ messages: [{ role: "user", content: "Hi" }] }));
 
-		expect((capturedOptions as { permissionMode: string }).permissionMode).toBe("askUser");
+		expect((capturedOptions as { permissionMode: string }).permissionMode).toBe("default");
 	});
 });
 

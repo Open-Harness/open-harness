@@ -1408,7 +1408,8 @@ describe("WorkflowRuntime handler exception handling (Phase 10 edge case)", () =
 		const errorEvent = result.events.find((e) => e.name === "error:occurred");
 		expect(errorEvent).toBeDefined();
 		// Context should include handler name and event name for debugging
-		expect(errorEvent?.payload.context).toMatchObject({
+		const payload = errorEvent?.payload as { context?: { eventName: string; handlerName: string } };
+		expect(payload?.context).toMatchObject({
 			eventName: "user:input",
 			handlerName: "stackTraceHandler",
 		});
@@ -1441,7 +1442,8 @@ describe("WorkflowRuntime handler exception handling (Phase 10 edge case)", () =
 		const errorEvent = result.events.find((e) => e.name === "error:occurred");
 		expect(errorEvent).toBeDefined();
 		// Non-Error should be stringified
-		expect(errorEvent?.payload.message).toBe("String error message");
+		const errorPayload = errorEvent?.payload as { message?: string };
+		expect(errorPayload?.message).toBe("String error message");
 	});
 
 	it("should continue processing subsequent events after multiple handler failures", async () => {

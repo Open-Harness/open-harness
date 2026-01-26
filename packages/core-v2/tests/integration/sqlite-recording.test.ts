@@ -57,10 +57,10 @@ const initialState: RecordingTestState = {
 const UserInputEvent = defineEvent<"user:input", { text: string }>("user:input");
 const TextCompleteEvent = defineEvent<"text:complete", { fullText: string }>("text:complete");
 
-// Handlers with explicit state type
-const userInputHandler = defineHandler<typeof UserInputEvent, RecordingTestState>(UserInputEvent, {
+// Handlers with explicit state type annotation on handler parameter
+const userInputHandler = defineHandler(UserInputEvent, {
 	name: "userInputHandler",
-	handler: (event, state) => ({
+	handler: (event, state: RecordingTestState) => ({
 		state: {
 			...state,
 			messages: [...state.messages, { role: "user" as const, content: event.payload.text }],
@@ -71,9 +71,9 @@ const userInputHandler = defineHandler<typeof UserInputEvent, RecordingTestState
 	}),
 });
 
-const textCompleteHandler = defineHandler<typeof TextCompleteEvent, RecordingTestState>(TextCompleteEvent, {
+const textCompleteHandler = defineHandler(TextCompleteEvent, {
 	name: "textCompleteHandler",
-	handler: (event, state) => ({
+	handler: (event, state: RecordingTestState) => ({
 		state: {
 			...state,
 			messages: [...state.messages, { role: "assistant" as const, content: event.payload.fullText }],

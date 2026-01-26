@@ -2589,3 +2589,42 @@ Phase 13 visual verification tasks - ALL blocked on MCP infrastructure:
 Phase 13 (19 tasks) requires Claude-in-Chrome MCP extension to be installed and configured.
 
 **Conclusion**: No code tasks can be implemented. All remaining tasks are external infrastructure dependencies.
+
+## 2026-01-22T19:45:00Z - TypeScript Fixes (Session 6 continued)
+
+**Task**: Fix TypeScript errors blocking git push
+**Status**: COMPLETE
+
+**Issues Fixed**:
+
+### Source Files:
+1. `src/message/projection.ts`: Fixed ToolInvocation spread type - explicitly set required fields
+2. `src/provider/ClaudeProvider.ts`: 
+   - Changed `toClaudeMessages` from sync Generator to async Generator (SDK expects AsyncIterable)
+   - Moved `structured_output` access after type narrowing (only exists on SDKResultSuccess)
+   - Fixed `resolveOutputFormat` return type to use `Record<string, unknown>` for schema
+   - Fixed stream method to properly iterate ReadableStream
+3. `src/provider/Provider.ts`: Updated `permissionMode` type from `"bypassPermissions" | "askUser"` to match SDK's valid values
+
+### Test Files:
+1. `tests/message.test.ts`: Added `at()` helper for type-safe array access with readonly arrays
+2. `tests/claude-provider.test.ts`: Updated "askUser" to "default"
+3. `tests/provider.test.ts`: Updated "askUser" to "default" in config test
+4. `tests/react.test.ts`: 
+   - Fixed WorkflowProvider children prop pattern (include children in props object)
+   - Added `as unknown as typeof fetch` cast for mock fetch
+5. `tests/tape.test.ts`: Fixed capturedWarning type narrowing with explicit assignment
+6. `tests/workflow-handler.test.ts`: Cast handlers array to `HandlerDefinition<AnyEvent, TestState>[]`
+7. `tests/workflow-runtime.test.ts`: Added type assertions for errorEvent.payload access
+8. `tests/integration/sqlite-recording.test.ts`: Removed incorrect type arguments from defineHandler calls
+9. `tests/integration/claude-live.test.ts`: Fixed outputFormat schema type
+
+### Configuration:
+- `packages/core-v2/tsconfig.json`: Added DOM lib for React testing types
+
+**Verification**:
+- Tests: PASS (903 tests, 0 failures)
+- Typecheck: PASS (tsc --noEmit completes without errors)
+- Lint: PASS (0 errors, 32 warnings - all style-related)
+
+**Changes Ready for Commit**

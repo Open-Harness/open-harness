@@ -412,7 +412,7 @@ describe("useWorkflow", () => {
 				expect.objectContaining({
 					input: "Hello",
 				}),
-			);
+			) as unknown as typeof fetch;
 		});
 
 		it("should call onFinish callback on success", async () => {
@@ -735,7 +735,7 @@ describe("WorkflowProvider (FR-057)", () => {
 
 			// Create a simple wrapper that returns children
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// Context should be available
@@ -746,7 +746,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// Should have access to workflow data
@@ -759,7 +759,7 @@ describe("WorkflowProvider (FR-057)", () => {
 
 			const { result } = renderHook(() => useWorkflowContext(), {
 				wrapper: ({ children }: { children: ReactNode }) =>
-					createElement(WorkflowProvider, { workflow, options }, children),
+					createElement(WorkflowProvider, { workflow, options, children }),
 			});
 
 			expect(result.current.input).toBe("Initial value");
@@ -780,7 +780,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// AI SDK compatible
@@ -796,7 +796,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// Open Harness unique
@@ -808,7 +808,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// Tape controls
@@ -829,7 +829,7 @@ describe("WorkflowProvider (FR-057)", () => {
 
 			// Create wrapper with provider
 			const wrapper = ({ children }: { children: ReactNode }) =>
-				createElement(WorkflowProvider, { workflow }, children);
+				createElement(WorkflowProvider, { workflow, children });
 
 			// Render two hooks
 			const { result: result1 } = renderHook(() => useWorkflowContext(), { wrapper });
@@ -845,7 +845,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const initialMessages = [{ id: "1", role: "user" as const, content: "Hello", _events: [] as readonly EventId[] }];
 
 			const wrapper = ({ children }: { children: ReactNode }) =>
-				createElement(WorkflowProvider, { workflow, options: { initialMessages } }, children);
+				createElement(WorkflowProvider, { workflow, options: { initialMessages }, children });
 
 			const { result: result1 } = renderHook(() => useWorkflowContext(), { wrapper });
 			const { result: result2 } = renderHook(() => useWorkflowContext(), { wrapper });
@@ -859,7 +859,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const wrapper = ({ children }: { children: ReactNode }) =>
-				createElement(WorkflowProvider, { workflow }, children);
+				createElement(WorkflowProvider, { workflow, children });
 
 			const { result: result1 } = renderHook(() => useWorkflowContext(), { wrapper });
 			const { result: result2 } = renderHook(() => useWorkflowContext(), { wrapper });
@@ -900,7 +900,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			act(() => {
@@ -914,7 +914,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// Set input
@@ -935,7 +935,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// Use tape controls
@@ -962,7 +962,7 @@ describe("WorkflowProvider (FR-057)", () => {
 			const workflow = createMockWorkflow();
 
 			const { result } = renderHook(() => useWorkflowContext<TestState>(), {
-				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow }, children),
+				wrapper: ({ children }: { children: ReactNode }) => createElement(WorkflowProvider, { workflow, children }),
 			});
 
 			// State should be typed as TestState
@@ -1267,7 +1267,7 @@ describe("WorkflowChat (FR-058)", () => {
 					{ type: "state", data: { count: 1, messages: ["Hello"], terminated: false } },
 					{ type: "done", data: { sessionId: "test-123", terminated: false } },
 				]),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
@@ -1289,7 +1289,7 @@ describe("WorkflowChat (FR-058)", () => {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ input: "Hello", record: false }),
 				}),
-			);
+			) as unknown as typeof fetch;
 		});
 
 		it("should update events state from SSE event messages", async () => {
@@ -1306,7 +1306,7 @@ describe("WorkflowChat (FR-058)", () => {
 					{ type: "state", data: { count: 1, messages: ["Hello"], terminated: false } },
 					{ type: "done", data: { sessionId: "test-123", terminated: false } },
 				]),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
@@ -1336,7 +1336,7 @@ describe("WorkflowChat (FR-058)", () => {
 					{ type: "state", data: newState },
 					{ type: "done", data: { sessionId: "test-123", terminated: false, finalState: newState } },
 				]),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow<TestState>(workflow, { api: "/api/workflow" }));
@@ -1373,7 +1373,7 @@ describe("WorkflowChat (FR-058)", () => {
 						},
 					},
 				]),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow", onFinish }));
@@ -1392,7 +1392,7 @@ describe("WorkflowChat (FR-058)", () => {
 				expect.objectContaining({
 					terminated: true,
 				}),
-			);
+			) as unknown as typeof fetch;
 		});
 
 		it("should set error state when SSE error event is received", async () => {
@@ -1402,7 +1402,7 @@ describe("WorkflowChat (FR-058)", () => {
 				.fn()
 				.mockResolvedValue(
 					createMockSSEResponse([{ type: "error", data: { message: "Server error occurred", name: "ServerError" } }]),
-				);
+				) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow", onError }));
@@ -1428,7 +1428,7 @@ describe("WorkflowChat (FR-058)", () => {
 					status: 404,
 					headers: { "Content-Type": "application/json" },
 				}),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
@@ -1452,7 +1452,7 @@ describe("WorkflowChat (FR-058)", () => {
 				.fn()
 				.mockResolvedValue(
 					createMockSSEResponse([{ type: "done", data: { sessionId: "test-123", terminated: false } }]),
-				);
+				) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow", record: true }));
@@ -1471,7 +1471,7 @@ describe("WorkflowChat (FR-058)", () => {
 				expect.objectContaining({
 					body: expect.stringContaining('"record":true'),
 				}),
-			);
+			) as unknown as typeof fetch;
 		});
 
 		it("should NOT call workflow.run when api option is provided", async () => {
@@ -1480,7 +1480,7 @@ describe("WorkflowChat (FR-058)", () => {
 				.fn()
 				.mockResolvedValue(
 					createMockSSEResponse([{ type: "done", data: { sessionId: "test-123", terminated: false } }]),
-				);
+				) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
@@ -1524,7 +1524,7 @@ describe("WorkflowChat (FR-058)", () => {
 					},
 					{ type: "done", data: { sessionId: "test-123", terminated: false } },
 				]),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));
@@ -1548,7 +1548,7 @@ describe("WorkflowChat (FR-058)", () => {
 					status: 200,
 					headers: { "Content-Type": "text/plain" },
 				}),
-			);
+			) as unknown as typeof fetch;
 			global.fetch = mockFetch;
 
 			const { result } = renderHook(() => useWorkflow(workflow, { api: "/api/workflow" }));

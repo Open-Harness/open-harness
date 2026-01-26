@@ -278,11 +278,15 @@ export function projectEventsToMessages(
 
 				if (toolIndex !== -1) {
 					const existing = currentAssistantMessage.toolInvocations[toolIndex];
-					currentAssistantMessage.toolInvocations[toolIndex] = {
-						...existing,
-						result: event.payload.output,
-						state: event.payload.isError ? "error" : "result",
-					};
+					if (existing) {
+						currentAssistantMessage.toolInvocations[toolIndex] = {
+							toolCallId: existing.toolCallId,
+							toolName: existing.toolName,
+							args: existing.args,
+							result: event.payload.output,
+							state: event.payload.isError ? "error" : "result",
+						};
+					}
 				}
 			}
 			continue;

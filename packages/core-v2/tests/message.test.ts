@@ -17,6 +17,15 @@ import {
 	type ToolInvocationState,
 } from "../src/message/index.js";
 
+/** Helper to get array element with non-null assertion (for type safety in tests) */
+function at<T>(arr: readonly T[], index: number): T {
+	const element = arr[index];
+	if (element === undefined) {
+		throw new Error(`Expected element at index ${index} but array has length ${arr.length}`);
+	}
+	return element;
+}
+
 // Reset message ID counter before each test for deterministic IDs
 beforeEach(() => {
 	resetMessageIdCounter();
@@ -194,15 +203,15 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages([event]);
 
 			expect(messages).toHaveLength(1);
-			expect(messages[0].role).toBe("user");
-			expect(messages[0].content).toBe("Hello world");
+			expect(at(messages, 0).role).toBe("user");
+			expect(at(messages, 0).content).toBe("Hello world");
 		});
 
 		it("should include event ID in _events", () => {
 			const event = createEvent("user:input", { text: "Test" });
 			const messages = projectEventsToMessages([event]);
 
-			expect(messages[0]._events).toContain(event.id);
+			expect(at(messages, 0)._events).toContain(event.id);
 		});
 
 		it("should handle multiple user inputs", () => {
@@ -211,8 +220,8 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages([event1, event2]);
 
 			expect(messages).toHaveLength(2);
-			expect(messages[0].content).toBe("First");
-			expect(messages[1].content).toBe("Second");
+			expect(at(messages, 0).content).toBe("First");
+			expect(at(messages, 1).content).toBe("Second");
 		});
 	});
 
@@ -226,24 +235,24 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages(events);
 
 			expect(messages).toHaveLength(1);
-			expect(messages[0].role).toBe("assistant");
-			expect(messages[0].content).toBe("Hello world!");
+			expect(at(messages, 0).role).toBe("assistant");
+			expect(at(messages, 0).content).toBe("Hello world!");
 		});
 
 		it("should track all delta event IDs", () => {
 			const events = [createEvent("text:delta", { delta: "A" }), createEvent("text:delta", { delta: "B" })];
 			const messages = projectEventsToMessages(events);
 
-			expect(messages[0]._events).toHaveLength(2);
-			expect(messages[0]._events).toContain(events[0].id);
-			expect(messages[0]._events).toContain(events[1].id);
+			expect(at(messages, 0)._events).toHaveLength(2);
+			expect(at(messages, 0)._events).toContain(events[0]!.id);
+			expect(at(messages, 0)._events).toContain(events[1]!.id);
 		});
 
 		it("should include agentName if provided", () => {
 			const event = createEvent("text:delta", { delta: "Hi", agentName: "greeter" });
 			const messages = projectEventsToMessages([event]);
 
-			expect(messages[0].name).toBe("greeter");
+			expect(at(messages, 0).name).toBe("greeter");
 		});
 	});
 
@@ -257,7 +266,7 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages(events);
 
 			expect(messages).toHaveLength(1);
-			expect(messages[0].content).toBe("Hello");
+			expect(at(messages, 0).content).toBe("Hello");
 		});
 
 		it("should handle text:complete without prior deltas", () => {
@@ -265,14 +274,14 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages([event]);
 
 			expect(messages).toHaveLength(1);
-			expect(messages[0].content).toBe("Direct message");
+			expect(at(messages, 0).content).toBe("Direct message");
 		});
 
 		it("should include text:complete event ID", () => {
 			const completeEvent = createEvent("text:complete", { fullText: "Done" });
 			const messages = projectEventsToMessages([completeEvent]);
 
-			expect(messages[0]._events).toContain(completeEvent.id);
+			expect(at(messages, 0)._events).toContain(completeEvent.id);
 		});
 	});
 
@@ -282,9 +291,9 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages([event]);
 
 			expect(messages).toHaveLength(1);
-			expect(messages[0].role).toBe("assistant");
-			expect(messages[0].name).toBe("research-agent");
-			expect(messages[0].content).toBe("");
+			expect(at(messages, 0).role).toBe("assistant");
+			expect(at(messages, 0).name).toBe("research-agent");
+			expect(at(messages, 0).content).toBe("");
 		});
 
 		it("should finalize previous assistant message when new agent starts", () => {
@@ -297,10 +306,10 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages(events);
 
 			expect(messages).toHaveLength(2);
-			expect(messages[0].name).toBe("agent1");
-			expect(messages[0].content).toBe("First response");
-			expect(messages[1].name).toBe("agent2");
-			expect(messages[1].content).toBe("Second response");
+			expect(at(messages, 0).name).toBe("agent1");
+			expect(at(messages, 0).content).toBe("First response");
+			expect(at(messages, 1).name).toBe("agent2");
+			expect(at(messages, 1).content).toBe("Second response");
 		});
 	});
 
@@ -314,8 +323,8 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages([event]);
 
 			expect(messages).toHaveLength(1);
-			expect(messages[0].toolInvocations).toHaveLength(1);
-			expect(messages[0].toolInvocations?.[0]).toEqual({
+			expect(at(messages, 0).toolInvocations).toHaveLength(1);
+			expect(at(messages, 0).toolInvocations?.[0]).toEqual({
 				toolCallId: "call-123",
 				toolName: "get_weather",
 				args: { location: "NYC" },
@@ -330,7 +339,7 @@ describe("projectEventsToMessages", () => {
 			];
 			const messages = projectEventsToMessages(events);
 
-			expect(messages[0].toolInvocations).toHaveLength(2);
+			expect(at(messages, 0).toolInvocations).toHaveLength(2);
 		});
 	});
 
@@ -342,7 +351,7 @@ describe("projectEventsToMessages", () => {
 			];
 			const messages = projectEventsToMessages(events);
 
-			expect(messages[0].toolInvocations?.[0]).toEqual({
+			expect(at(messages, 0).toolInvocations?.[0]).toEqual({
 				toolCallId: "call-1",
 				toolName: "search",
 				args: { q: "test" },
@@ -358,8 +367,8 @@ describe("projectEventsToMessages", () => {
 			];
 			const messages = projectEventsToMessages(events);
 
-			expect(messages[0].toolInvocations?.[0].state).toBe("error");
-			expect(messages[0].toolInvocations?.[0].result).toBe("Network error");
+			expect(at(messages, 0).toolInvocations?.[0]?.state).toBe("error");
+			expect(at(messages, 0).toolInvocations?.[0]?.result).toBe("Network error");
 		});
 
 		it("should update correct tool when multiple tools called", () => {
@@ -371,8 +380,8 @@ describe("projectEventsToMessages", () => {
 			];
 			const messages = projectEventsToMessages(events);
 
-			expect(messages[0].toolInvocations?.[0].result).toBe("result1");
-			expect(messages[0].toolInvocations?.[1].result).toBe("result2");
+			expect(at(messages, 0).toolInvocations?.[0]?.result).toBe("result1");
+			expect(at(messages, 0).toolInvocations?.[1]?.result).toBe("result2");
 		});
 	});
 
@@ -386,9 +395,9 @@ describe("projectEventsToMessages", () => {
 			];
 			const messages = projectEventsToMessages(events);
 
-			expect(messages[0]._events).toHaveLength(4);
+			expect(at(messages, 0)._events).toHaveLength(4);
 			for (const event of events) {
-				expect(messages[0]._events).toContain(event.id);
+				expect(at(messages, 0)._events).toContain(event.id);
 			}
 		});
 
@@ -396,7 +405,7 @@ describe("projectEventsToMessages", () => {
 			const events = [createEvent("user:input", { text: "Test" })];
 			const messages = projectEventsToMessages(events, { includeEventIds: false });
 
-			expect(messages[0]._events).toEqual([]);
+			expect(at(messages, 0)._events).toEqual([]);
 		});
 	});
 
@@ -408,8 +417,8 @@ describe("projectEventsToMessages", () => {
 			const events = [createEvent("user:input", { text: "First" }), createEvent("user:input", { text: "Second" })];
 			const messages = projectEventsToMessages(events, { generateId: customGenerator });
 
-			expect(messages[0].id).toBe("custom-100");
-			expect(messages[1].id).toBe("custom-101");
+			expect(at(messages, 0).id).toBe("custom-100");
+			expect(at(messages, 1).id).toBe("custom-101");
 		});
 	});
 
@@ -431,19 +440,19 @@ describe("projectEventsToMessages", () => {
 			expect(messages).toHaveLength(3);
 
 			// First message: user question
-			expect(messages[0].role).toBe("user");
-			expect(messages[0].content).toBe("What's the weather?");
+			expect(at(messages, 0).role).toBe("user");
+			expect(at(messages, 0).content).toBe("What's the weather?");
 
 			// Second message: assistant with tool use
-			expect(messages[1].role).toBe("assistant");
-			expect(messages[1].name).toBe("weather-agent");
-			expect(messages[1].content).toBe("Let me check the weather. It's 72°F!");
-			expect(messages[1].toolInvocations).toHaveLength(1);
-			expect(messages[1].toolInvocations?.[0].state).toBe("result");
+			expect(at(messages, 1).role).toBe("assistant");
+			expect(at(messages, 1).name).toBe("weather-agent");
+			expect(at(messages, 1).content).toBe("Let me check the weather. It's 72°F!");
+			expect(at(messages, 1).toolInvocations).toHaveLength(1);
+			expect(at(messages, 1).toolInvocations?.[0]?.state).toBe("result");
 
 			// Third message: user thanks
-			expect(messages[2].role).toBe("user");
-			expect(messages[2].content).toBe("Thanks!");
+			expect(at(messages, 2).role).toBe("user");
+			expect(at(messages, 2).content).toBe("Thanks!");
 		});
 
 		it("should handle multi-turn conversation", () => {
@@ -488,7 +497,7 @@ describe("projectEventsToMessages", () => {
 			const event = createEvent("user:input", { text: "" });
 			const messages = projectEventsToMessages([event]);
 
-			expect(messages[0].content).toBe("");
+			expect(at(messages, 0).content).toBe("");
 		});
 
 		it("should handle special characters in content", () => {
@@ -496,14 +505,14 @@ describe("projectEventsToMessages", () => {
 			const messages = projectEventsToMessages([event]);
 
 			// Content should be preserved as-is (escaping is rendering concern)
-			expect(messages[0].content).toBe("Hello <script>alert('xss')</script>");
+			expect(at(messages, 0).content).toBe("Hello <script>alert('xss')</script>");
 		});
 
 		it("should handle unicode content", () => {
 			const event = createEvent("user:input", { text: "Hello 世界 🌍" });
 			const messages = projectEventsToMessages([event]);
 
-			expect(messages[0].content).toBe("Hello 世界 🌍");
+			expect(at(messages, 0).content).toBe("Hello 世界 🌍");
 		});
 	});
 });

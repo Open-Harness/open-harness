@@ -35,7 +35,7 @@ async function collectMessages(
 	prompt: string,
 	options?: {
 		maxTurns?: number;
-		outputFormat?: { type: "json_schema"; schema: unknown };
+		outputFormat?: { type: "json_schema"; schema: Record<string, unknown> };
 	},
 ): Promise<{
 	messages: SDKMessage[];

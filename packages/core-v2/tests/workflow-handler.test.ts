@@ -7,12 +7,14 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+	type AnyEvent,
 	type CorsOptions,
 	type CreateWorkflowHandlerOptions,
 	createWorkflow,
 	createWorkflowHandler,
 	defineEvent,
 	defineHandler,
+	type HandlerDefinition,
 	stateOnly,
 	type Workflow,
 	type WorkflowHandler,
@@ -65,7 +67,7 @@ function createTestWorkflow(): Workflow<TestState> {
 	return createWorkflow({
 		name: "test-workflow",
 		initialState,
-		handlers: [messageHandler, terminateHandler],
+		handlers: [messageHandler, terminateHandler] as HandlerDefinition<AnyEvent, TestState>[],
 		agents: [],
 		until: (state) => state.terminated,
 	});

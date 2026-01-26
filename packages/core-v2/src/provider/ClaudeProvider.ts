@@ -301,7 +301,6 @@ export function makeClaudeProviderService(
 								if (sdkMessage.type === "result") {
 									const result = sdkMessage as SDKResultMessage;
 									sessionId = result.session_id ?? sessionId;
-									structuredOutput = result.structured_output;
 									stopReason = result.subtype === "success" ? "end_turn" : undefined;
 
 									if (result.subtype !== "success") {
@@ -313,6 +312,9 @@ export function makeClaudeProviderService(
 											undefined,
 										);
 									}
+
+									// Now we know subtype is "success", so structured_output exists
+									structuredOutput = result.structured_output;
 
 									// Final text from result
 									if (typeof result.result === "string") {
@@ -403,8 +405,11 @@ export function makeClaudeProviderService(
 
 /**
  * Converts ProviderMessages to Claude SDK user messages.
+ * Returns an AsyncGenerator to match the SDK's expected AsyncIterable<SDKUserMessage> type.
  */
-function* toClaudeMessages(messages: readonly { role: string; content: string }[]): Generator<SDKUserMessage> {
+async function* toClaudeMessages(
+	messages: readonly { role: string; content: string }[],
+): AsyncGenerator<SDKUserMessage> {
 	for (const message of messages) {
 		yield {
 			type: "user",
@@ -431,10 +436,15 @@ function* toClaudeMessages(messages: readonly { role: string; content: string }[
  * @param options - Query options that may contain outputFormat or zodSchema
  * @returns The resolved output format or undefined
  */
-function resolveOutputFormat(options: QueryOptions): { type: "json_schema"; schema: unknown } | undefined {
+function resolveOutputFormat(
+	options: QueryOptions,
+): { type: "json_schema"; schema: Record<string, unknown> } | undefined {
 	// outputFormat takes precedence (already JSON Schema)
 	if (options.outputFormat) {
-		return options.outputFormat;
+		return {
+			type: "json_schema",
+			schema: options.outputFormat.schema as Record<string, unknown>,
+		};
 	}
 
 	// Convert zodSchema to JSON Schema if provided (FR-067)
@@ -442,7 +452,7 @@ function resolveOutputFormat(options: QueryOptions): { type: "json_schema"; sche
 		const jsonSchema = convertZodToJsonSchema(options.zodSchema as Parameters<typeof convertZodToJsonSchema>[0]);
 		return {
 			type: "json_schema",
-			schema: jsonSchema,
+			schema: jsonSchema as Record<string, unknown>,
 		};
 	}
 
@@ -549,7 +559,17 @@ export async function createClaudeProvider(config: ClaudeProviderConfig = {}): P
 		query: (options: QueryOptions) => Effect.runPromise(service.query(options)),
 		stream: (options: QueryOptions) => ({
 			async *[Symbol.asyncIterator]() {
-				yield* Stream.toReadableStream(service.stream(options));
+				const readableStream = Stream.toReadableStream(service.stream(options));
+				const reader = readableStream.getReader();
+				try {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						yield value;
+					}
+				} finally {
+					reader.releaseLock();
+				}
 			},
 		}),
 		info: () => Effect.runPromise(service.info()),
