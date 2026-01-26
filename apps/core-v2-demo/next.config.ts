@@ -5,6 +5,20 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   // Transpile workspace packages that use ESM-style .js imports in TypeScript
   transpilePackages: ["@open-harness/core-v2"],
+  // Turbopack config (Next.js 16+ uses Turbopack by default)
+  // Turbopack handles .js/.ts extension resolution natively, so minimal config needed
+  turbopack: {
+    resolveExtensions: [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mts",
+      ".mjs",
+      ".cts",
+      ".cjs",
+    ],
+  },
   webpack: (config, { isServer }) => {
     // Fix module resolution for workspace packages using TypeScript ESM pattern
     // (files import with .js extension but only .ts files exist)

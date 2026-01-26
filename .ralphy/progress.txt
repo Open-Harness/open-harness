@@ -2172,3 +2172,24 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
 - We had to explicitly set config.resolve.conditionNames for client bundles
 - Server-side routes (/api/workflow) still use the default entry point with SqliteStore (correct behavior)
 - The warning about better-sqlite3 dynamic require on server-side is harmless
+
+## 2026-01-22T03:10:00Z - Phase 12 Dev Server Verification
+**Task**: Verify the app runs with: cd apps/core-v2-demo && bun run dev
+**Status**: COMPLETE
+**Changes**:
+- Updated apps/core-v2-demo/next.config.ts to add turbopack config (resolveExtensions array)
+- Updated apps/core-v2-demo/package.json to use `next dev --webpack` flag
+- Fixed: Next.js 16 uses Turbopack by default, but Turbopack doesn't support `extensionAlias` for .js→.ts resolution
+- Solution: Use webpack mode explicitly which supports the existing extensionAlias config for ESM-style imports
+
+**Verification**:
+- Dev server starts successfully: `bun run dev` → "Ready in 6.3s"
+- HTTP 200 response from http://localhost:3000
+- HTML content verified: "Core V2 Demo" heading, chat input, send button, tape controls all present
+- Tests: PASS (903 tests across 26 files)
+- Lint: PASS (after format fix)
+
+**Notes**:
+- The core-v2 package uses TypeScript ESM convention (import with .js extension)
+- Webpack's extensionAlias handles the .js→.ts resolution correctly
+- Turbopack lacks equivalent extensionAlias support, so --webpack flag is required for dev
