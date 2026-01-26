@@ -2260,3 +2260,37 @@ Phase 13 should remain incomplete until:
 - Streaming behavior is inherently non-deterministic - depends on SDK internal buffering and network conditions
 - The golden fixtures still show `input_json_delta` events because those were recorded from actual SDK responses that happened to chunk
 - This is a valid test fix, not a test skip - we still verify the functionality when it occurs
+
+## 2026-01-22T03:20:00Z - Phase 13 Task 1: Start Dev Server
+**Task**: Start the core-v2-demo app on localhost:3000
+**Status**: COMPLETE
+**Changes**:
+- Started `apps/core-v2-demo` dev server with `bun run dev`
+- Server responded with HTTP 200 at localhost:3000
+- Verified HTML response contains all required UI elements via curl:
+  - "Core V2 Demo" heading
+  - `data-testid="chat-input"` - input field
+  - `data-testid="submit-button"` - submit button
+  - `data-testid="rewind-button"` - rewind button
+  - `data-testid="step-back-button"` - step back button
+  - `data-testid="step-button"` - step forward button
+  - `data-testid="position-indicator"` showing "1/1"
+**Verification**:
+- Dev server started successfully
+- curl http://localhost:3000 returned complete HTML with all UI components
+- Server stopped after verification
+
+**REMAINING PHASE 13 TASKS ARE BLOCKED**:
+All subsequent Phase 13 tasks require MCP browser automation tools:
+- `mcp__claude-in-chrome__tabs_create_mcp`
+- `mcp__claude-in-chrome__navigate`
+- `mcp__claude-in-chrome__computer`
+- `mcp__claude-in-chrome__find`
+- `mcp__claude-in-chrome__form_input`
+
+These tools are NOT available in the current environment. They require:
+1. Chrome browser with Claude-in-Chrome extension installed
+2. MCP server configuration connecting Claude to the browser extension
+3. The extension running and accepting MCP commands
+
+The implementation is complete (Phases 1-12). Visual verification (Phase 13) requires external infrastructure.

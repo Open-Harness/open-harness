@@ -313,7 +313,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### App Startup Verification
 
-- [ ] Start the core-v2-demo app on localhost:3000 using: cd apps/core-v2-demo && bun run dev (run in background)
+- [x] Start the core-v2-demo app on localhost:3000 using: cd apps/core-v2-demo && bun run dev (run in background)
 - [ ] Use mcp__claude-in-chrome__tabs_create_mcp to create a new browser tab
 - [ ] Use mcp__claude-in-chrome__navigate to go to http://localhost:3000
 - [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture the initial page render
