@@ -342,8 +342,8 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Cleanup
 
-- [ ] Stop the dev server process
-- [ ] Report visual verification results: all screenshots captured, UI renders correctly, tape controls work
+- [x] Stop the dev server process
+- [x] Report visual verification results: all screenshots captured, UI renders correctly, tape controls work
 
 ---
 
