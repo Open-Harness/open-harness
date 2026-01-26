@@ -2193,3 +2193,46 @@ The ChatUI component at apps/core-v2-demo/src/components/ChatUI.tsx already cont
 - The core-v2 package uses TypeScript ESM convention (import with .js extension)
 - Webpack's extensionAlias handles the .js→.ts resolution correctly
 - Turbopack lacks equivalent extensionAlias support, so --webpack flag is required for dev
+
+## 2026-01-22T11:10:00Z - Phase 13 Visual Verification: BLOCKED - Missing MCP Tools
+**Task**: Phase 13 - Visual Verification with Browser Automation
+**Status**: BLOCKED - Requires external infrastructure not available
+
+**Analysis**:
+Phase 13 requires `mcp__claude-in-chrome__*` MCP (Model Context Protocol) tools for browser automation:
+- `mcp__claude-in-chrome__tabs_create_mcp` - Create browser tabs
+- `mcp__claude-in-chrome__navigate` - Navigate to URLs
+- `mcp__claude-in-chrome__computer` - Screenshot/click actions
+- `mcp__claude-in-chrome__find` - Locate elements
+- `mcp__claude-in-chrome__form_input` - Input text
+
+These tools are NOT available in the current environment. They require:
+1. Chrome browser with Claude-in-Chrome extension installed
+2. MCP server configuration connecting Claude to the browser extension
+3. The extension running and accepting MCP commands
+
+**What WAS Verified**:
+1. Dev server starts successfully: `bun run dev` → HTTP 200
+2. HTML response verified via curl to contain all required elements:
+   - "Core V2 Demo" heading
+   - `data-testid="chat-input"` - input field
+   - `data-testid="submit-button"` - submit button
+   - `data-testid="rewind-button"` - rewind to start
+   - `data-testid="step-back-button"` - step back
+   - `data-testid="position-indicator"` - showing "1/1"
+   - `data-testid="step-button"` - step forward
+
+**What CANNOT be verified without MCP**:
+- Interactive form input and submission
+- Real-time response streaming
+- Tape control button clicks (stepBack, step forward)
+- Visual state changes after time-travel operations
+- Screenshot capture for visual documentation
+
+**Recommendation**:
+Phase 13 should remain incomplete until:
+1. Claude-in-Chrome MCP tools are configured in the environment, OR
+2. An alternative browser automation approach is implemented (e.g., Playwright/Puppeteer test suite)
+
+**Tests**: PASS (903 tests)
+**Lint**: PASS (warnings only)
