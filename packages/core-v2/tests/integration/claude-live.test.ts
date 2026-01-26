@@ -168,20 +168,16 @@ describe("Claude SDK Live Integration Tests", () => {
 			LIVE_TEST_TIMEOUT,
 		);
 
-		it(
-			"should emit text_delta events for streaming text",
-			async () => {
-				const result = await collectMessages("Explain what the number 7 is in one sentence.");
+		it("should emit text_delta events for streaming text", { timeout: LIVE_TEST_TIMEOUT, retry: 2 }, async () => {
+			const result = await collectMessages("Explain what the number 7 is in one sentence.");
 
-				// For longer responses, we should see text deltas
-				// (short responses may not stream)
-				expect(result.messages.some((m) => m.type === "stream_event")).toBe(true);
+			// For longer responses, we should see text deltas
+			// (short responses may not stream)
+			expect(result.messages.some((m) => m.type === "stream_event")).toBe(true);
 
-				// Final text should be non-empty
-				expect(result.finalText.length).toBeGreaterThan(0);
-			},
-			LIVE_TEST_TIMEOUT,
-		);
+			// Final text should be non-empty
+			expect(result.finalText.length).toBeGreaterThan(0);
+		});
 	});
 
 	describe("Tool Use Integration", () => {
