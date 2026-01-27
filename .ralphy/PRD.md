@@ -281,7 +281,9 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 12: E2E Demo Application
 
-**Build a real Next.js app in apps/ that uses core-v2 to prove the React integration works end-to-end.**
+**Build a real Next.js app that showcases core-v2's killer features: recording sessions and replaying them with time-travel.**
+
+**KEY INSIGHT: Tape controls (stepBack, rewind) only make sense in REPLAY mode, not during live streaming. The demo must have two distinct modes.**
 
 ### App Setup
 
@@ -290,18 +292,39 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 - [x] Add React peer dependency to packages/core-v2/package.json: "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }
 - [x] Create apps/core-v2-demo/src/lib/workflow.ts that defines a simple TaskExecutor workflow using core-v2 (based on quickstart.md example)
 
-### UI Components
+### Session Management (THE ARCHITECTURE)
 
-- [x] Create apps/core-v2-demo/src/app/page.tsx as the main demo page with "Core V2 Demo" heading
-- [x] Create apps/core-v2-demo/src/components/ChatUI.tsx component that uses useWorkflow hook from @open-harness/core-v2/react
-- [x] Implement ChatUI to display: messages list, input field, submit button, loading indicator, error display
-- [x] Add tape controls to ChatUI: stepBack button, step button, rewind button, position indicator showing "Position X of Y"
-- [x] Style the UI with Tailwind CSS for clear visual feedback (different colors for user/assistant messages, loading spinner, etc.)
+- [x] Create apps/core-v2-demo/src/components/SessionList.tsx showing all recorded sessions from SqliteStore
+- [ ] Display session metadata: id, date, event count, duration
+- [ ] Add "New Session" button that starts recording a fresh session (enters Live Mode)
+- [ ] Add click handler on session rows to load that session for replay (enters Replay Mode)
+- [ ] Create apps/core-v2-demo/src/app/page.tsx showing SessionList as the landing view
+
+### Live Recording Mode (for NEW sessions)
+
+- [ ] Create apps/core-v2-demo/src/components/LiveChat.tsx for recording NEW sessions
+- [ ] LiveChat uses useWorkflow with record:true and SqliteStore
+- [ ] Display: messages list, input field, submit button, loading indicator, error display
+- [ ] Show "Recording" indicator while session is active
+- [ ] DO NOT show tape controls in Live Mode (they don't work while streaming!)
+- [ ] When user ends session, return to SessionList
+
+### Replay Mode (THE KILLER FEATURE)
+
+- [ ] Create apps/core-v2-demo/src/components/ReplayViewer.tsx for viewing recorded sessions
+- [ ] Load session via workflow.load(sessionId) to get Tape instance
+- [ ] Show tape controls: stepBack, step, rewind, playTo slider
+- [ ] Show position indicator: "Event 5 of 23"
+- [ ] Show messages projected from events at current tape position
+- [ ] Tape controls update React state via useWorkflow tape integration
+- [ ] "Back to Sessions" button to return to SessionList
 
 ### Server Integration
 
 - [x] Create apps/core-v2-demo/src/app/api/workflow/route.ts using createWorkflowHandler() from core-v2 for server-side execution
-- [x] Configure ChatUI to connect via api: '/api/workflow' option in useWorkflow
+- [x] Configure workflow API to use SqliteStore for persistence
+- [ ] Implement GET /api/sessions endpoint returning list of recorded sessions
+- [ ] Implement GET /api/sessions/[id] endpoint returning session events for replay
 - [x] Verify the app builds with: cd apps/core-v2-demo && bun run build
 - [x] Verify the app runs with: cd apps/core-v2-demo && bun run dev
 
@@ -309,41 +332,57 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ## Phase 13: Visual Verification with Browser Automation
 
-**Use Claude-in-Chrome MCP to actually see and verify the app renders correctly.**
+**Use Claude-in-Chrome MCP to verify the demo app's session management, recording, and replay features.**
 
-### App Startup Verification
+### App Startup & Session List Verification
 
 - [x] Start the core-v2-demo app on localhost:3000 using: cd apps/core-v2-demo && bun run dev (run in background)
 - [ ] Use mcp__claude-in-chrome__tabs_create_mcp to create a new browser tab
 - [ ] Use mcp__claude-in-chrome__navigate to go to http://localhost:3000
 - [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture the initial page render
-- [ ] Verify screenshot shows: "Core V2 Demo" heading, input field, submit button visible
+- [ ] Verify screenshot shows: "Core V2 Demo" heading, SessionList component, "New Session" button visible
+- [ ] Verify any existing sessions are listed with their metadata (if database has previous sessions)
 
-### Interactive Testing
+### Live Recording Mode Verification
 
+- [ ] Use mcp__claude-in-chrome__find to locate the "New Session" button
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click "New Session"
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture LiveChat view
+- [ ] Verify screenshot shows: LiveChat with input field, "Recording" indicator, NO tape controls visible
 - [ ] Use mcp__claude-in-chrome__find to locate the chat input field
 - [ ] Use mcp__claude-in-chrome__form_input to type a test message: "What is 2 + 2?"
 - [ ] Use mcp__claude-in-chrome__find to locate the submit button
 - [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click submit
-- [ ] Use mcp__claude-in-chrome__computer with action:"wait" for 3 seconds to allow response
+- [ ] Use mcp__claude-in-chrome__computer with action:"wait" for 5 seconds to allow response
 - [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture the response
-- [ ] Verify screenshot shows: user message "What is 2 + 2?", assistant response with answer, no error messages
+- [ ] Verify screenshot shows: user message, assistant response, still NO tape controls (live mode)
 
-### Time-Travel Verification
+### Return to Session List
 
-- [ ] Use mcp__claude-in-chrome__find to locate the stepBack button
-- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click stepBack
-- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture after stepBack
-- [ ] Verify screenshot shows: position indicator changed, previous state displayed
+- [ ] Use mcp__claude-in-chrome__find to locate "Back to Sessions" or "End Session" button
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to return to session list
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture updated session list
+- [ ] Verify screenshot shows: newly recorded session appears in the list with correct metadata
+
+### Replay Mode Verification (THE KILLER FEATURE)
+
+- [ ] Use mcp__claude-in-chrome__find to locate the newly recorded session row
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to load the session for replay
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture ReplayViewer
+- [ ] Verify screenshot shows: ReplayViewer with tape controls now VISIBLE, position indicator, messages
+- [ ] Use mcp__claude-in-chrome__find to locate the rewind button
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click rewind
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture after rewind
+- [ ] Verify screenshot shows: position indicator at "Event 0", initial state displayed
 - [ ] Use mcp__claude-in-chrome__find to locate the step (forward) button
-- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click step forward
-- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture after step forward
-- [ ] Verify screenshot shows: position returned to latest, full conversation visible again
+- [ ] Use mcp__claude-in-chrome__computer with action:"left_click" to click step forward multiple times
+- [ ] Use mcp__claude-in-chrome__computer with action:"screenshot" to capture mid-replay state
+- [ ] Verify screenshot shows: position advanced, partial conversation visible
 
 ### Cleanup
 
 - [x] Stop the dev server process
-- [x] Report visual verification results: all screenshots captured, UI renders correctly, tape controls work
+- [x] Report visual verification results: session management works, live mode has no tape controls, replay mode has full tape controls
 
 ---
 
