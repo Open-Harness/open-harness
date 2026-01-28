@@ -3394,3 +3394,27 @@ However, no tests existed. Added comprehensive test suite to validate the functi
 - Currently shows a placeholder in replay mode indicating "ReplayViewer component coming soon"
 - This completes the click handler requirement - mode transition to replay now works
 - Full replay functionality requires implementing ReplayViewer (separate PRD task)
+
+## 2026-01-22T06:08:00Z - Phase 12 Task: PRD Cleanup for page.tsx
+
+**Task**: Create apps/core-v2-demo/src/app/page.tsx showing SessionList as the landing view
+**Status**: PRD UPDATED (implementation was already complete)
+
+**Analysis**:
+- The page.tsx file already existed with full implementation from previous session (2026-01-22T06:05)
+- 22 passing tests existed in page.test.tsx
+- The PRD task (line 301) was not marked complete despite implementation being done
+- This session corrects the PRD state to match actual implementation
+
+**Verification**:
+- Tests: PASS (41 tests - 22 page tests + 19 SessionList tests)
+- Lint: PASS (turbo lint across 26 packages)
+- File exists: apps/core-v2-demo/src/app/page.tsx (178 lines)
+- File exists: apps/core-v2-demo/src/app/page.test.tsx (7.8 KB)
+
+**PRD Update**: Marked line 301 as complete `[x]`
+
+**Notes**:
+- This was a PRD sync fix, not new implementation
+- The page.tsx shows SessionList as landing view (mode === "list")
+- Supports mode transitions: list → live, list → replay, live/replay → list
