@@ -3418,3 +3418,56 @@ However, no tests existed. Added comprehensive test suite to validate the functi
 - This was a PRD sync fix, not new implementation
 - The page.tsx shows SessionList as landing view (mode === "list")
 - Supports mode transitions: list → live, list → replay, live/replay → list
+
+---
+
+## 2026-01-22 06:14:31 - Phase 12: Live Recording Mode (LiveChat.tsx)
+
+### Task Completed
+Created `apps/core-v2-demo/src/components/LiveChat.tsx` for recording NEW workflow sessions.
+
+### Changes Made
+
+1. **Created LiveChat.tsx** - A specialized chat component for recording mode:
+   - Uses `useWorkflow` hook with `record: true` for session recording
+   - Displays messages list, input field, submit button
+   - Shows loading indicator during AI processing
+   - Shows error display for failures
+   - Shows workflow state (phase, task count, completed count)
+   - **KEY DIFFERENCE from ChatUI**: NO tape controls (they don't work during live streaming!)
+   - "End Session" button that calls `onSessionEnd` callback to return to SessionList
+   - Input/submit disabled when workflow is complete
+
+2. **Updated page.tsx** - Integrated LiveChat into the Live Mode:
+   - Changed import from ChatUI to LiveChat
+   - Added `onSessionEnd={handleBackToList}` callback to LiveChat
+   - Updated documentation comments
+
+3. **Created LiveChat.test.tsx** - Comprehensive test suite (31 tests):
+   - Component structure tests
+   - **Critical test**: Verifies NO tape controls are rendered
+   - Empty state tests
+   - Messages display tests (user, assistant, agent names, tool invocations)
+   - Loading state tests
+   - Error display tests
+   - Workflow state display tests
+   - End Session button tests
+   - Form submission tests
+   - Input handling tests
+
+4. **Updated page.test.tsx** - Updated to use LiveChat mock:
+   - Changed mock from ChatUI to LiveChat
+   - Added onSessionEnd callback to mock
+   - Added test for session end via callback
+   - Updated all references from chat-ui to live-chat
+
+### Test Results
+- All 73 tests pass (SessionList: 19, LiveChat: 31, page: 23)
+- Linting passes
+
+### Architecture Insight
+The PRD specifies two distinct modes:
+- **Live Mode (LiveChat)**: For recording new sessions. No tape controls because you can't step back through events that are still being generated.
+- **Replay Mode (ReplayViewer)**: For viewing recorded sessions. Full tape controls (stepBack, step, rewind, playTo) for time-travel debugging.
+
+This separation ensures the correct UX - tape controls only appear when they're actually useful (during replay of completed sessions).

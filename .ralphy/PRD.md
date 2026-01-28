@@ -302,12 +302,12 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Live Recording Mode (for NEW sessions)
 
-- [ ] Create apps/core-v2-demo/src/components/LiveChat.tsx for recording NEW sessions
-- [ ] LiveChat uses useWorkflow with record:true and SqliteStore
-- [ ] Display: messages list, input field, submit button, loading indicator, error display
-- [ ] Show "Recording" indicator while session is active
-- [ ] DO NOT show tape controls in Live Mode (they don't work while streaming!)
-- [ ] When user ends session, return to SessionList
+- [x] Create apps/core-v2-demo/src/components/LiveChat.tsx for recording NEW sessions
+- [x] LiveChat uses useWorkflow with record:true and SqliteStore
+- [x] Display: messages list, input field, submit button, loading indicator, error display
+- [x] Show "Recording" indicator while session is active
+- [x] DO NOT show tape controls in Live Mode (they don't work while streaming!)
+- [x] When user ends session, return to SessionList
 
 ### Replay Mode (THE KILLER FEATURE)
 

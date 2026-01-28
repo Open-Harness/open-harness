@@ -3,7 +3,7 @@
  *
  * Validates the session management architecture:
  * - List Mode: SessionList as landing view
- * - Live Mode: ChatUI for recording new sessions
+ * - Live Mode: LiveChat for recording new sessions
  * - Replay Mode: Placeholder for time-travel debugging
  *
  * @module apps/core-v2-demo/src/app/page.test
@@ -41,10 +41,23 @@ vi.mock("@/components/SessionList", () => ({
   ),
 }));
 
-vi.mock("@/components/ChatUI", () => ({
-  ChatUI: ({ api }: { api?: string }) => (
-    <div data-testid="chat-ui" data-api={api}>
-      ChatUI Component
+vi.mock("@/components/LiveChat", () => ({
+  LiveChat: ({
+    api,
+    onSessionEnd,
+  }: {
+    api: string;
+    onSessionEnd: () => void;
+  }) => (
+    <div data-testid="live-chat" data-api={api}>
+      <span>LiveChat Component</span>
+      <button
+        type="button"
+        onClick={onSessionEnd}
+        data-testid="end-session-button"
+      >
+        End Session
+      </button>
     </div>
   ),
 }));
@@ -64,9 +77,9 @@ describe("Home Page", () => {
       expect(screen.getByTestId("session-list")).toBeInTheDocument();
     });
 
-    it("does not show ChatUI in list mode", () => {
+    it("does not show LiveChat in list mode", () => {
       render(<Home />);
-      expect(screen.queryByTestId("chat-ui")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("live-chat")).not.toBeInTheDocument();
     });
 
     it("does not show back button in list mode", () => {
@@ -88,7 +101,7 @@ describe("Home Page", () => {
 
       fireEvent.click(screen.getByTestId("new-session-button"));
 
-      expect(screen.getByTestId("chat-ui")).toBeInTheDocument();
+      expect(screen.getByTestId("live-chat")).toBeInTheDocument();
     });
 
     it("shows recording indicator in live mode", () => {
@@ -115,12 +128,12 @@ describe("Home Page", () => {
       expect(screen.queryByTestId("session-list")).not.toBeInTheDocument();
     });
 
-    it("passes api prop to ChatUI", () => {
+    it("passes api prop to LiveChat", () => {
       render(<Home />);
 
       fireEvent.click(screen.getByTestId("new-session-button"));
 
-      expect(screen.getByTestId("chat-ui")).toHaveAttribute(
+      expect(screen.getByTestId("live-chat")).toHaveAttribute(
         "data-api",
         "/api/workflow",
       );
@@ -131,12 +144,25 @@ describe("Home Page", () => {
 
       // Enter live mode
       fireEvent.click(screen.getByTestId("new-session-button"));
-      expect(screen.getByTestId("chat-ui")).toBeInTheDocument();
+      expect(screen.getByTestId("live-chat")).toBeInTheDocument();
 
       // Return to list mode
       fireEvent.click(screen.getByTestId("back-button"));
       expect(screen.getByTestId("session-list")).toBeInTheDocument();
-      expect(screen.queryByTestId("chat-ui")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("live-chat")).not.toBeInTheDocument();
+    });
+
+    it("returns to list mode when session ends via onSessionEnd callback", () => {
+      render(<Home />);
+
+      // Enter live mode
+      fireEvent.click(screen.getByTestId("new-session-button"));
+      expect(screen.getByTestId("live-chat")).toBeInTheDocument();
+
+      // End session via callback
+      fireEvent.click(screen.getByTestId("end-session-button"));
+      expect(screen.getByTestId("session-list")).toBeInTheDocument();
+      expect(screen.queryByTestId("live-chat")).not.toBeInTheDocument();
     });
   });
 
@@ -174,12 +200,12 @@ describe("Home Page", () => {
       expect(screen.queryByTestId("session-list")).not.toBeInTheDocument();
     });
 
-    it("does not show ChatUI in replay mode", () => {
+    it("does not show LiveChat in replay mode", () => {
       render(<Home />);
 
       fireEvent.click(screen.getByTestId("select-session-button"));
 
-      expect(screen.queryByTestId("chat-ui")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("live-chat")).not.toBeInTheDocument();
     });
 
     it("does not show recording indicator in replay mode", () => {
@@ -217,7 +243,7 @@ describe("Home Page", () => {
 
       // Live mode
       fireEvent.click(screen.getByTestId("new-session-button"));
-      expect(screen.getByTestId("chat-ui")).toBeInTheDocument();
+      expect(screen.getByTestId("live-chat")).toBeInTheDocument();
 
       // Back to list mode
       fireEvent.click(screen.getByTestId("back-button"));

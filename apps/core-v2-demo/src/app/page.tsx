@@ -5,19 +5,19 @@
  *
  * Demonstrates the core-v2 package's React integration with:
  * - Session management via SessionList (landing view)
- * - Live Mode: Recording new sessions with ChatUI
+ * - Live Mode: Recording new sessions with LiveChat
  * - Replay Mode: Time-travel debugging of recorded sessions (TODO)
  *
  * Architecture:
  * - "list" mode: SessionList showing all recorded sessions
- * - "live" mode: ChatUI for recording new sessions
+ * - "live" mode: LiveChat for recording new sessions (no tape controls)
  * - "replay" mode: ReplayViewer for time-travel debugging (pending implementation)
  *
  * @module apps/core-v2-demo/src/app/page
  */
 
 import { useCallback, useState } from "react";
-import { ChatUI } from "@/components/ChatUI";
+import { LiveChat } from "@/components/LiveChat";
 import { SessionList } from "@/components/SessionList";
 
 /**
@@ -126,7 +126,7 @@ export default function Home() {
           <>
             <BackButton onClick={handleBackToList} />
             <RecordingIndicator />
-            <ChatUI api="/api/workflow" />
+            <LiveChat api="/api/workflow" onSessionEnd={handleBackToList} />
           </>
         )}
 
