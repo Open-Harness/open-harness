@@ -3263,3 +3263,60 @@ Since MCP tools are unavailable, performed command-line verification:
 - Line 305-312: LiveChat component for recording
 - Line 314-320: ReplayViewer component for time-travel
 - Line 327: GET /api/sessions/[id] endpoint for replay events
+
+## 2026-01-22T05:58:00Z - Session Metadata Display Tests (Session 23)
+
+**Task**: Display session metadata: id, date, event count, duration
+**Status**: COMPLETE
+
+**Analysis**:
+The SessionList component already had full metadata display implemented:
+- **ID**: Truncated display (`session.id.slice(0, 8)...`) at line 295
+- **Date**: Formatted via `formatDate(session.createdAt)` at line 304
+- **Event count**: Shows `session.eventCount` with "events" label (lines 309-314)
+- **Duration**: Calculated via `formatDuration(session.createdAt, session.lastEventAt)` (lines 317-322)
+
+However, no tests existed. Added comprehensive test suite to validate the functionality.
+
+**Test Infrastructure Added**:
+- Added `vitest`, `@vitejs/plugin-react`, `@testing-library/react`, `@testing-library/jest-dom`, and `jsdom` to devDependencies
+- Created `vitest.config.ts` with React plugin and jsdom environment
+- Created `src/test/setup.ts` with jest-dom matchers
+
+**Tests Created** (14 total in `src/components/SessionList.test.tsx`):
+1. **Session Metadata Display**:
+   - displays truncated session ID
+   - displays formatted creation date
+   - displays event count for each session
+   - displays calculated duration for sessions with lastEventAt
+   - displays dash for sessions without lastEventAt
+   - displays workflow name when available
+
+2. **Duration Formatting**:
+   - formats duration less than 1 second as '< 1s'
+   - formats duration in seconds only when under a minute
+   - formats duration in minutes and seconds
+
+3. **Session Count**:
+   - displays total session count in header
+   - displays singular 'session' for single session
+
+4. **Empty State**:
+   - shows empty state message when no sessions
+
+5. **Loading State**:
+   - shows loading skeleton while fetching
+
+6. **Error State**:
+   - shows error message on fetch failure
+
+**Verification**:
+- Tests: PASS (14 tests)
+- Lint: PASS (biome check)
+
+**Files Changed**:
+- `apps/core-v2-demo/package.json` (added test dependencies and scripts)
+- `apps/core-v2-demo/vitest.config.ts` (NEW - vitest configuration)
+- `apps/core-v2-demo/src/test/setup.ts` (NEW - test setup)
+- `apps/core-v2-demo/src/components/SessionList.test.tsx` (NEW - 14 tests)
+- `.ralphy/PRD.md` (marked task complete)
