@@ -10,6 +10,7 @@
 import {
   type AnyEvent,
   createSqliteStore,
+  makeSessionId,
   type PublicStore,
   type SessionMetadata,
 } from "@open-harness/core-v2";
@@ -42,7 +43,7 @@ async function getStore(): Promise<PublicStore> {
  */
 interface SessionDetailResponse {
   id: string;
-  events: AnyEvent[];
+  events: readonly AnyEvent[];
   createdAt: string;
   lastEventAt?: string;
   eventCount: number;
@@ -54,7 +55,7 @@ interface SessionDetailResponse {
  */
 function toResponse(
   session: SessionMetadata,
-  events: AnyEvent[],
+  events: readonly AnyEvent[],
 ): SessionDetailResponse {
   return {
     id: session.id,
@@ -96,7 +97,7 @@ export async function GET(
     }
 
     // Get events for this session
-    const events = await store.events(id);
+    const events = await store.events(makeSessionId(id));
 
     // Convert to response format
     const response = toResponse(sessionMeta, events);
