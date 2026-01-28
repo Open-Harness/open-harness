@@ -1,0 +1,13 @@
+import { defineConfig } from "tsdown"
+
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm", "cjs"],
+  dts: true,
+  sourcemap: true,
+  clean: true,
+  treeshake: true,
+  outDir: "dist",
+  external: ["@open-scaffold/core", "react", "react-dom"],
+  tsconfig: "tsconfig.src.json"
+})

@@ -1,0 +1,43 @@
+{
+  "name": "@open-scaffold/testing",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Shared testing utilities and recordings for Open Scaffold",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./recordings": "./recordings/test.db"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-scaffold/open-scaffold",
+    "directory": "packages/testing"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -b tsconfig.json",
+    "record": "bun src/record.ts"
+  },
+  "dependencies": {
+    "@open-scaffold/core": "*",
+    "@open-scaffold/server": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}

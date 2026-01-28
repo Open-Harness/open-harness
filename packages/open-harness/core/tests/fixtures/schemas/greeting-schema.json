@@ -1,9 +1,0 @@
-{
-	"type": "object",
-	"properties": {
-		"greeting": {
-			"type": "string"
-		}
-	},
-	"required": ["greeting"]
-}

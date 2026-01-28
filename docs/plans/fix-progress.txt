@@ -1,0 +1,55 @@
+Consolidated Fix Plan — Execution Progress
+============================================
+Started: 2026-01-27
+Completed: 2026-01-27
+
+Wave 1: Tasks 1, 2, 3 (critical path — block Task 6)
+Wave 2: Tasks 4, 5 (independent)
+Wave 3: Task 6 (blocked by 1, 2, 3)
+Wave 4: Tasks 7, 8 (blocked by 5)
+
+--- Progress ---
+
+Task #1 [DONE] Fix CLI providers — hardcode AnthropicProvider models
+  - Gate: typecheck pass, tests 223 pass
+  - Summary: Imported AnthropicProvider, registered 3 Anthropic models in OpenScaffold.create()
+
+Task #2 [DONE] Fix OpenScaffold layer gaps — add ProviderModeContext + throw on empty registry
+  - Gate: typecheck pass, tests 223 pass
+  - Summary: Added ProviderModeContext to AppServices type + layer, added throw on undefined providers
+
+Task #3 [DONE] Wire RuntimeConfig.database — auto-construct EventStore from database path
+  - Gate: typecheck pass, tests 223 pass
+  - Summary: Replaced InMemoryEventStore fallback with EventStoreLive, default ~/.openscaffold/scaffold.db, fixed test regressions with database:":memory:"
+
+Task #4 [DONE] Spec drift cleanup — remove flat callbacks, clean artifacts, update docs
+  - Gate: typecheck pass, tests pass
+  - Summary: Removed flat callbacks from RunOptions, deleted HANDOFF.md/PLAN.md/migration-plan.md, froze migration-plan-v2.md
+
+Task #5 [DONE] Record real API fixtures and replace mock provider
+  - Gate: typecheck pass, tests pass
+  - Summary: Created test-provider.ts using real ProviderRecorder with in-memory storage, deleted mock-provider.ts, migrated all test files
+
+Task #6 [DONE] Add integration tests — EventStore, EventBus, ProviderRegistry, CLI E2E
+  - Gate: typecheck pass, tests pass (9 new integration tests)
+  - Summary: Added 4 integration test files: eventstore, eventbus, provider-registry, CLI E2E
+
+Task #7 [DONE] Upgrade shallow tests to behavioral assertions
+  - Gate: typecheck pass, tests pass
+  - Summary: Added behavioral assertions to next-agent, next-workflow, next-phase, next-config, next-run tests
+
+Task #8 [DONE] Add error path tests with recorded error fixtures
+  - Gate: typecheck pass, tests pass (14 new error path tests)
+  - Summary: Added error-paths.test.ts with ProviderNotFoundError, abort, schema validation, auth failure tests
+
+--- FINAL RESULTS ---
+
+All 8 tasks COMPLETE.
+Typecheck: 5/5 packages pass
+Tests: 29 files, 257 tests, ALL PASS
+  - Started with: 223 tests (219 passing, 4 client failures)
+  - Ended with: 257 tests (all 257 passing)
+  - Net new tests: +34
+
+Files changed: 29 modified/deleted, 8 new files created
+Net lines: +1,340 added, -1,814 removed

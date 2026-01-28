@@ -1,4 +1,0 @@
-{
-	"title": "Testing",
-	"pages": ["index", "vitest-setup", "signal-assertions", "recording-replay"]
-}

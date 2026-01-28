@@ -1,0 +1,99 @@
+/**
+ * resumeSession - Resume a paused session from its current position.
+ *
+ * Flow:
+ * 1. Load events from store
+ * 2. Compute current state from event log (pure scan)
+ * 3. Execute workflow from resumed state via executeWorkflow
+ *
+ * Mental model: This is "RESUME" on the VCR after PAUSE.
+ *
+ * @module
+ */
+
+import { Effect } from "effect"
+
+import {
+  type AgentError,
+  computeStateAt,
+  type ExecuteOptions,
+  executeWorkflow,
+  type ProviderError,
+  type ProviderNotFoundError,
+  type ProviderRegistry,
+  type RecordingNotFound,
+  type Services,
+  type SessionId,
+  type SessionNotFound,
+  type StoreError,
+  type WorkflowDef,
+  type WorkflowError,
+  type WorkflowResult
+} from "@open-scaffold/core"
+
+import { loadSession } from "./loadSession.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────
+
+export interface ResumeConfig<S, Input = string, Phases extends string = never> {
+  readonly sessionId: SessionId
+  readonly workflow: WorkflowDef<S, Input, Phases>
+  readonly input: Input
+  readonly initialState: S // Fallback if no state:updated events exist
+  readonly resumePhase?: string // Phase to resume from (for phased workflows)
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Program
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Resume a paused session.
+ *
+ * Loads existing events, computes current state, then delegates to
+ * `executeWorkflow` with the `resumeState` option so the runtime
+ * skips `start()` and begins from the checkpoint.
+ */
+export const resumeSession = <S, Input = string, Phases extends string = never>(
+  config: ResumeConfig<S, Input, Phases>
+): Effect.Effect<
+  WorkflowResult<S>,
+  | StoreError
+  | SessionNotFound
+  | WorkflowError
+  | AgentError
+  | ProviderError
+  | RecordingNotFound
+  | ProviderNotFoundError,
+  ProviderRegistry | Services.ProviderRecorder | Services.ProviderModeContext | Services.EventStore | Services.EventBus
+> =>
+  Effect.gen(function*() {
+    const { initialState, input, resumePhase, sessionId, workflow } = config
+
+    // Load session events
+    const { events } = yield* loadSession(sessionId)
+
+    // Compute current state by scanning for last state:updated event
+    const currentState = computeStateAt<S>(events, events.length) ?? initialState
+
+    yield* Effect.log("Session resuming", {
+      sessionId,
+      eventCount: events.length
+    })
+
+    // Execute workflow from resumed state
+    const options: ExecuteOptions<Input> = {
+      input,
+      sessionId,
+      resumeState: currentState,
+      ...(resumePhase !== undefined ? { resumePhase } : {})
+    }
+
+    return yield* executeWorkflow(workflow, options)
+  }).pipe(
+    Effect.withSpan("resumeSession", {
+      attributes: { sessionId: config.sessionId }
+    })
+  )

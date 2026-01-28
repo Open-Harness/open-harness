@@ -1,9 +1,0 @@
-{
-	"title": "Types",
-	"pages": [
-		"flow-definition",
-		"node-definition",
-		"edge-definition",
-		"runtime-event"
-	]
-}

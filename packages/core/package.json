@@ -1,0 +1,54 @@
+{
+  "name": "@open-scaffold/core",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Open Scaffold Core - Event-sourced workflow runtime with Effect-TS",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./Engine": {
+      "import": {
+        "types": "./dist/Engine/index.d.mts",
+        "default": "./dist/Engine/index.mjs"
+      },
+      "require": {
+        "types": "./dist/Engine/index.d.cts",
+        "default": "./dist/Engine/index.cjs"
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-scaffold/open-scaffold",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -b tsconfig.json",
+    "test": "vitest",
+    "coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "@effect/platform": "latest",
+    "@effect/sql": "latest",
+    "@effect/sql-libsql": "latest",
+    "effect": "latest",
+    "immer": "^10.1.1",
+    "zod": "^3.23.0"
+  }
+}

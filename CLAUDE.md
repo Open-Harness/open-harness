@@ -1,224 +1,123 @@
-# Open Harness Development Guidelines
-
-Auto-generated from all feature plans. Last updated: 2025-12-28
-
-## Documentation
-
-READ packages/sdk/docs/*
-
-
-## Active Technologies
-- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, listr2 (optional peer) (003-harness-renderer)
-- N/A (state in memory, recordings to filesystem) (003-harness-renderer)
-- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, bun:tes (004-test-infra-audit)
-- JSON fixture files in `recordings/golden/`, JSONL E2E recordings in `tests/fixtures/e2e/` (004-test-infra-audit)
-- TypeScript 5.x (strict mode) + @anthropic-ai/sdk (NEW), @needle-di/core, zod (005-monologue-system)
-- N/A (in-memory buffer, history ephemeral per-session) (005-monologue-system)
-- N/A (state in memory) (007-fluent-harness-dx)
-- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod, node:async_hooks (AsyncLocalStorage) (008-unified-event-system)
-- N/A (in-memory event bus, no persistence) (008-unified-event-system)
-- JSON fixture files in `recordings/golden/`, test fixtures as embedded data (009-tech-debt-cleanup)
-- N/A (in-memory event bus, message queues) (010-transport-architecture)
-- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod (013-anthropic-refactor)
-- N/A (no persistence layer in this package) (013-anthropic-refactor)
-- TypeScript 5.x (strict mode enabled in tsconfig.json) + @anthropic-ai/claude-agent-sdk ^0.1.76, zod ^4.2.1, yaml ^2.4.5 (016-pause-resume)
-- In-memory (Map-based session state store, no persistence to disk per spec assumptions) (016-pause-resume)
-- TypeScript 5.x (strict mode enabled) + `effect`, `@effect/schema`, `@effect/platform`, `@anthropic-ai/claude-agent-sdk` (001-effect-refactor)
-- Built-in via Effect Service/Layer pattern (memory default, SQLite adapter) (001-effect-refactor)
-
-- TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @needle-di/core, zod (002-sdk-validation)
-
-## Project Structure
-
-```text
-src/
-tests/
-```
-
-## Commands
-
-```bash
-# From repository root (uses turbo for monorepo with caching):
-bun run typecheck   # Type check entire monorepo
-bun run lint        # Lint entire monorepo
-bun run test        # Run tests across monorepo
-
-# In packages/sdk/:
-bun run test        # Safe tests only (unit + replay, no network)
-bun run test:live   # Integration tests (requires auth)
-```
-
-**Note**: Always use `bun x` (not `bunx`) for running executables. Use `bun run <script>` for package.json scripts.
-
-## Code Style
-
-TypeScript 5.x (strict mode): Follow standard conventions
-
-## Recent Changes
-- 001-effect-refactor: Added TypeScript 5.x (strict mode enabled) + `effect`, `@effect/schema`, `@effect/platform`, `@anthropic-ai/claude-agent-sdk`
-- 016-pause-resume: Added TypeScript 5.x (strict mode enabled in tsconfig.json) + @anthropic-ai/claude-agent-sdk ^0.1.76, zod ^4.2.1, yaml ^2.4.5
-- 013-anthropic-refactor: Added TypeScript 5.x (strict mode) + @anthropic-ai/claude-agent-sdk, @anthropic-ai/sdk, @needle-di/core, zod
-
 
 <!-- MANUAL ADDITIONS START -->
 
-## CRITICAL: Testing Requirements
+## ⚠️ CRITICAL: TYPESCRIPT BUILD ARTIFACTS - READ THIS FIRST ⚠️
 
-**MANDATORY - NEVER SKIP THESE:**
+**NEVER emit TypeScript build artifacts into source directories.**
 
-### 1. External System Integration Testing
-When code interfaces with external systems (SDK, APIs, databases), you MUST:
-- Write integration tests that validate REAL behavior against the actual system
-- Create fixtures from REAL SDK responses, not fabricated data
-- Run tests against the live system to verify behavior before claiming "done"
+The build system is:
+- **tsdown** → outputs to `dist/` (for bundling/publishing)
+- **tsc -b** → outputs to `build/` (for type checking with project references)
 
-### 2. UI/TUI Testing
-When modifying UI components (especially `apps/horizon-agent`), you MUST:
-- Use the `tttd` skill to visually validate TUI changes
-- Capture before/after screenshots or recordings
-- Verify streaming behavior works correctly in the actual terminal
+**FORBIDDEN:**
+- NEVER run `tsc` without proper config that sets `outDir`
+- NEVER emit `.js`, `.d.ts`, `.js.map`, `.d.ts.map` files into `src/` directories
+- If you see these files in `src/`, DELETE THEM IMMEDIATELY
 
-### 3. Event System Changes
-When modifying event types or emission patterns, you MUST:
-- Create or update fixtures with REAL captured events from SDK
-- Write integration tests that run against the live SDK
-- Verify consumers handle the new events correctly via actual execution
+**Correct commands:**
+- `pnpm build` → runs `turbo run build` → tsdown to dist/
+- `pnpm typecheck` → runs `turbo run typecheck` → tsc -b to build/
+- `pnpm lint` → ESLint (no file emission)
+- `pnpm test` → Vitest (no file emission)
 
-### 4. Validation Before "Done"
-Never claim a task is complete without:
-- Running integration tests that touch real systems
-- Visually validating UI changes if applicable
-- Proving the behavior works, not just that types compile
+**The .gitignore blocks these patterns but files still pollute the working directory:**
+```
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+apps/*/src/**/*.js
+apps/*/src/**/*.d.ts
+```
 
-**Unit tests that mock everything prove nothing about real behavior. Integration tests are mandatory.**
-
-### 5. Fixture Recording Policy
-**CRITICAL: You are NOT allowed to fabricate fixtures.**
-- All test fixtures MUST be recorded from REAL SDK interactions
-- Use `packages/sdk/scripts/record-fixtures.ts` or similar to capture real responses
-- Fixtures must include actual SDK message types, timing, and structure
-- Never manually create fixtures with made-up data - this masks real SDK behavior differences
-- When fixing SDK integration bugs, always capture new fixtures from live SDK to prove the fix works
-
-### 6. No Unilateral Architectural Decisions
-**CRITICAL: You are NOT allowed to make architectural decisions without explicit approval.**
-- If you identify something that might be a bug but involves design choices (e.g., "who is responsible for X?", "should component A or B handle this?"), you MUST:
-  1. Document the observation clearly
-  2. Ask the user for guidance OR create an issue for discussion
-  3. **Do NOT implement changes** that affect system architecture or component responsibilities
-- Examples of architectural decisions that require approval:
-  - Changing which component is responsible for state/data
-  - Adding new event types or changing event semantics
-  - Modifying the contract between components
-  - Changing data flow patterns (who produces vs consumes)
-- When in doubt, ask. A quick question is better than an unauthorized refactor.
-
-## CRITICAL: Debugging with Logs
-
-**USE THE `harness-logs` SKILL PROACTIVELY** when debugging issues in this repository.
-
-Logs are written to `.open-harness/logs/harness.log` in JSONL format. Before asking the user "what went wrong?" - CHECK THE LOGS FIRST.
-
-**Quick error check:**
+**If you accidentally emit files to src/, clean with:**
 ```bash
-jq -c 'select(.level >= 50)' .open-harness/logs/harness.log 2>/dev/null | tail -10
+find packages apps -path "*/src/*" -type f \( -name "*.js" -o -name "*.d.ts" -o -name "*.js.map" -o -name "*.d.ts.map" \) -delete
 ```
 
-**When to check logs:**
-- Test failures
-- Runtime errors
-- Unexpected behavior
-- Verifying what actually happened
+---
 
-**Activate the skill:** Use `/harness-logs` or let it auto-activate during any debugging session.
+## ⚠️ CRITICAL: ANTHROPIC SDK TESTING - READ THIS FIRST ⚠️
 
-See `.claude/skills/harness-logs/SKILL.md` for full JQ patterns and debugging workflows.
+**WE HAVE AN ANTHROPIC SUBSCRIPTION. NO API KEY IS NEEDED.**
 
-## CRITICAL: No console.log/error/warn
+The Anthropic SDK works automatically via subscription. DO NOT:
+- Add `ANTHROPIC_API_KEY` environment variable checks
+- Create mock providers for testing
+- Skip real SDK testing because "we don't have an API key"
+- Suggest integration tests "require an API key"
 
-**DO NOT use `console.log`, `console.error`, `console.warn`, or `console.debug` in this codebase.**
+**TESTING APPROACH - MANDATORY:**
+1. **Record fixtures with REAL SDK**: Run provider against real Anthropic API
+2. **Use ProviderRecorder**: We built this infrastructure specifically for recording/playback
+3. **Tests use playback mode**: Replay recorded fixtures deterministically
+4. **Never mock the SDK**: Real responses, recorded and replayed
 
-Use the structured Pino logger instead:
+**Why this matters:**
+- We spent significant effort building ProviderRecorder for exactly this purpose
+- Mock tests don't validate real SDK behavior
+- The subscription handles auth automatically
+- Adding API key checks BREAKS the subscription flow
+
+**The infrastructure exists:**
+- `ProviderRecorder` service records stream events
+- `ProviderModeContext` switches between "live" and "playback"
+- `runAgentWithStreaming` handles recording automatically in live mode
+
+**When writing provider tests:**
+1. First run: Use "live" mode → records to ProviderRecorder
+2. Subsequent runs: Use "playback" mode → replays from recordings
+3. Commit recorded fixtures to repo for CI
+
+---
+
+## ⚠️ CRITICAL: NO MOCKS TESTING PHILOSOPHY ⚠️
+
+**NEVER use mocks or stubs that fake behavior. Every test must exercise real code paths.**
+
+### Rules
+
+- **No mock services**: Never create stubs that return `Effect.succeed([])` or `Effect.void`
+- **No fabricated fixtures**: Test data must come from real recordings, not invented by agents
+- **No in-memory fakes**: Use LibSQL `:memory:` (real SQLite with real migrations) instead of fake `Map<>`-based stubs
+- **No dual code paths**: There should be ONE implementation, not "real" and "test" versions
+
+### What to use instead
+
+| Instead of... | Use... |
+|---------------|--------|
+| `EventStoreStub` | `EventStoreLive({ url: ":memory:" })` |
+| `EventBusStub` | `EventBusLive` (PubSub is inherently in-memory) |
+| `ProviderRecorderStub` | `ProviderRecorderLive({ url: ":memory:" })` |
+| `StateSnapshotStoreStub` | `StateSnapshotStoreLive({ url: ":memory:" })` |
+| Mock providers | `ProviderRecorder` playback of real recorded responses |
+| Fabricated JSON fixtures | Record real API responses, commit to repo |
+
+### Test layer setup
+
+All tests use real implementations with ephemeral databases:
 
 ```typescript
-import { getLogger } from "@internal/core";
-
-const logger = getLogger();
-
-// ❌ WRONG
-console.log("Starting process");
-console.error("Something failed:", error);
-
-// ✅ CORRECT
-logger.info({ processId }, "Starting process");
-logger.error({ err: error, context }, "Something failed");
+const makeTestLayer = () =>
+  Layer.mergeAll(
+    EventStoreLive({ url: ":memory:" }),
+    StateSnapshotStoreLive({ url: ":memory:" }),
+    ProviderRecorderLive({ url: ":memory:" }),
+    Layer.effect(EventBus, EventBusLive),
+    Layer.succeed(ProviderModeContext, { mode: "playback" })
+  )
 ```
 
-**Why:**
-1. Structured logs are queryable with `jq`
-2. Automatic file output to `.open-harness/logs/harness.log`
-3. Log levels enable filtering (trace/debug/info/warn/error)
-4. Correlation IDs (runId, nodeId) for tracing
-5. Consistent format across the codebase
+### Pure functions are fine
 
-**Logger API:**
-- `logger.trace()` - Very verbose (streaming deltas)
-- `logger.debug()` - Tool calls, state patches
-- `logger.info()` - Lifecycle events (default level)
-- `logger.warn()` - Interruptions, timeouts
-- `logger.error({ err: error }, "message")` - Failures (use `err` key for errors)
+Functions like `computeStateAt` that take arrays as input don't need services or databases. They're just functions operating on data — no mocks needed.
 
-**For event logging**, use the event subscriber instead of manual logging:
-```typescript
-import { subscribeLogger } from "@internal/core";
-const unsubscribe = subscribeLogger(runtime, logger);
-```
+### Why this matters
 
-## CRITICAL: Authentication
+- Stubs hide bugs (a stub that returns `[]` never tests error handling, migrations, or constraints)
+- LibSQL `:memory:` is fast (no disk I/O) and exercises real SQL
+- ProviderRecorder already exists for deterministic replay of real API responses
+- If a test needs a mock, the architecture is wrong — fix the architecture
 
-**DO NOT look for or set ANTHROPIC_API_KEY.** This project uses Claude Code subscription authentication via `@anthropic-ai/claude-agent-sdk`. The SDK handles auth automatically through the Claude Code subscription. Setting or looking for an API key will BREAK the app.
-
-- Live tests work automatically with subscription auth
-- Just run tests/harnesses directly - no env vars needed
-- The SDK uses Claude Code's built-in authentication
-
-## CRITICAL: Next.js Page/Route Params Type Definition
-
-**DO NOT define `params` as a direct object type in Next.js 15+ page/route components.**
-
-In Next.js 15+, the `params` prop is a Promise and MUST be typed as such. This has broken the docs site multiple times.
-
-### ❌ WRONG (breaks at runtime):
-```typescript
-type PageProps = {
-	params: { slug?: string[] };  // ❌ Wrong - params is NOT a direct object
-};
-
-export default async function Page(props: PageProps) {
-	const params = await props.params;  // This works, but TypeScript type is wrong
-	// ...
-}
-```
-
-### ✅ CORRECT:
-```typescript
-type PageParams = {
-	slug?: string[];
-};
-
-type PageProps = {
-	params: Promise<PageParams>;  // ✅ Correct - params is a Promise
-};
-
-export default async function Page(props: PageProps) {
-	const params = await props.params;
-	// ...
-}
-```
-
-**Why this matters**: Even though the code correctly awaits `params`, if the TypeScript type is wrong, Next.js will fail at runtime when trying to pass the Promise. This breaks all pages except the landing page.
-
-**Reference**: See `apps/docs/src/app/docs/[[...slug]]/page.tsx` and `apps/docs/src/app/og/docs/[...slug]/route.tsx` for correct examples.
+---
 
 BEHAVIORAL DECORATORS:
 
@@ -262,197 +161,6 @@ BEHAVIORAL DECORATORS:
 
     **CRITICAL**: Always give your candid and honest opinion. never equivocate and always push back if you feel the user is wrong or suggesting something obviously suboptimal.
 
-## Git Branching Workflow
-
-**CRITICAL: Branch from `dev`, NOT `master`**
-
-This project uses a **feature → dev → master** workflow:
-
-```
-master (production/stable)
-  ↑
-  └── dev (integration branch)
-       ↑
-       └── feat/* (feature branches)
-```
-
-**MANDATORY RULES:**
-
-1. **ALWAYS create feature branches from `dev`**:
-   ```bash
-   git checkout dev
-   git pull origin dev
-   git checkout -b feat/your-feature
-   ```
-
-2. **ALWAYS merge feature branches into `dev`**:
-   - Open PRs targeting `dev`, NOT `master`
-   - `dev` is the integration branch for all ongoing work
-
-3. **NEVER branch from `master`**:
-   - `master` is the stable production branch
-   - Only `dev` merges into `master` (via release PR)
-   - Branching from `master` causes massive merge conflicts
-
-4. **Release workflow**:
-   - Features merge to `dev` continuously
-   - When ready to release, merge `dev` → `master`
-   - Keep the rolling `dev` → `master` PR open as the release train
-
-**Why this matters**: If you branch from `master`, your branch is missing all the work in `dev`. When you try to merge back to `dev`, you'll have ~100+ conflicting files from divergent history. This is what happened with the JSONata PR and required a full rebase to fix.
-
-## PR Workflow Policy (GitHub CLI)
-
-- Open PRs with `gh pr create` (or GitHub UI if needed); do not use Graphite.
-- Target all feature PRs to `dev`.
-- Keep the rolling `dev` -> `master` PR open as the release train.
-- Keep PRs focused; link the bead/issue in the PR description.
-- When ready to release, merge the `dev` -> `master` PR.
-
-## Beads Issue Tracking (Agent Workflow)
-
-This project uses [Beads](https://github.com/steveyegge/beads) for git-native issue tracking. As an agent, you MUST follow these patterns.
-
-### Architecture
-
-```
-Code branches:              Beads data:
-master ← dev ← feat/*       beads-sync (dedicated branch)
-```
-
-Issue data lives on the `beads-sync` branch via git worktree. Your feature branches stay clean of beads commits.
-
-### Session Start
-
-Context is auto-injected via hooks. You'll see issue status in your session context.
-
-```bash
-# Check what you're working on
-bd list --mine           # Issues assigned to you
-bd status                # Overall database status
-```
-
-### Worktree Helper Script
-
-Use the repo script to create a worktree + branch, claim the epic, disable the beads daemon in the new tab, and launch the app.
-
-```bash
-bun run worktree -- --epic open-harness-69b --feature "Alpha Release Prep"
-```
-
-Options:
-- `--app claude` to launch Claude Code instead of OpenCode (default).
-- `--base origin/dev` to override the base branch.
-
-Notes:
-- `--epic` must reference a beads epic (the script validates the issue type).
-- Worktree names are `bead-city` (3-digit bead derived from epic id + random historical city).
-- Uses Ghostty AppleScript to open a new tab; ensure Accessibility permissions for System Events.
-- The tab exports `BEADS_NO_DAEMON=1` to avoid worktree daemon issues.
-
-### During Work
-
-```bash
-# Start working on an issue
-bd start <issue-id>      # Marks issue in-progress
-
-# Add progress notes (do this frequently)
-bd comment <issue-id> "Implemented X, moving to Y"
-
-# Close issues and sync immediately (worktree-safe)
-bd close <issue-id>
-bd sync
-
-# Create issues for discovered work
-bd create                # Interactive creation
-
-# Link commits to issues
-git commit -m "Fix bug in parser (bd-abc123)"
-```
-
-### Session End (CRITICAL)
-
-**NEVER end a session without syncing beads.** Unpushed beads changes cause severe problems for other agents and humans.
-
-```bash
-# This is MANDATORY before ending any session
-bd sync                  # Commits beads changes to beads-sync branch
-git push                 # Push your code changes
-```
-
-The `bd sync` command:
-1. Exports pending changes to JSONL
-2. Commits to `beads-sync` branch (via worktree)
-3. Pulls remote changes
-4. Imports updates
-5. Pushes to remote
-
-### Multi-Agent Coordination
-
-When multiple agents work simultaneously:
-
-1. **Hash-based IDs prevent collisions** - Creating issues simultaneously is safe
-2. **Append-only JSONL** - Changes merge cleanly
-3. **Daemon batches commits** - 30-second debounce prevents spam
-4. **Always sync before stopping** - This is the golden rule
-
-### Common Commands
-
-| Command | When to Use |
-|---------|-------------|
-| `bd list` | See open issues |
-| `bd list --mine` | Issues assigned to you |
-| `bd show <id>` | View issue details |
-| `bd start <id>` | Begin work on issue |
-| `bd comment <id> "msg"` | Add progress note |
-| `bd close <id>` | Mark issue complete |
-| `bd create` | Create new issue |
-| `bd sync` | **ALWAYS run before session end** |
-| `bd doctor` | Diagnose problems |
-
-### Handling Conflicts
-
-If you encounter beads merge conflicts:
-
-```bash
-# Accept remote version and re-import
-git checkout --theirs .beads/issues.jsonl
-bd import
-bd sync
-```
-
-### Do NOT
-
-- Create issues on feature branches (use `bd create` which goes to `beads-sync`)
-- End sessions without `bd sync`
-- Close issues without running `bd sync` in the same session (worktree tabs export `BEADS_NO_DAEMON=1`)
-- Manually edit `.beads/issues.jsonl`
-- Ignore `bd doctor` warnings
 
 <!-- MANUAL ADDITIONS END -->
 
-## Landing the Plane (Session Completion)
-
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds

@@ -1,275 +1,146 @@
-# Open Harness
+# Open Scaffold
 
-![Status: Alpha](https://img.shields.io/badge/status-alpha-orange)
-
-> Signal-based observability infrastructure for production AI agents.
+Event-sourced workflow runtime with deterministic replay for AI agent orchestration.
 
 ## Overview
 
-Open Harness provides a reactive, signal-based architecture for building observable AI agent systems:
+Open Scaffold provides infrastructure for building, testing, and debugging AI agent workflows:
 
-- **Signal-Based Architecture**: All agent events flow as typed signals through a central bus
-- **Full Observability**: Subscribe to any signal pattern for logging, metrics, or custom handlers
-- **Harness Adapters**: Unified interface for Claude, OpenAI, and other AI providers
-- **Replay Testing**: Record and replay agent interactions for deterministic tests
+- **Event Sourcing** -- Every action is recorded as an immutable event
+- **Deterministic Replay** -- Reproduce any workflow run exactly
+- **Recording/Playback** -- Record API calls in `live` mode, replay in `playback` mode for CI
+- **Streaming** -- Real-time event streams via SSE
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `@open-scaffold/core` | Domain types, agents, phases, workflows |
+| `@open-scaffold/server` | HTTP/SSE server with OpenScaffold public API |
+| `@open-scaffold/client` | HTTP client + React hooks (17 hooks) |
 
 ## Quick Start
 
-### Installation
+This example shows a research workflow with a researcher agent that produces findings from a topic.
 
-```bash
-bun add @open-harness/core
-```
-
-### Hello World
+**1. Define your agent:**
 
 ```typescript
-import { ClaudeHarness } from "@open-harness/core";
-import { SignalBus, attachReporter, createConsoleReporter } from "@open-harness/core";
+// researcher.ts
+import { agent } from "@open-scaffold/core"
+import { z } from "zod"
 
-// Create a signal bus for observability
-const bus = new SignalBus();
-
-// Attach a console reporter to see all signals
-attachReporter(bus, createConsoleReporter());
-
-// Create a harness for Claude
-const harness = new ClaudeHarness({ model: "claude-sonnet-4-20250514" });
-
-// Run the harness - it yields signals as the agent streams
-const input = {
-  messages: [{ role: "user", content: "What is quantum computing?" }],
-};
-
-for await (const signal of harness.run(input, { signal: new AbortController().signal })) {
-  bus.emit(signal); // Route signals through the bus
-
-  // Handle specific signals
-  if (signal.name === "harness:text:delta") {
-    process.stdout.write(signal.payload.content);
-  }
-}
+export const researcher = agent({
+  name: "researcher",
+  model: "claude-sonnet-4-5",
+  output: z.object({ findings: z.array(z.string()) }),
+  prompt: (state) => `Research the following topic: ${state.topic}`,
+  update: (output, draft) => { draft.findings = output.findings }
+})
 ```
+
+**2. Define the workflow:**
+
+```typescript
+// workflow.ts
+import { workflow, phase } from "@open-scaffold/core"
+import { researcher } from "./researcher"
+
+export const researchFlow = workflow({
+  name: "research-flow",
+  initialState: { topic: "", findings: [] as string[] },
+  start: (input, draft) => { draft.topic = input },
+  phases: {
+    research: { run: researcher, next: "done" },
+    done: phase.terminal()
+  }
+})
+```
+
+**3. Execute the workflow:**
+
+```typescript
+// main.ts
+import { execute, run } from "@open-scaffold/core"
+import { researchFlow } from "./workflow"
+
+// Option A: Async iterator API
+const execution = execute(researchFlow, {
+  input: "quantum computing",
+  providers: { "claude-sonnet-4-5": anthropicProvider }
+})
+
+for await (const event of execution) {
+  console.log(event.name, event.payload)
+}
+
+// Option B: Promise API with observer
+const result = await run(researchFlow, {
+  input: "quantum computing",
+  observer: {
+    stateChanged: (state) => console.log("State:", state),
+    phaseChanged: (phase) => console.log("Phase:", phase),
+  }
+})
+```
+
+## Provider Modes
+
+| Mode | Behavior |
+|------|----------|
+| `live` | Call real APIs, record responses to database |
+| `playback` | Replay recorded responses, never call APIs |
+
+Use `live` during development to record, then `playback` in CI for deterministic tests.
 
 ## Documentation
 
-- [Full Documentation](https://docs.open-harness.dev) - Tutorials, guides, and API reference
-- [Quickstart Tutorial](https://docs.open-harness.dev/docs/learn/quickstart) - Run your first harness
-- [Architecture](https://docs.open-harness.dev/docs/concepts/architecture) - Understand the signal-based design
-- [Contributing Guide](CONTRIBUTING.md) - How to contribute to Open Harness
-
-## Core Concepts
-
-### Signals
-
-Everything in Open Harness is a signal. Signals are typed events with a name, payload, and metadata:
-
-```typescript
-interface Signal<T = unknown> {
-  name: string;           // e.g., "harness:text:delta"
-  payload: T;             // Typed payload
-  timestamp: number;      // When the signal was created
-  source?: SignalSource;  // Where it came from
-}
-```
-
-### SignalBus
-
-The central dispatcher for all signals. Subscribe to patterns and handle events:
-
-```typescript
-const bus = new SignalBus();
-
-// Subscribe to all harness signals
-bus.subscribe("harness:*", (signal) => {
-  console.log(signal.name, signal.payload);
-});
-
-// Subscribe to specific patterns
-bus.subscribe("harness:text:*", (signal) => {
-  // Handle text deltas and completions
-});
-```
-
-### Harnesses
-
-Harnesses wrap AI providers and emit signals as async generators:
-
-```typescript
-const harness = new ClaudeHarness();
-
-for await (const signal of harness.run(input, ctx)) {
-  // Signals: harness:start, harness:text:delta, harness:tool:call, harness:end, etc.
-}
-```
-
-## Features
-
-- **Reactive Signal Architecture**: Typed signals flow through a central bus
-- **Pattern Matching**: Subscribe to signals using glob patterns (`harness:*`, `harness:text:*`)
-- **Multiple Reporters**: Console, metrics, custom reporters attach to the bus
-- **Harness Adapters**: Claude, OpenAI Codex, with more coming
-- **Snapshot State**: Derive point-in-time state from signal history
-- **Replay Testing**: Record signals and replay for deterministic tests
+| Doc | Description |
+|-----|-------------|
+| [Mental Model](./docs/reference/mental-model.md) | Core concepts: events, agents, phases, workflows |
+| [Architecture](./docs/reference/architecture.md) | Server/client design, services, protocol |
+| [Architecture Diagrams](./docs/reference/architecture-diagrams.md) | Visual diagrams (Mermaid) |
+| [SDK Internals](./docs/reference/sdk-internals.md) | Effect patterns for library authors |
+| [Reference Implementation](./docs/reference/reference-implementation.md) | Complete workflow example |
 
 ## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/open-harness/open-harness.git
-cd open-harness
-
 # Install dependencies
-bun install
+pnpm install
 
 # Run tests
-bun run test
+pnpm test
 
-# Type checking
-bun run typecheck
+# Type check
+pnpm typecheck
 
-# Lint and format
-bun run lint
+# Lint
+pnpm lint
 ```
 
-## Project Structure
+## Architecture
 
 ```
-open-harness/
-├── apps/
-│   └── docs/                    # Documentation site (Next.js + Fumadocs)
-├── packages/
-│   ├── adapters/
-│   │   └── harnesses/           # Harness implementations (Claude, OpenAI)
-│   ├── internal/
-│   │   ├── signals/             # SignalBus, stores, reporters
-│   │   └── signals-core/        # Signal primitives, Harness interface
-│   └── open-harness/
-│       ├── core/                # Public core API
-│       ├── testing/             # Test utilities
-│       └── vitest/              # Vitest matchers
-├── specs/                       # Feature specifications
-└── .beads/                      # Issue tracking
++-------------------------------------------------------------+
+|                      OpenScaffold                            |
+|           (Public API - Promise-based, no Effect)            |
++-------------------------------------------------------------+
+                              |
+         +--------------------+--------------------+
+         v                    v                    v
+   +----------+        +-----------+       +-----------+
+   |  Server  |        |   Core    |       |  Client   |
+   | HTTP/SSE |<------>|  Runtime  |<------|  HTTP/SSE |
+   +----------+        +-----------+       +-----------+
+         |                    |
+         v                    v
+   +----------+        +-----------+
+   | Provider |        |  Storage  |
+   |(Anthropic)|        | (LibSQL)  |
+   +----------+        +-----------+
 ```
-
-## Authentication
-
-When using harnesses with Claude, authentication is handled automatically through the Claude Code subscription:
-
-```bash
-# Live tests work automatically with subscription auth
-bun run test:live
-```
-
-**Do not set `ANTHROPIC_API_KEY`** - the SDK handles auth through your Claude Code subscription.
-
-## Git Workflow
-
-We use a standard branching model:
-
-```
-master (release ~1x/month)
-   ↑
-  dev (integration branch)
-   ↑
-feature/* (your work)
-```
-
-- Create feature branches from `dev`
-- PRs target `dev` for integration
-- `dev` merges to `master` for releases
-
----
-
-## Issue Tracking with Beads
-
-We use [Beads](https://github.com/steveyegge/beads) for lightweight, git-native issue tracking.
-
-### For New Team Members
-
-```bash
-# Install beads CLI (if not already installed)
-curl -sSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash
-
-# The repo is already configured - just start using it
-bd list              # See open issues
-bd show <id>         # View issue details
-bd create            # Create new issue
-```
-
-### How We Use Beads
-
-**Sync Branch Pattern**: Issue data lives on a dedicated `beads-sync` branch, not in your feature branches. This prevents merge conflicts and keeps code branches clean.
-
-```
-Your code:                 Beads data:
-master ← dev ← feat/*      beads-sync (auto-synced)
-```
-
-**Daily workflow**:
-```bash
-# Start of session - context auto-injected via hooks
-
-# Work on issues
-bd start <id>        # Mark issue in-progress
-bd comment <id>      # Add progress notes
-
-# End of session - ALWAYS sync before stopping
-bd sync              # Commits + pushes beads changes
-```
-
-### Key Commands
-
-| Command | Description |
-|---------|-------------|
-| `bd list` | List open issues |
-| `bd create` | Create new issue |
-| `bd show <id>` | View issue details |
-| `bd start <id>` | Start working on issue |
-| `bd close <id>` | Close completed issue |
-| `bd sync` | Sync changes to remote |
-| `bd status` | Show database status |
-| `bd doctor` | Health check |
-
-### Why Sync Branch?
-
-1. **No merge conflicts** - Feature branches don't carry beads data
-2. **Multi-agent friendly** - Agents can work in parallel without collision
-3. **Clean PRs** - Code reviews aren't cluttered with issue metadata
-
-### New Clone Setup
-
-If you clone this repo fresh:
-
-```bash
-# The sync-branch is already configured in .beads/config.yaml
-# Just make sure your local daemon knows about it:
-bd config set sync.branch beads-sync
-bd hooks install
-```
-
----
-
-## Contributing
-
-1. Create a feature branch from `dev`
-2. Make your changes
-3. Run `bun run typecheck && bun run lint`
-4. Create PR targeting `dev`
-5. Ensure `bd sync` is run before ending your session
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
-
-## Alpha Status
-
-This is an **alpha release**. Expect:
-
-- evolving APIs and potentially breaking changes
-- documentation gaps that we're actively improving
-- missing features that are planned for future releases
-
-We welcome feedback, bug reports, and contributions as we prepare for beta.
 
 ## License
 
-MIT - see [LICENSE](LICENSE) for details
+MIT

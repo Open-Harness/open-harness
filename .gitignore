@@ -1,129 +1,60 @@
-_bmad*
-.opencode*
-# ============================================
-# Core Bun/Vite/Node
-# ============================================
-node_modules
-out
-dist
-*.tgz
+coverage/
+*.tsbuildinfo
+.turbo/
+node_modules/
+.DS_Store
+tmp/
+dist/
+build/
+# Prevent accidental emit into source trees
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+apps/*/src/**/*.js
+apps/*/src/**/*.js.map
+apps/*/src/**/*.d.ts
+apps/*/src/**/*.d.ts.map
+apps/*/test/**/*.js
+apps/*/test/**/*.js.map
+apps/*/test/**/*.d.ts
+apps/*/test/**/*.d.ts.map
+packages/*/test/**/*.js
+packages/*/test/**/*.js.map
+packages/*/test/**/*.d.ts
+packages/*/test/**/*.d.ts.map
 
-# ============================================
-# Testing & Coverage
-# ============================================
-coverage
-*.lcov
 
-# ============================================
-# Logs
-# ============================================
-logs
-*.log
-report.[0-9]_[0-9]_[0-9]_[0-9]_.json
+# Database files (exclude generated/ephemeral databases)
+*.db
+# But track test fixtures/recordings
+!packages/testing/recordings/*.db
 
-# ============================================
-# Environment Files
-# ============================================
+# Test output (generated during test runs)
+test-output/
+scratchpad/*
+!scratchpad/tsconfig.json
+.direnv/
+.idea/
 .env
+.env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
 
-# ============================================
-# Caches
-# ============================================
-.eslintcache
-.cache
-*.tsbuildinfo
-__pycache__
-.turbo/
+# Claude/Cloud related files and folders
+.claude/debug/
+.claude/projects/
+.claude/statsig/
+.claude/sig/
+.claude/telemetry/
+.claude/todos/
+.claude.json
+.claude.backup
+.claude-plugin/
 
-# ============================================
-# IDE Files
-# ============================================
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
-# ============================================
-# OS Files
-# ============================================
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ============================================
-# ============================================
-# PROJECT-SPECIFIC EXCLUSIONS
-# ============================================
-# ============================================
-
-# ============================================
-# Audio Files (generated, large)
-# ============================================
-*.wav
-*.mp3
-*.ogg
-*.flac
-
-# ============================================
-# Test Artifacts & Workspaces
-# ============================================
-test_project/
-test_autonomous_run/
-tmp/
-temp/
-
-# PRD Workflow sandbox
-.sandbox/
-
-# ============================================
-# Claude-Quickstarts (external, not part of SDK)
-# ============================================
-claude-quickstarts/
-
-# ============================================
-# .claude - Local AI Config (keep structure, exclude generated)
-# ============================================
-# Audio files
-.claude/audio/tracks/*.mp3
-.claude/audio/tracks/*.wav
-.claude/audio/*.wav
-.claude/audio/*.mp3
-
-# Local settings (don't commit personal config)
-.claude/settings.local.json
-.claude/github-star-reminder.txt
-
-# Inbox/Exports (personal workspaces)
-.claude/inbox/
-.claude/exports/
-
-# ============================================
-# Knowledge Base (Obsidian vault)
-# ============================================
-# Private folder is symlinked OUT - never track it
-.knowledge/private
-# Daily notes are personal
-.knowledge/daily/
-# Obsidian workspace/cache files
-.knowledge/.obsidian/workspace.json
-.knowledge/.obsidian/workspace-mobile.json
-.knowledge/.obsidian/cache
-
-# ============================================
-# Config Files (generated/local)
-# ============================================
-settings.json
-settings.local.json
-
-# ============================================
-# Hooks (generated scripts)
-# ============================================
-/hooks/*.sh
-
-# bv (beads viewer) local config and caches
-.bv/
+# Cache and runtime data
+.npm-cache/
+sessions/
+statuses/
+:memory:

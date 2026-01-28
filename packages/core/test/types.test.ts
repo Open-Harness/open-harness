@@ -1,0 +1,318 @@
+/**
+ * Tests for Engine/types.ts
+ *
+ * Validates the core type definitions for the state-first DX.
+ */
+
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+
+import {
+  type AnyEvent,
+  type Draft,
+  EventIdSchema,
+  type EventName,
+  EVENTS,
+  makeEvent,
+  makeEventId,
+  parseEventId,
+  type StateSnapshot,
+  WorkflowAbortedError,
+  WorkflowAgentError,
+  WorkflowPhaseError,
+  WorkflowProviderError,
+  type WorkflowResult,
+  WorkflowStoreError,
+  WorkflowTimeoutError,
+  WorkflowValidationError
+} from "../src/Engine/types.js"
+
+describe("EVENTS constant", () => {
+  it("has all expected event names", () => {
+    expect(EVENTS.WORKFLOW_STARTED).toBe("workflow:started")
+    expect(EVENTS.WORKFLOW_COMPLETED).toBe("workflow:completed")
+    expect(EVENTS.PHASE_ENTERED).toBe("phase:entered")
+    expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
+    expect(EVENTS.AGENT_STARTED).toBe("agent:started")
+    expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
+    expect(EVENTS.STATE_UPDATED).toBe("state:updated")
+    expect(EVENTS.TEXT_DELTA).toBe("text:delta")
+    expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
+    expect(EVENTS.TOOL_CALLED).toBe("tool:called")
+    expect(EVENTS.TOOL_RESULT).toBe("tool:result")
+    expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
+    expect(EVENTS.INPUT_RESPONSE).toBe("input:response")
+  })
+
+  it("event names are unique", () => {
+    const values = Object.values(EVENTS)
+    const uniqueValues = new Set(values)
+    expect(values.length).toBe(uniqueValues.size)
+  })
+})
+
+describe("EventId (Effect Schema branded type)", () => {
+  it("makeEventId generates valid UUID", async () => {
+    const id = await Effect.runPromise(makeEventId())
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+  })
+
+  it("parseEventId validates UUID format", async () => {
+    const validId = "550e8400-e29b-41d4-a716-446655440000"
+    const parsed = await Effect.runPromise(parseEventId(validId))
+    expect(parsed).toBe(validId)
+  })
+
+  it("parseEventId rejects invalid UUID", async () => {
+    const invalidId = "not-a-uuid"
+    await expect(Effect.runPromise(parseEventId(invalidId))).rejects.toThrow()
+  })
+
+  it("EventIdSchema brands the type", () => {
+    // This is a compile-time check - the schema exists and has brand
+    expect(EventIdSchema).toBeDefined()
+  })
+})
+
+describe("makeEvent", () => {
+  it("creates event with generated ID", async () => {
+    const event = await Effect.runPromise(
+      makeEvent("test:event", { value: 42 })
+    ) as AnyEvent
+
+    expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+    expect(event.name).toBe("test:event")
+    expect(event.payload).toEqual({ value: 42 })
+    expect(event.timestamp).toBeInstanceOf(Date)
+    expect(event.causedBy).toBeUndefined()
+  })
+
+  it("supports causedBy for causality tracking", async () => {
+    const causeId = await Effect.runPromise(makeEventId())
+    const event = await Effect.runPromise(
+      makeEvent("effect:event", {}, causeId)
+    ) as AnyEvent
+
+    expect(event.causedBy).toBe(causeId)
+  })
+})
+
+describe("Event type", () => {
+  it("AnyEvent accepts any event", async () => {
+    const id1 = await Effect.runPromise(makeEventId())
+    const id2 = await Effect.runPromise(makeEventId())
+    const id3 = await Effect.runPromise(makeEventId())
+
+    const events: Array<AnyEvent> = [
+      { id: id1, name: "a", payload: "string", timestamp: new Date() },
+      { id: id2, name: "b", payload: { complex: true }, timestamp: new Date() },
+      { id: id3, name: "c", payload: null, timestamp: new Date() }
+    ]
+
+    expect(events).toHaveLength(3)
+  })
+})
+
+describe("StateSnapshot type", () => {
+  it("can be created with required fields", () => {
+    interface TestState {
+      count: number
+    }
+
+    const snapshot: StateSnapshot<TestState> = {
+      sessionId: "session-123",
+      state: { count: 42 },
+      position: 10,
+      createdAt: new Date()
+    }
+
+    expect(snapshot.sessionId).toBe("session-123")
+    expect(snapshot.state.count).toBe(42)
+    expect(snapshot.position).toBe(10)
+    expect(snapshot.phase).toBeUndefined()
+  })
+
+  it("supports optional phase field", () => {
+    const snapshot: StateSnapshot = {
+      sessionId: "session-456",
+      state: {},
+      position: 5,
+      phase: "planning",
+      createdAt: new Date()
+    }
+
+    expect(snapshot.phase).toBe("planning")
+  })
+})
+
+describe("WorkflowResult type", () => {
+  it("represents a completed workflow", () => {
+    interface TestState {
+      goal: string
+      done: boolean
+    }
+
+    const result: WorkflowResult<TestState> = {
+      state: { goal: "test", done: true },
+      sessionId: "session-789",
+      events: [],
+      completed: true,
+      exitPhase: "done"
+    }
+
+    expect(result.state.done).toBe(true)
+    expect(result.completed).toBe(true)
+    expect(result.exitPhase).toBe("done")
+  })
+
+  it("represents an incomplete workflow", () => {
+    const result: WorkflowResult<unknown> = {
+      state: {},
+      sessionId: "session-abc",
+      events: [],
+      completed: false
+    }
+
+    expect(result.completed).toBe(false)
+    expect(result.exitPhase).toBeUndefined()
+  })
+})
+
+describe("Workflow Errors (Data.TaggedError)", () => {
+  it("WorkflowAgentError has correct tag and fields", () => {
+    const error = new WorkflowAgentError({
+      agentName: "planner",
+      message: "Agent failed to produce output"
+    })
+
+    expect(error._tag).toBe("WorkflowAgentError")
+    expect(error.agentName).toBe("planner")
+    expect(error.message).toBe("Agent failed to produce output")
+  })
+
+  it("WorkflowAgentError supports cause for error chaining", () => {
+    const originalError = new Error("Network failure")
+    const error = new WorkflowAgentError({
+      agentName: "worker",
+      message: "Execution failed",
+      cause: originalError
+    })
+
+    expect(error.cause).toBe(originalError)
+  })
+
+  it("WorkflowValidationError has correct tag and fields", () => {
+    const error = new WorkflowValidationError({
+      agentName: "judge",
+      message: "Invalid output schema",
+      path: "verdict"
+    })
+
+    expect(error._tag).toBe("WorkflowValidationError")
+    expect(error.agentName).toBe("judge")
+    expect(error.path).toBe("verdict")
+  })
+
+  it("WorkflowPhaseError has correct tag and fields", () => {
+    const error = new WorkflowPhaseError({
+      fromPhase: "planning",
+      toPhase: "working",
+      message: "Invalid transition"
+    })
+
+    expect(error._tag).toBe("WorkflowPhaseError")
+    expect(error.fromPhase).toBe("planning")
+    expect(error.toPhase).toBe("working")
+  })
+
+  it("WorkflowStoreError has correct tag and fields", () => {
+    const error = new WorkflowStoreError({
+      operation: "snapshot",
+      message: "Failed to save state"
+    })
+
+    expect(error._tag).toBe("WorkflowStoreError")
+    expect(error.operation).toBe("snapshot")
+  })
+
+  it("WorkflowProviderError has correct tag and fields", () => {
+    const error = new WorkflowProviderError({
+      agentName: "planner",
+      code: "RATE_LIMITED",
+      message: "Too many requests",
+      retryable: true
+    })
+
+    expect(error._tag).toBe("WorkflowProviderError")
+    expect(error.code).toBe("RATE_LIMITED")
+    expect(error.retryable).toBe(true)
+  })
+
+  it("WorkflowTimeoutError has correct tag and fields", () => {
+    const error = new WorkflowTimeoutError({
+      phase: "working",
+      agentName: "worker",
+      timeoutMs: 30000
+    })
+
+    expect(error._tag).toBe("WorkflowTimeoutError")
+    expect(error.timeoutMs).toBe(30000)
+  })
+
+  it("WorkflowAbortedError has correct tag and fields", () => {
+    const error = new WorkflowAbortedError({
+      phase: "judging",
+      reason: "User cancelled"
+    })
+
+    expect(error._tag).toBe("WorkflowAbortedError")
+    expect(error.reason).toBe("User cancelled")
+  })
+})
+
+describe("Draft type (compile-time)", () => {
+  // These are compile-time type checks - if this file compiles, the types work
+
+  it("allows mutation in update functions", () => {
+    // This is a type-level test - we just verify the pattern works
+    interface State {
+      items: Array<string>
+      count: number
+    }
+
+    // Simulate an update function signature
+    type UpdateFn = (output: { item: string }, draft: Draft<State>) => void
+
+    // If this compiles, Draft<State> correctly allows mutation
+    const update: UpdateFn = (output, draft) => {
+      draft.items.push(output.item)
+      draft.count += 1
+    }
+
+    // Runtime check that the function exists
+    expect(typeof update).toBe("function")
+  })
+})
+
+describe("EventName type (compile-time)", () => {
+  it("is a union of all event name literals", () => {
+    // This is a compile-time check - if this compiles, EventName is correct
+    const validNames: Array<EventName> = [
+      "workflow:started",
+      "workflow:completed",
+      "phase:entered",
+      "phase:exited",
+      "agent:started",
+      "agent:completed",
+      "state:updated",
+      "text:delta",
+      "thinking:delta",
+      "tool:called",
+      "tool:result",
+      "input:requested",
+      "input:response"
+    ]
+
+    expect(validNames).toHaveLength(13)
+  })
+})
