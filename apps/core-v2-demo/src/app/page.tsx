@@ -18,6 +18,7 @@
 
 import { useCallback, useState } from "react";
 import { LiveChat } from "@/components/LiveChat";
+import { ReplayViewer } from "@/components/ReplayViewer";
 import { SessionList } from "@/components/SessionList";
 
 /**
@@ -132,45 +133,10 @@ export default function Home() {
 
         {/* Replay Mode - Time-Travel Debugging */}
         {mode === "replay" && selectedSessionId && (
-          <>
-            <BackButton onClick={handleBackToList} />
-            <div
-              className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white p-8 text-center shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
-              data-testid="replay-placeholder"
-            >
-              <div className="mb-4 rounded-full bg-violet-100 p-4 dark:bg-violet-900/30">
-                <svg
-                  className="h-8 w-8 text-violet-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  role="img"
-                  aria-label="Replay"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 7.5V18M15 7.5V18M3 16.811V8.69c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811z"
-                  />
-                </svg>
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                Replay Mode
-              </h3>
-              <p className="mb-4 max-w-sm text-sm text-zinc-500 dark:text-zinc-400">
-                Session:{" "}
-                <span className="font-mono font-medium text-violet-600 dark:text-violet-400">
-                  {selectedSessionId.slice(0, 8)}...
-                </span>
-              </p>
-              <p className="text-sm text-zinc-400 dark:text-zinc-500">
-                ReplayViewer component coming soon.
-                <br />
-                Full tape controls for time-travel debugging.
-              </p>
-            </div>
-          </>
+          <ReplayViewer
+            sessionId={selectedSessionId}
+            onBack={handleBackToList}
+          />
         )}
       </div>
     </main>

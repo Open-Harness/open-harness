@@ -478,3 +478,36 @@ export {
 	renderEvent,
 	renderEventAsync,
 } from "./renderer/index.js";
+
+// =============================================================================
+// MESSAGE MODULE
+// =============================================================================
+
+/**
+ * Message types and projection utilities for AI SDK compatibility.
+ *
+ * Messages are projected from Events for React integration. The projection
+ * accumulates streaming events (text:delta) into complete messages.
+ *
+ * @example
+ * ```typescript
+ * import { projectEventsToMessages, type Message } from "@open-harness/core-v2";
+ *
+ * // Project events into messages
+ * const messages = projectEventsToMessages(events);
+ *
+ * // Use in React component
+ * messages.forEach(msg => {
+ *   console.log(`${msg.role}: ${msg.content}`);
+ * });
+ * ```
+ */
+export type {
+	Message,
+	MessageRole,
+	ProjectionOptions,
+	ToolInvocation,
+	ToolInvocationState,
+} from "./message/index.js";
+
+export { generateMessageId, projectEventsToMessages, resetMessageIdCounter } from "./message/index.js";

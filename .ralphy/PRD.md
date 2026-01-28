@@ -311,20 +311,20 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 ### Replay Mode (THE KILLER FEATURE)
 
-- [ ] Create apps/core-v2-demo/src/components/ReplayViewer.tsx for viewing recorded sessions
-- [ ] Load session via workflow.load(sessionId) to get Tape instance
-- [ ] Show tape controls: stepBack, step, rewind, playTo slider
-- [ ] Show position indicator: "Event 5 of 23"
-- [ ] Show messages projected from events at current tape position
-- [ ] Tape controls update React state via useWorkflow tape integration
-- [ ] "Back to Sessions" button to return to SessionList
+- [x] Create apps/core-v2-demo/src/components/ReplayViewer.tsx for viewing recorded sessions
+- [x] Load session via workflow.load(sessionId) to get Tape instance
+- [x] Show tape controls: stepBack, step, rewind, playTo slider
+- [x] Show position indicator: "Event 5 of 23"
+- [x] Show messages projected from events at current tape position
+- [x] Tape controls update React state via useWorkflow tape integration
+- [x] "Back to Sessions" button to return to SessionList
 
 ### Server Integration
 
 - [x] Create apps/core-v2-demo/src/app/api/workflow/route.ts using createWorkflowHandler() from core-v2 for server-side execution
 - [x] Configure workflow API to use SqliteStore for persistence
 - [x] Implement GET /api/sessions endpoint returning list of recorded sessions
-- [ ] Implement GET /api/sessions/[id] endpoint returning session events for replay
+- [x] Implement GET /api/sessions/[id] endpoint returning session events for replay
 - [x] Verify the app builds with: cd apps/core-v2-demo && bun run build
 - [x] Verify the app runs with: cd apps/core-v2-demo && bun run dev
 

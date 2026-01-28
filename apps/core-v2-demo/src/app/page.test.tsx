@@ -62,6 +62,24 @@ vi.mock("@/components/LiveChat", () => ({
   ),
 }));
 
+vi.mock("@/components/ReplayViewer", () => ({
+  ReplayViewer: ({
+    sessionId,
+    onBack,
+  }: {
+    sessionId: string;
+    onBack: () => void;
+  }) => (
+    <div data-testid="replay-viewer" data-session={sessionId}>
+      <span>ReplayViewer Component</span>
+      <span>{sessionId.slice(0, 8)}...</span>
+      <button type="button" onClick={onBack} data-testid="back-button">
+        Back to Sessions
+      </button>
+    </div>
+  ),
+}));
+
 describe("Home Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -172,7 +190,7 @@ describe("Home Page", () => {
 
       fireEvent.click(screen.getByTestId("select-session-button"));
 
-      expect(screen.getByTestId("replay-placeholder")).toBeInTheDocument();
+      expect(screen.getByTestId("replay-viewer")).toBeInTheDocument();
     });
 
     it("shows truncated session ID in replay mode", () => {
@@ -223,14 +241,12 @@ describe("Home Page", () => {
 
       // Enter replay mode
       fireEvent.click(screen.getByTestId("select-session-button"));
-      expect(screen.getByTestId("replay-placeholder")).toBeInTheDocument();
+      expect(screen.getByTestId("replay-viewer")).toBeInTheDocument();
 
       // Return to list mode
       fireEvent.click(screen.getByTestId("back-button"));
       expect(screen.getByTestId("session-list")).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("replay-placeholder"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("replay-viewer")).not.toBeInTheDocument();
     });
   });
 
@@ -258,7 +274,7 @@ describe("Home Page", () => {
 
       // Replay mode
       fireEvent.click(screen.getByTestId("select-session-button"));
-      expect(screen.getByTestId("replay-placeholder")).toBeInTheDocument();
+      expect(screen.getByTestId("replay-viewer")).toBeInTheDocument();
 
       // Back to list mode
       fireEvent.click(screen.getByTestId("back-button"));

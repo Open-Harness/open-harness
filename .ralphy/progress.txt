@@ -3471,3 +3471,32 @@ The PRD specifies two distinct modes:
 - **Replay Mode (ReplayViewer)**: For viewing recorded sessions. Full tape controls (stepBack, step, rewind, playTo) for time-travel debugging.
 
 This separation ensures the correct UX - tape controls only appear when they're actually useful (during replay of completed sessions).
+
+## 2026-01-22T06:23:00Z - Phase 12: ReplayViewer Component (THE KILLER FEATURE)
+**Task**: Implement ReplayViewer component for viewing recorded sessions with time-travel controls
+**Status**: COMPLETE
+**Changes**:
+- Created apps/core-v2-demo/src/components/ReplayViewer.tsx with:
+  - Full tape controls: stepBack, step, rewind, play/pause, position slider
+  - Position indicator showing "Event X of Y"
+  - Messages projected from events at current tape position
+  - Back to Sessions button
+  - Loading skeleton, error display with retry
+  - Fetches session events from API
+- Created apps/core-v2-demo/src/app/api/sessions/[id]/route.ts:
+  - GET endpoint returning session events for replay
+  - Returns session metadata + all events
+  - Uses same SqliteStore as sessions list
+- Created apps/core-v2-demo/src/components/ReplayViewer.test.tsx with 14 tests
+- Updated apps/core-v2-demo/src/app/page.tsx to use ReplayViewer instead of placeholder
+- Updated apps/core-v2-demo/src/app/page.test.tsx with ReplayViewer mock
+- Added projectEventsToMessages export to packages/core-v2/src/index.ts (message module)
+**Verification**:
+- bun run test: PASS (87 tests, 14 new ReplayViewer tests)
+- bun run lint: PASS (no errors)
+- bun run typecheck: PASS
+**Notes**:
+- ReplayViewer loads events from API endpoint, builds local tape state for navigation
+- Tape controls implemented as React state updates (position, status)
+- Messages are projected from events up to current position
+- Play button steps through events with 200ms delay
