@@ -2,39 +2,14 @@
  * Sessions API Route Handler
  *
  * Provides endpoints for listing recorded workflow sessions.
- * Sessions are stored in SQLite via core-v2's SqliteStore.
+ * Sessions are stored in memory via core-v2's MemoryStore.
  *
  * GET /api/sessions - List all recorded sessions with metadata
  */
 
-import {
-  createSqliteStore,
-  type PublicStore,
-  type SessionMetadata,
-} from "@open-harness/core-v2";
+import { type SessionMetadata } from "@open-harness/core-v2";
 import { NextResponse } from "next/server";
-
-/**
- * Database path for session storage.
- * Uses a file in the project root for persistence across restarts.
- */
-const DATABASE_PATH = process.env.SQLITE_PATH || "./data/sessions.db";
-
-/**
- * Singleton store instance to avoid re-creating connections.
- * Lazy initialized on first request.
- */
-let storePromise: Promise<PublicStore> | null = null;
-
-/**
- * Get or create the store instance.
- */
-async function getStore(): Promise<PublicStore> {
-  if (!storePromise) {
-    storePromise = createSqliteStore({ path: DATABASE_PATH });
-  }
-  return storePromise;
-}
+import { getStore } from "@/lib/store";
 
 /**
  * Response type for GET /api/sessions.

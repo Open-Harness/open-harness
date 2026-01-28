@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   // Transpile workspace packages that use ESM-style .js imports in TypeScript
   transpilePackages: ["@open-harness/core-v2"],
+  // Keep native modules external from webpack bundling (they need Node.js require)
+  serverExternalPackages: ["better-sqlite3"],
   // Turbopack config (Next.js 16+ uses Turbopack by default)
   // Turbopack handles .js/.ts extension resolution natively, so minimal config needed
   turbopack: {

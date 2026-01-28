@@ -186,9 +186,15 @@ export {
 // NOTE: createSqliteStore is NOT exported here - it requires Node.js native modules
 
 // =============================================================================
-// PROVIDER MODULE
+// PROVIDER MODULE (Browser-Safe - NO ClaudeProvider)
 // =============================================================================
 
+/**
+ * Provider types for browser code.
+ *
+ * NOTE: makeClaudeProviderService is NOT available in the browser.
+ * LLM calls should be made server-side via API routes.
+ */
 export type {
 	ClaudeProviderConfig,
 	ProviderErrorCode,
@@ -199,9 +205,10 @@ export type {
 	QueryOptions,
 	QueryResult,
 	StreamChunk,
-} from "./provider/index.js";
+} from "./provider/index.browser.js";
 
-export { ProviderError } from "./provider/index.js";
+export { ProviderError } from "./provider/index.browser.js";
+// NOTE: makeClaudeProviderService is NOT exported - use server entry point
 
 // =============================================================================
 // RENDERER MODULE
@@ -225,3 +232,36 @@ export {
 	renderEvent,
 	renderEventAsync,
 } from "./renderer/index.js";
+
+// =============================================================================
+// MESSAGE MODULE
+// =============================================================================
+
+/**
+ * Message types and projection utilities for AI SDK compatibility.
+ *
+ * Messages are projected from Events for React integration. The projection
+ * accumulates streaming events (text:delta) into complete messages.
+ *
+ * @example
+ * ```typescript
+ * import { projectEventsToMessages, type Message } from "@open-harness/core-v2";
+ *
+ * // Project events into messages
+ * const messages = projectEventsToMessages(events);
+ *
+ * // Use in React component
+ * messages.forEach(msg => {
+ *   console.log(`${msg.role}: ${msg.content}`);
+ * });
+ * ```
+ */
+export type {
+	Message,
+	MessageRole,
+	ProjectionOptions,
+	ToolInvocation,
+	ToolInvocationState,
+} from "./message/index.js";
+
+export { generateMessageId, projectEventsToMessages, resetMessageIdCounter } from "./message/index.js";

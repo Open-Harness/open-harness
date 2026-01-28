@@ -404,6 +404,7 @@ export {
  */
 export type {
 	ClaudeProviderConfig,
+	LLMProviderService,
 	ProviderErrorCode,
 	ProviderInfo,
 	ProviderMessage,
@@ -414,7 +415,7 @@ export type {
 	StreamChunk,
 } from "./provider/index.js";
 
-export { ProviderError } from "./provider/index.js";
+export { makeClaudeProviderService, ProviderError } from "./provider/index.js";
 
 // =============================================================================
 // RENDERER MODULE

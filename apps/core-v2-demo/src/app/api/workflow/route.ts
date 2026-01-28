@@ -16,14 +16,11 @@
  */
 
 import { createWorkflowHandler } from "@open-harness/core-v2";
-import { createTaskExecutorWorkflow } from "@/lib/workflow";
-
-// Create the workflow instance for server-side execution
-const workflow = createTaskExecutorWorkflow();
+import { serverWorkflow } from "@/lib/workflow-server";
 
 // Create the HTTP handler with CORS support for local development
 const handler = createWorkflowHandler({
-  workflow,
+  workflow: serverWorkflow,
   cors: {
     origin: ["http://localhost:3000", "http://localhost:3001"],
     methods: ["POST", "OPTIONS"],

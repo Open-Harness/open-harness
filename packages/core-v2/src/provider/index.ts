@@ -10,6 +10,7 @@
 // Types
 export type {
 	ClaudeProviderConfig,
+	LLMProviderService,
 	ProviderErrorCode,
 	ProviderInfo,
 	ProviderMessage,
@@ -22,3 +23,6 @@ export type {
 
 // Error class (consumer-facing, no Effect)
 export { ProviderError } from "./Provider.js";
+
+// Claude Provider factory (for creating real LLM providers)
+export { makeClaudeProviderService } from "./ClaudeProvider.js";

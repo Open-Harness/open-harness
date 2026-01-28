@@ -9,34 +9,11 @@
 
 import {
   type AnyEvent,
-  createSqliteStore,
   makeSessionId,
-  type PublicStore,
   type SessionMetadata,
 } from "@open-harness/core-v2";
 import { NextResponse } from "next/server";
-
-/**
- * Database path for session storage.
- * Uses the same path as the sessions list endpoint.
- */
-const DATABASE_PATH = process.env.SQLITE_PATH || "./data/sessions.db";
-
-/**
- * Singleton store instance to avoid re-creating connections.
- * Lazy initialized on first request.
- */
-let storePromise: Promise<PublicStore> | null = null;
-
-/**
- * Get or create the store instance.
- */
-async function getStore(): Promise<PublicStore> {
-  if (!storePromise) {
-    storePromise = createSqliteStore({ path: DATABASE_PATH });
-  }
-  return storePromise;
-}
+import { getStore } from "@/lib/store";
 
 /**
  * Response type for GET /api/sessions/[id].

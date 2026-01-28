@@ -82,6 +82,18 @@ export const initialState: TaskWorkflowState = {
 // =============================================================================
 
 /**
+ * User input event - emitted by the runtime when user submits input.
+ * This is the entry point for the workflow.
+ */
+interface UserInputPayload {
+  text: string;
+  sessionId?: string;
+}
+export const UserInput = defineEvent<"user:input", UserInputPayload>(
+  "user:input",
+);
+
+/**
  * Event emitted when the workflow starts with a user's goal.
  */
 interface WorkflowStartPayload {
@@ -142,6 +154,22 @@ export const WorkflowComplete = defineEvent<
 // =============================================================================
 // 3. Define Handlers (pure functions that update domain state)
 // =============================================================================
+
+/**
+ * Handles user:input event - converts user input to workflow:start.
+ * This is the entry point that bridges runtime events to workflow events.
+ */
+export const handleUserInput = defineHandler(UserInput, {
+  name: "handle-user-input",
+  handler: (event, state: TaskWorkflowState) => {
+    // Extract the user's goal from the input text
+    // Emit workflow:start to trigger the planner agent
+    return {
+      state,
+      events: [emitEvent("workflow:start", { goal: event.payload.text }, event.id)],
+    };
+  },
+});
 
 /**
  * Handles workflow:start event - initializes the goal.
@@ -395,6 +423,7 @@ export function createTaskExecutorWorkflow() {
   // Handlers need to be cast to AnyEvent type for array typing
   // This is a TypeScript limitation with handler contravariance, not an Effect leak
   const handlers = [
+    handleUserInput,
     handleWorkflowStart,
     handlePlanCreated,
     handleTaskExecuted,
@@ -411,6 +440,8 @@ export function createTaskExecutorWorkflow() {
     agents,
     // Termination: when we reach the complete phase
     until: (state) => state.currentPhase === "complete",
+    // Provider is injected by server-side code (see workflow-server.ts)
+    // Client-side doesn't need provider since execution happens via API
   });
 }
 

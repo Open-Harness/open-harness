@@ -439,8 +439,27 @@ export const makeWorkflowRuntimeService = Effect.gen(function* () {
 								const result = yield* llmProvider.query(queryOptions as QueryOptions);
 
 								// Transform output to events via onOutput
-								if (result.output && agent.onOutput) {
-									const outputEvents = agent.onOutput(result.output, event);
+								// Try structured output first, fallback to parsing text as JSON
+								let agentOutput = result.output;
+								const hasOnOutput = typeof agent.onOutput === "function";
+								if (!agentOutput && result.text && hasOnOutput) {
+									// Fallback: parse text as JSON if structured output not available
+									// This handles cases where SDK doesn't return structured_output
+									try {
+										// Extract JSON from markdown code blocks if present
+										let jsonText = result.text.trim();
+										const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+										if (codeBlockMatch?.[1]) {
+											jsonText = codeBlockMatch[1].trim();
+										}
+										agentOutput = JSON.parse(jsonText);
+									} catch {
+										// Text is not valid JSON, leave agentOutput undefined
+									}
+								}
+
+								if (agentOutput && agent.onOutput) {
+									const outputEvents = agent.onOutput(agentOutput, event);
 									emittedEvents.push(...outputEvents);
 								}
 

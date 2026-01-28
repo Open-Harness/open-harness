@@ -149,11 +149,12 @@ export function LiveChat({ api, onSessionEnd }: LiveChatProps) {
   // Create workflow instance once
   const workflow = useMemo(() => createTaskExecutorWorkflow(), []);
 
-  // Use the workflow hook with recording enabled
+  // Use the workflow hook
+  // NOTE: record is disabled until store integration is complete
   const { messages, input, setInput, handleSubmit, isLoading, error, state } =
     useWorkflow<TaskWorkflowState>(workflow, {
       api,
-      record: true,
+      record: false,
     });
 
   // Handle form submission

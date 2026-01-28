@@ -116,6 +116,8 @@ export interface WorkflowDefinition<S> {
 	readonly until: (state: S) => boolean;
 	/** Optional store for persistence */
 	readonly store?: StoreService;
+	/** Optional LLM provider for agent execution */
+	readonly provider?: LLMProviderService;
 	/** Default model for agents */
 	readonly model?: string;
 }
@@ -220,7 +222,9 @@ class WorkflowImpl<S> implements Workflow<S> {
 			? Layer.succeed(Store, definition.store)
 			: Layer.succeed(Store, createNoopStore());
 
-		const providerLayer = Layer.succeed(LLMProvider, createNoopProvider());
+		const providerLayer = definition.provider
+			? Layer.succeed(LLMProvider, definition.provider)
+			: Layer.succeed(LLMProvider, createNoopProvider());
 
 		// Compose dependencies
 		const dependencies = Layer.mergeAll(storeLayer, providerLayer, EventBusLive);
