@@ -296,7 +296,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 - [x] Create apps/core-v2-demo/src/components/SessionList.tsx showing all recorded sessions from SqliteStore
 - [x] Display session metadata: id, date, event count, duration
-- [ ] Add "New Session" button that starts recording a fresh session (enters Live Mode)
+- [x] Add "New Session" button that starts recording a fresh session (enters Live Mode)
 - [ ] Add click handler on session rows to load that session for replay (enters Replay Mode)
 - [ ] Create apps/core-v2-demo/src/app/page.tsx showing SessionList as the landing view
 

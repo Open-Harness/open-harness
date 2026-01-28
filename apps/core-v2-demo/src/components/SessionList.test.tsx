@@ -6,11 +6,14 @@
  * - Creation date (formatted)
  * - Event count
  * - Duration (calculated from createdAt to lastEventAt)
+ * - New Session button (enters Live Mode)
+ * - Session row click (enters Replay Mode)
  *
  * @module apps/core-v2-demo/src/components/SessionList.test
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type SessionInfo, SessionList } from "./SessionList";
 
@@ -305,6 +308,140 @@ describe("SessionList", () => {
           screen.getByText(/Failed to fetch sessions/),
         ).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("New Session Button", () => {
+    it("renders 'New Session' button in header", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSessions,
+      });
+
+      render(
+        <SessionList onNewSession={() => {}} onSelectSession={() => {}} />,
+      );
+
+      await waitFor(() => {
+        const newSessionButton = screen.getByTestId("new-session-button");
+        expect(newSessionButton).toBeInTheDocument();
+        expect(newSessionButton).toHaveTextContent("New Session");
+      });
+    });
+
+    it("calls onNewSession when 'New Session' button is clicked", async () => {
+      const user = userEvent.setup();
+      const mockOnNewSession = vi.fn();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSessions,
+      });
+
+      render(
+        <SessionList
+          onNewSession={mockOnNewSession}
+          onSelectSession={() => {}}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("new-session-button")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("new-session-button"));
+
+      expect(mockOnNewSession).toHaveBeenCalledTimes(1);
+    });
+
+    it("calls onNewSession when 'Start First Session' button is clicked in empty state", async () => {
+      const user = userEvent.setup();
+      const mockOnNewSession = vi.fn();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      });
+
+      render(
+        <SessionList
+          onNewSession={mockOnNewSession}
+          onSelectSession={() => {}}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("No sessions yet")).toBeInTheDocument();
+      });
+
+      // Click the "Start First Session" button in empty state
+      const startButton = screen.getByRole("button", {
+        name: /Start First Session/,
+      });
+      await user.click(startButton);
+
+      expect(mockOnNewSession).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Session Row Click", () => {
+    it("calls onSelectSession with session ID when session row is clicked", async () => {
+      const user = userEvent.setup();
+      const mockOnSelectSession = vi.fn();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSessions,
+      });
+
+      render(
+        <SessionList
+          onNewSession={() => {}}
+          onSelectSession={mockOnSelectSession}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("a1b2c3d4...")).toBeInTheDocument();
+      });
+
+      // Click the first session row
+      const sessionRow = screen.getByTestId(
+        `session-row-${mockSessions[0].id}`,
+      );
+      await user.click(sessionRow);
+
+      expect(mockOnSelectSession).toHaveBeenCalledTimes(1);
+      expect(mockOnSelectSession).toHaveBeenCalledWith(mockSessions[0].id);
+    });
+
+    it("passes correct session ID for each row", async () => {
+      const user = userEvent.setup();
+      const mockOnSelectSession = vi.fn();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockSessions,
+      });
+
+      render(
+        <SessionList
+          onNewSession={() => {}}
+          onSelectSession={mockOnSelectSession}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("b2c3d4e5...")).toBeInTheDocument();
+      });
+
+      // Click the second session row
+      const sessionRow = screen.getByTestId(
+        `session-row-${mockSessions[1].id}`,
+      );
+      await user.click(sessionRow);
+
+      expect(mockOnSelectSession).toHaveBeenCalledWith(mockSessions[1].id);
     });
   });
 });

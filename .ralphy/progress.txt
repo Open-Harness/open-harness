@@ -3320,3 +3320,32 @@ However, no tests existed. Added comprehensive test suite to validate the functi
 - `apps/core-v2-demo/src/test/setup.ts` (NEW - test setup)
 - `apps/core-v2-demo/src/components/SessionList.test.tsx` (NEW - 14 tests)
 - `.ralphy/PRD.md` (marked task complete)
+## 2026-01-22T06:01:00Z - Phase 12 Task: Add "New Session" Button Tests
+**Task**: Add "New Session" button that starts recording a fresh session (enters Live Mode)
+**Status**: COMPLETE
+**Analysis**:
+- The "New Session" button already existed in SessionList component (line 236-247)
+- The button has proper `data-testid="new-session-button"` for testing
+- The button calls `onNewSession` callback when clicked
+- There's also a "Start First Session" button in the EmptyState component
+- What was missing: tests for the button click behavior
+
+**Changes**:
+1. Added `@testing-library/user-event` dependency to `apps/core-v2-demo/package.json`
+2. Added new tests to `apps/core-v2-demo/src/components/SessionList.test.tsx`:
+   - `describe("New Session Button")` with 3 tests:
+     - Renders "New Session" button in header
+     - Calls onNewSession when "New Session" button is clicked
+     - Calls onNewSession when "Start First Session" button is clicked in empty state
+   - `describe("Session Row Click")` with 2 tests:
+     - Calls onSelectSession with session ID when session row is clicked
+     - Passes correct session ID for each row
+
+**Verification**:
+- bun run test: PASS (19 tests, all passing)
+- bun run lint: PASS (16 tasks, warnings only - pre-existing in core-v2)
+
+**Notes**:
+- The implementation was already complete, only tests were missing
+- Also added tests for the onSelectSession callback (session row click) which will be needed for PRD task 300
+
