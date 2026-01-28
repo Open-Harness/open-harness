@@ -3231,3 +3231,35 @@ Since MCP tools are unavailable, performed command-line verification:
 **Files Changed**:
 - `apps/core-v2-demo/src/components/SessionList.tsx` (NEW)
 - `.ralphy/PRD.md` (marked task complete)
+
+## 2026-01-22T23:45:00Z - GET /api/sessions Endpoint (Session 10)
+
+**Task**: Implement GET /api/sessions endpoint returning list of recorded sessions
+**Status**: COMPLETE
+
+**Implementation**:
+- Created `apps/core-v2-demo/src/app/api/sessions/route.ts`
+- Uses `createSqliteStore` from core-v2 with Promise-based `PublicStore` interface
+- Lazy singleton pattern for store connection (avoids re-creating on each request)
+- Converts `SessionMetadata` dates to ISO strings for JSON serialization
+- Returns array of sessions with: id, createdAt, lastEventAt, eventCount, workflowName
+- Error handling returns empty array on failure
+
+**Key Design Choices**:
+1. **Singleton Store**: Database connection is created once and reused across requests
+2. **Date Serialization**: `SessionMetadata.createdAt` (Date) → `SessionResponse.createdAt` (ISO string)
+3. **Environment Variable**: `SQLITE_PATH` env var allows configuring database location
+
+**Verification**:
+- TypeScript: PASS (`tsc --noEmit` completes without errors)
+- Lint: PASS (16 packages, all pass)
+- Tests: PASS (13 packages, FULL TURBO cache)
+- Build: PASS (Next.js build shows `/api/sessions` as dynamic route)
+
+**PRD Update**: Marked line 326 as complete `[x]`
+
+**Remaining Phase 12 Tasks**:
+- Line 298-301: Session management UI integration (page.tsx using SessionList)
+- Line 305-312: LiveChat component for recording
+- Line 314-320: ReplayViewer component for time-travel
+- Line 327: GET /api/sessions/[id] endpoint for replay events

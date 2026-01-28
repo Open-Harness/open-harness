@@ -323,7 +323,7 @@ Build a **greenfield package** (`packages/core-v2`) implementing an event-source
 
 - [x] Create apps/core-v2-demo/src/app/api/workflow/route.ts using createWorkflowHandler() from core-v2 for server-side execution
 - [x] Configure workflow API to use SqliteStore for persistence
-- [ ] Implement GET /api/sessions endpoint returning list of recorded sessions
+- [x] Implement GET /api/sessions endpoint returning list of recorded sessions
 - [ ] Implement GET /api/sessions/[id] endpoint returning session events for replay
 - [x] Verify the app builds with: cd apps/core-v2-demo && bun run build
 - [x] Verify the app runs with: cd apps/core-v2-demo && bun run dev
