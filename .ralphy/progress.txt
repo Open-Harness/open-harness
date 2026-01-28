@@ -3349,3 +3349,48 @@ However, no tests existed. Added comprehensive test suite to validate the functi
 - The implementation was already complete, only tests were missing
 - Also added tests for the onSelectSession callback (session row click) which will be needed for PRD task 300
 
+
+## 2026-01-22T06:05:00Z - Phase 12 Task: Session Row Click Handler (Replay Mode)
+
+**Task**: Add click handler on session rows to load that session for replay (enters Replay Mode)
+**Status**: COMPLETE
+
+**Analysis**:
+- The SessionList component already had the `onSelectSession(sessionId)` callback wired up (line 288)
+- What was missing: page.tsx integration to handle mode transitions
+- This task is closely coupled with line 301 (SessionList as landing view) since both require the page architecture
+
+**Changes**:
+1. Updated `apps/core-v2-demo/src/app/page.tsx`:
+   - Added AppMode type ("list" | "live" | "replay") for state management
+   - Added useState hooks for `mode` and `selectedSessionId`
+   - Added `handleNewSession` callback → enters Live Mode
+   - Added `handleSelectSession(sessionId)` callback → enters Replay Mode
+   - Added `handleBackToList` callback → returns to List Mode
+   - Render SessionList in "list" mode (landing view)
+   - Render ChatUI with RecordingIndicator in "live" mode
+   - Render Replay placeholder with session ID in "replay" mode
+   - Added BackButton and RecordingIndicator helper components
+
+2. Updated `apps/core-v2-demo/vitest.config.ts`:
+   - Fixed `@` path alias to use `resolve(__dirname, "./src")` instead of relative path
+   - This enables vitest to correctly resolve `@/components/*` imports
+
+3. Created `apps/core-v2-demo/src/app/page.test.tsx` with 22 tests:
+   - List Mode (4 tests): renders SessionList, no ChatUI, no back button, no recording indicator
+   - Live Mode (6 tests): enters via New Session button, shows recording indicator, back button, hides SessionList, passes api prop, returns to list
+   - Replay Mode (6 tests): enters via session click, shows truncated ID, back button, hides SessionList/ChatUI, no recording indicator, returns to list
+   - Mode Transitions (3 tests): list→live→list, list→replay→list, clears session on return
+   - Page Header (2 tests): renders title and description
+
+**Verification**:
+- Tests: PASS (41 tests - 22 new page tests + 19 existing SessionList tests)
+- Lint: PASS (biome check, 3 import order fixes applied)
+
+**PRD Update**: Marked line 300 as complete `[x]`
+
+**Notes**:
+- The ReplayViewer component (PRD lines 314-320) is not yet implemented
+- Currently shows a placeholder in replay mode indicating "ReplayViewer component coming soon"
+- This completes the click handler requirement - mode transition to replay now works
+- Full replay functionality requires implementing ReplayViewer (separate PRD task)
