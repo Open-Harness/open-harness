@@ -1,209 +1,151 @@
-# Getting Started with Open Scaffold
+# Getting Started
 
-Build event-sourced AI workflows with full observability and control.
+**Get running in 5 minutes.**
+
+---
 
 ## Prerequisites
 
 - Node.js 20+
-- pnpm 10+ (or npm/yarn)
-- Basic TypeScript knowledge
+- pnpm (or npm/yarn)
+
+---
 
 ## Installation
 
 ```bash
-# Core packages
 pnpm add @open-scaffold/core @open-scaffold/server @open-scaffold/client
-
-# Optional: Pre-built UI components
-pnpm add @open-scaffold/ui
 ```
+
+---
 
 ## Quick Start
 
-### 1. Define Your Workflow
+### 1. Define an Agent
 
-Create `workflow.ts`:
+Agents are AI actors with a model, prompt, output schema, and state update function.
 
 ```typescript
-import { agent, phase, workflow } from "@open-scaffold/core"
+// agents.ts
+import { agent } from "@open-scaffold/core"
 import { z } from "zod"
 
-// Define an agent
-const worker = agent({
+export const worker = agent({
   name: "worker",
   model: "claude-sonnet-4-5",
   output: z.object({
-    task: z.string(),
     result: z.string()
   }),
-  prompt: (state) => `Complete this task: ${state.currentTask}`,
+  prompt: (state) => `Complete this task: ${state.task}`,
   update: (output, draft) => {
-    draft.completedTasks.push(output.task)
+    draft.result = output.result
   }
 })
+```
 
-// Create the workflow with phases
+### 2. Define a Workflow
+
+Workflows combine agents into phases with explicit transitions.
+
+```typescript
+// workflow.ts
+import { workflow, phase } from "@open-scaffold/core"
+import { worker } from "./agents"
+
 export const myWorkflow = workflow({
   name: "my-workflow",
-  initialState: { currentTask: "", completedTasks: [] as string[] },
-  start: (input, draft) => { draft.currentTask = input },
+  initialState: { task: "", result: "" },
+  start: (input: string, draft) => {
+    draft.task = input
+  },
   phases: {
-    working: { run: worker, next: "done" },
+    work: { run: worker, next: "done" },
     done: phase.terminal()
   }
 })
 ```
 
-### 2. Execute the Workflow
+### 3. Run It
 
-Create `main.ts`:
+Execute the workflow with observer callbacks to monitor progress.
 
 ```typescript
-import { execute, run } from "@open-scaffold/core"
+// main.ts
+import { run } from "@open-scaffold/core"
+import { AnthropicProvider } from "@open-scaffold/server"
 import { myWorkflow } from "./workflow"
 
-// Option A: Async iterator API
-const execution = execute(myWorkflow, {
-  input: "Build a todo app",
-  providers: { "claude-sonnet-4-5": anthropicProvider }
-})
-
-for await (const event of execution) {
-  console.log(event.name, event.payload)
-}
-
-// Option B: Promise API with observer
 const result = await run(myWorkflow, {
-  input: "Build a todo app",
+  input: "Write a haiku about coding",
+  runtime: {
+    providers: { "claude-sonnet-4-5": AnthropicProvider() },
+    mode: "live"
+  },
   observer: {
-    stateChanged: (state) => console.log("State:", state),
-    phaseChanged: (phase) => console.log("Phase:", phase),
+    onStateChanged: (state, patches) => {
+      console.log("State updated:", patches)
+    },
+    onTextDelta: ({ agent, delta }) => {
+      process.stdout.write(delta)
+    },
+    onAgentCompleted: ({ agent, output, durationMs }) => {
+      console.log(`\n${agent} completed in ${durationMs}ms`)
+    }
   }
 })
+
+console.log("Final result:", result.state.result)
 ```
 
-### 3. Connect from React
+### 4. Connect React (Optional)
 
-**Option A: With UI Components (Recommended)**
+Add real-time UI with the client package.
 
 ```tsx
-import { WorkflowProvider } from "@open-scaffold/client"
-import {
-  ConnectionStatus,
-  EventStream,
-  StateViewer,
-  InputArea,
-  VCRToolbar,
-  InteractionModal
-} from "@open-scaffold/ui"
+// app.tsx
+import { WorkflowProvider, useWorkflowState, useCreateSession } from "@open-scaffold/client"
 
 function App() {
   return (
-    <WorkflowProvider url="http://localhost:3001">
-      <div className="min-h-screen p-4">
-        <header className="flex justify-between items-center mb-4">
-          <h1>My Workflow</h1>
-          <ConnectionStatus showIcon />
-        </header>
-
-        <div className="grid grid-cols-2 gap-4">
-          <EventStream maxHeight="400px" />
-          <StateViewer />
-        </div>
-
-        <footer className="mt-4 space-y-2">
-          <InputArea placeholder="Send a message..." />
-          <VCRToolbar />
-        </footer>
-
-        <InteractionModal />
-      </div>
-    </WorkflowProvider>
-  )
-}
-```
-
-**Option B: With Hooks Only (Custom UI)**
-
-```tsx
-import { WorkflowProvider, useEvents, useCreateSession, useSendInput } from "@open-scaffold/client"
-
-function App() {
-  return (
-    <WorkflowProvider url="http://localhost:3001">
+    <WorkflowProvider url="http://localhost:42069">
       <WorkflowUI />
     </WorkflowProvider>
   )
 }
 
 function WorkflowUI() {
-  const events = useEvents()
+  const state = useWorkflowState<{ task: string; result: string }>()
   const createSession = useCreateSession()
-  const sendInput = useSendInput()
 
   return (
     <div>
-      <button onClick={() => createSession("Hello!")}>
-        Start Session
-      </button>
-      <div>{events.length} events</div>
+      <button onClick={() => createSession("Hello!")}>Start</button>
+      {state && <p>Result: {state.result}</p>}
     </div>
   )
 }
 ```
 
-### 4. Configure Tailwind (for UI Components)
+---
 
-If using `@open-scaffold/ui`, add the package to your Tailwind content paths:
+## What Just Happened?
 
-```js
-// tailwind.config.js
-export default {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./node_modules/@open-scaffold/ui/**/*.{js,mjs}"
-  ],
-  darkMode: "class"
-}
-```
+1. **Agent defined** -- The `worker` agent knows its model, how to prompt it, what output to expect (via Zod schema), and how to update workflow state with the result.
 
-## Core Concepts
+2. **Workflow composed** -- The workflow defines initial state, how to apply input, and phases that sequence agent execution. The `work` phase runs the agent, then transitions to `done`.
 
-| Concept | Description |
-|---------|-------------|
-| **Agents** | AI actors with model, prompt, output schema, and state update function |
-| **Phases** | Named stages that define workflow progression |
-| **Workflows** | Compositions of agents and phases with initial state |
-| **execute()** | Async iterator API for streaming events |
-| **run()** | Promise API with observer for state/phase changes |
-| **WorkflowObserver** | Observer protocol for state and phase change callbacks |
-| **VCR Controls** | Pause, resume, fork sessions like a VCR tape |
-| **HITL** | Human-in-the-loop via event-based interactions |
+3. **Runtime executed** -- The `run()` function executes the workflow. The `runtime` config provides the AI provider and mode (`live` for real API calls, `playback` for recorded responses). Observer callbacks stream progress in real-time.
 
-## Development Tools
+4. **React connected** -- The client package provides hooks that connect to a running server on port 42069, giving you reactive state updates in your UI.
 
-### Storybook (UI Components)
+---
 
-The UI package includes Storybook for component development:
+## What's Next?
 
-```bash
-cd packages/ui
-pnpm storybook
-```
-
-This opens a component browser at `http://localhost:6006` where you can:
-- View all components in isolation
-- Test different props and states
-- Verify dark mode and responsive behavior
-
-### Provider Recording
-
-For deterministic testing, record AI responses in `live` mode, then replay with `playback` mode. The `RuntimeConfig` with its `database` field handles storage configuration.
-
-## What's Next
-
-- [React Hooks API Reference](./api/react-hooks.md) - All 18 hooks documented
-- [Component Library Reference](./api/components.md) - Pre-built UI components
-- [Configuration Reference](./api/configuration.md) - Server and client options
-- [Architecture Overview](./reference/architecture.md) - How the pieces fit together
-- [Mental Model](./reference/mental-model.md) - Deep dive into concepts
+| Document | Description |
+|----------|-------------|
+| [Concepts](./concepts.md) | Core mental models |
+| [Building Workflows](./building-workflows.md) | Agents, phases, workflows |
+| [React Integration](./react-integration.md) | React hooks reference |
+| [API Reference](./api-reference.md) | Complete type signatures |
+| [Architecture](./architecture.md) | How it works internally |

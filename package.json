@@ -9,7 +9,6 @@
   ],
   "scripts": {
     "clean": "node scripts/clean.mjs",
-    "clean:stray": "node scripts/clean-stray.mjs",
     "prebuild": "node scripts/clean-stray.mjs",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
