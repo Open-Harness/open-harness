@@ -86,8 +86,12 @@ Events use Effect's discriminated union pattern with `_tag`:
 import { Data } from "effect"
 
 // ═══════════════════════════════════════════════════════════════
-// Event Classes (13 total)
+// Event Classes (illustrative subset)
 // ═══════════════════════════════════════════════════════════════
+
+// Note: ADR-006 introduces additional state-sourcing events
+// (e.g. StateIntent/StateCheckpoint/SessionForked) and may supersede
+// earlier “state updated” style events.
 
 export class WorkflowStarted extends Data.TaggedClass("WorkflowStarted")<{
   readonly sessionId: string

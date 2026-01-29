@@ -85,14 +85,13 @@ const result = await run(workflow, {
   }
 })
 
-// With HITL - return value from callback becomes response
+// With HITL
 const result = await run(workflow, {
   input: "Hello",
   runtime,
-  observer: {
-    onInputRequested: async (request) => {
-      return await promptUser(request.prompt)
-    }
+  humanInput: {
+    approval: async (prompt) => confirm(prompt),
+    choice: async (prompt, options) => select(prompt, options)
   }
 })
 
@@ -160,7 +159,7 @@ const result = await execution
 - Single clear way to run workflows
 - No Effect in public API
 - Familiar patterns (Promise, callbacks, AbortSignal)
-- HITL via async callback return values
+- HITL via `humanInput` handlers (see ADR-002)
 - Pause/resume available when needed
 
 ### Negative
@@ -171,13 +170,13 @@ const result = await execution
 ### Migration Path
 1. Users using `await run(...)` - No change needed
 2. Users using `execute()` for-await - Switch to `run()` with observer callbacks
-3. Users using `execute().respond()` - Switch to `onInputRequested` returning response
+3. Users using `execute().respond()` - Switch to `run()` with `humanInput` handlers (ADR-002)
 
 ---
 
 ## Implementation Notes
 
-1. **`onInputRequested` must be async-aware** - Runtime waits for callback to return
+1. **HITL is handled by `humanInput`** - Runtime waits for handler to return (ADR-002)
 2. **Pause/resume wiring** - Already exists in runtime, just needs to be exposed
 3. **`executeWorkflow()` stays internal** - Server package imports directly from Engine/runtime.ts
 4. **Remove from index.ts** - Only export `run()` and related types

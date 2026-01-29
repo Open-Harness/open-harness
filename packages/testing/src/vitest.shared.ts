@@ -3,14 +3,6 @@ import type { UserConfig } from "vitest/config"
 
 const root = path.join(__dirname, "../..")
 
-const alias = (name: string) => {
-  const target = process.env.TEST_DIST !== undefined ? "dist/dist/esm" : "src"
-  return {
-    [`${name}/test`]: path.join(root, name, "test"),
-    [`${name}`]: path.join(root, name, target)
-  }
-}
-
 const scopedAlias = (name: string) => {
   const target = process.env.TEST_DIST !== undefined ? "dist/dist/esm" : "src"
   return {

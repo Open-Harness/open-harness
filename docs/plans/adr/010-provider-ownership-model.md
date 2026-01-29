@@ -137,9 +137,11 @@ const planner = agent({
 ```typescript
 const result = await run(myWorkflow, {
   input: "Build an API",
-  mode: "live",           // Optional, defaults to "live"
-  database: "./data.db"   // Optional, defaults to ~/.openscaffold/
-  // NO providers map needed!
+  runtime: {
+    mode: "live",
+    database: "./data.db"
+  }
+  // No providers map needed!
 })
 ```
 
@@ -426,7 +428,10 @@ const planner = agent({
 // Runtime (no providers map!)
 const result = await run(myWorkflow, {
   input: "Build an API",
-  mode: "live"
+  runtime: {
+    mode: "live",
+    database: "./data.db"
+  }
 })
 ```
 

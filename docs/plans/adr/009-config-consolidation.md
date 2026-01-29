@@ -44,7 +44,7 @@ The decision on provider ownership affects config shape:
 
 Once ADR-010 is accepted, the config types reduce to:
 - **Server:** `database`, `mode`, `port`, `host`, `workflow`
-- **Runtime:** `mode`, `database` (both optional with defaults)
+- **Runtime:** `mode`, `database`
 
 ---
 

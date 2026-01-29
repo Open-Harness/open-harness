@@ -39,13 +39,13 @@ This folder contains Architecture Decision Records and the technical debt invent
 |------|-----|--------|
 | Execution API | [ADR-001](./001-execution-api.md) | Accepted |
 | HITL Architecture | [ADR-002](./002-hitl-architecture.md) | Accepted |
-| Public vs Internal Exports | [ADR-003](./003-public-vs-internal-exports.md) | Proposed |
+| Public vs Internal Exports | [ADR-003](./003-public-vs-internal-exports.md) | Accepted |
 | Event/Observer Pattern | [ADR-004](./004-event-observer-pattern.md) | Accepted |
 | Type Safety Strategy | [ADR-005](./005-type-safety-strategy.md) | Proposed |
 | State Sourcing Model | [ADR-006](./006-state-sourcing-model.md) | Accepted |
 | Error Hierarchy | [ADR-007](./007-error-hierarchy.md) | Accepted |
 | Naming Conventions | [ADR-008](./008-naming-conventions.md) | Accepted |
-| Config Consolidation | [ADR-009](./009-config-consolidation.md) | Proposed |
+| Config Consolidation | [ADR-009](./009-config-consolidation.md) | Accepted |
 | Provider Ownership Model | [ADR-010](./010-provider-ownership-model.md) | Accepted |
 
 ## Process

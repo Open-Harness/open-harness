@@ -35,7 +35,7 @@ import { type AnyEvent, type EventId, EVENTS, makeEvent } from "./types.js"
 export class ProviderNotFoundError extends Data.TaggedError("ProviderNotFoundError")<{
   readonly model: string
 }> {
-  get message() {
+  override get message() {
     return `No provider registered for model: ${this.model}`
   }
 }

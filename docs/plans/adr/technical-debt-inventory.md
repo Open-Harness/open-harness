@@ -9,8 +9,8 @@
 | Metric | Count |
 |--------|-------|
 | Total Issues | 96 |
-| Resolved (via ADR) | 28 |
-| Remaining | 68 |
+| Resolved (via ADR) | 47 |
+| Remaining | 49 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -21,9 +21,14 @@
 |-----|-------|--------|-----------------|
 | [ADR-001](./001-execution-api.md) | Execution API Design | Accepted | API-001, API-003, API-004, API-005, API-011, ARCH-003, DEAD-001, DEAD-002 |
 | [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, ARCH-012, DEAD-009, DEAD-011 |
+| [ADR-003](./003-public-vs-internal-exports.md) | Public vs Internal Exports | Accepted | ARCH-004, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006 |
 | [ADR-004](./004-event-observer-pattern.md) | Event/Observer Pattern | Accepted | ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005 |
+| [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Proposed | TYPE-001–TYPE-015 |
 | [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
-| [ADR-010](./010-provider-ownership-model.md) | Provider Ownership Model | Proposed | ARCH-006, ARCH-021 |
+| [ADR-007](./007-error-hierarchy.md) | Error Hierarchy | Accepted | ERR-001, ERR-002, NAME-006 |
+| [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008 |
+| [ADR-009](./009-config-consolidation.md) | Config Consolidation | Accepted | API-002, API-006, API-007 |
+| [ADR-010](./010-provider-ownership-model.md) | Provider Ownership Model | Accepted | ARCH-006, ARCH-021 |
 
 ## Decision Log
 
@@ -35,7 +40,11 @@
 | 2026-01-29 | 7 | **ADR-002**: Inline human input on phase | One HITL system. Two types (approval, choice). Conditional via function. Delete Domain/Interaction.ts. See [ADR-002](./002-hitl-architecture.md) |
 | 2026-01-29 | 7 | **ADR-004**: PubSub-based event architecture | Single EventHub with PubSub, Data.TaggedClass events with `_tag`, Match.exhaustive dispatch, fiber-based subscribers. See [ADR-004](./004-event-observer-pattern.md) |
 | 2026-01-29 | 7 | **ADR-006**: True event sourcing | Events are source of truth. State derived via SubscriptionRef projection fiber. Enables fork/replay. StateCache with snapshots for optimization. See [ADR-006](./006-state-sourcing-model.md) |
-| 2026-01-29 | 7 | **ADR-010**: Agent owns provider | Agents embed provider directly (not model string). No ProviderRegistry. Clean variant creation for evals. Blocks ADR-009. See [ADR-010](./010-provider-ownership-model.md) |
+| 2026-01-29 | 7 | **ADR-010**: Agent owns provider | Agents embed provider directly (not model string). No ProviderRegistry. Clean variant creation for evals. Prereq for ADR-009. See [ADR-010](./010-provider-ownership-model.md) |
+| 2026-01-29 | 7 | **ADR-003**: Public vs internal exports | Separate `/internal` entrypoints + JSDoc `@internal` to keep public API minimal; routes/SSE/internal helpers move behind internal entrypoints. See [ADR-003](./003-public-vs-internal-exports.md) |
+| 2026-01-29 | 7 | **ADR-007**: Error hierarchy | Consolidate on a single canonical error hierarchy and structured API errors for better consumer DX. See [ADR-007](./007-error-hierarchy.md) |
+| 2026-01-29 | 7 | **ADR-008**: Naming conventions | Standardize payload field names and callback names for consistency across packages. See [ADR-008](./008-naming-conventions.md) |
+| 2026-01-29 | 7 | **ADR-009**: Config consolidation | Nested runtime/server config, single-workflow server model, and one public server creation path. See [ADR-009](./009-config-consolidation.md) |
 
 ## Open Questions
 
@@ -43,8 +52,8 @@
 2. ~~Should `Domain/Interaction.ts` be removed entirely, or kept as advanced helper?~~ ✅ **Remove entirely - ADR-002**
 3. ~~Is the core/server/client/testing package split correct?~~ ✅ Confirmed correct in Phase 1
 4. Are there other deep dive areas we should add?
-5. Should route handlers and SSE utilities be exported publicly or moved to internal?
-6. Should there be a `@open-scaffold/core/internal` entry point for advanced users?
+5. ~~Should route handlers and SSE utilities be exported publicly or moved to internal?~~ ✅ **Move to internal - ADR-003**
+6. ~~Should there be a `@open-scaffold/core/internal` entry point for advanced users?~~ ✅ **Yes - ADR-003**
 
 ---
 
@@ -54,14 +63,14 @@
 
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
-| NAME-001 | `agentName` vs `agent` in 6 payload types | Needs Investigation | — | Domain events, HITL payloads | Decision: prefer shorter `agent` |
-| NAME-002 | `promptText` vs `prompt` in HITL | Needs Investigation | — | HITL payloads | Decision: prefer shorter `prompt` |
-| NAME-003 | `inputType` vs `type` in HITL | Needs Investigation | — | HITL payloads | Decision: prefer shorter `type` |
-| NAME-004 | `UseFilteredEventsOptions` should be `FilteredEventsOptions` | Needs Investigation | — | client/react/hooks.ts | `Use` prefix redundant for option types |
+| NAME-001 | `agentName` vs `agent` in 6 payload types | ✅ **Resolved** | ADR-008 | Domain events, HITL payloads | Prefer shorter `agent` |
+| NAME-002 | `promptText` vs `prompt` in HITL | ✅ **Resolved** | ADR-008 | HITL payloads | Prefer shorter `prompt` |
+| NAME-003 | `inputType` vs `type` in HITL | ✅ **Resolved** | ADR-008 | HITL payloads | Prefer shorter `type` |
+| NAME-004 | `UseFilteredEventsOptions` should be `FilteredEventsOptions` | ✅ **Resolved** | ADR-008 | client/react/hooks.ts | `Use` prefix redundant for option types |
 | NAME-005 | Event type naming inconsistent (`Event<N,P>` defined twice) | ✅ **Resolved** | ADR-004 | Domain/Interaction.ts, Engine/types.ts | Single Data.TaggedClass union |
-| NAME-006 | Error class organization inconsistent | Needs Investigation | — | Engine/types.ts, Domain/Errors.ts | Workflow*Error in types.ts, plain names in Errors.ts |
+| NAME-006 | Error class organization inconsistent | ✅ **Resolved** | ADR-007 | Engine/types.ts, Domain/Errors.ts | Consolidate and standardize error hierarchy |
 | NAME-007 | Observer callback naming inconsistent | ✅ **Resolved** | ADR-004 | Engine/types.ts | Match.exhaustive dispatch standardizes naming |
-| NAME-008 | Id vs ID capitalization mixed | Needs Investigation | — | Domain/Ids.ts | `EventId` (lowercase d) vs others |
+| NAME-008 | Id vs ID capitalization mixed | ✅ **Resolved** | ADR-008 | Domain/Ids.ts | Keep `Id` convention (lowercase d) consistently |
 
 ### HITL Systems
 
@@ -75,22 +84,22 @@
 
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
-| ERR-001 | Duplicate error hierarchies (Domain vs Workflow) | Needs Investigation | — | Domain/Errors.ts, Engine/types.ts | CRITICAL: Which is canonical? |
-| ERR-002 | Two error classes in server (`OpenScaffoldError`, `ServerError`) | Needs Investigation | — | server/OpenScaffold.ts, server/http/Server.ts | Different purposes unclear |
+| ERR-001 | Duplicate error hierarchies (Domain vs Workflow) | ✅ **Resolved** | ADR-007 | Domain/Errors.ts, Engine/types.ts | Consolidate on one canonical hierarchy |
+| ERR-002 | Two error classes in server (`OpenScaffoldError`, `ServerError`) | ✅ **Resolved** | ADR-007 | server/OpenScaffold.ts, server/http/Server.ts | Clarified error boundaries and mapping |
 
 ### API Surface
 
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
 | API-001 | Inconsistent execution APIs (`run` vs `execute` vs `executeWorkflow`) | ✅ **Resolved** | ADR-001 | Engine/*.ts | Consolidate to single `run()` API |
-| API-002 | Inconsistent configuration options | Needs Investigation | — | — | MAJOR: different config shapes |
+| API-002 | Inconsistent configuration options | ✅ **Resolved** | ADR-009 | — | Consolidate config shapes |
 | API-003 | Unused/incomplete APIs (`streamWorkflow`, `WorkflowHandle`) | ✅ **Resolved** | ADR-001 | Engine/runtime.ts | Remove from public API |
 | API-004 | `WorkflowHandle<S>` exported but incomplete | ✅ **Resolved** | ADR-001 | Engine/runtime.ts | Remove from public API |
 | API-005 | `streamWorkflow()` returns at end, not true streaming | ✅ **Resolved** | ADR-001 | Engine/runtime.ts | Remove from public API |
-| API-006 | Three overlapping config types in server | Needs Investigation | — | server/*.ts | `OpenScaffoldConfig`, `ServerConfig`, `CreateServerOptions` |
-| API-007 | Two server creation paths without guidance | Needs Investigation | — | server/*.ts | `OpenScaffold.createServer()` vs `createServer()` |
-| API-008 | 10 route handlers exported individually | Needs Investigation | — | server/index.ts | Users should use `createServer()` not individual routes |
-| API-009 | SSE utilities exported publicly | Needs Investigation | — | server/index.ts, client/index.ts | Implementation details, not user API |
+| API-006 | Three overlapping config types in server | ✅ **Resolved** | ADR-009 | server/*.ts | Consolidate into one public config shape |
+| API-007 | Two server creation paths without guidance | ✅ **Resolved** | ADR-009 | server/*.ts | One public server creation path |
+| API-008 | 10 route handlers exported individually | ✅ **Resolved** | ADR-003 | server/index.ts | Route handlers are internal-only |
+| API-009 | SSE utilities exported publicly | ✅ **Resolved** | ADR-003 | server/index.ts, client/index.ts | SSE utilities are internal-only |
 | API-010 | Redundant `react/index.ts` barrel in client | Needs Investigation | — | client/react/index.ts | Main index.ts already exports everything |
 | API-011 | `runSimple()` and `runWithText()` feel incomplete | ✅ **Resolved** | ADR-001 | Engine/run.ts | Remove - use `run()` with observer |
 | API-012 | ID schemas incomplete (only 2 of 4 exported) | Needs Investigation | — | Domain/Ids.ts | `SessionIdSchema`, `WorkflowIdSchema` but not `AgentIdSchema` |
@@ -121,10 +130,10 @@
 |----|-------|--------|----------|-------|-------|
 | DEAD-001 | `streamWorkflow` incomplete stub exported | ✅ **Resolved** | ADR-001 | Engine/runtime.ts:698-718 | Remove from public API |
 | DEAD-002 | `WorkflowHandle` interface exported but not implemented | ✅ **Resolved** | ADR-001 | Engine/runtime.ts:728-741 | Remove from public API |
-| DEAD-003 | `computeStateAt()` possibly internal-only | Needs Investigation | — | Engine/utils.ts | Pure util, maybe shouldn't be public |
-| DEAD-004 | `runAgentDef()` exposed publicly | Needs Investigation | — | Engine/provider.ts | Low-level, users should use run() |
-| DEAD-005 | `makeInMemoryProviderRegistry()` in public API | Needs Investigation | — | Engine/provider.ts | Testing utility, maybe move to Layers |
-| DEAD-006 | `sseReconnectSchedule` in client exports | Needs Investigation | — | client/Reconnect.ts | Effect-specific, internal use only |
+| DEAD-003 | `computeStateAt()` possibly internal-only | ✅ **Resolved** | ADR-003 | Engine/utils.ts | Internal-only export |
+| DEAD-004 | `runAgentDef()` exposed publicly | ✅ **Resolved** | ADR-003 | Engine/provider.ts | Internal-only export |
+| DEAD-005 | `makeInMemoryProviderRegistry()` in public API | ✅ **Resolved** | ADR-003 | Engine/provider.ts | Internal/testing-only export |
+| DEAD-006 | `sseReconnectSchedule` in client exports | ✅ **Resolved** | ADR-003 | client/Reconnect.ts | Internal-only export |
 | DEAD-007 | 8 Logger layers never used | Needs Investigation | — | Layers/Logger.ts:20-85 | ProdLoggerLayer, TestLoggerLayer, etc. |
 | DEAD-008 | `loadWorkflowTape` never imported | Needs Investigation | — | server/programs/loadWorkflowTape.ts | Not re-exported from main index |
 | DEAD-009 | Interaction utilities test-only | ✅ **Resolved** | ADR-002 | Domain/Interaction.ts | Delete — replaced by inline human on phase |
@@ -160,12 +169,12 @@
 | ARCH-001 | Three parallel observer patterns (fragmented) | ✅ **Resolved** | ADR-004 | WorkflowObserver, EventBus, EventStore | Single EventHub with PubSub, fiber subscribers |
 | ARCH-002 | Service instantiation patterns inconsistent | Needs Investigation | — | — | MAJOR: different service setup |
 | ARCH-003 | Inconsistent naming for execution functions | ✅ **Resolved** | ADR-001 | — | Single `run()` API |
-| ARCH-004 | Too many internals exposed in core | Needs Investigation | — | core/index.ts | Services, Layers, SessionContext are advanced |
+| ARCH-004 | Too many internals exposed in core | ✅ **Resolved** | ADR-003 | core/index.ts | Move internals behind `/internal` entrypoint |
 | ARCH-005 | 26 event types exported individually | ✅ **Resolved** | ADR-004 | Engine/types.ts | Single WorkflowEvent union with Data.TaggedClass |
 | ARCH-006 | Provider infrastructure too public | ✅ **Resolved** | ADR-010 | Engine/provider.ts | ProviderRegistry deleted, runAgentDef internal |
 | ARCH-021 | Provider ownership model misaligned with eval design | ✅ **Resolved** | ADR-010 | Engine/agent.ts, Engine/provider.ts | Agent owns provider directly. See [ADR-010](./010-provider-ownership-model.md) |
 | ARCH-022 | `workflow.with()` not implemented | Needs Implementation | — | Engine/workflow.ts | Specified in eval-system-design.md. Required for variants. Depends on ADR-010. |
-| ARCH-007 | RouteContext/RouteResponse types exported | Needs Investigation | — | server/http/Routes.ts | Implementation details |
+| ARCH-007 | RouteContext/RouteResponse types exported | ✅ **Resolved** | ADR-003 | server/http/Routes.ts | Internal-only exports |
 | ARCH-008 | Convenience hooks vs context access redundancy | Needs Investigation | — | client/react/hooks.ts | Multiple ways to get same data |
 | ARCH-009 | State exists in 4 places (divergence risk) | ✅ **Resolved** | ADR-006 | Multiple | Events are source of truth, state derived |
 | ARCH-010 | ProviderRecorder has two competing APIs | ✅ **Resolved** | ADR-006 | Services/ProviderRecorder.ts | Incremental API is canonical |
