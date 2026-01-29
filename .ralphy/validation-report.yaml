@@ -1,0 +1,279 @@
+validation_report:
+  timestamp: "2026-01-29T00:00:00Z"
+  result: PASS
+
+  statistics:
+    total_tasks: 53
+    implementation_tasks: 35
+    test_tasks: 7
+    cleanup_tasks: 8
+    documentation_tasks: 3
+
+    must_rules_checked: 7
+    must_violations: 0
+
+    should_rules_checked: 6
+    should_violations: 0
+
+    built_in_critical_patterns_checked: 5
+    built_in_critical_violations: 0
+
+    built_in_medium_patterns_checked: 4
+    built_in_medium_violations: 0
+
+  format_validation:
+    - name: "Root level tasks key"
+      status: PASS
+      detail: "tasks: key at root level (flat, not nested)"
+
+    - name: "Task structure"
+      status: PASS
+      detail: "All 53 tasks have title, completed, details"
+
+    - name: "Acceptance criteria"
+      status: PASS
+      detail: "All 53 tasks have acceptance array with verifiable criteria"
+
+    - name: "Verification commands"
+      status: PASS
+      detail: "All 53 tasks have verify array with runnable commands"
+
+    - name: "ADR references"
+      status: PASS
+      detail: "35 implementation tasks reference their source ADRs (ADR-001 to ADR-013)"
+
+    - name: "Issue references"
+      status: PASS
+      detail: "8 cleanup/test tasks reference issue IDs (TEST-001 to TEST-016, DEAD-007 to DEAD-012, API-012, TYPE-002, DOC-001 to DOC-004)"
+
+    - name: "Parallel groups"
+      status: PASS
+      detail: "Tasks organized into 8 phases (parallel_group: 1-8) with correct dependencies"
+
+  constitution_checks:
+    must_rules:
+      - rule_id: "MUST-001"
+        name: "No TypeScript Build Artifacts in Source"
+        pattern_checked: "tsc --outDir src|emit.*src|outputDir.*src"
+        violations: 0
+        status: PASS
+
+      - rule_id: "MUST-002"
+        name: "No Mocks or Stubs"
+        pattern_checked: "mock|Mock|stub|Stub|fake|Fake|jest.fn|vi.fn|sinon|Effect.succeed([])|Effect.void|Map<>()"
+        violations: 0
+        status: PASS
+        note: "Matches found in task descriptions that PROPERLY describe avoiding mocks (e.g., 'No mocks or stubs used' in acceptance criteria, 'Use real implementations, no mocking per CLAUDE.md')"
+
+      - rule_id: "MUST-003"
+        name: "No API Key Checks"
+        pattern_checked: "ANTHROPIC_API_KEY|process.env.API_KEY|apiKey.*required|missing.*api.*key"
+        violations: 0
+        status: PASS
+
+      - rule_id: "MUST-004"
+        name: "Use ProviderRecorder for Provider Tests"
+        pattern_checked: "mock.*provider|fake.*response|simulated.*stream|hardcoded.*completion"
+        violations: 0
+        status: PASS
+
+      - rule_id: "MUST-005"
+        name: "Follow ADR Decisions"
+        pattern_checked: "ProviderRegistry usage|computeStateAt as primary|Domain/Interaction.ts usage|nested phases:"
+        violations: 0
+        status: PASS
+        detail: "Tasks properly REMOVE ProviderRegistry (5.3), delete Domain/Interaction.ts (5.8), implement deriveState (2.2), and replace computeStateAt"
+
+      - rule_id: "MUST-006"
+        name: "Effect Schema at Boundaries"
+        pattern_checked: "JSON.parse.*as|as unknown as|response.json\\(\\) as"
+        violations: 0
+        status: PASS
+        detail: "Tasks 3.2, 3.3, 3.4, 3.5 properly specify REPLACING these patterns with Schema.decodeUnknown"
+
+      - rule_id: "MUST-007"
+        name: "Events Are Source of Truth"
+        pattern_checked: "state.*before.*event|mutate.*then.*emit|store.*state.*first"
+        violations: 0
+        status: PASS
+
+    should_rules:
+      - rule_id: "SHOULD-001"
+        name: "Use Data.TaggedClass for Events"
+        pattern_checked: "type.*Event.*=.*{|interface.*Event"
+        violations: 0
+        status: PASS
+        detail: "Task 1.1 explicitly creates Data.TaggedClass event definitions"
+
+      - rule_id: "SHOULD-002"
+        name: "Use Match.exhaustive for Event Dispatch"
+        pattern_checked: "switch.*event.*type|if.*event._tag ==="
+        violations: 0
+        status: PASS
+        detail: "Task 1.4 explicitly adds Match.exhaustive dispatch"
+
+      - rule_id: "SHOULD-003"
+        name: "Agent Owns Provider"
+        pattern_checked: "model:.*string|modelName|getProvider.*model"
+        violations: 0
+        status: PASS
+        detail: "Task 5.2 changes AgentDef from model string to provider instance"
+
+      - rule_id: "SHOULD-004"
+        name: "Three-Tier Hook Architecture"
+        pattern_checked: "useContext.*Workflow|excessive individual hook exports"
+        violations: 0
+        status: PASS
+        detail: "Tasks 6.2-6.8 implement three-tier architecture (primitives -> grouped -> unified)"
+
+      - rule_id: "SHOULD-005"
+        name: "Internal vs Public Exports"
+        pattern_checked: "export.*Route.*Handler|export.*SSE.*|export.*runAgentDef"
+        violations: 0
+        status: PASS
+        detail: "Tasks 4.3-4.5 create /internal entrypoints, task 4.2 removes runSimple/runWithText"
+
+      - rule_id: "SHOULD-006"
+        name: "Consistent Naming"
+        pattern_checked: "agentName|promptText|inputType"
+        violations: 0
+        status: PASS
+        detail: "Task 1.1 specifies using short names per ADR-008"
+
+  built_in_anti_patterns:
+    always_block:
+      - pattern: "That's OK for"
+        violations: 0
+        status: PASS
+
+      - pattern: "mock harness"
+        violations: 0
+        status: PASS
+
+      - pattern: "acceptable.*mock"
+        violations: 0
+        status: PASS
+
+      - pattern: "skip.*test.*api"
+        violations: 0
+        status: PASS
+
+      - pattern: "TODO.*later"
+        violations: 0
+        status: PASS
+
+    always_warn:
+      - pattern: "for now"
+        violations: 0
+        status: PASS
+
+      - pattern: "verify it works"
+        violations: 0
+        status: PASS
+
+      - pattern: "should work"
+        violations: 0
+        status: PASS
+
+      - pattern: "might need"
+        violations: 0
+        status: PASS
+
+  quality_checks:
+    atomicity:
+      status: PASS
+      detail: "All 53 tasks are atomic - each has single clear outcome, can be completed in one session"
+      examples:
+        - "1.1: Create Data.TaggedClass event definitions (single file, single concept)"
+        - "5.3: Delete ProviderRegistry and related code (focused deletion)"
+        - "7.1: Add tests for SSE parsing (covers one module)"
+
+    acceptance_criteria:
+      status: PASS
+      detail: "All acceptance criteria are verifiable and specific, no ambiguous language"
+      total_criteria: 265
+      verification_approach: "Grep patterns, build commands, type checking, test runs"
+
+    verification_commands:
+      status: PASS
+      detail: "All verify commands are runnable without manual intervention"
+      types_used:
+        - "pnpm typecheck"
+        - "pnpm build"
+        - "pnpm test"
+        - "pnpm lint"
+        - "grep patterns"
+        - "file existence checks"
+
+    source_references:
+      status: PASS
+      detail: "Implementation tasks reference source ADRs, cleanup tasks reference issues"
+      adr_coverage:
+        - "ADR-001: 2 tasks"
+        - "ADR-002: 5 tasks"
+        - "ADR-003: 3 tasks"
+        - "ADR-004: 6 tasks"
+        - "ADR-005: 5 tasks"
+        - "ADR-006: 5 tasks"
+        - "ADR-010: 5 tasks"
+        - "ADR-013: 8 tasks"
+      total_implementation_tasks: 35 (out of 53)
+
+  phase_organization:
+    status: PASS
+    details:
+      phase_1:
+        name: "Event System"
+        adr: "ADR-004"
+        tasks: 6
+        dependencies: "None (foundation)"
+
+      phase_2:
+        name: "State Sourcing"
+        adr: "ADR-006"
+        tasks: 5
+        dependencies: "Requires Phase 1"
+
+      phase_3:
+        name: "Type Safety"
+        adr: "ADR-005"
+        tasks: 5
+        dependencies: "Requires Phase 1"
+
+      phase_4:
+        name: "API Consolidation"
+        adr: "ADR-001, ADR-003"
+        tasks: 5
+        dependencies: "Requires Phase 1-3"
+
+      phase_5:
+        name: "Provider/HITL"
+        adr: "ADR-002, ADR-010"
+        tasks: 9
+        dependencies: "Requires Phase 1-4"
+
+      phase_6:
+        name: "React Hooks"
+        adr: "ADR-013"
+        tasks: 8
+        dependencies: "Requires Phase 4"
+
+      phase_7:
+        name: "Test Coverage"
+        adr: "TEST-*"
+        tasks: 7
+        dependencies: "Requires Phase 1-6"
+
+      phase_8:
+        name: "Cleanup"
+        adr: "DEAD-*, DOC-*, TYPE-*"
+        tasks: 8
+        dependencies: "Requires earlier phases"
+
+  violations_summary:
+    critical_violations: 0
+    medium_violations: 0
+    quality_issues: 0
+    recommendation: "All validation checks PASSED. No violations detected."
+
+summary: "PASS - 53 tasks validated against constitution. All MUST rules (7), SHOULD rules (6), built-in patterns (9), and quality checks PASSED. No violations found."
