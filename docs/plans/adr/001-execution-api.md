@@ -58,7 +58,7 @@ interface WorkflowExecution<S> extends PromiseLike<WorkflowResult<S>> {
 
 interface RunOptions<S, Input> {
   readonly input: Input
-  readonly runtime: RuntimeConfig
+  readonly runtime: RuntimeConfig  // Note: Simplified per ADR-010 (no providers map)
   readonly sessionId?: string
   readonly signal?: AbortSignal
   readonly observer?: WorkflowObserver<S>

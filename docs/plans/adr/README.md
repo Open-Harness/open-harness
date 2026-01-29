@@ -14,6 +14,15 @@ This folder contains Architecture Decision Records and the technical debt invent
 |------|---------|
 | [technical-debt-inventory.md](./technical-debt-inventory.md) | Master list of all technical debt issues |
 | [001-execution-api.md](./001-execution-api.md) | ADR: Execution API Design |
+| [002-hitl-architecture.md](./002-hitl-architecture.md) | ADR: Human-in-the-Loop Architecture |
+| [003-public-vs-internal-exports.md](./003-public-vs-internal-exports.md) | ADR: Public vs Internal Exports |
+| [004-event-observer-pattern.md](./004-event-observer-pattern.md) | ADR: Event/Observer Pattern |
+| [005-type-safety-strategy.md](./005-type-safety-strategy.md) | ADR: Type Safety Strategy |
+| [006-state-sourcing-model.md](./006-state-sourcing-model.md) | ADR: State Sourcing Model |
+| [007-error-hierarchy.md](./007-error-hierarchy.md) | ADR: Error Hierarchy |
+| [008-naming-conventions.md](./008-naming-conventions.md) | ADR: Naming Conventions |
+| [009-config-consolidation.md](./009-config-consolidation.md) | ADR: Config Consolidation |
+| [010-provider-ownership-model.md](./010-provider-ownership-model.md) | ADR: Provider Ownership Model |
 
 ## ADR Status Legend
 
@@ -29,14 +38,15 @@ This folder contains Architecture Decision Records and the technical debt invent
 | Area | ADR | Status |
 |------|-----|--------|
 | Execution API | [ADR-001](./001-execution-api.md) | Accepted |
-| HITL Architecture | TBD | — |
-| Public vs Internal Exports | TBD | — |
-| Event/Observer Pattern | TBD | — |
-| Type Safety Strategy | TBD | — |
-| State Sourcing Model | TBD | — |
-| Error Hierarchy | TBD | — |
-| Naming Conventions | TBD | — |
-| Config Consolidation | TBD | — |
+| HITL Architecture | [ADR-002](./002-hitl-architecture.md) | Accepted |
+| Public vs Internal Exports | [ADR-003](./003-public-vs-internal-exports.md) | Proposed |
+| Event/Observer Pattern | [ADR-004](./004-event-observer-pattern.md) | Accepted |
+| Type Safety Strategy | [ADR-005](./005-type-safety-strategy.md) | Proposed |
+| State Sourcing Model | [ADR-006](./006-state-sourcing-model.md) | Accepted |
+| Error Hierarchy | [ADR-007](./007-error-hierarchy.md) | Accepted |
+| Naming Conventions | [ADR-008](./008-naming-conventions.md) | Accepted |
+| Config Consolidation | [ADR-009](./009-config-consolidation.md) | Proposed |
+| Provider Ownership Model | [ADR-010](./010-provider-ownership-model.md) | Accepted |
 
 ## Process
 

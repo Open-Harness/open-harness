@@ -8,9 +8,9 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Issues | 99 |
-| Resolved (via ADR) | 7 |
-| Remaining | 92 |
+| Total Issues | 96 |
+| Resolved (via ADR) | 28 |
+| Remaining | 68 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -20,6 +20,10 @@
 | ADR | Title | Status | Issues Resolved |
 |-----|-------|--------|-----------------|
 | [ADR-001](./001-execution-api.md) | Execution API Design | Accepted | API-001, API-003, API-004, API-005, API-011, ARCH-003, DEAD-001, DEAD-002 |
+| [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, ARCH-012, DEAD-009, DEAD-011 |
+| [ADR-004](./004-event-observer-pattern.md) | Event/Observer Pattern | Accepted | ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005 |
+| [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
+| [ADR-010](./010-provider-ownership-model.md) | Provider Ownership Model | Proposed | ARCH-006, ARCH-021 |
 
 ## Decision Log
 
@@ -28,11 +32,15 @@
 | 2026-01-29 | Pre-0 | Use shorter names (`agent`, `prompt`, `type`) | More idiomatic for APIs, matches observer callbacks |
 | 2026-01-29 | 1 | Package structure is correct (core/server/client/testing/cli) | Clean separation, no circular deps, each has distinct purpose |
 | 2026-01-29 | 7 | **ADR-001**: Single `run()` API returning awaitable handle | Consolidate 6 execution functions into one. Observer callbacks for events, control methods for pause/resume/abort. See [ADR-001](./001-execution-api.md) |
+| 2026-01-29 | 7 | **ADR-002**: Inline human input on phase | One HITL system. Two types (approval, choice). Conditional via function. Delete Domain/Interaction.ts. See [ADR-002](./002-hitl-architecture.md) |
+| 2026-01-29 | 7 | **ADR-004**: PubSub-based event architecture | Single EventHub with PubSub, Data.TaggedClass events with `_tag`, Match.exhaustive dispatch, fiber-based subscribers. See [ADR-004](./004-event-observer-pattern.md) |
+| 2026-01-29 | 7 | **ADR-006**: True event sourcing | Events are source of truth. State derived via SubscriptionRef projection fiber. Enables fork/replay. StateCache with snapshots for optimization. See [ADR-006](./006-state-sourcing-model.md) |
+| 2026-01-29 | 7 | **ADR-010**: Agent owns provider | Agents embed provider directly (not model string). No ProviderRegistry. Clean variant creation for evals. Blocks ADR-009. See [ADR-010](./010-provider-ownership-model.md) |
 
 ## Open Questions
 
 1. ~~Should `run()` and `execute()` be consolidated into one API?~~ ✅ **Yes - ADR-001**
-2. Should `Domain/Interaction.ts` be removed entirely, or kept as advanced helper?
+2. ~~Should `Domain/Interaction.ts` be removed entirely, or kept as advanced helper?~~ ✅ **Remove entirely - ADR-002**
 3. ~~Is the core/server/client/testing package split correct?~~ ✅ Confirmed correct in Phase 1
 4. Are there other deep dive areas we should add?
 5. Should route handlers and SSE utilities be exported publicly or moved to internal?
@@ -50,18 +58,18 @@
 | NAME-002 | `promptText` vs `prompt` in HITL | Needs Investigation | — | HITL payloads | Decision: prefer shorter `prompt` |
 | NAME-003 | `inputType` vs `type` in HITL | Needs Investigation | — | HITL payloads | Decision: prefer shorter `type` |
 | NAME-004 | `UseFilteredEventsOptions` should be `FilteredEventsOptions` | Needs Investigation | — | client/react/hooks.ts | `Use` prefix redundant for option types |
-| NAME-005 | Event type naming inconsistent (`Event<N,P>` defined twice) | Needs Investigation | — | Domain/Interaction.ts, Engine/types.ts | Two separate Event definitions cause confusion |
+| NAME-005 | Event type naming inconsistent (`Event<N,P>` defined twice) | ✅ **Resolved** | ADR-004 | Domain/Interaction.ts, Engine/types.ts | Single Data.TaggedClass union |
 | NAME-006 | Error class organization inconsistent | Needs Investigation | — | Engine/types.ts, Domain/Errors.ts | Workflow*Error in types.ts, plain names in Errors.ts |
-| NAME-007 | Observer callback naming inconsistent | Needs Investigation | — | Engine/types.ts | `onStateChanged` vs `onPhaseChanged` - inconsistent verbs |
+| NAME-007 | Observer callback naming inconsistent | ✅ **Resolved** | ADR-004 | Engine/types.ts | Match.exhaustive dispatch standardizes naming |
 | NAME-008 | Id vs ID capitalization mixed | Needs Investigation | — | Domain/Ids.ts | `EventId` (lowercase d) vs others |
 
 ### HITL Systems
 
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
-| HITL-001 | Two competing HITL systems exist | Needs Investigation | — | Domain/Interaction.ts, Phase/Runtime | Unclear which is canonical |
-| HITL-002 | Different payload structures between systems | Needs Investigation | — | — | May cause runtime confusion |
-| HITL-003 | React hooks only work with one HITL system | Needs Investigation | — | React integration | Users may pick wrong system |
+| HITL-001 | Two competing HITL systems exist | ✅ **Resolved** | ADR-002 | Domain/Interaction.ts, Phase/Runtime | Inline human on phase is canonical |
+| HITL-002 | Different payload structures between systems | ✅ **Resolved** | ADR-002 | — | Unified payload structure |
+| HITL-003 | React hooks only work with one HITL system | ✅ **Resolved** | ADR-002 | React integration | Hooks will use new unified payloads |
 
 ### Error Handling
 
@@ -95,7 +103,7 @@
 | TYPE-002 | `StateSnapshot` exported from multiple places | Needs Investigation | — | Engine/types.ts, Domain/Interaction.ts | Potential confusion |
 | TYPE-003 | **HIGH**: Double cast `as unknown as Record` in workflow.ts | Needs Investigation | — | Engine/workflow.ts:226 | Defeats type safety for union validation |
 | TYPE-004 | ID brand casts without runtime validation | Needs Investigation | — | Domain/Ids.ts, Engine/types.ts | 6 locations: UUID cast to branded type |
-| TYPE-005 | Event payload casts without validation | Needs Investigation | — | Engine/runtime.ts | 12 locations: payload.X cast to expected type |
+| TYPE-005 | Event payload casts without validation | ✅ **Resolved** | ADR-004 | Engine/runtime.ts | Data.TaggedClass provides type-safe access |
 | TYPE-006 | JSON.parse without validation in LibSQL | Needs Investigation | — | Layers/LibSQL.ts:71 | Parsed JSON cast to unknown/typed |
 | TYPE-007 | StateSnapshot state cast on retrieval | Needs Investigation | — | Services/StateCache.ts:112,121 | Generic `S` assumed without validation |
 | TYPE-008 | Zod schema cast loses type info | Needs Investigation | — | Engine/provider.ts:242 | `outputSchema as ZodType<unknown>` |
@@ -119,9 +127,9 @@
 | DEAD-006 | `sseReconnectSchedule` in client exports | Needs Investigation | — | client/Reconnect.ts | Effect-specific, internal use only |
 | DEAD-007 | 8 Logger layers never used | Needs Investigation | — | Layers/Logger.ts:20-85 | ProdLoggerLayer, TestLoggerLayer, etc. |
 | DEAD-008 | `loadWorkflowTape` never imported | Needs Investigation | — | server/programs/loadWorkflowTape.ts | Not re-exported from main index |
-| DEAD-009 | Interaction utilities test-only | Needs Investigation | — | Domain/Interaction.ts | `createInteraction`, `findPendingInteractions` |
+| DEAD-009 | Interaction utilities test-only | ✅ **Resolved** | ADR-002 | Domain/Interaction.ts | Delete — replaced by inline human on phase |
 | DEAD-010 | 7 React hooks missing from react/index.ts | Needs Investigation | — | client/react/index.ts | useFork, usePause, useResume, etc. not re-exported |
-| DEAD-011 | `usePendingInteraction(s)` completely untested | Needs Investigation | — | client/react/hooks.ts | Zero test coverage, zero external usage |
+| DEAD-011 | `usePendingInteraction(s)` completely untested | ✅ **Resolved** | ADR-002 | client/react/hooks.ts | Will be rewritten for new HITL payloads |
 | DEAD-012 | `InMemoryProviderRecorder` possibly redundant | Needs Investigation | — | core test helpers | Alternative to makeInMemoryProviderRecorder |
 
 ### Test Coverage
@@ -149,26 +157,28 @@
 
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
-| ARCH-001 | Three parallel observer patterns (fragmented) | Needs Investigation | — | WorkflowObserver, EventBus, EventStore | Triple dispatch for same event |
+| ARCH-001 | Three parallel observer patterns (fragmented) | ✅ **Resolved** | ADR-004 | WorkflowObserver, EventBus, EventStore | Single EventHub with PubSub, fiber subscribers |
 | ARCH-002 | Service instantiation patterns inconsistent | Needs Investigation | — | — | MAJOR: different service setup |
 | ARCH-003 | Inconsistent naming for execution functions | ✅ **Resolved** | ADR-001 | — | Single `run()` API |
 | ARCH-004 | Too many internals exposed in core | Needs Investigation | — | core/index.ts | Services, Layers, SessionContext are advanced |
-| ARCH-005 | 26 event types exported individually | Needs Investigation | — | Engine/types.ts | 13 Payload + 13 Event pairs verbose |
-| ARCH-006 | Provider infrastructure too public | Needs Investigation | — | Engine/provider.ts | ProviderRegistry, runAgentDef, etc. |
+| ARCH-005 | 26 event types exported individually | ✅ **Resolved** | ADR-004 | Engine/types.ts | Single WorkflowEvent union with Data.TaggedClass |
+| ARCH-006 | Provider infrastructure too public | ✅ **Resolved** | ADR-010 | Engine/provider.ts | ProviderRegistry deleted, runAgentDef internal |
+| ARCH-021 | Provider ownership model misaligned with eval design | ✅ **Resolved** | ADR-010 | Engine/agent.ts, Engine/provider.ts | Agent owns provider directly. See [ADR-010](./010-provider-ownership-model.md) |
+| ARCH-022 | `workflow.with()` not implemented | Needs Implementation | — | Engine/workflow.ts | Specified in eval-system-design.md. Required for variants. Depends on ADR-010. |
 | ARCH-007 | RouteContext/RouteResponse types exported | Needs Investigation | — | server/http/Routes.ts | Implementation details |
 | ARCH-008 | Convenience hooks vs context access redundancy | Needs Investigation | — | client/react/hooks.ts | Multiple ways to get same data |
-| ARCH-009 | State exists in 4 places (divergence risk) | Needs Investigation | — | Multiple | Ref, events, snapshots, client cache |
-| ARCH-010 | ProviderRecorder has two competing APIs | Needs Investigation | — | Services/ProviderRecorder.ts | Legacy save() vs incremental API |
-| ARCH-011 | StateCache is orphaned (defined but never used) | Needs Investigation | — | Services/StateCache.ts | No Layer impl, not wired up |
-| ARCH-012 | HITL flow unclear (no visible continuation) | Needs Investigation | — | runtime.ts | onInputRequested not properly awaited |
+| ARCH-009 | State exists in 4 places (divergence risk) | ✅ **Resolved** | ADR-006 | Multiple | Events are source of truth, state derived |
+| ARCH-010 | ProviderRecorder has two competing APIs | ✅ **Resolved** | ADR-006 | Services/ProviderRecorder.ts | Incremental API is canonical |
+| ARCH-011 | StateCache is orphaned (defined but never used) | ✅ **Resolved** | ADR-006 | Services/StateCache.ts | Wired to EventHub for reactive updates |
+| ARCH-012 | HITL flow unclear (no visible continuation) | ✅ **Resolved** | ADR-002 | runtime.ts | Inline human on phase with clear flow |
 | ARCH-013 | HTTP server reinvents routing (~300 LoC) | Needs Investigation | — | server/http/Server.ts | Could use Hono, halve code |
 | ARCH-014 | Three store implementations scattered | Needs Investigation | — | Core/Layers, Server/store | Confusing which is official |
 | ARCH-015 | Stream vs AsyncIterable (two async models) | Needs Investigation | — | core, client | Effect Stream + Web standard AsyncIterable |
 | ARCH-016 | ProviderModeContext is ambient (spooky action) | Needs Investigation | — | FiberRef | Global state via FiberRef |
 | ARCH-017 | Phase lifecycle under-specified | Needs Investigation | — | Engine/phase.ts | No guards, no recovery, no rollback |
-| ARCH-018 | Event → State order inverted (not true sourcing) | Needs Investigation | — | runtime.ts | Mutate state THEN emit event |
-| ARCH-019 | No event versioning strategy | Needs Investigation | — | — | Schema evolution could break replay |
-| ARCH-020 | dispatchToObserver has 10+ switch cases | Needs Investigation | — | runtime.ts | Add event type = update 3 places |
+| ARCH-018 | Event → State order inverted (not true sourcing) | ✅ **Resolved** | ADR-006 | runtime.ts | Events first, state derived |
+| ARCH-019 | No event versioning strategy | ✅ **Resolved** | ADR-006 | — | Data.TaggedClass with _tag enables versioning |
+| ARCH-020 | dispatchToObserver has 10+ switch cases | ✅ **Resolved** | ADR-004 | runtime.ts | Match.exhaustive replaces switch |
 
 ### Documentation
 
@@ -178,7 +188,7 @@
 | DOC-002 | No internal vs public API documentation | Needs Investigation | — | — | Services/Layers need @internal markers |
 | DOC-003 | Hook grouping/hierarchy undocumented | Needs Investigation | — | client/react/*.ts | Actions vs State vs Predicates |
 | DOC-004 | HITL flow undocumented | Needs Investigation | — | — | No diagram showing pause/resume/input |
-| DOC-005 | State sourcing model undocumented | Needs Investigation | — | — | Event vs state vs snapshot relationship |
+| DOC-005 | State sourcing model undocumented | ✅ **Resolved** | ADR-006 | — | Fully documented in ADR-006 |
 | DOC-006 | Phase semantics undocumented | Needs Investigation | — | — | When snapshots created, lifecycle unclear |
 
 ---
