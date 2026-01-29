@@ -9,8 +9,8 @@
 | Metric | Count |
 |--------|-------|
 | Total Issues | 96 |
-| Resolved (via ADR) | 56 |
-| Remaining | 40 |
+| Resolved (via ADR) | 57 |
+| Remaining | 39 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -23,7 +23,7 @@
 | [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, ARCH-012, DEAD-009, DEAD-011 |
 | [ADR-003](./003-public-vs-internal-exports.md) | Public vs Internal Exports | Accepted | ARCH-004, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006 |
 | [ADR-004](./004-event-observer-pattern.md) | Event/Observer Pattern | Accepted | ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005 |
-| [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Accepted | TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013 |
+| [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Accepted | TYPE-003, TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013 |
 | [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
 | [ADR-007](./007-error-hierarchy.md) | Error Hierarchy | Accepted | ERR-001, ERR-002, NAME-006 |
 | [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008 |
@@ -110,7 +110,7 @@
 |----|-------|--------|----------|-------|-------|
 | TYPE-001 | Duplicate type definitions | ✅ **Resolved** | ADR-008 | Engine/types.ts, Domain/Interaction.ts | Consolidate to single `Event` definition |
 | TYPE-002 | `StateSnapshot` exported from multiple places | Open | — | Engine/types.ts, Domain/Interaction.ts | Consolidate exports (implementation detail) |
-| TYPE-003 | **HIGH**: Double cast `as unknown as Record` in workflow.ts | Verify | ADR-006? | Engine/workflow.ts:226 | Check if still exists post state-sourcing refactor |
+| TYPE-003 | **HIGH**: Double cast `as unknown as Record` in workflow.ts | ✅ **Resolved** | ADR-005 | Engine/workflow.ts:226 | Replace with `WorkflowDefSchema` Effect Schema validation |
 | TYPE-004 | ID brand casts without runtime validation | ✅ **Resolved** | ADR-005 | Domain/Ids.ts, Engine/types.ts | Schema validation with `Schema.brand` |
 | TYPE-005 | Event payload casts without validation | ✅ **Resolved** | ADR-004 | Engine/runtime.ts | `Data.TaggedClass` provides type-safe access |
 | TYPE-006 | JSON.parse without validation in LibSQL | ✅ **Resolved** | ADR-005 | Layers/LibSQL.ts:71 | Schema decode for deserialized rows |
@@ -180,7 +180,7 @@
 | ARCH-010 | ProviderRecorder has two competing APIs | ✅ **Resolved** | ADR-006 | Services/ProviderRecorder.ts | Incremental API is canonical |
 | ARCH-011 | StateCache is orphaned (defined but never used) | ✅ **Resolved** | ADR-006 | Services/StateCache.ts | Wired to EventHub for reactive updates |
 | ARCH-012 | HITL flow unclear (no visible continuation) | ✅ **Resolved** | ADR-002 | runtime.ts | Inline human on phase with clear flow |
-| ARCH-013 | HTTP server reinvents routing (~300 LoC) | Needs Investigation | — | server/http/Server.ts | Could use Hono, halve code |
+| ARCH-013 | HTTP server reinvents routing (~300 LoC) | ✅ **Resolved** | ADR-009 | server/http/Server.ts | Migrate to `@effect/platform-node` HTTP server |
 | ARCH-014 | Three store implementations scattered | Needs Investigation | — | Core/Layers, Server/store | Confusing which is official |
 | ARCH-015 | Stream vs AsyncIterable (two async models) | Needs Investigation | — | core, client | Effect Stream + Web standard AsyncIterable |
 | ARCH-016 | ProviderModeContext is ambient (spooky action) | Needs Investigation | — | FiberRef | Global state via FiberRef |

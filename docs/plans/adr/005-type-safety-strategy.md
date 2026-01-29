@@ -4,7 +4,7 @@
 **Date:** 2026-01-29
 **Decision Area:** Type Safety Strategy
 **Related Issues:** TYPE-002, TYPE-003, TYPE-004, TYPE-006, TYPE-007, TYPE-008, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013
-**Resolves:** TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013
+**Resolves:** TYPE-003, TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013
 **Superseded by Other ADRs:** TYPE-001 (ADR-008), TYPE-005 (ADR-004), TYPE-014 (ADR-002), TYPE-015 (ADR-006)
 
 ---
@@ -72,6 +72,7 @@ Zod would require wrapping `parse()` in `Effect.tryCatch` constantly — two err
 
 | Issue | Location | Schema Use |
 |-------|----------|------------|
+| TYPE-003 | `Engine/workflow.ts` | `WorkflowDefSchema` discriminated union for SimpleWorkflow vs PhaseWorkflow |
 | TYPE-004 | `Domain/Ids.ts` | `Schema.String.pipe(Schema.pattern(...), Schema.brand(...))` |
 | TYPE-006 | `Layers/LibSQL.ts` | Schema for deserialized rows |
 | TYPE-009 | `Layers/InMemory.ts` | ID validation on key conversion |
@@ -94,7 +95,6 @@ Zod would require wrapping `parse()` in `Effect.tryCatch` constantly — two err
 | Issue | Status | Notes |
 |-------|--------|-------|
 | TYPE-002 | Open | `StateSnapshot` export consolidation — implementation detail |
-| TYPE-003 | Verify | Double cast in `workflow.ts` — check if still exists post-ADR-006 |
 | TYPE-007 | Verify | State cast in `StateCache.ts` — verify with ADR-006 implementation |
 | TYPE-008 | Accept | Zod cast in `provider.ts` — Zod kept for agent `output` schemas by design (ADR-010) |
 
@@ -215,6 +215,7 @@ const handleEvent = (event: WorkflowEvent) => {
 
 | File | Schema For | Replaces |
 |------|-----------|----------|
+| `packages/core/src/Engine/workflow.ts` | `WorkflowDefSchema` (discriminated union) | Double cast `as unknown as Record` |
 | `packages/core/src/Domain/Ids.ts` | Branded ID types | UUID casts |
 | `packages/core/src/Layers/LibSQL.ts` | Row deserialization | JSON.parse casts |
 | `packages/server/src/store/EventStoreLive.ts` | `StoredEvent` | payload cast |

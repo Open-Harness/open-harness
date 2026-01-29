@@ -177,6 +177,46 @@ A `workflows: Record<string, WorkflowDef>` registry requires changing the HTTP c
 
 ---
 
+## HTTP Server Implementation
+
+**Current:** Raw Node.js `http` module with manual routing (~300 LoC of if/else route matching).
+
+**Target:** `@effect/platform-node` HTTP server
+
+### Decision
+
+Migrate to Effect's native HTTP platform rather than raw Node.js.
+
+### Why
+
+| Aspect | Raw Node.js | Effect HTTP |
+|--------|-------------|-------------|
+| Fiber-aware | ❌ Manual | ✅ Built-in — requests run in fibers with proper interruption |
+| Error handling | ❌ Try/catch boilerplate | ✅ Effect error channels propagate correctly |
+| Testing | ❌ Mock Node.js server | ✅ Run handlers as pure Effect programs with test layers |
+| Routing | ❌ Manual if/else (~300 LoC) | ✅ Composable router with type-safe routes |
+| Middleware | ❌ Manual | ✅ Built-in CORS, logging, error mapping |
+
+### Migration Path
+
+1. Add `@effect/platform-node` dependency
+2. Replace `http.createServer()` with `NodeHttpServer.make`
+3. Convert manual routing to `Http.router`:
+   ```typescript
+   const router = Http.router.empty.pipe(
+     Http.router.get("/sessions", listSessionsHandler),
+     Http.router.post("/sessions", createSessionHandler),
+     // ... etc
+   )
+   ```
+4. Keep public `createServer()` API unchanged — internal refactor only
+
+### Scope
+
+This is an internal implementation change. The public API (`createServer()` config shape, route contract, SSE behavior) remains identical.
+
+---
+
 ## Consequences
 
 ### Positive
