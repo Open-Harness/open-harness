@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-01-29
 **Decision Area:** Execution API Design
-**Related Issues:** API-001, API-003, API-004, API-005, ARCH-003, DEAD-001, DEAD-002
+**Related Issues:** API-001, API-003, API-004, API-005, API-011, ARCH-003, DEAD-001, DEAD-002
 
 ---
 

@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-01-29
 **Decision Area:** Naming Conventions
-**Related Issues:** NAME-001 through NAME-008
+**Related Issues:** NAME-001, NAME-002, NAME-003, NAME-004, NAME-008
 
 ---
 

@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-01-29
 **Decision Area:** Provider Architecture
-**Related Issues:** ARCH-006, ARCH-021, API-002, API-006
+**Related Issues:** ARCH-006, ARCH-021
 **Blocks:** ADR-009 (Config Consolidation)
 
 ---

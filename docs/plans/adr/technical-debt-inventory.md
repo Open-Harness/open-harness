@@ -9,8 +9,8 @@
 | Metric | Count |
 |--------|-------|
 | Total Issues | 96 |
-| Resolved (via ADR) | 47 |
-| Remaining | 49 |
+| Resolved (via ADR) | 56 |
+| Remaining | 40 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -23,7 +23,7 @@
 | [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, ARCH-012, DEAD-009, DEAD-011 |
 | [ADR-003](./003-public-vs-internal-exports.md) | Public vs Internal Exports | Accepted | ARCH-004, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006 |
 | [ADR-004](./004-event-observer-pattern.md) | Event/Observer Pattern | Accepted | ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005 |
-| [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Proposed | TYPE-001–TYPE-015 |
+| [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Accepted | TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013 |
 | [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
 | [ADR-007](./007-error-hierarchy.md) | Error Hierarchy | Accepted | ERR-001, ERR-002, NAME-006 |
 | [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008 |
@@ -108,21 +108,21 @@
 
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
-| TYPE-001 | Duplicate type definitions | Needs Investigation | — | — | MINOR: potential divergence |
-| TYPE-002 | `StateSnapshot` exported from multiple places | Needs Investigation | — | Engine/types.ts, Domain/Interaction.ts | Potential confusion |
-| TYPE-003 | **HIGH**: Double cast `as unknown as Record` in workflow.ts | Needs Investigation | — | Engine/workflow.ts:226 | Defeats type safety for union validation |
-| TYPE-004 | ID brand casts without runtime validation | Needs Investigation | — | Domain/Ids.ts, Engine/types.ts | 6 locations: UUID cast to branded type |
-| TYPE-005 | Event payload casts without validation | ✅ **Resolved** | ADR-004 | Engine/runtime.ts | Data.TaggedClass provides type-safe access |
-| TYPE-006 | JSON.parse without validation in LibSQL | Needs Investigation | — | Layers/LibSQL.ts:71 | Parsed JSON cast to unknown/typed |
-| TYPE-007 | StateSnapshot state cast on retrieval | Needs Investigation | — | Services/StateCache.ts:112,121 | Generic `S` assumed without validation |
-| TYPE-008 | Zod schema cast loses type info | Needs Investigation | — | Engine/provider.ts:242 | `outputSchema as ZodType<unknown>` |
-| TYPE-009 | Array.from keys cast to SessionId | Needs Investigation | — | Layers/InMemory.ts:78 | String keys assumed valid SessionIds |
-| TYPE-010 | JSON.parse in StateSnapshotStoreLive | Needs Investigation | — | server/store/StateSnapshotStoreLive.ts:36 | No validation on state_json |
-| TYPE-011 | JSON.parse in EventStoreLive | Needs Investigation | — | server/store/EventStoreLive.ts:40 | No validation on event payload |
-| TYPE-012 | response.json() cast to generic T | Needs Investigation | — | client/HttpClient.ts:62 | No runtime validation of JSON structure |
-| TYPE-013 | JSON.parse SSE message cast to AnyEvent | Needs Investigation | — | client/HttpClient.ts:114 | No validation of event structure |
-| TYPE-014 | event.payload casts in usePendingInteractions | Needs Investigation | — | client/react/hooks.ts:448,466 | Assumes payload structure without guards |
-| TYPE-015 | computeStateAt double cast | Needs Investigation | — | Engine/utils.ts:36 | `(payload as Record).state as S` |
+| TYPE-001 | Duplicate type definitions | ✅ **Resolved** | ADR-008 | Engine/types.ts, Domain/Interaction.ts | Consolidate to single `Event` definition |
+| TYPE-002 | `StateSnapshot` exported from multiple places | Open | — | Engine/types.ts, Domain/Interaction.ts | Consolidate exports (implementation detail) |
+| TYPE-003 | **HIGH**: Double cast `as unknown as Record` in workflow.ts | Verify | ADR-006? | Engine/workflow.ts:226 | Check if still exists post state-sourcing refactor |
+| TYPE-004 | ID brand casts without runtime validation | ✅ **Resolved** | ADR-005 | Domain/Ids.ts, Engine/types.ts | Schema validation with `Schema.brand` |
+| TYPE-005 | Event payload casts without validation | ✅ **Resolved** | ADR-004 | Engine/runtime.ts | `Data.TaggedClass` provides type-safe access |
+| TYPE-006 | JSON.parse without validation in LibSQL | ✅ **Resolved** | ADR-005 | Layers/LibSQL.ts:71 | Schema decode for deserialized rows |
+| TYPE-007 | StateSnapshot state cast on retrieval | Verify | ADR-006 | Services/StateCache.ts:112,121 | Verify with state-sourcing implementation |
+| TYPE-008 | Zod schema cast loses type info | Accept | ADR-010 | Engine/provider.ts:242 | Zod kept for agent output by design |
+| TYPE-009 | Array.from keys cast to SessionId | ✅ **Resolved** | ADR-005 | Layers/InMemory.ts:78 | ID validation with Schema |
+| TYPE-010 | JSON.parse in StateSnapshotStoreLive | ✅ **Resolved** | ADR-005 | server/store/StateSnapshotStoreLive.ts:36 | `StateCheckpoint` schema validation |
+| TYPE-011 | JSON.parse in EventStoreLive | ✅ **Resolved** | ADR-005 | server/store/EventStoreLive.ts:40 | `StoredEvent` schema validation |
+| TYPE-012 | response.json() cast to generic T | ✅ **Resolved** | ADR-005 | client/HttpClient.ts:62 | API response schemas |
+| TYPE-013 | JSON.parse SSE message cast to AnyEvent | ✅ **Resolved** | ADR-005 | client/HttpClient.ts:114 | SSE message schema validation |
+| TYPE-014 | event.payload casts in usePendingInteractions | ✅ **Resolved** | ADR-002 | client/react/hooks.ts:448,466 | Hook rewritten with new HITL payloads |
+| TYPE-015 | computeStateAt double cast | ✅ **Resolved** | ADR-006 | Engine/utils.ts:36 | `deriveState` replaces `computeStateAt` |
 
 ### Dead Code
 

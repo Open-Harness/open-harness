@@ -41,7 +41,7 @@ This folder contains Architecture Decision Records and the technical debt invent
 | HITL Architecture | [ADR-002](./002-hitl-architecture.md) | Accepted |
 | Public vs Internal Exports | [ADR-003](./003-public-vs-internal-exports.md) | Accepted |
 | Event/Observer Pattern | [ADR-004](./004-event-observer-pattern.md) | Accepted |
-| Type Safety Strategy | [ADR-005](./005-type-safety-strategy.md) | Proposed |
+| Type Safety Strategy | [ADR-005](./005-type-safety-strategy.md) | Accepted |
 | State Sourcing Model | [ADR-006](./006-state-sourcing-model.md) | Accepted |
 | Error Hierarchy | [ADR-007](./007-error-hierarchy.md) | Accepted |
 | Naming Conventions | [ADR-008](./008-naming-conventions.md) | Accepted |

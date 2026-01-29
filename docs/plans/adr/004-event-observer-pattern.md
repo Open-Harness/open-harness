@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-01-29
 **Decision Area:** Event/Observer Pattern
-**Related Issues:** ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007
+**Related Issues:** ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005
 
 ---
 
@@ -89,9 +89,9 @@ import { Data } from "effect"
 // Event Classes (illustrative subset)
 // ═══════════════════════════════════════════════════════════════
 
-// Note: ADR-006 introduces additional state-sourcing events
-// (e.g. StateIntent/StateCheckpoint/SessionForked) and may supersede
-// earlier “state updated” style events.
+// Note: State events use ADR-006's event sourcing model.
+// StateIntent contains patches (source of truth), StateCheckpoint is for
+// replay optimization, SessionForked tracks lineage for fork/resume.
 
 export class WorkflowStarted extends Data.TaggedClass("WorkflowStarted")<{
   readonly sessionId: string
@@ -133,10 +133,25 @@ export class AgentCompleted extends Data.TaggedClass("AgentCompleted")<{
   readonly timestamp: Date
 }> {}
 
-export class StateUpdated extends Data.TaggedClass("StateUpdated")<{
+// State events per ADR-006 (event sourcing)
+export class StateIntent extends Data.TaggedClass("StateIntent")<{
+  readonly intentId: string
+  readonly patches: ReadonlyArray<unknown>
+  readonly inversePatches: ReadonlyArray<unknown>
+  readonly timestamp: Date
+}> {}
+
+export class StateCheckpoint extends Data.TaggedClass("StateCheckpoint")<{
   readonly state: unknown
-  readonly patches?: ReadonlyArray<unknown>
-  readonly inversePatches?: ReadonlyArray<unknown>
+  readonly position: number
+  readonly phase: string
+  readonly timestamp: Date
+}> {}
+
+export class SessionForked extends Data.TaggedClass("SessionForked")<{
+  readonly parentSessionId: string
+  readonly forkIndex: number
+  readonly initialState: unknown
   readonly timestamp: Date
 }> {}
 
@@ -194,7 +209,9 @@ export type WorkflowEvent =
   | PhaseExited
   | AgentStarted
   | AgentCompleted
-  | StateUpdated
+  | StateIntent      // ADR-006: patch-based state change
+  | StateCheckpoint  // ADR-006: snapshot for replay optimization
+  | SessionForked    // ADR-006: lineage tracking for fork/resume
   | TextDelta
   | ThinkingDelta
   | ToolCalled
@@ -370,8 +387,18 @@ export const dispatchToObserver = (
       })
     }),
 
-    Match.tag("StateUpdated", (e) => {
-      observer.onStateChanged?.(e.state, e.patches)
+    Match.tag("StateIntent", (e) => {
+      // State derived from patches per ADR-006; observer receives derived state
+      // The projection fiber applies patches and notifies via onStateChanged
+    }),
+
+    Match.tag("StateCheckpoint", (e) => {
+      // Checkpoint for replay optimization; may trigger onStateChanged
+      observer.onStateChanged?.(e.state)
+    }),
+
+    Match.tag("SessionForked", () => {
+      // Internal lineage event, no observer callback
     }),
 
     Match.tag("TextDelta", (e) => {
@@ -501,7 +528,9 @@ const tagToEventName: Record<WorkflowEvent["_tag"], EventName> = {
   PhaseExited: "phase:exited",
   AgentStarted: "agent:started",
   AgentCompleted: "agent:completed",
-  StateUpdated: "state:updated",
+  StateIntent: "state:intent",
+  StateCheckpoint: "state:checkpoint",
+  SessionForked: "session:forked",
   TextDelta: "text:delta",
   ThinkingDelta: "thinking:delta",
   ToolCalled: "tool:called",

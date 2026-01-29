@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-01-29
 **Decision Area:** Public vs Internal Exports
-**Related Issues:** ARCH-004, ARCH-006, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006
+**Related Issues:** ARCH-004, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006
 
 ---
 
