@@ -1,0 +1,43 @@
+project:
+  name: "open-scaffold"
+  language: "TypeScript"
+  framework: "Effect"
+
+commands:
+  test: "pnpm test"
+  lint: "pnpm lint"
+  typecheck: "pnpm typecheck"
+  build: "pnpm build"
+
+capabilities:
+  browser: "false"
+
+rules:
+  - "NEVER emit TypeScript build artifacts to src/ directories"
+  - "ALWAYS use Effect's Layer system for dependency injection"
+  - "NEVER use mocks or stubs in tests - use real implementations with :memory: databases"
+  - "ALWAYS use ProviderRecorder for provider testing"
+  - "Follow ADR decisions exactly as specified"
+  - "Use Data.TaggedClass for events (ADR-004)"
+  - "Use Effect Schema for validation at boundaries (ADR-005)"
+  - "Events are source of truth, state is derived (ADR-006)"
+  - "Agent owns provider directly, no ProviderRegistry (ADR-010)"
+
+boundaries:
+  never_touch:
+    - "packages/*/src/**/*.js"
+    - "packages/*/src/**/*.d.ts"
+    - "apps/*/src/**/*.js"
+    - "apps/*/src/**/*.d.ts"
+    - ".factory/artifacts/**"
+    - "node_modules/**"
+    - ".git/**"
+
+ralphy:
+  worktrees: false
+  parallel: false
+  max_parallel: 1
+  branch_per_task: true
+  create_pr: true
+  base_branch: "cleanup/open-scaffold-architecture"
+  target_branch: "dev"
