@@ -9,8 +9,8 @@
 | Metric | Count |
 |--------|-------|
 | Total Issues | 96 |
-| Resolved (via ADR) | 63 |
-| Remaining | 33 |
+| Resolved (via ADR) | 65 |
+| Remaining | 31 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -20,14 +20,14 @@
 | ADR | Title | Status | Issues Resolved |
 |-----|-------|--------|-----------------|
 | [ADR-001](./001-execution-api.md) | Execution API Design | Accepted | API-001, API-003, API-004, API-005, API-011, ARCH-003, DEAD-001, DEAD-002 |
-| [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, ARCH-012, DEAD-009, DEAD-011 |
+| [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, TYPE-014, ARCH-012, DEAD-009, DEAD-011 |
 | [ADR-003](./003-public-vs-internal-exports.md) | Public vs Internal Exports | Accepted | ARCH-004, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006 |
 | [ADR-004](./004-event-observer-pattern.md) | Event/Observer Pattern | Accepted | ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005 |
 | [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Accepted | TYPE-003, TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013 |
-| [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
+| [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | TYPE-015, ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
 | [ADR-007](./007-error-hierarchy.md) | Error Hierarchy | Accepted | ERR-001, ERR-002, NAME-006 |
-| [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008 |
-| [ADR-009](./009-config-consolidation.md) | Config Consolidation | Accepted | API-002, API-006, API-007 |
+| [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008, TYPE-001 |
+| [ADR-009](./009-config-consolidation.md) | Config Consolidation | Accepted | API-002, API-006, API-007, ARCH-013 |
 | [ADR-010](./010-provider-ownership-model.md) | Provider Ownership Model | Accepted | ARCH-006, ARCH-021 |
 | [ADR-013](./013-react-hooks-architecture.md) | React Hooks Architecture | Accepted | ARCH-008, API-010, DEAD-010, TEST-012, TEST-013, DOC-003 |
 
