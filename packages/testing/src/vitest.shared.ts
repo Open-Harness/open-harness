@@ -1,7 +1,7 @@
 import * as path from "node:path"
 import type { UserConfig } from "vitest/config"
 
-const root = path.join(__dirname, "..")
+const root = path.join(__dirname, "../..")
 
 const alias = (name: string) => {
   const target = process.env.TEST_DIST !== undefined ? "dist/dist/esm" : "src"
@@ -20,9 +20,6 @@ const scopedAlias = (name: string) => {
 }
 
 const aliases = {
-  ...alias("cli"),
-  ...alias("domain"),
-  ...alias("server"),
   ...scopedAlias("core"),
   ...scopedAlias("server"),
   ...scopedAlias("client")

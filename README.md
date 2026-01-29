@@ -1,145 +1,81 @@
 # Open Scaffold
 
-Event-sourced workflow runtime with deterministic replay for AI agent orchestration.
+**Build AI workflows you can test like software.**
 
-## Overview
+## The Problem
 
-Open Scaffold provides infrastructure for building, testing, and debugging AI agent workflows:
+AI workflows are hard to test. Every run is different. Costs add up during development. CI pipelines can't rely on non-deterministic API calls. When something breaks in production, you can't reproduce it.
 
-- **Event Sourcing** -- Every action is recorded as an immutable event
-- **Deterministic Replay** -- Reproduce any workflow run exactly
-- **Recording/Playback** -- Record API calls in `live` mode, replay in `playback` mode for CI
-- **Streaming** -- Real-time event streams via SSE
+## The Solution
 
-## Packages
+| Capability | What it does |
+|------------|--------------|
+| **Build** | Define agents with typed outputs, compose into phases, wire into workflows |
+| **Debug** | VCR-style recording: run once with real APIs, replay infinitely in tests |
+| **Evaluate** | Compare workflow variants, score outputs, A/B test prompts |
 
-| Package | Description |
-|---------|-------------|
-| `@open-scaffold/core` | Domain types, agents, phases, workflows |
-| `@open-scaffold/server` | HTTP/SSE server with OpenScaffold public API |
-| `@open-scaffold/client` | HTTP client + React hooks (17 hooks) |
-
-## Quick Start
-
-This example shows a research workflow with a researcher agent that produces findings from a topic.
-
-**1. Define your agent:**
+## Quick Example
 
 ```typescript
-// researcher.ts
-import { agent } from "@open-scaffold/core"
+import { agent, workflow, phase, run } from "@open-scaffold/core"
 import { z } from "zod"
 
-export const researcher = agent({
+// 1. Define an agent with typed output
+const researcher = agent({
   name: "researcher",
   model: "claude-sonnet-4-5",
   output: z.object({ findings: z.array(z.string()) }),
-  prompt: (state) => `Research the following topic: ${state.topic}`,
+  prompt: (state) => `Research: ${state.topic}`,
   update: (output, draft) => { draft.findings = output.findings }
 })
-```
 
-**2. Define the workflow:**
-
-```typescript
-// workflow.ts
-import { workflow, phase } from "@open-scaffold/core"
-import { researcher } from "./researcher"
-
-export const researchFlow = workflow({
+// 2. Compose into a workflow
+const researchFlow = workflow({
   name: "research-flow",
   initialState: { topic: "", findings: [] as string[] },
-  start: (input, draft) => { draft.topic = input },
+  start: (input: string, draft) => { draft.topic = input },
   phases: {
     research: { run: researcher, next: "done" },
     done: phase.terminal()
   }
 })
-```
 
-**3. Execute the workflow:**
-
-```typescript
-// main.ts
-import { execute, run } from "@open-scaffold/core"
-import { researchFlow } from "./workflow"
-
-// Option A: Async iterator API
-const execution = execute(researchFlow, {
-  input: "quantum computing",
-  providers: { "claude-sonnet-4-5": anthropicProvider }
-})
-
-for await (const event of execution) {
-  console.log(event.name, event.payload)
-}
-
-// Option B: Promise API with observer
+// 3. Run with observer callbacks
 const result = await run(researchFlow, {
   input: "quantum computing",
+  runtime: {
+    providers: { "claude-sonnet-4-5": anthropicProvider },
+    mode: "live"  // Switch to "playback" for tests
+  },
   observer: {
-    stateChanged: (state) => console.log("State:", state),
-    phaseChanged: (phase) => console.log("Phase:", phase),
+    onStateChanged: (state) => console.log("State:", state),
+    onTextDelta: ({ agent, delta }) => process.stdout.write(delta),
+    onAgentCompleted: ({ agent, output, durationMs }) => {
+      console.log(`${agent} finished in ${durationMs}ms`)
+    }
   }
 })
 ```
 
-## Provider Modes
+## How It Works
 
-| Mode | Behavior |
-|------|----------|
-| `live` | Call real APIs, record responses to database |
-| `playback` | Replay recorded responses, never call APIs |
+Every action in a workflow is recorded as an immutable event. In `live` mode, API calls are made and responses are saved. In `playback` mode, saved responses are replayed exactly -- no API calls, no costs, deterministic every time. This means you can develop against real APIs, then run tests in CI with perfect reproducibility.
 
-Use `live` during development to record, then `playback` in CI for deterministic tests.
+## Packages
 
-## Documentation
+| Package | Description |
+|---------|-------------|
+| `@open-scaffold/core` | Agents, phases, workflows, and execution runtime |
+| `@open-scaffold/server` | HTTP/SSE server on port 42069 |
+| `@open-scaffold/client` | HTTP client + React hooks |
 
-| Doc | Description |
-|-----|-------------|
-| [Mental Model](./docs/reference/mental-model.md) | Core concepts: events, agents, phases, workflows |
-| [Architecture](./docs/reference/architecture.md) | Server/client design, services, protocol |
-| [Architecture Diagrams](./docs/reference/architecture-diagrams.md) | Visual diagrams (Mermaid) |
-| [SDK Internals](./docs/reference/sdk-internals.md) | Effect patterns for library authors |
-| [Reference Implementation](./docs/reference/reference-implementation.md) | Complete workflow example |
-
-## Development
+## Get Started
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Run tests
-pnpm test
-
-# Type check
-pnpm typecheck
-
-# Lint
-pnpm lint
+pnpm add @open-scaffold/core
 ```
 
-## Architecture
-
-```
-+-------------------------------------------------------------+
-|                      OpenScaffold                            |
-|           (Public API - Promise-based, no Effect)            |
-+-------------------------------------------------------------+
-                              |
-         +--------------------+--------------------+
-         v                    v                    v
-   +----------+        +-----------+       +-----------+
-   |  Server  |        |   Core    |       |  Client   |
-   | HTTP/SSE |<------>|  Runtime  |<------|  HTTP/SSE |
-   +----------+        +-----------+       +-----------+
-         |                    |
-         v                    v
-   +----------+        +-----------+
-   | Provider |        |  Storage  |
-   |(Anthropic)|        | (LibSQL)  |
-   +----------+        +-----------+
-```
+See the [documentation](./docs/getting-started.md) for full guides.
 
 ## License
 
