@@ -1,0 +1,383 @@
+# Technical Debt Inventory
+
+> **Living document** — Updated as issues are discovered and resolved.
+>
+> **Last updated:** 2026-01-29
+
+## Summary
+
+| Metric | Count |
+|--------|-------|
+| Total Issues | 99 |
+| Resolved (via ADR) | 7 |
+| Remaining | 92 |
+| Bugs | 0 |
+| Smells | 0 |
+| Intentional | 0 |
+
+## ADR Index
+
+| ADR | Title | Status | Issues Resolved |
+|-----|-------|--------|-----------------|
+| [ADR-001](./001-execution-api.md) | Execution API Design | Accepted | API-001, API-003, API-004, API-005, API-011, ARCH-003, DEAD-001, DEAD-002 |
+
+## Decision Log
+
+| Date | Phase | Decision | Rationale |
+|------|-------|----------|-----------|
+| 2026-01-29 | Pre-0 | Use shorter names (`agent`, `prompt`, `type`) | More idiomatic for APIs, matches observer callbacks |
+| 2026-01-29 | 1 | Package structure is correct (core/server/client/testing/cli) | Clean separation, no circular deps, each has distinct purpose |
+| 2026-01-29 | 7 | **ADR-001**: Single `run()` API returning awaitable handle | Consolidate 6 execution functions into one. Observer callbacks for events, control methods for pause/resume/abort. See [ADR-001](./001-execution-api.md) |
+
+## Open Questions
+
+1. ~~Should `run()` and `execute()` be consolidated into one API?~~ ✅ **Yes - ADR-001**
+2. Should `Domain/Interaction.ts` be removed entirely, or kept as advanced helper?
+3. ~~Is the core/server/client/testing package split correct?~~ ✅ Confirmed correct in Phase 1
+4. Are there other deep dive areas we should add?
+5. Should route handlers and SSE utilities be exported publicly or moved to internal?
+6. Should there be a `@open-scaffold/core/internal` entry point for advanced users?
+
+---
+
+## Issues by Category
+
+### Naming Inconsistencies
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| NAME-001 | `agentName` vs `agent` in 6 payload types | Needs Investigation | — | Domain events, HITL payloads | Decision: prefer shorter `agent` |
+| NAME-002 | `promptText` vs `prompt` in HITL | Needs Investigation | — | HITL payloads | Decision: prefer shorter `prompt` |
+| NAME-003 | `inputType` vs `type` in HITL | Needs Investigation | — | HITL payloads | Decision: prefer shorter `type` |
+| NAME-004 | `UseFilteredEventsOptions` should be `FilteredEventsOptions` | Needs Investigation | — | client/react/hooks.ts | `Use` prefix redundant for option types |
+| NAME-005 | Event type naming inconsistent (`Event<N,P>` defined twice) | Needs Investigation | — | Domain/Interaction.ts, Engine/types.ts | Two separate Event definitions cause confusion |
+| NAME-006 | Error class organization inconsistent | Needs Investigation | — | Engine/types.ts, Domain/Errors.ts | Workflow*Error in types.ts, plain names in Errors.ts |
+| NAME-007 | Observer callback naming inconsistent | Needs Investigation | — | Engine/types.ts | `onStateChanged` vs `onPhaseChanged` - inconsistent verbs |
+| NAME-008 | Id vs ID capitalization mixed | Needs Investigation | — | Domain/Ids.ts | `EventId` (lowercase d) vs others |
+
+### HITL Systems
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| HITL-001 | Two competing HITL systems exist | Needs Investigation | — | Domain/Interaction.ts, Phase/Runtime | Unclear which is canonical |
+| HITL-002 | Different payload structures between systems | Needs Investigation | — | — | May cause runtime confusion |
+| HITL-003 | React hooks only work with one HITL system | Needs Investigation | — | React integration | Users may pick wrong system |
+
+### Error Handling
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| ERR-001 | Duplicate error hierarchies (Domain vs Workflow) | Needs Investigation | — | Domain/Errors.ts, Engine/types.ts | CRITICAL: Which is canonical? |
+| ERR-002 | Two error classes in server (`OpenScaffoldError`, `ServerError`) | Needs Investigation | — | server/OpenScaffold.ts, server/http/Server.ts | Different purposes unclear |
+
+### API Surface
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| API-001 | Inconsistent execution APIs (`run` vs `execute` vs `executeWorkflow`) | ✅ **Resolved** | ADR-001 | Engine/*.ts | Consolidate to single `run()` API |
+| API-002 | Inconsistent configuration options | Needs Investigation | — | — | MAJOR: different config shapes |
+| API-003 | Unused/incomplete APIs (`streamWorkflow`, `WorkflowHandle`) | ✅ **Resolved** | ADR-001 | Engine/runtime.ts | Remove from public API |
+| API-004 | `WorkflowHandle<S>` exported but incomplete | ✅ **Resolved** | ADR-001 | Engine/runtime.ts | Remove from public API |
+| API-005 | `streamWorkflow()` returns at end, not true streaming | ✅ **Resolved** | ADR-001 | Engine/runtime.ts | Remove from public API |
+| API-006 | Three overlapping config types in server | Needs Investigation | — | server/*.ts | `OpenScaffoldConfig`, `ServerConfig`, `CreateServerOptions` |
+| API-007 | Two server creation paths without guidance | Needs Investigation | — | server/*.ts | `OpenScaffold.createServer()` vs `createServer()` |
+| API-008 | 10 route handlers exported individually | Needs Investigation | — | server/index.ts | Users should use `createServer()` not individual routes |
+| API-009 | SSE utilities exported publicly | Needs Investigation | — | server/index.ts, client/index.ts | Implementation details, not user API |
+| API-010 | Redundant `react/index.ts` barrel in client | Needs Investigation | — | client/react/index.ts | Main index.ts already exports everything |
+| API-011 | `runSimple()` and `runWithText()` feel incomplete | ✅ **Resolved** | ADR-001 | Engine/run.ts | Remove - use `run()` with observer |
+| API-012 | ID schemas incomplete (only 2 of 4 exported) | Needs Investigation | — | Domain/Ids.ts | `SessionIdSchema`, `WorkflowIdSchema` but not `AgentIdSchema` |
+
+### Type Safety
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| TYPE-001 | Duplicate type definitions | Needs Investigation | — | — | MINOR: potential divergence |
+| TYPE-002 | `StateSnapshot` exported from multiple places | Needs Investigation | — | Engine/types.ts, Domain/Interaction.ts | Potential confusion |
+| TYPE-003 | **HIGH**: Double cast `as unknown as Record` in workflow.ts | Needs Investigation | — | Engine/workflow.ts:226 | Defeats type safety for union validation |
+| TYPE-004 | ID brand casts without runtime validation | Needs Investigation | — | Domain/Ids.ts, Engine/types.ts | 6 locations: UUID cast to branded type |
+| TYPE-005 | Event payload casts without validation | Needs Investigation | — | Engine/runtime.ts | 12 locations: payload.X cast to expected type |
+| TYPE-006 | JSON.parse without validation in LibSQL | Needs Investigation | — | Layers/LibSQL.ts:71 | Parsed JSON cast to unknown/typed |
+| TYPE-007 | StateSnapshot state cast on retrieval | Needs Investigation | — | Services/StateCache.ts:112,121 | Generic `S` assumed without validation |
+| TYPE-008 | Zod schema cast loses type info | Needs Investigation | — | Engine/provider.ts:242 | `outputSchema as ZodType<unknown>` |
+| TYPE-009 | Array.from keys cast to SessionId | Needs Investigation | — | Layers/InMemory.ts:78 | String keys assumed valid SessionIds |
+| TYPE-010 | JSON.parse in StateSnapshotStoreLive | Needs Investigation | — | server/store/StateSnapshotStoreLive.ts:36 | No validation on state_json |
+| TYPE-011 | JSON.parse in EventStoreLive | Needs Investigation | — | server/store/EventStoreLive.ts:40 | No validation on event payload |
+| TYPE-012 | response.json() cast to generic T | Needs Investigation | — | client/HttpClient.ts:62 | No runtime validation of JSON structure |
+| TYPE-013 | JSON.parse SSE message cast to AnyEvent | Needs Investigation | — | client/HttpClient.ts:114 | No validation of event structure |
+| TYPE-014 | event.payload casts in usePendingInteractions | Needs Investigation | — | client/react/hooks.ts:448,466 | Assumes payload structure without guards |
+| TYPE-015 | computeStateAt double cast | Needs Investigation | — | Engine/utils.ts:36 | `(payload as Record).state as S` |
+
+### Dead Code
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| DEAD-001 | `streamWorkflow` incomplete stub exported | ✅ **Resolved** | ADR-001 | Engine/runtime.ts:698-718 | Remove from public API |
+| DEAD-002 | `WorkflowHandle` interface exported but not implemented | ✅ **Resolved** | ADR-001 | Engine/runtime.ts:728-741 | Remove from public API |
+| DEAD-003 | `computeStateAt()` possibly internal-only | Needs Investigation | — | Engine/utils.ts | Pure util, maybe shouldn't be public |
+| DEAD-004 | `runAgentDef()` exposed publicly | Needs Investigation | — | Engine/provider.ts | Low-level, users should use run() |
+| DEAD-005 | `makeInMemoryProviderRegistry()` in public API | Needs Investigation | — | Engine/provider.ts | Testing utility, maybe move to Layers |
+| DEAD-006 | `sseReconnectSchedule` in client exports | Needs Investigation | — | client/Reconnect.ts | Effect-specific, internal use only |
+| DEAD-007 | 8 Logger layers never used | Needs Investigation | — | Layers/Logger.ts:20-85 | ProdLoggerLayer, TestLoggerLayer, etc. |
+| DEAD-008 | `loadWorkflowTape` never imported | Needs Investigation | — | server/programs/loadWorkflowTape.ts | Not re-exported from main index |
+| DEAD-009 | Interaction utilities test-only | Needs Investigation | — | Domain/Interaction.ts | `createInteraction`, `findPendingInteractions` |
+| DEAD-010 | 7 React hooks missing from react/index.ts | Needs Investigation | — | client/react/index.ts | useFork, usePause, useResume, etc. not re-exported |
+| DEAD-011 | `usePendingInteraction(s)` completely untested | Needs Investigation | — | client/react/hooks.ts | Zero test coverage, zero external usage |
+| DEAD-012 | `InMemoryProviderRecorder` possibly redundant | Needs Investigation | — | core test helpers | Alternative to makeInMemoryProviderRecorder |
+
+### Test Coverage
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| TEST-001 | **CRITICAL**: SSE parsing has ZERO tests | Needs Investigation | — | client/src/SSE.ts | parseSSEMessage, createSSEStream completely untested |
+| TEST-002 | **CRITICAL**: CLI has ZERO tests | Needs Investigation | — | apps/cli/src/**/* | 399 LoC, 15+ components, all untested |
+| TEST-003 | **HIGH**: hashProviderRequest untested | Needs Investigation | — | core/Domain/Hash.ts | Recording hash determinism critical but not tested |
+| TEST-004 | **HIGH**: OpenScaffold lifecycle untested | Needs Investigation | — | server/OpenScaffold.ts | initialize/dispose/resource cleanup not tested |
+| TEST-005 | **HIGH**: loadWorkflow() dynamic import untested | Needs Investigation | — | cli/loader.ts | Executes arbitrary code with no safety tests |
+| TEST-006 | **HIGH**: LibSQL layer only integration-tested | Needs Investigation | — | core/Layers/LibSQL.ts | Query building, migrations, edge cases untested |
+| TEST-007 | HttpClient SSE integration uses mocked fetch | Needs Investigation | — | client/HttpClient.ts | Real streaming behavior not tested |
+| TEST-008 | EventBusLive concurrency untested | Needs Investigation | — | server/services/EventBusLive.ts | Multiple subscribers, race conditions |
+| TEST-009 | StateSnapshotStore corruption recovery untested | Needs Investigation | — | server/store/*.ts | No tests for corrupt state handling |
+| TEST-010 | Route error handling only happy paths | Needs Investigation | — | server/http/Routes.ts | Database/provider failures not tested |
+| TEST-011 | Provider recording error recovery untested | Needs Investigation | — | core/Engine/provider.ts | Only happy paths tested |
+| TEST-012 | React hooks only test initial state | Needs Investigation | — | client/react/hooks.ts | No mutation/state change tests |
+| TEST-013 | WorkflowProvider component untested | Needs Investigation | — | client/react/Provider.tsx | No component tests exist |
+| TEST-014 | mapStreamEventToInternal untested | Needs Investigation | — | core/Engine/provider.ts:132 | Event type mappings not directly tested |
+| TEST-015 | No concurrent session tests anywhere | Needs Investigation | — | Multiple packages | Pause/resume/fork race conditions |
+| TEST-016 | No end-to-end recording/playback test | Needs Investigation | — | core/server | Live → record → playback cycle not verified |
+
+### Architecture
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| ARCH-001 | Three parallel observer patterns (fragmented) | Needs Investigation | — | WorkflowObserver, EventBus, EventStore | Triple dispatch for same event |
+| ARCH-002 | Service instantiation patterns inconsistent | Needs Investigation | — | — | MAJOR: different service setup |
+| ARCH-003 | Inconsistent naming for execution functions | ✅ **Resolved** | ADR-001 | — | Single `run()` API |
+| ARCH-004 | Too many internals exposed in core | Needs Investigation | — | core/index.ts | Services, Layers, SessionContext are advanced |
+| ARCH-005 | 26 event types exported individually | Needs Investigation | — | Engine/types.ts | 13 Payload + 13 Event pairs verbose |
+| ARCH-006 | Provider infrastructure too public | Needs Investigation | — | Engine/provider.ts | ProviderRegistry, runAgentDef, etc. |
+| ARCH-007 | RouteContext/RouteResponse types exported | Needs Investigation | — | server/http/Routes.ts | Implementation details |
+| ARCH-008 | Convenience hooks vs context access redundancy | Needs Investigation | — | client/react/hooks.ts | Multiple ways to get same data |
+| ARCH-009 | State exists in 4 places (divergence risk) | Needs Investigation | — | Multiple | Ref, events, snapshots, client cache |
+| ARCH-010 | ProviderRecorder has two competing APIs | Needs Investigation | — | Services/ProviderRecorder.ts | Legacy save() vs incremental API |
+| ARCH-011 | StateCache is orphaned (defined but never used) | Needs Investigation | — | Services/StateCache.ts | No Layer impl, not wired up |
+| ARCH-012 | HITL flow unclear (no visible continuation) | Needs Investigation | — | runtime.ts | onInputRequested not properly awaited |
+| ARCH-013 | HTTP server reinvents routing (~300 LoC) | Needs Investigation | — | server/http/Server.ts | Could use Hono, halve code |
+| ARCH-014 | Three store implementations scattered | Needs Investigation | — | Core/Layers, Server/store | Confusing which is official |
+| ARCH-015 | Stream vs AsyncIterable (two async models) | Needs Investigation | — | core, client | Effect Stream + Web standard AsyncIterable |
+| ARCH-016 | ProviderModeContext is ambient (spooky action) | Needs Investigation | — | FiberRef | Global state via FiberRef |
+| ARCH-017 | Phase lifecycle under-specified | Needs Investigation | — | Engine/phase.ts | No guards, no recovery, no rollback |
+| ARCH-018 | Event → State order inverted (not true sourcing) | Needs Investigation | — | runtime.ts | Mutate state THEN emit event |
+| ARCH-019 | No event versioning strategy | Needs Investigation | — | — | Schema evolution could break replay |
+| ARCH-020 | dispatchToObserver has 10+ switch cases | Needs Investigation | — | runtime.ts | Add event type = update 3 places |
+
+### Documentation
+
+| ID | Issue | Status | Category | Files | Notes |
+|----|-------|--------|----------|-------|-------|
+| DOC-001 | No execution API decision matrix in docs | Needs Investigation | — | — | Users don't know which to use |
+| DOC-002 | No internal vs public API documentation | Needs Investigation | — | — | Services/Layers need @internal markers |
+| DOC-003 | Hook grouping/hierarchy undocumented | Needs Investigation | — | client/react/*.ts | Actions vs State vs Predicates |
+| DOC-004 | HITL flow undocumented | Needs Investigation | — | — | No diagram showing pause/resume/input |
+| DOC-005 | State sourcing model undocumented | Needs Investigation | — | — | Event vs state vs snapshot relationship |
+| DOC-006 | Phase semantics undocumented | Needs Investigation | — | — | When snapshots created, lifecycle unclear |
+
+---
+
+## Phase Progress
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 0: Create Inventory | ✅ Complete | This document |
+| 1: Public API Surface | ✅ Complete | 30 new issues found |
+| 2: Type Safety Holes | ✅ Complete | 15 new issues found |
+| 3: Dead Code | ✅ Complete | 6 new issues found |
+| 4: Test Coverage | ✅ Complete | 16 new issues found |
+| 5: Architectural Clarity | ✅ Complete | 15 new issues found |
+| 6: Documentation vs Implementation | ⏭️ Skipped | Docs follow implementation; audit after decisions made |
+| 7: Categorization & Canonical Definition | 🔄 In Progress | ADRs required for each decision area |
+| 8: Implementation Planning | Not Started | — |
+| 9: Execution | Not Started | — |
+
+---
+
+## Phase 1 Detailed Findings
+
+### @open-scaffold/core (97 exports)
+- **State-First API** (11 exports): ✅ Excellent - core builders are clean
+- **Execution APIs** (13 exports): ⚠️ Confusing - 3 different APIs need guidance
+- **Event Types** (26 exports): ⚠️ Too granular - consider discriminated unions
+- **Provider Types** (5 exports): ✅ Good - necessary for custom providers
+- **Provider Infrastructure** (7 exports): 🔴 Too public - should be internal
+- **Interactions** (13 exports): ✅ Good - complete HITL support
+- **IDs & Errors** (12 exports): ⚠️ Incomplete - missing some schemas
+- **Internal/Advanced** (8 exports): 🔴 Unclear - needs @internal marking
+
+### @open-scaffold/server
+- **Core facade** (`OpenScaffold`): ✅ Clean Promise-based API
+- **Route handlers**: 🔴 10 exported individually but should use `createServer()`
+- **SSE utilities**: 🔴 Implementation details exposed
+- **Config types**: ⚠️ 3 overlapping types need consolidation
+
+### @open-scaffold/client
+- **Contract & HTTP**: ✅ Clean abstraction
+- **React hooks** (19): ✅ Comprehensive but some redundancy with context
+- **react/index.ts barrel**: 🔴 Redundant - main index.ts exports all
+- **SSE/Reconnect internals**: ⚠️ Exposed but advanced-only
+
+### Package Structure
+- ✅ **Confirmed correct**: core → server → cli, client ← core
+- ✅ No circular dependencies
+- ✅ Clear separation of concerns
+
+---
+
+## Phase 2 Detailed Findings: Type Safety
+
+### @open-scaffold/core (24 violations)
+- **HIGH** (1): Double cast in workflow.ts:226 (`as unknown as Record`)
+- **MEDIUM** (23): ID brand casts, event payload casts, JSON parsing
+
+### @open-scaffold/server (22 type assertions)
+- **CRITICAL** (2): JSON.parse without validation (EventStoreLive, StateSnapshotStoreLive)
+- **ACCEPTABLE** (20): Nominal type casts, intentional assertions
+
+### @open-scaffold/client (3 violations)
+- **MODERATE** (3): JSON.parse casts, event payload assumptions
+
+### Root Cause Patterns
+1. **Brand Type Boundary**: UUID strings need casting to branded types (SessionId, EventId)
+2. **JSON Deserialization**: `JSON.parse()` returns unknown, needs runtime validation
+3. **Generic Type Loss**: Generic `<S>` parameters lose type info at storage boundaries
+4. **Event Payloads**: Discriminated unions accessed via unsafe casts vs type guards
+
+### Recommendations
+1. **CRITICAL**: Replace double cast in workflow.ts with proper type guards
+2. **HIGH**: Add Effect Schema decoders at JSON deserialization points
+3. **MEDIUM**: Use Zod or runtime validators for payload types
+
+---
+
+## Phase 3 Detailed Findings: Dead Code
+
+### @open-scaffold/core
+- **DEAD** (2): `streamWorkflow` stub, `WorkflowHandle` interface (both incomplete)
+- **UNUSED** (8): All Logger layers (ProdLoggerLayer, TestLoggerLayer, etc.)
+- **TEST-ONLY** (4): Interaction utilities (`createInteraction`, etc.)
+
+### @open-scaffold/server
+- **DEAD** (1): `loadWorkflowTape` program never imported
+- **INTERNAL ONLY** (3): Pause/resume/fork routes (correctly not exported - healthy)
+
+### @open-scaffold/client
+- **INCOMPLETE** (1): `react/index.ts` missing 7 hooks + 1 type
+- **UNTESTED** (3): `usePendingInteraction(s)` + `PendingInteraction` type
+
+### Assessment
+- **Code is generally clean** - minimal true dead code
+- **Main issues are incomplete features** not broken code
+- **Architectural gaps** in export consistency (client react barrel)
+
+---
+
+## Phase 4 Detailed Findings: Test Coverage
+
+### Critical Gaps (HIGH RISK)
+
+| Package | File | Issue | Risk |
+|---------|------|-------|------|
+| **client** | SSE.ts | Zero tests for SSE parsing - protocol errors silent | HIGH |
+| **cli** | entire app | Zero tests for 399 LoC, 15+ components | HIGH |
+| **core** | Hash.ts | hashProviderRequest determinism untested - breaks recording | HIGH |
+| **server** | OpenScaffold.ts | Lifecycle/resource cleanup untested - memory leaks | HIGH |
+| **cli** | loader.ts | Dynamic code execution with no error tests | HIGH |
+
+### Medium Gaps (Error Paths)
+
+| Package | File | Issue |
+|---------|------|-------|
+| **server** | Routes.ts | Only happy paths tested; DB/provider failures not tested |
+| **client** | HttpClient.ts | Real SSE streaming not tested (mocked fetch) |
+| **core** | provider.ts | Provider recording error recovery untested |
+| **server** | EventBusLive.ts | Concurrent subscribers, race conditions untested |
+
+### Integration Test Gaps
+
+1. **No end-to-end recording/playback test**: Live → record → playback cycle never verified
+2. **No concurrent session tests**: Multiple clients pause/resume/fork same session
+3. **No HTTP server e2e tests**: Routes tested in isolation, no full stack
+4. **No React component tree tests**: WorkflowProvider + hooks together
+
+### Coverage by Package
+
+| Package | Source LoC | Test LoC | Assessment |
+|---------|------------|----------|------------|
+| core | 10,675 | 7,705 | Good coverage, gaps in error paths |
+| server | 650+ | 2,400+ | Good coverage, integration gaps |
+| client | 400+ | 800+ | **Critical SSE gap** |
+| cli | 399 | **0** | **Zero coverage** |
+
+### Recommendations (Priority Order)
+
+1. **IMMEDIATE**: Add tests for client/SSE.ts (parseSSEMessage, createSSEStream)
+2. **IMMEDIATE**: Add e2e tests for CLI commands
+3. **HIGH**: Test hashProviderRequest determinism
+4. **HIGH**: Test OpenScaffold lifecycle (create → use → dispose)
+5. **MEDIUM**: Add concurrent session tests
+6. **MEDIUM**: Test error paths end-to-end
+
+---
+
+## Phase 5 Detailed Findings: Architecture
+
+### Architectural Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CORE (@open-scaffold/core)               │
+│  ┌──────────────┐  ┌────────────────────────────────────┐   │
+│  │ Domain Model │  │ Effect-Based Runtime               │   │
+│  │ IDs, Errors  │  │ executeWorkflow → events + state   │   │
+│  └──────────────┘  └────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ Service Tags: EventStore, EventBus, ProviderRecorder│    │
+│  └─────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ Public APIs: run(), execute(), streamWorkflow()     │    │
+│  │ (Effect → Promise bridge)                           │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+         ↓ imports                    ↓ imports
+┌────────────────────┐        ┌───────────────────────────┐
+│ SERVER             │        │ CLIENT                    │
+│ HTTP + SSE         │ ←REST→ │ HttpClient + React hooks  │
+│ Programs           │        │ AsyncIterable<Event>      │
+│ Store (LibSQL)     │        │                           │
+└────────────────────┘        └───────────────────────────┘
+```
+
+### Key Tensions Identified
+
+| Tension | Description | Impact |
+|---------|-------------|--------|
+| **State in 4 places** | Ref, events, snapshots, client | Divergence risk |
+| **Triple dispatch** | WorkflowObserver + EventBus + EventStore | Fragility, 3 places to update |
+| **Stream vs AsyncIterable** | Effect Stream (core) + Web standard (client) | Two async models |
+| **Event → State order** | Mutate THEN emit (not true sourcing) | Replay fragility |
+| **HITL unclear** | onInputRequested not awaited | Deadlock risk |
+| **HTTP reinvention** | ~300 LoC raw Node.js | Could use Hono |
+
+### Positive Findings
+
+- ✅ **Package layering correct**: core → server, client ← core
+- ✅ **No circular dependencies**
+- ✅ **Effect usage disciplined**: internal Effect, public Promise
+- ✅ **Service isolation excellent**: Clean Layer composition
+- ✅ **Event model solid**: Immer patches, causality tracking
+
+### Quick Wins (Next 48 Hours)
+
+1. Document HITL flow with diagram
+2. Add test: `computeStateAt(all_events) === final_state`
+3. Remove orphaned StateCache (or integrate it)
+4. Deprecate ProviderRecorder.save()
+5. Clarify phase semantics in architecture.md
