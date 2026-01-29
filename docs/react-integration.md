@@ -368,7 +368,7 @@ function TextStream() {
   return (
     <div>
       {textDeltas.map(event => (
-        <span key={event.id}>{event.payload.text}</span>
+        <span key={event.id}>{(event.payload as { delta: string }).delta}</span>
       ))}
     </div>
   )
@@ -624,6 +624,8 @@ function VCRControls() {
 ## HITL Interactions
 
 Human-in-the-Loop (HITL) hooks enable workflows to request human input and wait for responses.
+
+> **Note:** These hooks work with `createInteraction()` from `@open-scaffold/core`, which emits `InteractionRequestPayload` events with `interactionId`, `agentName`, and `prompt` fields. Phase-level HITL (via `phase({ human: {...} })`) uses a different payload format (`promptText` instead of `prompt`) and won't work correctly with these hooks.
 
 ### PendingInteraction Type
 

@@ -56,7 +56,7 @@ Open Scaffold is organized into four packages with clear dependency boundaries:
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
 │                              @open-scaffold/testing                                 │
 │                                                                                     │
-│   Shared test utilities, vitest config, setup                                      │
+│   Pre-recorded API responses for deterministic playback testing                    │
 │                                                                                     │
 │   Used by: all packages (devDependency)                                            │
 └─────────────────────────────────────────────────────────────────────────────────────┘
@@ -69,7 +69,7 @@ Open Scaffold is organized into four packages with clear dependency boundaries:
 | `@open-scaffold/core` | Domain types, service interfaces, workflow runtime | `agent()`, `phase()`, `workflow()`, `run()`, `Services.*` |
 | `@open-scaffold/server` | HTTP server, storage implementations, Anthropic provider | `OpenScaffold`, `AnthropicProvider`, `EventStoreLive` |
 | `@open-scaffold/client` | HTTP client, React integration, SSE parsing | `HttpClient`, `useWorkflowState`, `WorkflowProvider` |
-| `@open-scaffold/testing` | Test infrastructure, shared vitest config | `vitest.shared.ts`, `setupTests.ts` |
+| `@open-scaffold/testing` | Pre-recorded API responses, test helpers | `recordingsDbPath`, `recordingsDbUrl`, `getRandomPort()` |
 
 ### Core Package Structure
 
@@ -184,7 +184,7 @@ The framework generates these events automatically during workflow execution:
 | `thinking:delta` | `{ agentName, delta }` | Streaming thinking chunk |
 | `tool:called` | `{ agentName, toolId, toolName, input }` | Tool invocation |
 | `tool:result` | `{ agentName, toolId, output, isError }` | Tool result |
-| `input:requested` | `{ promptText, inputType, options? }` | HITL pause |
+| `input:requested` | Phase: `{ promptText, inputType, options? }`<br/>Interaction: `{ interactionId, agentName, prompt, inputType, options? }` | HITL pause |
 | `input:response` | `{ response }` | HITL resume |
 
 ### State Computation

@@ -500,16 +500,35 @@ interface ToolResultPayload {
   readonly isError: boolean
 }
 
-// input:requested
+// input:requested (phase-level HITL via `phase({ human: {...} })`)
 interface InputRequestedPayload {
   readonly promptText: string
   readonly inputType: "freeform" | "approval" | "choice"
   readonly options?: ReadonlyArray<string>
 }
 
+// input:requested (custom interaction via `createInteraction()`)
+// NOTE: React hooks parse this format, not InputRequestedPayload
+interface InteractionRequestPayload {
+  readonly interactionId: string
+  readonly agentName: string
+  readonly prompt: string
+  readonly inputType: "freeform" | "approval" | "choice"
+  readonly options?: ReadonlyArray<string>
+  readonly metadata?: Record<string, unknown>
+}
+
 // input:response
 interface InputResponsePayload {
   readonly response: string
+}
+
+// input:response (for interactions)
+interface InteractionResponsePayload {
+  readonly interactionId: string
+  readonly value: string
+  readonly approved?: boolean        // For approval type
+  readonly selectedIndex?: number    // For choice type
 }
 ```
 
@@ -563,14 +582,13 @@ type ProviderErrorCode =
 Create an OpenScaffold instance for running workflows as HTTP servers.
 
 ```typescript
-import { OpenScaffold } from "@open-scaffold/server"
-import { anthropicProvider } from "@open-scaffold/core"
+import { OpenScaffold, AnthropicProvider } from "@open-scaffold/server"
 
 const scaffold = OpenScaffold.create({
-  database: "./data/app.db",       // Required: SQLite path
+  database: "./data/app.db",       // Required: LibSQL path
   mode: "live",                    // Required: "live" | "playback"
   providers: {                     // Required (use {} to opt out)
-    "claude-sonnet-4-20250514": anthropicProvider({ model: "claude-sonnet-4-20250514" })
+    "claude-sonnet-4-5": AnthropicProvider()
   }
 })
 ```
@@ -849,8 +867,10 @@ interface PendingInteraction {
 Run without callbacks. Returns just the result.
 
 ```typescript
+import { AnthropicProvider } from "@open-scaffold/server"
+
 const result = await runSimple(myWorkflow, "Build an API", {
-  providers: { "claude-sonnet-4-20250514": anthropicProvider }
+  providers: { "claude-sonnet-4-5": AnthropicProvider() }
 })
 ```
 
@@ -859,8 +879,10 @@ const result = await runSimple(myWorkflow, "Build an API", {
 Run and collect all text output.
 
 ```typescript
+import { AnthropicProvider } from "@open-scaffold/server"
+
 const { text, result } = await runWithText(myWorkflow, "Generate code", {
-  providers: { "claude-sonnet-4-20250514": anthropicProvider }
+  providers: { "claude-sonnet-4-5": AnthropicProvider() }
 })
 console.log("Generated:", text)
 ```

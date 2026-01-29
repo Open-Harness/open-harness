@@ -18,6 +18,7 @@ AI workflows are hard to test. Every run is different. Costs add up during devel
 
 ```typescript
 import { agent, workflow, phase, run } from "@open-scaffold/core"
+import { AnthropicProvider } from "@open-scaffold/server"
 import { z } from "zod"
 
 // 1. Define an agent with typed output
@@ -44,7 +45,7 @@ const researchFlow = workflow({
 const result = await run(researchFlow, {
   input: "quantum computing",
   runtime: {
-    providers: { "claude-sonnet-4-5": anthropicProvider },
+    providers: { "claude-sonnet-4-5": AnthropicProvider() },
     mode: "live"  // Switch to "playback" for tests
   },
   observer: {
@@ -66,8 +67,9 @@ Every action in a workflow is recorded as an immutable event. In `live` mode, AP
 | Package | Description |
 |---------|-------------|
 | `@open-scaffold/core` | Agents, phases, workflows, and execution runtime |
-| `@open-scaffold/server` | HTTP/SSE server on port 42069 |
-| `@open-scaffold/client` | HTTP client + React hooks |
+| `@open-scaffold/server` | HTTP/SSE server, providers (Anthropic), port 42069 |
+| `@open-scaffold/client` | HTTP client + React hooks (18 hooks) |
+| `@open-scaffold/testing` | Shared recordings database for deterministic tests |
 
 ## Get Started
 

@@ -417,11 +417,12 @@ Use `run()` with observer callbacks:
 
 ```typescript
 import { run } from "@open-scaffold/core"
+import { AnthropicProvider } from "@open-scaffold/server"
 
 const result = await run(myWorkflow, {
   input: "Build a REST API",
   runtime: {
-    providers: { "claude-sonnet-4-5": anthropicProvider },
+    providers: { "claude-sonnet-4-5": AnthropicProvider() },
     mode: "live"
   },
   observer: {
@@ -643,7 +644,7 @@ import { execute } from "@open-scaffold/core"
 const execution = execute(myWorkflow, {
   input: "Build a REST API",
   runtime: {
-    providers: { "claude-sonnet-4-5": anthropicProvider },
+    providers: { "claude-sonnet-4-5": AnthropicProvider() },
     mode: "live"
   }
 })
@@ -655,9 +656,10 @@ console.log("Session:", execution.sessionId)
 for await (const event of execution) {
   console.log(event.name, event.payload)
 
-  // Handle HITL prompts
+  // Handle HITL prompts (phase-level HITL uses promptText)
   if (event.name === "input:requested") {
-    const response = await getUserInput(event.payload.promptText)
+    const payload = event.payload as { promptText: string }
+    const response = await getUserInput(payload.promptText)
     execution.respond(response)
   }
 }
@@ -695,12 +697,12 @@ import { runSimple, runWithText } from "@open-scaffold/core"
 
 // Just get the result, no callbacks
 const result = await runSimple(myWorkflow, "Build an API", {
-  providers: { "claude-sonnet-4-5": anthropicProvider }
+  providers: { "claude-sonnet-4-5": AnthropicProvider() }
 })
 
 // Collect all streamed text output
 const { text, result } = await runWithText(myWorkflow, "Generate code", {
-  providers: { "claude-sonnet-4-5": anthropicProvider }
+  providers: { "claude-sonnet-4-5": AnthropicProvider() }
 })
 console.log("Generated text:", text)
 ```
@@ -714,27 +716,20 @@ For production deployments, use `OpenScaffold` from the server package.
 ### Basic Server Setup
 
 ```typescript
-import { OpenScaffold } from "@open-scaffold/server"
-import { createAnthropicProvider } from "@open-scaffold/server/provider"
+import { OpenScaffold, AnthropicProvider } from "@open-scaffold/server"
 
-// Create the Anthropic provider
-const anthropicProvider = createAnthropicProvider({
-  model: "claude-sonnet-4-5",
-})
-
-// Create OpenScaffold instance
+// Create OpenScaffold instance with Anthropic provider
 const scaffold = OpenScaffold.create({
-  database: "./data/app.db",  // SQLite database path
+  database: "./data/app.db",  // LibSQL database path
   mode: "live",               // "live" or "playback"
   providers: {
-    "claude-sonnet-4-5": anthropicProvider,
+    "claude-sonnet-4-5": AnthropicProvider(),
   },
 })
 
-// Create and start HTTP server
+// Create and start HTTP server (default port: 42069)
 const server = scaffold.createServer({
   workflow: myWorkflow,
-  port: 3001,
 })
 
 await server.start()
@@ -777,7 +772,7 @@ In playback mode, the server uses recorded API responses instead of calling the 
 const scaffold = OpenScaffold.create({
   database: "./data/app.db",
   mode: "playback",  // Use cached responses
-  providers: { "claude-sonnet-4-5": anthropicProvider },
+  providers: { "claude-sonnet-4-5": AnthropicProvider() },
 })
 ```
 
@@ -1127,7 +1122,7 @@ import { run } from "@open-scaffold/core"
 const result = await run(researchWorkflow, {
   input: "quantum computing advances",
   runtime: {
-    providers: { "claude-sonnet-4-5": anthropicProvider },
+    providers: { "claude-sonnet-4-5": AnthropicProvider() },
     mode: "live"
   },
   observer: {

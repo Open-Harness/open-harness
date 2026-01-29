@@ -72,13 +72,13 @@ Execute the workflow with observer callbacks to monitor progress.
 ```typescript
 // main.ts
 import { run } from "@open-scaffold/core"
+import { AnthropicProvider } from "@open-scaffold/server"
 import { myWorkflow } from "./workflow"
-import { anthropicProvider } from "@open-scaffold/core/providers"
 
 const result = await run(myWorkflow, {
   input: "Write a haiku about coding",
   runtime: {
-    providers: { "claude-sonnet-4-5": anthropicProvider },
+    providers: { "claude-sonnet-4-5": AnthropicProvider() },
     mode: "live"
   },
   observer: {

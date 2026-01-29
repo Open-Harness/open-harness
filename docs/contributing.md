@@ -76,7 +76,7 @@ interface EventStoreService {
 
 **Why this split?**
 
-1. **Core is testable in isolation** - Stubs allow type-checking without real implementations
+1. **Core is testable in isolation** - Use `:memory:` databases for fast, real tests
 2. **Core is platform-agnostic** - No Node.js dependencies
 3. **Server provides implementations** - Real databases, real providers
 4. **Client is separate** - Different runtime (browser), different dependencies
@@ -115,14 +115,11 @@ const EventStoreLive = (config: LibSQLConfig): Layer.Layer<EventStore, never, ne
     })
   )
 
-// 4. Stub for type-checking (dies if called)
-const EventStoreStub = Layer.succeed(
-  EventStore,
-  EventStore.of({
-    append: () => Effect.die("EventStore.append not implemented"),
-    getEvents: () => Effect.die("EventStore.getEvents not implemented"),
-  })
-)
+// 4. For tests: use REAL implementations with :memory: databases
+// DO NOT use stubs that fake behavior - per CLAUDE.md testing philosophy
+const TestEventStore = EventStoreLive({ url: ":memory:" })
+// This creates a real SQLite database in memory - fast, no disk I/O,
+// but exercises real SQL, real migrations, and real constraints
 ```
 
 ### Services in This System
@@ -323,7 +320,7 @@ const scaffold = OpenScaffold.create({
 3. **Services have no requirements** - Dependencies at Layer level
 4. **One database** - Logical separation (tables), not physical (files)
 5. **Mode is explicit** - No magic env vars
-6. **Stubs die** - Fast failure if stub used at runtime
+6. **No mocks** - Use real implementations with `:memory:` databases
 7. **Events are the truth** - Everything derives from the tape
 
 ---
