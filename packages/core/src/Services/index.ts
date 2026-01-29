@@ -22,6 +22,10 @@ export { makeStateCache } from "./StateCache.js"
 export type { EventBusService } from "./EventBus.js"
 export { EventBus } from "./EventBus.js"
 
+// EventHub (ADR-004: PubSub-backed event emission)
+export type { EventHubService } from "./EventHub.js"
+export { EventHub, EventHubLive, makeEventHub } from "./EventHub.js"
+
 // AgentProvider
 export type {
   AgentProviderService,

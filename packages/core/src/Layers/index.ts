@@ -20,6 +20,7 @@ export {
 // In-memory implementations (standalone / testing)
 export {
   InMemoryEventBus,
+  InMemoryEventHub,
   InMemoryEventStore,
   InMemoryProviderRecorder,
   makeInMemoryProviderRecorder

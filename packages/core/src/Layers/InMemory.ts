@@ -1,22 +1,26 @@
 /**
- * In-memory implementations of EventStore, EventBus, and ProviderRecorder.
+ * In-memory implementations of EventStore, EventBus, EventHub, and ProviderRecorder.
  *
  * Real implementations using in-memory data structures.
  * Suitable for standalone/testing use without external dependencies.
  *
  * - InMemoryEventStore: Uses a Map<string, AnyEvent[]> for storage
  * - InMemoryEventBus: Noop publish, empty subscribe (no subscribers in standalone mode)
+ * - InMemoryEventHub: PubSub-backed event hub for workflow events
  * - InMemoryProviderRecorder: Uses a Map for recording/playback storage
  *
  * @module
  */
 
-import { Effect, Layer, Ref, Stream } from "effect"
+import { Effect, Layer, PubSub, Ref, Stream } from "effect"
+import type { Scope } from "effect"
 
+import type { WorkflowEvent } from "../Domain/Events.js"
 import type { SessionId } from "../Domain/Ids.js"
 import type { AgentStreamEvent } from "../Domain/Provider.js"
 import type { AnyEvent } from "../Engine/types.js"
 import { EventBus } from "../Services/EventBus.js"
+import { EventHub } from "../Services/EventHub.js"
 import { EventStore } from "../Services/EventStore.js"
 import {
   ProviderRecorder,
@@ -116,6 +120,68 @@ export const InMemoryEventBus: Layer.Layer<EventBus> = Layer.succeed(
   EventBus.of({
     publish: () => Effect.void,
     subscribe: () => Stream.empty
+  })
+)
+
+// ─────────────────────────────────────────────────────────────────
+// InMemoryEventHub
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * In-memory EventHub implementation backed by PubSub.
+ *
+ * Per ADR-004: Single emission point for all workflow events.
+ * Uses Effect's unbounded PubSub for broadcasting events to subscribers.
+ *
+ * This is the primary event distribution mechanism - all workflow events
+ * flow through EventHub and are broadcast to:
+ * - EventStore (persistence)
+ * - EventBus (SSE subscribers)
+ * - Observer callbacks
+ *
+ * The layer is scoped, meaning the PubSub is created fresh for each
+ * workflow execution and automatically cleaned up when the scope closes.
+ *
+ * @example
+ * ```typescript
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     const hub = yield* EventHub
+ *
+ *     // Fork a subscriber
+ *     yield* Effect.forkScoped(
+ *       Effect.gen(function* () {
+ *         const stream = yield* hub.subscribe()
+ *         yield* stream.pipe(
+ *           Stream.runForEach((event) =>
+ *             Effect.log(`Event: ${event._tag}`)
+ *           )
+ *         )
+ *       })
+ *     )
+ *
+ *     // Publish event
+ *     yield* hub.publish(new WorkflowStarted({ ... }))
+ *   })
+ * )
+ *
+ * Effect.runPromise(program.pipe(Effect.provide(InMemoryEventHub)))
+ * ```
+ */
+export const InMemoryEventHub: Layer.Layer<EventHub, never, Scope.Scope> = Layer.scoped(
+  EventHub,
+  Effect.gen(function*() {
+    const pubsub = yield* PubSub.unbounded<WorkflowEvent>()
+
+    return EventHub.of({
+      publish: (event) => PubSub.publish(pubsub, event).pipe(Effect.asVoid),
+
+      subscribe: () =>
+        Effect.gen(function*() {
+          const subscription = yield* PubSub.subscribe(pubsub)
+          return Stream.fromQueue(subscription)
+        })
+    })
   })
 )
 
