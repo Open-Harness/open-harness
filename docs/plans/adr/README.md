@@ -50,8 +50,8 @@ This folder contains Architecture Decision Records and the technical debt invent
 | Naming Conventions | [ADR-008](./008-naming-conventions.md) | Accepted |
 | Config Consolidation | [ADR-009](./009-config-consolidation.md) | Accepted |
 | Provider Ownership Model | [ADR-010](./010-provider-ownership-model.md) | Accepted |
-| Service Instantiation Pattern | [ADR-011](./011-service-instantiation-pattern.md) | Proposed |
-| Phase Lifecycle Specification | [ADR-012](./012-phase-lifecycle-specification.md) | Proposed |
+| Service Instantiation Pattern | [ADR-011](./011-service-instantiation-pattern.md) | Accepted |
+| Phase Lifecycle Specification | [ADR-012](./012-phase-lifecycle-specification.md) | Accepted |
 | React Hooks Architecture | [ADR-013](./013-react-hooks-architecture.md) | Accepted |
 
 ## Process

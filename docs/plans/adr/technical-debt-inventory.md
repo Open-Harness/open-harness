@@ -8,9 +8,9 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Issues | 96 |
-| Resolved (via ADR) | 65 |
-| Remaining | 31 |
+| Total Issues | 90 |
+| Resolved (via ADR) | 69 |
+| Remaining | 21 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -29,6 +29,8 @@
 | [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008, TYPE-001 |
 | [ADR-009](./009-config-consolidation.md) | Config Consolidation | Accepted | API-002, API-006, API-007, ARCH-013 |
 | [ADR-010](./010-provider-ownership-model.md) | Provider Ownership Model | Accepted | ARCH-006, ARCH-021 |
+| [ADR-011](./011-service-instantiation-pattern.md) | Service Instantiation Pattern | Accepted | ARCH-002 |
+| [ADR-012](./012-phase-lifecycle-specification.md) | Phase Lifecycle Specification | Proposed | ARCH-017 |
 | [ADR-013](./013-react-hooks-architecture.md) | React Hooks Architecture | Accepted | ARCH-008, API-010, DEAD-010, TEST-012, TEST-013, DOC-003 |
 
 ## Decision Log
@@ -116,8 +118,8 @@
 | TYPE-004 | ID brand casts without runtime validation | ✅ **Resolved** | ADR-005 | Domain/Ids.ts, Engine/types.ts | Schema validation with `Schema.brand` |
 | TYPE-005 | Event payload casts without validation | ✅ **Resolved** | ADR-004 | Engine/runtime.ts | `Data.TaggedClass` provides type-safe access |
 | TYPE-006 | JSON.parse without validation in LibSQL | ✅ **Resolved** | ADR-005 | Layers/LibSQL.ts:71 | Schema decode for deserialized rows |
-| TYPE-007 | StateSnapshot state cast on retrieval | Verify | ADR-006 | Services/StateCache.ts:112,121 | Verify with state-sourcing implementation |
-| TYPE-008 | Zod schema cast loses type info | Accept | ADR-010 | Engine/provider.ts:242 | Zod kept for agent output by design |
+| TYPE-007 | StateSnapshot state cast on retrieval | ✅ **Resolved** | ADR-006 | Services/StateCache.ts:112,121 | Verified — StateCache uses deriveState with schema validation |
+| TYPE-008 | Zod schema cast loses type info | ✅ **Accepted** | ADR-010 | Engine/provider.ts:242 | Zod kept for agent output by design — intentional tradeoff |
 | TYPE-009 | Array.from keys cast to SessionId | ✅ **Resolved** | ADR-005 | Layers/InMemory.ts:78 | ID validation with Schema |
 | TYPE-010 | JSON.parse in StateSnapshotStoreLive | ✅ **Resolved** | ADR-005 | server/store/StateSnapshotStoreLive.ts:36 | `StateCheckpoint` schema validation |
 | TYPE-011 | JSON.parse in EventStoreLive | ✅ **Resolved** | ADR-005 | server/store/EventStoreLive.ts:40 | `StoredEvent` schema validation |
@@ -169,13 +171,13 @@
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
 | ARCH-001 | Three parallel observer patterns (fragmented) | ✅ **Resolved** | ADR-004 | WorkflowObserver, EventBus, EventStore | Single EventHub with PubSub, fiber subscribers |
-| ARCH-002 | Service instantiation patterns inconsistent | Needs Investigation | — | — | MAJOR: different service setup |
+| ARCH-002 | Service instantiation patterns inconsistent | ✅ **Resolved** | ADR-011 | Server.ts, Engine/runtime.ts | Standardized Layer factories with makeAppLayer |
 | ARCH-003 | Inconsistent naming for execution functions | ✅ **Resolved** | ADR-001 | — | Single `run()` API |
 | ARCH-004 | Too many internals exposed in core | ✅ **Resolved** | ADR-003 | core/index.ts | Move internals behind `/internal` entrypoint |
 | ARCH-005 | 26 event types exported individually | ✅ **Resolved** | ADR-004 | Engine/types.ts | Single WorkflowEvent union with Data.TaggedClass |
 | ARCH-006 | Provider infrastructure too public | ✅ **Resolved** | ADR-010 | Engine/provider.ts | ProviderRegistry deleted, runAgentDef internal |
 | ARCH-021 | Provider ownership model misaligned with eval design | ✅ **Resolved** | ADR-010 | Engine/agent.ts, Engine/provider.ts | Agent owns provider directly. See [ADR-010](./010-provider-ownership-model.md) |
-| ARCH-022 | `workflow.with()` not implemented | Needs Implementation | — | Engine/workflow.ts | Specified in eval-system-design.md. Required for variants. Depends on ADR-010. |
+
 | ARCH-007 | RouteContext/RouteResponse types exported | ✅ **Resolved** | ADR-003 | server/http/Routes.ts | Internal-only exports |
 | ARCH-008 | Convenience hooks vs context access redundancy | ✅ **Resolved** | ADR-013 | client/react/hooks.ts | Three-tier hook architecture eliminates redundancy |
 | ARCH-009 | State exists in 4 places (divergence risk) | ✅ **Resolved** | ADR-006 | Multiple | Events are source of truth, state derived |
@@ -186,21 +188,10 @@
 | ARCH-014 | Three store implementations scattered | Needs Investigation | — | Core/Layers, Server/store | Confusing which is official |
 | ARCH-015 | Stream vs AsyncIterable (two async models) | Needs Investigation | — | core, client | Effect Stream + Web standard AsyncIterable |
 | ARCH-016 | ProviderModeContext is ambient (spooky action) | Needs Investigation | — | FiberRef | Global state via FiberRef |
-| ARCH-017 | Phase lifecycle under-specified | Needs Investigation | — | Engine/phase.ts | No guards, no recovery, no rollback |
+| ARCH-017 | Phase lifecycle under-specified | ✅ **Resolved** | ADR-012 | Engine/phase.ts | Guards + lifecycle hooks with retry/pause strategies |
 | ARCH-018 | Event → State order inverted (not true sourcing) | ✅ **Resolved** | ADR-006 | runtime.ts | Events first, state derived |
 | ARCH-019 | No event versioning strategy | ✅ **Resolved** | ADR-006 | — | Data.TaggedClass with _tag enables versioning |
 | ARCH-020 | dispatchToObserver has 10+ switch cases | ✅ **Resolved** | ADR-004 | runtime.ts | Match.exhaustive replaces switch |
-
-### Documentation
-
-| ID | Issue | Status | Category | Files | Notes |
-|----|-------|--------|----------|-------|-------|
-| DOC-001 | No execution API decision matrix in docs | Needs Investigation | — | — | Users don't know which to use |
-| DOC-002 | No internal vs public API documentation | Needs Investigation | — | — | Services/Layers need @internal markers |
-| DOC-003 | Hook grouping/hierarchy undocumented | ✅ **Resolved** | ADR-013 | client/react/*.ts | Three-tier architecture documented in ADR-013 |
-| DOC-004 | HITL flow undocumented | Needs Investigation | — | — | No diagram showing pause/resume/input |
-| DOC-005 | State sourcing model undocumented | ✅ **Resolved** | ADR-006 | — | Fully documented in ADR-006 |
-| DOC-006 | Phase semantics undocumented | Needs Investigation | — | — | When snapshots created, lifecycle unclear |
 
 ---
 
