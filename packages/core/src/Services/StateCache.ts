@@ -22,7 +22,7 @@ import type { SessionId } from "../Domain/Ids.js"
 import { deriveState } from "../Engine/utils.js"
 import { EventHub } from "./EventHub.js"
 import { EventStore } from "./EventStore.js"
-import type { StateSnapshot } from "./StateSnapshotStore.js"
+import type { StoredStateSnapshot } from "./StateSnapshotStore.js"
 import { StateSnapshotStore } from "./StateSnapshotStore.js"
 
 // ─────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export const makeStateCache = <S>(
             state,
             position: totalPosition,
             createdAt: new Date()
-          } as StateSnapshot)
+          } as StoredStateSnapshot)
         }
 
         return state

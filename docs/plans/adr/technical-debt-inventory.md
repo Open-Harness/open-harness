@@ -2,15 +2,15 @@
 
 > **Living document** — Updated as issues are discovered and resolved.
 >
-> **Last updated:** 2026-01-29
+> **Last updated:** 2026-01-30
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
 | Total Issues | 90 |
-| Resolved (via ADR) | 69 |
-| Remaining | 21 |
+| Resolved (via ADR) | 70 |
+| Remaining | 20 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -139,7 +139,7 @@
 | DEAD-005 | `makeInMemoryProviderRegistry()` in public API | ✅ **Resolved** | ADR-003 | Engine/provider.ts | Internal/testing-only export |
 | DEAD-006 | `sseReconnectSchedule` in client exports | ✅ **Resolved** | ADR-003 | client/Reconnect.ts | Internal-only export |
 | DEAD-007 | 8 Logger layers never used | Needs Investigation | — | Layers/Logger.ts:20-85 | ProdLoggerLayer, TestLoggerLayer, etc. |
-| DEAD-008 | `loadWorkflowTape` never imported | Needs Investigation | — | server/programs/loadWorkflowTape.ts | Not re-exported from main index |
+| DEAD-008 | `loadWorkflowTape` never imported | ✅ **Resolved** | ADR-003 | server/programs/loadWorkflowTape.ts | Exported via `@open-scaffold/server/internal` |
 | DEAD-009 | Interaction utilities test-only | ✅ **Resolved** | ADR-002 | Domain/Interaction.ts | Delete — replaced by inline human on phase |
 | DEAD-010 | 7 React hooks missing from react/index.ts | ✅ **Resolved** | ADR-013 | client/react/index.ts | New grouped hooks replace individual hooks |
 | DEAD-011 | `usePendingInteraction(s)` completely untested | ✅ **Resolved** | ADR-002 | client/react/hooks.ts | Will be rewritten for new HITL payloads |
@@ -153,7 +153,7 @@
 | TEST-002 | **CRITICAL**: CLI has ZERO tests | Needs Investigation | — | apps/cli/src/**/* | 399 LoC, 15+ components, all untested |
 | TEST-003 | **HIGH**: hashProviderRequest untested | Needs Investigation | — | core/Domain/Hash.ts | Recording hash determinism critical but not tested |
 | TEST-004 | **HIGH**: OpenScaffold lifecycle untested | Needs Investigation | — | server/OpenScaffold.ts | initialize/dispose/resource cleanup not tested |
-| TEST-005 | **HIGH**: loadWorkflow() dynamic import untested | Needs Investigation | — | cli/loader.ts | Executes arbitrary code with no safety tests |
+| TEST-005 | **HIGH**: loadWorkflow() dynamic import untested | ✅ **Resolved** | — | cli/loader.ts | Covered by apps/cli/test/loader.test.ts (9 tests) |
 | TEST-006 | **HIGH**: LibSQL layer only integration-tested | Needs Investigation | — | core/Layers/LibSQL.ts | Query building, migrations, edge cases untested |
 | TEST-007 | HttpClient SSE integration uses mocked fetch | Needs Investigation | — | client/HttpClient.ts | Real streaming behavior not tested |
 | TEST-008 | EventBusLive concurrency untested | Needs Investigation | — | server/services/EventBusLive.ts | Multiple subscribers, race conditions |
@@ -277,8 +277,8 @@
 - **TEST-ONLY** (4): Interaction utilities (`createInteraction`, etc.)
 
 ### @open-scaffold/server
-- **DEAD** (1): `loadWorkflowTape` program never imported
 - **INTERNAL ONLY** (3): Pause/resume/fork routes (correctly not exported - healthy)
+- ~~**DEAD** (1): `loadWorkflowTape`~~ → Now exported via `@open-scaffold/server/internal`
 
 ### @open-scaffold/client
 - **INCOMPLETE** (1): `react/index.ts` missing 7 hooks + 1 type

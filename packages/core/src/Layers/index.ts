@@ -4,19 +4,6 @@
  * @module
  */
 
-// Logger configurations
-export {
-  DebugLevelLayer,
-  DevLoggerLayer,
-  DevLoggingLayer,
-  ErrorLevelLayer,
-  ProdLoggerLayer,
-  ProdLoggingLayer,
-  TestLoggerLayer,
-  TestLoggingLayer,
-  WarnLevelLayer
-} from "./Logger.js"
-
 // In-memory implementations (standalone / testing)
 export {
   InMemoryEventBus,

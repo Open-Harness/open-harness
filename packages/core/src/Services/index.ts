@@ -11,7 +11,7 @@ export type { EventStoreService } from "./EventStore.js"
 export { EventStore } from "./EventStore.js"
 
 // StateSnapshotStore
-export type { StateSnapshot, StateSnapshotStoreService } from "./StateSnapshotStore.js"
+export type { StateSnapshotStoreService, StoredStateSnapshot } from "./StateSnapshotStore.js"
 export { StateSnapshotStore } from "./StateSnapshotStore.js"
 
 // StateCache

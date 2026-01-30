@@ -36,7 +36,7 @@ export { computeStateAt, deriveState, deriveStateOptimized } from "./Engine/util
 // Provider Infrastructure (for library authors)
 // ─────────────────────────────────────────────────────────────────
 
-export { runAgentDef } from "./Engine/provider.js"
+export { mapStreamEventToInternal, runAgentDef } from "./Engine/provider.js"
 export type { AgentExecutionContext, AgentExecutionResult } from "./Engine/provider.js"
 
 // ─────────────────────────────────────────────────────────────────

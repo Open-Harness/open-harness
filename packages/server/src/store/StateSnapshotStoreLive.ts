@@ -49,10 +49,10 @@ const decodeStateCheckpoint = Schema.decodeUnknown(StateCheckpointSchema)
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Convert a database row to a StateSnapshot object with Schema validation.
+ * Convert a database row to a StoredStateSnapshot object with Schema validation.
  * Returns an Effect that fails with StoreError if validation fails.
  */
-const rowToSnapshot = (row: SnapshotRow): Effect.Effect<Services.StateSnapshot, StoreError> => {
+const rowToSnapshot = (row: SnapshotRow): Effect.Effect<Services.StoredStateSnapshot, StoreError> => {
   // Parse the JSON state first - this can throw
   const parsedState = Effect.try({
     try: () => JSON.parse(row.state_json),
@@ -84,7 +84,7 @@ const rowToSnapshot = (row: SnapshotRow): Effect.Effect<Services.StateSnapshot, 
 
       // Combine both validations
       return Effect.all([validatedSessionId, validatedCheckpoint]).pipe(
-        Effect.map(([sessionId, checkpoint]): Services.StateSnapshot => ({
+        Effect.map(([sessionId, checkpoint]): Services.StoredStateSnapshot => ({
           sessionId,
           state: checkpoint.state,
           position: checkpoint.position,

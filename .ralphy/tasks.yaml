@@ -1491,7 +1491,7 @@ tasks:
       - command: pnpm test packages/server -- --testPathPattern=OpenScaffold
         expect: All tests pass
   - title: "7.5: Add tests for loadWorkflow dynamic import (TEST-005)"
-    completed: false
+    completed: true
     parallel_group: 7
     issue: TEST-005
     details: |

@@ -82,8 +82,10 @@ const toRunResult = (
 
 /**
  * Map a stream event to an internal event.
+ *
+ * Exported for testing purposes via @open-scaffold/core/internal.
  */
-const mapStreamEventToInternal = (
+export const mapStreamEventToInternal = (
   agentName: string,
   streamEvent: AgentStreamEvent,
   causedBy?: EventId
