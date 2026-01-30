@@ -47,7 +47,7 @@ Event-sourced workflow runtime with Effect-TS.
 ## Installation
 
 ```bash
-pnpm add @open-scaffold/core
+bun add @open-scaffold/core
 ```
 
 ## Usage

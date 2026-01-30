@@ -153,7 +153,7 @@ Per `CLAUDE.md`:
 1. **No mocks**: Use real implementations with `:memory:` databases
 2. **No API key checks**: Subscription handles auth
 3. **Use ProviderRecorder**: For all provider testing
-4. **No build artifacts in src/**: Use `pnpm build` → `dist/`
+4. **No build artifacts in src/**: Use `bun run build` → `dist/`
 
 ## Success Criteria
 

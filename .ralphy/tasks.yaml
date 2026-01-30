@@ -40,7 +40,7 @@ tasks:
       - Field names follow ADR-008 conventions (agent not agentName)
       - TypeScript compiles without errors
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'Data.TaggedClass' packages/core/src/Domain/Events.ts
         expect: "15"
@@ -70,7 +70,7 @@ tasks:
       - subscribe() returns scoped Stream<WorkflowEvent>
       - Uses Effect PubSub.unbounded
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'PubSub' packages/core/src/Services/EventHub.ts
         expect: ">= 3"
@@ -115,7 +115,7 @@ tasks:
       - All use Effect.forkScoped
       - Stream.runForEach processes events
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'forkScoped' packages/core/src/Engine/subscribers.ts
         expect: ">= 3"
@@ -159,7 +159,7 @@ tasks:
       - Handles all 15 event types
       - Adding new event type without handler causes compile error
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'Match.exhaustive' packages/core/src/Engine/dispatch.ts
         expect: Match.exhaustive
@@ -201,7 +201,7 @@ tasks:
       - toSerializedEvent converts _tag to name property
       - EventId generated at serialization time
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'tagToEventName' packages/core/src/Domain/Events.ts
         expect: "1"
@@ -245,9 +245,9 @@ tasks:
       - Subscriber fibers forked with Effect.forkScoped
       - Old dispatchToObserver calls removed
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
-      - command: pnpm test packages/core
+      - command: bun run test packages/core
         expect: All tests pass
   - title: "2.1: Create StateProjection service with SubscriptionRef (ADR-006)"
     completed: true
@@ -290,7 +290,7 @@ tasks:
       - Applies patches from StateIntent events
       - Sets state directly from StateCheckpoint events
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'SubscriptionRef' packages/core/src/Services/StateProjection.ts
         expect: Multiple matches
@@ -320,7 +320,7 @@ tasks:
       - Handles StateCheckpoint events
       - deriveStateOptimized starts from last checkpoint
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'deriveState' packages/core/src/Engine/utils.ts
         expect: Multiple matches
@@ -362,7 +362,7 @@ tasks:
       - State read from SubscriptionRef
       - Agents see updated state after intent emitted
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'StateIntent' packages/core/src/Engine/runtime.ts
         expect: ">= 1"
@@ -401,7 +401,7 @@ tasks:
       - StateCheckpoint emitted on pause
       - Checkpoint includes position and phase
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'StateCheckpoint' packages/core/src/Engine/runtime.ts
         expect: ">= 2"
@@ -445,7 +445,7 @@ tasks:
       - Effect.Cache for memoization
       - Invalidates on new StateIntent
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'deriveState' packages/core/src/Services/StateCache.ts
         expect: deriveState
@@ -476,7 +476,7 @@ tasks:
       - Schema.decodeUnknown used for validation
       - Type derived from schema matches existing type
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'Schema.brand' packages/core/src/Domain/Ids.ts
         expect: ">= 4"
@@ -505,7 +505,7 @@ tasks:
       - Decode errors become StoreError
       - No as EventPayload casts
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -v 'as.*Payload' packages/server/src/store/EventStoreLive.ts
         expect: No cast matches
@@ -544,7 +544,7 @@ tasks:
       - JSON.parse followed by Schema validation
       - No as S casts after parse
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "3.4: Add API response schemas in HttpClient (ADR-005)"
     completed: true
@@ -584,7 +584,7 @@ tasks:
       - response.json() validated with schema
       - No as AnyEvent casts
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'Schema.decodeUnknown' packages/client/src/HttpClient.ts
         expect: ">= 2"
@@ -623,7 +623,7 @@ tasks:
       - No as unknown as Record cast
       - Schema validation determines workflow type
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -v 'as unknown as' packages/core/src/Engine/workflow.ts
         expect: No matches
@@ -666,7 +666,7 @@ tasks:
       - Has pause(), resume(), abort() methods
       - Has isPaused property
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'PromiseLike' packages/core/src/Engine/run.ts
         expect: PromiseLike
@@ -700,7 +700,7 @@ tasks:
       - runWithText() deleted
       - Only run() in public API
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'export.*runSimple' packages/core/src/index.ts
         expect: "0"
@@ -745,7 +745,7 @@ tasks:
       - Services/Layers exported from internal
       - Not exported from main index.ts
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep './internal' packages/core/package.json
         expect: ./internal
@@ -786,7 +786,7 @@ tasks:
       - package.json has ./internal export
       - Route handlers in internal, not main
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep './internal' packages/server/package.json
         expect: ./internal
@@ -815,7 +815,7 @@ tasks:
       - package.json has ./internal export
       - sseReconnectSchedule not in main exports
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "5.1: Update AgentProvider interface with model and config (ADR-010)"
     completed: false
@@ -852,7 +852,7 @@ tasks:
       - stream() method unchanged
       - Types compile
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'model:' packages/core/src/Domain/Provider.ts
         expect: "model:"
@@ -880,7 +880,7 @@ tasks:
       - "No model: string in AgentDef"
       - agent() factory accepts provider
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -v 'model:.*string' packages/core/src/Engine/agent.ts
         expect: No model string
@@ -910,7 +910,7 @@ tasks:
       - No makeInMemoryProviderRegistry
       - provider.ts uses agent.provider directly
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -r 'ProviderRegistry' packages/core/src/
         expect: No matches
@@ -951,7 +951,7 @@ tasks:
       - No providers in RunOptions
       - Runtime config simpler
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "5.5: Add human field to PhaseDef (ADR-002)"
     completed: false
@@ -977,7 +977,7 @@ tasks:
       - PhaseDef has human? field
       - Supports static and function form
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep 'human?' packages/core/src/Engine/phase.ts
         expect: human?
@@ -1006,7 +1006,7 @@ tasks:
       - approval handler returns Promise<boolean>
       - choice handler returns Promise<string>
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "5.7: Implement runtime HITL flow (ADR-002)"
     completed: false
@@ -1049,9 +1049,9 @@ tasks:
       - InputReceived emitted with value
       - state.humanResponse available for routing
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
-      - command: pnpm test packages/core
+      - command: bun run test packages/core
         expect: All tests pass
   - title: "5.8: Delete Domain/Interaction.ts (ADR-002)"
     completed: false
@@ -1080,7 +1080,7 @@ tasks:
     verify:
       - command: "! test -f packages/core/src/Domain/Interaction.ts"
         expect: File does not exist
-      - command: pnpm build
+      - command: bun run build
         expect: Build succeeds
   - title: "5.9: Create cliPrompt and autoApprove helpers (ADR-002)"
     completed: false
@@ -1106,7 +1106,7 @@ tasks:
       - autoApprove() returns true for approval, first option for choice
       - Both return HumanInputHandler
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.1: Add @tanstack/react-query dependency (ADR-013)"
     completed: false
@@ -1125,7 +1125,7 @@ tasks:
 
       ## Steps
       1. Add @tanstack/react-query to dependencies
-      2. Run pnpm install
+      2. Run bun install
     acceptance:
       - "@tanstack/react-query in dependencies"
       - Version ^5.0.0 or higher
@@ -1156,7 +1156,7 @@ tasks:
       - Uses useQuery from React Query
       - Query keys follow pattern
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.3: Create primitive mutation hooks (ADR-013)"
     completed: false
@@ -1196,7 +1196,7 @@ tasks:
       - Five mutation hooks exist
       - Uses useMutation from React Query
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.4: Create SSE subscription hook (ADR-013)"
     completed: false
@@ -1225,7 +1225,7 @@ tasks:
       - Invalidates state on StateIntent
       - Cleans up EventSource on unmount
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.5: Create grouped hooks (Tier 1) (ADR-013)"
     completed: false
@@ -1272,7 +1272,7 @@ tasks:
       - useWorkflowVCR returns pause, resume, fork
       - useWorkflowHITL returns pending, respond
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.6: Create unified useWorkflow hook (Tier 2) (ADR-013)"
     completed: false
@@ -1312,7 +1312,7 @@ tasks:
       - Actions bound to sessionId
       - Derived status (isRunning, isPaused, isCompleted)
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.7: Create WorkflowClientProvider (ADR-013)"
     completed: false
@@ -1338,7 +1338,7 @@ tasks:
       - Accepts baseUrl prop
       - Provides client context
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "6.8: Update client/react exports (ADR-013)"
     completed: false
@@ -1377,7 +1377,7 @@ tasks:
       - WorkflowClientProvider exported
       - Old hooks removed or deprecated
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "7.1: Add tests for SSE parsing (TEST-001)"
     completed: false
@@ -1407,7 +1407,7 @@ tasks:
       - No mocks or stubs used
       - Tests pass
     verify:
-      - command: pnpm test packages/client -- --testPathPattern=SSE
+      - command: bun run test packages/client -- --testPathPattern=SSE
         expect: All tests pass
   - title: "7.2: Add tests for CLI commands (TEST-002)"
     completed: false
@@ -1436,7 +1436,7 @@ tasks:
       - Error cases covered
       - No mocks
     verify:
-      - command: pnpm test apps/cli
+      - command: bun run test apps/cli
         expect: Tests pass
   - title: "7.3: Add tests for hashProviderRequest (TEST-003)"
     completed: false
@@ -1462,7 +1462,7 @@ tasks:
       - Key ordering tested
       - 3+ test cases
     verify:
-      - command: pnpm test packages/core -- --testPathPattern=Hash
+      - command: bun run test packages/core -- --testPathPattern=Hash
         expect: All tests pass
   - title: "7.4: Add tests for OpenScaffold lifecycle (TEST-004)"
     completed: false
@@ -1488,7 +1488,7 @@ tasks:
       - Resource cleanup verified
       - "Uses :memory: database"
     verify:
-      - command: pnpm test packages/server -- --testPathPattern=OpenScaffold
+      - command: bun run test packages/server -- --testPathPattern=OpenScaffold
         expect: All tests pass
   - title: "7.5: Add tests for loadWorkflow dynamic import (TEST-005)"
     completed: true
@@ -1514,7 +1514,7 @@ tasks:
       - Error cases covered
       - No arbitrary code execution without validation
     verify:
-      - command: pnpm test apps/cli -- --testPathPattern=loader
+      - command: bun run test apps/cli -- --testPathPattern=loader
         expect: All tests pass
   - title: "7.6: Add end-to-end recording/playback test (TEST-016)"
     completed: false
@@ -1555,7 +1555,7 @@ tasks:
       - Results match
       - Uses ProviderRecorder, not mocks
     verify:
-      - command: pnpm test packages/core -- --testPathPattern=recording-playback
+      - command: bun run test packages/core -- --testPathPattern=recording-playback
         expect: All tests pass
   - title: "7.7: Add tests for mapStreamEventToInternal (TEST-014)"
     completed: false
@@ -1579,7 +1579,7 @@ tasks:
       - All event mappings tested
       - Unknown type handling tested
     verify:
-      - command: pnpm test packages/core -- --testPathPattern=provider-events
+      - command: bun run test packages/core -- --testPathPattern=provider-events
         expect: All tests pass
   - title: "8.1: Delete unused Logger layers (DEAD-007)"
     completed: false
@@ -1606,7 +1606,7 @@ tasks:
       - No dangling imports
       - Build succeeds
     verify:
-      - command: pnpm build
+      - command: bun run build
         expect: Build succeeds
       - command: grep -r 'ProdLoggerLayer' packages/
         expect: No matches or only in Logger.ts
@@ -1634,7 +1634,7 @@ tasks:
       - Either exported or deleted
       - No orphaned code
     verify:
-      - command: pnpm build
+      - command: bun run build
         expect: Build succeeds
   - title: "8.3: Resolve InMemoryProviderRecorder (DEAD-012)"
     completed: false
@@ -1671,7 +1671,7 @@ tasks:
       - Redundancy resolved
       - Tests use canonical approach
     verify:
-      - command: pnpm test
+      - command: bun run test
         expect: All tests pass
   - title: "8.4: Export missing ID schemas (API-012)"
     completed: false
@@ -1707,7 +1707,7 @@ tasks:
       - All 4 ID schemas exported
       - Can import from @open-scaffold/core
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
       - command: grep -c 'IdSchema' packages/core/src/index.ts
         expect: ">= 4"
@@ -1735,7 +1735,7 @@ tasks:
       - Single canonical StateSnapshot export
       - Other locations re-export if needed
     verify:
-      - command: pnpm typecheck
+      - command: bun run typecheck
         expect: No errors
   - title: "8.6: Add execution API documentation (DOC-001)"
     completed: false

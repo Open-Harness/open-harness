@@ -125,8 +125,8 @@
 
 - [ ] All 13 ADRs are implemented per their specifications
 - [ ] No mocks in tests (use real implementations with :memory:)
-- [ ] All tests pass (pnpm test)
-- [ ] TypeScript typechecks (pnpm typecheck)
+- [ ] All tests pass (bun run test)
+- [ ] TypeScript typechecks (bun run typecheck)
 - [ ] No build artifacts in src/ directories
 - [ ] Public API matches ADR-003 (minimal, stable)
 - [ ] Internal API available via /internal entrypoints

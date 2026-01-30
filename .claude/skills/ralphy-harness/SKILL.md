@@ -72,7 +72,7 @@ ralphy --yaml .ralphy/tasks.yaml --no-parallel
 
 1. **No mocks/stubs** - Use real implementations with `:memory:`
 2. **No API key checks** - Subscription handles auth
-3. **No build artifacts in src/** - Use `pnpm build` → `dist/`
+3. **No build artifacts in src/** - Use `bun run build` → `dist/`
 4. **Use ProviderRecorder** - For all provider testing
 5. **Follow ADR decisions** - No ProviderRegistry, events are source of truth
 
@@ -105,9 +105,9 @@ Each task must have:
     - "Criterion 1 - verifiable"
     - "Criterion 2 - verifiable"
   verify:
-    - command: "pnpm typecheck"
+    - command: "bun run typecheck"
       expect: "No errors"
-    - command: "pnpm test"
+    - command: "bun run test"
       expect: "All pass"
 ```
 

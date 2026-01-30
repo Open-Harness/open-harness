@@ -15,10 +15,10 @@ The build system is:
 - If you see these files in `src/`, DELETE THEM IMMEDIATELY
 
 **Correct commands:**
-- `pnpm build` → runs `turbo run build` → tsdown to dist/
-- `pnpm typecheck` → runs `turbo run typecheck` → tsc -b to build/
-- `pnpm lint` → ESLint (no file emission)
-- `pnpm test` → Vitest (no file emission)
+- `bun run build` → runs `turbo run build` → tsdown to dist/
+- `bun run typecheck` → runs `turbo run typecheck` → tsc -b to build/
+- `bun run lint` → ESLint (no file emission)
+- `bun run test` → Vitest (no file emission)
 
 **The .gitignore blocks these patterns but files still pollute the working directory:**
 ```

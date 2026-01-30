@@ -94,7 +94,7 @@ tasks:
       Files to modify:
       - packages/core/src/Engine/types.ts
     verify:
-      - command: "pnpm typecheck"
+      - command: "bun run typecheck"
         expect: "No errors"
     acceptance:
       - "All events use Data.TaggedClass"

@@ -55,11 +55,11 @@ Verification commands must:
 
 ```yaml
 verify:
-  - command: "pnpm typecheck"
+  - command: "bun run typecheck"
     expect: "No errors"
   - command: "grep -r 'Data.TaggedClass' packages/core/src/Engine/types.ts"
     expect: "Multiple matches"
-  - command: "pnpm test packages/core"
+  - command: "bun run test packages/core"
     expect: "All tests pass"
 ```
 
@@ -132,7 +132,7 @@ For test coverage issues:
     - "createSSEStream has integration test"
     - "No mocks or stubs used"
   verify:
-    - command: "pnpm test packages/client --coverage"
+    - command: "bun run test packages/client --coverage"
       expect: "SSE.ts > 80% coverage"
 ```
 
@@ -160,7 +160,7 @@ For dead code removal:
   verify:
     - command: "! test -f packages/core/src/Layers/Logger.ts"
       expect: "File does not exist"
-    - command: "pnpm build"
+    - command: "bun run build"
       expect: "Build succeeds"
 ```
 

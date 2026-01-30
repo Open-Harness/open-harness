@@ -4,6 +4,11 @@
  * Validates that respond() on the WorkflowExecution handle feeds into
  * the runtime's Queue.take(ctx.inputQueue), unblocking HITL phases.
  * Uses ProviderRecorder playback with pre-seeded fixtures.
+ *
+ * NOTE: Event payloads use LEGACY wire format (promptText, inputType, response)
+ * produced by workflowEventToLegacy() for backwards compatibility with storage
+ * and SSE consumers. Internal events use new naming (prompt, type, value) per ADR-008.
+ * See packages/core/src/Engine/runtime.ts:workflowEventToLegacy for the mapping.
  */
 
 import { describe, expect, it } from "vitest"
@@ -145,13 +150,13 @@ describe("HITL queue wiring", () => {
     expect(eventNames).toContain(EVENTS.AGENT_COMPLETED)
     expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
 
-    // Verify the input:requested payload
+    // Verify the input:requested payload (legacy wire format per workflowEventToLegacy)
     const inputRequestedEvent = events.find((e) => e.name === EVENTS.INPUT_REQUESTED)
     const payload = inputRequestedEvent?.payload as { promptText: string; inputType: string }
     expect(payload.promptText).toBe("Review proposal: Build a REST API")
     expect(payload.inputType).toBe("approval")
 
-    // Verify the input:response payload
+    // Verify the input:response payload (legacy wire format)
     const inputResponseEvent = events.find((e) => e.name === EVENTS.INPUT_RESPONSE)
     const responsePayload = inputResponseEvent?.payload as { response: string }
     expect(responsePayload.response).toBe("approve")

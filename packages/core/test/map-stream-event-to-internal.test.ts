@@ -4,6 +4,9 @@
  * This function maps AgentStreamEvent (from providers) to internal Event types.
  * It's a pure transformation function with no dependencies.
  *
+ * NOTE: The function signature uses `agent: string` per ADR-008. The test variable
+ * `testAgent` holds the agent identifier value passed to the function.
+ *
  * @module
  */
 
@@ -15,7 +18,7 @@ import { type AnyEvent, EVENTS, makeEventId } from "../src/Engine/types.js"
 import { mapStreamEventToInternal } from "../src/internal.js"
 
 describe("mapStreamEventToInternal", () => {
-  const agentName = "test-agent"
+  const testAgent = "test-agent"
 
   describe("TextDelta events", () => {
     it("maps TextDelta to text:delta event", async () => {
@@ -25,7 +28,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -47,7 +50,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -67,7 +70,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent, causedBy)
+        mapStreamEventToInternal(testAgent, streamEvent, causedBy)
       )
 
       expect(result).not.toBeNull()
@@ -84,7 +87,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -103,7 +106,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -125,7 +128,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -152,7 +155,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -178,7 +181,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -202,7 +205,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -225,7 +228,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -248,7 +251,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -273,7 +276,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -287,7 +290,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -302,7 +305,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -315,7 +318,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -328,7 +331,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -342,7 +345,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -355,7 +358,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).toBeNull()
@@ -370,7 +373,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -388,7 +391,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -407,7 +410,7 @@ describe("mapStreamEventToInternal", () => {
       }
 
       const result = await Effect.runPromise(
-        mapStreamEventToInternal(agentName, streamEvent)
+        mapStreamEventToInternal(testAgent, streamEvent)
       )
 
       expect(result).not.toBeNull()
@@ -442,9 +445,9 @@ describe("mapStreamEventToInternal", () => {
 
       const [result1, result2, result3] = await Effect.runPromise(
         Effect.all([
-          mapStreamEventToInternal(agentName, streamEvent),
-          mapStreamEventToInternal(agentName, streamEvent),
-          mapStreamEventToInternal(agentName, streamEvent)
+          mapStreamEventToInternal(testAgent, streamEvent),
+          mapStreamEventToInternal(testAgent, streamEvent),
+          mapStreamEventToInternal(testAgent, streamEvent)
         ])
       )
 

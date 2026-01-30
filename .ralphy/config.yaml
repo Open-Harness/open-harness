@@ -4,10 +4,10 @@ project:
   framework: "Effect"
 
 commands:
-  test: "pnpm test"
-  lint: "pnpm lint"
-  typecheck: "pnpm typecheck"
-  build: "pnpm build"
+  test: "bun run test"
+  lint: "bun run lint"
+  typecheck: "bun run typecheck"
+  build: "bun run build"
 
 capabilities:
   browser: "false"
