@@ -19,7 +19,7 @@ import {
 } from "@open-scaffold/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
 import { executeWorkflow } from "@open-scaffold/core/internal"
-import type { AnyEvent, ProviderMode, ProviderRegistry, SessionId, WorkflowDef } from "@open-scaffold/core"
+import type { AnyEvent, ProviderMode, SessionId, WorkflowDef } from "@open-scaffold/core"
 
 import { forkSession } from "../programs/forkSession.js"
 import { observeEvents, type ObserveEventsOptions } from "../programs/observeEvents.js"
@@ -56,7 +56,6 @@ export type RouteEnvironment =
   | Services.EventBus
   | Services.ProviderRecorder
   | Services.ProviderModeContext
-  | ProviderRegistry
 
 export interface ProviderStatus {
   readonly name: string

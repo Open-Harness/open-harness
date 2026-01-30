@@ -39,7 +39,16 @@ export type ProviderMode = "live" | "playback"
  * Recording is an ORCHESTRATION concern, not a provider concern.
  */
 export interface AgentProvider {
+  /** Provider name (e.g., "anthropic", "codex") */
   readonly name: string
+
+  /** Model identifier (e.g., "claude-sonnet-4-5") */
+  readonly model: string
+
+  /** Provider-specific configuration for hashing in recording/playback (ADR-010) */
+  readonly config?: Record<string, unknown>
+
+  /** Stream agent execution */
   readonly stream: (options: ProviderRunOptions) => Stream.Stream<AgentStreamEvent, ProviderError>
 }
 

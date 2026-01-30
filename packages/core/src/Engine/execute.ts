@@ -12,7 +12,7 @@ import { mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-import type { AgentProvider, ProviderMode } from "../Domain/Provider.js"
+import type { ProviderMode } from "../Domain/Provider.js"
 import { InMemoryEventBus } from "../Layers/InMemory.js"
 import { EventStoreLive } from "../Layers/LibSQL.js"
 import { EventBus, type EventBusService } from "../Services/EventBus.js"
@@ -20,7 +20,6 @@ import { EventStore, type EventStoreService } from "../Services/EventStore.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../Services/ProviderRecorder.js"
 
-import { makeInMemoryProviderRegistry, ProviderRegistry } from "./provider.js"
 import { type ExecuteOptions, executeWorkflow } from "./runtime.js"
 import { WorkflowAbortedError } from "./types.js"
 import type { AnyEvent, WorkflowError, WorkflowResult } from "./types.js"
@@ -34,17 +33,13 @@ import type { WorkflowDef } from "./workflow.js"
  * Runtime configuration for workflow execution.
  *
  * Provides the required services for running workflows:
- * - providers: Map of model names to provider instances
  * - mode: "live" for real API calls, "playback" for recordings
  * - recorder: Service for recording/replaying provider responses
+ * - database: Storage URL for event persistence
+ *
+ * Per ADR-010: Agents own their providers directly, so no providers map is needed here.
  */
 export interface RuntimeConfig {
-  /**
-   * Provider instances keyed by model name.
-   * Example: { "claude-sonnet-4-5": anthropicProvider }
-   */
-  readonly providers: Record<string, AgentProvider>
-
   /**
    * Provider mode: "live" or "playback"
    * @default "live"
@@ -102,10 +97,7 @@ export interface ExecuteWithRuntimeOptions<Input> extends ExecuteOptions<Input> 
  * ```typescript
  * const execution = execute(myWorkflow, {
  *   input: "Build API",
- *   runtime: {
- *     providers: { "claude-sonnet-4-5": myProvider },
- *     mode: "live"
- *   }
+ *   runtime: { mode: "live" }
  * })
  *
  * // Iterate over events as they occur
@@ -206,10 +198,7 @@ const noopRecorder: ProviderRecorderService = {
  * ```typescript
  * const execution = execute(myWorkflow, {
  *   input: "Build API",
- *   runtime: {
- *     providers: { "claude-sonnet-4-5": anthropicProvider },
- *     mode: "live"
- *   }
+ *   runtime: { mode: "live" }
  * })
  *
  * for await (const event of execution) {
@@ -304,20 +293,8 @@ export function execute<S, Input, Phases extends string = never>(
   // Build the service layer from runtime config
   const { runtime } = options
 
-  // Create provider registry with configured providers
-  const registryService = makeInMemoryProviderRegistry()
-
   // Build layers
-  const ProviderRegistryLayer = Layer.effect(
-    ProviderRegistry,
-    Effect.gen(function*() {
-      // Register all providers
-      for (const [model, provider] of Object.entries(runtime.providers)) {
-        yield* registryService.registerProvider(model, provider)
-      }
-      return registryService
-    })
-  )
+  // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
 
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, {
     mode: runtime.mode ?? "live"
@@ -343,7 +320,6 @@ export function execute<S, Input, Phases extends string = never>(
     : InMemoryEventBus
 
   const runtimeLayer = Layer.mergeAll(
-    ProviderRegistryLayer,
     ProviderModeLayer,
     ProviderRecorderLayer,
     EventStoreLayer,

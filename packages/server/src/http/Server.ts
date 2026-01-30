@@ -16,8 +16,6 @@ import type {
   WorkflowDef
 } from "@open-scaffold/core"
 import {
-  makeInMemoryProviderRegistry,
-  ProviderRegistry,
   Services,
   SessionNotFound,
   ValidationError
@@ -243,20 +241,13 @@ export interface CreateServerOptions<S> extends ServerConfig {
     readonly connected: boolean
   }
   /**
-   * Named providers map for the ProviderRegistry.
+   * Named providers map.
    * Keys are model strings (e.g., "claude-sonnet-4-20250514"),
    * values are AgentProvider implementations.
    *
-   * Optional - if not provided, no ProviderRegistry layer is added.
-   *
-   * @example
-   * ```typescript
-   * createServer({
-   *   providers: {
-   *     "claude-sonnet-4-20250514": AnthropicProvider({ model: "claude-sonnet-4-20250514" }),
-   *   }
-   * })
-   * ```
+   * Note: Per ADR-010, agents now own their providers directly.
+   * This map is kept for backward compatibility but will be removed
+   * in Task 5.4.
    */
   readonly providers?: Record<string, AgentProvider>
 }
@@ -273,8 +264,7 @@ export const createServer = <S>(options: CreateServerOptions<S>): ServerService 
       | Services.StateSnapshotStore
       | Services.EventBus
       | Services.ProviderRecorder
-      | Services.ProviderModeContext
-      | ProviderRegistry,
+      | Services.ProviderModeContext,
       unknown
     >
     | null = null
@@ -292,27 +282,13 @@ export const createServer = <S>(options: CreateServerOptions<S>): ServerService 
   const startServer = Effect.gen(function*() {
     if (server) return
 
-    // Build ProviderRegistry layer (empty if no providers configured)
-    const providerRegistryLayer = Layer.effect(
-      ProviderRegistry,
-      Effect.sync(() => {
-        const registry = makeInMemoryProviderRegistry()
-        if (options.providers) {
-          for (const [model, provider] of Object.entries(options.providers)) {
-            Effect.runSync(registry.registerProvider(model, provider))
-          }
-        }
-        return registry
-      })
-    )
-
+    // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
     const fullLayer = Layer.mergeAll(
       options.eventStore,
       options.snapshotStore,
       makeEventBusLayer(),
       providerModeLayer,
-      providerRecorderLayer,
-      providerRegistryLayer
+      providerRecorderLayer
     )
 
     runtime = ManagedRuntime.make(
@@ -322,7 +298,6 @@ export const createServer = <S>(options: CreateServerOptions<S>): ServerService 
         | Services.EventBus
         | Services.ProviderRecorder
         | Services.ProviderModeContext
-        | ProviderRegistry
       >
     )
 

@@ -20,11 +20,12 @@ import { EventStore } from "../Services/EventStore.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../Services/ProviderRecorder.js"
 
-import { makeInMemoryProviderRegistry, ProviderRegistry } from "./provider.js"
+import type { HumanInputHandler } from "../helpers/humanInput.js"
 
 // Re-export RuntimeConfig from execute.ts for use in RunOptions
 // This is the primary export path per ADR-001
-export type { RuntimeConfig } from "./execute.js"
+import type { RuntimeConfig } from "./execute.js"
+export type { RuntimeConfig }
 import { executeWorkflow } from "./runtime.js"
 import { type WorkflowObserver, type WorkflowResult } from "./types.js"
 import type { WorkflowDef } from "./workflow.js"
@@ -62,6 +63,25 @@ export interface RunOptions<S, Input> {
    * Receives typed callbacks for all workflow lifecycle events.
    */
   readonly observer?: WorkflowObserver<S>
+
+  /**
+   * Human input handler for HITL (Human-in-the-Loop) interactions.
+   *
+   * Per ADR-002: Provides approval() and choice() callbacks for human input.
+   * Use cliPrompt() for terminal-based prompts or autoApprove() for testing.
+   *
+   * @example
+   * ```typescript
+   * import { cliPrompt } from "@openscaffold/core"
+   *
+   * await run(workflow, {
+   *   input: "Build API",
+   *   runtime: myRuntime,
+   *   humanInput: cliPrompt()
+   * })
+   * ```
+   */
+  readonly humanInput?: HumanInputHandler
 }
 
 /**
@@ -198,18 +218,8 @@ export function run<S, Input, Phases extends string = never>(
   let isAborted = false
 
   // Build service layers from runtime config
+  // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
   const { runtime } = options
-  const registryService = makeInMemoryProviderRegistry()
-
-  const ProviderRegistryLayer = Layer.effect(
-    ProviderRegistry,
-    Effect.gen(function*() {
-      for (const [model, provider] of Object.entries(runtime.providers)) {
-        yield* registryService.registerProvider(model, provider)
-      }
-      return registryService
-    })
-  )
 
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, {
     mode: runtime.mode ?? "live"
@@ -235,7 +245,6 @@ export function run<S, Input, Phases extends string = never>(
     : InMemoryEventBus
 
   const runtimeLayer = Layer.mergeAll(
-    ProviderRegistryLayer,
     ProviderModeLayer,
     ProviderRecorderLayer,
     EventStoreLayer,
@@ -247,7 +256,8 @@ export function run<S, Input, Phases extends string = never>(
     const result = yield* executeWorkflow(workflow, {
       input: options.input,
       sessionId,
-      ...(options.observer ? { observer: options.observer } : {})
+      ...(options.observer ? { observer: options.observer } : {}),
+      ...(options.humanInput ? { humanInput: options.humanInput } : {})
     })
 
     return result

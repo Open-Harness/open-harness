@@ -20,7 +20,7 @@ import {
   type SimpleWorkflowDef,
   workflow
 } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -35,10 +35,10 @@ interface TestState {
 
 type TestPhases = "planning" | "working" | "judging" | "done"
 
-// Test agents
+// Test agents (per ADR-010: agents own provider directly)
 const simpleAgent = agent<TestState, { message: string }>({
   name: "simple",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ message: z.string() }),
   prompt: (state: TestState) => `Goal: ${state.goal}`,
   update: (output: { message: string }, draft: TestState) => {
@@ -48,7 +48,7 @@ const simpleAgent = agent<TestState, { message: string }>({
 
 const plannerAgent = agent<TestState, { tasks: Array<string>; done: boolean }>({
   name: "planner",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ tasks: z.array(z.string()), done: z.boolean() }),
   prompt: (state: TestState) => `Plan for: ${state.goal}`,
   update: (output: { tasks: Array<string>; done: boolean }, draft: TestState) => {
@@ -61,7 +61,7 @@ const plannerAgent = agent<TestState, { tasks: Array<string>; done: boolean }>({
 
 const judgeAgent = agent<TestState, { verdict: "continue" | "complete" }>({
   name: "judge",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ verdict: z.enum(["continue", "complete"]) }),
   prompt: (state: TestState) => `Judge progress on: ${state.goal}`,
   update: (output: { verdict: "continue" | "complete" }, draft: TestState) => {
@@ -317,6 +317,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
   const providerOptions = { model: "claude-sonnet-4-5" }
   const playbackDummy = {
     name: "playback-dummy",
+    model: "playback-dummy",
     stream: () => {
       throw new Error("playbackDummyProvider called - recording not found")
     }
@@ -348,7 +349,6 @@ describe("workflow behavioral (execution and phase transitions)", () => {
     const result = await run(w, {
       input: "write tests",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
         recorder: seedRecorder(fixtures),
         database: ":memory:"
@@ -380,7 +380,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const planAgent = agent<PhaseState, { tasks: Array<string>; done: boolean }>({
       name: "planner",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: taskSchema,
       prompt: (state) => `Plan for: ${state.goal}`,
       update: (output, draft) => {
@@ -404,7 +404,6 @@ describe("workflow behavioral (execution and phase transitions)", () => {
     })
 
     const runtime: RuntimeConfig = {
-      providers: { "claude-sonnet-4-5": playbackDummy },
       mode: "playback",
       recorder: seedRecorder(fixtures),
       database: ":memory:"
@@ -446,7 +445,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const planAgent = agent<MultiState, { plan: string }>({
       name: "planner",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: planSchema,
       prompt: (state) => `Plan: ${state.goal}`,
       update: (output, draft) => {
@@ -456,7 +455,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const workAgent = agent<MultiState, { result: string }>({
       name: "worker",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: workSchema,
       prompt: (state) => `Work: ${state.plan}`,
       update: (output, draft) => {
@@ -497,7 +496,6 @@ describe("workflow behavioral (execution and phase transitions)", () => {
     const result = await run(w, {
       input: "build API",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
         recorder: seedRecorder(fixtures),
         database: ":memory:"

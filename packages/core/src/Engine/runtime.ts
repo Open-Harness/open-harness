@@ -33,8 +33,9 @@ import type { ProviderRecorder } from "../Services/ProviderRecorder.js"
 
 import type { AgentDef } from "./agent.js"
 import { dispatchToObserver } from "./dispatch.js"
-import type { PhaseDef } from "./phase.js"
-import { type ProviderNotFoundError, type ProviderRegistry, runAgentDef } from "./provider.js"
+import type { HumanConfig, PhaseDef } from "./phase.js"
+import type { HumanInputHandler } from "../helpers/humanInput.js"
+import { runAgentDef } from "./provider.js"
 // Note: subscribers.ts exports are not used here anymore (see comment in executeWorkflow)
 // import { makeBusSubscriber, makeObserverSubscriber, makeStoreSubscriber } from "./subscribers.js"
 import {
@@ -97,6 +98,8 @@ interface RuntimeContext<S> {
   readonly onEvent?: (event: AnyEvent) => void
   /** Optional observer for structured lifecycle callbacks (handled by makeObserverSubscriber) */
   readonly observer?: WorkflowObserver<unknown>
+  /** Optional human input handler for HITL (ADR-002) */
+  readonly humanInput?: HumanInputHandler
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -323,7 +326,7 @@ const updateState = <S>(
  * Execute a single agent and update state.
  *
  * This bridges to runAgentDef which handles:
- * - Provider resolution via ProviderRegistry
+ * - Using the agent's provider directly (per ADR-010)
  * - Recording/playback via ProviderRecorder
  * - Output parsing via Zod schema
  *
@@ -345,8 +348,8 @@ const executeAgent = <S, O, Ctx>(
   phase?: string
 ): Effect.Effect<
   O,
-  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
+  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
 > =>
   Effect.gen(function*() {
     // Per ADR-006: Read state from SubscriptionRef (backed by StateProjection)
@@ -464,8 +467,8 @@ const executePhase = <S, Phases extends string>(
   fromPhase?: string
 ): Effect.Effect<
   Phases | undefined,
-  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
+  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
 > =>
   Effect.gen(function*() {
     // Update current phase
@@ -497,6 +500,8 @@ const executePhase = <S, Phases extends string>(
     // Execute phase loop
     let output: unknown
     let shouldContinue = true
+    // Track human response for routing (available to next() function via state)
+    let humanResponse: { value: string; approved?: boolean } | undefined
 
     while (shouldContinue) {
       // Check for pause
@@ -505,50 +510,6 @@ const executePhase = <S, Phases extends string>(
         // Per ADR-006: Emit StateCheckpoint on pause for resume optimization
         yield* emitStateCheckpoint(ctx, phaseName)
         yield* Deferred.await(ctx.pauseDeferred)
-      }
-
-      // Handle human-in-the-loop
-      if (phaseDef.human) {
-        // Per ADR-006: Read state from SubscriptionRef (backed by StateProjection)
-        const state = yield* SubscriptionRef.get(ctx.stateRef)
-        const promptText = phaseDef.human.prompt(state)
-        const requestId = crypto.randomUUID()
-
-        // Emit InputRequested event
-        const inputRequestedProps: {
-          id: string
-          prompt: string
-          type: "approval" | "choice"
-          timestamp: Date
-          options?: ReadonlyArray<string>
-        } = {
-          id: requestId,
-          prompt: promptText,
-          type: phaseDef.human.type === "freeform" ? "approval" : phaseDef.human.type,
-          timestamp: new Date()
-        }
-        if (phaseDef.human.options !== undefined) inputRequestedProps.options = phaseDef.human.options
-        yield* emitEvent(ctx, new Events.InputRequested(inputRequestedProps))
-
-        // Wait for response
-        const response = yield* Queue.take(ctx.inputQueue)
-
-        // Emit InputReceived event
-        yield* emitEvent(
-          ctx,
-          new Events.InputReceived({
-            id: requestId,
-            value: response,
-            timestamp: new Date()
-          })
-        )
-
-        // Process response if handler provided
-        if (phaseDef.onResponse) {
-          yield* updateState(ctx, (draft) => {
-            phaseDef.onResponse!(response, draft)
-          })
-        }
       }
 
       // Execute agent if present
@@ -570,6 +531,106 @@ const executePhase = <S, Phases extends string>(
         } else {
           // Single agent execution
           output = yield* executeAgent(ctx, phaseDef.run, undefined, phaseName)
+        }
+      }
+
+      // Per ADR-002: Handle human-in-the-loop AFTER agent completes
+      // Evaluate phase.human config (static or function that receives state and agent output)
+      if (phaseDef.human) {
+        const state = yield* SubscriptionRef.get(ctx.stateRef)
+
+        // Resolve human config: could be static or a function returning config (or null to skip)
+        const humanConfig: HumanConfig<S> | null = typeof phaseDef.human === "function"
+          ? phaseDef.human(state, output)
+          : phaseDef.human
+
+        if (humanConfig) {
+          // Resolve prompt (static string or function)
+          const prompt = typeof humanConfig.prompt === "function"
+            ? humanConfig.prompt(state)
+            : humanConfig.prompt
+
+          // Resolve options if type is "choice" (static array or function)
+          const resolvedOptions = humanConfig.options
+            ? (typeof humanConfig.options === "function"
+              ? humanConfig.options(state)
+              : humanConfig.options)
+            : undefined
+
+          const requestId = crypto.randomUUID()
+
+          // Emit InputRequested event
+          const inputRequestedProps: {
+            id: string
+            prompt: string
+            type: "approval" | "choice"
+            timestamp: Date
+            options?: ReadonlyArray<string>
+          } = {
+            id: requestId,
+            prompt,
+            type: humanConfig.type,
+            timestamp: new Date()
+          }
+          if (resolvedOptions !== undefined) inputRequestedProps.options = resolvedOptions
+          yield* emitEvent(ctx, new Events.InputRequested(inputRequestedProps))
+
+          // Get response: prefer humanInput handler (ADR-002), fall back to inputQueue
+          let response: string
+          let approved: boolean | undefined
+
+          if (ctx.humanInput) {
+            // Use ADR-002 humanInput handler
+            if (humanConfig.type === "approval") {
+              approved = yield* Effect.promise(() => ctx.humanInput!.approval(prompt))
+              response = approved ? "yes" : "no"
+            } else {
+              // type === "choice"
+              response = yield* Effect.promise(() =>
+                ctx.humanInput!.choice(prompt, resolvedOptions ? [...resolvedOptions] : [])
+              )
+            }
+          } else {
+            // Fall back to inputQueue (for execute.ts compatibility)
+            response = yield* Queue.take(ctx.inputQueue)
+            // For approval type from queue, interpret "yes"/"y" as approved
+            if (humanConfig.type === "approval") {
+              approved = response.toLowerCase().startsWith("y")
+            }
+          }
+
+          // Emit InputReceived event
+          const inputReceivedProps: {
+            id: string
+            value: string
+            timestamp: Date
+            approved?: boolean
+          } = {
+            id: requestId,
+            value: response,
+            timestamp: new Date()
+          }
+          if (approved !== undefined) inputReceivedProps.approved = approved
+          yield* emitEvent(ctx, new Events.InputReceived(inputReceivedProps))
+
+          // Store human response for routing (can be accessed via state.humanResponse)
+          // Use conditional spreading to satisfy exactOptionalPropertyTypes
+          humanResponse = approved !== undefined
+            ? { value: response, approved }
+            : { value: response }
+
+          // Update state with human response so it's available to next() and until()
+          yield* updateState(ctx, (draft) => {
+            // Store response in state for routing decisions
+            ;(draft as Record<string, unknown>).humanResponse = humanResponse
+          })
+
+          // Process response if handler provided
+          if (phaseDef.onResponse) {
+            yield* updateState(ctx, (draft) => {
+              phaseDef.onResponse!(response, draft)
+            })
+          }
         }
       }
 
@@ -628,8 +689,8 @@ const executeSimpleWorkflow = <S, Input>(
   ctx: RuntimeContext<S>
 ): Effect.Effect<
   void,
-  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
+  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
 > =>
   Effect.gen(function*() {
     let shouldContinue = true
@@ -672,8 +733,8 @@ const executePhaseWorkflow = <S, Input, Phases extends string>(
   ctx: RuntimeContext<S>
 ): Effect.Effect<
   string | undefined,
-  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
+  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext | EventHub | EventStore | EventBus
 > =>
   Effect.gen(function*() {
     // Determine starting phase — prefer resumePhase from context if set
@@ -750,6 +811,17 @@ export interface ExecuteOptions<Input> {
    * All methods are fire-and-forget (void) except inputRequested (async).
    */
   readonly observer?: WorkflowObserver<unknown>
+  /**
+   * Optional human input handler for HITL (Human-in-the-Loop) interactions.
+   *
+   * Per ADR-002: When a phase's human config is triggered, this handler is
+   * called to get the human response. The handler provides approval() and
+   * choice() callbacks for different input types.
+   *
+   * If not provided but phase.human is configured, the runtime falls back
+   * to the inputQueue-based approach (for execute.ts compatibility).
+   */
+  readonly humanInput?: HumanInputHandler
 }
 
 /**
@@ -783,8 +855,8 @@ export const executeWorkflow = <S, Input, Phases extends string = never>(
   options: ExecuteOptions<Input>
 ): Effect.Effect<
   WorkflowResult<S>,
-  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext | EventStore | EventBus
+  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext | EventStore | EventBus
 > =>
   // Wrap in Effect.scoped per ADR-004: subscriber fibers are automatically
   // cleaned up when the scope closes
@@ -858,7 +930,8 @@ export const executeWorkflow = <S, Input, Phases extends string = never>(
       const ctx: RuntimeContext<S> = {
         ...baseCtx,
         ...(options.onEvent ? { onEvent: options.onEvent } : {}),
-        ...(options.observer ? { observer: options.observer } : {})
+        ...(options.observer ? { observer: options.observer } : {}),
+        ...(options.humanInput ? { humanInput: options.humanInput } : {})
       }
 
       // Provide EventHub to the rest of the execution
@@ -986,8 +1059,8 @@ export const streamWorkflow = <S, Input, Phases extends string = never>(
   options: ExecuteOptions<Input>
 ): Stream.Stream<
   AnyEvent,
-  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext | EventStore | EventBus
+  WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext | EventStore | EventBus
 > =>
   // Note: Real-time streaming requires modifying the runtime to push events
   // to a queue as they occur. Currently, events are collected and returned

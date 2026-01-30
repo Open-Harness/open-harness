@@ -23,13 +23,6 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // Public API Types (plain TypeScript)
 // ─────────────────────────────────────────────────────────────────
 
-/**
- * Unique event identifier (UUID v4 string at runtime).
- * Branded at compile-time to prevent mixing with other string IDs.
- * Used by the legacy Interaction module (Domain/Interaction.ts).
- */
-export type InteractionEventId = string & { readonly _brand: "EventId" }
-
 /** Agent identifier (agent name at runtime, branded at compile time). */
 export const AgentIdSchema = Schema.String.pipe(Schema.brand("AgentId"))
 export type AgentId = Schema.Schema.Type<typeof AgentIdSchema>

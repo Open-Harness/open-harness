@@ -11,9 +11,8 @@ import { z } from "zod"
 import { agent } from "../src/Engine/agent.js"
 import type { RuntimeConfig } from "../src/Engine/execute.js"
 import { run, type RunOptions } from "../src/Engine/run.js"
-import type { RuntimeConfig } from "../src/Engine/execute.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -29,10 +28,10 @@ interface TestState {
 const messageSchema = z.object({ message: z.string() })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
-// Test agent
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<TestState, { message: string }>({
   name: "test-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state) => `Goal: ${state.goal}`,
   update: (output, draft) => {
@@ -96,14 +95,15 @@ const fixtures: ReadonlyArray<SimpleFixture> = [
 // Dummy provider for playback mode
 const playbackDummy = {
   name: "playback-dummy",
+  model: "playback-dummy",
   stream: () => {
     throw new Error("playbackDummyProvider called - recording not found")
   }
 }
 
 // Test runtime config using playback mode
+// Per ADR-010: No providers map needed - agents own their providers directly
 const testRuntime: RuntimeConfig = {
-  providers: { "claude-sonnet-4-5": playbackDummy },
   mode: "playback",
   recorder: seedRecorder(fixtures),
   database: ":memory:"

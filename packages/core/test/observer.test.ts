@@ -14,7 +14,7 @@ import { phase } from "../src/Engine/phase.js"
 import { executeWorkflow } from "../src/Engine/runtime.js"
 import type { AnyEvent, WorkflowObserver } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { runWithTestRuntime, type SimpleFixture } from "./helpers/test-provider.js"
+import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -34,10 +34,10 @@ const resultSchema = z.object({ result: z.string() })
 
 const providerOptions = { model: "claude-sonnet-4-5" }
 
-// Test agents
+// Test agents (per ADR-010: agents own provider directly)
 const planAgent = agent<TestState, { message: string }>({
   name: "plan-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state) => `Plan: ${state.goal}`,
   update: (output, draft) => {
@@ -47,7 +47,7 @@ const planAgent = agent<TestState, { message: string }>({
 
 const execAgent = agent<TestState, { result: string }>({
   name: "exec-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: resultSchema,
   prompt: (state) => `Execute: ${state.tasks.join(",")}`,
   update: (output, draft) => {

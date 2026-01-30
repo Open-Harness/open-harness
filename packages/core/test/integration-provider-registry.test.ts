@@ -1,8 +1,11 @@
 /**
- * Integration test: ProviderRegistry pipeline.
+ * Integration test: Provider instance on agent (ADR-010).
  *
- * Exercises the full pipeline: registry lookup -> provider.stream() -> agent result.
- * Uses the mock provider through the real ProviderRegistry service and runAgentDef.
+ * Exercises the pattern where agents own their provider directly.
+ * Tests runAgentDef with provider instance.
+ *
+ * Per ADR-010: ProviderRegistry has been removed entirely.
+ * Agents now own their providers directly at definition time.
  */
 
 import { Effect, Layer, Stream } from "effect"
@@ -11,23 +14,18 @@ import { z } from "zod"
 
 import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "../src/Domain/Provider.js"
 import { agent } from "../src/Engine/agent.js"
-import {
-  type AgentExecutionResult,
-  makeInMemoryProviderRegistry,
-  ProviderNotFoundError,
-  ProviderRegistry,
-  runAgentDef
-} from "../src/Engine/provider.js"
+import { type AgentExecutionResult, runAgentDef } from "../src/Engine/provider.js"
 import { EVENTS } from "../src/Engine/types.js"
 import { ProviderModeContext } from "../src/Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../src/Services/ProviderRecorder.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Mock provider that returns stream events
+// Test provider that returns stream events
 // ─────────────────────────────────────────────────────────────────
 
-const createTestProvider = (outputData: unknown): AgentProvider => ({
-  name: "test-registry-provider",
+const createTestProvider = (modelName: string, outputData: unknown): AgentProvider => ({
+  name: "test-provider",
+  model: modelName,
   stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, never> => {
     return Stream.fromIterable([
       { _tag: "TextDelta" as const, delta: "Hello" },
@@ -53,33 +51,24 @@ const noopRecorder: ProviderRecorderService = {
   finalizeRecording: () => Effect.void
 }
 
+// Base layer for tests (no ProviderRegistry needed per ADR-010)
+const baseLayer = Layer.mergeAll(
+  Layer.succeed(ProviderModeContext, { mode: "live" }),
+  Layer.succeed(ProviderRecorder, noopRecorder)
+)
+
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
-describe("ProviderRegistry pipeline integration", () => {
-  it("resolves provider from registry and streams result through runAgentDef", async () => {
-    const provider = createTestProvider({ answer: "forty-two" })
+describe("Agent with provider instance (ADR-010)", () => {
+  it("executes agent with provider instance directly", async () => {
+    const provider = createTestProvider("claude-sonnet-4-5", { answer: "forty-two" })
 
-    // Build real ProviderRegistry with registered provider
-    const registryService = makeInMemoryProviderRegistry()
-
-    const layer = Layer.mergeAll(
-      Layer.effect(
-        ProviderRegistry,
-        Effect.gen(function*() {
-          yield* registryService.registerProvider("claude-sonnet-4-5", provider)
-          return registryService
-        })
-      ),
-      Layer.succeed(ProviderModeContext, { mode: "live" }),
-      Layer.succeed(ProviderRecorder, noopRecorder)
-    )
-
-    // Define an agent that uses the registered model
+    // Per ADR-010: Agent owns provider directly
     const testAgent = agent<{ input: string }, { answer: string }>({
-      name: "registry-test-agent",
-      model: "claude-sonnet-4-5",
+      name: "direct-provider-agent",
+      provider,
       output: z.object({ answer: z.string() }),
       prompt: (state: { input: string }) => `Input: ${state.input}`,
       update: (output: { answer: string }, draft: { input: string }) => {
@@ -94,7 +83,7 @@ describe("ProviderRegistry pipeline integration", () => {
         { input: "What is the answer?" },
         undefined,
         { sessionId: "test-session-1" }
-      ).pipe(Effect.provide(layer)) as Effect.Effect<AgentExecutionResult<{ answer: string }>>
+      ).pipe(Effect.provide(baseLayer)) as Effect.Effect<AgentExecutionResult<{ answer: string }>>
     )
 
     // Verify the output was parsed through the Zod schema
@@ -115,88 +104,14 @@ describe("ProviderRegistry pipeline integration", () => {
     expect(result.durationMs).toBeGreaterThanOrEqual(0)
   })
 
-  it("fails with ProviderNotFoundError for unregistered model", async () => {
-    const registryService = makeInMemoryProviderRegistry()
+  it("pipelines multiple agents with different providers", async () => {
+    const providerA = createTestProvider("model-a", { step: "planned" })
+    const providerB = createTestProvider("model-b", { step: "executed" })
 
-    const layer = Layer.mergeAll(
-      Layer.succeed(ProviderRegistry, registryService),
-      Layer.succeed(ProviderModeContext, { mode: "live" }),
-      Layer.succeed(ProviderRecorder, noopRecorder)
-    )
-
-    const testAgent = agent<{ input: string }, { answer: string }>({
-      name: "missing-model-agent",
-      model: "non-existent-model",
-      output: z.object({ answer: z.string() }),
-      prompt: () => "test",
-      update: () => {}
-    })
-
-    // Use catchAll to inspect the error without crashing
-    let caughtError: unknown = null
-    await Effect.runPromise(
-      runAgentDef(
-        testAgent,
-        { input: "test" },
-        undefined,
-        { sessionId: "test-session-2" }
-      ).pipe(
-        Effect.provide(layer),
-        Effect.catchAll((error) =>
-          Effect.sync(() => {
-            caughtError = error
-          })
-        )
-      )
-    )
-
-    // Should fail with ProviderNotFoundError
-    expect(caughtError).toBeInstanceOf(ProviderNotFoundError)
-    expect((caughtError as ProviderNotFoundError).model).toBe("non-existent-model")
-  })
-
-  it("lists registered models from the registry", async () => {
-    const registryService = makeInMemoryProviderRegistry()
-
-    const provider1 = createTestProvider({ v: 1 })
-    const provider2 = createTestProvider({ v: 2 })
-
-    await Effect.runPromise(
-      Effect.gen(function*() {
-        yield* registryService.registerProvider("model-a", provider1)
-        yield* registryService.registerProvider("model-b", provider2)
-      }) as Effect.Effect<void>
-    )
-
-    const models = await Effect.runPromise(registryService.listModels())
-
-    expect(models).toContain("model-a")
-    expect(models).toContain("model-b")
-    expect(models).toHaveLength(2)
-  })
-
-  it("pipelines multiple agents through the same registry", async () => {
-    const providerA = createTestProvider({ step: "planned" })
-    const providerB = createTestProvider({ step: "executed" })
-
-    const registryService = makeInMemoryProviderRegistry()
-
-    const layer = Layer.mergeAll(
-      Layer.effect(
-        ProviderRegistry,
-        Effect.gen(function*() {
-          yield* registryService.registerProvider("model-a", providerA)
-          yield* registryService.registerProvider("model-b", providerB)
-          return registryService
-        })
-      ),
-      Layer.succeed(ProviderModeContext, { mode: "live" }),
-      Layer.succeed(ProviderRecorder, noopRecorder)
-    )
-
+    // Per ADR-010: Each agent owns its provider
     const agentA = agent<{ data: string }, { step: string }>({
       name: "agent-a",
-      model: "model-a",
+      provider: providerA,
       output: z.object({ step: z.string() }),
       prompt: (s: { data: string }) => s.data,
       update: (o: { step: string }, d: { data: string }) => {
@@ -206,7 +121,7 @@ describe("ProviderRegistry pipeline integration", () => {
 
     const agentB = agent<{ data: string }, { step: string }>({
       name: "agent-b",
-      model: "model-b",
+      provider: providerB,
       output: z.object({ step: z.string() }),
       prompt: (s: { data: string }) => s.data,
       update: (o: { step: string }, d: { data: string }) => {
@@ -230,11 +145,30 @@ describe("ProviderRegistry pipeline integration", () => {
       )
 
       return { a: resultA.output, b: resultB.output }
-    }).pipe(Effect.provide(layer)) as Effect.Effect<{ a: { step: string }; b: { step: string } }>
+    }).pipe(Effect.provide(baseLayer)) as Effect.Effect<{ a: { step: string }; b: { step: string } }>
 
     const result = await Effect.runPromise(program)
 
     expect(result.a).toEqual({ step: "planned" })
     expect(result.b).toEqual({ step: "executed" })
   })
+
+  it("uses provider.model for hash computation", async () => {
+    // The provider's model is used for hash computation (for recording/playback)
+    const provider = createTestProvider("my-model-123", { answer: "test" })
+
+    const testAgent = agent<{ input: string }, { answer: string }>({
+      name: "model-hash-agent",
+      provider,
+      output: z.object({ answer: z.string() }),
+      prompt: () => "test",
+      update: () => {}
+    })
+
+    expect(testAgent.provider.model).toBe("my-model-123")
+    expect(testAgent.provider.name).toBe("test-provider")
+  })
 })
+
+// Note: ProviderRegistry tests removed per ADR-010.
+// Agents now own their providers directly, so there's no registry lookup.

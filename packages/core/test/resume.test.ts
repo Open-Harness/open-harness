@@ -14,7 +14,7 @@ import { phase } from "../src/Engine/phase.js"
 import { type ExecuteOptions, executeWorkflow } from "../src/Engine/runtime.js"
 import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { runWithTestRuntime, type SimpleFixture } from "./helpers/test-provider.js"
+import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -39,12 +39,12 @@ const verdictSchema = z.object({ verdict: z.enum(["continue", "done"]) })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
 // ─────────────────────────────────────────────────────────────────
-// Test Agents
+// Test Agents (per ADR-010: agents own provider directly)
 // ─────────────────────────────────────────────────────────────────
 
 const plannerAgent = agent<ResumeTestState, { plan: string }>({
   name: "planner",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: planSchema,
   prompt: (state) => `Plan for: ${state.goal}`,
   update: (output, draft) => {
@@ -54,7 +54,7 @@ const plannerAgent = agent<ResumeTestState, { plan: string }>({
 
 const workerAgent = agent<ResumeTestState, { result: string }>({
   name: "worker",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: resultSchema,
   prompt: (state) => `Work on: ${state.planItems.join(", ")}`,
   update: (output, draft) => {
@@ -64,7 +64,7 @@ const workerAgent = agent<ResumeTestState, { result: string }>({
 
 const judgeAgent = agent<ResumeTestState, { verdict: "continue" | "done" }>({
   name: "judge",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: verdictSchema,
   prompt: (state) => `Judge: ${state.workResults.join(", ")}`,
   update: (output, draft) => {

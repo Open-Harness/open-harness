@@ -11,7 +11,7 @@
  */
 
 import type { AgentProvider, WorkflowDef } from "@open-scaffold/core"
-import { makeInMemoryProviderRegistry, ProviderRegistry, Services } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core"
 import { Effect, Layer, ManagedRuntime } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "./constants.js"
@@ -41,11 +41,13 @@ export interface OpenScaffoldConfig {
   /** Provider mode: "live" or "playback" (REQUIRED - no default) */
   readonly mode: ProviderMode
   /**
-   * Named providers map for the ProviderRegistry.
+   * Named providers map for workflow context.
    * Keys are model strings (e.g., "claude-sonnet-4-20250514"),
    * values are AgentProvider implementations.
    *
-   * Optional - if not provided, no ProviderRegistry layer is added.
+   * Note: Per ADR-010, agents now own their providers directly.
+   * This map is kept for backward compatibility but will be removed
+   * in Task 5.4.
    */
   readonly providers?: Record<string, AgentProvider>
 }
@@ -110,7 +112,6 @@ type AppServices =
   | Services.StateSnapshotStore
   | Services.EventBus
   | Services.ProviderRecorder
-  | ProviderRegistry
   | Services.ProviderModeContext
 
 // ─────────────────────────────────────────────────────────────────
@@ -165,35 +166,14 @@ export class OpenScaffold {
    * Create a new OpenScaffold instance.
    */
   static create(config: OpenScaffoldConfig): OpenScaffold {
-    // Validate providers: undefined means caller forgot, {} means explicit opt-out
-    if (config.providers === undefined) {
-      throw new Error(
-        "OpenScaffold created without providers. Any workflow with agent phases will fail. " +
-          "Pass providers to OpenScaffold.create() or set providers: {} to explicitly opt out."
-      )
-    }
-
     // Create individual layers - all use same database for unified storage
     const eventStoreLayer = EventStoreLive({ url: config.database })
     const snapshotStoreLayer = StateSnapshotStoreLive({ url: config.database })
     const providerRecorderLayer = ProviderRecorderLive({ url: config.database })
     const eventBusLayer = Layer.effect(Services.EventBus, EventBusLive)
 
-    // Build ProviderRegistry layer (empty if no providers configured)
-    const providerRegistryLayer = Layer.effect(
-      ProviderRegistry,
-      Effect.sync(() => {
-        const registry = makeInMemoryProviderRegistry()
-        if (config.providers) {
-          for (const [model, provider] of Object.entries(config.providers)) {
-            Effect.runSync(registry.registerProvider(model, provider))
-          }
-        }
-        return registry
-      })
-    )
-
     // ProviderModeContext layer
+    // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
     const providerModeLayer = Layer.succeed(
       Services.ProviderModeContext,
       { mode: config.mode }
@@ -205,7 +185,6 @@ export class OpenScaffold {
       snapshotStoreLayer,
       providerRecorderLayer,
       eventBusLayer,
-      providerRegistryLayer,
       providerModeLayer
     )
 

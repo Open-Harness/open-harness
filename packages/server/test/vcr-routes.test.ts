@@ -23,7 +23,6 @@ import {
   workflow,
   type WorkflowDef
 } from "@open-scaffold/core"
-import { makeInMemoryProviderRegistry, ProviderRegistry } from "@open-scaffold/core"
 import {
   deleteSessionRoute,
   forkSessionRoute,
@@ -51,9 +50,18 @@ interface TestState {
 
 type TestPhases = "planning" | "done"
 
+// Per ADR-010: Agents own their provider directly
+const testProvider = {
+  name: "test-provider",
+  model: "test-model",
+  stream: () => {
+    throw new Error("Should not be called in playback mode")
+  }
+}
+
 const testAgent = agent<TestState, { message: string }>({
   name: "test-agent",
-  model: "test-model",
+  provider: testProvider,
   output: z.object({ message: z.string() }),
   prompt: (state) => `Goal: ${state.goal}`,
   update: (output, draft) => {
@@ -80,18 +88,13 @@ const testWorkflow = workflow<TestState, string, TestPhases>({
 const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))
 
 const makeTestLayer = () => {
-  const providerRegistryLayer = Layer.effect(
-    ProviderRegistry,
-    Effect.sync(() => makeInMemoryProviderRegistry())
-  )
-
+  // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
   return Layer.mergeAll(
     EventStoreLive({ url: ":memory:" }),
     StateSnapshotStoreLive({ url: ":memory:" }),
     makeInMemoryRecorderLayer(),
     Layer.effect(Services.EventBus, EventBusLive),
-    Layer.succeed(Services.ProviderModeContext, { mode: "playback" as const }),
-    providerRegistryLayer
+    Layer.succeed(Services.ProviderModeContext, { mode: "playback" as const })
   )
 }
 

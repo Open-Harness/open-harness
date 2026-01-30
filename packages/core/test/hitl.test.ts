@@ -14,7 +14,7 @@ import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
 import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -32,10 +32,10 @@ type HitlPhases = "review" | "finalize" | "done"
 const messageSchema = z.object({ message: z.string() })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
-// Agent for the finalize phase
+// Agent for the finalize phase (per ADR-010: agents own provider directly)
 const finalizeAgent = agent<HitlState, { message: string }>({
   name: "finalizer",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state) => `Finalize: ${state.proposal}, approved=${state.approved}`,
   update: (output, draft) => {
@@ -46,6 +46,7 @@ const finalizeAgent = agent<HitlState, { message: string }>({
 // Dummy provider for playback mode
 const playbackDummy = {
   name: "playback-dummy",
+  model: "playback-dummy",
   stream: () => {
     throw new Error("playbackDummyProvider called - recording not found")
   }
@@ -76,8 +77,8 @@ const hitlFixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
+// Per ADR-010: No providers map needed - agents own their providers directly
 const testRuntime: RuntimeConfig = {
-  providers: { "claude-sonnet-4-5": playbackDummy },
   mode: "playback",
   recorder: seedRecorder(hitlFixtures),
   database: ":memory:"

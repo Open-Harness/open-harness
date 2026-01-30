@@ -6,13 +6,15 @@
  * - Generate structured output (via Zod schema)
  * - Update state via Immer-style draft mutations
  *
- * Provider-agnostic: just specify model string, everything else passes through.
+ * Per ADR-010: Agents own their provider directly instead of referencing
+ * a model string. The provider instance includes name, model, config, and stream().
  *
  * @module
  */
 
 import type { z } from "zod"
 
+import type { AgentProvider } from "../Domain/Provider.js"
 import type { Draft } from "./types.js"
 
 // ─────────────────────────────────────────────────────────────────
@@ -30,7 +32,7 @@ import type { Draft } from "./types.js"
  * ```typescript
  * const planner = agent({
  *   name: "planner",
- *   model: "claude-sonnet-4-5",
+ *   provider: anthropicProvider,
  *   output: z.object({ tasks: z.array(TaskSchema) }),
  *   prompt: (state) => `Create tasks for: ${state.goal}`,
  *   update: (output, draft) => {
@@ -47,15 +49,19 @@ export interface AgentDef<S = unknown, O = unknown, Ctx = void> {
   readonly name: string
 
   /**
-   * Model identifier string.
-   * Passed through to the provider (e.g., "claude-sonnet-4-5", "gpt-4o").
-   * Provider-agnostic: the runtime maps this to the appropriate provider.
+   * Provider instance for this agent.
+   *
+   * Per ADR-010: Agents own their provider directly. The provider includes:
+   * - name: Provider identifier (e.g., "anthropic", "codex")
+   * - model: Model identifier (e.g., "claude-sonnet-4-5")
+   * - config: Provider-specific configuration for recording hash
+   * - stream(): Streaming execution function
    */
-  readonly model: string
+  readonly provider: AgentProvider
 
   /**
-   * Provider-specific options.
-   * Passed through to the SDK (tools, permissions, temperature, etc.)
+   * Agent-level option overrides.
+   * Merged with provider config for specific calls (tools, temperature, etc.)
    */
   readonly options?: Record<string, unknown>
 
@@ -106,7 +112,7 @@ export interface AgentDef<S = unknown, O = unknown, Ctx = void> {
  * ```typescript
  * const planner = agent({
  *   name: "planner",
- *   model: "claude-sonnet-4-5",
+ *   provider: anthropicProvider,
  *   output: z.object({ tasks: z.array(z.string()) }),
  *   prompt: (state) => `Plan: ${state.goal}`,
  *   update: (output, draft) => {
@@ -121,7 +127,7 @@ export interface AgentDef<S = unknown, O = unknown, Ctx = void> {
  *
  * const worker = agent<State, WorkerOutput, TaskContext>({
  *   name: "worker",
- *   model: "claude-sonnet-4-5",
+ *   provider: anthropicProvider,
  *   output: z.object({ result: z.string() }),
  *   prompt: (state, ctx) => `Do: ${ctx.task.description}`,
  *   update: (output, draft, ctx) => {
@@ -138,8 +144,8 @@ export function agent<S, O, Ctx = void>(
   if (!def.name) {
     throw new Error("Agent requires 'name' field")
   }
-  if (!def.model) {
-    throw new Error(`Agent "${def.name}" requires 'model' field`)
+  if (!def.provider) {
+    throw new Error(`Agent "${def.name}" requires 'provider' field`)
   }
   if (!def.output) {
     throw new Error(`Agent "${def.name}" requires 'output' schema`)

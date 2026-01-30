@@ -6,14 +6,35 @@
  * within a full workflow execution pipeline.
  */
 
+import { Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import type { AgentProvider } from "../src/Domain/Provider.js"
 import { agent, type AgentDef } from "../src/Engine/agent.js"
 import { run } from "../src/Engine/run.js"
 import type { Draft } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Test Provider (per ADR-010: agents own provider instances)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Create a test provider for use in agent definitions.
+ * This is a minimal provider that should not be called in playback mode.
+ */
+const createTestProvider = (model: string = "claude-sonnet-4-5"): AgentProvider => ({
+  name: "test-provider",
+  model,
+  stream: () => {
+    throw new Error("Test provider stream() should not be called in playback mode")
+  }
+})
+
+/** Default test provider for most tests */
+const testProvider = createTestProvider()
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Output types
@@ -47,7 +68,7 @@ describe("agent() factory", () => {
       expect(() => {
         agent({
           name: "",
-          model: "test",
+          provider: testProvider,
           output: z.string(),
           prompt: () => "test",
           update: () => {}
@@ -55,23 +76,23 @@ describe("agent() factory", () => {
       }).toThrow("Agent requires 'name' field")
     })
 
-    it("throws if model is missing", () => {
+    it("throws if provider is missing", () => {
       expect(() => {
         agent({
           name: "test-agent",
-          model: "",
+          provider: undefined as unknown as AgentProvider,
           output: z.string(),
           prompt: () => "test",
           update: () => {}
         })
-      }).toThrow("Agent \"test-agent\" requires 'model' field")
+      }).toThrow("Agent \"test-agent\" requires 'provider' field")
     })
 
     it("throws if output schema is missing", () => {
       expect(() => {
         agent({
           name: "test-agent",
-          model: "claude-sonnet-4-5",
+          provider: testProvider,
           output: undefined as unknown as z.ZodType<unknown>,
           prompt: () => "test",
           update: () => {}
@@ -83,7 +104,7 @@ describe("agent() factory", () => {
       expect(() => {
         agent({
           name: "test-agent",
-          model: "claude-sonnet-4-5",
+          provider: testProvider,
           output: z.string(),
           prompt: undefined as unknown as () => string,
           update: () => {}
@@ -95,7 +116,7 @@ describe("agent() factory", () => {
       expect(() => {
         agent({
           name: "test-agent",
-          model: "claude-sonnet-4-5",
+          provider: testProvider,
           output: z.string(),
           prompt: () => "test",
           update: undefined as unknown as () => void
@@ -108,7 +129,7 @@ describe("agent() factory", () => {
     it("creates agent with all required fields", () => {
       const planner = agent<TestState, TestOutput>({
         name: "planner",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: TestOutputSchema,
         prompt: (state: TestState) => `Plan for: ${state.goal}`,
         update: (output: TestOutput, draft: TestState) => {
@@ -119,7 +140,8 @@ describe("agent() factory", () => {
       })
 
       expect(planner.name).toBe("planner")
-      expect(planner.model).toBe("claude-sonnet-4-5")
+      expect(planner.provider).toBe(testProvider)
+      expect(planner.provider.model).toBe("claude-sonnet-4-5")
       expect(planner.output).toBe(TestOutputSchema)
       expect(typeof planner.prompt).toBe("function")
       expect(typeof planner.update).toBe("function")
@@ -128,7 +150,7 @@ describe("agent() factory", () => {
     it("supports optional options field", () => {
       const agentWithOptions = agent<TestState, TestOutput>({
         name: "with-options",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         options: {
           tools: [{ type: "preset", preset: "claude_code" }],
           temperature: 0.7
@@ -151,7 +173,7 @@ describe("agent() factory", () => {
 
       const testAgent = agent<TestState, TestOutput>({
         name: "test",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: TestOutputSchema,
         prompt: (s: TestState) => `Goal: ${s.goal}, Count: ${s.count}`,
         update: () => {}
@@ -167,7 +189,7 @@ describe("agent() factory", () => {
 
       const testAgent = agent<TestState, TestOutput>({
         name: "test",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: TestOutputSchema,
         prompt: () => "test",
         update: (o: TestOutput, draft: TestState) => {
@@ -190,7 +212,7 @@ describe("agent() factory", () => {
     it("creates agent with context type", () => {
       const worker = agent<TestState, { result: string }, TestContext>({
         name: "worker",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: z.object({ result: z.string() }),
         prompt: (state: TestState, ctx: TestContext) => `Process item ${ctx.itemIndex}: ${ctx.itemValue}`,
         update: (output: { result: string }, draft: TestState, ctx: TestContext) => {
@@ -209,7 +231,7 @@ describe("agent() factory", () => {
 
       const worker = agent<TestState, { result: string }, TestContext>({
         name: "worker",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: z.object({ result: z.string() }),
         prompt: (s: TestState, c: TestContext) => `Item ${c.itemIndex} (${c.itemValue}) for: ${s.goal}`,
         update: () => {}
@@ -226,7 +248,7 @@ describe("agent() factory", () => {
 
       const worker = agent<TestState, { result: string }, TestContext>({
         name: "worker",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: z.object({ result: z.string() }),
         prompt: () => "test",
         update: (o: { result: string }, draft: TestState, c: TestContext) => {
@@ -243,7 +265,7 @@ describe("agent() factory", () => {
     it("returns the definition object unchanged", () => {
       const def = {
         name: "test",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: z.string(),
         prompt: () => "test",
         update: () => {}
@@ -252,7 +274,7 @@ describe("agent() factory", () => {
       const result = agent(def)
 
       expect(result.name).toBe(def.name)
-      expect(result.model).toBe(def.model)
+      expect(result.provider).toBe(def.provider)
       expect(result.output).toBe(def.output)
       expect(result.prompt).toBe(def.prompt)
       expect(result.update).toBe(def.update)
@@ -264,21 +286,21 @@ describe("AgentDef type (compile-time)", () => {
   // These are compile-time checks - if the file compiles, the types work
 
   it("AgentDef can be assigned from agent()", () => {
-    const testAgent: AgentDef<TestState, TestOutput, void> = agent<TestState, TestOutput>({
+    const testAgentDef: AgentDef<TestState, TestOutput, void> = agent<TestState, TestOutput>({
       name: "test",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: TestOutputSchema,
       prompt: () => "test",
       update: () => {}
     })
 
-    expect(testAgent.name).toBe("test")
+    expect(testAgentDef.name).toBe("test")
   })
 
   it("AgentDef with context can be assigned", () => {
     const contextualAgent: AgentDef<TestState, TestOutput, TestContext> = agent<TestState, TestOutput, TestContext>({
       name: "contextual",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: TestOutputSchema,
       prompt: (state: TestState, ctx: TestContext) => `${state.goal} ${ctx.itemValue}`,
       update: (output: TestOutput, draft: TestState, ctx: TestContext) => {
@@ -292,23 +314,23 @@ describe("AgentDef type (compile-time)", () => {
 
 describe("Zod schema integration", () => {
   it("output schema validates correctly", () => {
-    const testAgent = agent<TestState, TestOutput>({
+    const testAgentZod = agent<TestState, TestOutput>({
       name: "test",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: TestOutputSchema,
       prompt: () => "test",
       update: () => {}
     })
 
     // Valid output
-    const validResult = testAgent.output.safeParse({
+    const validResult = testAgentZod.output.safeParse({
       newItems: ["a", "b"],
       done: true
     })
     expect(validResult.success).toBe(true)
 
     // Invalid output
-    const invalidResult = testAgent.output.safeParse({
+    const invalidResult = testAgentZod.output.safeParse({
       newItems: "not-an-array",
       done: "not-a-boolean"
     })
@@ -327,9 +349,18 @@ describe("agent behavioral (workflow execution)", () => {
   })
   const providerOptions = { model: "claude-sonnet-4-5" }
 
+  // Per ADR-010: Agent owns provider directly
+  const playbackDummy: AgentProvider = {
+    name: "playback-dummy",
+    model: "claude-sonnet-4-5",
+    stream: () => {
+      throw new Error("playbackDummyProvider called - recording not found")
+    }
+  }
+
   const plannerAgent = agent<TestState, TestOutput>({
     name: "planner",
-    model: "claude-sonnet-4-5",
+    provider: playbackDummy,
     output: plannerSchema,
     prompt: (state: TestState) => `Plan for: ${state.goal}`,
     update: (output: TestOutput, draft: TestState) => {
@@ -350,13 +381,6 @@ describe("agent behavioral (workflow execution)", () => {
     }
   ]
 
-  const playbackDummy = {
-    name: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
-
   it("update() mutates state through full workflow execution pipeline", async () => {
     const testWorkflow = workflow<TestState>({
       name: "agent-behavioral-test",
@@ -371,7 +395,6 @@ describe("agent behavioral (workflow execution)", () => {
     const result = await run(testWorkflow, {
       input: "build an API",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
         recorder: seedRecorder(fixtures),
         database: ":memory:"
@@ -402,7 +425,6 @@ describe("agent behavioral (workflow execution)", () => {
     const result = await run(testWorkflow, {
       input: "build an API",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
         recorder: seedRecorder(fixtures),
         database: ":memory:"

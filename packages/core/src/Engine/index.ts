@@ -99,8 +99,8 @@ export { isPhaseWorkflow, isSimpleWorkflow, workflow } from "./workflow.js"
 // Provider Infrastructure
 // ─────────────────────────────────────────────────────────────────
 
-export type { AgentExecutionContext, AgentExecutionResult, ProviderRegistryService } from "./provider.js"
-export { makeInMemoryProviderRegistry, ProviderNotFoundError, ProviderRegistry, runAgentDef } from "./provider.js"
+export type { AgentExecutionContext, AgentExecutionResult } from "./provider.js"
+export { runAgentDef } from "./provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Run (Simple Promise API) - PRIMARY PUBLIC API (ADR-001)

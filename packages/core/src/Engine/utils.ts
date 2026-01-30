@@ -11,7 +11,7 @@ import { EVENTS } from "./types.js"
 
 /**
  * Minimal event shape required by computeStateAt.
- * Both AnyEvent (Next) and AnyInteractionEvent (Domain) satisfy this.
+ * AnyEvent satisfies this interface.
  */
 interface EventLike {
   readonly name: string

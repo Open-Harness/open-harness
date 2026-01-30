@@ -12,64 +12,18 @@
  * @module
  */
 
-import { Context, Data, Effect, Stream } from "effect"
+import { Effect, Stream } from "effect"
 import type { ZodType } from "zod"
 
 import { AgentError, RecordingNotFound } from "../Domain/Errors.js"
 import type { ProviderError, StoreError } from "../Domain/Errors.js"
 import { hashProviderRequest } from "../Domain/Hash.js"
-import type { AgentProvider, AgentRunResult, AgentStreamEvent, ProviderRunOptions } from "../Domain/Provider.js"
+import type { AgentRunResult, AgentStreamEvent, ProviderRunOptions } from "../Domain/Provider.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder } from "../Services/ProviderRecorder.js"
 
 import type { AgentDef } from "./agent.js"
 import { type AnyEvent, type EventId, EVENTS, makeEvent } from "./types.js"
-
-// ─────────────────────────────────────────────────────────────────
-// Provider Registry Service
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Error when a provider cannot be found for a model.
- */
-export class ProviderNotFoundError extends Data.TaggedError("ProviderNotFoundError")<{
-  readonly model: string
-}> {
-  override get message() {
-    return `No provider registered for model: ${this.model}`
-  }
-}
-
-/**
- * Service for resolving model strings to AgentProvider instances.
- *
- * In production, this would be configured with actual providers.
- * For testing, it can be configured with mock providers.
- */
-export interface ProviderRegistryService {
-  /**
-   * Get a provider for the given model string.
-   */
-  readonly getProvider: (model: string) => Effect.Effect<AgentProvider, ProviderNotFoundError>
-
-  /**
-   * Register a provider for a model string.
-   */
-  readonly registerProvider: (model: string, provider: AgentProvider) => Effect.Effect<void>
-
-  /**
-   * List all registered model names.
-   */
-  readonly listModels: () => Effect.Effect<ReadonlyArray<string>>
-}
-
-/**
- * Context.Tag for ProviderRegistry dependency injection.
- */
-export class ProviderRegistry extends Context.Tag("@open-scaffold/core/ProviderRegistry")<
-  ProviderRegistry,
-  ProviderRegistryService
->() {}
 
 // ─────────────────────────────────────────────────────────────────
 // Agent Execution
@@ -202,8 +156,8 @@ export const runAgentDef = <S, O, Ctx>(
   executionContext: AgentExecutionContext
 ): Effect.Effect<
   AgentExecutionResult<O>,
-  AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext
+  AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext
 > =>
   Effect.gen(function*() {
     const startTime = Date.now()
@@ -220,7 +174,7 @@ export const runAgentDef = <S, O, Ctx>(
       })
 
     // Get services
-    const registry = yield* ProviderRegistry
+    // Per ADR-010: No ProviderRegistry needed - agent.provider is used directly
     const recorder = yield* ProviderRecorder
     const { mode } = yield* ProviderModeContext
 
@@ -237,11 +191,13 @@ export const runAgentDef = <S, O, Ctx>(
       : (agent.prompt as (s: S) => string)(state)
 
     // Build provider options
+    // Per ADR-010: Use provider.model and provider.config, merge with agent.options
     const providerOptions: ProviderRunOptions = {
       prompt,
       outputSchema: agent.output as ZodType<unknown>,
       providerOptions: {
-        model: agent.model,
+        model: agent.provider.model,
+        ...agent.provider.config,
         ...agent.options
       },
       ...(executionContext.abortSignal ? { abortSignal: executionContext.abortSignal } : {})
@@ -280,7 +236,8 @@ export const runAgentDef = <S, O, Ctx>(
       // ─────────────────────────────────────────────────────────────────
       // LIVE MODE: Call provider, record events incrementally
       // ─────────────────────────────────────────────────────────────────
-      const provider = yield* registry.getProvider(agent.model)
+      // Per ADR-010: Use agent.provider directly instead of registry lookup
+      const provider = agent.provider
 
       // Start incremental recording (crash-safe)
       const recordingId = yield* recorder.startRecording(hash, {
@@ -389,38 +346,9 @@ export const runAgentDef = <S, O, Ctx>(
     return result
   }).pipe(
     Effect.withSpan("runAgentDef", {
-      attributes: { agentName: agent.name, model: agent.model }
+      attributes: { agentName: agent.name, model: agent.provider.model }
     })
   )
 
 // ─────────────────────────────────────────────────────────────────
 // In-Memory Provider Registry Implementation
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Create an in-memory ProviderRegistry.
- *
- * This is useful for testing or simple setups where providers
- * are registered at startup.
- */
-export const makeInMemoryProviderRegistry = (): ProviderRegistryService => {
-  const providers = new Map<string, AgentProvider>()
-
-  return {
-    getProvider: (model) =>
-      Effect.sync(() => providers.get(model)).pipe(
-        Effect.flatMap((provider) =>
-          provider
-            ? Effect.succeed(provider)
-            : Effect.fail(new ProviderNotFoundError({ model }))
-        )
-      ),
-
-    registerProvider: (model, provider) =>
-      Effect.sync(() => {
-        providers.set(model, provider)
-      }),
-
-    listModels: () => Effect.sync(() => Array.from(providers.keys()))
-  }
-}

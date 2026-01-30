@@ -6,11 +6,13 @@
  * pre-seeded fixtures and real in-memory services.
  *
  * Covers:
- * - ProviderNotFoundError when model missing from registry
  * - Rate limit handling (ProviderError with RATE_LIMITED code)
  * - Auth failure propagation (ProviderError with AUTH_FAILED code)
  * - Invalid output schema handling (Zod parse failure)
  * - Workflow abort/cancellation cleanup
+ *
+ * Per ADR-010: Agents own their providers directly.
+ * There is no ProviderNotFoundError since registry lookup was removed.
  *
  * @module
  */
@@ -24,12 +26,7 @@ import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "../src
 import { agent } from "../src/Engine/agent.js"
 // execute is internal API - import from internal.ts
 import { execute } from "../src/internal.js"
-import {
-  makeInMemoryProviderRegistry,
-  ProviderNotFoundError,
-  ProviderRegistry,
-  runAgentDef
-} from "../src/Engine/provider.js"
+import { runAgentDef } from "../src/Engine/provider.js"
 import { WorkflowAbortedError } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
@@ -54,139 +51,39 @@ const noopRecorder: ProviderRecorderService = {
 
 /**
  * Create a test provider that streams events from an iterable.
- * Used for live-mode tests where we control the provider directly.
+ * Per ADR-010: Agents own their provider directly.
  */
-const createProvider = (events: ReadonlyArray<AgentStreamEvent>): AgentProvider => ({
+const createProvider = (
+  modelName: string,
+  events: ReadonlyArray<AgentStreamEvent>
+): AgentProvider => ({
   name: "test-error-provider",
-  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> => Stream.fromIterable(events)
+  model: modelName,
+  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
+    Stream.fromIterable(events)
 })
 
 /**
  * Create a test provider that fails with a ProviderError.
+ * Per ADR-010: Agents own their provider directly.
  */
-const createFailingProvider = (error: ProviderError): AgentProvider => ({
+const createFailingProvider = (modelName: string, error: ProviderError): AgentProvider => ({
   name: "test-failing-provider",
-  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> => Stream.fail(error)
+  model: modelName,
+  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
+    Stream.fail(error)
 })
 
 /**
- * Build a layer with specific providers and live mode.
+ * Build a layer for live mode (no ProviderRegistry needed per ADR-010).
  */
-const buildLiveLayer = (providers: Record<string, AgentProvider>) => {
-  const registryService = makeInMemoryProviderRegistry()
-
-  return Layer.mergeAll(
-    Layer.effect(
-      ProviderRegistry,
-      Effect.gen(function*() {
-        for (const [model, provider] of Object.entries(providers)) {
-          yield* registryService.registerProvider(model, provider)
-        }
-        return registryService
-      })
-    ),
+const buildLiveLayer = () =>
+  Layer.mergeAll(
     Layer.succeed(ProviderModeContext, { mode: "live" as const }),
     Layer.succeed(ProviderRecorder, noopRecorder),
     InMemoryEventStore,
     InMemoryEventBus
   )
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Test: ProviderNotFoundError
-// ─────────────────────────────────────────────────────────────────
-
-describe("Error Path: ProviderNotFoundError", () => {
-  it("fails with ProviderNotFoundError when model is not registered", async () => {
-    // Registry has no providers registered
-    const registryService = makeInMemoryProviderRegistry()
-
-    const layer = Layer.mergeAll(
-      Layer.succeed(ProviderRegistry, registryService),
-      Layer.succeed(ProviderModeContext, { mode: "live" as const }),
-      Layer.succeed(ProviderRecorder, noopRecorder)
-    )
-
-    const testAgent = agent<{ input: string }, { answer: string }>({
-      name: "missing-model-agent",
-      model: "nonexistent-model-xyz",
-      output: z.object({ answer: z.string() }),
-      prompt: () => "test prompt",
-      update: () => {}
-    })
-
-    let caughtError: unknown = null
-    await Effect.runPromise(
-      runAgentDef(
-        testAgent,
-        { input: "test" },
-        undefined,
-        { sessionId: "error-test-1" }
-      ).pipe(
-        Effect.provide(layer),
-        Effect.catchAll((error) =>
-          Effect.sync(() => {
-            caughtError = error
-          })
-        )
-      )
-    )
-
-    expect(caughtError).toBeInstanceOf(ProviderNotFoundError)
-    expect((caughtError as ProviderNotFoundError).model).toBe("nonexistent-model-xyz")
-    expect((caughtError as ProviderNotFoundError).message).toContain("nonexistent-model-xyz")
-  })
-
-  it("fails when one of two models is missing from registry", async () => {
-    const goodProvider = createProvider([
-      { _tag: "TextDelta", delta: "ok" },
-      { _tag: "Result", output: { answer: "ok" }, stopReason: "end_turn", text: "ok" }
-    ])
-
-    const registryService = makeInMemoryProviderRegistry()
-
-    const layer = Layer.mergeAll(
-      Layer.effect(
-        ProviderRegistry,
-        Effect.gen(function*() {
-          yield* registryService.registerProvider("model-a", goodProvider)
-          // model-b is NOT registered
-          return registryService
-        })
-      ),
-      Layer.succeed(ProviderModeContext, { mode: "live" as const }),
-      Layer.succeed(ProviderRecorder, noopRecorder)
-    )
-
-    const agentB = agent<{ input: string }, { answer: string }>({
-      name: "agent-b",
-      model: "model-b",
-      output: z.object({ answer: z.string() }),
-      prompt: () => "test",
-      update: () => {}
-    })
-
-    let caughtError: unknown = null
-    await Effect.runPromise(
-      runAgentDef(
-        agentB,
-        { input: "test" },
-        undefined,
-        { sessionId: "error-test-2" }
-      ).pipe(
-        Effect.provide(layer),
-        Effect.catchAll((error) =>
-          Effect.sync(() => {
-            caughtError = error
-          })
-        )
-      )
-    )
-
-    expect(caughtError).toBeInstanceOf(ProviderNotFoundError)
-    expect((caughtError as ProviderNotFoundError).model).toBe("model-b")
-  })
-})
 
 // ─────────────────────────────────────────────────────────────────
 // Test: Rate Limit (ProviderError with RATE_LIMITED)
@@ -201,12 +98,12 @@ describe("Error Path: Rate Limit Handling", () => {
       retryAfter: 30
     })
 
-    const failingProvider = createFailingProvider(rateLimitError)
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": failingProvider })
+    // Per ADR-010: Agent owns failing provider directly
+    const failingProvider = createFailingProvider("claude-sonnet-4-5", rateLimitError)
 
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "rate-limited-agent",
-      model: "claude-sonnet-4-5",
+      provider: failingProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "test prompt",
       update: () => {}
@@ -220,7 +117,7 @@ describe("Error Path: Rate Limit Handling", () => {
         undefined,
         { sessionId: "rate-limit-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error
@@ -250,12 +147,12 @@ describe("Error Path: Auth Failure Propagation", () => {
       retryable: false
     })
 
-    const failingProvider = createFailingProvider(authError)
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": failingProvider })
+    // Per ADR-010: Agent owns failing provider directly
+    const failingProvider = createFailingProvider("claude-sonnet-4-5", authError)
 
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "auth-failed-agent",
-      model: "claude-sonnet-4-5",
+      provider: failingProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "test prompt",
       update: () => {}
@@ -269,7 +166,7 @@ describe("Error Path: Auth Failure Propagation", () => {
         undefined,
         { sessionId: "auth-fail-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error
@@ -293,7 +190,7 @@ describe("Error Path: Auth Failure Propagation", () => {
 describe("Error Path: Invalid Output Schema", () => {
   it("fails with AgentError when output does not match Zod schema", async () => {
     // Provider returns { wrongField: "value" } but schema expects { answer: string }
-    const badOutputProvider = createProvider([
+    const badOutputProvider = createProvider("claude-sonnet-4-5", [
       { _tag: "TextDelta", delta: "Generating..." },
       {
         _tag: "Result",
@@ -303,11 +200,9 @@ describe("Error Path: Invalid Output Schema", () => {
       }
     ])
 
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": badOutputProvider })
-
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "schema-mismatch-agent",
-      model: "claude-sonnet-4-5",
+      provider: badOutputProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "test prompt",
       update: () => {}
@@ -321,7 +216,7 @@ describe("Error Path: Invalid Output Schema", () => {
         undefined,
         { sessionId: "schema-error-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error
@@ -340,7 +235,7 @@ describe("Error Path: Invalid Output Schema", () => {
 
   it("fails when output has wrong type for a required field", async () => {
     // Provider returns { answer: 42 } but schema expects { answer: string }
-    const wrongTypeProvider = createProvider([
+    const wrongTypeProvider = createProvider("claude-sonnet-4-5", [
       {
         _tag: "Result",
         output: { answer: 42 },
@@ -348,11 +243,9 @@ describe("Error Path: Invalid Output Schema", () => {
       }
     ])
 
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": wrongTypeProvider })
-
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "wrong-type-agent",
-      model: "claude-sonnet-4-5",
+      provider: wrongTypeProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "test prompt",
       update: () => {}
@@ -366,7 +259,7 @@ describe("Error Path: Invalid Output Schema", () => {
         undefined,
         { sessionId: "wrong-type-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error
@@ -400,9 +293,18 @@ describe("Error Path: Invalid Output Schema", () => {
       modelName: "claude-sonnet-4-5"
     })
 
+    // Per ADR-010: Agent owns provider directly (playback mode uses dummy)
+    const playbackDummy: AgentProvider = {
+      name: "playback-dummy",
+      model: "claude-sonnet-4-5",
+      stream: () => {
+        throw new Error("Should not be called in playback mode")
+      }
+    }
+
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "corrupted-fixture-agent",
-      model: "claude-sonnet-4-5",
+      provider: playbackDummy,
       output: schema,
       prompt: () => "test prompt",
       update: () => {}
@@ -439,17 +341,15 @@ describe("Error Path: Invalid Output Schema", () => {
 describe("Error Path: No Result from Stream", () => {
   it("fails with AgentError when stream ends without a Result event", async () => {
     // Stream has text events but no Result
-    const noResultProvider = createProvider([
+    const noResultProvider = createProvider("claude-sonnet-4-5", [
       { _tag: "TextDelta", delta: "Hello" },
       { _tag: "TextComplete", text: "Hello World" }
       // No Result event!
     ])
 
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": noResultProvider })
-
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "no-result-agent",
-      model: "claude-sonnet-4-5",
+      provider: noResultProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "test prompt",
       update: () => {}
@@ -463,7 +363,7 @@ describe("Error Path: No Result from Stream", () => {
         undefined,
         { sessionId: "no-result-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error
@@ -492,9 +392,18 @@ describe("Error Path: RecordingNotFound", () => {
       modelName: "claude-sonnet-4-5"
     })
 
+    // Per ADR-010: Agent owns provider directly (playback mode uses dummy)
+    const playbackDummy: AgentProvider = {
+      name: "playback-dummy",
+      model: "claude-sonnet-4-5",
+      stream: () => {
+        throw new Error("Should not be called in playback mode")
+      }
+    }
+
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "no-recording-agent",
-      model: "claude-sonnet-4-5",
+      provider: playbackDummy,
       output: z.object({ answer: z.string() }),
       prompt: () => "unrecorded prompt",
       update: () => {}
@@ -529,10 +438,15 @@ describe("Error Path: RecordingNotFound", () => {
 
 describe("Error Path: Workflow Abort/Cancellation", () => {
   it("aborts workflow execution via execute().abort()", async () => {
-    // Create a simple workflow with a working fixture
+    // Per ADR-010: Agent owns provider directly
+    const goodProvider = createProvider("claude-sonnet-4-5", [
+      { _tag: "TextDelta", delta: "Working..." },
+      { _tag: "Result", output: { result: "done" }, stopReason: "end_turn", text: "Working..." }
+    ])
+
     const testAgent = agent<{ goal: string; done: boolean }, { result: string }>({
       name: "abort-test-agent",
-      model: "claude-sonnet-4-5",
+      provider: goodProvider,
       output: z.object({ result: z.string() }),
       prompt: (s) => `Goal: ${s.goal}`,
       update: (o, draft) => {
@@ -550,16 +464,9 @@ describe("Error Path: Workflow Abort/Cancellation", () => {
       until: (s) => s.done
     })
 
-    // Use a provider that returns valid data (to test abort, not provider errors)
-    const goodProvider = createProvider([
-      { _tag: "TextDelta", delta: "Working..." },
-      { _tag: "Result", output: { result: "done" }, stopReason: "end_turn", text: "Working..." }
-    ])
-
     const execution = execute(testWorkflow, {
       input: "test abort",
       runtime: {
-        providers: { "claude-sonnet-4-5": goodProvider },
         mode: "live",
         database: ":memory:"
       }
@@ -580,9 +487,15 @@ describe("Error Path: Workflow Abort/Cancellation", () => {
   })
 
   it("abort() stops the async iterator", async () => {
+    // Per ADR-010: Agent owns provider directly
+    const goodProvider = createProvider("claude-sonnet-4-5", [
+      { _tag: "TextDelta", delta: "Working..." },
+      { _tag: "Result", output: { result: "done" }, stopReason: "end_turn", text: "Working..." }
+    ])
+
     const testAgent = agent<{ goal: string; done: boolean }, { result: string }>({
       name: "abort-iter-agent",
-      model: "claude-sonnet-4-5",
+      provider: goodProvider,
       output: z.object({ result: z.string() }),
       prompt: (s) => `Goal: ${s.goal}`,
       update: (o, draft) => {
@@ -600,15 +513,9 @@ describe("Error Path: Workflow Abort/Cancellation", () => {
       until: (s) => s.done
     })
 
-    const goodProvider = createProvider([
-      { _tag: "TextDelta", delta: "Working..." },
-      { _tag: "Result", output: { result: "done" }, stopReason: "end_turn", text: "Working..." }
-    ])
-
     const execution = execute(testWorkflow, {
       input: "test abort iterator",
       runtime: {
-        providers: { "claude-sonnet-4-5": goodProvider },
         mode: "live",
         database: ":memory:"
       }
@@ -633,9 +540,15 @@ describe("Error Path: Workflow Abort/Cancellation", () => {
   })
 
   it("execution.isPaused reports pause state correctly", async () => {
+    // Per ADR-010: Agent owns provider directly
+    const goodProvider = createProvider("claude-sonnet-4-5", [
+      { _tag: "TextDelta", delta: "Working..." },
+      { _tag: "Result", output: { result: "done" }, stopReason: "end_turn", text: "Working..." }
+    ])
+
     const testAgent = agent<{ goal: string; done: boolean }, { result: string }>({
       name: "pause-state-agent",
-      model: "claude-sonnet-4-5",
+      provider: goodProvider,
       output: z.object({ result: z.string() }),
       prompt: (s) => `Goal: ${s.goal}`,
       update: (o, draft) => {
@@ -653,15 +566,9 @@ describe("Error Path: Workflow Abort/Cancellation", () => {
       until: (s) => s.done
     })
 
-    const goodProvider = createProvider([
-      { _tag: "TextDelta", delta: "Working..." },
-      { _tag: "Result", output: { result: "done" }, stopReason: "end_turn", text: "Working..." }
-    ])
-
     const execution = execute(testWorkflow, {
       input: "test pause state",
       runtime: {
-        providers: { "claude-sonnet-4-5": goodProvider },
         mode: "live",
         database: ":memory:"
       }
@@ -699,12 +606,12 @@ describe("Error Path: ProviderError code variants", () => {
       retryable: false
     })
 
-    const failingProvider = createFailingProvider(contextError)
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": failingProvider })
+    // Per ADR-010: Agent owns failing provider directly
+    const failingProvider = createFailingProvider("claude-sonnet-4-5", contextError)
 
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "context-exceeded-agent",
-      model: "claude-sonnet-4-5",
+      provider: failingProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "very long prompt that exceeds context",
       update: () => {}
@@ -718,7 +625,7 @@ describe("Error Path: ProviderError code variants", () => {
         undefined,
         { sessionId: "context-exceeded-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error
@@ -740,12 +647,12 @@ describe("Error Path: ProviderError code variants", () => {
       retryable: false
     })
 
-    const failingProvider = createFailingProvider(unknownError)
-    const layer = buildLiveLayer({ "claude-sonnet-4-5": failingProvider })
+    // Per ADR-010: Agent owns failing provider directly
+    const failingProvider = createFailingProvider("claude-sonnet-4-5", unknownError)
 
     const testAgent = agent<{ input: string }, { answer: string }>({
       name: "unknown-error-agent",
-      model: "claude-sonnet-4-5",
+      provider: failingProvider,
       output: z.object({ answer: z.string() }),
       prompt: () => "test",
       update: () => {}
@@ -759,7 +666,7 @@ describe("Error Path: ProviderError code variants", () => {
         undefined,
         { sessionId: "unknown-error-test" }
       ).pipe(
-        Effect.provide(layer),
+        Effect.provide(buildLiveLayer()),
         Effect.catchAll((error) =>
           Effect.sync(() => {
             caughtError = error

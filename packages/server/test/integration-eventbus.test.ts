@@ -10,29 +10,12 @@ import { Effect, Fiber, Layer, PubSub, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { agent, type AnyEvent, EVENTS, Services, type SessionId, workflow } from "@open-scaffold/core"
+import { agent, type AnyEvent, EVENTS, type ProviderRunOptions, Services, type SessionId, workflow } from "@open-scaffold/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
 import { executeWorkflow } from "@open-scaffold/core/internal"
 
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive } from "../src/internal.js"
-
-// ─────────────────────────────────────────────────────────────────
-// Mock provider (inline, same pattern as core tests)
-// ─────────────────────────────────────────────────────────────────
-
-const mockProvider = {
-  name: "mock-provider",
-  stream: (options: { prompt: string }) => {
-    const events = []
-    if (options.prompt.includes("Goal:")) {
-      events.push({ _tag: "Result" as const, output: { message: "broadcast-test" }, stopReason: "end_turn" as const })
-    } else {
-      events.push({ _tag: "Result" as const, output: { message: "default" }, stopReason: "end_turn" as const })
-    }
-    return Stream.fromIterable(events)
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Test fixtures
@@ -43,9 +26,25 @@ interface BusTestState {
   message: string
 }
 
+// Per ADR-010: Agents own their provider directly
+// The provider returns a fixed result stream for testing EventBus broadcast
+const busTestProvider = {
+  name: "bus-test-provider",
+  model: "claude-sonnet-4-5",
+  stream: (options: ProviderRunOptions) => {
+    const events = []
+    if (options.prompt?.includes("Goal:")) {
+      events.push({ _tag: "Result" as const, output: { message: "broadcast-test" }, stopReason: "end_turn" as const })
+    } else {
+      events.push({ _tag: "Result" as const, output: { message: "default" }, stopReason: "end_turn" as const })
+    }
+    return Stream.fromIterable(events)
+  }
+}
+
 const testAgent = agent<BusTestState, { message: string }>({
   name: "bus-agent",
-  model: "claude-sonnet-4-5",
+  provider: busTestProvider,
   output: z.object({ message: z.string() }),
   prompt: (state) => `Goal: ${state.goal}`,
   update: (output, draft) => {
@@ -84,24 +83,13 @@ describe("EventBus broadcast integration", () => {
 
     // Build a complete layer with real PubSub EventBus, real LibSQL EventStore,
     // and mock provider/recorder
-    const registryService = (await import("@open-scaffold/core")).makeInMemoryProviderRegistry()
-    const { ProviderRegistry } = await import("@open-scaffold/core")
-
-    const ProviderRegistryLayer = Layer.effect(
-      ProviderRegistry,
-      Effect.gen(function*() {
-        yield* registryService.registerProvider("claude-sonnet-4-5", mockProvider)
-        return registryService
-      })
-    )
-
+    // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
     const ProviderModeLayer = Layer.succeed(Services.ProviderModeContext, { mode: "live" as const })
     const ProviderRecorderLayer = Layer.succeed(Services.ProviderRecorder, noopRecorder)
     const EventStoreLayer = EventStoreLive({ url: ":memory:" })
     const EventBusLayer = Layer.effect(Services.EventBus, EventBusLive)
 
     const fullLayer = Layer.mergeAll(
-      ProviderRegistryLayer,
       ProviderModeLayer,
       ProviderRecorderLayer,
       EventStoreLayer,

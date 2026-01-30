@@ -17,8 +17,6 @@ import {
   type AgentError,
   computeStateAt,
   type ProviderError,
-  type ProviderNotFoundError,
-  type ProviderRegistry,
   type RecordingNotFound,
   type Services,
   type SessionId,
@@ -65,9 +63,8 @@ export const resumeSession = <S, Input = string, Phases extends string = never>(
   | WorkflowError
   | AgentError
   | ProviderError
-  | RecordingNotFound
-  | ProviderNotFoundError,
-  ProviderRegistry | Services.ProviderRecorder | Services.ProviderModeContext | Services.EventStore | Services.EventBus
+  | RecordingNotFound,
+  Services.ProviderRecorder | Services.ProviderModeContext | Services.EventStore | Services.EventBus
 > =>
   Effect.gen(function*() {
     const { initialState, input, resumePhase, sessionId, workflow } = config

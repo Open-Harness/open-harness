@@ -14,7 +14,6 @@ import type { ZodType } from "zod"
 
 import { hashProviderRequest } from "../../src/Domain/Hash.js"
 import type { AgentProvider, AgentRunResult, AgentStreamEvent } from "../../src/Domain/Provider.js"
-import { makeInMemoryProviderRegistry, ProviderRegistry } from "../../src/Engine/provider.js"
 import { InMemoryEventBus, InMemoryEventStore, makeInMemoryProviderRecorder } from "../../src/Layers/InMemory.js"
 import { ProviderModeContext } from "../../src/Services/ProviderMode.js"
 import {
@@ -164,50 +163,52 @@ export interface TestRuntimeOptions {
   readonly additionalModels?: ReadonlyArray<string>
 }
 
+// Note: playbackDummyProvider removed per ADR-010 - no longer needed
+// since agents own their providers directly
+
 /**
- * A dummy provider that should never be called in playback mode.
- * If it IS called, it means the recording lookup failed.
+ * Create a test provider for use in agent definitions.
+ * Per ADR-010: Agents own their provider directly.
+ *
+ * This provider is designed for playback mode - it should not be called
+ * because recordings are replayed instead.
+ *
+ * @param modelName - The model name for hash computation (default: "claude-sonnet-4-5")
+ * @returns An AgentProvider instance for test use
  */
-const playbackDummyProvider: AgentProvider = {
-  name: "playback-dummy",
-  stream: () => {
-    throw new Error(
-      "playbackDummyProvider.stream() was called. " +
-        "This means a recording was not found for a request. " +
-        "Ensure all fixtures are seeded with correct prompts and schemas."
-    )
+export function createTestProvider(modelName: string = "claude-sonnet-4-5"): AgentProvider {
+  return {
+    name: "test-provider",
+    model: modelName,
+    stream: () => {
+      throw new Error(
+        "Test provider stream() was called. " +
+          "In playback mode, recordings should be used instead. " +
+          "Check that fixtures are seeded correctly."
+      )
+    }
   }
 }
+
+/** Default test provider for most tests (claude-sonnet-4-5) */
+export const testProvider = createTestProvider()
 
 /**
  * Create a complete test runtime layer using ProviderRecorder playback.
  *
  * This provides all the services needed to run workflows in tests:
- * - ProviderRegistry with a dummy provider (never called in playback)
  * - ProviderModeContext set to "playback"
  * - ProviderRecorder pre-seeded with fixtures
  * - EventStore (in-memory)
  * - EventBus (in-memory)
+ *
+ * Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly.
  */
 export const createTestRuntimeLayer = (options: TestRuntimeOptions) => {
-  const { additionalModels = [], fixtures, modelName = "claude-sonnet-4-5" } = options
+  const { fixtures } = options
 
   // Seed the recorder with fixtures
   const recorder = seedRecorder(fixtures)
-
-  // Build registry with dummy provider for all models
-  const registryService = makeInMemoryProviderRegistry()
-  const allModels = [modelName, ...additionalModels]
-
-  const ProviderRegistryLayer = Layer.effect(
-    ProviderRegistry,
-    Effect.gen(function*() {
-      for (const model of allModels) {
-        yield* registryService.registerProvider(model, playbackDummyProvider)
-      }
-      return registryService
-    })
-  )
 
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, { mode: "playback" as const })
 
@@ -218,7 +219,6 @@ export const createTestRuntimeLayer = (options: TestRuntimeOptions) => {
   const EventBusLayer = InMemoryEventBus
 
   return Layer.mergeAll(
-    ProviderRegistryLayer,
     ProviderModeLayer,
     ProviderRecorderLayer,
     EventStoreLayer,

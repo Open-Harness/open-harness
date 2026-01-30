@@ -24,7 +24,7 @@ import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { EventStoreLive } from "../src/Layers/LibSQL.js"
 import { EventStore } from "../src/Services/EventStore.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test fixtures
@@ -38,9 +38,10 @@ interface PersistState {
 const resultSchema = z.object({ result: z.string() })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<PersistState, { result: string }>({
   name: "persist-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: resultSchema,
   prompt: (state: PersistState) => `Goal: ${state.goal}`,
   update: (output: { result: string }, draft: PersistState) => {
@@ -80,6 +81,7 @@ const fixtures: ReadonlyArray<SimpleFixture> = [
 // Dummy provider for playback mode (should never be called)
 const playbackDummy = {
   name: "playback-dummy",
+  model: "playback-dummy",
   stream: () => {
     throw new Error("playbackDummyProvider called - recording not found")
   }
@@ -112,7 +114,6 @@ describe("EventStore persistence integration", () => {
 
     // Run workflow with file-backed database, using playback mode
     const runtime: RuntimeConfig = {
-      providers: { "claude-sonnet-4-5": playbackDummy },
       mode: "playback",
       recorder: seedRecorder(fixtures),
       database: url
@@ -169,7 +170,6 @@ describe("EventStore persistence integration", () => {
     dbPaths.push(filePath)
 
     const runtime: RuntimeConfig = {
-      providers: { "claude-sonnet-4-5": playbackDummy },
       mode: "playback",
       recorder: seedRecorder(fixtures),
       database: url

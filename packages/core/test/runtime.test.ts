@@ -13,7 +13,7 @@ import { phase } from "../src/Engine/phase.js"
 import { type ExecuteOptions, executeWorkflow } from "../src/Engine/runtime.js"
 import { EVENTS, WorkflowAgentError } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { runWithTestRuntime, type SimpleFixture } from "./helpers/test-provider.js"
+import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -30,10 +30,10 @@ type TestPhases = "planning" | "done"
 // Shared output schema (must be the same instance for hash consistency)
 const messageSchema = z.object({ message: z.string() })
 
-// Test agent
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<TestState, { message: string }>({
   name: "test-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state: TestState) => `Goal: ${state.goal}`,
   update: (output: { message: string }, draft: TestState) => {

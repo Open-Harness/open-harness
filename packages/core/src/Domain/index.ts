@@ -5,7 +5,7 @@
  */
 
 // IDs
-export type { AgentId, EventId, InteractionEventId, SessionId, WorkflowId } from "./Ids.js"
+export type { AgentId, EventId, SessionId, WorkflowId } from "./Ids.js"
 export {
   AgentIdSchema,
   EventIdSchema,
@@ -55,25 +55,6 @@ export {
 
 // Hash utilities
 export { hashProviderRequest } from "./Hash.js"
-
-// Interaction (HITL)
-export type {
-  AnyEvent,
-  Event,
-  HandlerDefinition,
-  HandlerResult,
-  Interaction,
-  InteractionConfig,
-  InteractionRequestPayload,
-  InteractionResponsePayload,
-  InteractionType
-} from "./Interaction.js"
-export {
-  createInteraction,
-  findPendingInteractions,
-  isInteractionRequest,
-  isInteractionResponse
-} from "./Interaction.js"
 
 // Provider types (renamed from Agent.ts)
 export type { AgentProvider, AgentRunResult, AgentStreamEvent, ProviderMode, ProviderRunOptions } from "./Provider.js"

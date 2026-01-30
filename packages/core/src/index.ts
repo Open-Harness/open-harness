@@ -98,13 +98,8 @@ export {
 } from "./Engine/types.js"
 
 // Provider infrastructure
-export type { AgentExecutionContext, AgentExecutionResult, ProviderRegistryService } from "./Engine/provider.js"
-export {
-  makeInMemoryProviderRegistry,
-  ProviderNotFoundError,
-  ProviderRegistry,
-  runAgentDef
-} from "./Engine/provider.js"
+export type { AgentExecutionContext, AgentExecutionResult } from "./Engine/provider.js"
+export { runAgentDef } from "./Engine/provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Provider Types (used by server package)
@@ -119,32 +114,10 @@ export type {
 } from "./Domain/Provider.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Interactions (HITL)
-// ─────────────────────────────────────────────────────────────────
-
-export type {
-  AnyEvent as AnyInteractionEvent,
-  Event as InteractionEvent,
-  HandlerDefinition,
-  HandlerResult,
-  Interaction,
-  InteractionConfig,
-  InteractionRequestPayload,
-  InteractionResponsePayload,
-  InteractionType
-} from "./Domain/Interaction.js"
-export {
-  createInteraction,
-  findPendingInteractions,
-  isInteractionRequest,
-  isInteractionResponse
-} from "./Domain/Interaction.js"
-
-// ─────────────────────────────────────────────────────────────────
 // IDs
 // ─────────────────────────────────────────────────────────────────
 
-export type { AgentId, InteractionEventId } from "./Domain/Ids.js"
+export type { AgentId } from "./Domain/Ids.js"
 export type { SessionId, WorkflowId } from "./Domain/Ids.js"
 export { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "./Domain/Ids.js"
 
@@ -187,3 +160,10 @@ export {
   SessionContextRef,
   withSessionContext
 } from "./Domain/Context.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers (HITL utilities per ADR-002)
+// ─────────────────────────────────────────────────────────────────
+
+export type { HumanInputHandler } from "./helpers/index.js"
+export { autoApprove, cliPrompt } from "./helpers/index.js"
