@@ -21,7 +21,8 @@ import { z } from "zod"
 
 import { type AgentStreamEvent, type ProviderRunOptions, Services } from "@open-scaffold/core"
 
-import { AnthropicProvider, ProviderRecorderLive } from "../src/index.js"
+import { AnthropicProvider } from "../src/index.js"
+import { ProviderRecorderLive } from "../src/internal.js"
 
 // Simple hash for testing (production uses hashProviderRequest from core internals)
 const simpleHash = (prompt: string): string => `test-${Buffer.from(prompt).toString("base64").slice(0, 20)}`

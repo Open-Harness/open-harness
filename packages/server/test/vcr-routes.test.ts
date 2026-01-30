@@ -35,8 +35,9 @@ import {
   resumeSessionRoute
 } from "../src/http/Routes.js"
 import { makeInMemoryRecorderLayer, ServerError } from "../src/http/Server.js"
-import { EventBusLive, EventStoreLive, type RouteContext, StateSnapshotStoreLive } from "../src/index.js"
-import { recordEvent } from "../src/programs/recordEvent.js"
+import { EventBusLive } from "../src/index.js"
+import { EventStoreLive, type RouteContext, StateSnapshotStoreLive } from "../src/internal.js"
+import { recordEvent } from "../src/internal.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test Workflow

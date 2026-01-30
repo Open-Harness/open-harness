@@ -10,7 +10,8 @@ import { z } from "zod"
 
 import { agent } from "../src/Engine/agent.js"
 import type { RuntimeConfig } from "../src/Engine/execute.js"
-import { run, type RunOptions, runSimple, runWithText } from "../src/Engine/run.js"
+import { run, type RunOptions } from "../src/Engine/run.js"
+import type { RuntimeConfig } from "../src/Engine/execute.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
 
@@ -190,30 +191,16 @@ describe("run()", () => {
   })
 })
 
-describe("runSimple()", () => {
-  it("is a convenience wrapper for run()", async () => {
-    const result = await runSimple(testWorkflow, "Test", testRuntime)
-
-    expect(result.state.goal).toBe("Test")
-    expect(result.state.tasks).toContain("Task completed")
-  })
-
-  it("accepts workflow, input, and runtime", async () => {
-    const result = await runSimple(testWorkflow, "Build an API", testRuntime)
-
-    expect(result.state.goal).toBe("Build an API")
-  })
-})
-
-describe("runWithText()", () => {
-  it("returns object with text and result properties", async () => {
-    const { result, text } = await runWithText(testWorkflow, "Test", testRuntime)
-
-    expect(result.state.goal).toBe("Test")
-    // Text is collected from streamed chunks via observer
-    expect(typeof text).toBe("string")
-  })
-})
+// runSimple() and runWithText() removed per ADR-001
+// Use run() directly instead:
+//
+// Before: await runSimple(workflow, input, runtime)
+// After:  await run(workflow, { input, runtime })
+//
+// Before: const { text } = await runWithText(workflow, input, runtime)
+// After:  const chunks: string[] = []
+//         await run(workflow, { input, runtime, observer: { onTextDelta: ({ delta }) => chunks.push(delta) } })
+//         const text = chunks.join("")
 
 describe("RunOptions interface", () => {
   it("accepts observer field", () => {

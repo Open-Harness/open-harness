@@ -18,7 +18,7 @@ import {
   makeInMemoryRecorderLayer,
   type ServerService,
   StateSnapshotStoreLive
-} from "../src/index.js"
+} from "../src/internal.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test Workflow Definition

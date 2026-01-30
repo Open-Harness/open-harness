@@ -31,17 +31,9 @@ export { phase } from "./Engine/phase.js"
 export type { PhaseWorkflowDef, SimpleWorkflowDef, WorkflowDef } from "./Engine/workflow.js"
 export { isPhaseWorkflow, isSimpleWorkflow, workflow } from "./Engine/workflow.js"
 
-// Runtime execution
-export type { ExecuteOptions, WorkflowHandle } from "./Engine/runtime.js"
-export { executeWorkflow, streamWorkflow } from "./Engine/runtime.js"
-
-// Async iterator API
-export type { ExecuteWithRuntimeOptions, RuntimeConfig, WorkflowExecution } from "./Engine/execute.js"
-export { execute } from "./Engine/execute.js"
-
-// Simple Promise API
-export type { RunOptions, RunResult } from "./Engine/run.js"
-export { run, runSimple, runWithText } from "./Engine/run.js"
+// Simple Promise API - PRIMARY PUBLIC API (ADR-001)
+export type { RunOptions, RunResult, RuntimeConfig, WorkflowExecution } from "./Engine/run.js"
+export { run } from "./Engine/run.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -174,6 +166,9 @@ export {
 // ─────────────────────────────────────────────────────────────────
 // Internal (for library authors / advanced use)
 // ─────────────────────────────────────────────────────────────────
+// NOTE: These exports are also available at "@open-scaffold/core/internal"
+// for explicit opt-in. The main index exports are kept for backward
+// compatibility during the migration period per ADR-003.
 
 // Services (Effect Context.Tag) - for building custom layers
 export * as Services from "./Services/index.js"

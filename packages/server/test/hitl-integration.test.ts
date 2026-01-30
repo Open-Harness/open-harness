@@ -17,8 +17,9 @@ import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { type AnyEvent, EVENTS, makeEvent, Services, type SessionId } from "@open-scaffold/core"
-import { EventBusLive, EventStoreLive } from "../src/index.js"
-import { recordEvent } from "../src/programs/recordEvent.js"
+import { EventBusLive } from "../src/index.js"
+import { EventStoreLive } from "../src/internal.js"
+import { recordEvent } from "../src/internal.js"
 
 // Helper to create events synchronously
 const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))

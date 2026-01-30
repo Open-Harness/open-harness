@@ -19,11 +19,6 @@ export { ClientError } from "./Contract.js"
 
 // HTTP Client
 export { HttpClient } from "./HttpClient.js"
-// Reconnection
-export { sseReconnectSchedule } from "./Reconnect.js"
-// SSE
-export type { ParsedSSEMessage } from "./SSE.js"
-export { createSSEStream, parseSSEMessage } from "./SSE.js"
 
 // React bindings
 export type { WorkflowContextValue } from "./react/context.js"

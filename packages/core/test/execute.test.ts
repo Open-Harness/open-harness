@@ -9,10 +9,12 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { agent } from "../src/Engine/agent.js"
-import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
 import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
+// execute is internal API - import from internal.ts
+import { execute } from "../src/internal.js"
+import type { RuntimeConfig } from "../src/Engine/execute.js"
 import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────

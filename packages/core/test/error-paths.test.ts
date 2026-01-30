@@ -22,7 +22,8 @@ import { z } from "zod"
 import { AgentError, ProviderError, RecordingNotFound } from "../src/Domain/Errors.js"
 import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "../src/Domain/Provider.js"
 import { agent } from "../src/Engine/agent.js"
-import { execute } from "../src/Engine/execute.js"
+// execute is internal API - import from internal.ts
+import { execute } from "../src/internal.js"
 import {
   makeInMemoryProviderRegistry,
   ProviderNotFoundError,

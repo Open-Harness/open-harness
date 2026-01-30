@@ -7,6 +7,7 @@ const scopedAlias = (name: string) => {
   const target = process.env.TEST_DIST !== undefined ? "dist/dist/esm" : "src"
   return {
     [`@open-scaffold/${name}/test`]: path.join(root, name, "test"),
+    [`@open-scaffold/${name}/internal`]: path.join(root, name, target, "internal.ts"),
     [`@open-scaffold/${name}`]: path.join(root, name, target, "index.ts")
   }
 }

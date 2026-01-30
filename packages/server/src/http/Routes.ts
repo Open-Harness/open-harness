@@ -11,13 +11,14 @@ import { Effect, Fiber, Schema } from "effect"
 import {
   computeStateAt,
   EVENTS,
-  executeWorkflow,
   makeEvent,
   Services,
   SessionIdSchema,
   SessionNotFound,
   ValidationError
 } from "@open-scaffold/core"
+// executeWorkflow is internal API (ADR-001) - import from internal entrypoint
+import { executeWorkflow } from "@open-scaffold/core/internal"
 import type { AnyEvent, ProviderMode, ProviderRegistry, SessionId, WorkflowDef } from "@open-scaffold/core"
 
 import { forkSession } from "../programs/forkSession.js"

@@ -11,10 +11,11 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { agent, type AnyEvent, EVENTS, Services, type SessionId, workflow } from "@open-scaffold/core"
-import { executeWorkflow } from "@open-scaffold/core"
+// executeWorkflow is internal API (ADR-001) - import from internal entrypoint
+import { executeWorkflow } from "@open-scaffold/core/internal"
 
-import { EventBusLive } from "../src/services/EventBusLive.js"
-import { EventStoreLive } from "../src/store/EventStoreLive.js"
+import { EventBusLive } from "../src/index.js"
+import { EventStoreLive } from "../src/internal.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Mock provider (inline, same pattern as core tests)
