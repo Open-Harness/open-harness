@@ -18,8 +18,8 @@ import {
   ValidationError
 } from "@open-scaffold/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
-import { executeWorkflow } from "@open-scaffold/core/internal"
 import type { AnyEvent, ProviderMode, SessionId, WorkflowDef } from "@open-scaffold/core"
+import { executeWorkflow } from "@open-scaffold/core/internal"
 
 import { forkSession } from "../programs/forkSession.js"
 import { observeEvents, type ObserveEventsOptions } from "../programs/observeEvents.js"

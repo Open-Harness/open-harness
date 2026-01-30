@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, URL */
 /**
  * Remove stray TypeScript build artifacts from src/ directories.
  *

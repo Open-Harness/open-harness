@@ -18,24 +18,24 @@ import { createSSEStream, parseSSEMessage } from "../src/SSE.js"
 describe("parseSSEMessage", () => {
   describe("valid SSE messages", () => {
     it("parses a single data event", () => {
-      const raw = 'data: {"foo":"bar"}'
+      const raw = "data: {\"foo\":\"bar\"}"
       const result = parseSSEMessage(raw)
 
-      expect(result).toEqual({ data: '{"foo":"bar"}' })
+      expect(result).toEqual({ data: "{\"foo\":\"bar\"}" })
     })
 
     it("parses event with custom event type", () => {
-      const raw = 'event: update\ndata: {"status":"active"}'
+      const raw = "event: update\ndata: {\"status\":\"active\"}"
       const result = parseSSEMessage(raw)
 
       expect(result).toEqual({
         event: "update",
-        data: '{"status":"active"}'
+        data: "{\"status\":\"active\"}"
       })
     })
 
     it("parses event with id", () => {
-      const raw = 'id: 12345\ndata: test message'
+      const raw = "id: 12345\ndata: test message"
       const result = parseSSEMessage(raw)
 
       expect(result).toEqual({
@@ -76,11 +76,11 @@ describe("parseSSEMessage", () => {
     })
 
     it("handles data line with colon in value", () => {
-      const raw = 'data: {"url":"http://example.com:8080/path"}'
+      const raw = "data: {\"url\":\"http://example.com:8080/path\"}"
       const result = parseSSEMessage(raw)
 
       expect(result).toEqual({
-        data: '{"url":"http://example.com:8080/path"}'
+        data: "{\"url\":\"http://example.com:8080/path\"}"
       })
     })
 
@@ -147,11 +147,11 @@ describe("parseSSEMessage", () => {
     })
 
     it("handles Unicode characters", () => {
-      const raw = 'data: {"emoji":"🎉","chinese":"你好","arabic":"مرحبا"}'
+      const raw = "data: {\"emoji\":\"🎉\",\"chinese\":\"你好\",\"arabic\":\"مرحبا\"}"
       const result = parseSSEMessage(raw)
 
       expect(result).toEqual({
-        data: '{"emoji":"🎉","chinese":"你好","arabic":"مرحبا"}'
+        data: "{\"emoji\":\"🎉\",\"chinese\":\"你好\",\"arabic\":\"مرحبا\"}"
       })
     })
 
@@ -227,10 +227,10 @@ describe("parseSSEMessage", () => {
 
   describe("JSON data parsing scenarios", () => {
     it("preserves valid JSON structure", () => {
-      const raw = 'data: {"nested":{"array":[1,2,3],"bool":true}}'
+      const raw = "data: {\"nested\":{\"array\":[1,2,3],\"bool\":true}}"
       const result = parseSSEMessage(raw)
 
-      expect(result?.data).toBe('{"nested":{"array":[1,2,3],"bool":true}}')
+      expect(result?.data).toBe("{\"nested\":{\"array\":[1,2,3],\"bool\":true}}")
       expect(JSON.parse(result!.data)).toEqual({
         nested: { array: [1, 2, 3], bool: true }
       })
@@ -245,10 +245,10 @@ describe("parseSSEMessage", () => {
     })
 
     it("handles multiline JSON across multiple data lines", () => {
-      const raw = 'data: {"key":\ndata: "value"}'
+      const raw = "data: {\"key\":\ndata: \"value\"}"
       const result = parseSSEMessage(raw)
 
-      expect(result?.data).toBe('{"key":\n"value"}')
+      expect(result?.data).toBe("{\"key\":\n\"value\"}")
     })
   })
 })
@@ -261,7 +261,7 @@ describe("createSSEStream", () => {
   /**
    * Helper to create a mock Response with a readable stream body.
    */
-  const createMockResponse = (chunks: string[]): Response => {
+  const createMockResponse = (chunks: Array<string>): Response => {
     const encoder = new TextEncoder()
     let chunkIndex = 0
 
@@ -288,7 +288,7 @@ describe("createSSEStream", () => {
   })
 
   it("parses single event from stream", async () => {
-    const response = createMockResponse(['data: hello\n\n'])
+    const response = createMockResponse(["data: hello\n\n"])
     const stream = createSSEStream(response)
 
     const messages: Array<{ data: string }> = []
@@ -301,9 +301,9 @@ describe("createSSEStream", () => {
 
   it("parses multiple events from stream", async () => {
     const response = createMockResponse([
-      'data: first\n\n',
-      'data: second\n\n',
-      'data: third\n\n'
+      "data: first\n\n",
+      "data: second\n\n",
+      "data: third\n\n"
     ])
     const stream = createSSEStream(response)
 
@@ -321,9 +321,9 @@ describe("createSSEStream", () => {
 
   it("handles events split across chunks", async () => {
     const response = createMockResponse([
-      'data: part',
-      'ial\n\n',
-      'data: complete\n\n'
+      "data: part",
+      "ial\n\n",
+      "data: complete\n\n"
     ])
     const stream = createSSEStream(response)
 
@@ -340,7 +340,7 @@ describe("createSSEStream", () => {
 
   it("handles multiple events in single chunk", async () => {
     const response = createMockResponse([
-      'data: one\n\ndata: two\n\ndata: three\n\n'
+      "data: one\n\ndata: two\n\ndata: three\n\n"
     ])
     const stream = createSSEStream(response)
 
@@ -358,8 +358,8 @@ describe("createSSEStream", () => {
 
   it("handles trailing data without final double newline", async () => {
     const response = createMockResponse([
-      'data: first\n\n',
-      'data: trailing'
+      "data: first\n\n",
+      "data: trailing"
     ])
     const stream = createSSEStream(response)
 
@@ -376,9 +376,9 @@ describe("createSSEStream", () => {
 
   it("skips keep-alive messages (comments)", async () => {
     const response = createMockResponse([
-      ': keep-alive\n\n',
-      'data: actual\n\n',
-      ': another keep-alive\n\n'
+      ": keep-alive\n\n",
+      "data: actual\n\n",
+      ": another keep-alive\n\n"
     ])
     const stream = createSSEStream(response)
 
@@ -392,7 +392,7 @@ describe("createSSEStream", () => {
 
   it("handles CRLF line endings in stream", async () => {
     const response = createMockResponse([
-      'data: crlf test\r\n\r\n'
+      "data: crlf test\r\n\r\n"
     ])
     const stream = createSSEStream(response)
 
@@ -406,7 +406,7 @@ describe("createSSEStream", () => {
 
   it("parses events with all fields from stream", async () => {
     const response = createMockResponse([
-      'event: update\nid: 123\nretry: 5000\ndata: full event\n\n'
+      "event: update\nid: 123\nretry: 5000\ndata: full event\n\n"
     ])
     const stream = createSSEStream(response)
 
@@ -436,7 +436,7 @@ describe("createSSEStream", () => {
   })
 
   it("handles stream with only whitespace", async () => {
-    const response = createMockResponse(['   \n\n'])
+    const response = createMockResponse(["   \n\n"])
     const stream = createSSEStream(response)
 
     const messages: Array<unknown> = []
@@ -463,7 +463,7 @@ describe("createSSEStream", () => {
 
   it("handles Unicode in stream", async () => {
     const response = createMockResponse([
-      'data: {"emoji":"🚀","text":"Unicode works!"}\n\n'
+      "data: {\"emoji\":\"🚀\",\"text\":\"Unicode works!\"}\n\n"
     ])
     const stream = createSSEStream(response)
 
@@ -473,7 +473,7 @@ describe("createSSEStream", () => {
     }
 
     expect(messages).toEqual([{
-      data: '{"emoji":"🚀","text":"Unicode works!"}'
+      data: "{\"emoji\":\"🚀\",\"text\":\"Unicode works!\"}"
     }])
   })
 })

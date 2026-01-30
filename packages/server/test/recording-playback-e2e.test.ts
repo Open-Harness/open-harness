@@ -11,16 +11,16 @@
  * @module
  */
 
-import { Effect, Layer, Stream } from "effect"
+import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { type AgentStreamEvent, type ProviderRunOptions, Services } from "@open-scaffold/core"
 
-const { ProviderModeContext } = Services
-
 import { AnthropicProvider } from "../src/provider/Provider.js"
 import { ProviderRecorderLive } from "../src/store/ProviderRecorderLive.js"
+
+const { ProviderModeContext: _ProviderModeContext } = Services
 
 // ─────────────────────────────────────────────────────────────────
 // Test Schema and Types

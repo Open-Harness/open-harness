@@ -101,14 +101,6 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
     }
   ]
 
-  const playbackDummy = {
-    name: "playback-dummy",
-    model: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
-
   it("mode: 'playback' with recorder uses recorded fixtures", async () => {
     const result = await run(testWorkflow, {
       input: "go",

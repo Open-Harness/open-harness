@@ -341,6 +341,7 @@ export function execute<S, Input, Phases extends string = never>(
   }).pipe(Effect.provide(runtimeLayer))
 
   // Start execution using runFork to get fiber reference for interruption
+  // eslint-disable-next-line prefer-const -- fiber is declared outside this scope for use in abort handlers
   fiber = Effect.runFork(program)
 
   // Observe fiber completion to signal result

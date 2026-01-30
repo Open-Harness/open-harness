@@ -12,8 +12,7 @@ import { describe, expect, it } from "vitest"
 
 import { type AnyEvent, computeStateAt, EVENTS, makeEvent, Services, type SessionId } from "@open-scaffold/core"
 import { EventBusLive } from "../src/index.js"
-import { EventStoreLive } from "../src/internal.js"
-import { forkSession, loadSession, recordEvent } from "../src/internal.js"
+import { EventStoreLive, forkSession, loadSession, recordEvent } from "../src/internal.js"
 
 // Helper to create events synchronously
 const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))

@@ -107,7 +107,8 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
           id: event.id,
           prompt: payload.promptText,
           type: payload.inputType,
-          options: payload.options,
+          // Only include options if defined (satisfies exactOptionalPropertyTypes)
+          ...(payload.options !== undefined && { options: payload.options }),
           timestamp: event.timestamp
         })
       } else if (event.name === EVENTS.INPUT_RESPONSE) {

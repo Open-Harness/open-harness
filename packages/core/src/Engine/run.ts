@@ -25,10 +25,11 @@ import type { HumanInputHandler } from "../helpers/humanInput.js"
 // Re-export RuntimeConfig from execute.ts for use in RunOptions
 // This is the primary export path per ADR-001
 import type { RuntimeConfig } from "./execute.js"
-export type { RuntimeConfig }
 import { executeWorkflow } from "./runtime.js"
 import { type WorkflowObserver, type WorkflowResult } from "./types.js"
 import type { WorkflowDef } from "./workflow.js"
+
+export type { RuntimeConfig }
 
 // ─────────────────────────────────────────────────────────────────
 // Types

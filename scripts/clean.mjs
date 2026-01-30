@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, URL */
 /**
  * Clean build artifacts from the monorepo.
  *

@@ -6,7 +6,7 @@
  * @module
  */
 
-import type { ReactNode } from "react"
+import type { JSX, ReactNode } from "react"
 import { createContext, useContext, useMemo } from "react"
 
 import type { WorkflowClient } from "../Contract.js"

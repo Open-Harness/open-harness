@@ -315,13 +315,6 @@ describe("WorkflowDef types (compile-time)", () => {
 
 describe("workflow behavioral (execution and phase transitions)", () => {
   const providerOptions = { model: "claude-sonnet-4-5" }
-  const playbackDummy = {
-    name: "playback-dummy",
-    model: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
 
   const taskSchema = z.object({ tasks: z.array(z.string()), done: z.boolean() })
   const messageSchema = z.object({ message: z.string() })

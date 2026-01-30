@@ -13,8 +13,8 @@ import { phase } from "../src/Engine/phase.js"
 import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 // execute is internal API - import from internal.ts
-import { execute } from "../src/internal.js"
 import type { RuntimeConfig } from "../src/Engine/execute.js"
+import { execute } from "../src/internal.js"
 import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
@@ -77,15 +77,6 @@ const simpleFixtures: ReadonlyArray<SimpleFixture> = [
     providerOptions
   }
 ]
-
-// Dummy provider that should never be called in playback mode
-const playbackDummy = {
-  name: "playback-dummy",
-  model: "playback-dummy",
-  stream: () => {
-    throw new Error("playbackDummyProvider called - recording not found")
-  }
-}
 
 // Test runtime config using playback mode
 // Per ADR-010: No providers map needed - agents own their providers directly

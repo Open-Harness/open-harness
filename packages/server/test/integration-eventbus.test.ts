@@ -6,11 +6,19 @@
  * start and collects events published during execution.
  */
 
-import { Effect, Fiber, Layer, PubSub, Stream } from "effect"
+import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { agent, type AnyEvent, EVENTS, type ProviderRunOptions, Services, type SessionId, workflow } from "@open-scaffold/core"
+import {
+  agent,
+  type AnyEvent,
+  EVENTS,
+  type ProviderRunOptions,
+  Services,
+  type SessionId,
+  workflow
+} from "@open-scaffold/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
 import { executeWorkflow } from "@open-scaffold/core/internal"
 

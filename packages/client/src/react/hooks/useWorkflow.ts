@@ -11,13 +11,13 @@
 import { useMemo } from "react"
 
 import { EVENTS } from "@open-scaffold/core"
-import type { AnyEvent } from "@open-scaffold/core"
+import type { AnyEvent, EventId } from "@open-scaffold/core"
 
 import type { ForkResult, PauseResult, ResumeResult } from "../../Contract.js"
-import type { PendingInteraction } from "./useWorkflowHITL.js"
-import type { WorkflowDataStatus } from "./useWorkflowData.js"
 import { useWorkflowActions } from "./useWorkflowActions.js"
+import type { WorkflowDataStatus } from "./useWorkflowData.js"
 import { useWorkflowData } from "./useWorkflowData.js"
+import type { PendingInteraction } from "./useWorkflowHITL.js"
 import { useWorkflowHITL } from "./useWorkflowHITL.js"
 import { useWorkflowVCR } from "./useWorkflowVCR.js"
 
@@ -206,7 +206,7 @@ export const useWorkflow = <S>(sessionId: string | null): UseWorkflowResult<S> =
 
   // Derive workflow status from events
   // Note: Events use `name` field with values like "workflow:started"
-  const { isRunning, isPaused, isCompleted } = useMemo(() => {
+  const { isCompleted, isPaused, isRunning } = useMemo(() => {
     const events = data.events
     const hasStarted = events.some((e) => e.name === EVENTS.WORKFLOW_STARTED)
     const hasCompleted = events.some((e) => e.name === EVENTS.WORKFLOW_COMPLETED)
@@ -269,7 +269,8 @@ export const useWorkflow = <S>(sessionId: string | null): UseWorkflowResult<S> =
     },
     respond: async (interactionId, response) => {
       assertSession()
-      return hitl.respond(interactionId, response)
+      // Cast to EventId - the public API accepts string for ergonomics
+      return hitl.respond(interactionId as EventId, response)
     },
 
     // Loading

@@ -78,15 +78,6 @@ const fixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Dummy provider for playback mode (should never be called)
-const playbackDummy = {
-  name: "playback-dummy",
-  model: "playback-dummy",
-  stream: () => {
-    throw new Error("playbackDummyProvider called - recording not found")
-  }
-}
-
 const makeDbPath = () => {
   const dir = path.join(tmpdir(), "open-scaffold-tests")
   mkdirSync(dir, { recursive: true })

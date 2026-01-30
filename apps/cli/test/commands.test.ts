@@ -8,8 +8,8 @@
  * @module
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { Command } from "commander"
+import { beforeEach, describe, expect, it } from "vitest"
 
 // ─────────────────────────────────────────────────────────────────
 // Test the CLI program structure

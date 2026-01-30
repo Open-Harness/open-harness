@@ -15,11 +15,7 @@ import type {
   SessionId,
   WorkflowDef
 } from "@open-scaffold/core"
-import {
-  Services,
-  SessionNotFound,
-  ValidationError
-} from "@open-scaffold/core"
+import { Services, SessionNotFound, ValidationError } from "@open-scaffold/core"
 import { Cause, Context, Data, Effect, Exit, Fiber, Layer, ManagedRuntime, Option, Stream } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "../constants.js"

@@ -173,8 +173,12 @@ describe("phase() factory", () => {
       })
 
       expect(p.human).toBeDefined()
-      expect(p.human!.type).toBe("approval")
-      expect(p.human!.prompt({ goal: "test", tasks: [], approved: false })).toBe("Review goal: test")
+      // Type narrow: we know human is a static config, not a function
+      const humanConfig = p.human as HumanConfig<TestState>
+      expect(humanConfig.type).toBe("approval")
+      expect((humanConfig.prompt as (state: TestState) => string)({ goal: "test", tasks: [], approved: false })).toBe(
+        "Review goal: test"
+      )
       expect(p.onResponse).toBeDefined()
     })
 
@@ -188,8 +192,10 @@ describe("phase() factory", () => {
         next: "done"
       })
 
-      expect(p.human!.type).toBe("choice")
-      expect(p.human!.options).toEqual(["Continue", "Revise", "Cancel"])
+      // Type narrow: we know human is a static config, not a function
+      const humanConfig = p.human as HumanConfig<TestState>
+      expect(humanConfig.type).toBe("choice")
+      expect(humanConfig.options).toEqual(["Continue", "Revise", "Cancel"])
     })
 
     it("allows human phase without next (if terminal)", () => {
@@ -246,12 +252,9 @@ describe("PhaseDef type (compile-time)", () => {
 })
 
 describe("HumanConfig type (compile-time)", () => {
-  it("HumanConfig can be created with all types", () => {
-    const freeform: HumanConfig<TestState> = {
-      prompt: () => "Enter text",
-      type: "freeform"
-    }
-
+  // Note: Per ADR-002, only "approval" and "choice" are valid types.
+  // For freeform text input, use "choice" with an "Other..." option.
+  it("HumanConfig can be created with valid types", () => {
     const approval: HumanConfig<TestState> = {
       prompt: () => "Approve?",
       type: "approval"
@@ -263,7 +266,6 @@ describe("HumanConfig type (compile-time)", () => {
       options: ["A", "B", "C"]
     }
 
-    expect(freeform.type).toBe("freeform")
     expect(approval.type).toBe("approval")
     expect(choice.type).toBe("choice")
   })
@@ -275,13 +277,6 @@ describe("HumanConfig type (compile-time)", () => {
 
 describe("phase behavioral (next() routing)", () => {
   const providerOptions = { model: "claude-sonnet-4-5" }
-  const playbackDummy = {
-    name: "playback-dummy",
-    model: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
 
   it("static next routes to the correct phase", async () => {
     type Phases = "step1" | "step2" | "done"

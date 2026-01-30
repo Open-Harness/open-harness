@@ -30,7 +30,7 @@ export interface HumanInputHandler {
    * @param options - Array of options to choose from
    * @returns Promise resolving to the selected option
    */
-  choice: (prompt: string, options: string[]) => Promise<string>
+  choice: (prompt: string, options: Array<string>) => Promise<string>
 }
 
 /**
@@ -65,7 +65,7 @@ export const cliPrompt = (): HumanInputHandler => ({
     })
   },
 
-  choice: async (prompt: string, options: string[]): Promise<string> => {
+  choice: async (prompt: string, options: Array<string>): Promise<string> => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
@@ -100,5 +100,5 @@ export const cliPrompt = (): HumanInputHandler => ({
  */
 export const autoApprove = (): HumanInputHandler => ({
   approval: async (_prompt: string): Promise<boolean> => true,
-  choice: async (_prompt: string, options: string[]): Promise<string> => options[0]
+  choice: async (_prompt: string, options: Array<string>): Promise<string> => options[0]
 })

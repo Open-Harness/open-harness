@@ -11,7 +11,7 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import type { AgentStreamEvent } from "../src/Domain/Provider.js"
-import { EVENTS, makeEventId, type AnyEvent } from "../src/Engine/types.js"
+import { type AnyEvent, EVENTS, makeEventId } from "../src/Engine/types.js"
 import { mapStreamEventToInternal } from "../src/internal.js"
 
 describe("mapStreamEventToInternal", () => {

@@ -25,10 +25,10 @@ import { AgentError, ProviderError, RecordingNotFound } from "../src/Domain/Erro
 import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "../src/Domain/Provider.js"
 import { agent } from "../src/Engine/agent.js"
 // execute is internal API - import from internal.ts
-import { execute } from "../src/internal.js"
 import { runAgentDef } from "../src/Engine/provider.js"
 import { WorkflowAbortedError } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
+import { execute } from "../src/internal.js"
 import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
 import { ProviderModeContext } from "../src/Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../src/Services/ProviderRecorder.js"
@@ -59,8 +59,7 @@ const createProvider = (
 ): AgentProvider => ({
   name: "test-error-provider",
   model: modelName,
-  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
-    Stream.fromIterable(events)
+  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> => Stream.fromIterable(events)
 })
 
 /**
@@ -70,8 +69,7 @@ const createProvider = (
 const createFailingProvider = (modelName: string, error: ProviderError): AgentProvider => ({
   name: "test-failing-provider",
   model: modelName,
-  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
-    Stream.fail(error)
+  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> => Stream.fail(error)
 })
 
 /**

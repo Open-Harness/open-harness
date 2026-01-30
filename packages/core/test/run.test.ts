@@ -92,15 +92,6 @@ const fixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Dummy provider for playback mode
-const playbackDummy = {
-  name: "playback-dummy",
-  model: "playback-dummy",
-  stream: () => {
-    throw new Error("playbackDummyProvider called - recording not found")
-  }
-}
-
 // Test runtime config using playback mode
 // Per ADR-010: No providers map needed - agents own their providers directly
 const testRuntime: RuntimeConfig = {

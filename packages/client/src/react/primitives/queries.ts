@@ -24,8 +24,7 @@ export const workflowKeys = {
   all: ["workflow"] as const,
   session: (sessionId: string | null) => ["workflow", "session", sessionId] as const,
   events: (sessionId: string | null) => ["workflow", "events", sessionId] as const,
-  state: (sessionId: string | null, position: number) =>
-    ["workflow", "state", sessionId, position] as const
+  state: (sessionId: string | null, position: number) => ["workflow", "state", sessionId, position] as const
 }
 
 /**

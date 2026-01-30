@@ -28,8 +28,7 @@ export const useCreateSessionMutation = () => {
   const { client } = useWorkflowClient()
 
   return useMutation({
-    mutationFn: ({ input }: { input: string }): Promise<string> =>
-      client.createSession(input)
+    mutationFn: ({ input }: { input: string }): Promise<string> => client.createSession(input)
   })
 }
 
@@ -54,8 +53,7 @@ export const useSendInputMutation = () => {
   const { client } = useWorkflowClient()
 
   return useMutation({
-    mutationFn: ({ event }: { event: AnyEvent }): Promise<void> =>
-      client.sendInput(event)
+    mutationFn: ({ event }: { event: AnyEvent }): Promise<void> => client.sendInput(event)
   })
 }
 

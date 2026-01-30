@@ -31,10 +31,10 @@ import { EventStore } from "../Services/EventStore.js"
 import type { ProviderModeContext } from "../Services/ProviderMode.js"
 import type { ProviderRecorder } from "../Services/ProviderRecorder.js"
 
+import type { HumanInputHandler } from "../helpers/humanInput.js"
 import type { AgentDef } from "./agent.js"
 import { dispatchToObserver } from "./dispatch.js"
 import type { HumanConfig, PhaseDef } from "./phase.js"
-import type { HumanInputHandler } from "../helpers/humanInput.js"
 import { runAgentDef } from "./provider.js"
 // Note: subscribers.ts exports are not used here anymore (see comment in executeWorkflow)
 // import { makeBusSubscriber, makeObserverSubscriber, makeStoreSubscriber } from "./subscribers.js"

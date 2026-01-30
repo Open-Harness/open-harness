@@ -27,7 +27,7 @@ import {
   type WorkflowResult
 } from "@open-scaffold/core"
 // executeWorkflow and ExecuteOptions are internal API (ADR-001) - import from internal entrypoint
-import { executeWorkflow, type ExecuteOptions } from "@open-scaffold/core/internal"
+import { type ExecuteOptions, executeWorkflow } from "@open-scaffold/core/internal"
 
 import { loadSession } from "./loadSession.js"
 
