@@ -19,10 +19,8 @@ import { Effect, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { AgentError, ProviderError, RecordingNotFound } from "../src/Domain/Errors.js"
 import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "../src/Domain/Provider.js"
-import { ProviderError } from "../src/Domain/Errors.js"
-import { AgentError, RecordingNotFound } from "../src/Domain/Errors.js"
-import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
 import { agent } from "../src/Engine/agent.js"
 import { execute } from "../src/Engine/execute.js"
 import {
@@ -31,8 +29,9 @@ import {
   ProviderRegistry,
   runAgentDef
 } from "../src/Engine/provider.js"
-import { workflow } from "../src/Engine/workflow.js"
 import { WorkflowAbortedError } from "../src/Engine/types.js"
+import { workflow } from "../src/Engine/workflow.js"
+import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
 import { ProviderModeContext } from "../src/Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../src/Services/ProviderRecorder.js"
 import { createTestRuntimeLayer, type SimpleFixture } from "./helpers/test-provider.js"
@@ -58,8 +57,7 @@ const noopRecorder: ProviderRecorderService = {
  */
 const createProvider = (events: ReadonlyArray<AgentStreamEvent>): AgentProvider => ({
   name: "test-error-provider",
-  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
-    Stream.fromIterable(events)
+  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> => Stream.fromIterable(events)
 })
 
 /**
@@ -67,8 +65,7 @@ const createProvider = (events: ReadonlyArray<AgentStreamEvent>): AgentProvider 
  */
 const createFailingProvider = (error: ProviderError): AgentProvider => ({
   name: "test-failing-provider",
-  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
-    Stream.fail(error)
+  stream: (_options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> => Stream.fail(error)
 })
 
 /**
@@ -80,7 +77,7 @@ const buildLiveLayer = (providers: Record<string, AgentProvider>) => {
   return Layer.mergeAll(
     Layer.effect(
       ProviderRegistry,
-      Effect.gen(function* () {
+      Effect.gen(function*() {
         for (const [model, provider] of Object.entries(providers)) {
           yield* registryService.registerProvider(model, provider)
         }
@@ -150,7 +147,7 @@ describe("Error Path: ProviderNotFoundError", () => {
     const layer = Layer.mergeAll(
       Layer.effect(
         ProviderRegistry,
-        Effect.gen(function* () {
+        Effect.gen(function*() {
           yield* registryService.registerProvider("model-a", goodProvider)
           // model-b is NOT registered
           return registryService
@@ -387,7 +384,7 @@ describe("Error Path: Invalid Output Schema", () => {
     // To get matching hashes, we need the fixture to use the same schema and
     // providerOptions as the agent. The output is deliberately invalid.
     const schema = z.object({ answer: z.string() })
-    const fixtures: SimpleFixture[] = [
+    const fixtures: Array<SimpleFixture> = [
       {
         prompt: "test prompt",
         output: { corrupted: true }, // Does not match z.object({ answer: z.string() })

@@ -4,9 +4,10 @@
  * Validates the core type definitions for the state-first DX.
  */
 
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
+import { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "../src/Domain/Ids.js"
 import {
   type AnyEvent,
   type Draft,
@@ -71,6 +72,87 @@ describe("EventId (Effect Schema branded type)", () => {
   it("EventIdSchema brands the type", () => {
     // This is a compile-time check - the schema exists and has brand
     expect(EventIdSchema).toBeDefined()
+  })
+})
+
+describe("SessionId (Effect Schema branded type)", () => {
+  it("makeSessionId generates valid UUID", async () => {
+    const id = await Effect.runPromise(makeSessionId())
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+  })
+
+  it("parseSessionId validates UUID format", async () => {
+    const validId = "550e8400-e29b-41d4-a716-446655440000"
+    const parsed = await Effect.runPromise(parseSessionId(validId))
+    expect(parsed).toBe(validId)
+  })
+
+  it("parseSessionId rejects invalid UUID", async () => {
+    const invalidId = "not-a-uuid"
+    await expect(Effect.runPromise(parseSessionId(invalidId))).rejects.toThrow()
+  })
+
+  it("parseSessionId rejects empty string", async () => {
+    await expect(Effect.runPromise(parseSessionId(""))).rejects.toThrow()
+  })
+
+  it("parseSessionId rejects partial UUID", async () => {
+    const partialId = "550e8400-e29b-41d4"
+    await expect(Effect.runPromise(parseSessionId(partialId))).rejects.toThrow()
+  })
+
+  it("SessionIdSchema brands the type", () => {
+    expect(SessionIdSchema).toBeDefined()
+  })
+})
+
+describe("WorkflowId (Effect Schema branded type)", () => {
+  it("WorkflowIdSchema accepts any string", async () => {
+    const decode = Schema.decodeUnknown(WorkflowIdSchema)
+    const result = await Effect.runPromise(decode("my-workflow"))
+    expect(result).toBe("my-workflow")
+  })
+
+  it("WorkflowIdSchema accepts workflow names with special chars", async () => {
+    const decode = Schema.decodeUnknown(WorkflowIdSchema)
+    const result = await Effect.runPromise(decode("task-planner-v2"))
+    expect(result).toBe("task-planner-v2")
+  })
+
+  it("WorkflowIdSchema rejects non-strings", async () => {
+    const decode = Schema.decodeUnknown(WorkflowIdSchema)
+    await expect(Effect.runPromise(decode(123))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(null))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(undefined))).rejects.toThrow()
+  })
+
+  it("WorkflowIdSchema brands the type", () => {
+    expect(WorkflowIdSchema).toBeDefined()
+  })
+})
+
+describe("AgentId (Effect Schema branded type)", () => {
+  it("AgentIdSchema accepts any string", async () => {
+    const decode = Schema.decodeUnknown(AgentIdSchema)
+    const result = await Effect.runPromise(decode("planner"))
+    expect(result).toBe("planner")
+  })
+
+  it("AgentIdSchema accepts agent names with special chars", async () => {
+    const decode = Schema.decodeUnknown(AgentIdSchema)
+    const result = await Effect.runPromise(decode("code-reviewer-v2"))
+    expect(result).toBe("code-reviewer-v2")
+  })
+
+  it("AgentIdSchema rejects non-strings", async () => {
+    const decode = Schema.decodeUnknown(AgentIdSchema)
+    await expect(Effect.runPromise(decode(123))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(null))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(undefined))).rejects.toThrow()
+  })
+
+  it("AgentIdSchema brands the type", () => {
+    expect(AgentIdSchema).toBeDefined()
   })
 })
 

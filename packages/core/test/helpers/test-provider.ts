@@ -14,8 +14,8 @@ import type { ZodType } from "zod"
 
 import { hashProviderRequest } from "../../src/Domain/Hash.js"
 import type { AgentProvider, AgentRunResult, AgentStreamEvent } from "../../src/Domain/Provider.js"
-import { InMemoryEventBus, InMemoryEventStore, makeInMemoryProviderRecorder } from "../../src/Layers/InMemory.js"
 import { makeInMemoryProviderRegistry, ProviderRegistry } from "../../src/Engine/provider.js"
+import { InMemoryEventBus, InMemoryEventStore, makeInMemoryProviderRecorder } from "../../src/Layers/InMemory.js"
 import { ProviderModeContext } from "../../src/Services/ProviderMode.js"
 import {
   ProviderRecorder,
@@ -232,7 +232,6 @@ export const createTestRuntimeLayer = (options: TestRuntimeOptions) => {
  * Convenience wrapper for tests that need to run Effects with recorded fixtures.
  */
 export const runWithTestRuntime = <A>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   effect: Effect.Effect<A, any, any>,
   options: TestRuntimeOptions
 ): Promise<A> => {

@@ -154,6 +154,7 @@ describe("WorkflowEvent Data.TaggedClass definitions", () => {
     it("StateIntent has correct _tag and fields", () => {
       const event = new StateIntent({
         intentId: "intent-001",
+        state: { count: 5 },
         patches: [{ op: "replace", path: "/count", value: 5 }],
         inversePatches: [{ op: "replace", path: "/count", value: 4 }],
         timestamp
@@ -332,7 +333,7 @@ describe("WorkflowEvent union type", () => {
       new PhaseExited({ phase: "p", reason: "next", timestamp }),
       new AgentStarted({ agent: "a", timestamp }),
       new AgentCompleted({ agent: "a", output: {}, durationMs: 0, timestamp }),
-      new StateIntent({ intentId: "i", patches: [], inversePatches: [], timestamp }),
+      new StateIntent({ intentId: "i", state: {}, patches: [], inversePatches: [], timestamp }),
       new StateCheckpoint({ state: {}, position: 0, phase: "p", timestamp }),
       new SessionForked({ parentSessionId: "p", forkIndex: 0, initialState: {}, timestamp }),
       new TextDelta({ agent: "a", delta: "", timestamp }),

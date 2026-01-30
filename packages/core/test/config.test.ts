@@ -10,10 +10,10 @@
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
-import type { InputRequest, RuntimeConfig, WorkflowObserver } from "../src/index.js"
 import { agent } from "../src/Engine/agent.js"
 import { run } from "../src/Engine/run.js"
 import { workflow } from "../src/Engine/workflow.js"
+import type { InputRequest, RuntimeConfig, WorkflowObserver } from "../src/index.js"
 import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
 
 describe("RuntimeConfig", () => {

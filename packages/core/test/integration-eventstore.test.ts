@@ -17,12 +17,12 @@ import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import type { SessionId } from "../src/Domain/Ids.js"
-import { EventStoreLive } from "../src/Layers/LibSQL.js"
 import { agent } from "../src/Engine/agent.js"
 import type { RuntimeConfig } from "../src/Engine/execute.js"
 import { run } from "../src/Engine/run.js"
 import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
+import { EventStoreLive } from "../src/Layers/LibSQL.js"
 import { EventStore } from "../src/Services/EventStore.js"
 import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
 

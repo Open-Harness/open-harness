@@ -6,8 +6,8 @@
 
 import { SqlClient } from "@effect/sql"
 import { LibsqlClient } from "@effect/sql-libsql"
-import { type AnyEvent, type EventId, Services, type SessionId, StoreError } from "@open-scaffold/core"
-import { Effect, Layer, Redacted } from "effect"
+import { type AnyEvent, EventIdSchema, parseSessionId, Services, type SessionId, StoreError } from "@open-scaffold/core"
+import { Effect, Layer, Redacted, Schema } from "effect"
 
 import type { LibSQLConfig } from "./Config.js"
 import { runMigrations } from "./Migrations.js"
@@ -27,24 +27,84 @@ interface EventRow {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// StoredEvent Schema (ADR-005: Type Safety at Store Boundaries)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Schema for validating parsed event payload from database.
+ *
+ * This validates the JSON-parsed payload structure matches what we expect.
+ * The database stores events with snake_case columns, but the parsed payload
+ * should be a plain object. We validate that the row.id and row.caused_by
+ * are valid EventIds, and that the payload parses as valid JSON.
+ */
+const StoredEventPayloadSchema = Schema.Unknown
+
+/**
+ * Schema for the fully parsed stored event.
+ * Used to validate the combination of row fields after JSON.parse.
+ */
+const StoredEventSchema = Schema.Struct({
+  id: EventIdSchema,
+  name: Schema.String,
+  payload: StoredEventPayloadSchema,
+  timestamp: Schema.DateFromString,
+  causedBy: Schema.optional(EventIdSchema)
+})
+
+// ─────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Convert a database row to an Event object.
+ * Decode a stored event row into an AnyEvent using Schema validation.
+ * Maps decode errors to StoreError per ADR-005.
  */
-const rowToEvent = (row: EventRow): AnyEvent => {
-  const event: AnyEvent = {
-    id: row.id as EventId,
-    name: row.name,
-    payload: JSON.parse(row.payload) as unknown,
-    timestamp: new Date(row.timestamp)
-  }
-  // Only add causedBy if it exists (exactOptionalPropertyTypes compatibility)
-  if (row.caused_by) {
-    return { ...event, causedBy: row.caused_by as EventId }
-  }
-  return event
+const decodeStoredEvent = Schema.decodeUnknown(StoredEventSchema)
+
+/**
+ * Convert a database row to an Event object with Schema validation.
+ * Returns an Effect that fails with StoreError if validation fails.
+ */
+const rowToEvent = (row: EventRow): Effect.Effect<AnyEvent, StoreError> => {
+  // Parse the JSON payload first - this can throw
+  const parsedPayload = Effect.try({
+    try: () => JSON.parse(row.payload),
+    catch: (error) => new StoreError({ operation: "read", cause: `Invalid JSON in event payload: ${error}` })
+  })
+
+  return parsedPayload.pipe(
+    Effect.flatMap((payload) => {
+      // Build the object to validate (transform snake_case to camelCase)
+      const toValidate = {
+        id: row.id,
+        name: row.name,
+        payload,
+        timestamp: row.timestamp,
+        ...(row.caused_by !== null ? { causedBy: row.caused_by } : {})
+      }
+
+      return decodeStoredEvent(toValidate).pipe(
+        Effect.mapError((parseError) =>
+          new StoreError({ operation: "read", cause: `Invalid stored event: ${parseError}` })
+        ),
+        Effect.map((validated): AnyEvent => {
+          // Build AnyEvent, only including causedBy if present
+          // (for exactOptionalPropertyTypes compatibility)
+          const event: AnyEvent = {
+            id: validated.id,
+            name: validated.name,
+            payload: validated.payload,
+            timestamp: validated.timestamp
+          }
+          if (validated.causedBy !== undefined) {
+            return { ...event, causedBy: validated.causedBy }
+          }
+          return event
+        })
+      )
+    })
+  )
 }
 
 /**
@@ -132,10 +192,12 @@ export const EventStoreLive = (config: LibSQLConfig): Layer.Layer<Services.Event
             FROM events
             WHERE session_id = ${sessionId}
             ORDER BY position ASC
-          `
-          return rows.map(rowToEvent)
+          `.pipe(
+            Effect.mapError((cause) => new StoreError({ operation: "read", cause }))
+          )
+          // Validate each row using Schema (ADR-005)
+          return yield* Effect.forEach(rows, rowToEvent)
         }).pipe(
-          Effect.mapError((cause) => new StoreError({ operation: "read", cause })),
           Effect.withSpan("EventStore.getEvents", { attributes: { sessionId } })
         ),
 
@@ -147,10 +209,12 @@ export const EventStoreLive = (config: LibSQLConfig): Layer.Layer<Services.Event
             WHERE session_id = ${sessionId}
             AND position >= ${position}
             ORDER BY position ASC
-          `
-          return rows.map(rowToEvent)
+          `.pipe(
+            Effect.mapError((cause) => new StoreError({ operation: "read", cause }))
+          )
+          // Validate each row using Schema (ADR-005)
+          return yield* Effect.forEach(rows, rowToEvent)
         }).pipe(
-          Effect.mapError((cause) => new StoreError({ operation: "read", cause })),
           Effect.withSpan("EventStore.getEventsFrom", { attributes: { sessionId, position } })
         ),
 
@@ -160,10 +224,17 @@ export const EventStoreLive = (config: LibSQLConfig): Layer.Layer<Services.Event
             SELECT id
             FROM sessions
             ORDER BY created_at DESC
-          `
-          return rows.map((row) => row.id as SessionId)
+          `.pipe(
+            Effect.mapError((cause) => new StoreError({ operation: "read", cause }))
+          )
+          // Validate each session ID using Schema (ADR-005)
+          return yield* Effect.forEach(rows, (row) =>
+            parseSessionId(row.id).pipe(
+              Effect.mapError((parseError) =>
+                new StoreError({ operation: "read", cause: `Invalid session ID: ${parseError}` })
+              )
+            ))
         }).pipe(
-          Effect.mapError((cause) => new StoreError({ operation: "read", cause })),
           Effect.withSpan("EventStore.listSessions")
         ),
 

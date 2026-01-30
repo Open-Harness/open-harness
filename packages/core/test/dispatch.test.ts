@@ -191,10 +191,12 @@ describe("dispatchToObserver (Match.exhaustive)", () => {
   })
 
   describe("State Events (ADR-006)", () => {
-    it("StateIntent does not trigger observer callback (handled by projection)", () => {
+    it("StateIntent triggers onStateChanged with state and patches", () => {
       const observer = createMockedObserver()
+      const testState = { count: 5 }
       const event = new StateIntent({
         intentId: "intent-001",
+        state: testState,
         patches: [{ op: "replace", path: "/count", value: 5 }],
         inversePatches: [{ op: "replace", path: "/count", value: 4 }],
         timestamp
@@ -202,8 +204,11 @@ describe("dispatchToObserver (Match.exhaustive)", () => {
 
       dispatchToObserver(observer, event)
 
-      // StateIntent is processed by the projection fiber, not dispatched directly
-      expect(observer.onStateChanged).not.toHaveBeenCalled()
+      // StateIntent now triggers onStateChanged for backward compatibility
+      expect(observer.onStateChanged).toHaveBeenCalledWith(
+        testState,
+        [{ op: "replace", path: "/count", value: 5 }]
+      )
     })
 
     it("StateCheckpoint triggers onStateChanged with state", () => {
@@ -385,7 +390,7 @@ describe("dispatchToObserver handles missing callbacks", () => {
       new PhaseExited({ phase: "p", reason: "next", timestamp }),
       new AgentStarted({ agent: "a", timestamp }),
       new AgentCompleted({ agent: "a", output: {}, durationMs: 0, timestamp }),
-      new StateIntent({ intentId: "i", patches: [], inversePatches: [], timestamp }),
+      new StateIntent({ intentId: "i", state: {}, patches: [], inversePatches: [], timestamp }),
       new StateCheckpoint({ state: {}, position: 0, phase: "p", timestamp }),
       new SessionForked({ parentSessionId: "p", forkIndex: 0, initialState: {}, timestamp }),
       new TextDelta({ agent: "a", delta: "", timestamp }),
@@ -433,7 +438,7 @@ describe("dispatchToObserver exhaustiveness (ADR-004)", () => {
       new PhaseExited({ phase: "p", reason: "next", timestamp }),
       new AgentStarted({ agent: "a", timestamp }),
       new AgentCompleted({ agent: "a", output: {}, durationMs: 0, timestamp }),
-      new StateIntent({ intentId: "i", patches: [], inversePatches: [], timestamp }),
+      new StateIntent({ intentId: "i", state: {}, patches: [], inversePatches: [], timestamp }),
       new StateCheckpoint({ state: {}, position: 0, phase: "p", timestamp }),
       new SessionForked({ parentSessionId: "p", forkIndex: 0, initialState: {}, timestamp }),
       new TextDelta({ agent: "a", delta: "", timestamp }),

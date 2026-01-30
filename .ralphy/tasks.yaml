@@ -1,58 +1,53 @@
-# Open Harness Technical Debt Resolution Tasks
-# Generated from ADRs and Technical Debt Inventory
-#
-# Phases:
-#   1: Event System (ADR-004)
-#   2: State Sourcing (ADR-006)
-#   3: Type Safety (ADR-005)
-#   4: API Consolidation (ADR-001, ADR-003)
-#   5: Provider/HITL (ADR-002, ADR-010)
-#   6: React Hooks (ADR-013)
-#   7: Test Coverage (TEST-*)
-#   8: Cleanup (DEAD-*, DOC-*, API-012)
-
 tasks:
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 1: Event System (ADR-004)
-  # ═══════════════════════════════════════════════════════════════════════════
-
   - title: "1.1: Create Data.TaggedClass event definitions (ADR-004)"
-    completed: false
+    completed: true
     parallel_group: 1
-    adr: "ADR-004"
-    details: |
+    adr: ADR-004
+    details: >
       ## What
-      Create new event definitions using Effect's Data.TaggedClass with _tag discriminator.
+
+      Create new event definitions using Effect's Data.TaggedClass with _tag
+      discriminator.
+
 
       ## Files
+
       - packages/core/src/Domain/Events.ts (create)
 
+
       ## Context
+
       Per ADR-004 "Event Types (Data.TaggedClass)":
+
       > Events use Effect's discriminated union pattern with _tag
 
+
       ## Steps
+
       1. Import { Data } from "effect"
-      2. Create event classes: WorkflowStarted, WorkflowCompleted, PhaseEntered, PhaseExited,
+
+      2. Create event classes: WorkflowStarted, WorkflowCompleted, PhaseEntered,
+      PhaseExited,
          AgentStarted, AgentCompleted, StateIntent, StateCheckpoint, SessionForked,
          TextDelta, ThinkingDelta, ToolCalled, ToolResult, InputRequested, InputReceived
       3. Create WorkflowEvent union type
-      4. Use short field names per ADR-008 (agent, prompt, type, not agentName, promptText, inputType)
-    acceptance:
-      - "WorkflowEvent is a discriminated union with _tag field"
-      - "All 15 event types extend Data.TaggedClass"
-      - "Field names follow ADR-008 conventions (agent not agentName)"
-      - "TypeScript compiles without errors"
-    verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'Data.TaggedClass' packages/core/src/Domain/Events.ts"
-        expect: "15"
 
+      4. Use short field names per ADR-008 (agent, prompt, type, not agentName,
+      promptText, inputType)
+    acceptance:
+      - WorkflowEvent is a discriminated union with _tag field
+      - All 15 event types extend Data.TaggedClass
+      - Field names follow ADR-008 conventions (agent not agentName)
+      - TypeScript compiles without errors
+    verify:
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'Data.TaggedClass' packages/core/src/Domain/Events.ts
+        expect: "15"
   - title: "1.2: Implement EventHub service with PubSub (ADR-004)"
-    completed: false
+    completed: true
     parallel_group: 1
-    adr: "ADR-004"
+    adr: ADR-004
     details: |
       ## What
       Create EventHub service using Effect PubSub for event distribution.
@@ -70,183 +65,239 @@ tasks:
       3. Implement subscribe() returning Stream from PubSub.subscribe
       4. Create EventHubLive Layer with makeEventHub
     acceptance:
-      - "EventHub service tag exists"
-      - "publish() emits to all subscribers"
-      - "subscribe() returns scoped Stream<WorkflowEvent>"
-      - "Uses Effect PubSub.unbounded"
+      - EventHub service tag exists
+      - publish() emits to all subscribers
+      - subscribe() returns scoped Stream<WorkflowEvent>
+      - Uses Effect PubSub.unbounded
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'PubSub' packages/core/src/Services/EventHub.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'PubSub' packages/core/src/Services/EventHub.ts
         expect: ">= 3"
-
   - title: "1.3: Create fiber-based event subscribers (ADR-004)"
     completed: false
     parallel_group: 1
-    adr: "ADR-004"
-    details: |
+    adr: ADR-004
+    details: >
       ## What
-      Create subscriber fibers for EventStore, EventBus, and Observer with isolated failure handling.
+
+      Create subscriber fibers for EventStore, EventBus, and Observer with
+      isolated failure handling.
+
 
       ## Files
+
       - packages/core/src/Engine/subscribers.ts (create)
 
+
       ## Context
+
       Per ADR-004 "Fiber-Based Subscribers":
+
       > Each subscriber runs in its own fiber with isolated failure handling
 
+
       ## Steps
-      1. Create makeStoreSubscriber - persists events to EventStore with error isolation
+
+      1. Create makeStoreSubscriber - persists events to EventStore with error
+      isolation
+
       2. Create makeBusSubscriber - broadcasts to EventBus for SSE
+
       3. Create makeObserverSubscriber - calls user callbacks
+
       4. Use Effect.forkScoped for automatic cleanup
+
       5. Wrap store failures in Effect.catchAll to avoid crashing workflow
     acceptance:
-      - "Three subscriber factory functions exist"
-      - "Store failures are caught and logged, not propagated"
-      - "All use Effect.forkScoped"
-      - "Stream.runForEach processes events"
+      - Three subscriber factory functions exist
+      - Store failures are caught and logged, not propagated
+      - All use Effect.forkScoped
+      - Stream.runForEach processes events
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'forkScoped' packages/core/src/Engine/subscribers.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'forkScoped' packages/core/src/Engine/subscribers.ts
         expect: ">= 3"
-
   - title: "1.4: Add Match.exhaustive dispatch function (ADR-004)"
-    completed: false
+    completed: true
     parallel_group: 1
-    adr: "ADR-004"
-    details: |
+    adr: ADR-004
+    details: >
       ## What
-      Replace switch-based dispatchToObserver with Match.exhaustive for compile-time safety.
+
+      Replace switch-based dispatchToObserver with Match.exhaustive for
+      compile-time safety.
+
 
       ## Files
+
       - packages/core/src/Engine/dispatch.ts (create)
 
+
       ## Context
+
       Per ADR-004 "Exhaustive Observer Dispatch":
+
       > Type-safe, compile-time exhaustive dispatch using Effect Match
 
+
       ## Steps
+
       1. Import { Match } from "effect"
+
       2. Create dispatchToObserver function using Match.value().pipe()
+
       3. Handle all 15 event _tag values
+
       4. End with Match.exhaustive for compile-time safety
+
       5. Call observer.onEvent first for catch-all
     acceptance:
-      - "Uses Match.value and Match.tag pattern"
-      - "Ends with Match.exhaustive"
-      - "Handles all 15 event types"
-      - "Adding new event type without handler causes compile error"
+      - Uses Match.value and Match.tag pattern
+      - Ends with Match.exhaustive
+      - Handles all 15 event types
+      - Adding new event type without handler causes compile error
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'Match.exhaustive' packages/core/src/Engine/dispatch.ts"
-        expect: "Match.exhaustive"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'Match.exhaustive' packages/core/src/Engine/dispatch.ts
+        expect: Match.exhaustive
   - title: "1.5: Add event serialization layer (ADR-004)"
-    completed: false
+    completed: true
     parallel_group: 1
-    adr: "ADR-004"
-    details: |
+    adr: ADR-004
+    details: >
       ## What
-      Create toSerializedEvent function to convert tagged events to JSON-friendly format.
+
+      Create toSerializedEvent function to convert tagged events to
+      JSON-friendly format.
+
 
       ## Files
+
       - packages/core/src/Domain/Events.ts (modify)
 
+
       ## Context
+
       Per ADR-004 "Serialization (JSON Boundary)":
+
       > Convert tagged events to JSON-friendly format for storage/SSE
 
+
       ## Steps
-      1. Define SerializedEvent interface with id, name, payload, timestamp, causedBy
-      2. Create tagToEventName mapping (_tag to "workflow:started", "agent:completed", etc.)
+
+      1. Define SerializedEvent interface with id, name, payload, timestamp,
+      causedBy
+
+      2. Create tagToEventName mapping (_tag to "workflow:started",
+      "agent:completed", etc.)
+
       3. Implement toSerializedEvent function extracting _tag and spreading rest
     acceptance:
-      - "SerializedEvent interface defined"
-      - "tagToEventName has all 15 mappings"
-      - "toSerializedEvent converts _tag to name property"
-      - "EventId generated at serialization time"
+      - SerializedEvent interface defined
+      - tagToEventName has all 15 mappings
+      - toSerializedEvent converts _tag to name property
+      - EventId generated at serialization time
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'tagToEventName' packages/core/src/Domain/Events.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'tagToEventName' packages/core/src/Domain/Events.ts
         expect: "1"
-
   - title: "1.6: Wire runtime to use EventHub.publish (ADR-004)"
-    completed: false
+    completed: true
     parallel_group: 1
-    adr: "ADR-004"
-    details: |
+    adr: ADR-004
+    details: >
       ## What
-      Update runtime.ts to emit events through EventHub instead of direct dispatch.
+
+      Update runtime.ts to emit events through EventHub instead of direct
+      dispatch.
+
 
       ## Files
+
       - packages/core/src/Engine/runtime.ts (modify)
 
+
       ## Context
+
       Per ADR-004 "Runtime Wiring":
+
       > All events through one PubSub.publish() call
 
+
       ## Steps
+
       1. Add EventHub to runtime dependencies
+
       2. Replace emitEvent calls with hub.publish(new EventClass(...))
+
       3. Fork subscriber fibers at workflow start (scoped)
+
       4. Remove duplicate dispatch code from emitEvent and agent loop
+
       5. Track events in Ref for result
     acceptance:
-      - "EventHub in runtime dependencies"
-      - "emitEvent replaced with hub.publish"
-      - "Subscriber fibers forked with Effect.forkScoped"
-      - "Old dispatchToObserver calls removed"
+      - EventHub in runtime dependencies
+      - emitEvent replaced with hub.publish
+      - Subscriber fibers forked with Effect.forkScoped
+      - Old dispatchToObserver calls removed
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "pnpm test packages/core"
-        expect: "All tests pass"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 2: State Sourcing (ADR-006)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: pnpm test packages/core
+        expect: All tests pass
   - title: "2.1: Create StateProjection service with SubscriptionRef (ADR-006)"
-    completed: false
+    completed: true
     parallel_group: 2
-    adr: "ADR-006"
-    details: |
+    adr: ADR-006
+    details: >
       ## What
-      Create StateProjection service that derives state from events using SubscriptionRef.
+
+      Create StateProjection service that derives state from events using
+      SubscriptionRef.
+
 
       ## Files
+
       - packages/core/src/Services/StateProjection.ts (create)
 
+
       ## Context
+
       Per ADR-006 "State Projection Fiber":
+
       > A background fiber watches events and maintains derived state
 
+
       ## Steps
+
       1. Create StateProjection Context.Tag
+
       2. Implement makeStateProjection using SubscriptionRef.make
+
       3. Fork fiber that subscribes to EventHub
+
       4. Handle StateIntent (apply patches) and StateCheckpoint (set state)
+
       5. Use Match.orElse for non-state events
     acceptance:
-      - "StateProjection service tag exists"
-      - "Uses SubscriptionRef for reactive state"
-      - "Fiber subscribes to EventHub"
-      - "Applies patches from StateIntent events"
-      - "Sets state directly from StateCheckpoint events"
+      - StateProjection service tag exists
+      - Uses SubscriptionRef for reactive state
+      - Fiber subscribes to EventHub
+      - Applies patches from StateIntent events
+      - Sets state directly from StateCheckpoint events
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'SubscriptionRef' packages/core/src/Services/StateProjection.ts"
-        expect: "Multiple matches"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'SubscriptionRef' packages/core/src/Services/StateProjection.ts
+        expect: Multiple matches
   - title: "2.2: Implement deriveState function (ADR-006)"
-    completed: false
+    completed: true
     parallel_group: 2
-    adr: "ADR-006"
+    adr: ADR-006
     details: |
       ## What
       Create deriveState function to compute state from events array.
@@ -264,116 +315,144 @@ tasks:
       3. Handle StateCheckpoint by setting state directly
       4. Create deriveStateOptimized that finds last checkpoint first
     acceptance:
-      - "deriveState function exists"
-      - "Applies patches from StateIntent events"
-      - "Handles StateCheckpoint events"
-      - "deriveStateOptimized starts from last checkpoint"
+      - deriveState function exists
+      - Applies patches from StateIntent events
+      - Handles StateCheckpoint events
+      - deriveStateOptimized starts from last checkpoint
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'deriveState' packages/core/src/Engine/utils.ts"
-        expect: "Multiple matches"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'deriveState' packages/core/src/Engine/utils.ts
+        expect: Multiple matches
   - title: "2.3: Update runtime to emit StateIntent (ADR-006)"
-    completed: false
+    completed: true
     parallel_group: 2
-    adr: "ADR-006"
-    details: |
+    adr: ADR-006
+    details: >
       ## What
-      Change agent state updates to emit StateIntent events instead of direct Ref mutation.
+
+      Change agent state updates to emit StateIntent events instead of direct
+      Ref mutation.
+
 
       ## Files
+
       - packages/core/src/Engine/runtime.ts (modify)
 
+
       ## Context
+
       Per ADR-006 "Updated State Mutation":
+
       > Emit intent, projection handles state
 
+
       ## Steps
+
       1. Change updateState to emit StateIntent with patches
+
       2. Remove direct Ref.update calls for state
+
       3. Read state from SubscriptionRef.get (provided by StateProjection)
+
       4. Projection fiber applies patches automatically
     acceptance:
-      - "State mutations emit StateIntent events"
-      - "No direct Ref.set/update for workflow state"
-      - "State read from SubscriptionRef"
-      - "Agents see updated state after intent emitted"
+      - State mutations emit StateIntent events
+      - No direct Ref.set/update for workflow state
+      - State read from SubscriptionRef
+      - Agents see updated state after intent emitted
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'StateIntent' packages/core/src/Engine/runtime.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'StateIntent' packages/core/src/Engine/runtime.ts
         expect: ">= 1"
-
   - title: "2.4: Add checkpoint emission on phase change (ADR-006)"
-    completed: false
+    completed: true
     parallel_group: 2
-    adr: "ADR-006"
-    details: |
+    adr: ADR-006
+    details: >
       ## What
-      Emit StateCheckpoint events on phase completion and pause for snapshot optimization.
+
+      Emit StateCheckpoint events on phase completion and pause for snapshot
+      optimization.
+
 
       ## Files
+
       - packages/core/src/Engine/runtime.ts (modify)
 
+
       ## Context
+
       Per ADR-006 "Checkpoint Emission":
+
       > Snapshot on phase change, pause, every N events
 
+
       ## Steps
+
       1. Emit StateCheckpoint after each phase completes
+
       2. Emit StateCheckpoint when workflow pauses
+
       3. Include current state, position, phase name, timestamp
     acceptance:
-      - "StateCheckpoint emitted on phase exit"
-      - "StateCheckpoint emitted on pause"
-      - "Checkpoint includes position and phase"
+      - StateCheckpoint emitted on phase exit
+      - StateCheckpoint emitted on pause
+      - Checkpoint includes position and phase
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'StateCheckpoint' packages/core/src/Engine/runtime.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'StateCheckpoint' packages/core/src/Engine/runtime.ts
         expect: ">= 2"
-
   - title: "2.5: Wire StateCache to EventHub (ADR-006)"
-    completed: false
+    completed: true
     parallel_group: 2
-    adr: "ADR-006"
-    details: |
+    adr: ADR-006
+    details: >
       ## What
-      Update StateCache to use deriveState and subscribe to EventHub for invalidation.
+
+      Update StateCache to use deriveState and subscribe to EventHub for
+      invalidation.
+
 
       ## Files
+
       - packages/core/src/Services/StateCache.ts (modify)
 
+
       ## Context
+
       Per ADR-006 "StateCache Implementation":
+
       > Recompute state from snapshot + events
 
+
       ## Steps
+
       1. Replace computeStateAt with deriveState
+
       2. Load latest snapshot, get events after, derive state
+
       3. Save new snapshot if replayed many events
+
       4. Use Effect.Cache for memoization
+
       5. Invalidate on StateIntent events
     acceptance:
-      - "Uses deriveState instead of computeStateAt"
-      - "Loads from snapshot + subsequent events"
-      - "Effect.Cache for memoization"
-      - "Invalidates on new StateIntent"
+      - Uses deriveState instead of computeStateAt
+      - Loads from snapshot + subsequent events
+      - Effect.Cache for memoization
+      - Invalidates on new StateIntent
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'deriveState' packages/core/src/Services/StateCache.ts"
-        expect: "deriveState"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 3: Type Safety (ADR-005)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'deriveState' packages/core/src/Services/StateCache.ts
+        expect: deriveState
   - title: "3.1: Add Effect Schema for branded ID types (ADR-005)"
-    completed: false
+    completed: true
     parallel_group: 3
-    adr: "ADR-005"
+    adr: ADR-005
     details: |
       ## What
       Replace ID casts with Effect Schema validation using branded types.
@@ -392,20 +471,19 @@ tasks:
       4. Create WorkflowIdSchema and AgentIdSchema
       5. Export schemas alongside types
     acceptance:
-      - "SessionIdSchema validates UUID format"
-      - "All 4 ID types have schemas"
-      - "Schema.decodeUnknown used for validation"
-      - "Type derived from schema matches existing type"
+      - SessionIdSchema validates UUID format
+      - All 4 ID types have schemas
+      - Schema.decodeUnknown used for validation
+      - Type derived from schema matches existing type
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'Schema.brand' packages/core/src/Domain/Ids.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'Schema.brand' packages/core/src/Domain/Ids.ts
         expect: ">= 4"
-
   - title: "3.2: Add StoredEvent schema for EventStoreLive (ADR-005)"
-    completed: false
+    completed: true
     parallel_group: 3
-    adr: "ADR-005"
+    adr: ADR-005
     details: |
       ## What
       Add Effect Schema validation for JSON.parse in EventStoreLive.
@@ -422,142 +500,181 @@ tasks:
       2. Replace JSON.parse cast with Schema.decodeUnknown
       3. Map decode errors to StoreError
     acceptance:
-      - "StoredEvent schema defined"
-      - "JSON.parse followed by Schema.decodeUnknown"
-      - "Decode errors become StoreError"
-      - "No as EventPayload casts"
+      - StoredEvent schema defined
+      - JSON.parse followed by Schema.decodeUnknown
+      - Decode errors become StoreError
+      - No as EventPayload casts
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -v 'as.*Payload' packages/server/src/store/EventStoreLive.ts"
-        expect: "No cast matches"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -v 'as.*Payload' packages/server/src/store/EventStoreLive.ts
+        expect: No cast matches
   - title: "3.3: Add StateCheckpoint schema for StateSnapshotStoreLive (ADR-005)"
-    completed: false
+    completed: true
     parallel_group: 3
-    adr: "ADR-005"
-    details: |
+    adr: ADR-005
+    details: >
       ## What
-      Add Effect Schema validation for state_json parsing in StateSnapshotStoreLive.
+
+      Add Effect Schema validation for state_json parsing in
+      StateSnapshotStoreLive.
+
 
       ## Files
+
       - packages/server/src/store/StateSnapshotStoreLive.ts (modify)
 
+
       ## Context
+
       Per ADR-005 "Store Boundary":
+
       > StateCheckpoint schema validation
 
+
       ## Steps
+
       1. Define StateCheckpointSchema
+
       2. Replace JSON.parse(row.state_json) cast with Schema.decodeUnknown
+
       3. Map decode errors to StoreError
     acceptance:
-      - "StateCheckpointSchema defined"
-      - "JSON.parse followed by Schema validation"
-      - "No as S casts after parse"
+      - StateCheckpointSchema defined
+      - JSON.parse followed by Schema validation
+      - No as S casts after parse
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "3.4: Add API response schemas in HttpClient (ADR-005)"
-    completed: false
+    completed: true
     parallel_group: 3
-    adr: "ADR-005"
-    details: |
+    adr: ADR-005
+    details: >
       ## What
-      Add Effect Schema validation for API responses and SSE messages in HttpClient.
+
+      Add Effect Schema validation for API responses and SSE messages in
+      HttpClient.
+
 
       ## Files
+
       - packages/client/src/HttpClient.ts (modify)
 
+
       ## Context
+
       Per ADR-005 "API Boundary":
+
       > API response schemas, SSE message schema
 
+
       ## Steps
+
       1. Define ApiResponse schema
+
       2. Define SSE message schema
+
       3. Replace response.json() as T with Schema.decodeUnknown
+
       4. Replace JSON.parse SSE cast with schema validation
     acceptance:
-      - "ApiResponse schema defined"
-      - "SSE message schema defined"
-      - "response.json() validated with schema"
-      - "No as AnyEvent casts"
+      - ApiResponse schema defined
+      - SSE message schema defined
+      - response.json() validated with schema
+      - No as AnyEvent casts
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'Schema.decodeUnknown' packages/client/src/HttpClient.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'Schema.decodeUnknown' packages/client/src/HttpClient.ts
         expect: ">= 2"
-
   - title: "3.5: Replace double cast in workflow.ts (ADR-005)"
-    completed: false
+    completed: true
     parallel_group: 3
-    adr: "ADR-005"
-    details: |
+    adr: ADR-005
+    details: >
       ## What
+
       Replace as unknown as Record cast with WorkflowDefSchema validation.
 
+
       ## Files
+
       - packages/core/src/Engine/workflow.ts (modify)
 
+
       ## Context
+
       Per ADR-005:
+
       > Replace double cast in workflow.ts with proper type guards
 
+
       ## Steps
-      1. Define WorkflowDefSchema as discriminated union (SimpleWorkflow vs PhaseWorkflow)
+
+      1. Define WorkflowDefSchema as discriminated union (SimpleWorkflow vs
+      PhaseWorkflow)
+
       2. Replace line 226 cast with Schema.decodeUnknown
+
       3. Use discriminated union to determine workflow type
     acceptance:
-      - "WorkflowDefSchema defined"
-      - "No as unknown as Record cast"
-      - "Schema validation determines workflow type"
+      - WorkflowDefSchema defined
+      - No as unknown as Record cast
+      - Schema validation determines workflow type
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -v 'as unknown as' packages/core/src/Engine/workflow.ts"
-        expect: "No matches"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 4: API Consolidation (ADR-001, ADR-003)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -v 'as unknown as' packages/core/src/Engine/workflow.ts
+        expect: No matches
   - title: "4.1: Enhance run() to return WorkflowExecution (ADR-001)"
     completed: false
     parallel_group: 4
-    adr: "ADR-001"
-    details: |
+    adr: ADR-001
+    details: >
       ## What
-      Modify run() to return WorkflowExecution with control methods and PromiseLike.
+
+      Modify run() to return WorkflowExecution with control methods and
+      PromiseLike.
+
 
       ## Files
+
       - packages/core/src/Engine/run.ts (modify)
 
+
       ## Context
+
       Per ADR-001 "New API Shape":
+
       > WorkflowExecution<S> extends PromiseLike<WorkflowResult<S>>
 
+
       ## Steps
-      1. Define WorkflowExecution interface with pause(), resume(), abort(), isPaused
+
+      1. Define WorkflowExecution interface with pause(), resume(), abort(),
+      isPaused
+
       2. Modify run() return type to WorkflowExecution<S>
+
       3. Implement then() for PromiseLike
+
       4. Wire pause/resume to runtime mechanisms
     acceptance:
-      - "WorkflowExecution interface defined"
-      - "Implements PromiseLike (can be awaited)"
-      - "Has pause(), resume(), abort() methods"
-      - "Has isPaused property"
+      - WorkflowExecution interface defined
+      - Implements PromiseLike (can be awaited)
+      - Has pause(), resume(), abort() methods
+      - Has isPaused property
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'PromiseLike' packages/core/src/Engine/run.ts"
-        expect: "PromiseLike"
-
-  - title: "4.2: Remove execute(), streamWorkflow(), runSimple(), runWithText() (ADR-001)"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'PromiseLike' packages/core/src/Engine/run.ts
+        expect: PromiseLike
+  - title: "4.2: Remove execute(), streamWorkflow(), runSimple(), runWithText()
+      (ADR-001)"
     completed: false
     parallel_group: 4
-    adr: "ADR-001"
+    adr: ADR-001
     details: |
       ## What
       Remove redundant execution APIs, keeping only run().
@@ -577,83 +694,106 @@ tasks:
       3. Keep executeWorkflow internal for server use
       4. Update index.ts exports
     acceptance:
-      - "execute() not exported publicly"
-      - "streamWorkflow() not exported publicly"
-      - "runSimple() deleted"
-      - "runWithText() deleted"
-      - "Only run() in public API"
+      - execute() not exported publicly
+      - streamWorkflow() not exported publicly
+      - runSimple() deleted
+      - runWithText() deleted
+      - Only run() in public API
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'export.*runSimple' packages/core/src/index.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'export.*runSimple' packages/core/src/index.ts
         expect: "0"
-
   - title: "4.3: Create /internal entrypoint for core (ADR-003)"
     completed: false
     parallel_group: 4
-    adr: "ADR-003"
-    details: |
+    adr: ADR-003
+    details: >
       ## What
-      Create @open-scaffold/core/internal entrypoint for advanced/internal exports.
+
+      Create @open-scaffold/core/internal entrypoint for advanced/internal
+      exports.
+
 
       ## Files
+
       - packages/core/src/internal.ts (create)
+
       - packages/core/package.json (modify exports)
 
+
       ## Context
+
       Per ADR-003 "Chosen Approach":
+
       > Move advanced exports behind /internal entrypoint
 
+
       ## Steps
-      1. Create internal.ts exporting Services, Layers, computeStateAt, runAgentDef
+
+      1. Create internal.ts exporting Services, Layers, computeStateAt,
+      runAgentDef
+
       2. Add exports["./internal"] to package.json
+
       3. Add JSDoc @internal to internal exports
+
       4. Remove internal exports from main index.ts
     acceptance:
-      - "packages/core/src/internal.ts exists"
-      - "package.json has ./internal export"
-      - "Services/Layers exported from internal"
-      - "Not exported from main index.ts"
+      - packages/core/src/internal.ts exists
+      - package.json has ./internal export
+      - Services/Layers exported from internal
+      - Not exported from main index.ts
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep './internal' packages/core/package.json"
-        expect: "./internal"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep './internal' packages/core/package.json
+        expect: ./internal
   - title: "4.4: Create /internal entrypoint for server (ADR-003)"
     completed: false
     parallel_group: 4
-    adr: "ADR-003"
-    details: |
+    adr: ADR-003
+    details: >
       ## What
-      Create @open-scaffold/server/internal entrypoint for route handlers and SSE.
+
+      Create @open-scaffold/server/internal entrypoint for route handlers and
+      SSE.
+
 
       ## Files
+
       - packages/server/src/internal.ts (create)
+
       - packages/server/package.json (modify exports)
 
+
       ## Context
+
       Per ADR-003:
+
       > Route handlers and SSE utilities are internal-only
 
+
       ## Steps
+
       1. Create internal.ts exporting route handlers, Server, ServerError
+
       2. Add exports["./internal"] to package.json
+
       3. Remove route handlers from main index.ts
     acceptance:
-      - "packages/server/src/internal.ts exists"
-      - "package.json has ./internal export"
-      - "Route handlers in internal, not main"
+      - packages/server/src/internal.ts exists
+      - package.json has ./internal export
+      - Route handlers in internal, not main
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep './internal' packages/server/package.json"
-        expect: "./internal"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep './internal' packages/server/package.json
+        expect: ./internal
   - title: "4.5: Create /internal entrypoint for client (ADR-003)"
     completed: false
     parallel_group: 4
-    adr: "ADR-003"
+    adr: ADR-003
     details: |
       ## What
       Create @open-scaffold/client/internal entrypoint for SSE utilities.
@@ -671,50 +811,55 @@ tasks:
       2. Add exports["./internal"] to package.json
       3. Remove SSE internals from main index.ts
     acceptance:
-      - "packages/client/src/internal.ts exists"
-      - "package.json has ./internal export"
-      - "sseReconnectSchedule not in main exports"
+      - packages/client/src/internal.ts exists
+      - package.json has ./internal export
+      - sseReconnectSchedule not in main exports
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 5: Provider/HITL (ADR-002, ADR-010)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "5.1: Update AgentProvider interface with model and config (ADR-010)"
     completed: false
     parallel_group: 5
-    adr: "ADR-010"
-    details: |
+    adr: ADR-010
+    details: >
       ## What
+
       Add model and config properties to AgentProvider interface for hashing.
 
+
       ## Files
+
       - packages/core/src/Domain/Provider.ts (modify)
 
+
       ## Context
+
       Per ADR-010 "AgentProvider Interface":
+
       > Provider must expose configuration for hashing
 
+
       ## Steps
+
       1. Add readonly model: string to AgentProvider
-      2. Add readonly config?: Record<string, unknown> for provider-specific options
+
+      2. Add readonly config?: Record<string, unknown> for provider-specific
+      options
+
       3. Ensure stream() method signature unchanged
     acceptance:
-      - "AgentProvider has name, model, config properties"
-      - "stream() method unchanged"
-      - "Types compile"
+      - AgentProvider has name, model, config properties
+      - stream() method unchanged
+      - Types compile
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'model:' packages/core/src/Domain/Provider.ts"
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'model:' packages/core/src/Domain/Provider.ts
         expect: "model:"
-
   - title: "5.2: Change AgentDef from model string to provider instance (ADR-010)"
     completed: false
     parallel_group: 5
-    adr: "ADR-010"
+    adr: ADR-010
     details: |
       ## What
       Replace agent.model string with agent.provider instance.
@@ -733,17 +878,16 @@ tasks:
     acceptance:
       - "AgentDef has provider: AgentProvider"
       - "No model: string in AgentDef"
-      - "agent() factory accepts provider"
+      - agent() factory accepts provider
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -v 'model:.*string' packages/core/src/Engine/agent.ts"
-        expect: "No model string"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -v 'model:.*string' packages/core/src/Engine/agent.ts
+        expect: No model string
   - title: "5.3: Delete ProviderRegistry and related code (ADR-010)"
     completed: false
     parallel_group: 5
-    adr: "ADR-010"
+    adr: ADR-010
     details: |
       ## What
       Remove ProviderRegistry service since agents now own their providers.
@@ -762,47 +906,57 @@ tasks:
       3. Delete ProviderNotFoundError
       4. Update provider.ts to use agent.provider directly
     acceptance:
-      - "No ProviderRegistry service"
-      - "No makeInMemoryProviderRegistry"
-      - "provider.ts uses agent.provider directly"
+      - No ProviderRegistry service
+      - No makeInMemoryProviderRegistry
+      - provider.ts uses agent.provider directly
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -r 'ProviderRegistry' packages/core/src/"
-        expect: "No matches"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -r 'ProviderRegistry' packages/core/src/
+        expect: No matches
   - title: "5.4: Remove providers map from RuntimeConfig (ADR-010)"
     completed: false
     parallel_group: 5
-    adr: "ADR-010"
-    details: |
+    adr: ADR-010
+    details: >
       ## What
-      Remove providers map from runtime configuration since agents own providers.
+
+      Remove providers map from runtime configuration since agents own
+      providers.
+
 
       ## Files
+
       - packages/core/src/Engine/run.ts (modify)
+
       - packages/core/src/Engine/types.ts (modify RuntimeConfig if there)
 
+
       ## Context
+
       Per ADR-010 "Runtime Configuration (Simplified)":
+
       > No providers map needed
 
+
       ## Steps
+
       1. Remove providers from RuntimeConfig type
+
       2. Remove providers from RunOptions
+
       3. Update any code that reads runtime.providers
     acceptance:
-      - "No providers in RuntimeConfig"
-      - "No providers in RunOptions"
-      - "Runtime config simpler"
+      - No providers in RuntimeConfig
+      - No providers in RunOptions
+      - Runtime config simpler
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "5.5: Add human field to PhaseDef (ADR-002)"
     completed: false
     parallel_group: 5
-    adr: "ADR-002"
+    adr: ADR-002
     details: |
       ## What
       Add inline human input configuration to phase definitions.
@@ -819,19 +973,18 @@ tasks:
       2. Add human field to PhaseDef
       3. Support static config and function form
     acceptance:
-      - "HumanConfig interface defined"
-      - "PhaseDef has human? field"
-      - "Supports static and function form"
+      - HumanConfig interface defined
+      - PhaseDef has human? field
+      - Supports static and function form
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep 'human?' packages/core/src/Engine/phase.ts"
-        expect: "human?"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep 'human?' packages/core/src/Engine/phase.ts
+        expect: human?
   - title: "5.6: Add humanInput handlers to RunOptions (ADR-002)"
     completed: false
     parallel_group: 5
-    adr: "ADR-002"
+    adr: ADR-002
     details: |
       ## What
       Add humanInput option to run() for handling approval/choice callbacks.
@@ -848,51 +1001,62 @@ tasks:
       2. Add humanInput to RunOptions
       3. Wire to runtime to call handlers on InputRequested
     acceptance:
-      - "HumanInputHandler type defined"
-      - "RunOptions has humanInput"
-      - "approval handler returns Promise<boolean>"
-      - "choice handler returns Promise<string>"
+      - HumanInputHandler type defined
+      - RunOptions has humanInput
+      - approval handler returns Promise<boolean>
+      - choice handler returns Promise<string>
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "5.7: Implement runtime HITL flow (ADR-002)"
     completed: false
     parallel_group: 5
-    adr: "ADR-002"
-    details: |
+    adr: ADR-002
+    details: >
       ## What
+
       Implement runtime logic to evaluate human config and call handlers.
 
+
       ## Files
+
       - packages/core/src/Engine/runtime.ts (modify)
 
+
       ## Context
+
       Per ADR-002 "Event Flow":
-      > agent:completed -> human config evaluated -> input:requested -> handler -> input:received
+
+      > agent:completed -> human config evaluated -> input:requested -> handler
+      -> input:received
+
 
       ## Steps
+
       1. After agent completes, evaluate phase.human (static or function)
+
       2. If human config returned, emit InputRequested event
+
       3. Await humanInput handler (approval or choice)
+
       4. Emit InputReceived event with response
+
       5. Store humanResponse in state for routing
     acceptance:
-      - "Human config evaluated after agent"
-      - "InputRequested emitted when human needed"
-      - "Handler awaited for response"
-      - "InputReceived emitted with value"
-      - "state.humanResponse available for routing"
+      - Human config evaluated after agent
+      - InputRequested emitted when human needed
+      - Handler awaited for response
+      - InputReceived emitted with value
+      - state.humanResponse available for routing
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "pnpm test packages/core"
-        expect: "All tests pass"
-
+      - command: pnpm typecheck
+        expect: No errors
+      - command: pnpm test packages/core
+        expect: All tests pass
   - title: "5.8: Delete Domain/Interaction.ts (ADR-002)"
     completed: false
     parallel_group: 5
-    adr: "ADR-002"
+    adr: ADR-002
     details: |
       ## What
       Delete the unused Domain/Interaction.ts file.
@@ -910,19 +1074,18 @@ tasks:
       2. Remove any exports from index.ts
       3. Update any imports that reference it
     acceptance:
-      - "Domain/Interaction.ts deleted"
-      - "No imports of Interaction"
-      - "Build succeeds"
+      - Domain/Interaction.ts deleted
+      - No imports of Interaction
+      - Build succeeds
     verify:
       - command: "! test -f packages/core/src/Domain/Interaction.ts"
-        expect: "File does not exist"
-      - command: "pnpm build"
-        expect: "Build succeeds"
-
+        expect: File does not exist
+      - command: pnpm build
+        expect: Build succeeds
   - title: "5.9: Create cliPrompt and autoApprove helpers (ADR-002)"
     completed: false
     parallel_group: 5
-    adr: "ADR-002"
+    adr: ADR-002
     details: |
       ## What
       Create built-in human input handlers for CLI and testing.
@@ -939,21 +1102,16 @@ tasks:
       2. Create autoApprove() returning true/first option
       3. Export from helpers
     acceptance:
-      - "cliPrompt() prompts via readline"
-      - "autoApprove() returns true for approval, first option for choice"
-      - "Both return HumanInputHandler"
+      - cliPrompt() prompts via readline
+      - autoApprove() returns true for approval, first option for choice
+      - Both return HumanInputHandler
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 6: React Hooks (ADR-013)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.1: Add @tanstack/react-query dependency (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
+    adr: ADR-013
     details: |
       ## What
       Add React Query as dependency for client package.
@@ -970,15 +1128,14 @@ tasks:
       2. Run pnpm install
     acceptance:
       - "@tanstack/react-query in dependencies"
-      - "Version ^5.0.0 or higher"
+      - Version ^5.0.0 or higher
     verify:
-      - command: "grep 'react-query' packages/client/package.json"
-        expect: "react-query"
-
+      - command: grep 'react-query' packages/client/package.json
+        expect: react-query
   - title: "6.2: Create primitive query hooks (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
+    adr: ADR-013
     details: |
       ## What
       Create internal primitive hooks using React Query.
@@ -995,45 +1152,56 @@ tasks:
       2. Create useEventsQuery with queryKey ['events', id]
       3. Create useStateAtQuery with queryKey ['state', id, position]
     acceptance:
-      - "Three query hooks exist"
-      - "Uses useQuery from React Query"
-      - "Query keys follow pattern"
+      - Three query hooks exist
+      - Uses useQuery from React Query
+      - Query keys follow pattern
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.3: Create primitive mutation hooks (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
-    details: |
+    adr: ADR-013
+    details: >
       ## What
+
       Create internal mutation hooks for actions.
 
+
       ## Files
+
       - packages/client/src/react/primitives/mutations.ts (create)
 
+
       ## Context
+
       Per ADR-013 "Mutations":
-      > useCreateSessionMutation, useSendInputMutation, usePauseMutation, useResumeMutation, useForkMutation
+
+      > useCreateSessionMutation, useSendInputMutation, usePauseMutation,
+      useResumeMutation, useForkMutation
+
 
       ## Steps
+
       1. Create useCreateSessionMutation
+
       2. Create useSendInputMutation
+
       3. Create usePauseMutation
+
       4. Create useResumeMutation
+
       5. Create useForkMutation
     acceptance:
-      - "Five mutation hooks exist"
-      - "Uses useMutation from React Query"
+      - Five mutation hooks exist
+      - Uses useMutation from React Query
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.4: Create SSE subscription hook (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
+    adr: ADR-013
     details: |
       ## What
       Create hook that subscribes to SSE and updates React Query cache.
@@ -1052,80 +1220,104 @@ tasks:
       4. Invalidate ['state', id] on state events
       5. Cleanup on unmount
     acceptance:
-      - "useEventSubscription exists"
-      - "Updates events cache on message"
-      - "Invalidates state on StateIntent"
-      - "Cleans up EventSource on unmount"
+      - useEventSubscription exists
+      - Updates events cache on message
+      - Invalidates state on StateIntent
+      - Cleans up EventSource on unmount
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.5: Create grouped hooks (Tier 1) (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
-    details: |
+    adr: ADR-013
+    details: >
       ## What
-      Create four grouped hooks: useWorkflowData, useWorkflowActions, useWorkflowVCR, useWorkflowHITL.
+
+      Create four grouped hooks: useWorkflowData, useWorkflowActions,
+      useWorkflowVCR, useWorkflowHITL.
+
 
       ## Files
+
       - packages/client/src/react/hooks/useWorkflowData.ts (create)
+
       - packages/client/src/react/hooks/useWorkflowActions.ts (create)
+
       - packages/client/src/react/hooks/useWorkflowVCR.ts (create)
+
       - packages/client/src/react/hooks/useWorkflowHITL.ts (create)
 
+
       ## Context
+
       Per ADR-013 "Tier 1: Grouped Hooks":
+
       > Four hooks organized by concern
 
+
       ## Steps
+
       1. Create useWorkflowData composing queries
+
       2. Create useWorkflowActions composing create/send mutations
+
       3. Create useWorkflowVCR composing pause/resume/fork
+
       4. Create useWorkflowHITL deriving pending interactions
     acceptance:
-      - "Four grouped hooks exist"
-      - "useWorkflowData returns events, state, status"
-      - "useWorkflowActions returns create, send"
-      - "useWorkflowVCR returns pause, resume, fork"
-      - "useWorkflowHITL returns pending, respond"
+      - Four grouped hooks exist
+      - useWorkflowData returns events, state, status
+      - useWorkflowActions returns create, send
+      - useWorkflowVCR returns pause, resume, fork
+      - useWorkflowHITL returns pending, respond
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.6: Create unified useWorkflow hook (Tier 2) (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
-    details: |
+    adr: ADR-013
+    details: >
       ## What
+
       Create the main useWorkflow hook composing all grouped hooks.
 
+
       ## Files
+
       - packages/client/src/react/hooks/useWorkflow.ts (create)
 
+
       ## Context
+
       Per ADR-013 "Tier 2: Unified Hook":
+
       > One hook for most users
 
+
       ## Steps
+
       1. Create useWorkflow<S>(sessionId) hook
-      2. Compose useWorkflowData, useWorkflowActions, useWorkflowVCR, useWorkflowHITL
+
+      2. Compose useWorkflowData, useWorkflowActions, useWorkflowVCR,
+      useWorkflowHITL
+
       3. Derive isRunning, isPaused, isCompleted from events
+
       4. Bind actions to sessionId
     acceptance:
-      - "useWorkflow exists"
-      - "Returns events, state, status, actions"
-      - "Actions bound to sessionId"
-      - "Derived status (isRunning, isPaused, isCompleted)"
+      - useWorkflow exists
+      - Returns events, state, status, actions
+      - Actions bound to sessionId
+      - Derived status (isRunning, isPaused, isCompleted)
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.7: Create WorkflowClientProvider (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
+    adr: ADR-013
     details: |
       ## What
       Create provider component for client configuration.
@@ -1142,49 +1334,55 @@ tasks:
       2. Create context for client
       3. Export for use with QueryClientProvider
     acceptance:
-      - "WorkflowClientProvider exists"
-      - "Accepts baseUrl prop"
-      - "Provides client context"
+      - WorkflowClientProvider exists
+      - Accepts baseUrl prop
+      - Provides client context
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "6.8: Update client/react exports (ADR-013)"
     completed: false
     parallel_group: 6
-    adr: "ADR-013"
-    details: |
+    adr: ADR-013
+    details: >
       ## What
+
       Update exports to expose new hooks and remove old ones.
 
+
       ## Files
+
       - packages/client/src/react/index.ts (modify)
+
       - packages/client/src/index.ts (modify if needed)
 
+
       ## Context
+
       Per ADR-013 "What Gets Removed" and "What Gets Added"
 
+
       ## Steps
-      1. Export useWorkflow, useWorkflowData, useWorkflowActions, useWorkflowVCR, useWorkflowHITL
+
+      1. Export useWorkflow, useWorkflowData, useWorkflowActions,
+      useWorkflowVCR, useWorkflowHITL
+
       2. Export WorkflowClientProvider
+
       3. Remove 19 old individual hooks
+
       4. Keep old hooks with deprecation warnings (optional)
     acceptance:
-      - "New hooks exported"
-      - "WorkflowClientProvider exported"
-      - "Old hooks removed or deprecated"
+      - New hooks exported
+      - WorkflowClientProvider exported
+      - Old hooks removed or deprecated
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 7: Test Coverage (TEST-*)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "7.1: Add tests for SSE parsing (TEST-001)"
     completed: false
     parallel_group: 7
-    issue: "TEST-001"
+    issue: TEST-001
     details: |
       ## What
       Add unit tests for SSE.ts parsing functions.
@@ -1204,18 +1402,17 @@ tasks:
       ## Test Pattern
       Use real implementations, no mocking per CLAUDE.md.
     acceptance:
-      - "parseSSEMessage has 3+ test cases"
-      - "createSSEStream has integration test"
-      - "No mocks or stubs used"
-      - "Tests pass"
+      - parseSSEMessage has 3+ test cases
+      - createSSEStream has integration test
+      - No mocks or stubs used
+      - Tests pass
     verify:
-      - command: "pnpm test packages/client -- --testPathPattern=SSE"
-        expect: "All tests pass"
-
+      - command: pnpm test packages/client -- --testPathPattern=SSE
+        expect: All tests pass
   - title: "7.2: Add tests for CLI commands (TEST-002)"
     completed: false
     parallel_group: 7
-    issue: "TEST-002"
+    issue: TEST-002
     details: |
       ## What
       Add end-to-end tests for CLI app.
@@ -1235,17 +1432,16 @@ tasks:
       ## Test Pattern
       Use real implementations with `:memory:` database.
     acceptance:
-      - "CLI commands tested"
-      - "Error cases covered"
-      - "No mocks"
+      - CLI commands tested
+      - Error cases covered
+      - No mocks
     verify:
-      - command: "pnpm test apps/cli"
-        expect: "Tests pass"
-
+      - command: pnpm test apps/cli
+        expect: Tests pass
   - title: "7.3: Add tests for hashProviderRequest (TEST-003)"
     completed: false
     parallel_group: 7
-    issue: "TEST-003"
+    issue: TEST-003
     details: |
       ## What
       Add unit tests for hash determinism.
@@ -1262,17 +1458,16 @@ tasks:
       - Different input produces different hash
       - Key ordering normalized
     acceptance:
-      - "Hash determinism verified"
-      - "Key ordering tested"
-      - "3+ test cases"
+      - Hash determinism verified
+      - Key ordering tested
+      - 3+ test cases
     verify:
-      - command: "pnpm test packages/core -- --testPathPattern=Hash"
-        expect: "All tests pass"
-
+      - command: pnpm test packages/core -- --testPathPattern=Hash
+        expect: All tests pass
   - title: "7.4: Add tests for OpenScaffold lifecycle (TEST-004)"
     completed: false
     parallel_group: 7
-    issue: "TEST-004"
+    issue: TEST-004
     details: |
       ## What
       Add tests for OpenScaffold create/use/dispose lifecycle.
@@ -1289,17 +1484,16 @@ tasks:
       - Dispose cleans up
       - Error during init handled
     acceptance:
-      - "Lifecycle tested"
-      - "Resource cleanup verified"
+      - Lifecycle tested
+      - Resource cleanup verified
       - "Uses :memory: database"
     verify:
-      - command: "pnpm test packages/server -- --testPathPattern=OpenScaffold"
-        expect: "All tests pass"
-
+      - command: pnpm test packages/server -- --testPathPattern=OpenScaffold
+        expect: All tests pass
   - title: "7.5: Add tests for loadWorkflow dynamic import (TEST-005)"
     completed: false
     parallel_group: 7
-    issue: "TEST-005"
+    issue: TEST-005
     details: |
       ## What
       Add tests for CLI workflow loading.
@@ -1316,47 +1510,57 @@ tasks:
       - Invalid path error
       - Invalid export error
     acceptance:
-      - "Dynamic import tested"
-      - "Error cases covered"
-      - "No arbitrary code execution without validation"
+      - Dynamic import tested
+      - Error cases covered
+      - No arbitrary code execution without validation
     verify:
-      - command: "pnpm test apps/cli -- --testPathPattern=loader"
-        expect: "All tests pass"
-
+      - command: pnpm test apps/cli -- --testPathPattern=loader
+        expect: All tests pass
   - title: "7.6: Add end-to-end recording/playback test (TEST-016)"
     completed: false
     parallel_group: 7
-    issue: "TEST-016"
-    details: |
+    issue: TEST-016
+    details: >
       ## What
+
       Add integration test for full live -> record -> playback cycle.
 
+
       ## Files
+
       - packages/core/src/__tests__/recording-playback.test.ts (create)
 
+
       ## Context
+
       Per technical debt inventory:
+
       > No end-to-end recording/playback test
 
+
       ## Test Pattern
+
       1. Run workflow in live mode (records to ProviderRecorder)
+
       2. Run same workflow in playback mode (replays from recordings)
+
       3. Verify identical results
 
-      Use real Anthropic API for live mode (subscription handles auth per CLAUDE.md).
-    acceptance:
-      - "Live mode records events"
-      - "Playback mode replays events"
-      - "Results match"
-      - "Uses ProviderRecorder, not mocks"
-    verify:
-      - command: "pnpm test packages/core -- --testPathPattern=recording-playback"
-        expect: "All tests pass"
 
+      Use real Anthropic API for live mode (subscription handles auth per
+      CLAUDE.md).
+    acceptance:
+      - Live mode records events
+      - Playback mode replays events
+      - Results match
+      - Uses ProviderRecorder, not mocks
+    verify:
+      - command: pnpm test packages/core -- --testPathPattern=recording-playback
+        expect: All tests pass
   - title: "7.7: Add tests for mapStreamEventToInternal (TEST-014)"
     completed: false
     parallel_group: 7
-    issue: "TEST-014"
+    issue: TEST-014
     details: |
       ## What
       Add unit tests for event type mappings.
@@ -1372,20 +1576,15 @@ tasks:
       - Each event type mapped correctly
       - Unknown types handled
     acceptance:
-      - "All event mappings tested"
-      - "Unknown type handling tested"
+      - All event mappings tested
+      - Unknown type handling tested
     verify:
-      - command: "pnpm test packages/core -- --testPathPattern=provider-events"
-        expect: "All tests pass"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # PHASE 8: Cleanup (DEAD-*, DOC-*, API-012)
-  # ═══════════════════════════════════════════════════════════════════════════
-
+      - command: pnpm test packages/core -- --testPathPattern=provider-events
+        expect: All tests pass
   - title: "8.1: Delete unused Logger layers (DEAD-007)"
     completed: false
     parallel_group: 8
-    issue: "DEAD-007"
+    issue: DEAD-007
     details: |
       ## What
       Delete 8 unused Logger layer exports.
@@ -1403,19 +1602,18 @@ tasks:
       2. Delete unused layers
       3. Keep any that are actually used
     acceptance:
-      - "Unused Logger layers deleted"
-      - "No dangling imports"
-      - "Build succeeds"
+      - Unused Logger layers deleted
+      - No dangling imports
+      - Build succeeds
     verify:
-      - command: "pnpm build"
-        expect: "Build succeeds"
-      - command: "grep -r 'ProdLoggerLayer' packages/"
-        expect: "No matches or only in Logger.ts"
-
+      - command: pnpm build
+        expect: Build succeeds
+      - command: grep -r 'ProdLoggerLayer' packages/
+        expect: No matches or only in Logger.ts
   - title: "8.2: Export or delete loadWorkflowTape (DEAD-008)"
     completed: false
     parallel_group: 8
-    issue: "DEAD-008"
+    issue: DEAD-008
     details: |
       ## What
       Either export loadWorkflowTape from server index or delete if unused.
@@ -1433,70 +1631,90 @@ tasks:
       2. If needed, export from index.ts
       3. If not needed, delete the file
     acceptance:
-      - "Either exported or deleted"
-      - "No orphaned code"
+      - Either exported or deleted
+      - No orphaned code
     verify:
-      - command: "pnpm build"
-        expect: "Build succeeds"
-
+      - command: pnpm build
+        expect: Build succeeds
   - title: "8.3: Resolve InMemoryProviderRecorder (DEAD-012)"
     completed: false
     parallel_group: 8
-    issue: "DEAD-012"
-    details: |
+    issue: DEAD-012
+    details: >
       ## What
+
       Determine if InMemoryProviderRecorder is needed or redundant.
 
+
       ## Files
+
       - packages/core test helpers
 
+
       ## Context
+
       Per technical debt inventory:
-      > InMemoryProviderRecorder possibly redundant with makeInMemoryProviderRecorder
+
+      > InMemoryProviderRecorder possibly redundant with
+      makeInMemoryProviderRecorder
+
 
       ## Steps
-      1. Compare InMemoryProviderRecorder with ProviderRecorderLive({ url: ":memory:" })
+
+      1. Compare InMemoryProviderRecorder with ProviderRecorderLive({ url:
+      ":memory:" })
+
       2. If redundant, delete and update tests to use :memory: version
+
       3. If needed for test helpers, document why
     acceptance:
-      - "Redundancy resolved"
-      - "Tests use canonical approach"
+      - Redundancy resolved
+      - Tests use canonical approach
     verify:
-      - command: "pnpm test"
-        expect: "All tests pass"
-
+      - command: pnpm test
+        expect: All tests pass
   - title: "8.4: Export missing ID schemas (API-012)"
     completed: false
     parallel_group: 8
-    issue: "API-012"
-    details: |
+    issue: API-012
+    details: >
       ## What
+
       Export AgentIdSchema and EventIdSchema from Domain/Ids.ts.
 
+
       ## Files
+
       - packages/core/src/Domain/Ids.ts (modify)
+
       - packages/core/src/index.ts (modify)
 
+
       ## Context
+
       Per technical debt inventory:
+
       > ID schemas incomplete (only 2 of 4 exported)
 
-      ## Steps
-      1. Create AgentIdSchema if not exists (after task 3.1)
-      2. Ensure all 4 ID schemas exported: SessionIdSchema, WorkflowIdSchema, AgentIdSchema, EventIdSchema
-    acceptance:
-      - "All 4 ID schemas exported"
-      - "Can import from @open-scaffold/core"
-    verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-      - command: "grep -c 'IdSchema' packages/core/src/index.ts"
-        expect: ">= 4"
 
+      ## Steps
+
+      1. Create AgentIdSchema if not exists (after task 3.1)
+
+      2. Ensure all 4 ID schemas exported: SessionIdSchema, WorkflowIdSchema,
+      AgentIdSchema, EventIdSchema
+    acceptance:
+      - All 4 ID schemas exported
+      - Can import from @open-scaffold/core
+    verify:
+      - command: pnpm typecheck
+        expect: No errors
+      - command: grep -c 'IdSchema' packages/core/src/index.ts
+        expect: ">= 4"
   - title: "8.5: Consolidate StateSnapshot exports (TYPE-002)"
     completed: false
     parallel_group: 8
-    issue: "TYPE-002"
+    issue: TYPE-002
     details: |
       ## What
       Consolidate StateSnapshot to single export location.
@@ -1514,16 +1732,15 @@ tasks:
       2. Re-export from other locations if needed
       3. Document the canonical export
     acceptance:
-      - "Single canonical StateSnapshot export"
-      - "Other locations re-export if needed"
+      - Single canonical StateSnapshot export
+      - Other locations re-export if needed
     verify:
-      - command: "pnpm typecheck"
-        expect: "No errors"
-
+      - command: pnpm typecheck
+        expect: No errors
   - title: "8.6: Add execution API documentation (DOC-001)"
     completed: false
     parallel_group: 8
-    issue: "DOC-001"
+    issue: DOC-001
     details: |
       ## What
       Add execution API decision matrix to docs.
@@ -1541,17 +1758,16 @@ tasks:
       - Error handling approach
       - HITL integration (humanInput handlers)
     acceptance:
-      - "docs/api/execution.md exists"
-      - "Decision matrix table"
-      - "Examples provided"
+      - docs/api/execution.md exists
+      - Decision matrix table
+      - Examples provided
     verify:
-      - command: "test -f docs/api/execution.md"
-        expect: "File exists"
-
+      - command: test -f docs/api/execution.md
+        expect: File exists
   - title: "8.7: Add internal vs public API documentation (DOC-002)"
     completed: false
     parallel_group: 8
-    issue: "DOC-002"
+    issue: DOC-002
     details: |
       ## What
       Document what is public vs internal API.
@@ -1568,17 +1784,16 @@ tasks:
       - Internal API (/internal entrypoints)
       - When to use internal APIs
     acceptance:
-      - "docs/api/public-vs-internal.md exists"
-      - "Public exports listed"
-      - "Internal usage documented"
+      - docs/api/public-vs-internal.md exists
+      - Public exports listed
+      - Internal usage documented
     verify:
-      - command: "test -f docs/api/public-vs-internal.md"
-        expect: "File exists"
-
+      - command: test -f docs/api/public-vs-internal.md
+        expect: File exists
   - title: "8.8: Add HITL flow documentation (DOC-004)"
     completed: false
     parallel_group: 8
-    issue: "DOC-004"
+    issue: DOC-004
     details: |
       ## What
       Document HITL flow with diagram.
@@ -1596,9 +1811,9 @@ tasks:
       - Event flow diagram
       - Handler API
     acceptance:
-      - "docs/api/hitl.md exists"
-      - "Flow diagram included"
-      - "Examples for both types"
+      - docs/api/hitl.md exists
+      - Flow diagram included
+      - Examples for both types
     verify:
-      - command: "test -f docs/api/hitl.md"
-        expect: "File exists"
+      - command: test -f docs/api/hitl.md
+        expect: File exists

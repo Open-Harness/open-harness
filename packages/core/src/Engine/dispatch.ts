@@ -29,7 +29,7 @@ import type {
   WorkflowStarted
 } from "../Domain/Events.js"
 
-import type { WorkflowObserver } from "./types.js"
+import type { AnyEvent, EventId, WorkflowObserver } from "./types.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Type-Safe Event Handlers
@@ -88,7 +88,10 @@ const handleAgentStarted = (
   observer: WorkflowObserver<unknown>,
   event: AgentStarted
 ): void => {
-  observer.onAgentStarted?.({ agent: event.agent, phase: event.phase })
+  // Build object with optional phase only if defined (exactOptionalPropertyTypes)
+  const info: { agent: string; phase?: string } = { agent: event.agent }
+  if (event.phase !== undefined) info.phase = event.phase
+  observer.onAgentStarted?.(info)
 }
 
 /**
@@ -108,15 +111,14 @@ const handleAgentCompleted = (
 
 /**
  * Handler for StateIntent events.
- * Per ADR-006: State is derived from patches. The projection fiber
- * applies patches and notifies via onStateChanged.
+ * Calls onStateChanged with both state and patches for backward compatibility.
  */
 const handleStateIntent = (
-  _observer: WorkflowObserver<unknown>,
-  _event: StateIntent
+  observer: WorkflowObserver<unknown>,
+  event: StateIntent
 ): void => {
-  // State derived from patches per ADR-006; observer receives derived state
-  // via the projection fiber, not directly from this event
+  // StateIntent now includes state for observer compatibility
+  observer.onStateChanged?.(event.state, event.patches)
 }
 
 /**
@@ -249,10 +251,68 @@ const handleInputReceived = (
  * }))
  * ```
  */
+/**
+ * Convert WorkflowEvent to legacy AnyEvent format for onEvent callback.
+ * Maps new field names to legacy names for backward compatibility.
+ */
+const toSerializedEvent = (event: WorkflowEvent): AnyEvent => {
+  const { _tag, timestamp, ...payload } = event
+  const nameMap: Record<WorkflowEvent["_tag"], string> = {
+    WorkflowStarted: "workflow:started",
+    WorkflowCompleted: "workflow:completed",
+    PhaseEntered: "phase:entered",
+    PhaseExited: "phase:exited",
+    AgentStarted: "agent:started",
+    AgentCompleted: "agent:completed",
+    StateIntent: "state:updated",
+    StateCheckpoint: "state:updated",
+    SessionForked: "workflow:started",
+    TextDelta: "text:delta",
+    ThinkingDelta: "thinking:delta",
+    ToolCalled: "tool:called",
+    ToolResult: "tool:result",
+    InputRequested: "input:requested",
+    InputReceived: "input:response"
+  }
+
+  // Format payload for backward compatibility
+  let finalPayload: unknown = payload
+  if (_tag === "StateIntent") {
+    const intentPayload = payload as { intentId: string; state: unknown; patches: unknown; inversePatches: unknown }
+    finalPayload = {
+      state: intentPayload.state,
+      patches: intentPayload.patches,
+      inversePatches: intentPayload.inversePatches
+    }
+  } else if (_tag === "InputRequested") {
+    const reqPayload = payload as { id: string; prompt: string; type: string; options?: unknown }
+    finalPayload = {
+      promptText: reqPayload.prompt,
+      inputType: reqPayload.type,
+      options: reqPayload.options
+    }
+  } else if (_tag === "InputReceived") {
+    const recPayload = payload as { id: string; value: string; approved?: boolean }
+    finalPayload = {
+      response: recPayload.value
+    }
+  }
+
+  return {
+    id: crypto.randomUUID() as EventId,
+    name: nameMap[_tag],
+    payload: finalPayload,
+    timestamp
+  }
+}
+
 export const dispatchToObserver = (
   observer: WorkflowObserver<unknown>,
   event: WorkflowEvent
 ): void => {
+  // Always call onEvent first with serialized event (legacy format)
+  observer.onEvent?.(toSerializedEvent(event))
+
   // Exhaustive matching - compile error if any _tag is missing!
   Match.value(event).pipe(
     Match.tag("WorkflowStarted", (e) => handleWorkflowStarted(observer, e)),

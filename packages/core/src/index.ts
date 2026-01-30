@@ -107,7 +107,12 @@ export {
 
 // Provider infrastructure
 export type { AgentExecutionContext, AgentExecutionResult, ProviderRegistryService } from "./Engine/provider.js"
-export { makeInMemoryProviderRegistry, ProviderNotFoundError, ProviderRegistry, runAgentDef } from "./Engine/provider.js"
+export {
+  makeInMemoryProviderRegistry,
+  ProviderNotFoundError,
+  ProviderRegistry,
+  runAgentDef
+} from "./Engine/provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Provider Types (used by server package)
@@ -149,7 +154,7 @@ export {
 
 export type { AgentId, InteractionEventId } from "./Domain/Ids.js"
 export type { SessionId, WorkflowId } from "./Domain/Ids.js"
-export { SessionIdSchema, WorkflowIdSchema } from "./Domain/Ids.js"
+export { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "./Domain/Ids.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Errors

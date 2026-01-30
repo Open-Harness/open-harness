@@ -8,8 +8,8 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { makeSessionId } from "../src/Domain/Ids.js"
-import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
 import { makeEvent } from "../src/Engine/types.js"
+import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
 import { EventBus } from "../src/Services/EventBus.js"
 import { EventStore } from "../src/Services/EventStore.js"
 

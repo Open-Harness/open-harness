@@ -89,9 +89,14 @@ export class AgentCompleted extends Data.TaggedClass("AgentCompleted")<{
 /**
  * Emitted when state changes via Immer patches.
  * This is the source of truth for state changes per ADR-006.
+ *
+ * Includes full state for backward compatibility with observer.onStateChanged.
+ * Pure event sourcing systems can ignore the state and derive from patches.
  */
 export class StateIntent extends Data.TaggedClass("StateIntent")<{
   readonly intentId: string
+  /** The new state after applying patches (for observer compatibility) */
+  readonly state: unknown
   readonly patches: ReadonlyArray<unknown>
   readonly inversePatches: ReadonlyArray<unknown>
   readonly timestamp: Date
@@ -244,3 +249,100 @@ export type WorkflowEvent =
  * Useful for type-level operations.
  */
 export type WorkflowEventTag = WorkflowEvent["_tag"]
+
+// ═══════════════════════════════════════════════════════════════
+// Serialization (JSON Boundary) - ADR-004
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Branded EventId type for type safety.
+ * Uses UUID v4 format at runtime.
+ */
+export type EventId = string & { readonly _brand: "EventId" }
+
+/**
+ * Generate a new EventId synchronously.
+ * Uses crypto.randomUUID() which is available in Node.js 19+ and modern browsers.
+ */
+export const generateEventId = (): EventId => crypto.randomUUID() as EventId
+
+/**
+ * JSON-friendly event format for storage and SSE.
+ *
+ * Per ADR-004: This is the serialized format sent over the wire
+ * and persisted to EventStore. The internal WorkflowEvent (Data.TaggedClass)
+ * is converted to this format at serialization boundaries.
+ */
+export interface SerializedEvent {
+  /** Unique event identifier (UUID v4) */
+  readonly id: EventId
+  /** Colon-separated event name, e.g., "workflow:started", "agent:completed" */
+  readonly name: string
+  /** Event-specific payload (all fields except _tag and timestamp) */
+  readonly payload: Record<string, unknown>
+  /** Unix timestamp in milliseconds */
+  readonly timestamp: number
+  /** ID of the event that caused this one (for causality tracking) */
+  readonly causedBy?: EventId
+}
+
+/**
+ * Map from Data.TaggedClass _tag to colon-separated event name.
+ *
+ * Per ADR-004: Convert internal _tag values to external event names
+ * like "workflow:started" for storage/SSE compatibility.
+ */
+export const tagToEventName: Record<WorkflowEventTag, string> = {
+  WorkflowStarted: "workflow:started",
+  WorkflowCompleted: "workflow:completed",
+  PhaseEntered: "phase:entered",
+  PhaseExited: "phase:exited",
+  AgentStarted: "agent:started",
+  AgentCompleted: "agent:completed",
+  StateIntent: "state:intent",
+  StateCheckpoint: "state:checkpoint",
+  SessionForked: "session:forked",
+  TextDelta: "text:delta",
+  ThinkingDelta: "thinking:delta",
+  ToolCalled: "tool:called",
+  ToolResult: "tool:result",
+  InputRequested: "input:requested",
+  InputReceived: "input:received"
+}
+
+/**
+ * Convert WorkflowEvent (Data.TaggedClass) to SerializedEvent (JSON format).
+ *
+ * Per ADR-004: Serialization layer for storage and SSE. The EventId is
+ * generated at serialization time, not at event creation time.
+ *
+ * @param event - The WorkflowEvent to serialize
+ * @param id - Optional EventId (generated if not provided)
+ * @param causedBy - Optional ID of the event that caused this one
+ * @returns SerializedEvent ready for storage/transmission
+ *
+ * @example
+ * ```typescript
+ * const serialized = toSerializedEvent(new WorkflowStarted({
+ *   sessionId: "abc-123",
+ *   workflow: "task-planner",
+ *   input: { query: "hello" },
+ *   timestamp: new Date()
+ * }))
+ * // { id: "uuid...", name: "workflow:started", payload: {...}, timestamp: 1234567890 }
+ * ```
+ */
+export const toSerializedEvent = (
+  event: WorkflowEvent,
+  id?: EventId,
+  causedBy?: EventId
+): SerializedEvent => {
+  const { _tag, timestamp, ...payload } = event
+  return {
+    id: id ?? generateEventId(),
+    name: tagToEventName[_tag],
+    payload: payload as Record<string, unknown>,
+    timestamp: timestamp.getTime(),
+    ...(causedBy !== undefined ? { causedBy } : {})
+  }
+}

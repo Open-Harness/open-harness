@@ -43,3 +43,7 @@ export { ProviderRecorder } from "./ProviderRecorder.js"
 // ProviderMode
 export type { ProviderModeContextValue } from "./ProviderMode.js"
 export { ProviderModeContext } from "./ProviderMode.js"
+
+// StateProjection (ADR-006: Event-sourced state derivation)
+export type { StateProjectionService } from "./StateProjection.js"
+export { makeStateProjection, StateProjection, StateProjectionLive } from "./StateProjection.js"
