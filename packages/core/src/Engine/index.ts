@@ -128,3 +128,9 @@ export { run, runSimple, runWithText } from "./run.js"
 // ─────────────────────────────────────────────────────────────────
 
 export { computeStateAt } from "./utils.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Event Dispatch (ADR-004: Match.exhaustive)
+// ─────────────────────────────────────────────────────────────────
+
+export { dispatchToObserver } from "./dispatch.js"
