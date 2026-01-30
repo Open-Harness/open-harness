@@ -225,7 +225,7 @@ describe("Error Path: Invalid Output Schema", () => {
 
     expect(caughtError).toBeInstanceOf(AgentError)
     const err = caughtError as AgentError
-    expect(err.agentName).toBe("schema-mismatch-agent")
+    expect(err.agent).toBe("schema-mismatch-agent")
     expect(err.phase).toBe("output")
     // The cause should be a ZodError
     expect(err.cause).toBeDefined()
@@ -268,7 +268,7 @@ describe("Error Path: Invalid Output Schema", () => {
 
     expect(caughtError).toBeInstanceOf(AgentError)
     const err = caughtError as AgentError
-    expect(err.agentName).toBe("wrong-type-agent")
+    expect(err.agent).toBe("wrong-type-agent")
     expect(err.phase).toBe("output")
   })
 
@@ -327,7 +327,7 @@ describe("Error Path: Invalid Output Schema", () => {
 
     expect(caughtError).toBeInstanceOf(AgentError)
     const err = caughtError as AgentError
-    expect(err.agentName).toBe("corrupted-fixture-agent")
+    expect(err.agent).toBe("corrupted-fixture-agent")
     expect(err.phase).toBe("output")
   })
 })
@@ -372,7 +372,7 @@ describe("Error Path: No Result from Stream", () => {
 
     expect(caughtError).toBeInstanceOf(AgentError)
     const err = caughtError as AgentError
-    expect(err.agentName).toBe("no-result-agent")
+    expect(err.agent).toBe("no-result-agent")
     expect(err.phase).toBe("execution")
     expect(String(err.cause)).toContain("without result")
   })

@@ -27,7 +27,7 @@ describe("Programs (Effect)", () => {
   it("recordEvent persists and publishes", async () => {
     const layer = makeTestLayer()
     const sessionId = crypto.randomUUID() as SessionId
-    const event = mkEvent(EVENTS.AGENT_STARTED, { agentName: "test-agent" })
+    const event = mkEvent(EVENTS.AGENT_STARTED, { agent: "test-agent" })
 
     const program = Effect.gen(function*() {
       const bus = yield* Services.EventBus
@@ -59,9 +59,9 @@ describe("Programs (Effect)", () => {
     const events: Array<AnyEvent> = [
       mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId: "s1", workflowName: "test", input: "go" }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state1 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state2 }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agentName: "a1", output: "done", durationMs: 50 }),
+      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 50 }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state3 })
     ]
 

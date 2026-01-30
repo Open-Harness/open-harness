@@ -387,11 +387,11 @@ export interface PendingInteraction {
   /** Unique ID for this interaction */
   readonly interactionId: string
   /** Agent requesting input */
-  readonly agentName: string
+  readonly agent: string
   /** Human-readable prompt */
   readonly prompt: string
   /** Type of input expected */
-  readonly inputType: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   /** For choice type: available options */
   readonly options?: ReadonlyArray<string>
   /** Optional metadata for UI rendering */
@@ -415,7 +415,7 @@ export interface PendingInteraction {
  *   return (
  *     <div>
  *       <p>{pending.prompt}</p>
- *       {pending.inputType === "approval" && (
+ *       {pending.type === "approval" && (
  *         <>
  *           <button onClick={() => sendInput({
  *             id: crypto.randomUUID(),
@@ -447,17 +447,17 @@ const parsePendingInteractions = (
     if (event.name === "input:requested") {
       const payload = event.payload as {
         interactionId: string
-        agentName: string
+        agent: string
         prompt: string
-        inputType: "freeform" | "approval" | "choice"
+        type: "approval" | "choice"
         options?: ReadonlyArray<string>
         metadata?: Record<string, unknown>
       }
       const pending: PendingInteraction = {
         interactionId: payload.interactionId,
-        agentName: payload.agentName,
+        agent: payload.agent,
         prompt: payload.prompt,
-        inputType: payload.inputType,
+        type: payload.type,
         ...(payload.options ? { options: payload.options } : {}),
         ...(payload.metadata ? { metadata: payload.metadata } : {})
       }

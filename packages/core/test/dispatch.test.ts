@@ -47,7 +47,7 @@ function createMockedObserver(): WorkflowObserver<unknown> {
     onAgentCompleted: vi.fn(),
     onTextDelta: vi.fn(),
     onThinkingDelta: vi.fn(),
-    onToolCall: vi.fn(),
+    onToolCalled: vi.fn(),
     onToolResult: vi.fn(),
     onEvent: vi.fn(),
     onInputRequested: vi.fn()
@@ -280,7 +280,7 @@ describe("dispatchToObserver (Match.exhaustive)", () => {
   })
 
   describe("Tool Events", () => {
-    it("ToolCalled triggers onToolCall with full details", () => {
+    it("ToolCalled triggers onToolCalled with full details", () => {
       const observer = createMockedObserver()
       const event = new ToolCalled({
         agent: "coder",
@@ -292,13 +292,13 @@ describe("dispatchToObserver (Match.exhaustive)", () => {
 
       dispatchToObserver(observer, event)
 
-      expect(observer.onToolCall).toHaveBeenCalledWith({
+      expect(observer.onToolCalled).toHaveBeenCalledWith({
         agent: "coder",
         toolId: "tool-001",
         toolName: "write_file",
         input: { path: "/test.ts", content: "export {}" }
       })
-      expect(observer.onToolCall).toHaveBeenCalledTimes(1)
+      expect(observer.onToolCalled).toHaveBeenCalledTimes(1)
     })
 
     it("ToolResult triggers onToolResult with full details", () => {
@@ -422,7 +422,7 @@ describe("dispatchToObserver handles missing callbacks", () => {
     expect(observer.onAgentCompleted).not.toHaveBeenCalled()
     expect(observer.onStateChanged).not.toHaveBeenCalled()
     expect(observer.onThinkingDelta).not.toHaveBeenCalled()
-    expect(observer.onToolCall).not.toHaveBeenCalled()
+    expect(observer.onToolCalled).not.toHaveBeenCalled()
     expect(observer.onToolResult).not.toHaveBeenCalled()
   })
 })

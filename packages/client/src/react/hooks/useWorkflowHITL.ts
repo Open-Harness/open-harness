@@ -25,7 +25,7 @@ export interface PendingInteraction {
   /** The prompt text shown to the user */
   readonly prompt: string
   /** Type of input requested */
-  readonly type: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   /** Available options for choice type */
   readonly options?: ReadonlyArray<string>
   /** When the request was made */
@@ -99,14 +99,14 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
     for (const event of events) {
       if (event.name === EVENTS.INPUT_REQUESTED) {
         const payload = event.payload as {
-          promptText: string
-          inputType: "freeform" | "approval" | "choice"
+          prompt: string
+          type: "approval" | "choice"
           options?: ReadonlyArray<string>
         }
         requests.set(event.id, {
           id: event.id,
-          prompt: payload.promptText,
-          type: payload.inputType,
+          prompt: payload.prompt,
+          type: payload.type,
           // Only include options if defined (satisfies exactOptionalPropertyTypes)
           ...(payload.options !== undefined && { options: payload.options }),
           timestamp: event.timestamp

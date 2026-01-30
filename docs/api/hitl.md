@@ -47,7 +47,7 @@ Per ADR-002, there are exactly two input types:
 | `approval` | Yes/No decision | `handler.approval(prompt)` | `boolean` |
 | `choice` | Pick from options | `handler.choice(prompt, options)` | `string` (selected option) |
 
-For freeform text input, use `choice` with an "Other..." option that allows custom input.
+For freeform text input, use `choice` type with an "Other..." option that allows custom input.
 
 ---
 
@@ -487,7 +487,7 @@ interface WorkflowHITLResult {
 interface PendingInteraction {
   id: EventId
   prompt: string
-  type: "freeform" | "approval" | "choice"
+  type: "approval" | "choice"
   options?: ReadonlyArray<string>
   timestamp: Date
 }

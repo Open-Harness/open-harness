@@ -105,7 +105,7 @@ interface PhaseDef<S = unknown, Phases extends string = string, Ctx = void> {
 
 interface HumanConfig<S> {
   readonly prompt: (state: S) => string
-  readonly type: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
 }
 ```
@@ -383,7 +383,7 @@ interface WorkflowObserver<S> {
   onThinkingDelta?(info: { agent: string; delta: string }): void
 
   // ─── Tools ───
-  onToolCall?(info: { agent: string; toolId: string; toolName: string; input: unknown }): void
+  onToolCalled?(info: { agent: string; toolId: string; toolName: string; input: unknown }): void
   onToolResult?(info: { agent: string; toolId: string; output: unknown; isError: boolean }): void
 
   // ─── HITL (async - return the response) ───
@@ -395,7 +395,7 @@ interface WorkflowObserver<S> {
 
 interface InputRequest {
   readonly prompt: string
-  readonly type: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
 }
 ```
@@ -453,14 +453,14 @@ interface PhaseExitedPayload {
 
 // agent:started
 interface AgentStartedPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly phase?: string
   readonly context?: unknown
 }
 
 // agent:completed
 interface AgentCompletedPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly output: unknown
   readonly durationMs: number
 }
@@ -474,19 +474,19 @@ interface StateUpdatedPayload {
 
 // text:delta
 interface TextDeltaPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly delta: string
 }
 
 // thinking:delta
 interface ThinkingDeltaPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly delta: string
 }
 
 // tool:called
 interface ToolCalledPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly toolId: string
   readonly toolName: string
   readonly input: unknown
@@ -494,7 +494,7 @@ interface ToolCalledPayload {
 
 // tool:result
 interface ToolResultPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly toolId: string
   readonly output: unknown
   readonly isError: boolean
@@ -502,8 +502,8 @@ interface ToolResultPayload {
 
 // input:requested (phase-level HITL via `phase({ human: {...} })`)
 interface InputRequestedPayload {
-  readonly promptText: string
-  readonly inputType: "freeform" | "approval" | "choice"
+  readonly prompt: string
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
 }
 
@@ -511,9 +511,9 @@ interface InputRequestedPayload {
 // NOTE: React hooks parse this format, not InputRequestedPayload
 interface InteractionRequestPayload {
   readonly interactionId: string
-  readonly agentName: string
+  readonly agent: string
   readonly prompt: string
-  readonly inputType: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
   readonly metadata?: Record<string, unknown>
 }
@@ -554,12 +554,12 @@ All errors extend Effect's `Data.TaggedError` internally.
 
 | Error Class | Tag | Fields | When |
 |-------------|-----|--------|------|
-| `WorkflowAgentError` | `"WorkflowAgentError"` | `agentName`, `message`, `cause?` | Agent execution failed |
-| `WorkflowValidationError` | `"WorkflowValidationError"` | `agentName`, `message`, `path?` | Output doesn't match Zod schema |
+| `WorkflowAgentError` | `"WorkflowAgentError"` | `agent`, `message`, `cause?` | Agent execution failed |
+| `WorkflowValidationError` | `"WorkflowValidationError"` | `agent`, `message`, `path?` | Output doesn't match Zod schema |
 | `WorkflowPhaseError` | `"WorkflowPhaseError"` | `fromPhase`, `toPhase`, `message` | Invalid phase transition |
 | `WorkflowStoreError` | `"WorkflowStoreError"` | `operation`, `message`, `cause?` | Storage operation failed |
-| `WorkflowProviderError` | `"WorkflowProviderError"` | `agentName`, `code`, `message`, `retryable` | LLM API error |
-| `WorkflowTimeoutError` | `"WorkflowTimeoutError"` | `phase?`, `agentName?`, `timeoutMs` | Execution timed out |
+| `WorkflowProviderError` | `"WorkflowProviderError"` | `agent`, `code`, `message`, `retryable` | LLM API error |
+| `WorkflowTimeoutError` | `"WorkflowTimeoutError"` | `phase?`, `agent?`, `timeoutMs` | Execution timed out |
 | `WorkflowAbortedError` | `"WorkflowAbortedError"` | `phase?`, `reason` | Manually aborted |
 
 **Provider Error Codes:**
@@ -850,9 +850,9 @@ type ConnectionStatus = "disconnected" | "connecting" | "connected" | "reconnect
 
 interface PendingInteraction {
   readonly interactionId: string
-  readonly agentName: string
+  readonly agent: string
   readonly prompt: string
-  readonly inputType: "approval" | "choice" | "freeform"
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
   readonly metadata?: Record<string, unknown>
 }

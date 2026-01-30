@@ -57,12 +57,13 @@ describe("Observer type exports", () => {
   })
 
   it("InputRequest type is importable", () => {
+    // Per ADR-002: Only "approval" and "choice" types are valid
     const request: InputRequest = {
       prompt: "What do you think?",
-      type: "freeform"
+      type: "approval"
     }
     expect(request.prompt).toBe("What do you think?")
-    expect(request.type).toBe("freeform")
+    expect(request.type).toBe("approval")
   })
 })
 

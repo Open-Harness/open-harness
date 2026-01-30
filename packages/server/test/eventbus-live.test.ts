@@ -20,8 +20,8 @@ describe("EventBusLive", () => {
   it("publishes and filters by session", async () => {
     const sessionA = crypto.randomUUID() as SessionId
     const sessionB = crypto.randomUUID() as SessionId
-    const eventA = mkEvent(EVENTS.AGENT_STARTED, { agentName: "agent-a" })
-    const eventB = mkEvent(EVENTS.AGENT_STARTED, { agentName: "agent-b" })
+    const eventA = mkEvent(EVENTS.AGENT_STARTED, { agent: "agent-a" })
+    const eventB = mkEvent(EVENTS.AGENT_STARTED, { agent: "agent-b" })
 
     const program = Effect.gen(function*() {
       const bus = yield* Services.EventBus

@@ -184,7 +184,7 @@ export interface PhaseExitedPayload {
 
 /** Payload for agent:started */
 export interface AgentStartedPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly phase?: string
   /** Context passed to agent (from forEach) */
   readonly context?: unknown
@@ -192,7 +192,7 @@ export interface AgentStartedPayload {
 
 /** Payload for agent:completed */
 export interface AgentCompletedPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly output: unknown
   readonly durationMs: number
 }
@@ -209,19 +209,19 @@ export interface StateUpdatedPayload {
 
 /** Payload for text:delta */
 export interface TextDeltaPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly delta: string
 }
 
 /** Payload for thinking:delta */
 export interface ThinkingDeltaPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly delta: string
 }
 
 /** Payload for tool:called */
 export interface ToolCalledPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly toolId: string
   readonly toolName: string
   readonly input: unknown
@@ -229,7 +229,7 @@ export interface ToolCalledPayload {
 
 /** Payload for tool:result */
 export interface ToolResultPayload {
-  readonly agentName: string
+  readonly agent: string
   readonly toolId: string
   readonly output: unknown
   readonly isError: boolean
@@ -237,8 +237,8 @@ export interface ToolResultPayload {
 
 /** Payload for input:requested (HITL) */
 export interface InputRequestedPayload {
-  readonly promptText: string
-  readonly inputType: "freeform" | "approval" | "choice"
+  readonly prompt: string
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
 }
 
@@ -347,7 +347,7 @@ export interface WorkflowResult<S> {
  * Agent execution failed during workflow.
  */
 export class WorkflowAgentError extends Data.TaggedError("WorkflowAgentError")<{
-  readonly agentName: string
+  readonly agent: string
   readonly message: string
   readonly cause?: unknown
 }> {}
@@ -356,7 +356,7 @@ export class WorkflowAgentError extends Data.TaggedError("WorkflowAgentError")<{
  * Output validation failed (Zod schema mismatch).
  */
 export class WorkflowValidationError extends Data.TaggedError("WorkflowValidationError")<{
-  readonly agentName: string
+  readonly agent: string
   readonly message: string
   readonly path?: string
 }> {}
@@ -383,7 +383,7 @@ export class WorkflowStoreError extends Data.TaggedError("WorkflowStoreError")<{
  * Provider (LLM) error during workflow.
  */
 export class WorkflowProviderError extends Data.TaggedError("WorkflowProviderError")<{
-  readonly agentName: string
+  readonly agent: string
   readonly code: "RATE_LIMITED" | "CONTEXT_EXCEEDED" | "AUTH_FAILED" | "NETWORK" | "UNKNOWN"
   readonly message: string
   readonly retryable: boolean
@@ -394,7 +394,7 @@ export class WorkflowProviderError extends Data.TaggedError("WorkflowProviderErr
  */
 export class WorkflowTimeoutError extends Data.TaggedError("WorkflowTimeoutError")<{
   readonly phase?: string
-  readonly agentName?: string
+  readonly agent?: string
   readonly timeoutMs: number
 }> {}
 
@@ -427,7 +427,7 @@ export type WorkflowError =
  */
 export interface InputRequest {
   readonly prompt: string
-  readonly type: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
 }
 
@@ -459,7 +459,7 @@ export interface WorkflowObserver<S> {
   onThinkingDelta?(info: { agent: string; delta: string }): void
 
   // Tool events
-  onToolCall?(info: { agent: string; toolId: string; toolName: string; input: unknown }): void
+  onToolCalled?(info: { agent: string; toolId: string; toolName: string; input: unknown }): void
   onToolResult?(info: { agent: string; toolId: string; output: unknown; isError: boolean }): void
 
   // HITL

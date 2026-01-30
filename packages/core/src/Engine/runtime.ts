@@ -396,14 +396,14 @@ const executeAgent = <S, O, Ctx>(
  * Convert a legacy AnyEvent to a WorkflowEvent (Data.TaggedClass).
  * Returns undefined for events that don't have a direct mapping.
  */
-const legacyEventToWorkflowEvent = (event: AnyEvent, agentName: string): WorkflowEvent | undefined => {
+const legacyEventToWorkflowEvent = (event: AnyEvent, agent: string): WorkflowEvent | undefined => {
   const timestamp = event.timestamp
   const p = event.payload as Record<string, unknown>
 
   switch (event.name) {
     case EVENTS.AGENT_STARTED: {
       const agentStartedProps: { agent: string; timestamp: Date; phase?: string; context?: unknown } = {
-        agent: agentName,
+        agent,
         timestamp
       }
       if (p.phase !== undefined) agentStartedProps.phase = p.phase as string
@@ -412,26 +412,26 @@ const legacyEventToWorkflowEvent = (event: AnyEvent, agentName: string): Workflo
     }
     case EVENTS.AGENT_COMPLETED:
       return new Events.AgentCompleted({
-        agent: agentName,
+        agent,
         output: p.output,
         durationMs: p.durationMs as number,
         timestamp
       })
     case EVENTS.TEXT_DELTA:
       return new Events.TextDelta({
-        agent: agentName,
+        agent,
         delta: p.delta as string,
         timestamp
       })
     case EVENTS.THINKING_DELTA:
       return new Events.ThinkingDelta({
-        agent: agentName,
+        agent,
         delta: p.delta as string,
         timestamp
       })
     case EVENTS.TOOL_CALLED:
       return new Events.ToolCalled({
-        agent: agentName,
+        agent,
         toolId: p.toolId as string,
         toolName: p.toolName as string,
         input: p.input,
@@ -439,7 +439,7 @@ const legacyEventToWorkflowEvent = (event: AnyEvent, agentName: string): Workflo
       })
     case EVENTS.TOOL_RESULT:
       return new Events.ToolResult({
-        agent: agentName,
+        agent,
         toolId: p.toolId as string,
         output: p.output,
         isError: p.isError as boolean,

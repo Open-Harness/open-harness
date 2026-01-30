@@ -64,7 +64,7 @@ export function useEventStream(
             break
 
           case "agent:started":
-            streamingAgentRef.current = (event.payload as { agentName: string }).agentName
+            streamingAgentRef.current = (event.payload as { agent: string }).agent
             setStreamingText("")
             break
 

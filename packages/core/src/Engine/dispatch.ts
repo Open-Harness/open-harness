@@ -167,13 +167,13 @@ const handleThinkingDelta = (
 
 /**
  * Handler for ToolCalled events.
- * Calls observer.onToolCall with tool details.
+ * Calls observer.onToolCalled with tool details.
  */
 const handleToolCalled = (
   observer: WorkflowObserver<unknown>,
   event: ToolCalled
 ): void => {
-  observer.onToolCall?.({
+  observer.onToolCalled?.({
     agent: event.agent,
     toolId: event.toolId,
     toolName: event.toolName,

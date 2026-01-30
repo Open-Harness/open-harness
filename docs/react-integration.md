@@ -385,7 +385,7 @@ function AgentEvents() {
       <h3>Agent Activity ({agentEvents.length} events)</h3>
       {agentEvents.map(event => (
         <div key={event.id}>
-          {event.name}: {event.payload.agentName}
+          {event.name}: {event.payload.agent}
         </div>
       ))}
     </div>
@@ -625,7 +625,7 @@ function VCRControls() {
 
 Human-in-the-Loop (HITL) hooks enable workflows to request human input and wait for responses.
 
-> **Note:** These hooks work with `createInteraction()` from `@open-scaffold/core`, which emits `InteractionRequestPayload` events with `interactionId`, `agentName`, and `prompt` fields. Phase-level HITL (via `phase({ human: {...} })`) uses a different payload format (`promptText` instead of `prompt`) and won't work correctly with these hooks.
+> **Note:** These hooks work with `createInteraction()` from `@open-scaffold/core`, which emits `InteractionRequestPayload` events with `interactionId`, `agent`, and `prompt` fields. Phase-level HITL (via `phase({ human: {...} })`) uses a different payload format and won't work correctly with these hooks.
 
 ### PendingInteraction Type
 
@@ -634,11 +634,11 @@ interface PendingInteraction {
   /** Unique ID for this interaction - use when responding */
   readonly interactionId: string
   /** Agent requesting input */
-  readonly agentName: string
+  readonly agent: string
   /** Human-readable prompt */
   readonly prompt: string
   /** Type of input expected */
-  readonly inputType: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   /** For choice type: available options */
   readonly options?: ReadonlyArray<string>
   /** Optional metadata for UI rendering */
@@ -712,10 +712,10 @@ function InteractionModal() {
   return (
     <div className="modal-overlay">
       <div className="modal">
-        <h3>{pending.agentName} needs input</h3>
+        <h3>{pending.agent} needs input</h3>
         <p>{pending.prompt}</p>
 
-        {pending.inputType === "approval" && (
+        {pending.type === "approval" && (
           <div className="actions">
             <button
               className="approve"
@@ -732,7 +732,7 @@ function InteractionModal() {
           </div>
         )}
 
-        {pending.inputType === "choice" && pending.options && (
+        {pending.type === "choice" && pending.options && (
           <div className="choices">
             {pending.options.map(opt => (
               <button key={opt} onClick={() => respond(opt)}>
@@ -741,27 +741,8 @@ function InteractionModal() {
             ))}
           </div>
         )}
-
-        {pending.inputType === "freeform" && (
-          <FreeformInput onSubmit={respond} />
-        )}
       </div>
     </div>
-  )
-}
-
-function FreeformInput({ onSubmit }: { onSubmit: (value: string) => void }) {
-  const [value, setValue] = useState("")
-
-  return (
-    <form onSubmit={e => { e.preventDefault(); onSubmit(value) }}>
-      <textarea
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        rows={3}
-      />
-      <button type="submit">Submit</button>
-    </form>
   )
 }
 ```
@@ -786,8 +767,8 @@ function InteractionQueue() {
       <ul>
         {interactions.map(interaction => (
           <li key={interaction.interactionId}>
-            <strong>{interaction.agentName}</strong>: {interaction.prompt}
-            <span className="type">{interaction.inputType}</span>
+            <strong>{interaction.agent}</strong>: {interaction.prompt}
+            <span className="type">{interaction.type}</span>
           </li>
         ))}
       </ul>
@@ -1022,10 +1003,10 @@ function WorkflowUI() {
           {pending && (
             <div className="modal-overlay">
               <div className="modal">
-                <h3>{pending.agentName} needs input</h3>
+                <h3>{pending.agent} needs input</h3>
                 <p>{pending.prompt}</p>
 
-                {pending.inputType === "approval" && (
+                {pending.type === "approval" && (
                   <div className="actions">
                     <button
                       className="approve"
@@ -1042,7 +1023,7 @@ function WorkflowUI() {
                   </div>
                 )}
 
-                {pending.inputType === "choice" && pending.options && (
+                {pending.type === "choice" && pending.options && (
                   <div className="choices">
                     {pending.options.map(opt => (
                       <button
@@ -1054,32 +1035,12 @@ function WorkflowUI() {
                     ))}
                   </div>
                 )}
-
-                {pending.inputType === "freeform" && (
-                  <FreeformModal onSubmit={respondToInteraction} />
-                )}
               </div>
             </div>
           )}
         </>
       )}
     </div>
-  )
-}
-
-function FreeformModal({ onSubmit }: { onSubmit: (value: string) => void }) {
-  const [value, setValue] = useState("")
-
-  return (
-    <form onSubmit={e => { e.preventDefault(); onSubmit(value); setValue("") }}>
-      <textarea
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        placeholder="Enter your response..."
-        rows={3}
-      />
-      <button type="submit">Submit</button>
-    </form>
   )
 }
 
@@ -1137,9 +1098,9 @@ interface ForkResult {
 // HITL interaction
 interface PendingInteraction {
   readonly interactionId: string
-  readonly agentName: string
+  readonly agent: string
   readonly prompt: string
-  readonly inputType: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
   readonly options?: ReadonlyArray<string>
   readonly metadata?: Record<string, unknown>
 }

@@ -263,19 +263,19 @@ describe("WorkflowResult type", () => {
 describe("Workflow Errors (Data.TaggedError)", () => {
   it("WorkflowAgentError has correct tag and fields", () => {
     const error = new WorkflowAgentError({
-      agentName: "planner",
+      agent: "planner",
       message: "Agent failed to produce output"
     })
 
     expect(error._tag).toBe("WorkflowAgentError")
-    expect(error.agentName).toBe("planner")
+    expect(error.agent).toBe("planner")
     expect(error.message).toBe("Agent failed to produce output")
   })
 
   it("WorkflowAgentError supports cause for error chaining", () => {
     const originalError = new Error("Network failure")
     const error = new WorkflowAgentError({
-      agentName: "worker",
+      agent: "worker",
       message: "Execution failed",
       cause: originalError
     })
@@ -285,13 +285,13 @@ describe("Workflow Errors (Data.TaggedError)", () => {
 
   it("WorkflowValidationError has correct tag and fields", () => {
     const error = new WorkflowValidationError({
-      agentName: "judge",
+      agent: "judge",
       message: "Invalid output schema",
       path: "verdict"
     })
 
     expect(error._tag).toBe("WorkflowValidationError")
-    expect(error.agentName).toBe("judge")
+    expect(error.agent).toBe("judge")
     expect(error.path).toBe("verdict")
   })
 
@@ -319,7 +319,7 @@ describe("Workflow Errors (Data.TaggedError)", () => {
 
   it("WorkflowProviderError has correct tag and fields", () => {
     const error = new WorkflowProviderError({
-      agentName: "planner",
+      agent: "planner",
       code: "RATE_LIMITED",
       message: "Too many requests",
       retryable: true
@@ -333,7 +333,7 @@ describe("Workflow Errors (Data.TaggedError)", () => {
   it("WorkflowTimeoutError has correct tag and fields", () => {
     const error = new WorkflowTimeoutError({
       phase: "working",
-      agentName: "worker",
+      agent: "worker",
       timeoutMs: 30000
     })
 

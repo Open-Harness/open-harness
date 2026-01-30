@@ -280,7 +280,7 @@ describe("VCR HTTP Routes", () => {
     const program = Effect.gen(function*() {
       const sessionId = crypto.randomUUID() as SessionId
       yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { goal: "v1", tasks: [], done: false } }))
-      yield* recordEvent(sessionId, mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }))
+      yield* recordEvent(sessionId, mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }))
       yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { goal: "v2", tasks: ["a"], done: false } }))
 
       const ctx = makeCtx({ params: { id: sessionId }, query: { position: "1" } })

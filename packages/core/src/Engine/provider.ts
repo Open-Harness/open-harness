@@ -86,7 +86,7 @@ const toRunResult = (
  * Exported for testing purposes via @open-scaffold/core/internal.
  */
 export const mapStreamEventToInternal = (
-  agentName: string,
+  agent: string,
   streamEvent: AgentStreamEvent,
   causedBy?: EventId
 ): Effect.Effect<AnyEvent | null> => {
@@ -94,14 +94,14 @@ export const mapStreamEventToInternal = (
     case "TextDelta":
       return makeEvent(
         EVENTS.TEXT_DELTA,
-        { agentName, delta: streamEvent.delta },
+        { agent, delta: streamEvent.delta },
         causedBy
       )
 
     case "ThinkingDelta":
       return makeEvent(
         EVENTS.THINKING_DELTA,
-        { agentName, delta: streamEvent.delta },
+        { agent, delta: streamEvent.delta },
         causedBy
       )
 
@@ -109,7 +109,7 @@ export const mapStreamEventToInternal = (
       return makeEvent(
         EVENTS.TOOL_CALLED,
         {
-          agentName,
+          agent,
           toolId: streamEvent.toolId,
           toolName: streamEvent.toolName,
           input: streamEvent.input
@@ -121,7 +121,7 @@ export const mapStreamEventToInternal = (
       return makeEvent(
         EVENTS.TOOL_RESULT,
         {
-          agentName,
+          agent,
           toolId: streamEvent.toolId,
           output: streamEvent.output,
           isError: streamEvent.isError
@@ -182,7 +182,7 @@ export const runAgentDef = <S, O, Ctx>(
 
     // Emit agent:started
     yield* emitEvent(EVENTS.AGENT_STARTED, {
-      agentName: agent.name,
+      agent: agent.name,
       phase: executionContext.phase,
       context: agentContext
     })
@@ -290,7 +290,7 @@ export const runAgentDef = <S, O, Ctx>(
           Effect.catchAll((saveError) =>
             Effect.logWarning("Failed to finalize recording", {
               hash,
-              agentName: agent.name,
+              agent: agent.name,
               error: String(saveError)
             })
           )
@@ -302,7 +302,7 @@ export const runAgentDef = <S, O, Ctx>(
     if (!streamResult) {
       return yield* Effect.fail(
         new AgentError({
-          agentName: agent.name,
+          agent: agent.name,
           phase: "execution",
           cause: "Provider stream ended without result"
         })
@@ -314,7 +314,7 @@ export const runAgentDef = <S, O, Ctx>(
     if (!parsed.success) {
       return yield* Effect.fail(
         new AgentError({
-          agentName: agent.name,
+          agent: agent.name,
           phase: "output",
           cause: parsed.error
         })
@@ -325,7 +325,7 @@ export const runAgentDef = <S, O, Ctx>(
 
     // Emit agent:completed
     yield* emitEvent(EVENTS.AGENT_COMPLETED, {
-      agentName: agent.name,
+      agent: agent.name,
       output: parsed.data,
       durationMs
     })
@@ -348,7 +348,7 @@ export const runAgentDef = <S, O, Ctx>(
     return result
   }).pipe(
     Effect.withSpan("runAgentDef", {
-      attributes: { agentName: agent.name, model: agent.provider.model }
+      attributes: { agent: agent.name, model: agent.provider.model }
     })
   )
 

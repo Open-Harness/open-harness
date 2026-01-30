@@ -22,8 +22,8 @@ describe("computeStateAt", () => {
   it("returns undefined when no state:updated events exist", () => {
     const events = [
       mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId: "s1", workflowName: "test", input: "hi" }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agentName: "a1", output: "done", durationMs: 100 })
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
+      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 100 })
     ]
     const result = computeStateAt(events, events.length)
     expect(result).toBeUndefined()
@@ -34,7 +34,7 @@ describe("computeStateAt", () => {
     const events = [
       mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId: "s1", workflowName: "test", input: "hi" }),
       mkEvent(EVENTS.STATE_UPDATED, { state }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agentName: "a1", output: "done", durationMs: 100 })
+      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 100 })
     ]
     const result = computeStateAt<typeof state>(events, events.length)
     expect(result).toEqual(state)
@@ -46,9 +46,9 @@ describe("computeStateAt", () => {
     const state3 = { count: 3 }
     const events = [
       mkEvent(EVENTS.STATE_UPDATED, { state: state1 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state2 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a2" }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a2" }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state3 })
     ]
 
@@ -84,10 +84,10 @@ describe("computeStateAt", () => {
     const state = { phase: "init" }
     const events = [
       mkEvent(EVENTS.STATE_UPDATED, { state }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agentName: "a1", output: "done", durationMs: 50 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a2" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agentName: "a2", output: "done2", durationMs: 60 })
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
+      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 50 }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a2" }),
+      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a2", output: "done2", durationMs: 60 })
     ]
     // All events, but only the first is state:updated
     const result = computeStateAt(events, events.length)
@@ -97,8 +97,8 @@ describe("computeStateAt", () => {
   it("returns state from the end of the event log", () => {
     const finalState = { completed: true }
     const events = [
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agentName: "a1", output: "done", durationMs: 50 }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
+      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 50 }),
       mkEvent(EVENTS.STATE_UPDATED, { state: finalState })
     ]
     const result = computeStateAt(events, events.length)
@@ -109,9 +109,9 @@ describe("computeStateAt", () => {
     const state1 = { step: 1 }
     const state2 = { step: 2 }
     const events = [
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a1" }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state1 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agentName: "a2" }),
+      mkEvent(EVENTS.AGENT_STARTED, { agent: "a2" }),
       mkEvent(EVENTS.STATE_UPDATED, { state: state2 })
     ]
 

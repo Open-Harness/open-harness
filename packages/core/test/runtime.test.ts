@@ -239,19 +239,19 @@ describe("EVENTS constant", () => {
 describe("WorkflowAgentError", () => {
   it("is a tagged error with correct _tag", () => {
     const error = new WorkflowAgentError({
-      agentName: "test",
+      agent: "test",
       message: "Test error"
     })
 
     expect(error._tag).toBe("WorkflowAgentError")
-    expect(error.agentName).toBe("test")
+    expect(error.agent).toBe("test")
     expect(error.message).toBe("Test error")
   })
 
   it("can include optional cause", () => {
     const cause = new Error("Underlying error")
     const error = new WorkflowAgentError({
-      agentName: "test",
+      agent: "test",
       message: "Test error",
       cause
     })

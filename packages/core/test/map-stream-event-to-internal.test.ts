@@ -32,7 +32,7 @@ describe("mapStreamEventToInternal", () => {
       const event = result as AnyEvent
       expect(event.name).toBe(EVENTS.TEXT_DELTA)
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         delta: "Hello, world!"
       })
       expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
@@ -54,7 +54,7 @@ describe("mapStreamEventToInternal", () => {
       const event = result as AnyEvent
       expect(event.name).toBe(EVENTS.TEXT_DELTA)
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         delta: ""
       })
     })
@@ -91,7 +91,7 @@ describe("mapStreamEventToInternal", () => {
       const event = result as AnyEvent
       expect(event.name).toBe(EVENTS.THINKING_DELTA)
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         delta: "Let me think about this..."
       })
     })
@@ -109,7 +109,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         delta: ""
       })
     })
@@ -132,7 +132,7 @@ describe("mapStreamEventToInternal", () => {
       const event = result as AnyEvent
       expect(event.name).toBe(EVENTS.TOOL_CALLED)
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         toolId: "tool_123",
         toolName: "search",
         input: { query: "effect-ts" }
@@ -158,7 +158,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         toolId: "tool_456",
         toolName: "execute",
         input: {
@@ -184,7 +184,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         toolId: "tool_789",
         toolName: "get_time",
         input: null
@@ -209,7 +209,7 @@ describe("mapStreamEventToInternal", () => {
       const event = result as AnyEvent
       expect(event.name).toBe(EVENTS.TOOL_RESULT)
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         toolId: "tool_123",
         output: { data: [1, 2, 3] },
         isError: false
@@ -232,7 +232,7 @@ describe("mapStreamEventToInternal", () => {
       const event = result as AnyEvent
       expect(event.name).toBe(EVENTS.TOOL_RESULT)
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         toolId: "tool_456",
         output: "Error: Connection timeout",
         isError: true
@@ -254,7 +254,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         toolId: "tool_789",
         output: null,
         isError: false
@@ -376,7 +376,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         delta: "Unicode: \u00e9\u00e8\u00ea \nNewline\tTab"
       })
     })
@@ -394,7 +394,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "test-agent",
+        agent: "test-agent",
         delta: "Test with emojis: \uD83D\uDE0A\uD83D\uDE80"
       })
     })
@@ -429,7 +429,7 @@ describe("mapStreamEventToInternal", () => {
       expect(result).not.toBeNull()
       const event = result as AnyEvent
       expect(event.payload).toEqual({
-        agentName: "agent-with-special_chars.v2",
+        agent: "agent-with-special_chars.v2",
         delta: "test"
       })
     })
