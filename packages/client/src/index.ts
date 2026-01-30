@@ -20,30 +20,5 @@ export { ClientError } from "./Contract.js"
 // HTTP Client
 export { HttpClient } from "./HttpClient.js"
 
-// React bindings
-export type { WorkflowContextValue } from "./react/context.js"
-export { WorkflowContext } from "./react/context.js"
-export type { PendingInteraction, UseFilteredEventsOptions, UseStateAtResult } from "./react/hooks.js"
-export {
-  useConnectSession,
-  useCreateSession,
-  useDisconnect,
-  useEvents,
-  useFilteredEvents,
-  useFork,
-  useIsConnected,
-  useIsPaused,
-  useIsRunning,
-  usePause,
-  usePendingInteraction,
-  usePendingInteractions,
-  usePosition,
-  useResume,
-  useSendInput,
-  useSessionId,
-  useStateAt,
-  useStatus,
-  useWorkflowState
-} from "./react/hooks.js"
-export type { WorkflowProviderProps } from "./react/Provider.js"
-export { WorkflowProvider } from "./react/Provider.js"
+// React bindings (ADR-013 - re-export from react/index.ts)
+export * from "./react/index.js"

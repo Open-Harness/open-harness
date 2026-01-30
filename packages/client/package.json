@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@open-scaffold/core": "*",
+    "@tanstack/react-query": "^5.0.0",
     "effect": "latest"
   },
   "peerDependencies": {
