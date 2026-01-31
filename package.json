@@ -18,7 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "changeset-version": "changeset version && node scripts/version.mjs",
+    "changeset-version": "changeset version",
     "changeset-publish": "bun run build && TEST_DIST= bun vitest run && changeset publish"
   },
   "devDependencies": {
