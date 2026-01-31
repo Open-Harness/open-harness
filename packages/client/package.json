@@ -1,6 +1,7 @@
 {
   "name": "@open-scaffold/client",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "Open Scaffold Client - Abstract client contract and HTTP implementation",
@@ -31,11 +32,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/open-scaffold/open-scaffold",
+    "url": "https://github.com/Open-Harness/open-harness",
     "directory": "packages/client"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "tsdown",

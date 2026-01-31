@@ -1,6 +1,7 @@
 {
   "name": "@open-scaffold/core",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "Open Scaffold Core - Event-sourced workflow runtime with Effect-TS",
@@ -41,11 +42,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/open-scaffold/open-scaffold",
+    "url": "https://github.com/Open-Harness/open-harness",
     "directory": "packages/core"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "tsdown",

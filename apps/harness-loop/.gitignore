@@ -1,0 +1,6 @@
+# Test fixtures (contain task-specific data)
+fixtures/
+
+# Build output
+dist/
+build/

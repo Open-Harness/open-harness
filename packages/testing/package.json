@@ -1,6 +1,7 @@
 {
   "name": "@open-scaffold/testing",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "Shared testing utilities and recordings for Open Scaffold",
@@ -22,11 +23,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/open-scaffold/open-scaffold",
+    "url": "https://github.com/Open-Harness/open-harness",
     "directory": "packages/testing"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "tsdown",
