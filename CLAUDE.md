@@ -1,6 +1,34 @@
 
 <!-- MANUAL ADDITIONS START -->
 
+## ⚠️ CRITICAL: VITEST ORPHANED PROCESSES - READ THIS FIRST ⚠️
+
+**NEVER run `vitest` without the `run` subcommand. Orphaned vitest processes will accumulate and crash the system.**
+
+Vitest defaults to **watch mode** when it detects a TTY. When an agent session ends or is interrupted, vitest keeps running in the background. Multiple agent runs = exponentially accumulating orphaned processes that consume all system resources.
+
+**Correct commands:**
+- `bun run test` → runs `vitest run` (single run, exits when done)
+- `bun run test:watch` → runs `vitest` in watch mode (interactive use only)
+
+**FORBIDDEN:**
+- NEVER run bare `vitest` without `run` subcommand
+- NEVER run `bun vitest` (use `bun run test` instead)
+
+**If you see orphaned vitest processes, kill them:**
+```bash
+pkill -f vitest
+```
+
+**Why this happens:**
+1. Agent runs `vitest` (not `vitest run`)
+2. Vitest detects TTY → starts in watch mode
+3. Agent finishes/interrupted → vitest keeps running
+4. Vitest spawns worker processes (`forks` pool) → those orphan too
+5. Multiple agent runs → system overload → computer shutdown
+
+---
+
 ## ⚠️ CRITICAL: TYPESCRIPT BUILD ARTIFACTS - READ THIS FIRST ⚠️
 
 **NEVER emit TypeScript build artifacts into source directories.**
@@ -18,7 +46,7 @@ The build system is:
 - `bun run build` → runs `turbo run build` → tsdown to dist/
 - `bun run typecheck` → runs `turbo run typecheck` → tsc -b to build/
 - `bun run lint` → ESLint (no file emission)
-- `bun run test` → Vitest (no file emission)
+- `bun run test` → Vitest run mode (runs once and exits, no file emission)
 
 **The .gitignore blocks these patterns but files still pollute the working directory:**
 ```
