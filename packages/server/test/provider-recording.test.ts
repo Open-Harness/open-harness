@@ -195,7 +195,8 @@ describe.skipIf(process.env.CI)("ProviderRecorderLive (Persistent Recording)", (
   })
 })
 
-describe("ProviderRecorderLive (Incremental Recording)", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("ProviderRecorderLive (Incremental Recording)", () => {
   it("records events incrementally and can replay them", async () => {
     const { filePath, url } = makeTestDb()
     const recorderLayer = ProviderRecorderLive({ url })
