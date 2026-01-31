@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "master",
   "updateInternalDependencies": "patch",
-  "ignore": ["@open-harness/cli"]
+  "ignore": ["@open-scaffold/cli"]
 }
