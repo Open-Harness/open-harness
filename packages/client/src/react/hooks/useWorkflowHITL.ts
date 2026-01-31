@@ -10,7 +10,12 @@
 
 import { useCallback, useMemo } from "react"
 
-import { decodeInputReceivedPayload, decodeInputRequestedPayload, EVENTS, makeEventId } from "@open-scaffold/core"
+import {
+  decodeInputReceivedPayload,
+  decodeInputRequestedPayload,
+  makeEventId,
+  tagToEventName
+} from "@open-scaffold/core"
 import type { SerializedEvent } from "@open-scaffold/core"
 import { Effect, Option } from "effect"
 
@@ -99,7 +104,7 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
     const responded = new Set<string>()
 
     for (const event of events) {
-      if (event.name === EVENTS.INPUT_REQUESTED) {
+      if (event.name === tagToEventName.InputRequested) {
         // Type-safe parsing via Effect Schema (returns Option, not Effect)
         const parsed = decodeInputRequestedPayload(event.payload)
         if (Option.isSome(parsed)) {
@@ -114,7 +119,7 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
           })
         }
         // Malformed events are silently skipped (Option.isNone case)
-      } else if (event.name === EVENTS.INPUT_RECEIVED) {
+      } else if (event.name === tagToEventName.InputReceived) {
         // Type-safe parsing - correlation via payload.id per ADR-008
         const parsed = decodeInputReceivedPayload(event.payload)
         if (Option.isSome(parsed)) {
@@ -137,7 +142,7 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
       // Correlation happens via payload.id, not causedBy
       const event: SerializedEvent = {
         id: eventId,
-        name: EVENTS.INPUT_RECEIVED,
+        name: tagToEventName.InputReceived,
         payload: {
           id: interactionId, // Correlation ID per ADR-008
           value: response

@@ -155,10 +155,17 @@ export const makeSeededRecorder = (
     const context = yield* Layer.build(baseLayer)
     const service = Context.get(context, ProviderRecorder)
 
-    // Seed all fixtures
+    // Seed all fixtures using incremental API
     for (const fixture of fixtures) {
       const entry = buildRecordingEntry(fixture)
-      yield* service.save(entry)
+      const recordingId = yield* service.startRecording(entry.hash, {
+        prompt: entry.prompt,
+        provider: entry.provider
+      })
+      for (const event of entry.streamData) {
+        yield* service.appendEvent(recordingId, event)
+      }
+      yield* service.finalizeRecording(recordingId, entry.result)
     }
 
     return service
@@ -232,10 +239,17 @@ export const makeTestRecorderLayer = (
       const context = yield* Layer.build(baseLayer)
       const service = Context.get(context, ProviderRecorder)
 
-      // Seed all fixtures
+      // Seed all fixtures using incremental API
       for (const fixture of fixtures) {
         const entry = buildRecordingEntry(fixture)
-        yield* service.save(entry)
+        const recordingId = yield* service.startRecording(entry.hash, {
+          prompt: entry.prompt,
+          provider: entry.provider
+        })
+        for (const event of entry.streamData) {
+          yield* service.appendEvent(recordingId, event)
+        }
+        yield* service.finalizeRecording(recordingId, entry.result)
       }
 
       // Return layer with seeded service

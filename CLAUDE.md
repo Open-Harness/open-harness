@@ -215,7 +215,32 @@ const event = { _tag: "TextDelta", delta: "correct" } satisfies AgentStreamEvent
 ### Exceptions
 
 - **Error narrowing in catch blocks is acceptable**: `catch (e) { const err = e as MyError }` - TypeScript types caught errors as `unknown`, narrowing is standard practice
-- **Intentional edge case testing**: `undefined as unknown as SomeType` when deliberately testing invalid inputs
+
+### Testing Validation Logic
+
+When testing that factory functions throw on invalid input, **use validation functions that accept `unknown`**, not type casts:
+
+```typescript
+// ❌ FORBIDDEN: Type casting to bypass TypeScript
+it("throws if provider is missing", () => {
+  expect(() => agent({
+    provider: undefined as unknown as AgentProvider,  // NO!
+    ...
+  })).toThrow()
+})
+
+// ✅ CORRECT: Use validation function that accepts unknown
+it("throws if provider is missing", () => {
+  expect(() => validateAgentDef({
+    provider: undefined,  // Clean - no casting needed
+    ...
+  })).toThrow("Agent \"test\" requires 'provider' field")
+})
+```
+
+**Available validation functions:**
+- `validateWorkflowDef(input: unknown)` - from `Engine/workflow.ts`
+- `validateAgentDef(input: unknown)` - from `Engine/agent.ts`
 
 ### Why This Matters
 

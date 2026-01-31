@@ -10,7 +10,7 @@
 
 import { useMemo } from "react"
 
-import { EVENTS } from "@open-scaffold/core"
+import { tagToEventName } from "@open-scaffold/core"
 import type { EventId, SerializedEvent } from "@open-scaffold/core"
 
 import type { ForkResult, PauseResult, ResumeResult } from "../../Contract.js"
@@ -208,8 +208,8 @@ export const useWorkflow = <S>(sessionId: string | null): WorkflowResult<S> => {
   // Note: Events use `name` field with values like "workflow:started"
   const { isCompleted, isPaused, isRunning } = useMemo(() => {
     const events = data.events
-    const hasStarted = events.some((e) => e.name === EVENTS.WORKFLOW_STARTED)
-    const hasCompleted = events.some((e) => e.name === EVENTS.WORKFLOW_COMPLETED)
+    const hasStarted = events.some((e) => e.name === tagToEventName.WorkflowStarted)
+    const hasCompleted = events.some((e) => e.name === tagToEventName.WorkflowCompleted)
 
     // Count pause/resume events if they exist (future-proof)
     // Currently pause/resume are API operations, not events

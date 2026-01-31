@@ -164,7 +164,6 @@ export interface WorkflowExecution<S> {
 
 const noopRecorder: ProviderRecorderService = {
   load: () => Effect.succeed(null),
-  save: () => Effect.void,
   delete: () => Effect.void,
   list: () => Effect.succeed([]),
   startRecording: () => Effect.succeed("noop"),

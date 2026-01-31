@@ -23,8 +23,9 @@ import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder } from "../Services/ProviderRecorder.js"
 
 import type { SerializedEvent } from "../Domain/Events.js"
+import { tagToEventName } from "../Domain/Events.js"
 import type { AgentDef } from "./agent.js"
-import { type EventId, EVENTS, makeEvent } from "./types.js"
+import { type EventId, makeEvent } from "./types.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Agent Execution
@@ -94,21 +95,21 @@ export const mapStreamEventToInternal = (
   switch (streamEvent._tag) {
     case "TextDelta":
       return makeEvent(
-        EVENTS.TEXT_DELTA,
+        tagToEventName.TextDelta,
         { agent, delta: streamEvent.delta },
         causedBy
       )
 
     case "ThinkingDelta":
       return makeEvent(
-        EVENTS.THINKING_DELTA,
+        tagToEventName.ThinkingDelta,
         { agent, delta: streamEvent.delta },
         causedBy
       )
 
     case "ToolCall":
       return makeEvent(
-        EVENTS.TOOL_CALLED,
+        tagToEventName.ToolCalled,
         {
           agent,
           toolId: streamEvent.toolId,
@@ -120,7 +121,7 @@ export const mapStreamEventToInternal = (
 
     case "ToolResult":
       return makeEvent(
-        EVENTS.TOOL_RESULT,
+        tagToEventName.ToolResult,
         {
           agent,
           toolId: streamEvent.toolId,
@@ -181,7 +182,7 @@ export const runAgentDef = <S, O, Ctx>(
     const { mode } = yield* ProviderModeContext
 
     // Emit agent:started
-    yield* emitEvent(EVENTS.AGENT_STARTED, {
+    yield* emitEvent(tagToEventName.AgentStarted, {
       agent: agent.name,
       phase: executionContext.phase,
       context: agentContext
@@ -322,7 +323,7 @@ export const runAgentDef = <S, O, Ctx>(
     const durationMs = Date.now() - startTime
 
     // Emit agent:completed
-    yield* emitEvent(EVENTS.AGENT_COMPLETED, {
+    yield* emitEvent(tagToEventName.AgentCompleted, {
       agent: agent.name,
       output: parsed.data,
       durationMs

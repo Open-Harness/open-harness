@@ -223,6 +223,39 @@ export function isPhaseWorkflow<S, Input, Phases extends string>(
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Validation Function (accepts unknown for testing)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Validate a workflow definition from unknown input.
+ *
+ * Use this function when testing validation logic or when input
+ * comes from an untrusted source (e.g., JSON parsing, user input).
+ *
+ * @param input - Untyped input to validate
+ * @returns Validated workflow definition
+ * @throws Error with user-friendly message if validation fails
+ *
+ * @example Testing validation errors:
+ * ```typescript
+ * it("throws if initialState is undefined", () => {
+ *   expect(() => validateWorkflowDef({
+ *     name: "test",
+ *     initialState: undefined,
+ *     start: () => {},
+ *     agent: someAgent
+ *   })).toThrow("Workflow \"test\" requires 'initialState' field")
+ * })
+ * ```
+ */
+export function validateWorkflowDef(input: unknown): WorkflowDef<unknown, unknown, string> {
+  // Cast to SimpleWorkflowDef to match one overload - the implementation
+  // will validate and potentially throw if it's actually a PhaseWorkflowDef
+  // or has other issues. This is safe because we're testing validation.
+  return workflow(input as SimpleWorkflowDef<unknown, unknown>)
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Workflow Factory
 // ─────────────────────────────────────────────────────────────────
 

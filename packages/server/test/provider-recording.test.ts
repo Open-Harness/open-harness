@@ -80,18 +80,19 @@ describe("ProviderRecorderLive (Persistent Recording)", () => {
         Stream.runDrain
       )
 
-      // Save to persistent DB
-      yield* recorder.save({
-        hash,
+      // Save to persistent DB using incremental API
+      const recordingId = yield* recorder.startRecording(hash, {
         prompt: providerOptions.prompt,
-        provider: provider.name,
-        streamData: recordedEvents,
-        result: {
-          stopReason: recordedResult!.stopReason,
-          output: recordedResult!.output,
-          ...(recordedResult!.text ? { text: recordedResult!.text } : {}),
-          ...(recordedResult!.usage ? { usage: recordedResult!.usage } : {})
-        }
+        provider: provider.name
+      })
+      for (const event of recordedEvents) {
+        yield* recorder.appendEvent(recordingId, event)
+      }
+      yield* recorder.finalizeRecording(recordingId, {
+        stopReason: recordedResult!.stopReason,
+        output: recordedResult!.output,
+        ...(recordedResult!.text ? { text: recordedResult!.text } : {}),
+        ...(recordedResult!.usage ? { usage: recordedResult!.usage } : {})
       })
 
       // Verify save worked
@@ -164,13 +165,14 @@ describe("ProviderRecorderLive (Persistent Recording)", () => {
     const program = Effect.gen(function*() {
       const recorder = yield* Services.ProviderRecorder
 
-      // Save a dummy entry
-      yield* recorder.save({
-        hash: "test-hash",
+      // Save a dummy entry using incremental API
+      const recordingId = yield* recorder.startRecording("test-hash", {
         prompt: "test prompt",
-        provider: "test-provider",
-        streamData: [],
-        result: { stopReason: "end_turn", output: { answer: "test", confidence: 1 } }
+        provider: "test-provider"
+      })
+      yield* recorder.finalizeRecording(recordingId, {
+        stopReason: "end_turn",
+        output: { answer: "test", confidence: 1 }
       })
 
       // Verify it exists

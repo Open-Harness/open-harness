@@ -38,7 +38,6 @@ import type { HumanConfig, PhaseDef } from "./phase.js"
 import { runAgentDef } from "./provider.js"
 import {
   type EventId,
-  EVENTS,
   type WorkflowError,
   type WorkflowObserver,
   WorkflowPhaseError,
@@ -147,8 +146,6 @@ const emitEvent = <S>(
       ctx.onEvent(serializedEvent)
     }
   })
-
-// Note: workflowEventToLegacy removed - use Events.toSerializedEvent for canonical format
 
 // ─────────────────────────────────────────────────────────────────
 // Checkpoint Helpers (ADR-006)
@@ -339,7 +336,7 @@ const serializedEventToWorkflowEvent = (event: SerializedEvent, agent: string): 
   const p = event.payload
 
   switch (event.name) {
-    case EVENTS.AGENT_STARTED: {
+    case Events.tagToEventName.AgentStarted: {
       const agentStartedProps: { agent: string; timestamp: Date; phase?: string; context?: unknown } = {
         agent,
         timestamp
@@ -348,26 +345,26 @@ const serializedEventToWorkflowEvent = (event: SerializedEvent, agent: string): 
       if (p.context !== undefined) agentStartedProps.context = p.context
       return new Events.AgentStarted(agentStartedProps)
     }
-    case EVENTS.AGENT_COMPLETED:
+    case Events.tagToEventName.AgentCompleted:
       return new Events.AgentCompleted({
         agent,
         output: p.output,
         durationMs: p.durationMs as number,
         timestamp
       })
-    case EVENTS.TEXT_DELTA:
+    case Events.tagToEventName.TextDelta:
       return new Events.TextDelta({
         agent,
         delta: p.delta as string,
         timestamp
       })
-    case EVENTS.THINKING_DELTA:
+    case Events.tagToEventName.ThinkingDelta:
       return new Events.ThinkingDelta({
         agent,
         delta: p.delta as string,
         timestamp
       })
-    case EVENTS.TOOL_CALLED:
+    case Events.tagToEventName.ToolCalled:
       return new Events.ToolCalled({
         agent,
         toolId: p.toolId as string,
@@ -375,7 +372,7 @@ const serializedEventToWorkflowEvent = (event: SerializedEvent, agent: string): 
         input: p.input,
         timestamp
       })
-    case EVENTS.TOOL_RESULT:
+    case Events.tagToEventName.ToolResult:
       return new Events.ToolResult({
         agent,
         toolId: p.toolId as string,

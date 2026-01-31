@@ -335,9 +335,12 @@ describe("OpenScaffold.getProviderRecorder()", () => {
     const recorder = await scaffold.getProviderRecorder()
     expect(recorder).toBeDefined()
     expect(typeof recorder.load).toBe("function")
-    expect(typeof recorder.save).toBe("function")
     expect(typeof recorder.list).toBe("function")
     expect(typeof recorder.delete).toBe("function")
+    // Incremental recording API
+    expect(typeof recorder.startRecording).toBe("function")
+    expect(typeof recorder.appendEvent).toBe("function")
+    expect(typeof recorder.finalizeRecording).toBe("function")
   })
 })
 

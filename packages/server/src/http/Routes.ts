@@ -11,10 +11,10 @@ import { Effect, Fiber, Schema } from "effect"
 import {
   computeStateAt,
   decodeSerializedEvent,
-  EVENTS,
   makeEvent,
   SessionIdSchema,
   SessionNotFound,
+  tagToEventName,
   ValidationError
 } from "@open-scaffold/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
@@ -289,7 +289,7 @@ export const postSessionInputRoute = <S>(
         Effect.mapError(() => new ValidationError({ message: "invalid event format" }))
       )
       : input
-      ? yield* makeEvent(EVENTS.INPUT_RECEIVED, { response: input })
+      ? yield* makeEvent(tagToEventName.InputReceived, { response: input })
       : null
 
     if (!event) {
@@ -420,7 +420,7 @@ export const resumeSessionRoute = <S>(
     // Determine the current phase from events (scan backwards for last phase:entered)
     let resumePhase: string | undefined
     for (let i = events.length - 1; i >= 0; i--) {
-      if (events[i].name === EVENTS.PHASE_ENTERED) {
+      if (events[i].name === tagToEventName.PhaseEntered) {
         resumePhase = (events[i].payload as { phase: string }).phase
         break
       }

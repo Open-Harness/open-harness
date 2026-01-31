@@ -26,7 +26,6 @@ export type {
   AnyEvent,
   Event,
   EventId,
-  EventName,
   // Observer protocol
   InputReceivedEvent,
   InputReceivedPayload,
@@ -62,7 +61,6 @@ export type {
 
 export {
   EventIdSchema,
-  EVENTS,
   makeEvent,
   makeEventId,
   parseEventId,

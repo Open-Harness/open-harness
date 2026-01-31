@@ -16,7 +16,7 @@
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { EVENTS, makeEvent, type SerializedEvent, type SessionId } from "@open-scaffold/core"
+import { makeEvent, type SerializedEvent, type SessionId, tagToEventName } from "@open-scaffold/core"
 import { Services } from "@open-scaffold/core/internal"
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive, recordEvent } from "../src/internal.js"
@@ -41,7 +41,7 @@ describe("HITL Integration Tests", () => {
       const bus = yield* Services.EventBus
 
       // Simulate workflow emitting input:requested (ADR-008 canonical format)
-      const requestEvent = mkEvent(EVENTS.INPUT_REQUESTED, {
+      const requestEvent = mkEvent(tagToEventName.InputRequested, {
         id: "req-1",
         prompt: "Do you approve this plan?",
         type: "approval"
@@ -55,7 +55,7 @@ describe("HITL Integration Tests", () => {
       yield* Effect.yieldNow()
 
       // Simulate client posting input:received (ADR-008 canonical format)
-      const responseEvent = mkEvent(EVENTS.INPUT_RECEIVED, {
+      const responseEvent = mkEvent(tagToEventName.InputReceived, {
         id: "req-1",
         value: "approve",
         approved: true
@@ -72,13 +72,13 @@ describe("HITL Integration Tests", () => {
 
     // Should have both events persisted
     expect(events).toHaveLength(2)
-    expect(events[0].name).toBe(EVENTS.INPUT_REQUESTED)
-    expect(events[1].name).toBe(EVENTS.INPUT_RECEIVED)
+    expect(events[0].name).toBe(tagToEventName.InputRequested)
+    expect(events[1].name).toBe(tagToEventName.InputReceived)
 
     // The response event should have been broadcast
     const items = Array.from(collected)
     expect(items).toHaveLength(1)
-    expect(items[0].name).toBe(EVENTS.INPUT_RECEIVED)
+    expect(items[0].name).toBe(tagToEventName.InputReceived)
     expect((items[0].payload as { id: string; value: string }).value).toBe("approve")
   })
 
@@ -91,7 +91,7 @@ describe("HITL Integration Tests", () => {
       // Simulate workflow requesting approval (ADR-008 canonical format)
       yield* recordEvent(
         sessionId,
-        mkEvent(EVENTS.INPUT_REQUESTED, {
+        mkEvent(tagToEventName.InputRequested, {
           id: "req-deploy",
           prompt: "Approve deployment?",
           type: "approval"
@@ -101,7 +101,7 @@ describe("HITL Integration Tests", () => {
       // Simulate client rejecting (ADR-008 canonical format)
       yield* recordEvent(
         sessionId,
-        mkEvent(EVENTS.INPUT_RECEIVED, {
+        mkEvent(tagToEventName.InputReceived, {
           id: "req-deploy",
           value: "reject",
           approved: false
@@ -118,8 +118,8 @@ describe("HITL Integration Tests", () => {
     const events = await Effect.runPromise(program)
 
     expect(events).toHaveLength(2)
-    expect(events[0].name).toBe(EVENTS.INPUT_REQUESTED)
-    expect(events[1].name).toBe(EVENTS.INPUT_RECEIVED)
+    expect(events[0].name).toBe(tagToEventName.InputRequested)
+    expect(events[1].name).toBe(tagToEventName.InputReceived)
     const payload = events[1].payload as { id: string; value: string; approved: boolean }
     expect(payload.value).toBe("reject")
     expect(payload.approved).toBe(false)
@@ -141,7 +141,7 @@ describe("HITL Integration Tests", () => {
       // Emit a sequence of events (ADR-008 canonical format)
       yield* recordEvent(
         sessionId,
-        mkEvent(EVENTS.WORKFLOW_STARTED, {
+        mkEvent(tagToEventName.WorkflowStarted, {
           sessionId,
           workflowName: "hitl-test",
           input: "start"
@@ -149,7 +149,7 @@ describe("HITL Integration Tests", () => {
       )
       yield* recordEvent(
         sessionId,
-        mkEvent(EVENTS.INPUT_REQUESTED, {
+        mkEvent(tagToEventName.InputRequested, {
           id: "choice-1",
           prompt: "What next?",
           type: "choice",
@@ -158,7 +158,7 @@ describe("HITL Integration Tests", () => {
       )
       yield* recordEvent(
         sessionId,
-        mkEvent(EVENTS.INPUT_RECEIVED, {
+        mkEvent(tagToEventName.InputReceived, {
           id: "choice-1",
           value: "Plan B"
         })
@@ -171,8 +171,8 @@ describe("HITL Integration Tests", () => {
     const items = Array.from(collected)
 
     expect(items).toHaveLength(3)
-    expect(items[0].name).toBe(EVENTS.WORKFLOW_STARTED)
-    expect(items[1].name).toBe(EVENTS.INPUT_REQUESTED)
-    expect(items[2].name).toBe(EVENTS.INPUT_RECEIVED)
+    expect(items[0].name).toBe(tagToEventName.WorkflowStarted)
+    expect(items[1].name).toBe(tagToEventName.InputRequested)
+    expect(items[2].name).toBe(tagToEventName.InputReceived)
   }, 10000)
 })

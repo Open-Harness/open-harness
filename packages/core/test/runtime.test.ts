@@ -8,10 +8,11 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { phase } from "../src/Engine/phase.js"
 import { type ExecuteOptions, executeWorkflow } from "../src/Engine/runtime.js"
-import { EVENTS, WorkflowAgentError } from "../src/Engine/types.js"
+import { WorkflowAgentError } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
@@ -167,7 +168,7 @@ describe("executeWorkflow", () => {
       )
 
       // Find state:intent events
-      const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_INTENT)
+      const stateEvents = result.events.filter((e) => e.name === tagToEventName.StateIntent)
       expect(stateEvents.length).toBeGreaterThan(0)
 
       // Verify patches are present in state:intent events
@@ -212,28 +213,28 @@ describe("executeWorkflow", () => {
       expect(result.state.goal).toBe("Test goal")
       expect(result.state.tasks).toContain("Task completed")
       // Verify events include phase transitions
-      const phaseEvents = result.events.filter((e) => e.name === EVENTS.PHASE_ENTERED)
+      const phaseEvents = result.events.filter((e) => e.name === tagToEventName.PhaseEntered)
       expect(phaseEvents.length).toBeGreaterThan(0)
     })
   })
 })
 
-describe("EVENTS constant", () => {
+describe("tagToEventName mapping", () => {
   it("has all expected event names", () => {
-    expect(EVENTS.WORKFLOW_STARTED).toBe("workflow:started")
-    expect(EVENTS.WORKFLOW_COMPLETED).toBe("workflow:completed")
-    expect(EVENTS.PHASE_ENTERED).toBe("phase:entered")
-    expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
-    expect(EVENTS.AGENT_STARTED).toBe("agent:started")
-    expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
-    expect(EVENTS.STATE_INTENT).toBe("state:intent")
-    expect(EVENTS.STATE_CHECKPOINT).toBe("state:checkpoint")
-    expect(EVENTS.TEXT_DELTA).toBe("text:delta")
-    expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
-    expect(EVENTS.TOOL_CALLED).toBe("tool:called")
-    expect(EVENTS.TOOL_RESULT).toBe("tool:result")
-    expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
-    expect(EVENTS.INPUT_RECEIVED).toBe("input:received")
+    expect(tagToEventName.WorkflowStarted).toBe("workflow:started")
+    expect(tagToEventName.WorkflowCompleted).toBe("workflow:completed")
+    expect(tagToEventName.PhaseEntered).toBe("phase:entered")
+    expect(tagToEventName.PhaseExited).toBe("phase:exited")
+    expect(tagToEventName.AgentStarted).toBe("agent:started")
+    expect(tagToEventName.AgentCompleted).toBe("agent:completed")
+    expect(tagToEventName.StateIntent).toBe("state:intent")
+    expect(tagToEventName.StateCheckpoint).toBe("state:checkpoint")
+    expect(tagToEventName.TextDelta).toBe("text:delta")
+    expect(tagToEventName.ThinkingDelta).toBe("thinking:delta")
+    expect(tagToEventName.ToolCalled).toBe("tool:called")
+    expect(tagToEventName.ToolResult).toBe("tool:result")
+    expect(tagToEventName.InputRequested).toBe("input:requested")
+    expect(tagToEventName.InputReceived).toBe("input:received")
   })
 })
 

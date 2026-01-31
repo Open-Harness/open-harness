@@ -370,7 +370,7 @@ export const decodeSerializedEvent = Schema.decodeUnknown(SerializedEventSchema)
  * Per ADR-004: Convert internal _tag values to external event names
  * like "workflow:started" for storage/SSE compatibility.
  */
-export const tagToEventName: Record<WorkflowEventTag, string> = {
+export const tagToEventName = {
   WorkflowStarted: "workflow:started",
   WorkflowCompleted: "workflow:completed",
   PhaseEntered: "phase:entered",
@@ -386,7 +386,12 @@ export const tagToEventName: Record<WorkflowEventTag, string> = {
   ToolResult: "tool:result",
   InputRequested: "input:requested",
   InputReceived: "input:received"
-}
+} as const satisfies Record<WorkflowEventTag, string>
+
+/**
+ * Union type of all event names (e.g., "workflow:started" | "agent:completed" | ...).
+ */
+export type EventName = (typeof tagToEventName)[keyof typeof tagToEventName]
 
 /**
  * Convert WorkflowEvent (Data.TaggedClass) to SerializedEvent (JSON format).

@@ -8,7 +8,7 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { computeStateAt } from "../src/Engine/utils.js"
-import { EVENTS, makeEvent, type SerializedEvent } from "../src/index.js"
+import { makeEvent, type SerializedEvent, tagToEventName } from "../src/index.js"
 
 // Helper to create events synchronously via Effect.runSync
 const mkEvent = (name: string, payload: Record<string, unknown>): SerializedEvent =>
@@ -22,9 +22,9 @@ describe("computeStateAt", () => {
 
   it("returns undefined when no state:intent events exist", () => {
     const events = [
-      mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId: "s1", workflowName: "test", input: "hi" }),
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 100 })
+      mkEvent(tagToEventName.WorkflowStarted, { sessionId: "s1", workflowName: "test", input: "hi" }),
+      mkEvent(tagToEventName.AgentStarted, { agent: "a1" }),
+      mkEvent(tagToEventName.AgentCompleted, { agent: "a1", output: "done", durationMs: 100 })
     ]
     const result = computeStateAt(events, events.length)
     expect(result).toBeUndefined()
@@ -33,9 +33,9 @@ describe("computeStateAt", () => {
   it("returns the state from the only state:intent event", () => {
     const state = { count: 1, items: ["a"] }
     const events = [
-      mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId: "s1", workflowName: "test", input: "hi" }),
-      mkEvent(EVENTS.STATE_INTENT, { state }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 100 })
+      mkEvent(tagToEventName.WorkflowStarted, { sessionId: "s1", workflowName: "test", input: "hi" }),
+      mkEvent(tagToEventName.StateIntent, { state }),
+      mkEvent(tagToEventName.AgentCompleted, { agent: "a1", output: "done", durationMs: 100 })
     ]
     const result = computeStateAt<typeof state>(events, events.length)
     expect(result).toEqual(state)
@@ -46,11 +46,11 @@ describe("computeStateAt", () => {
     const state2 = { count: 2 }
     const state3 = { count: 3 }
     const events = [
-      mkEvent(EVENTS.STATE_INTENT, { state: state1 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
-      mkEvent(EVENTS.STATE_INTENT, { state: state2 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a2" }),
-      mkEvent(EVENTS.STATE_INTENT, { state: state3 })
+      mkEvent(tagToEventName.StateIntent, { state: state1 }),
+      mkEvent(tagToEventName.AgentStarted, { agent: "a1" }),
+      mkEvent(tagToEventName.StateIntent, { state: state2 }),
+      mkEvent(tagToEventName.AgentStarted, { agent: "a2" }),
+      mkEvent(tagToEventName.StateIntent, { state: state3 })
     ]
 
     // At position 5 (all events), should return state3
@@ -65,7 +65,7 @@ describe("computeStateAt", () => {
 
   it("returns undefined when position is 0", () => {
     const events = [
-      mkEvent(EVENTS.STATE_INTENT, { state: { count: 1 } })
+      mkEvent(tagToEventName.StateIntent, { state: { count: 1 } })
     ]
     const result = computeStateAt(events, 0)
     expect(result).toBeUndefined()
@@ -74,7 +74,7 @@ describe("computeStateAt", () => {
   it("clamps position to events.length when position exceeds array length", () => {
     const state = { value: "final" }
     const events = [
-      mkEvent(EVENTS.STATE_INTENT, { state })
+      mkEvent(tagToEventName.StateIntent, { state })
     ]
     // Position 100 but only 1 event
     const result = computeStateAt(events, 100)
@@ -84,11 +84,11 @@ describe("computeStateAt", () => {
   it("returns state from the beginning of the event log", () => {
     const state = { phase: "init" }
     const events = [
-      mkEvent(EVENTS.STATE_INTENT, { state }),
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 50 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a2" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a2", output: "done2", durationMs: 60 })
+      mkEvent(tagToEventName.StateIntent, { state }),
+      mkEvent(tagToEventName.AgentStarted, { agent: "a1" }),
+      mkEvent(tagToEventName.AgentCompleted, { agent: "a1", output: "done", durationMs: 50 }),
+      mkEvent(tagToEventName.AgentStarted, { agent: "a2" }),
+      mkEvent(tagToEventName.AgentCompleted, { agent: "a2", output: "done2", durationMs: 60 })
     ]
     // All events, but only the first is state:intent
     const result = computeStateAt(events, events.length)
@@ -98,9 +98,9 @@ describe("computeStateAt", () => {
   it("returns state from the end of the event log", () => {
     const finalState = { completed: true }
     const events = [
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
-      mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 50 }),
-      mkEvent(EVENTS.STATE_INTENT, { state: finalState })
+      mkEvent(tagToEventName.AgentStarted, { agent: "a1" }),
+      mkEvent(tagToEventName.AgentCompleted, { agent: "a1", output: "done", durationMs: 50 }),
+      mkEvent(tagToEventName.StateIntent, { state: finalState })
     ]
     const result = computeStateAt(events, events.length)
     expect(result).toEqual(finalState)
@@ -110,10 +110,10 @@ describe("computeStateAt", () => {
     const state1 = { step: 1 }
     const state2 = { step: 2 }
     const events = [
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
-      mkEvent(EVENTS.STATE_INTENT, { state: state1 }),
-      mkEvent(EVENTS.AGENT_STARTED, { agent: "a2" }),
-      mkEvent(EVENTS.STATE_INTENT, { state: state2 })
+      mkEvent(tagToEventName.AgentStarted, { agent: "a1" }),
+      mkEvent(tagToEventName.StateIntent, { state: state1 }),
+      mkEvent(tagToEventName.AgentStarted, { agent: "a2" }),
+      mkEvent(tagToEventName.StateIntent, { state: state2 })
     ]
 
     // Position 2 means we look at events[0] and events[1]

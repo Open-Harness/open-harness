@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import type { AgentProvider } from "../src/Domain/Provider.js"
-import { agent, type AgentDef } from "../src/Engine/agent.js"
+import { agent, type AgentDef, validateAgentDef } from "../src/Engine/agent.js"
 import { run } from "../src/Engine/run.js"
 import type { Draft } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
@@ -62,10 +62,17 @@ interface TestContext {
 // ─────────────────────────────────────────────────────────────────
 
 describe("agent() factory", () => {
+  // ─────────────────────────────────────────────────────────────────
+  // Validation Tests
+  //
+  // These tests verify that the agent() factory throws appropriate
+  // errors for invalid input. We use validateAgentDef() which accepts
+  // unknown input, eliminating the need for type casts like `as unknown as`.
+  // ─────────────────────────────────────────────────────────────────
   describe("validation", () => {
     it("throws if name is missing", () => {
       expect(() => {
-        agent({
+        validateAgentDef({
           name: "",
           provider: testProvider,
           output: z.string(),
@@ -77,9 +84,9 @@ describe("agent() factory", () => {
 
     it("throws if provider is missing", () => {
       expect(() => {
-        agent({
+        validateAgentDef({
           name: "test-agent",
-          provider: undefined as unknown as AgentProvider,
+          provider: undefined,
           output: z.string(),
           prompt: () => "test",
           update: () => {}
@@ -89,10 +96,10 @@ describe("agent() factory", () => {
 
     it("throws if output schema is missing", () => {
       expect(() => {
-        agent({
+        validateAgentDef({
           name: "test-agent",
           provider: testProvider,
-          output: undefined as unknown as z.ZodType<unknown>,
+          output: undefined,
           prompt: () => "test",
           update: () => {}
         })
@@ -101,11 +108,11 @@ describe("agent() factory", () => {
 
     it("throws if prompt is missing", () => {
       expect(() => {
-        agent({
+        validateAgentDef({
           name: "test-agent",
           provider: testProvider,
           output: z.string(),
-          prompt: undefined as unknown as () => string,
+          prompt: undefined,
           update: () => {}
         })
       }).toThrow("Agent \"test-agent\" requires 'prompt' function")
@@ -113,12 +120,12 @@ describe("agent() factory", () => {
 
     it("throws if update is missing", () => {
       expect(() => {
-        agent({
+        validateAgentDef({
           name: "test-agent",
           provider: testProvider,
           output: z.string(),
           prompt: () => "test",
-          update: undefined as unknown as () => void
+          update: undefined
         })
       }).toThrow("Agent \"test-agent\" requires 'update' function")
     })

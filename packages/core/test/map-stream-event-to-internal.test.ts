@@ -14,8 +14,9 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import type { SerializedEvent } from "../src/Domain/Events.js"
+import { tagToEventName } from "../src/Domain/Events.js"
 import type { AgentStreamEvent } from "../src/Domain/Provider.js"
-import { EVENTS, makeEventId } from "../src/Engine/types.js"
+import { makeEventId } from "../src/Engine/types.js"
 import { mapStreamEventToInternal } from "../src/internal.js"
 
 describe("mapStreamEventToInternal", () => {
@@ -34,7 +35,7 @@ describe("mapStreamEventToInternal", () => {
 
       expect(result).not.toBeNull()
       const event = result as SerializedEvent
-      expect(event.name).toBe(EVENTS.TEXT_DELTA)
+      expect(event.name).toBe(tagToEventName.TextDelta)
       expect(event.payload).toEqual({
         agent: "test-agent",
         delta: "Hello, world!"
@@ -56,7 +57,7 @@ describe("mapStreamEventToInternal", () => {
 
       expect(result).not.toBeNull()
       const event = result as SerializedEvent
-      expect(event.name).toBe(EVENTS.TEXT_DELTA)
+      expect(event.name).toBe(tagToEventName.TextDelta)
       expect(event.payload).toEqual({
         agent: "test-agent",
         delta: ""
@@ -93,7 +94,7 @@ describe("mapStreamEventToInternal", () => {
 
       expect(result).not.toBeNull()
       const event = result as SerializedEvent
-      expect(event.name).toBe(EVENTS.THINKING_DELTA)
+      expect(event.name).toBe(tagToEventName.ThinkingDelta)
       expect(event.payload).toEqual({
         agent: "test-agent",
         delta: "Let me think about this..."
@@ -134,7 +135,7 @@ describe("mapStreamEventToInternal", () => {
 
       expect(result).not.toBeNull()
       const event = result as SerializedEvent
-      expect(event.name).toBe(EVENTS.TOOL_CALLED)
+      expect(event.name).toBe(tagToEventName.ToolCalled)
       expect(event.payload).toEqual({
         agent: "test-agent",
         toolId: "tool_123",
@@ -211,7 +212,7 @@ describe("mapStreamEventToInternal", () => {
 
       expect(result).not.toBeNull()
       const event = result as SerializedEvent
-      expect(event.name).toBe(EVENTS.TOOL_RESULT)
+      expect(event.name).toBe(tagToEventName.ToolResult)
       expect(event.payload).toEqual({
         agent: "test-agent",
         toolId: "tool_123",
@@ -234,7 +235,7 @@ describe("mapStreamEventToInternal", () => {
 
       expect(result).not.toBeNull()
       const event = result as SerializedEvent
-      expect(event.name).toBe(EVENTS.TOOL_RESULT)
+      expect(event.name).toBe(tagToEventName.ToolResult)
       expect(event.payload).toEqual({
         agent: "test-agent",
         toolId: "tool_456",

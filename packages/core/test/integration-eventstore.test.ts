@@ -16,11 +16,11 @@ import { Effect } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import type { SessionId } from "../src/Domain/Ids.js"
 import { agent } from "../src/Engine/agent.js"
 import type { RuntimeConfig } from "../src/Engine/execute.js"
 import { run } from "../src/Engine/run.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { EventStoreLive } from "../src/Layers/LibSQL.js"
 import { EventStore } from "../src/Services/EventStore.js"
@@ -137,13 +137,13 @@ describe("EventStore persistence integration", () => {
     // Note: agent:started and agent:completed are emitted by runAgentDef and collected
     // in-memory, but only events emitted via the runtime's emitEvent are persisted to EventStore.
     const eventNames = (persistedEvents as Array<{ name: string }>).map((e) => e.name)
-    expect(eventNames).toContain(EVENTS.STATE_INTENT)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
+    expect(eventNames).toContain(tagToEventName.StateIntent)
+    expect(eventNames).toContain(tagToEventName.WorkflowStarted)
+    expect(eventNames).toContain(tagToEventName.WorkflowCompleted)
 
     // Verify ordering: started before completed
-    const startedIdx = eventNames.indexOf(EVENTS.WORKFLOW_STARTED)
-    const completedIdx = eventNames.indexOf(EVENTS.WORKFLOW_COMPLETED)
+    const startedIdx = eventNames.indexOf(tagToEventName.WorkflowStarted)
+    const completedIdx = eventNames.indexOf(tagToEventName.WorkflowCompleted)
     expect(startedIdx).toBeLessThan(completedIdx)
 
     // Verify session appears in listSessions

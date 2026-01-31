@@ -51,7 +51,6 @@ export type {
   AnyEvent,
   Event,
   EventId,
-  EventName,
   InputReceivedEvent,
   InputReceivedPayload,
   InputRequest,
@@ -85,7 +84,6 @@ export type {
 // Event constants and utilities
 export {
   EventIdSchema,
-  EVENTS,
   makeEvent,
   makeEventId,
   parseEventId,
@@ -99,7 +97,14 @@ export {
 } from "./Engine/types.js"
 
 // Wire format deserialization (ADR-004)
-export { decodeSerializedEvent, generateEventId, type SerializedEvent, SerializedEventSchema } from "./Domain/Events.js"
+export {
+  decodeSerializedEvent,
+  type EventName,
+  generateEventId,
+  type SerializedEvent,
+  SerializedEventSchema,
+  tagToEventName
+} from "./Domain/Events.js"
 
 // HITL payload schemas (ADR-008: Type-safe event parsing)
 export {

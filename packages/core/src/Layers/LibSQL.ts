@@ -417,49 +417,6 @@ export const ProviderRecorderLive = (config: LibSQLConfig): Layer.Layer<Provider
           Effect.withSpan("ProviderRecorder.load", { attributes: { hash } })
         ),
 
-      save: (entry) =>
-        Effect.gen(function*() {
-          const recordingId = crypto.randomUUID()
-          const createdAt = new Date().toISOString()
-          const response = JSON.stringify(entry.result)
-
-          // Delete any existing recording for this hash
-          yield* sql`
-            DELETE FROM recording_events
-            WHERE recording_id IN (
-              SELECT recording_id FROM recording_sessions WHERE request_hash = ${entry.hash}
-            )
-          `
-          yield* sql`
-            DELETE FROM recording_sessions WHERE request_hash = ${entry.hash}
-          `
-
-          // Create a completed recording session
-          yield* sql`
-            INSERT INTO recording_sessions (
-              recording_id, request_hash, prompt, provider, status, response, created_at, completed_at
-            )
-            VALUES (
-              ${recordingId}, ${entry.hash}, ${entry.prompt}, ${entry.provider},
-              'complete', ${response}, ${createdAt}, ${createdAt}
-            )
-          `
-
-          // Insert all events
-          let eventIndex = 0
-          for (const event of entry.streamData) {
-            const eventData = JSON.stringify(event)
-            yield* sql`
-              INSERT INTO recording_events (recording_id, event_index, event_data, created_at)
-              VALUES (${recordingId}, ${eventIndex}, ${eventData}, ${createdAt})
-            `
-            eventIndex++
-          }
-        }).pipe(
-          Effect.mapError((cause) => new StoreError({ operation: "write", cause })),
-          Effect.withSpan("ProviderRecorder.save", { attributes: { hash: entry.hash } })
-        ),
-
       delete: (hash) =>
         Effect.gen(function*() {
           // Delete events first (foreign key relationship)

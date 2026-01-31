@@ -12,10 +12,10 @@ import { z } from "zod"
 
 import {
   agent,
-  EVENTS,
   type ProviderRunOptions,
   type SerializedEvent,
   type SessionId,
+  tagToEventName,
   workflow
 } from "@open-scaffold/core"
 // executeWorkflow and Services are internal API (ADR-001) - import from internal entrypoint
@@ -72,7 +72,6 @@ const testWorkflow = workflow<BusTestState>({
 // Noop recorder
 const noopRecorder: Services.ProviderRecorderService = {
   load: () => Effect.succeed(null),
-  save: () => Effect.void,
   delete: () => Effect.void,
   list: () => Effect.succeed([]),
   startRecording: () => Effect.succeed("noop"),
@@ -114,7 +113,7 @@ describe("EventBus broadcast integration", () => {
       // Subscribe to events for our session
       const subscriberFiber = yield* Effect.fork(
         bus.subscribe(sessionId as SessionId).pipe(
-          Stream.takeUntil((event) => event.name === EVENTS.WORKFLOW_COMPLETED),
+          Stream.takeUntil((event) => event.name === tagToEventName.WorkflowCompleted),
           Stream.runCollect
         )
       )
@@ -147,13 +146,13 @@ describe("EventBus broadcast integration", () => {
     const eventNames = broadcastedEvents.map((e: SerializedEvent) => e.name)
 
     // Key lifecycle events should have been broadcast
-    expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
-    expect(eventNames).toContain(EVENTS.STATE_INTENT)
+    expect(eventNames).toContain(tagToEventName.WorkflowStarted)
+    expect(eventNames).toContain(tagToEventName.WorkflowCompleted)
+    expect(eventNames).toContain(tagToEventName.StateIntent)
 
     // Events should arrive in order
-    const startedIdx = eventNames.indexOf(EVENTS.WORKFLOW_STARTED)
-    const completedIdx = eventNames.indexOf(EVENTS.WORKFLOW_COMPLETED)
+    const startedIdx = eventNames.indexOf(tagToEventName.WorkflowStarted)
+    const completedIdx = eventNames.indexOf(tagToEventName.WorkflowCompleted)
     expect(startedIdx).toBeLessThan(completedIdx)
   }, 15000)
 })

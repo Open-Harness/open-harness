@@ -9,10 +9,10 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { phase } from "../src/Engine/phase.js"
 import { type ExecuteOptions, executeWorkflow } from "../src/Engine/runtime.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
@@ -223,10 +223,10 @@ describe("executeWorkflow with resume options", () => {
       { fixtures }
     )
 
-    const startedEvents = result.events.filter((e) => e.name === EVENTS.WORKFLOW_STARTED)
+    const startedEvents = result.events.filter((e) => e.name === tagToEventName.WorkflowStarted)
     expect(startedEvents.length).toBe(1)
 
-    const completedEvents = result.events.filter((e) => e.name === EVENTS.WORKFLOW_COMPLETED)
+    const completedEvents = result.events.filter((e) => e.name === tagToEventName.WorkflowCompleted)
     expect(completedEvents.length).toBe(1)
   })
 
@@ -250,7 +250,7 @@ describe("executeWorkflow with resume options", () => {
 
     // The first state:intent event should NOT be from start()
     // (there should be no goal-setting patch from start)
-    const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_INTENT)
+    const stateEvents = result.events.filter((e) => e.name === tagToEventName.StateIntent)
     expect(stateEvents.length).toBeGreaterThan(0)
 
     // First state update should be from the worker agent, not from start()
@@ -288,7 +288,7 @@ describe("executeWorkflow with resume options", () => {
     expect(result.state.verdict).toBe("done")
 
     // Verify phase events: should see judging and done, not planning or working
-    const phaseEnteredEvents = result.events.filter((e) => e.name === EVENTS.PHASE_ENTERED)
+    const phaseEnteredEvents = result.events.filter((e) => e.name === tagToEventName.PhaseEntered)
     const phaseNames = phaseEnteredEvents.map(
       (e) => (e.payload as { phase: string }).phase
     )

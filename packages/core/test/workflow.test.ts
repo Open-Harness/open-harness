@@ -8,16 +8,17 @@
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
 import { run } from "../src/Engine/run.js"
-import { EVENTS } from "../src/Engine/types.js"
 import {
   isPhaseWorkflow,
   isSimpleWorkflow,
   type PhaseWorkflowDef,
   type SimpleWorkflowDef,
+  validateWorkflowDef,
   workflow
 } from "../src/Engine/workflow.js"
 import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
@@ -74,10 +75,17 @@ const judgeAgent = agent<TestState, { verdict: "continue" | "complete" }>({
 // ─────────────────────────────────────────────────────────────────
 
 describe("workflow() factory", () => {
+  // ─────────────────────────────────────────────────────────────────
+  // Validation Tests
+  //
+  // These tests verify that the workflow() factory throws appropriate
+  // errors for invalid input. We use validateWorkflowDef() which accepts
+  // unknown input, eliminating the need for type casts like `as unknown as`.
+  // ─────────────────────────────────────────────────────────────────
   describe("validation", () => {
     it("throws if name is missing", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
@@ -88,9 +96,9 @@ describe("workflow() factory", () => {
 
     it("throws if initialState is undefined", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
-          initialState: undefined as unknown as TestState,
+          initialState: undefined,
           start: () => {},
           agent: simpleAgent
         })
@@ -99,10 +107,10 @@ describe("workflow() factory", () => {
 
     it("throws if start is missing", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
-          start: undefined as unknown as () => void,
+          start: undefined,
           agent: simpleAgent
         })
       }).toThrow("Workflow \"test\" requires 'start' function")
@@ -110,47 +118,47 @@ describe("workflow() factory", () => {
 
     it("throws if both agent and phases are specified", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
           agent: simpleAgent,
           phases: { done: phase.terminal<TestState, "done">() }
-        } as unknown as SimpleWorkflowDef<TestState>)
+        })
       }).toThrow("Workflow \"test\" cannot have both 'agent' and 'phases'")
     })
 
     it("throws if neither agent nor phases are specified", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {}
-        } as unknown as SimpleWorkflowDef<TestState>)
+        })
       }).toThrow("Workflow \"test\" requires either 'agent' or 'phases'")
     })
 
     it("throws if phases is empty", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
-          phases: {} as { done: typeof phase.terminal }
-        } as PhaseWorkflowDef<TestState, string, "done">)
+          phases: {}
+        })
       }).toThrow("Workflow \"test\" has empty 'phases'")
     })
 
     it("throws if no terminal phase exists", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
           phases: {
-            planning: { run: plannerAgent, next: "planning" as const }
+            planning: { run: plannerAgent, next: "planning" }
           }
-        } as unknown as PhaseWorkflowDef<TestState, string, "planning">)
+        })
       }).toThrow("Workflow \"test\" must have at least one terminal phase")
     })
   })
@@ -407,7 +415,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const phaseEnteredNames: Array<string> = []
     for await (const event of execution) {
-      if (event.name === EVENTS.PHASE_ENTERED) {
+      if (event.name === tagToEventName.PhaseEntered) {
         phaseEnteredNames.push((event.payload as { phase: string }).phase)
       }
     }

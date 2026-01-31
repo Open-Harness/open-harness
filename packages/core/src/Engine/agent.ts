@@ -93,6 +93,37 @@ export interface AgentDef<S = unknown, O = unknown, Ctx = void> {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Validation Function (accepts unknown for testing)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Validate an agent definition from unknown input.
+ *
+ * Use this function when testing validation logic or when input
+ * comes from an untrusted source (e.g., JSON parsing, user input).
+ *
+ * @param input - Untyped input to validate
+ * @returns Validated agent definition
+ * @throws Error with user-friendly message if validation fails
+ *
+ * @example Testing validation errors:
+ * ```typescript
+ * it("throws if provider is missing", () => {
+ *   expect(() => validateAgentDef({
+ *     name: "test-agent",
+ *     provider: undefined,
+ *     output: z.string(),
+ *     prompt: () => "test",
+ *     update: () => {}
+ *   })).toThrow("Agent \"test-agent\" requires 'provider' field")
+ * })
+ * ```
+ */
+export function validateAgentDef(input: unknown): AgentDef<unknown, unknown, void> {
+  return agent(input as AgentDef<unknown, unknown, void>)
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Agent Factory
 // ─────────────────────────────────────────────────────────────────
 

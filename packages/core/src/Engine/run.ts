@@ -150,7 +150,6 @@ export interface WorkflowExecution<S> extends PromiseLike<RunResult<S>> {
 // Noop recorder for when no recorder is provided
 const noopRecorder: ProviderRecorderService = {
   load: () => Effect.succeed(null),
-  save: () => Effect.void,
   delete: () => Effect.void,
   list: () => Effect.succeed([]),
   startRecording: () => Effect.succeed("noop"),
@@ -336,22 +335,3 @@ export function run<S, Input, Phases extends string = never>(
 
   return execution
 }
-
-// ─────────────────────────────────────────────────────────────────
-// Deprecated Convenience Functions (removed per ADR-001)
-// ─────────────────────────────────────────────────────────────────
-
-// runSimple() and runWithText() have been removed per ADR-001.
-// Use run() directly instead:
-//
-// Before: await runSimple(workflow, input, runtime)
-// After:  await run(workflow, { input, runtime })
-//
-// Before: const { text } = await runWithText(workflow, input, runtime)
-// After:  const chunks: string[] = []
-//         await run(workflow, {
-//           input,
-//           runtime,
-//           observer: { onTextDelta: ({ delta }) => chunks.push(delta) }
-//         })
-//         const text = chunks.join("")

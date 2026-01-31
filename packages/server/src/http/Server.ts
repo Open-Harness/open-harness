@@ -85,26 +85,6 @@ export const makeInMemoryRecorderLayer = (): Layer.Layer<Services.ProviderRecord
           }
           return null
         }),
-      save: (entry) =>
-        Effect.sync(() => {
-          const recordingId = crypto.randomUUID()
-          // Delete any existing recording for this hash
-          for (const [id, recording] of recordings.entries()) {
-            if (recording.hash === entry.hash) {
-              recordings.delete(id)
-            }
-          }
-          // Create a completed recording
-          recordings.set(recordingId, {
-            hash: entry.hash,
-            prompt: entry.prompt,
-            provider: entry.provider,
-            events: [...entry.streamData],
-            status: "complete",
-            result: entry.result,
-            createdAt: new Date()
-          })
-        }),
       delete: (hash) =>
         Effect.sync(() => {
           for (const [id, recording] of recordings.entries()) {

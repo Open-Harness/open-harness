@@ -11,10 +11,10 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
@@ -127,7 +127,7 @@ describe("HITL queue wiring", () => {
       events.push({ name: event.name, payload: event.payload })
 
       // When we see input:requested, provide the human response
-      if (event.name === EVENTS.INPUT_REQUESTED && !respondedAlready) {
+      if (event.name === tagToEventName.InputRequested && !respondedAlready) {
         respondedAlready = true
         execution.respond("approve")
       }
@@ -144,22 +144,22 @@ describe("HITL queue wiring", () => {
 
     // Verify we saw all expected event types
     const eventNames = events.map((e) => e.name)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
-    expect(eventNames).toContain(EVENTS.INPUT_REQUESTED)
-    expect(eventNames).toContain(EVENTS.INPUT_RECEIVED)
-    expect(eventNames).toContain(EVENTS.PHASE_ENTERED)
-    expect(eventNames).toContain(EVENTS.AGENT_STARTED)
-    expect(eventNames).toContain(EVENTS.AGENT_COMPLETED)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
+    expect(eventNames).toContain(tagToEventName.WorkflowStarted)
+    expect(eventNames).toContain(tagToEventName.InputRequested)
+    expect(eventNames).toContain(tagToEventName.InputReceived)
+    expect(eventNames).toContain(tagToEventName.PhaseEntered)
+    expect(eventNames).toContain(tagToEventName.AgentStarted)
+    expect(eventNames).toContain(tagToEventName.AgentCompleted)
+    expect(eventNames).toContain(tagToEventName.WorkflowCompleted)
 
     // Verify the input:requested payload (canonical names per ADR-008)
-    const inputRequestedEvent = events.find((e) => e.name === EVENTS.INPUT_REQUESTED)
+    const inputRequestedEvent = events.find((e) => e.name === tagToEventName.InputRequested)
     const payload = inputRequestedEvent?.payload as { id: string; prompt: string; type: string }
     expect(payload.prompt).toBe("Review proposal: Build a REST API")
     expect(payload.type).toBe("approval")
 
     // Verify the input:received payload (canonical names per ADR-008)
-    const inputReceivedEvent = events.find((e) => e.name === EVENTS.INPUT_RECEIVED)
+    const inputReceivedEvent = events.find((e) => e.name === tagToEventName.InputReceived)
     const responsePayload = inputReceivedEvent?.payload as { id: string; value: string }
     expect(responsePayload.value).toBe("approve")
   })
@@ -196,7 +196,7 @@ describe("HITL queue wiring", () => {
     })
 
     for await (const event of execution) {
-      if (event.name === EVENTS.INPUT_REQUESTED) {
+      if (event.name === tagToEventName.InputRequested) {
         execution.respond("reject")
       }
     }

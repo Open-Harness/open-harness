@@ -12,10 +12,10 @@ import { Effect, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "../src/Domain/Provider.js"
 import { agent } from "../src/Engine/agent.js"
 import { type AgentExecutionResult, runAgentDef } from "../src/Engine/provider.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { ProviderModeContext } from "../src/Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../src/Services/ProviderRecorder.js"
 
@@ -43,7 +43,6 @@ const createTestProvider = (modelName: string, outputData: unknown): AgentProvid
 // Noop recorder
 const noopRecorder: ProviderRecorderService = {
   load: () => Effect.succeed(null),
-  save: () => Effect.void,
   delete: () => Effect.void,
   list: () => Effect.succeed([]),
   startRecording: () => Effect.succeed("noop"),
@@ -93,9 +92,9 @@ describe("Agent with provider instance (ADR-010)", () => {
     expect(result.events.length).toBeGreaterThan(0)
 
     const eventNames = result.events.map((e: { name: string }) => e.name)
-    expect(eventNames).toContain(EVENTS.AGENT_STARTED)
-    expect(eventNames).toContain(EVENTS.TEXT_DELTA)
-    expect(eventNames).toContain(EVENTS.AGENT_COMPLETED)
+    expect(eventNames).toContain(tagToEventName.AgentStarted)
+    expect(eventNames).toContain(tagToEventName.TextDelta)
+    expect(eventNames).toContain(tagToEventName.AgentCompleted)
 
     // Verify text was captured
     expect(result.text).toBe("Hello World")

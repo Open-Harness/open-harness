@@ -6,7 +6,7 @@
  * @module
  */
 
-import { EVENTS } from "./types.js"
+import { tagToEventName } from "../Domain/Events.js"
 
 /**
  * Minimal event shape required for state derivation.
@@ -34,7 +34,7 @@ export const computeStateAt = <S>(
   for (let i = Math.min(position, events.length) - 1; i >= 0; i--) {
     const name = events[i].name
     // Look for state:intent or state:checkpoint (canonical names)
-    if (name === EVENTS.STATE_INTENT || name === EVENTS.STATE_CHECKPOINT) {
+    if (name === tagToEventName.StateIntent || name === tagToEventName.StateCheckpoint) {
       return (events[i].payload as Record<string, unknown>).state as S
     }
   }
@@ -71,7 +71,7 @@ export const deriveState = <S>(
 
   for (const event of events) {
     const name = event.name
-    if (name === EVENTS.STATE_INTENT || name === EVENTS.STATE_CHECKPOINT) {
+    if (name === tagToEventName.StateIntent || name === tagToEventName.StateCheckpoint) {
       const payload = event.payload as Record<string, unknown>
       if (payload.state !== undefined) {
         state = payload.state as S

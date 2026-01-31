@@ -8,9 +8,9 @@
 import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { phase } from "../src/Engine/phase.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 // execute is internal API - import from internal.ts
 import type { RuntimeConfig } from "../src/Engine/execute.js"
@@ -299,13 +299,13 @@ describe("execute()", () => {
 
       // Find key events
       const workflowStartedIdx = collectedEvents.findIndex(
-        (e) => e.name === EVENTS.WORKFLOW_STARTED
+        (e) => e.name === tagToEventName.WorkflowStarted
       )
       const firstPhaseEnteredIdx = collectedEvents.findIndex(
-        (e) => e.name === EVENTS.PHASE_ENTERED
+        (e) => e.name === tagToEventName.PhaseEntered
       )
       const workflowCompletedIdx = collectedEvents.findIndex(
-        (e) => e.name === EVENTS.WORKFLOW_COMPLETED
+        (e) => e.name === tagToEventName.WorkflowCompleted
       )
 
       // All key events should exist
@@ -321,13 +321,13 @@ describe("execute()", () => {
 
       // Verify we see multiple phase transitions (planning -> working -> done)
       const phaseEnteredEvents = collectedEvents.filter(
-        (e) => e.name === EVENTS.PHASE_ENTERED
+        (e) => e.name === tagToEventName.PhaseEntered
       )
       expect(phaseEnteredEvents.length).toBe(3) // planning, working, done
 
       // Verify agent events appear between phase events
       const agentStartedEvents = collectedEvents.filter(
-        (e) => e.name === EVENTS.AGENT_STARTED
+        (e) => e.name === tagToEventName.AgentStarted
       )
       expect(agentStartedEvents.length).toBeGreaterThanOrEqual(2) // planner + worker
 
@@ -351,15 +351,15 @@ describe("execute()", () => {
       expect(eventNames.length).toBeGreaterThan(0)
 
       // workflow:started should be present and come before workflow:completed
-      const startIdx = eventNames.indexOf(EVENTS.WORKFLOW_STARTED)
-      const completeIdx = eventNames.indexOf(EVENTS.WORKFLOW_COMPLETED)
+      const startIdx = eventNames.indexOf(tagToEventName.WorkflowStarted)
+      const completeIdx = eventNames.indexOf(tagToEventName.WorkflowCompleted)
 
       expect(startIdx).toBeGreaterThanOrEqual(0)
       expect(completeIdx).toBeGreaterThanOrEqual(0)
       expect(startIdx).toBeLessThan(completeIdx)
 
       // Agent events should be present between start and complete
-      const agentStartIdx = eventNames.indexOf(EVENTS.AGENT_STARTED)
+      const agentStartIdx = eventNames.indexOf(tagToEventName.AgentStarted)
       expect(agentStartIdx).toBeGreaterThan(startIdx)
       expect(agentStartIdx).toBeLessThan(completeIdx)
     })

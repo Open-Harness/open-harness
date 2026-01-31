@@ -7,13 +7,11 @@
 import { Effect, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { type SerializedEvent } from "../src/Domain/Events.js"
+import { type EventName, type SerializedEvent, tagToEventName } from "../src/Domain/Events.js"
 import { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "../src/Domain/Ids.js"
 import {
   type Draft,
   EventIdSchema,
-  type EventName,
-  EVENTS,
   makeEvent,
   makeEventId,
   parseEventId,
@@ -28,26 +26,26 @@ import {
   WorkflowValidationError
 } from "../src/Engine/types.js"
 
-describe("EVENTS constant", () => {
+describe("tagToEventName mapping", () => {
   it("has all expected event names", () => {
-    expect(EVENTS.WORKFLOW_STARTED).toBe("workflow:started")
-    expect(EVENTS.WORKFLOW_COMPLETED).toBe("workflow:completed")
-    expect(EVENTS.PHASE_ENTERED).toBe("phase:entered")
-    expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
-    expect(EVENTS.AGENT_STARTED).toBe("agent:started")
-    expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
-    expect(EVENTS.STATE_INTENT).toBe("state:intent")
-    expect(EVENTS.STATE_CHECKPOINT).toBe("state:checkpoint")
-    expect(EVENTS.TEXT_DELTA).toBe("text:delta")
-    expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
-    expect(EVENTS.TOOL_CALLED).toBe("tool:called")
-    expect(EVENTS.TOOL_RESULT).toBe("tool:result")
-    expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
-    expect(EVENTS.INPUT_RECEIVED).toBe("input:received")
+    expect(tagToEventName.WorkflowStarted).toBe("workflow:started")
+    expect(tagToEventName.WorkflowCompleted).toBe("workflow:completed")
+    expect(tagToEventName.PhaseEntered).toBe("phase:entered")
+    expect(tagToEventName.PhaseExited).toBe("phase:exited")
+    expect(tagToEventName.AgentStarted).toBe("agent:started")
+    expect(tagToEventName.AgentCompleted).toBe("agent:completed")
+    expect(tagToEventName.StateIntent).toBe("state:intent")
+    expect(tagToEventName.StateCheckpoint).toBe("state:checkpoint")
+    expect(tagToEventName.TextDelta).toBe("text:delta")
+    expect(tagToEventName.ThinkingDelta).toBe("thinking:delta")
+    expect(tagToEventName.ToolCalled).toBe("tool:called")
+    expect(tagToEventName.ToolResult).toBe("tool:result")
+    expect(tagToEventName.InputRequested).toBe("input:requested")
+    expect(tagToEventName.InputReceived).toBe("input:received")
   })
 
   it("event names are unique", () => {
-    const values = Object.values(EVENTS)
+    const values = Object.values(tagToEventName)
     const uniqueValues = new Set(values)
     expect(values.length).toBe(uniqueValues.size)
   })
