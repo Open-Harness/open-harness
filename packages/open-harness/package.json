@@ -1,5 +1,5 @@
 {
-  "name": "open-harness",
+  "name": "@open-harness/sdk",
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",

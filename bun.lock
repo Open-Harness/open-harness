@@ -55,7 +55,7 @@
     },
     "apps/harness-loop": {
       "name": "@open-harness/ralph",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "bin": {
         "ralph": "./dist/index.mjs",
       },
@@ -111,8 +111,8 @@
       },
     },
     "packages/open-harness": {
-      "name": "open-harness",
-      "version": "0.0.0",
+      "name": "@open-harness/sdk",
+      "version": "0.1.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "latest",
         "@effect/platform": "latest",
@@ -560,6 +560,8 @@
     "@open-harness/core": ["@open-harness/core@workspace:packages/core"],
 
     "@open-harness/ralph": ["@open-harness/ralph@workspace:apps/harness-loop"],
+
+    "@open-harness/sdk": ["@open-harness/sdk@workspace:packages/open-harness"],
 
     "@open-harness/server": ["@open-harness/server@workspace:packages/server"],
 
@@ -1472,8 +1474,6 @@
     "omggif": ["omggif@1.0.10", "", {}, "sha512-LMJTtvgc/nugXj0Vcrrs68Mn2D1r0zf630VNtqtpI1FEO7e+O9FP4gqs9AcnBaSEeoHIPm28u6qgPR0oyEpGSw=="],
 
     "open": ["open@10.2.0", "", { "dependencies": { "default-browser": "^5.2.1", "define-lazy-prop": "^3.0.0", "is-inside-container": "^1.0.0", "wsl-utils": "^0.1.0" } }, "sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA=="],
-
-    "open-harness": ["open-harness@workspace:packages/open-harness"],
 
     "optionator": ["optionator@0.9.4", "", { "dependencies": { "deep-is": "^0.1.3", "fast-levenshtein": "^2.0.6", "levn": "^0.4.1", "prelude-ls": "^1.2.1", "type-check": "^0.4.0", "word-wrap": "^1.2.5" } }, "sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g=="],
 
