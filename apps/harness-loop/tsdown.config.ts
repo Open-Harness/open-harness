@@ -15,5 +15,7 @@ export default defineConfig({
   noExternal: [
     "@open-scaffold/core",
     "@open-scaffold/server"
-  ]
+  ],
+  // Acknowledge we intentionally bundle transitive dependencies
+  inlineOnly: false
 })

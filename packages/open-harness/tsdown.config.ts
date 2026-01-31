@@ -21,5 +21,7 @@ export default defineConfig({
     "@open-scaffold/server",
     "@open-scaffold/client",
     "@open-scaffold/testing"
-  ]
+  ],
+  // Acknowledge we intentionally bundle transitive dependencies
+  inlineOnly: false
 })
