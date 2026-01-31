@@ -34,10 +34,10 @@
       },
     },
     "apps/cli": {
-      "name": "@open-scaffold/cli",
+      "name": "@open-harness/cli",
       "version": "0.0.0",
       "bin": {
-        "scaffold": "./dist/index.mjs",
+        "harness": "./dist/index.mjs",
       },
       "dependencies": {
         "@open-scaffold/core": "*",
@@ -553,9 +553,9 @@
 
     "@nolyfill/is-core-module": ["@nolyfill/is-core-module@1.0.39", "", {}, "sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA=="],
 
-    "@open-harness/ralph": ["@open-harness/ralph@workspace:apps/harness-loop"],
+    "@open-harness/cli": ["@open-harness/cli@workspace:apps/cli"],
 
-    "@open-scaffold/cli": ["@open-scaffold/cli@workspace:apps/cli"],
+    "@open-harness/ralph": ["@open-harness/ralph@workspace:apps/harness-loop"],
 
     "@open-scaffold/client": ["@open-scaffold/client@workspace:packages/client"],
 
