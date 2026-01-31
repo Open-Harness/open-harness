@@ -2,6 +2,7 @@
  * Terminal renderer for workflow events.
  *
  * Style D: Hybrid - boxes for structure, compact for high-frequency events.
+ * Includes tool-specific renderers for beautiful, semantic output.
  *
  * @module
  */
@@ -21,6 +22,9 @@ const FG_BLUE = "\x1b[34m"
 const FG_CYAN = "\x1b[36m"
 const FG_WHITE = "\x1b[37m"
 const FG_GRAY = "\x1b[90m"
+
+// Agent text indent (4 spaces)
+const AGENT_INDENT = "    "
 
 // ─────────────────────────────────────────────────────────────────
 // Box Drawing Characters
@@ -368,10 +372,25 @@ export const renderToolResult = (
 }
 
 /**
- * Render streaming text delta (just return the text, no decoration).
+ * Render streaming text delta with indentation for visual distinction.
  */
 export const renderTextDelta = (delta: string): string => {
+  // Indent each line for visual distinction from tool calls
+  if (delta.includes("\n")) {
+    return delta
+      .split("\n")
+      .map((line, i) => (i === 0 ? line : AGENT_INDENT + line))
+      .join("\n")
+  }
   return delta
+}
+
+/**
+ * Render gap before agent text (after tool calls).
+ * Tool results already end with \n, so we just need the indent.
+ */
+export const renderAgentTextGap = (): string => {
+  return AGENT_INDENT
 }
 
 /**
@@ -438,10 +457,471 @@ export const renderExecutionOrder = (taskIds: Array<string>): string => {
 }
 
 /**
- * Render final success message.
+ * Render final success message (legacy - use renderOutro for full stats).
  */
 export const renderAllTasksComplete = (count: number): string => {
   const title = `${FG_GREEN}${SYM.success}${RESET}  ${BOLD}${FG_WHITE}ALL TASKS COMPLETE${RESET}`
   const content = `Successfully completed ${count} task${count === 1 ? "" : "s"}`
   return "\n" + renderBox(title, content, { color: FG_GREEN })
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Outro Statistics
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Statistics for the outro summary.
+ */
+export interface OutroStats {
+  tasks: number
+  duration: number
+  toolCalls: number
+  agentRuns: number
+  sessionId?: string
+}
+
+/**
+ * Format duration for outro display.
+ */
+const formatOutroDuration = (ms: number): string => {
+  if (ms < 1000) return `${ms}ms`
+  const seconds = ms / 1000
+  if (seconds < 60) return `${seconds.toFixed(1)}s`
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds.toFixed(1)}s`
+}
+
+/**
+ * Render the outro statistics box.
+ */
+export const renderOutro = (stats: OutroStats): string => {
+  const width = Math.min(getTerminalWidth() - 2, 64)
+  const innerWidth = width - 2
+  const pad = " ".repeat(2)
+
+  const lines: Array<string> = []
+
+  // Top border
+  lines.push(`${FG_GREEN}${BOX.topLeft}${BOX.horizontal.repeat(innerWidth)}${BOX.topRight}${RESET}`)
+
+  // Title line
+  const titleText = `${SYM.success}  ALL TASKS COMPLETE`
+  const titlePadded = titleText.padEnd(innerWidth - 2)
+  lines.push(
+    `${FG_GREEN}${BOX.vertical}${RESET}${pad}${BOLD}${FG_WHITE}${titlePadded}${RESET}${FG_GREEN}${BOX.vertical}${RESET}`
+  )
+
+  // Divider
+  lines.push(
+    `${FG_GREEN}${BOX.dividerLeft}${BOX.horizontal.repeat(innerWidth)}${BOX.dividerRight}${RESET}`
+  )
+
+  // Stats rows
+  const statRows = [
+    ["Tasks", `${stats.tasks} completed`],
+    ["Duration", formatOutroDuration(stats.duration)],
+    ["Tools", `${stats.toolCalls} calls`],
+    ["Agents", `${stats.agentRuns} runs`]
+  ]
+
+  for (const [label, value] of statRows) {
+    const rowText = `${label.padEnd(12)}${value}`
+    const rowPadded = rowText.padEnd(innerWidth - 2)
+    lines.push(
+      `${FG_GREEN}${BOX.vertical}${RESET}${pad}${DIM}${rowPadded}${RESET}${FG_GREEN}${BOX.vertical}${RESET}`
+    )
+  }
+
+  // Bottom border
+  lines.push(`${FG_GREEN}${BOX.bottomLeft}${BOX.horizontal.repeat(innerWidth)}${BOX.bottomRight}${RESET}`)
+
+  return "\n" + lines.join("\n")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Tool-Specific Renderers
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Tool renderer signature.
+ */
+type ToolRenderer = (input: unknown, output: unknown, isError: boolean) => string
+
+/**
+ * Extract line count from file content output.
+ *
+ * Read tool output format: "     1→content" (spaces, digits, tab/arrow, content)
+ * We count only lines that match this pattern.
+ */
+const countLines = (output: unknown): number => {
+  if (typeof output !== "string") return 0
+
+  // Remove system reminders before counting
+  let cleaned = output
+  const reminderIndex = cleaned.indexOf("<system-reminder>")
+  if (reminderIndex !== -1) {
+    cleaned = cleaned.substring(0, reminderIndex)
+  }
+
+  // Count lines that start with the line number pattern: spaces + digits + arrow/tab
+  const lines = cleaned.split("\n")
+  let count = 0
+  for (const line of lines) {
+    // Match: optional spaces, one or more digits, then → or tab
+    if (/^\s*\d+[→\t]/.test(line)) {
+      count++
+    }
+  }
+
+  // Return count, or 1 if we got output but no line numbers (edge case)
+  return count || (cleaned.trim().length > 0 ? 1 : 0)
+}
+
+/**
+ * Extract file count from glob output.
+ */
+const countFiles = (output: unknown): number => {
+  if (typeof output !== "string") return 0
+  // Glob output is typically file paths, one per line
+  return output.trim().split("\n").filter((l) => l.trim()).length
+}
+
+/**
+ * Extract match count from grep output.
+ */
+const parseGrepOutput = (output: unknown): { matches: number; files: number } => {
+  if (typeof output !== "string") return { matches: 0, files: 0 }
+  const lines = output.trim().split("\n").filter((l) => l.trim())
+  const files = new Set(lines.map((l) => l.split(":")[0])).size
+  return { matches: lines.length, files }
+}
+
+/**
+ * Format byte size for display.
+ */
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} bytes`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+}
+
+/**
+ * Render Read tool.
+ */
+const renderReadTool: ToolRenderer = (input, output, isError) => {
+  const params = input as Record<string, unknown>
+  const path = params.file_path as string || params.path as string || "unknown"
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Read${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}path:${RESET} ${FG_WHITE}${shortenPath(path)}${RESET}`)
+
+  if (isError) {
+    const errMsg = typeof output === "string" ? truncate(output, 40) : "Error"
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}${errMsg}${RESET}`)
+  } else {
+    const lineCount = countLines(output)
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}${lineCount} lines${RESET}`
+    )
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render Write tool.
+ */
+const renderWriteTool: ToolRenderer = (input, _output, isError) => {
+  const params = input as Record<string, unknown>
+  const path = params.file_path as string || params.path as string || "unknown"
+  const content = params.content as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Write${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}path:${RESET} ${FG_WHITE}${shortenPath(path)}${RESET}`)
+
+  // Show content preview
+  if (content.length > 0) {
+    const preview = content.length > 30 ? truncate(content.replace(/\n/g, "\\n"), 30) : content.replace(/\n/g, "\\n")
+    lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}content:${RESET} ${FG_WHITE}"${preview}"${RESET}`)
+  }
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Failed${RESET}`)
+  } else {
+    const bytes = new TextEncoder().encode(content).length
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}Created (${
+        formatBytes(bytes)
+      })${RESET}`
+    )
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render Edit tool.
+ */
+const renderEditTool: ToolRenderer = (input, _output, isError) => {
+  const params = input as Record<string, unknown>
+  const path = params.file_path as string || params.path as string || "unknown"
+  const oldStr = params.old_string as string || ""
+  const newStr = params.new_string as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Edit${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}path:${RESET} ${FG_WHITE}${shortenPath(path)}${RESET}`)
+
+  // Show old/new preview
+  const oldPreview = truncate(oldStr.replace(/\n/g, "\\n"), 25)
+  const newPreview = truncate(newStr.replace(/\n/g, "\\n"), 25)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}old:${RESET} ${FG_WHITE}"${oldPreview}"${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}new:${RESET} ${FG_WHITE}"${newPreview}"${RESET}`)
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Failed${RESET}`)
+  } else {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}Applied${RESET}`)
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render Bash tool.
+ */
+const renderBashTool: ToolRenderer = (input, output, isError) => {
+  const params = input as Record<string, unknown>
+  const command = params.command as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Bash${RESET}`)
+
+  // Show command with $ prefix
+  const cmdPreview = truncate(command, 55)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${FG_WHITE}$ ${cmdPreview}${RESET}`)
+
+  if (isError) {
+    const errMsg = typeof output === "string" ? truncate(output.replace(/\n/g, " "), 40) : "Error"
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}${errMsg}${RESET}`)
+  } else {
+    // Show brief output summary
+    let summary = "(no output)"
+    if (typeof output === "string" && output.trim()) {
+      const cleaned = output.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").trim()
+      const outLines = cleaned.split("\n").filter((l) => l.trim())
+      if (outLines.length === 1) {
+        summary = truncate(outLines[0], 40)
+      } else if (outLines.length > 1) {
+        summary = `${truncate(outLines[0], 30)} (+${outLines.length - 1} lines)`
+      }
+    }
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}${summary}${RESET}`)
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render Glob tool.
+ */
+const renderGlobTool: ToolRenderer = (input, output, isError) => {
+  const params = input as Record<string, unknown>
+  const pattern = params.pattern as string || "**/*"
+  const path = params.path as string
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Glob${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}pattern:${RESET} ${FG_WHITE}${pattern}${RESET}`)
+
+  if (path) {
+    lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}path:${RESET} ${FG_WHITE}${shortenPath(path)}${RESET}`)
+  }
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Error${RESET}`)
+  } else {
+    const fileCount = countFiles(output)
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}${fileCount} files${RESET}`
+    )
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render Grep tool.
+ */
+const renderGrepTool: ToolRenderer = (input, output, isError) => {
+  const params = input as Record<string, unknown>
+  const pattern = params.pattern as string || ""
+  const path = params.path as string
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Grep${RESET}`)
+  lines.push(
+    `  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}pattern:${RESET} ${FG_WHITE}"${truncate(pattern, 40)}"${RESET}`
+  )
+
+  if (path) {
+    lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}path:${RESET} ${FG_WHITE}${shortenPath(path)}${RESET}`)
+  }
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Error${RESET}`)
+  } else {
+    const { files, matches } = parseGrepOutput(output)
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}${matches} matches in ${files} files${RESET}`
+    )
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render WebSearch tool.
+ */
+const renderWebSearchTool: ToolRenderer = (input, output, isError) => {
+  const params = input as Record<string, unknown>
+  const query = params.query as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} WebSearch${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}query:${RESET} ${FG_WHITE}"${truncate(query, 45)}"${RESET}`)
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Error${RESET}`)
+  } else {
+    // Estimate result count from output length
+    const resultCount = typeof output === "string" ? Math.max(1, Math.floor(output.length / 500)) : 0
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}${resultCount} results${RESET}`
+    )
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render WebFetch tool.
+ */
+const renderWebFetchTool: ToolRenderer = (input, output, isError) => {
+  const params = input as Record<string, unknown>
+  const url = params.url as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} WebFetch${RESET}`)
+
+  // Shorten URL for display
+  const shortUrl = url.length > 50 ? url.substring(0, 47) + "..." : url
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}url:${RESET} ${FG_WHITE}${shortUrl}${RESET}`)
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Failed to fetch${RESET}`)
+  } else {
+    const bytes = typeof output === "string" ? new TextEncoder().encode(output).length : 0
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}Fetched (${
+        formatBytes(bytes)
+      })${RESET}`
+    )
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render Task (subagent) tool.
+ */
+const renderTaskTool: ToolRenderer = (input, _output, isError) => {
+  const params = input as Record<string, unknown>
+  const subagentType = params.subagent_type as string || "unknown"
+  const prompt = params.prompt as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Task${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}type:${RESET} ${FG_WHITE}${subagentType}${RESET}`)
+  lines.push(
+    `  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}prompt:${RESET} ${FG_WHITE}"${truncate(prompt, 40)}"${RESET}`
+  )
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Failed${RESET}`)
+  } else {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}Completed${RESET}`)
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Render StructuredOutput tool.
+ */
+const renderOutputTool: ToolRenderer = (input, _output, isError) => {
+  const params = input as Record<string, unknown>
+  const success = params.success as boolean
+  const summary = params.summary as string || ""
+
+  const lines: Array<string> = []
+  lines.push(`\n${FG_BLUE}${BOLD}${SYM.tool} Output${RESET}`)
+  lines.push(`  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}success:${RESET} ${FG_WHITE}${success}${RESET}`)
+
+  if (summary) {
+    lines.push(
+      `  ${FG_GRAY}${BOX.treeVertical}${RESET} ${DIM}summary:${RESET} ${FG_WHITE}"${truncate(summary, 35)}"${RESET}`
+    )
+  }
+
+  if (isError) {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_RED}${SYM.error}${RESET} ${FG_RED}Error${RESET}`)
+  } else {
+    lines.push(`  ${FG_GRAY}${BOX.treeCorner}${RESET} ${FG_GREEN}${SYM.success}${RESET} ${FG_WHITE}Submitted${RESET}`)
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+/**
+ * Tool renderer registry.
+ */
+const TOOL_RENDERERS: Record<string, ToolRenderer> = {
+  Read: renderReadTool,
+  Write: renderWriteTool,
+  Edit: renderEditTool,
+  Bash: renderBashTool,
+  Glob: renderGlobTool,
+  Grep: renderGrepTool,
+  WebSearch: renderWebSearchTool,
+  WebFetch: renderWebFetchTool,
+  Task: renderTaskTool,
+  StructuredOutput: renderOutputTool
+}
+
+/**
+ * Check if a tool has a specific renderer.
+ */
+export const hasToolRenderer = (toolName: string): boolean => {
+  return toolName in TOOL_RENDERERS
+}
+
+/**
+ * Render tool call with tool-specific formatting (combined call + result).
+ */
+export const renderToolSpecific = (
+  toolName: string,
+  input: unknown,
+  output: unknown,
+  isError: boolean
+): string => {
+  const renderer = TOOL_RENDERERS[toolName]
+  if (renderer) {
+    return renderer(input, output, isError)
+  }
+  // Fallback: use generic rendering (handled by caller)
+  return ""
 }

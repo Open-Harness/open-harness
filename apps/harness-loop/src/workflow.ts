@@ -57,8 +57,7 @@ const taskExecutor = agent<TaskExecutionState, TaskResult>({
   name: "task-executor",
   provider: AnthropicProvider({
     model: "claude-opus-4-5-20251101",
-    extendedThinking: true,
-    maxTokens: 32000
+    extendedThinking: true
   }),
   options: {
     tools: { type: "preset", preset: "claude_code" },
