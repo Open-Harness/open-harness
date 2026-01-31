@@ -1,11 +1,11 @@
 /**
- * @open-scaffold/core - State-first workflow runtime.
+ * @open-harness/core - State-first workflow runtime.
  *
  * Primary API for defining and running AI agent workflows.
  *
  * @example
  * ```typescript
- * import { agent, workflow, phase, run } from "@open-scaffold/core"
+ * import { agent, workflow, phase, run } from "@open-harness/core"
  *
  * const myAgent = agent({ name: "assistant", model: "claude-sonnet-4-5", ... })
  * const myWorkflow = workflow({ name: "my-workflow", phases: { ... } })
@@ -154,7 +154,7 @@ export {
 } from "./Domain/Errors.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Internal Utilities (advanced use - prefer "@open-scaffold/core/internal")
+// Internal Utilities (advanced use - prefer "@open-harness/core/internal")
 // ─────────────────────────────────────────────────────────────────
 
 // computeStateAt is kept in main export since it's useful for state derivation

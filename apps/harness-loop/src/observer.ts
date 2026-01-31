@@ -7,7 +7,7 @@
  * @module
  */
 
-import type { WorkflowObserver } from "@open-scaffold/core"
+import type { WorkflowObserver } from "@open-harness/core"
 
 import {
   hasToolRenderer,

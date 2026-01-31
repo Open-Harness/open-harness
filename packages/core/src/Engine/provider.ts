@@ -85,7 +85,7 @@ const toRunResult = (
 /**
  * Map a stream event to an internal event.
  *
- * Exported for testing purposes via @open-scaffold/core/internal.
+ * Exported for testing purposes via @open-harness/core/internal.
  */
 export const mapStreamEventToInternal = (
   agent: string,

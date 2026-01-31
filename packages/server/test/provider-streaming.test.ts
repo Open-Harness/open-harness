@@ -16,7 +16,7 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import type { AgentStreamEvent } from "@open-scaffold/core"
+import type { AgentStreamEvent } from "@open-harness/core"
 
 import { AnthropicProvider } from "../src/provider/Provider.js"
 

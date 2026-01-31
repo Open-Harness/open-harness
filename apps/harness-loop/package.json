@@ -37,8 +37,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@open-scaffold/core": "*",
-    "@open-scaffold/server": "*",
+    "@open-harness/core": "*",
+    "@open-harness/server": "*",
     "tsx": "^4.19.0"
   }
 }

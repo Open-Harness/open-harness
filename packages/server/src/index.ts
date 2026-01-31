@@ -1,8 +1,8 @@
 /**
- * @open-scaffold/server - HTTP/SSE server for workflows.
+ * @open-harness/server - HTTP/SSE server for workflows.
  *
  * Public API exports only. For internal/advanced exports, use:
- * import { ... } from "@open-scaffold/server/internal"
+ * import { ... } from "@open-harness/server/internal"
  *
  * @module
  */

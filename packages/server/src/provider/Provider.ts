@@ -14,7 +14,7 @@ import {
   type AgentStreamEvent,
   ProviderError,
   type ProviderRunOptions
-} from "@open-scaffold/core"
+} from "@open-harness/core"
 import { Stream } from "effect"
 import { zodToJsonSchema } from "zod-to-json-schema"
 

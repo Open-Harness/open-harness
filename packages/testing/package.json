@@ -1,5 +1,5 @@
 {
-  "name": "@open-scaffold/testing",
+  "name": "@open-harness/testing",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -32,8 +32,8 @@
     "record": "bun src/record.ts"
   },
   "dependencies": {
-    "@open-scaffold/core": "*",
-    "@open-scaffold/server": "*"
+    "@open-harness/core": "*",
+    "@open-harness/server": "*"
   },
   "devDependencies": {
     "tsx": "^4.21.0"

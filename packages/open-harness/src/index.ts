@@ -69,4 +69,4 @@ export {
   autoApprove,
   cliPrompt,
   type HumanInputHandler
-} from "@open-scaffold/core"
+} from "@open-harness/core"

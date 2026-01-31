@@ -47,7 +47,7 @@ export interface StateProjectionService<S> {
  * Note: Uses `unknown` as the state type since Context.Tag doesn't support
  * type parameters. The actual state type is preserved through makeStateProjection.
  */
-export class StateProjection extends Context.Tag("@open-scaffold/StateProjection")<
+export class StateProjection extends Context.Tag("@open-harness/StateProjection")<
   StateProjection,
   StateProjectionService<unknown>
 >() {}

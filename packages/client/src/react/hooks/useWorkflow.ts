@@ -10,8 +10,8 @@
 
 import { useMemo } from "react"
 
-import { tagToEventName } from "@open-scaffold/core"
-import type { EventId, SerializedEvent } from "@open-scaffold/core"
+import { tagToEventName } from "@open-harness/core"
+import type { EventId, SerializedEvent } from "@open-harness/core"
 
 import type { ForkResult, PauseResult, ResumeResult } from "../../Contract.js"
 import { useWorkflowActions } from "./useWorkflowActions.js"

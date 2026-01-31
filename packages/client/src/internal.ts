@@ -1,6 +1,6 @@
 /**
  * @internal
- * Advanced/internal exports for @open-scaffold/client.
+ * Advanced/internal exports for @open-harness/client.
  * These are implementation details and may change without notice.
  *
  * @module

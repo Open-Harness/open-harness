@@ -2,7 +2,7 @@
  * VCR Integration Tests - Real HTTP Server Tests.
  *
  * Tests the full HTTP server using real LibSQL :memory: stores.
- * Workflow definitions use agent() + phase() + workflow() from @open-scaffold/core.
+ * Workflow definitions use agent() + phase() + workflow() from @open-harness/core.
  *
  * @module
  */
@@ -11,7 +11,7 @@ import { Effect } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { agent, phase, workflow, type WorkflowDef } from "@open-scaffold/core"
+import { agent, phase, workflow, type WorkflowDef } from "@open-harness/core"
 import {
   createServer,
   EventStoreLive,

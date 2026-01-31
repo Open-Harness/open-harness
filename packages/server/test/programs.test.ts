@@ -10,8 +10,8 @@
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { computeStateAt, makeEvent, type SerializedEvent, type SessionId, tagToEventName } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import { computeStateAt, makeEvent, type SerializedEvent, type SessionId, tagToEventName } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive, forkSession, loadSession, recordEvent } from "../src/internal.js"
 

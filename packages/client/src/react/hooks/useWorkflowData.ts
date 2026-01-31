@@ -9,7 +9,7 @@
 
 import { useMemo } from "react"
 
-import type { SerializedEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-harness/core"
 
 import { useEventsQuery, useEventSubscription, useStateAtQuery } from "../primitives/index.js"
 

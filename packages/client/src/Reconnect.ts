@@ -16,7 +16,7 @@ import { Duration, Schedule } from "effect"
  * @example
  * ```typescript
  * import { Effect } from "effect"
- * import { sseReconnectSchedule } from "@open-scaffold/client"
+ * import { sseReconnectSchedule } from "@open-harness/client"
  *
  * const connectSSE = (sessionId: string) => pipe(
  *   establishSSEConnection(sessionId),

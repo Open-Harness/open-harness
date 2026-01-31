@@ -17,9 +17,9 @@ import {
   type SessionId,
   tagToEventName,
   workflow
-} from "@open-scaffold/core"
+} from "@open-harness/core"
 // executeWorkflow and Services are internal API (ADR-001) - import from internal entrypoint
-import { executeWorkflow, Services } from "@open-scaffold/core/internal"
+import { executeWorkflow, Services } from "@open-harness/core/internal"
 
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive } from "../src/internal.js"

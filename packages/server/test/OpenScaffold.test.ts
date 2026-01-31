@@ -9,8 +9,8 @@ import { Stream } from "effect"
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { agent, phase, workflow } from "@open-scaffold/core"
-import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "@open-scaffold/core"
+import { agent, phase, workflow } from "@open-harness/core"
+import type { AgentProvider, AgentStreamEvent, ProviderRunOptions } from "@open-harness/core"
 
 import { OpenScaffold, OpenScaffoldError } from "../src/OpenScaffold.js"
 

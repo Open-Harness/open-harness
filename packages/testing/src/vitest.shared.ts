@@ -6,9 +6,9 @@ const root = path.join(__dirname, "../..")
 const scopedAlias = (name: string) => {
   const target = process.env.TEST_DIST !== undefined ? "dist/dist/esm" : "src"
   return {
-    [`@open-scaffold/${name}/test`]: path.join(root, name, "test"),
-    [`@open-scaffold/${name}/internal`]: path.join(root, name, target, "internal.ts"),
-    [`@open-scaffold/${name}`]: path.join(root, name, target, "index.ts")
+    [`@open-harness/${name}/test`]: path.join(root, name, "test"),
+    [`@open-harness/${name}/internal`]: path.join(root, name, target, "internal.ts"),
+    [`@open-harness/${name}`]: path.join(root, name, target, "index.ts")
   }
 }
 

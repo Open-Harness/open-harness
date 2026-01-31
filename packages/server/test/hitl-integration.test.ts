@@ -16,8 +16,8 @@
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { makeEvent, type SerializedEvent, type SessionId, tagToEventName } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import { makeEvent, type SerializedEvent, type SessionId, tagToEventName } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive, recordEvent } from "../src/internal.js"
 

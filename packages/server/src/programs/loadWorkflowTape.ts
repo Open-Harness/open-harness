@@ -2,7 +2,7 @@
  * loadWorkflowTape - Workflow tape loading utility.
  *
  * The main entry point for running workflows is now `executeWorkflow`
- * from `@open-scaffold/core`. This module provides `loadWorkflowTape`
+ * from `@open-harness/core`. This module provides `loadWorkflowTape`
  * for debugging, replay, and time-travel.
  *
  * @module
@@ -16,8 +16,8 @@ import {
   type SessionId,
   type SessionNotFound,
   type StoreError
-} from "@open-scaffold/core"
-import type { Services } from "@open-scaffold/core/internal"
+} from "@open-harness/core"
+import type { Services } from "@open-harness/core/internal"
 
 import { loadSession } from "./loadSession.js"
 

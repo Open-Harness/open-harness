@@ -7,7 +7,7 @@
  * @module
  */
 
-import { EventIdSchema, type SerializedEvent } from "@open-scaffold/core"
+import { EventIdSchema, type SerializedEvent } from "@open-harness/core"
 import { Effect, Schema } from "effect"
 
 import { ClientError } from "./Contract.js"

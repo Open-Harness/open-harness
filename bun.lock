@@ -40,8 +40,8 @@
         "harness": "./dist/index.mjs",
       },
       "dependencies": {
-        "@open-scaffold/core": "*",
-        "@open-scaffold/server": "*",
+        "@open-harness/core": "*",
+        "@open-harness/server": "*",
         "@opentui/core": "^0.1.74",
         "@opentui/react": "^0.1.74",
         "commander": "^12.0.0",
@@ -71,22 +71,22 @@
         "zod": "^3.24.2",
       },
       "devDependencies": {
-        "@open-scaffold/core": "*",
-        "@open-scaffold/server": "*",
+        "@open-harness/core": "*",
+        "@open-harness/server": "*",
         "tsx": "^4.19.0",
       },
     },
     "packages/client": {
-      "name": "@open-scaffold/client",
+      "name": "@open-harness/client",
       "version": "0.0.0",
       "dependencies": {
-        "@open-scaffold/core": "*",
+        "@open-harness/core": "*",
         "@tanstack/react-query": "^5.0.0",
         "effect": "latest",
       },
       "devDependencies": {
-        "@open-scaffold/server": "*",
-        "@open-scaffold/testing": "*",
+        "@open-harness/server": "*",
+        "@open-harness/testing": "*",
         "@testing-library/dom": "^10.4.1",
         "@testing-library/react": "^16.3.2",
         "@types/react": "^19.0.0",
@@ -99,7 +99,7 @@
       },
     },
     "packages/core": {
-      "name": "@open-scaffold/core",
+      "name": "@open-harness/core",
       "version": "0.0.0",
       "dependencies": {
         "@effect/platform": "latest",
@@ -125,10 +125,10 @@
         "zod-to-json-schema": "^3.24.6",
       },
       "devDependencies": {
-        "@open-scaffold/client": "*",
-        "@open-scaffold/core": "*",
-        "@open-scaffold/server": "*",
-        "@open-scaffold/testing": "*",
+        "@open-harness/client": "*",
+        "@open-harness/core": "*",
+        "@open-harness/server": "*",
+        "@open-harness/testing": "*",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
@@ -138,24 +138,24 @@
       ],
     },
     "packages/server": {
-      "name": "@open-scaffold/server",
+      "name": "@open-harness/server",
       "version": "0.0.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "latest",
         "@effect/platform": "latest",
         "@effect/sql": "latest",
         "@effect/sql-libsql": "latest",
-        "@open-scaffold/core": "*",
+        "@open-harness/core": "*",
         "effect": "latest",
         "zod-to-json-schema": "^3.24.6",
       },
     },
     "packages/testing": {
-      "name": "@open-scaffold/testing",
+      "name": "@open-harness/testing",
       "version": "0.0.0",
       "dependencies": {
-        "@open-scaffold/core": "*",
-        "@open-scaffold/server": "*",
+        "@open-harness/core": "*",
+        "@open-harness/server": "*",
       },
       "devDependencies": {
         "tsx": "^4.21.0",
@@ -555,15 +555,15 @@
 
     "@open-harness/cli": ["@open-harness/cli@workspace:apps/cli"],
 
+    "@open-harness/client": ["@open-harness/client@workspace:packages/client"],
+
+    "@open-harness/core": ["@open-harness/core@workspace:packages/core"],
+
     "@open-harness/ralph": ["@open-harness/ralph@workspace:apps/harness-loop"],
 
-    "@open-scaffold/client": ["@open-scaffold/client@workspace:packages/client"],
+    "@open-harness/server": ["@open-harness/server@workspace:packages/server"],
 
-    "@open-scaffold/core": ["@open-scaffold/core@workspace:packages/core"],
-
-    "@open-scaffold/server": ["@open-scaffold/server@workspace:packages/server"],
-
-    "@open-scaffold/testing": ["@open-scaffold/testing@workspace:packages/testing"],
+    "@open-harness/testing": ["@open-harness/testing@workspace:packages/testing"],
 
     "@opentui/core": ["@opentui/core@0.1.75", "", { "dependencies": { "bun-ffi-structs": "0.1.2", "diff": "8.0.2", "jimp": "1.6.0", "marked": "17.0.1", "yoga-layout": "3.2.1" }, "optionalDependencies": { "@dimforge/rapier2d-simd-compat": "^0.17.3", "@opentui/core-darwin-arm64": "0.1.75", "@opentui/core-darwin-x64": "0.1.75", "@opentui/core-linux-arm64": "0.1.75", "@opentui/core-linux-x64": "0.1.75", "@opentui/core-win32-arm64": "0.1.75", "@opentui/core-win32-x64": "0.1.75", "bun-webgpu": "0.1.4", "planck": "^1.4.2", "three": "0.177.0" }, "peerDependencies": { "web-tree-sitter": "0.25.10" } }, "sha512-8ARRZxSG+BXkJmEVtM2DQ4se7DAF1ZCKD07d+AklgTr2mxCzmdxxPbOwRzboSQ6FM7qGuTVPVbV4O2W9DpUmoA=="],
 
@@ -1017,7 +1017,7 @@
 
     "detect-indent": ["detect-indent@6.1.0", "", {}, "sha512-reYkTUJAZb9gUuZ2RvVCNhVHdg62RHnJ7WJl8ftMi4diZ6NWlciOzQN88pUhSELEwflJht4oQDv0F0BMlwaYtA=="],
 
-    "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
+    "detect-libc": ["detect-libc@2.0.2", "", {}, "sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw=="],
 
     "diff": ["diff@8.0.2", "", {}, "sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg=="],
 
@@ -1909,6 +1909,8 @@
 
     "@manypkg/get-packages/fs-extra": ["fs-extra@8.1.0", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^4.0.0", "universalify": "^0.1.0" } }, "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g=="],
 
+    "@parcel/watcher/detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
+
     "@quansync/fs/quansync": ["quansync@1.0.0", "", {}, "sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA=="],
 
     "@rolldown/binding-wasm32-wasi/@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.1", "", { "dependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1", "@tybys/wasm-util": "^0.10.1" } }, "sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A=="],
@@ -1959,13 +1961,9 @@
 
     "jest-util/picomatch": ["picomatch@2.3.1", "", {}, "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA=="],
 
-    "libsql/detect-libc": ["detect-libc@2.0.2", "", {}, "sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw=="],
-
     "micromatch/picomatch": ["picomatch@2.3.1", "", {}, "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA=="],
 
     "node-fetch/whatwg-url": ["whatwg-url@5.0.0", "", { "dependencies": { "tr46": "~0.0.3", "webidl-conversions": "^3.0.0" } }, "sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw=="],
-
-    "node-gyp-build-optional-packages/detect-libc": ["detect-libc@2.0.2", "", {}, "sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw=="],
 
     "normalize-package-data/semver": ["semver@5.7.2", "", { "bin": { "semver": "bin/semver" } }, "sha512-cBznnQ9KjJqU67B52RMC65CMarK2600WFnbkcaiwWq3xy/5haFJlshgnpjovMVJ+Hff49d8GEn0b87C5pDQ10g=="],
 

@@ -15,4 +15,4 @@
  * @module
  */
 
-export * from "@open-scaffold/testing"
+export * from "@open-harness/testing"

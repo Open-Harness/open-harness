@@ -34,8 +34,8 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@open-scaffold/core": "*",
-    "@open-scaffold/server": "*",
+    "@open-harness/core": "*",
+    "@open-harness/server": "*",
     "@opentui/core": "^0.1.74",
     "@opentui/react": "^0.1.74",
     "commander": "^12.0.0",

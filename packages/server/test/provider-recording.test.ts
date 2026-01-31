@@ -19,8 +19,8 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import type { ProviderRunOptions } from "@open-scaffold/core"
-import { makeTextDelta, Services } from "@open-scaffold/core/internal"
+import type { ProviderRunOptions } from "@open-harness/core"
+import { makeTextDelta, Services } from "@open-harness/core/internal"
 
 import { AnthropicProvider } from "../src/index.js"
 import { ProviderRecorderLive } from "../src/internal.js"

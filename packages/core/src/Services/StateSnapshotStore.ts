@@ -56,7 +56,7 @@ export interface StateSnapshotStoreService {
 // Service Tag
 // ─────────────────────────────────────────────────────────────────
 
-export class StateSnapshotStore extends Context.Tag("@open-scaffold/StateSnapshotStore")<
+export class StateSnapshotStore extends Context.Tag("@open-harness/StateSnapshotStore")<
   StateSnapshotStore,
   StateSnapshotStoreService
 >() {}
