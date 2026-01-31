@@ -1,17 +1,19 @@
 #!/usr/bin/env node
+/* global console, URL */
 /**
- * Clean ONLY stray build artifacts from src/ directories.
+ * Remove stray TypeScript build artifacts from src/ directories.
  *
- * This is a fast check that can run before every build to ensure
- * bundlers read .ts source files, not stale .js compiled output.
- *
- * Use `pnpm clean:stray` before builds or in CI.
+ * This prebuild script ensures that bundlers don't pick up stale .js files
+ * instead of current .ts source files. It does NOT remove dist/ or build/
+ * directories - those are intentional build outputs.
  */
 
 import { existsSync, readdirSync, statSync, unlinkSync } from "node:fs"
 import { join, relative } from "node:path"
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "")
+
+// Patterns for stray build artifacts that should NEVER be in src/
 const STRAY_PATTERNS = [".js", ".d.ts", ".js.map", ".d.ts.map"]
 
 function findStrayArtifacts(dir, artifacts = []) {
@@ -22,34 +24,45 @@ function findStrayArtifacts(dir, artifacts = []) {
     const stat = statSync(fullPath)
 
     if (stat.isDirectory()) {
-      if (entry === "node_modules" || entry === "dist" || entry === "build") continue
+      // Skip node_modules, dist, build
+      if (entry === "node_modules" || entry === "dist" || entry === "build") {
+        continue
+      }
       findStrayArtifacts(fullPath, artifacts)
     } else if (stat.isFile()) {
-      const isStray = STRAY_PATTERNS.some((p) => entry.endsWith(p))
+      // Check if this looks like a stray build artifact
+      const isStray = STRAY_PATTERNS.some((pattern) => entry.endsWith(pattern))
       if (isStray) {
+        // Only flag as stray if there's a corresponding .ts file
         const tsPath = fullPath.replace(/\.(js|d\.ts)(\.map)?$/, ".ts")
-        if (existsSync(tsPath)) artifacts.push(fullPath)
+        if (existsSync(tsPath)) {
+          artifacts.push(fullPath)
+        }
       }
     }
   }
+
   return artifacts
 }
 
-const stray = []
-for (const base of [join(ROOT, "packages"), join(ROOT, "apps")]) {
-  if (!existsSync(base)) continue
-  for (const pkg of readdirSync(base)) {
-    const srcPath = join(base, pkg, "src")
-    findStrayArtifacts(srcPath, stray)
+// Find and remove stray artifacts from src/ directories
+const packagesDir = join(ROOT, "packages")
+const appsDir = join(ROOT, "apps")
+
+const strayArtifacts = []
+for (const baseDir of [packagesDir, appsDir]) {
+  if (!existsSync(baseDir)) continue
+
+  for (const pkg of readdirSync(baseDir)) {
+    const srcPath = join(baseDir, pkg, "src")
+    findStrayArtifacts(srcPath, strayArtifacts)
   }
 }
 
-if (stray.length > 0) {
-  console.error(`\x1b[31mFound ${stray.length} stray build artifact(s) in src/:\x1b[0m\n`)
-  for (const f of stray) {
-    console.error(`  ${relative(ROOT, f)}`)
-    unlinkSync(f)
+if (strayArtifacts.length > 0) {
+  console.log(`Removing ${strayArtifacts.length} stray artifact(s):`)
+  for (const artifact of strayArtifacts) {
+    console.log(`  ${relative(ROOT, artifact)}`)
+    unlinkSync(artifact)
   }
-  console.error(`\n\x1b[33mCleaned. These files should NEVER exist in src/.\x1b[0m`)
-  console.error(`\x1b[33mCheck your tsconfig - don't emit to source directories!\x1b[0m\n`)
 }

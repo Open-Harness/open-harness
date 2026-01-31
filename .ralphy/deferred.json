@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "yaml:.ralphy/tasks.yaml:1.5: Add event serialization layer (ADR-004)": {
+      "count": 1,
+      "last": "2026-01-30T05:48:14.246Z",
+      "title": "1.5: Add event serialization layer (ADR-004)"
+    }
+  }
+}

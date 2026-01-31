@@ -10,25 +10,22 @@
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
-import type { InputRequest, RuntimeConfig, WorkflowObserver } from "../src/index.js"
 import { agent } from "../src/Engine/agent.js"
 import { run } from "../src/Engine/run.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import type { InputRequest, RuntimeConfig, WorkflowObserver } from "../src/index.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 describe("RuntimeConfig", () => {
-  it("accepts providers-only config", () => {
-    const config: RuntimeConfig = {
-      providers: {}
-    }
-    expect(config.providers).toEqual({})
+  // Per ADR-010: No providers map needed - agents own their providers directly
+  it("accepts empty config with defaults", () => {
+    const config: RuntimeConfig = {}
     expect(config.database).toBeUndefined()
     expect(config.mode).toBeUndefined()
   })
 
   it("accepts database field with file path", () => {
     const config: RuntimeConfig = {
-      providers: {},
       database: "./test.db"
     }
     expect(config.database).toBe("./test.db")
@@ -36,7 +33,6 @@ describe("RuntimeConfig", () => {
 
   it("accepts database field with :memory: for tests", () => {
     const config: RuntimeConfig = {
-      providers: {},
       database: ":memory:"
     }
     expect(config.database).toBe(":memory:")
@@ -44,7 +40,6 @@ describe("RuntimeConfig", () => {
 
   it("accepts database field alongside other optional fields", () => {
     const config: RuntimeConfig = {
-      providers: {},
       database: "./scaffold.db",
       mode: "live"
     }
@@ -62,12 +57,16 @@ describe("Observer type exports", () => {
   })
 
   it("InputRequest type is importable", () => {
+    // Per ADR-002: Only "approval" and "choice" types are valid
+    // Per ADR-008: id field is required for request-response correlation
     const request: InputRequest = {
+      id: "test-request-1",
       prompt: "What do you think?",
-      type: "freeform"
+      type: "approval"
     }
+    expect(request.id).toBe("test-request-1")
     expect(request.prompt).toBe("What do you think?")
-    expect(request.type).toBe("freeform")
+    expect(request.type).toBe("approval")
   })
 })
 
@@ -81,7 +80,7 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
 
   const testAgent = agent<{ result: string }, { result: string }>({
     name: "config-test-agent",
-    model: "claude-sonnet-4-5",
+    provider: testProvider,
     output: outputSchema,
     prompt: () => "test prompt",
     update: (output, draft) => {
@@ -106,20 +105,12 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
     }
   ]
 
-  const playbackDummy = {
-    name: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
-
   it("mode: 'playback' with recorder uses recorded fixtures", async () => {
     const result = await run(testWorkflow, {
       input: "go",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -135,9 +126,8 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
     const result = await run(testWorkflow, {
       input: "go",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onEvent: eventSpy }
@@ -158,9 +148,8 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
     await run(testWorkflow, {
       input: "go",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: {

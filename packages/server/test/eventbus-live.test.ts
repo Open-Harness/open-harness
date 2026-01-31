@@ -10,18 +10,20 @@
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { type AnyEvent, EVENTS, makeEvent, Services, type SessionId } from "@open-scaffold/core"
+import { makeEvent, type SerializedEvent, type SessionId, tagToEventName } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { EventBusLive } from "../src/services/EventBusLive.js"
 
 // Helper to create events synchronously
-const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))
+const mkEvent = (name: string, payload: Record<string, unknown>): SerializedEvent =>
+  Effect.runSync(makeEvent(name, payload))
 
 describe("EventBusLive", () => {
   it("publishes and filters by session", async () => {
     const sessionA = crypto.randomUUID() as SessionId
     const sessionB = crypto.randomUUID() as SessionId
-    const eventA = mkEvent(EVENTS.AGENT_STARTED, { agentName: "agent-a" })
-    const eventB = mkEvent(EVENTS.AGENT_STARTED, { agentName: "agent-b" })
+    const eventA = mkEvent(tagToEventName.AgentStarted, { agent: "agent-a" })
+    const eventB = mkEvent(tagToEventName.AgentStarted, { agent: "agent-b" })
 
     const program = Effect.gen(function*() {
       const bus = yield* Services.EventBus

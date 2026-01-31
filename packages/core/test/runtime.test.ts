@@ -8,12 +8,13 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { phase } from "../src/Engine/phase.js"
 import { type ExecuteOptions, executeWorkflow } from "../src/Engine/runtime.js"
-import { EVENTS, WorkflowAgentError } from "../src/Engine/types.js"
+import { WorkflowAgentError } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { runWithTestRuntime, type SimpleFixture } from "./helpers/test-provider.js"
+import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -30,10 +31,10 @@ type TestPhases = "planning" | "done"
 // Shared output schema (must be the same instance for hash consistency)
 const messageSchema = z.object({ message: z.string() })
 
-// Test agent
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<TestState, { message: string }>({
   name: "test-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state: TestState) => `Goal: ${state.goal}`,
   update: (output: { message: string }, draft: TestState) => {
@@ -150,7 +151,7 @@ describe("executeWorkflow", () => {
       expect(result.state.tasks).toContain("Task completed")
     })
 
-    it("captures Immer patches in state:updated events", async () => {
+    it("captures Immer patches in state:intent events", async () => {
       const simpleWorkflow = workflow<TestState>({
         name: "patches-test",
         initialState: { goal: "", tasks: [], done: false },
@@ -166,11 +167,11 @@ describe("executeWorkflow", () => {
         { fixtures }
       )
 
-      // Find state:updated events
-      const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_UPDATED)
+      // Find state:intent events
+      const stateEvents = result.events.filter((e) => e.name === tagToEventName.StateIntent)
       expect(stateEvents.length).toBeGreaterThan(0)
 
-      // Verify patches are present in state:updated events
+      // Verify patches are present in state:intent events
       for (const event of stateEvents) {
         const payload = event.payload as { state: unknown; patches?: Array<unknown>; inversePatches?: Array<unknown> }
         expect(payload.patches).toBeDefined()
@@ -212,46 +213,47 @@ describe("executeWorkflow", () => {
       expect(result.state.goal).toBe("Test goal")
       expect(result.state.tasks).toContain("Task completed")
       // Verify events include phase transitions
-      const phaseEvents = result.events.filter((e) => e.name === EVENTS.PHASE_ENTERED)
+      const phaseEvents = result.events.filter((e) => e.name === tagToEventName.PhaseEntered)
       expect(phaseEvents.length).toBeGreaterThan(0)
     })
   })
 })
 
-describe("EVENTS constant", () => {
+describe("tagToEventName mapping", () => {
   it("has all expected event names", () => {
-    expect(EVENTS.WORKFLOW_STARTED).toBe("workflow:started")
-    expect(EVENTS.WORKFLOW_COMPLETED).toBe("workflow:completed")
-    expect(EVENTS.PHASE_ENTERED).toBe("phase:entered")
-    expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
-    expect(EVENTS.AGENT_STARTED).toBe("agent:started")
-    expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
-    expect(EVENTS.STATE_UPDATED).toBe("state:updated")
-    expect(EVENTS.TEXT_DELTA).toBe("text:delta")
-    expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
-    expect(EVENTS.TOOL_CALLED).toBe("tool:called")
-    expect(EVENTS.TOOL_RESULT).toBe("tool:result")
-    expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
-    expect(EVENTS.INPUT_RESPONSE).toBe("input:response")
+    expect(tagToEventName.WorkflowStarted).toBe("workflow:started")
+    expect(tagToEventName.WorkflowCompleted).toBe("workflow:completed")
+    expect(tagToEventName.PhaseEntered).toBe("phase:entered")
+    expect(tagToEventName.PhaseExited).toBe("phase:exited")
+    expect(tagToEventName.AgentStarted).toBe("agent:started")
+    expect(tagToEventName.AgentCompleted).toBe("agent:completed")
+    expect(tagToEventName.StateIntent).toBe("state:intent")
+    expect(tagToEventName.StateCheckpoint).toBe("state:checkpoint")
+    expect(tagToEventName.TextDelta).toBe("text:delta")
+    expect(tagToEventName.ThinkingDelta).toBe("thinking:delta")
+    expect(tagToEventName.ToolCalled).toBe("tool:called")
+    expect(tagToEventName.ToolResult).toBe("tool:result")
+    expect(tagToEventName.InputRequested).toBe("input:requested")
+    expect(tagToEventName.InputReceived).toBe("input:received")
   })
 })
 
 describe("WorkflowAgentError", () => {
   it("is a tagged error with correct _tag", () => {
     const error = new WorkflowAgentError({
-      agentName: "test",
+      agent: "test",
       message: "Test error"
     })
 
     expect(error._tag).toBe("WorkflowAgentError")
-    expect(error.agentName).toBe("test")
+    expect(error.agent).toBe("test")
     expect(error.message).toBe("Test error")
   })
 
   it("can include optional cause", () => {
     const cause = new Error("Underlying error")
     const error = new WorkflowAgentError({
-      agentName: "test",
+      agent: "test",
       message: "Test error",
       cause
     })

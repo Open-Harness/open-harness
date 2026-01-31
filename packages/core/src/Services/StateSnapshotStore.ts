@@ -18,9 +18,13 @@ import type { SessionId } from "../Domain/Ids.js"
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * A snapshot of state at a specific event position.
+ * Internal storage representation of a state snapshot.
+ *
+ * Uses branded SessionId for type safety at store boundaries.
+ * The public API uses `StateSnapshot` from Engine/types.ts instead,
+ * which uses plain strings for easier user consumption.
  */
-export interface StateSnapshot<S = unknown> {
+export interface StoredStateSnapshot<S = unknown> {
   readonly sessionId: SessionId
   readonly state: S
   readonly position: number // Event index this state was computed at
@@ -39,10 +43,10 @@ export interface StateSnapshotStoreService {
   /** Get latest snapshot for a session (null if none exists) */
   readonly getLatest: (
     sessionId: SessionId
-  ) => Effect.Effect<StateSnapshot | null, StoreError>
+  ) => Effect.Effect<StoredStateSnapshot | null, StoreError>
 
   /** Save a snapshot */
-  readonly save: (snapshot: StateSnapshot) => Effect.Effect<void, StoreError>
+  readonly save: (snapshot: StoredStateSnapshot) => Effect.Effect<void, StoreError>
 
   /** Delete all snapshots for a session */
   readonly delete: (sessionId: SessionId) => Effect.Effect<void, StoreError>

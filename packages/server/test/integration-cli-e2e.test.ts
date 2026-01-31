@@ -23,6 +23,7 @@ import { OpenScaffold } from "../src/OpenScaffold.js"
 
 const createE2EMockProvider = (): AgentProvider => ({
   name: "e2e-mock-provider",
+  model: "e2e-mock-model",
   stream: (options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, never> => {
     const events: Array<AgentStreamEvent> = []
 
@@ -58,9 +59,11 @@ interface E2EState {
 
 type E2EPhases = "planning" | "done"
 
+// Per ADR-010: Agents own their provider directly
+// Use the mock provider that returns proper stream events
 const planner = agent<E2EState, { tasks: Array<string> }>({
   name: "planner",
-  model: "claude-sonnet-4-5",
+  provider: createE2EMockProvider(),
   output: z.object({ tasks: z.array(z.string()) }),
   prompt: (state) => `Create a task list for: ${state.goal}`,
   update: (output, draft) => {
@@ -210,7 +213,7 @@ describe("CLI E2E integration", () => {
 
     expect(eventNames).toContain("workflow:started")
     expect(eventNames).toContain("workflow:completed")
-    expect(eventNames).toContain("state:updated")
+    expect(eventNames).toContain("state:intent")
 
     // Verify ordering
     const startedIdx = eventNames.indexOf("workflow:started")

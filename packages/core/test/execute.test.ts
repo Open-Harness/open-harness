@@ -5,15 +5,17 @@
  * Uses ProviderRecorder playback with pre-seeded fixtures.
  */
 
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
-import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+// execute is internal API - import from internal.ts
+import type { RuntimeConfig } from "../src/Engine/execute.js"
+import { execute } from "../src/internal.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -29,10 +31,10 @@ interface TestState {
 const messageSchema = z.object({ message: z.string() })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
-// Test agent
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<TestState, { message: string }>({
   name: "test-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state) => `Goal: ${state.goal}`,
   update: (output, draft) => {
@@ -76,27 +78,24 @@ const simpleFixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Dummy provider that should never be called in playback mode
-const playbackDummy = {
-  name: "playback-dummy",
-  stream: () => {
-    throw new Error("playbackDummyProvider called - recording not found")
-  }
-}
-
-// Test runtime config using playback mode
-const testRuntime: RuntimeConfig = {
-  providers: { "claude-sonnet-4-5": playbackDummy },
-  mode: "playback",
-  recorder: seedRecorder(simpleFixtures),
-  database: ":memory:"
-}
-
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
 describe("execute()", () => {
+  // Test runtime config using playback mode
+  // Per ADR-010: No providers map needed - agents own their providers directly
+  // Created in beforeAll because seedRecorder is async (LibSQL :memory:)
+  let testRuntime: RuntimeConfig
+
+  beforeAll(async () => {
+    const recorder = await seedRecorder(simpleFixtures)
+    testRuntime = {
+      mode: "playback",
+      recorder,
+      database: ":memory:"
+    }
+  })
   describe("WorkflowExecution interface", () => {
     it("returns a WorkflowExecution object with correct shape", () => {
       const execution = execute(testWorkflow, { input: "Build API", runtime: testRuntime })
@@ -230,7 +229,7 @@ describe("execute()", () => {
 
       const plannerAgent = agent<MultiPhaseState, { plan: string }>({
         name: "planner",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: planSchema,
         prompt: (state) => `Plan: ${state.goal}`,
         update: (output, draft) => {
@@ -240,7 +239,7 @@ describe("execute()", () => {
 
       const workerAgent = agent<MultiPhaseState, { result: string }>({
         name: "worker",
-        model: "claude-sonnet-4-5",
+        provider: testProvider,
         output: resultSchema,
         prompt: (state) => `Work: ${state.plan}`,
         update: (output, draft) => {
@@ -277,9 +276,8 @@ describe("execute()", () => {
       ]
 
       const multiPhaseRuntime: RuntimeConfig = {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(multiPhaseFixtures),
+        recorder: await seedRecorder(multiPhaseFixtures),
         database: ":memory:"
       }
 
@@ -301,13 +299,13 @@ describe("execute()", () => {
 
       // Find key events
       const workflowStartedIdx = collectedEvents.findIndex(
-        (e) => e.name === EVENTS.WORKFLOW_STARTED
+        (e) => e.name === tagToEventName.WorkflowStarted
       )
       const firstPhaseEnteredIdx = collectedEvents.findIndex(
-        (e) => e.name === EVENTS.PHASE_ENTERED
+        (e) => e.name === tagToEventName.PhaseEntered
       )
       const workflowCompletedIdx = collectedEvents.findIndex(
-        (e) => e.name === EVENTS.WORKFLOW_COMPLETED
+        (e) => e.name === tagToEventName.WorkflowCompleted
       )
 
       // All key events should exist
@@ -323,13 +321,13 @@ describe("execute()", () => {
 
       // Verify we see multiple phase transitions (planning -> working -> done)
       const phaseEnteredEvents = collectedEvents.filter(
-        (e) => e.name === EVENTS.PHASE_ENTERED
+        (e) => e.name === tagToEventName.PhaseEntered
       )
       expect(phaseEnteredEvents.length).toBe(3) // planning, working, done
 
       // Verify agent events appear between phase events
       const agentStartedEvents = collectedEvents.filter(
-        (e) => e.name === EVENTS.AGENT_STARTED
+        (e) => e.name === tagToEventName.AgentStarted
       )
       expect(agentStartedEvents.length).toBeGreaterThanOrEqual(2) // planner + worker
 
@@ -353,15 +351,15 @@ describe("execute()", () => {
       expect(eventNames.length).toBeGreaterThan(0)
 
       // workflow:started should be present and come before workflow:completed
-      const startIdx = eventNames.indexOf(EVENTS.WORKFLOW_STARTED)
-      const completeIdx = eventNames.indexOf(EVENTS.WORKFLOW_COMPLETED)
+      const startIdx = eventNames.indexOf(tagToEventName.WorkflowStarted)
+      const completeIdx = eventNames.indexOf(tagToEventName.WorkflowCompleted)
 
       expect(startIdx).toBeGreaterThanOrEqual(0)
       expect(completeIdx).toBeGreaterThanOrEqual(0)
       expect(startIdx).toBeLessThan(completeIdx)
 
       // Agent events should be present between start and complete
-      const agentStartIdx = eventNames.indexOf(EVENTS.AGENT_STARTED)
+      const agentStartIdx = eventNames.indexOf(tagToEventName.AgentStarted)
       expect(agentStartIdx).toBeGreaterThan(startIdx)
       expect(agentStartIdx).toBeLessThan(completeIdx)
     })

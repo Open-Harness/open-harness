@@ -14,7 +14,7 @@ import { Effect, Stream } from "effect"
 import { z } from "zod"
 
 import type { AgentStreamEvent, ProviderRunOptions } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { AnthropicProvider, ProviderRecorderLive } from "@open-scaffold/server"
 
 import { recordingsDbUrl } from "./index.js"
@@ -96,10 +96,22 @@ const main = async () => {
         return
       }
 
-      // Stream from real provider
+      // Start incremental recording (crash-safe)
+      const recordingId = yield* recorder.startRecording(hash, {
+        prompt: providerOptions.prompt,
+        provider: provider.name
+      })
+
+      let eventCount = 0
+
+      // Stream from real provider with incremental recording
       yield* provider.stream(providerOptions).pipe(
         Stream.tap((event) =>
-          Effect.sync(() => {
+          Effect.gen(function*() {
+            // Append event incrementally (crash-safe)
+            yield* recorder.appendEvent(recordingId, event)
+            eventCount++
+
             recordedEvents.push(event)
             if (event._tag === "Result") {
               result = event
@@ -118,21 +130,15 @@ const main = async () => {
         throw new Error("No result received from provider")
       }
 
-      // Save to database
-      yield* recorder.save({
-        hash,
-        prompt: providerOptions.prompt,
-        provider: provider.name,
-        streamData: recordedEvents,
-        result: {
-          stopReason: result.stopReason,
-          output: result.output,
-          ...(result.text ? { text: result.text } : {}),
-          ...(result.usage ? { usage: result.usage } : {})
-        }
+      // Finalize recording after stream completes
+      yield* recorder.finalizeRecording(recordingId, {
+        stopReason: result.stopReason,
+        output: result.output,
+        ...(result.text ? { text: result.text } : {}),
+        ...(result.usage ? { usage: result.usage } : {})
       })
 
-      console.log(`  Recorded ${recordedEvents.length} events`)
+      console.log(`  Recorded ${eventCount} events`)
       console.log(`  Output:`, JSON.stringify(result.output, null, 2))
     }).pipe(Effect.provide(recorderLayer))
 

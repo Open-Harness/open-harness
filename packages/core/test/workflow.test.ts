@@ -8,19 +8,20 @@
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
 import { run } from "../src/Engine/run.js"
-import { EVENTS } from "../src/Engine/types.js"
 import {
   isPhaseWorkflow,
   isSimpleWorkflow,
   type PhaseWorkflowDef,
   type SimpleWorkflowDef,
+  validateWorkflowDef,
   workflow
 } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -35,10 +36,10 @@ interface TestState {
 
 type TestPhases = "planning" | "working" | "judging" | "done"
 
-// Test agents
+// Test agents (per ADR-010: agents own provider directly)
 const simpleAgent = agent<TestState, { message: string }>({
   name: "simple",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ message: z.string() }),
   prompt: (state: TestState) => `Goal: ${state.goal}`,
   update: (output: { message: string }, draft: TestState) => {
@@ -48,7 +49,7 @@ const simpleAgent = agent<TestState, { message: string }>({
 
 const plannerAgent = agent<TestState, { tasks: Array<string>; done: boolean }>({
   name: "planner",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ tasks: z.array(z.string()), done: z.boolean() }),
   prompt: (state: TestState) => `Plan for: ${state.goal}`,
   update: (output: { tasks: Array<string>; done: boolean }, draft: TestState) => {
@@ -61,7 +62,7 @@ const plannerAgent = agent<TestState, { tasks: Array<string>; done: boolean }>({
 
 const judgeAgent = agent<TestState, { verdict: "continue" | "complete" }>({
   name: "judge",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ verdict: z.enum(["continue", "complete"]) }),
   prompt: (state: TestState) => `Judge progress on: ${state.goal}`,
   update: (output: { verdict: "continue" | "complete" }, draft: TestState) => {
@@ -74,10 +75,17 @@ const judgeAgent = agent<TestState, { verdict: "continue" | "complete" }>({
 // ─────────────────────────────────────────────────────────────────
 
 describe("workflow() factory", () => {
+  // ─────────────────────────────────────────────────────────────────
+  // Validation Tests
+  //
+  // These tests verify that the workflow() factory throws appropriate
+  // errors for invalid input. We use validateWorkflowDef() which accepts
+  // unknown input, eliminating the need for type casts like `as unknown as`.
+  // ─────────────────────────────────────────────────────────────────
   describe("validation", () => {
     it("throws if name is missing", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
@@ -88,9 +96,9 @@ describe("workflow() factory", () => {
 
     it("throws if initialState is undefined", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
-          initialState: undefined as unknown as TestState,
+          initialState: undefined,
           start: () => {},
           agent: simpleAgent
         })
@@ -99,10 +107,10 @@ describe("workflow() factory", () => {
 
     it("throws if start is missing", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
-          start: undefined as unknown as () => void,
+          start: undefined,
           agent: simpleAgent
         })
       }).toThrow("Workflow \"test\" requires 'start' function")
@@ -110,47 +118,47 @@ describe("workflow() factory", () => {
 
     it("throws if both agent and phases are specified", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
           agent: simpleAgent,
           phases: { done: phase.terminal<TestState, "done">() }
-        } as unknown as SimpleWorkflowDef<TestState>)
+        })
       }).toThrow("Workflow \"test\" cannot have both 'agent' and 'phases'")
     })
 
     it("throws if neither agent nor phases are specified", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {}
-        } as unknown as SimpleWorkflowDef<TestState>)
+        })
       }).toThrow("Workflow \"test\" requires either 'agent' or 'phases'")
     })
 
     it("throws if phases is empty", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
-          phases: {} as { done: typeof phase.terminal }
-        } as PhaseWorkflowDef<TestState, string, "done">)
+          phases: {}
+        })
       }).toThrow("Workflow \"test\" has empty 'phases'")
     })
 
     it("throws if no terminal phase exists", () => {
       expect(() => {
-        workflow({
+        validateWorkflowDef({
           name: "test",
           initialState: { goal: "", tasks: [], done: false, verdict: null },
           start: () => {},
           phases: {
-            planning: { run: plannerAgent, next: "planning" as const }
+            planning: { run: plannerAgent, next: "planning" }
           }
-        } as unknown as PhaseWorkflowDef<TestState, string, "planning">)
+        })
       }).toThrow("Workflow \"test\" must have at least one terminal phase")
     })
   })
@@ -315,12 +323,6 @@ describe("WorkflowDef types (compile-time)", () => {
 
 describe("workflow behavioral (execution and phase transitions)", () => {
   const providerOptions = { model: "claude-sonnet-4-5" }
-  const playbackDummy = {
-    name: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
 
   const taskSchema = z.object({ tasks: z.array(z.string()), done: z.boolean() })
   const messageSchema = z.object({ message: z.string() })
@@ -348,9 +350,8 @@ describe("workflow behavioral (execution and phase transitions)", () => {
     const result = await run(w, {
       input: "write tests",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -380,7 +381,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const planAgent = agent<PhaseState, { tasks: Array<string>; done: boolean }>({
       name: "planner",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: taskSchema,
       prompt: (state) => `Plan for: ${state.goal}`,
       update: (output, draft) => {
@@ -404,9 +405,8 @@ describe("workflow behavioral (execution and phase transitions)", () => {
     })
 
     const runtime: RuntimeConfig = {
-      providers: { "claude-sonnet-4-5": playbackDummy },
       mode: "playback",
-      recorder: seedRecorder(fixtures),
+      recorder: await seedRecorder(fixtures),
       database: ":memory:"
     }
 
@@ -415,7 +415,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const phaseEnteredNames: Array<string> = []
     for await (const event of execution) {
-      if (event.name === EVENTS.PHASE_ENTERED) {
+      if (event.name === tagToEventName.PhaseEntered) {
         phaseEnteredNames.push((event.payload as { phase: string }).phase)
       }
     }
@@ -446,7 +446,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const planAgent = agent<MultiState, { plan: string }>({
       name: "planner",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: planSchema,
       prompt: (state) => `Plan: ${state.goal}`,
       update: (output, draft) => {
@@ -456,7 +456,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const workAgent = agent<MultiState, { result: string }>({
       name: "worker",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: workSchema,
       prompt: (state) => `Work: ${state.plan}`,
       update: (output, draft) => {
@@ -497,9 +497,8 @@ describe("workflow behavioral (execution and phase transitions)", () => {
     const result = await run(w, {
       input: "build API",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onPhaseChanged: phaseChanges }

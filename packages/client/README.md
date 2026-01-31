@@ -57,7 +57,7 @@ interface WorkflowClient {
 ## Installation
 
 ```bash
-pnpm add @open-scaffold/client
+bun add @open-scaffold/client
 ```
 
 ## Usage

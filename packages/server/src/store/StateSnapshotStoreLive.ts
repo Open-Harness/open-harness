@@ -6,8 +6,9 @@
 
 import { SqlClient } from "@effect/sql"
 import { LibsqlClient } from "@effect/sql-libsql"
-import { Services, StoreError } from "@open-scaffold/core"
-import { Effect, Layer, Redacted } from "effect"
+import { parseSessionId, StoreError } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
+import { Effect, Layer, Redacted, Schema } from "effect"
 
 import type { LibSQLConfig } from "./Config.js"
 import { runMigrations } from "./Migrations.js"
@@ -24,18 +25,76 @@ interface SnapshotRow {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// StateCheckpoint Schema (ADR-005: Type Safety at Store Boundaries)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Schema for validating parsed state from database.
+ *
+ * The state is stored as JSON and can be any valid JSON value.
+ * We validate that the parsed result is valid JSON structure.
+ */
+const StateCheckpointSchema = Schema.Struct({
+  state: Schema.Unknown, // The parsed state (generic - any valid JSON)
+  position: Schema.Number,
+  createdAt: Schema.instanceOf(Date)
+})
+
+/**
+ * Decode a state checkpoint using Schema validation.
+ */
+const decodeStateCheckpoint = Schema.decodeUnknown(StateCheckpointSchema)
+
+// ─────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Convert a database row to a StateSnapshot object.
+ * Convert a database row to a StoredStateSnapshot object with Schema validation.
+ * Returns an Effect that fails with StoreError if validation fails.
  */
-const rowToSnapshot = (row: SnapshotRow): Services.StateSnapshot => ({
-  sessionId: row.session_id as Services.StateSnapshot["sessionId"],
-  position: row.position,
-  state: JSON.parse(row.state_json) as unknown,
-  createdAt: new Date(row.created_at)
-})
+const rowToSnapshot = (row: SnapshotRow): Effect.Effect<Services.StoredStateSnapshot, StoreError> => {
+  // Parse the JSON state first - this can throw
+  const parsedState = Effect.try({
+    try: () => JSON.parse(row.state_json),
+    catch: (error) => new StoreError({ operation: "read", cause: `Invalid JSON in state_json: ${error}` })
+  })
+
+  return parsedState.pipe(
+    Effect.flatMap((state) => {
+      // Validate the session ID
+      const validatedSessionId = parseSessionId(row.session_id).pipe(
+        Effect.mapError((parseError) =>
+          new StoreError({ operation: "read", cause: `Invalid session ID: ${parseError}` })
+        )
+      )
+
+      // Build the object to validate
+      const toValidate = {
+        state,
+        position: row.position,
+        createdAt: new Date(row.created_at)
+      }
+
+      // Validate checkpoint structure
+      const validatedCheckpoint = decodeStateCheckpoint(toValidate).pipe(
+        Effect.mapError((parseError) =>
+          new StoreError({ operation: "read", cause: `Invalid state checkpoint: ${parseError}` })
+        )
+      )
+
+      // Combine both validations
+      return Effect.all([validatedSessionId, validatedCheckpoint]).pipe(
+        Effect.map(([sessionId, checkpoint]): Services.StoredStateSnapshot => ({
+          sessionId,
+          state: checkpoint.state,
+          position: checkpoint.position,
+          createdAt: checkpoint.createdAt
+        }))
+      )
+    })
+  )
+}
 
 // ─────────────────────────────────────────────────────────────────
 // StateSnapshotStore Implementation
@@ -75,10 +134,15 @@ export const StateSnapshotStoreLive = (
             WHERE session_id = ${sessionId}
             ORDER BY position DESC
             LIMIT 1
-          `
-          return rows.length === 0 ? null : rowToSnapshot(rows[0])
+          `.pipe(
+            Effect.mapError((cause) => new StoreError({ operation: "read", cause }))
+          )
+          if (rows.length === 0) {
+            return null
+          }
+          // Validate row using Schema (ADR-005)
+          return yield* rowToSnapshot(rows[0])
         }).pipe(
-          Effect.mapError((cause) => new StoreError({ operation: "read", cause })),
           Effect.withSpan("StateSnapshotStore.getLatest", { attributes: { sessionId } })
         ),
 

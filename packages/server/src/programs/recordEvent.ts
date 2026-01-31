@@ -8,14 +8,15 @@
 
 import { Effect } from "effect"
 
-import { type AnyEvent, Services, type SessionId, type StoreError } from "@open-scaffold/core"
+import { type SerializedEvent, type SessionId, type StoreError } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 
 /**
  * Append an event to the store and broadcast to live subscribers.
  */
 export const recordEvent = (
   sessionId: SessionId,
-  event: AnyEvent
+  event: SerializedEvent
 ): Effect.Effect<void, StoreError, Services.EventStore | Services.EventBus> =>
   Effect.gen(function*() {
     const store = yield* Services.EventStore

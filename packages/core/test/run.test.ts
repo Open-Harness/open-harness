@@ -5,14 +5,14 @@
  * Uses ProviderRecorder playback with pre-seeded fixtures.
  */
 
-import { describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import { agent } from "../src/Engine/agent.js"
 import type { RuntimeConfig } from "../src/Engine/execute.js"
-import { run, type RunOptions, runSimple, runWithText } from "../src/Engine/run.js"
+import { run, type RunOptions } from "../src/Engine/run.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -28,10 +28,10 @@ interface TestState {
 const messageSchema = z.object({ message: z.string() })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
-// Test agent
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<TestState, { message: string }>({
   name: "test-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state) => `Goal: ${state.goal}`,
   update: (output, draft) => {
@@ -92,25 +92,23 @@ const fixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Dummy provider for playback mode
-const playbackDummy = {
-  name: "playback-dummy",
-  stream: () => {
-    throw new Error("playbackDummyProvider called - recording not found")
-  }
-}
-
-// Test runtime config using playback mode
-const testRuntime: RuntimeConfig = {
-  providers: { "claude-sonnet-4-5": playbackDummy },
-  mode: "playback",
-  recorder: seedRecorder(fixtures),
-  database: ":memory:"
-}
-
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
+
+// Test runtime config using playback mode
+// Per ADR-010: No providers map needed - agents own their providers directly
+// Created in beforeAll because seedRecorder is async (LibSQL :memory:)
+let testRuntime: RuntimeConfig
+
+beforeAll(async () => {
+  const recorder = await seedRecorder(fixtures)
+  testRuntime = {
+    mode: "playback",
+    recorder,
+    database: ":memory:"
+  }
+})
 
 describe("run()", () => {
   describe("basic execution", () => {
@@ -190,30 +188,16 @@ describe("run()", () => {
   })
 })
 
-describe("runSimple()", () => {
-  it("is a convenience wrapper for run()", async () => {
-    const result = await runSimple(testWorkflow, "Test", testRuntime)
-
-    expect(result.state.goal).toBe("Test")
-    expect(result.state.tasks).toContain("Task completed")
-  })
-
-  it("accepts workflow, input, and runtime", async () => {
-    const result = await runSimple(testWorkflow, "Build an API", testRuntime)
-
-    expect(result.state.goal).toBe("Build an API")
-  })
-})
-
-describe("runWithText()", () => {
-  it("returns object with text and result properties", async () => {
-    const { result, text } = await runWithText(testWorkflow, "Test", testRuntime)
-
-    expect(result.state.goal).toBe("Test")
-    // Text is collected from streamed chunks via observer
-    expect(typeof text).toBe("string")
-  })
-})
+// runSimple() and runWithText() removed per ADR-001
+// Use run() directly instead:
+//
+// Before: await runSimple(workflow, input, runtime)
+// After:  await run(workflow, { input, runtime })
+//
+// Before: const { text } = await runWithText(workflow, input, runtime)
+// After:  const chunks: string[] = []
+//         await run(workflow, { input, runtime, observer: { onTextDelta: ({ delta }) => chunks.push(delta) } })
+//         const text = chunks.join("")
 
 describe("RunOptions interface", () => {
   it("accepts observer field", () => {

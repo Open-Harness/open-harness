@@ -16,7 +16,8 @@
 
 import { Effect, Stream } from "effect"
 
-import { type AnyEvent, Services, type SessionId, type SessionNotFound, type StoreError } from "@open-scaffold/core"
+import { type SerializedEvent, type SessionId, type SessionNotFound, type StoreError } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -42,7 +43,7 @@ export interface ObserveEventsOptions {
  */
 export const observeEvents = (
   options: ObserveEventsOptions
-): Stream.Stream<AnyEvent, SessionNotFound | StoreError, Services.EventBus | Services.EventStore> =>
+): Stream.Stream<SerializedEvent, SessionNotFound | StoreError, Services.EventBus | Services.EventStore> =>
   Stream.unwrapScoped(
     Effect.gen(function*() {
       const { fromPosition = 0, includeHistory = false, sessionId } = options

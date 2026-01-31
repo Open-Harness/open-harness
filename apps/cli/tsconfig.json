@@ -21,10 +21,10 @@
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
     "paths": {
-      "@open-scaffold/core": ["../core/src/index.ts"],
-      "@open-scaffold/core/*": ["../core/src/*.ts"],
-      "@open-scaffold/server": ["../server/src/index.ts"],
-      "@open-scaffold/server/*": ["../server/src/*.ts"]
+      "@open-scaffold/core": ["../../packages/core/src/index.ts"],
+      "@open-scaffold/core/*": ["../../packages/core/src/*.ts"],
+      "@open-scaffold/server": ["../../packages/server/src/index.ts"],
+      "@open-scaffold/server/*": ["../../packages/server/src/*.ts"]
     }
   }
 }

@@ -22,26 +22,26 @@ import type { Draft } from "./types.js"
  *
  * @template S - State type
  */
-export interface HumanConfig<S> {
+export interface HumanConfig<S = unknown> {
   /**
-   * Generate the prompt shown to the human.
-   * Receives current state to build context-aware prompts.
+   * Prompt shown to the human.
+   * Can be a static string or a function that receives state.
    */
-  readonly prompt: (state: S) => string
+  readonly prompt: string | ((state: S) => string)
 
   /**
    * Type of input expected:
-   * - "freeform": Open text input
    * - "approval": Yes/No decision
    * - "choice": Select from options
    */
-  readonly type: "freeform" | "approval" | "choice"
+  readonly type: "approval" | "choice"
 
   /**
    * Available options for "choice" type.
+   * Can be a static array or a function that receives state.
    * Required when type is "choice".
    */
-  readonly options?: ReadonlyArray<string>
+  readonly options?: ReadonlyArray<string> | ((state: S) => ReadonlyArray<string>)
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -108,8 +108,14 @@ export interface PhaseDef<S = unknown, Phases extends string = string, Ctx = voi
    * Human input configuration.
    * Mutually exclusive with `run` in most cases, but both can be present
    * for agent-assisted human decisions.
+   *
+   * Can be:
+   * - Static config: always request the same input
+   * - Function: dynamically decide based on state and agent output
+   *   - Return HumanConfig to request input
+   *   - Return null to skip human input
    */
-  readonly human?: HumanConfig<S>
+  readonly human?: HumanConfig<S> | ((state: S, output?: unknown) => HumanConfig<S> | null)
 
   /**
    * Process human response and update state.

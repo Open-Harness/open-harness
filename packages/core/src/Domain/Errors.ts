@@ -35,7 +35,7 @@ export class StoreError extends Data.TaggedError("StoreError")<{
  * Agent execution failed.
  */
 export class AgentError extends Data.TaggedError("AgentError")<{
-  readonly agentName: string
+  readonly agent: string
   readonly phase: "prompt" | "execution" | "output"
   readonly cause: unknown
 }> {}

@@ -4,7 +4,7 @@
  * @module
  */
 
-import type { AnyEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
 import { Stream } from "effect"
 
 /**
@@ -51,7 +51,7 @@ export const formatSSEMessage = (_message: SSEMessage): string => {
  * Convert an event stream to SSE message stream.
  */
 export const eventStreamToSSE = <E, R>(
-  _events: Stream.Stream<AnyEvent, E, R>
+  _events: Stream.Stream<SerializedEvent, E, R>
 ): Stream.Stream<string, E, R> => {
   return _events.pipe(
     Stream.map((event) =>

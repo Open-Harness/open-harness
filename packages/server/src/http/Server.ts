@@ -7,21 +7,9 @@
 import * as http from "node:http"
 import { URL } from "node:url"
 
-import type {
-  AgentProvider,
-  AgentRunResult,
-  AgentStreamEvent,
-  ProviderMode,
-  SessionId,
-  WorkflowDef
-} from "@open-scaffold/core"
-import {
-  makeInMemoryProviderRegistry,
-  ProviderRegistry,
-  Services,
-  SessionNotFound,
-  ValidationError
-} from "@open-scaffold/core"
+import type { AgentRunResult, AgentStreamEvent, ProviderMode, SessionId, WorkflowDef } from "@open-scaffold/core"
+import { SessionNotFound, ValidationError } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { Cause, Context, Data, Effect, Exit, Fiber, Layer, ManagedRuntime, Option, Stream } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "../constants.js"
@@ -63,17 +51,8 @@ import { SSE_HEADERS } from "./SSE.js"
  * ```
  */
 export const makeInMemoryRecorderLayer = (): Layer.Layer<Services.ProviderRecorder> => {
-  const store = new Map<string, {
-    hash: string
-    prompt: string
-    provider: string
-    streamData: ReadonlyArray<AgentStreamEvent>
-    result: AgentRunResult
-    recordedAt: Date
-  }>()
-
-  // In-memory incremental recording storage
-  const incrementalRecordings = new Map<
+  // Single unified storage for all recordings (mirrors persistent implementation)
+  const recordings = new Map<
     string,
     {
       hash: string
@@ -91,12 +70,8 @@ export const makeInMemoryRecorderLayer = (): Layer.Layer<Services.ProviderRecord
     Services.ProviderRecorder.of({
       load: (hash) =>
         Effect.sync(() => {
-          // First check legacy store
-          const entry = store.get(hash)
-          if (entry) return entry
-
-          // Then check incremental recordings (only completed)
-          for (const recording of incrementalRecordings.values()) {
+          // Find completed recording by hash
+          for (const recording of recordings.values()) {
             if (recording.hash === hash && recording.status === "complete" && recording.result) {
               return {
                 hash: recording.hash,
@@ -110,34 +85,36 @@ export const makeInMemoryRecorderLayer = (): Layer.Layer<Services.ProviderRecord
           }
           return null
         }),
-      save: (entry) =>
-        Effect.sync(() => {
-          store.set(entry.hash, { ...entry, recordedAt: new Date() })
-        }),
       delete: (hash) =>
         Effect.sync(() => {
-          store.delete(hash)
+          for (const [id, recording] of recordings.entries()) {
+            if (recording.hash === hash) {
+              recordings.delete(id)
+            }
+          }
         }),
       list: () =>
         Effect.sync(() =>
-          Array.from(store.values()).map((e) => ({
-            hash: e.hash,
-            prompt: e.prompt,
-            provider: e.provider,
-            recordedAt: e.recordedAt
-          }))
+          Array.from(recordings.values())
+            .filter((r) => r.status === "complete")
+            .map((r) => ({
+              hash: r.hash,
+              prompt: r.prompt,
+              provider: r.provider,
+              recordedAt: r.createdAt
+            }))
         ),
       // Incremental recording API
       startRecording: (hash, metadata) =>
         Effect.sync(() => {
           const recordingId = crypto.randomUUID()
           // Delete any existing incomplete recording for this hash
-          for (const [id, recording] of incrementalRecordings.entries()) {
+          for (const [id, recording] of recordings.entries()) {
             if (recording.hash === hash && recording.status === "in_progress") {
-              incrementalRecordings.delete(id)
+              recordings.delete(id)
             }
           }
-          incrementalRecordings.set(recordingId, {
+          recordings.set(recordingId, {
             hash,
             prompt: metadata.prompt,
             provider: metadata.provider,
@@ -149,14 +126,14 @@ export const makeInMemoryRecorderLayer = (): Layer.Layer<Services.ProviderRecord
         }),
       appendEvent: (recordingId, event) =>
         Effect.sync(() => {
-          const recording = incrementalRecordings.get(recordingId)
+          const recording = recordings.get(recordingId)
           if (recording) {
             recording.events.push(event)
           }
         }),
       finalizeRecording: (recordingId, result) =>
         Effect.sync(() => {
-          const recording = incrementalRecordings.get(recordingId)
+          const recording = recordings.get(recordingId)
           if (recording) {
             recording.status = "complete"
             recording.result = result
@@ -242,23 +219,6 @@ export interface CreateServerOptions<S> extends ServerConfig {
     readonly model?: string
     readonly connected: boolean
   }
-  /**
-   * Named providers map for the ProviderRegistry.
-   * Keys are model strings (e.g., "claude-sonnet-4-20250514"),
-   * values are AgentProvider implementations.
-   *
-   * Optional - if not provided, no ProviderRegistry layer is added.
-   *
-   * @example
-   * ```typescript
-   * createServer({
-   *   providers: {
-   *     "claude-sonnet-4-20250514": AnthropicProvider({ model: "claude-sonnet-4-20250514" }),
-   *   }
-   * })
-   * ```
-   */
-  readonly providers?: Record<string, AgentProvider>
 }
 
 export const createServer = <S>(options: CreateServerOptions<S>): ServerService => {
@@ -273,8 +233,7 @@ export const createServer = <S>(options: CreateServerOptions<S>): ServerService 
       | Services.StateSnapshotStore
       | Services.EventBus
       | Services.ProviderRecorder
-      | Services.ProviderModeContext
-      | ProviderRegistry,
+      | Services.ProviderModeContext,
       unknown
     >
     | null = null
@@ -292,27 +251,13 @@ export const createServer = <S>(options: CreateServerOptions<S>): ServerService 
   const startServer = Effect.gen(function*() {
     if (server) return
 
-    // Build ProviderRegistry layer (empty if no providers configured)
-    const providerRegistryLayer = Layer.effect(
-      ProviderRegistry,
-      Effect.sync(() => {
-        const registry = makeInMemoryProviderRegistry()
-        if (options.providers) {
-          for (const [model, provider] of Object.entries(options.providers)) {
-            Effect.runSync(registry.registerProvider(model, provider))
-          }
-        }
-        return registry
-      })
-    )
-
+    // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
     const fullLayer = Layer.mergeAll(
       options.eventStore,
       options.snapshotStore,
       makeEventBusLayer(),
       providerModeLayer,
-      providerRecorderLayer,
-      providerRegistryLayer
+      providerRecorderLayer
     )
 
     runtime = ManagedRuntime.make(
@@ -322,7 +267,6 @@ export const createServer = <S>(options: CreateServerOptions<S>): ServerService 
         | Services.EventBus
         | Services.ProviderRecorder
         | Services.ProviderModeContext
-        | ProviderRegistry
       >
     )
 

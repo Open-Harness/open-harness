@@ -4,7 +4,7 @@
  * @module
  */
 
-import type { AnyEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
 
 /**
  * Client error.
@@ -113,7 +113,7 @@ export interface WorkflowClient {
    * Get the event stream.
    * Must be connected first.
    */
-  events(): AsyncIterable<AnyEvent>
+  events(): AsyncIterable<SerializedEvent>
 
   /**
    * Get the current state.
@@ -135,7 +135,7 @@ export interface WorkflowClient {
    * Send user input event.
    * Must be connected first.
    */
-  sendInput(event: AnyEvent): Promise<void>
+  sendInput(event: SerializedEvent): Promise<void>
 
   /**
    * Disconnect from the session.

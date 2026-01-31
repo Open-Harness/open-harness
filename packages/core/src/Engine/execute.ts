@@ -12,18 +12,17 @@ import { mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-import type { AgentProvider, ProviderMode } from "../Domain/Provider.js"
-import { InMemoryEventBus } from "../Layers/InMemory.js"
+import type { ProviderMode } from "../Domain/Provider.js"
 import { EventStoreLive } from "../Layers/LibSQL.js"
-import { EventBus, type EventBusService } from "../Services/EventBus.js"
+import { EventBus, EventBusLive, type EventBusService } from "../Services/EventBus.js"
 import { EventStore, type EventStoreService } from "../Services/EventStore.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../Services/ProviderRecorder.js"
 
-import { makeInMemoryProviderRegistry, ProviderRegistry } from "./provider.js"
+import type { SerializedEvent } from "../Domain/Events.js"
 import { type ExecuteOptions, executeWorkflow } from "./runtime.js"
 import { WorkflowAbortedError } from "./types.js"
-import type { AnyEvent, WorkflowError, WorkflowResult } from "./types.js"
+import type { WorkflowError, WorkflowResult } from "./types.js"
 import type { WorkflowDef } from "./workflow.js"
 
 // ─────────────────────────────────────────────────────────────────
@@ -34,17 +33,11 @@ import type { WorkflowDef } from "./workflow.js"
  * Runtime configuration for workflow execution.
  *
  * Provides the required services for running workflows:
- * - providers: Map of model names to provider instances
  * - mode: "live" for real API calls, "playback" for recordings
  * - recorder: Service for recording/replaying provider responses
+ * - database: Storage URL for event persistence
  */
 export interface RuntimeConfig {
-  /**
-   * Provider instances keyed by model name.
-   * Example: { "claude-sonnet-4-5": anthropicProvider }
-   */
-  readonly providers: Record<string, AgentProvider>
-
   /**
    * Provider mode: "live" or "playback"
    * @default "live"
@@ -102,10 +95,7 @@ export interface ExecuteWithRuntimeOptions<Input> extends ExecuteOptions<Input> 
  * ```typescript
  * const execution = execute(myWorkflow, {
  *   input: "Build API",
- *   runtime: {
- *     providers: { "claude-sonnet-4-5": myProvider },
- *     mode: "live"
- *   }
+ *   runtime: { mode: "live" }
  * })
  *
  * // Iterate over events as they occur
@@ -123,7 +113,7 @@ export interface WorkflowExecution<S> {
    * Async iterator for consuming events as they occur.
    * Events are yielded in real-time during workflow execution.
    */
-  [Symbol.asyncIterator](): AsyncIterator<AnyEvent, undefined>
+  [Symbol.asyncIterator](): AsyncIterator<SerializedEvent, undefined>
 
   /**
    * Promise that resolves when workflow completes.
@@ -174,7 +164,6 @@ export interface WorkflowExecution<S> {
 
 const noopRecorder: ProviderRecorderService = {
   load: () => Effect.succeed(null),
-  save: () => Effect.void,
   delete: () => Effect.void,
   list: () => Effect.succeed([]),
   startRecording: () => Effect.succeed("noop"),
@@ -206,10 +195,7 @@ const noopRecorder: ProviderRecorderService = {
  * ```typescript
  * const execution = execute(myWorkflow, {
  *   input: "Build API",
- *   runtime: {
- *     providers: { "claude-sonnet-4-5": anthropicProvider },
- *     mode: "live"
- *   }
+ *   runtime: { mode: "live" }
  * })
  *
  * for await (const event of execution) {
@@ -245,9 +231,9 @@ export function execute<S, Input, Phases extends string = never>(
   const DONE: IteratorReturnResult<undefined> = { value: undefined, done: true }
 
   // Event queue for streaming - will be populated by the runtime
-  const eventBuffer: Array<AnyEvent> = []
+  const eventBuffer: Array<SerializedEvent> = []
   const eventWaiters: Array<{
-    resolve: (value: IteratorResult<AnyEvent, undefined>) => void
+    resolve: (value: IteratorResult<SerializedEvent, undefined>) => void
     reject: (error: unknown) => void
   }> = []
   let isComplete = false
@@ -269,7 +255,7 @@ export function execute<S, Input, Phases extends string = never>(
   })
 
   // Helper to emit an event to the stream
-  const emitEvent = (event: AnyEvent): void => {
+  const emitEvent = (event: SerializedEvent): void => {
     if (eventWaiters.length > 0) {
       const waiter = eventWaiters.shift()!
       waiter.resolve({ value: event, done: false })
@@ -304,21 +290,7 @@ export function execute<S, Input, Phases extends string = never>(
   // Build the service layer from runtime config
   const { runtime } = options
 
-  // Create provider registry with configured providers
-  const registryService = makeInMemoryProviderRegistry()
-
   // Build layers
-  const ProviderRegistryLayer = Layer.effect(
-    ProviderRegistry,
-    Effect.gen(function*() {
-      // Register all providers
-      for (const [model, provider] of Object.entries(runtime.providers)) {
-        yield* registryService.registerProvider(model, provider)
-      }
-      return registryService
-    })
-  )
-
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, {
     mode: runtime.mode ?? "live"
   })
@@ -340,10 +312,9 @@ export function execute<S, Input, Phases extends string = never>(
 
   const EventBusLayer = runtime.eventBus
     ? Layer.succeed(EventBus, runtime.eventBus)
-    : InMemoryEventBus
+    : Layer.effect(EventBus, EventBusLive)
 
   const runtimeLayer = Layer.mergeAll(
-    ProviderRegistryLayer,
     ProviderModeLayer,
     ProviderRecorderLayer,
     EventStoreLayer,
@@ -365,6 +336,7 @@ export function execute<S, Input, Phases extends string = never>(
   }).pipe(Effect.provide(runtimeLayer))
 
   // Start execution using runFork to get fiber reference for interruption
+  // eslint-disable-next-line prefer-const -- fiber is declared outside this scope for use in abort handlers
   fiber = Effect.runFork(program)
 
   // Observe fiber completion to signal result
@@ -389,8 +361,8 @@ export function execute<S, Input, Phases extends string = never>(
   })
 
   // Create the async iterator
-  const asyncIterator = (): AsyncIterator<AnyEvent, undefined> => ({
-    next: (): Promise<IteratorResult<AnyEvent, undefined>> => {
+  const asyncIterator = (): AsyncIterator<SerializedEvent, undefined> => ({
+    next: (): Promise<IteratorResult<SerializedEvent, undefined>> => {
       // Check if aborted
       if (isAborted) {
         return Promise.resolve(DONE)
@@ -417,7 +389,7 @@ export function execute<S, Input, Phases extends string = never>(
     },
 
     // Handle early termination (break from for-await loop)
-    return: (): Promise<IteratorResult<AnyEvent, undefined>> => {
+    return: (): Promise<IteratorResult<SerializedEvent, undefined>> => {
       // Cancel provider HTTP request
       abortController.abort()
       // Interrupt the Effect fiber

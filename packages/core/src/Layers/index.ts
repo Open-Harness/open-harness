@@ -1,30 +1,17 @@
 /**
  * Layer exports - configurations for different environments.
  *
+ * Per CLAUDE.md "NO MOCKS" policy:
+ * - Use LibSQL :memory: implementations for testing (real SQLite)
+ * - InMemoryEventHub is PubSub-backed (real implementation, not a mock)
+ * - EventBusLive is exported from Services/EventBus.ts
+ *
  * @module
  */
 
-// Logger configurations
-export {
-  DebugLevelLayer,
-  DevLoggerLayer,
-  DevLoggingLayer,
-  ErrorLevelLayer,
-  ProdLoggerLayer,
-  ProdLoggingLayer,
-  TestLoggerLayer,
-  TestLoggingLayer,
-  WarnLevelLayer
-} from "./Logger.js"
+// PubSub-backed EventHub (real implementation)
+export { InMemoryEventHub } from "./InMemory.js"
 
-// In-memory implementations (standalone / testing)
-export {
-  InMemoryEventBus,
-  InMemoryEventStore,
-  InMemoryProviderRecorder,
-  makeInMemoryProviderRecorder
-} from "./InMemory.js"
-
-// LibSQL-backed implementations (persistent storage)
-export type { LibSQLEventStoreConfig } from "./LibSQL.js"
-export { EventStoreLive } from "./LibSQL.js"
+// LibSQL-backed implementations (works with :memory: for testing)
+export type { LibSQLConfig } from "./LibSQL.js"
+export { EventStoreLive, ProviderRecorderLive } from "./LibSQL.js"

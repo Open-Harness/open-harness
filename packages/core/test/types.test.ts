@@ -4,15 +4,14 @@
  * Validates the core type definitions for the state-first DX.
  */
 
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
+import { type EventName, type SerializedEvent, tagToEventName } from "../src/Domain/Events.js"
+import { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "../src/Domain/Ids.js"
 import {
-  type AnyEvent,
   type Draft,
   EventIdSchema,
-  type EventName,
-  EVENTS,
   makeEvent,
   makeEventId,
   parseEventId,
@@ -27,25 +26,26 @@ import {
   WorkflowValidationError
 } from "../src/Engine/types.js"
 
-describe("EVENTS constant", () => {
+describe("tagToEventName mapping", () => {
   it("has all expected event names", () => {
-    expect(EVENTS.WORKFLOW_STARTED).toBe("workflow:started")
-    expect(EVENTS.WORKFLOW_COMPLETED).toBe("workflow:completed")
-    expect(EVENTS.PHASE_ENTERED).toBe("phase:entered")
-    expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
-    expect(EVENTS.AGENT_STARTED).toBe("agent:started")
-    expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
-    expect(EVENTS.STATE_UPDATED).toBe("state:updated")
-    expect(EVENTS.TEXT_DELTA).toBe("text:delta")
-    expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
-    expect(EVENTS.TOOL_CALLED).toBe("tool:called")
-    expect(EVENTS.TOOL_RESULT).toBe("tool:result")
-    expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
-    expect(EVENTS.INPUT_RESPONSE).toBe("input:response")
+    expect(tagToEventName.WorkflowStarted).toBe("workflow:started")
+    expect(tagToEventName.WorkflowCompleted).toBe("workflow:completed")
+    expect(tagToEventName.PhaseEntered).toBe("phase:entered")
+    expect(tagToEventName.PhaseExited).toBe("phase:exited")
+    expect(tagToEventName.AgentStarted).toBe("agent:started")
+    expect(tagToEventName.AgentCompleted).toBe("agent:completed")
+    expect(tagToEventName.StateIntent).toBe("state:intent")
+    expect(tagToEventName.StateCheckpoint).toBe("state:checkpoint")
+    expect(tagToEventName.TextDelta).toBe("text:delta")
+    expect(tagToEventName.ThinkingDelta).toBe("thinking:delta")
+    expect(tagToEventName.ToolCalled).toBe("tool:called")
+    expect(tagToEventName.ToolResult).toBe("tool:result")
+    expect(tagToEventName.InputRequested).toBe("input:requested")
+    expect(tagToEventName.InputReceived).toBe("input:received")
   })
 
   it("event names are unique", () => {
-    const values = Object.values(EVENTS)
+    const values = Object.values(tagToEventName)
     const uniqueValues = new Set(values)
     expect(values.length).toBe(uniqueValues.size)
   })
@@ -74,16 +74,98 @@ describe("EventId (Effect Schema branded type)", () => {
   })
 })
 
+describe("SessionId (Effect Schema branded type)", () => {
+  it("makeSessionId generates valid UUID", async () => {
+    const id = await Effect.runPromise(makeSessionId())
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+  })
+
+  it("parseSessionId validates UUID format", async () => {
+    const validId = "550e8400-e29b-41d4-a716-446655440000"
+    const parsed = await Effect.runPromise(parseSessionId(validId))
+    expect(parsed).toBe(validId)
+  })
+
+  it("parseSessionId rejects invalid UUID", async () => {
+    const invalidId = "not-a-uuid"
+    await expect(Effect.runPromise(parseSessionId(invalidId))).rejects.toThrow()
+  })
+
+  it("parseSessionId rejects empty string", async () => {
+    await expect(Effect.runPromise(parseSessionId(""))).rejects.toThrow()
+  })
+
+  it("parseSessionId rejects partial UUID", async () => {
+    const partialId = "550e8400-e29b-41d4"
+    await expect(Effect.runPromise(parseSessionId(partialId))).rejects.toThrow()
+  })
+
+  it("SessionIdSchema brands the type", () => {
+    expect(SessionIdSchema).toBeDefined()
+  })
+})
+
+describe("WorkflowId (Effect Schema branded type)", () => {
+  it("WorkflowIdSchema accepts any string", async () => {
+    const decode = Schema.decodeUnknown(WorkflowIdSchema)
+    const result = await Effect.runPromise(decode("my-workflow"))
+    expect(result).toBe("my-workflow")
+  })
+
+  it("WorkflowIdSchema accepts workflow names with special chars", async () => {
+    const decode = Schema.decodeUnknown(WorkflowIdSchema)
+    const result = await Effect.runPromise(decode("task-planner-v2"))
+    expect(result).toBe("task-planner-v2")
+  })
+
+  it("WorkflowIdSchema rejects non-strings", async () => {
+    const decode = Schema.decodeUnknown(WorkflowIdSchema)
+    await expect(Effect.runPromise(decode(123))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(null))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(undefined))).rejects.toThrow()
+  })
+
+  it("WorkflowIdSchema brands the type", () => {
+    expect(WorkflowIdSchema).toBeDefined()
+  })
+})
+
+describe("AgentId (Effect Schema branded type)", () => {
+  it("AgentIdSchema accepts any string", async () => {
+    const decode = Schema.decodeUnknown(AgentIdSchema)
+    const result = await Effect.runPromise(decode("planner"))
+    expect(result).toBe("planner")
+  })
+
+  it("AgentIdSchema accepts agent names with special chars", async () => {
+    const decode = Schema.decodeUnknown(AgentIdSchema)
+    const result = await Effect.runPromise(decode("code-reviewer-v2"))
+    expect(result).toBe("code-reviewer-v2")
+  })
+
+  it("AgentIdSchema rejects non-strings", async () => {
+    const decode = Schema.decodeUnknown(AgentIdSchema)
+    await expect(Effect.runPromise(decode(123))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(null))).rejects.toThrow()
+    await expect(Effect.runPromise(decode(undefined))).rejects.toThrow()
+  })
+
+  it("AgentIdSchema brands the type", () => {
+    expect(AgentIdSchema).toBeDefined()
+  })
+})
+
 describe("makeEvent", () => {
-  it("creates event with generated ID", async () => {
+  it("creates SerializedEvent with generated ID and numeric timestamp", async () => {
     const event = await Effect.runPromise(
       makeEvent("test:event", { value: 42 })
-    ) as AnyEvent
+    )
 
     expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
     expect(event.name).toBe("test:event")
     expect(event.payload).toEqual({ value: 42 })
-    expect(event.timestamp).toBeInstanceOf(Date)
+    expect(typeof event.timestamp).toBe("number")
+    expect(event.timestamp).toBeGreaterThan(0)
     expect(event.causedBy).toBeUndefined()
   })
 
@@ -91,25 +173,26 @@ describe("makeEvent", () => {
     const causeId = await Effect.runPromise(makeEventId())
     const event = await Effect.runPromise(
       makeEvent("effect:event", {}, causeId)
-    ) as AnyEvent
+    )
 
     expect(event.causedBy).toBe(causeId)
   })
 })
 
-describe("Event type", () => {
-  it("AnyEvent accepts any event", async () => {
+describe("SerializedEvent type", () => {
+  it("SerializedEvent uses numeric timestamp", async () => {
     const id1 = await Effect.runPromise(makeEventId())
     const id2 = await Effect.runPromise(makeEventId())
     const id3 = await Effect.runPromise(makeEventId())
 
-    const events: Array<AnyEvent> = [
-      { id: id1, name: "a", payload: "string", timestamp: new Date() },
-      { id: id2, name: "b", payload: { complex: true }, timestamp: new Date() },
-      { id: id3, name: "c", payload: null, timestamp: new Date() }
+    const events: Array<SerializedEvent> = [
+      { id: id1, name: "a", payload: { value: "string" }, timestamp: Date.now() },
+      { id: id2, name: "b", payload: { complex: true }, timestamp: Date.now() },
+      { id: id3, name: "c", payload: {}, timestamp: Date.now() }
     ]
 
     expect(events).toHaveLength(3)
+    expect(typeof events[0].timestamp).toBe("number")
   })
 })
 
@@ -181,19 +264,19 @@ describe("WorkflowResult type", () => {
 describe("Workflow Errors (Data.TaggedError)", () => {
   it("WorkflowAgentError has correct tag and fields", () => {
     const error = new WorkflowAgentError({
-      agentName: "planner",
+      agent: "planner",
       message: "Agent failed to produce output"
     })
 
     expect(error._tag).toBe("WorkflowAgentError")
-    expect(error.agentName).toBe("planner")
+    expect(error.agent).toBe("planner")
     expect(error.message).toBe("Agent failed to produce output")
   })
 
   it("WorkflowAgentError supports cause for error chaining", () => {
     const originalError = new Error("Network failure")
     const error = new WorkflowAgentError({
-      agentName: "worker",
+      agent: "worker",
       message: "Execution failed",
       cause: originalError
     })
@@ -203,13 +286,13 @@ describe("Workflow Errors (Data.TaggedError)", () => {
 
   it("WorkflowValidationError has correct tag and fields", () => {
     const error = new WorkflowValidationError({
-      agentName: "judge",
+      agent: "judge",
       message: "Invalid output schema",
       path: "verdict"
     })
 
     expect(error._tag).toBe("WorkflowValidationError")
-    expect(error.agentName).toBe("judge")
+    expect(error.agent).toBe("judge")
     expect(error.path).toBe("verdict")
   })
 
@@ -237,7 +320,7 @@ describe("Workflow Errors (Data.TaggedError)", () => {
 
   it("WorkflowProviderError has correct tag and fields", () => {
     const error = new WorkflowProviderError({
-      agentName: "planner",
+      agent: "planner",
       code: "RATE_LIMITED",
       message: "Too many requests",
       retryable: true
@@ -251,7 +334,7 @@ describe("Workflow Errors (Data.TaggedError)", () => {
   it("WorkflowTimeoutError has correct tag and fields", () => {
     const error = new WorkflowTimeoutError({
       phase: "working",
-      agentName: "worker",
+      agent: "worker",
       timeoutMs: 30000
     })
 
@@ -304,15 +387,17 @@ describe("EventName type (compile-time)", () => {
       "phase:exited",
       "agent:started",
       "agent:completed",
-      "state:updated",
+      "state:intent",
+      "state:checkpoint",
+      "session:forked",
       "text:delta",
       "thinking:delta",
       "tool:called",
       "tool:result",
       "input:requested",
-      "input:response"
+      "input:received"
     ]
 
-    expect(validNames).toHaveLength(13)
+    expect(validNames).toHaveLength(15)
   })
 })

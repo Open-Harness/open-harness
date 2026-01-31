@@ -31,17 +31,9 @@ export { phase } from "./Engine/phase.js"
 export type { PhaseWorkflowDef, SimpleWorkflowDef, WorkflowDef } from "./Engine/workflow.js"
 export { isPhaseWorkflow, isSimpleWorkflow, workflow } from "./Engine/workflow.js"
 
-// Runtime execution
-export type { ExecuteOptions, WorkflowHandle } from "./Engine/runtime.js"
-export { executeWorkflow, streamWorkflow } from "./Engine/runtime.js"
-
-// Async iterator API
-export type { ExecuteWithRuntimeOptions, RuntimeConfig, WorkflowExecution } from "./Engine/execute.js"
-export { execute } from "./Engine/execute.js"
-
-// Simple Promise API
-export type { RunOptions, RunResult } from "./Engine/run.js"
-export { run, runSimple, runWithText } from "./Engine/run.js"
+// Simple Promise API - PRIMARY PUBLIC API (ADR-001)
+export type { RunOptions, RunResult, RuntimeConfig, WorkflowExecution } from "./Engine/run.js"
+export { run } from "./Engine/run.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -59,18 +51,18 @@ export type {
   AnyEvent,
   Event,
   EventId,
-  EventName,
+  InputReceivedEvent,
+  InputReceivedPayload,
   InputRequest,
   InputRequestedEvent,
   InputRequestedPayload,
-  InputResponseEvent,
-  InputResponsePayload,
   PhaseEnteredEvent,
   PhaseEnteredPayload,
   PhaseExitedEvent,
   PhaseExitedPayload,
+  StateCheckpointEvent,
+  StateIntentEvent,
   StateSnapshot,
-  StateUpdatedEvent,
   StateUpdatedPayload,
   TextDeltaEvent,
   TextDeltaPayload,
@@ -92,7 +84,6 @@ export type {
 // Event constants and utilities
 export {
   EventIdSchema,
-  EVENTS,
   makeEvent,
   makeEventId,
   parseEventId,
@@ -105,9 +96,27 @@ export {
   WorkflowValidationError
 } from "./Engine/types.js"
 
+// Wire format deserialization (ADR-004)
+export {
+  decodeSerializedEvent,
+  type EventName,
+  generateEventId,
+  type SerializedEvent,
+  SerializedEventSchema,
+  tagToEventName
+} from "./Domain/Events.js"
+
+// HITL payload schemas (ADR-008: Type-safe event parsing)
+export {
+  decodeInputReceivedPayload,
+  decodeInputRequestedPayload,
+  InputReceivedPayloadSchema,
+  InputRequestedPayloadSchema
+} from "./Domain/Events.js"
+
 // Provider infrastructure
-export type { AgentExecutionContext, AgentExecutionResult, ProviderRegistryService } from "./Engine/provider.js"
-export { makeInMemoryProviderRegistry, ProviderNotFoundError, ProviderRegistry, runAgentDef } from "./Engine/provider.js"
+export type { AgentExecutionContext, AgentExecutionResult } from "./Engine/provider.js"
+export { runAgentDef } from "./Engine/provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Provider Types (used by server package)
@@ -122,34 +131,12 @@ export type {
 } from "./Domain/Provider.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Interactions (HITL)
-// ─────────────────────────────────────────────────────────────────
-
-export type {
-  AnyEvent as AnyInteractionEvent,
-  Event as InteractionEvent,
-  HandlerDefinition,
-  HandlerResult,
-  Interaction,
-  InteractionConfig,
-  InteractionRequestPayload,
-  InteractionResponsePayload,
-  InteractionType
-} from "./Domain/Interaction.js"
-export {
-  createInteraction,
-  findPendingInteractions,
-  isInteractionRequest,
-  isInteractionResponse
-} from "./Domain/Interaction.js"
-
-// ─────────────────────────────────────────────────────────────────
 // IDs
 // ─────────────────────────────────────────────────────────────────
 
-export type { AgentId, InteractionEventId } from "./Domain/Ids.js"
+export type { AgentId } from "./Domain/Ids.js"
 export type { SessionId, WorkflowId } from "./Domain/Ids.js"
-export { SessionIdSchema, WorkflowIdSchema } from "./Domain/Ids.js"
+export { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "./Domain/Ids.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Errors
@@ -167,19 +154,13 @@ export {
 } from "./Domain/Errors.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Internal (for library authors / advanced use)
+// Internal Utilities (advanced use - prefer "@open-scaffold/core/internal")
 // ─────────────────────────────────────────────────────────────────
 
-// Services (Effect Context.Tag) - for building custom layers
-export * as Services from "./Services/index.js"
-
-// Utilities (pure functions)
+// computeStateAt is kept in main export since it's useful for state derivation
 export { computeStateAt } from "./Engine/utils.js"
 
-// Layers - runtime configurations (loggers, in-memory)
-export * as Layers from "./Layers/index.js"
-
-// Session Context (FiberRef for ambient context)
+// Session Context (FiberRef for ambient context) - kept for advanced workflow customization
 export type { SessionContext } from "./Domain/Context.js"
 export {
   getSessionContext,
@@ -187,3 +168,10 @@ export {
   SessionContextRef,
   withSessionContext
 } from "./Domain/Context.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers (HITL utilities per ADR-002)
+// ─────────────────────────────────────────────────────────────────
+
+export type { HumanInputHandler } from "./helpers/index.js"
+export { autoApprove, cliPrompt } from "./helpers/index.js"

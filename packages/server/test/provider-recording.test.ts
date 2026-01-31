@@ -19,9 +19,11 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { type AgentStreamEvent, type ProviderRunOptions, Services } from "@open-scaffold/core"
+import type { ProviderRunOptions } from "@open-scaffold/core"
+import { makeTextDelta, Services } from "@open-scaffold/core/internal"
 
-import { AnthropicProvider, ProviderRecorderLive } from "../src/index.js"
+import { AnthropicProvider } from "../src/index.js"
+import { ProviderRecorderLive } from "../src/internal.js"
 
 // Simple hash for testing (production uses hashProviderRequest from core internals)
 const simpleHash = (prompt: string): string => `test-${Buffer.from(prompt).toString("base64").slice(0, 20)}`
@@ -78,18 +80,19 @@ describe("ProviderRecorderLive (Persistent Recording)", () => {
         Stream.runDrain
       )
 
-      // Save to persistent DB
-      yield* recorder.save({
-        hash,
+      // Save to persistent DB using incremental API
+      const recordingId = yield* recorder.startRecording(hash, {
         prompt: providerOptions.prompt,
-        provider: provider.name,
-        streamData: recordedEvents,
-        result: {
-          stopReason: recordedResult!.stopReason,
-          output: recordedResult!.output,
-          ...(recordedResult!.text ? { text: recordedResult!.text } : {}),
-          ...(recordedResult!.usage ? { usage: recordedResult!.usage } : {})
-        }
+        provider: provider.name
+      })
+      for (const event of recordedEvents) {
+        yield* recorder.appendEvent(recordingId, event)
+      }
+      yield* recorder.finalizeRecording(recordingId, {
+        stopReason: recordedResult!.stopReason,
+        output: recordedResult!.output,
+        ...(recordedResult!.text ? { text: recordedResult!.text } : {}),
+        ...(recordedResult!.usage ? { usage: recordedResult!.usage } : {})
       })
 
       // Verify save worked
@@ -162,13 +165,14 @@ describe("ProviderRecorderLive (Persistent Recording)", () => {
     const program = Effect.gen(function*() {
       const recorder = yield* Services.ProviderRecorder
 
-      // Save a dummy entry
-      yield* recorder.save({
-        hash: "test-hash",
+      // Save a dummy entry using incremental API
+      const recordingId = yield* recorder.startRecording("test-hash", {
         prompt: "test prompt",
-        provider: "test-provider",
-        streamData: [],
-        result: { stopReason: "end_turn", output: { answer: "test", confidence: 1 } }
+        provider: "test-provider"
+      })
+      yield* recorder.finalizeRecording(recordingId, {
+        stopReason: "end_turn",
+        output: { answer: "test", confidence: 1 }
       })
 
       // Verify it exists
@@ -306,15 +310,8 @@ describe("ProviderRecorderLive (Incremental Recording)", () => {
       })
 
       // Append some events
-      yield* recorder.appendEvent(recordingId, {
-        _tag: "TextDelta",
-        text: "Hello"
-      } as AgentStreamEvent)
-
-      yield* recorder.appendEvent(recordingId, {
-        _tag: "TextDelta",
-        text: " World"
-      } as AgentStreamEvent)
+      yield* recorder.appendEvent(recordingId, makeTextDelta("Hello"))
+      yield* recorder.appendEvent(recordingId, makeTextDelta(" World"))
 
       // DO NOT finalize - this simulates a crash
 
@@ -345,20 +342,14 @@ describe("ProviderRecorderLive (Incremental Recording)", () => {
         prompt: "test prompt",
         provider: "test-provider"
       })
-      yield* recorder.appendEvent(firstRecordingId, {
-        _tag: "TextDelta",
-        text: "First attempt"
-      } as AgentStreamEvent)
+      yield* recorder.appendEvent(firstRecordingId, makeTextDelta("First attempt"))
 
       // Start second recording - should clean up the first one
       const secondRecordingId = yield* recorder.startRecording(hash, {
         prompt: "test prompt",
         provider: "test-provider"
       })
-      yield* recorder.appendEvent(secondRecordingId, {
-        _tag: "TextDelta",
-        text: "Second attempt"
-      } as AgentStreamEvent)
+      yield* recorder.appendEvent(secondRecordingId, makeTextDelta("Second attempt"))
 
       // Finalize the second one
       yield* recorder.finalizeRecording(secondRecordingId, {
@@ -375,7 +366,7 @@ describe("ProviderRecorderLive (Incremental Recording)", () => {
 
     expect(entry).not.toBeNull()
     expect(entry!.streamData.length).toBe(1) // Only the second recording's event
-    expect((entry!.streamData[0] as { text: string }).text).toBe("Second attempt")
+    expect((entry!.streamData[0] as { delta: string }).delta).toBe("Second attempt")
 
     console.log("First recording ID:", firstRecordingId)
     console.log("Second recording ID:", secondRecordingId)
