@@ -53,6 +53,19 @@
         "tsx": "^4.19.0",
       },
     },
+    "apps/harness-loop": {
+      "name": "@open-scaffold/harness-loop",
+      "version": "0.0.0",
+      "dependencies": {
+        "@open-scaffold/core": "*",
+        "@open-scaffold/server": "*",
+        "effect": "^3.16.4",
+        "zod": "^3.24.2",
+      },
+      "devDependencies": {
+        "tsx": "^4.19.0",
+      },
+    },
     "packages/client": {
       "name": "@open-scaffold/client",
       "version": "0.0.0",
@@ -490,6 +503,8 @@
     "@open-scaffold/client": ["@open-scaffold/client@workspace:packages/client"],
 
     "@open-scaffold/core": ["@open-scaffold/core@workspace:packages/core"],
+
+    "@open-scaffold/harness-loop": ["@open-scaffold/harness-loop@workspace:apps/harness-loop"],
 
     "@open-scaffold/server": ["@open-scaffold/server@workspace:packages/server"],
 

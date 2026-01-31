@@ -1,0 +1,25 @@
+{
+  "name": "@open-scaffold/harness-loop",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Task executor for Claude Code task lists using Open Harness workflow engine",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -b tsconfig.json",
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@open-scaffold/core": "*",
+    "@open-scaffold/server": "*",
+    "effect": "^3.16.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
