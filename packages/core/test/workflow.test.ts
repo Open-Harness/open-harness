@@ -343,7 +343,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
       input: "write tests",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -398,7 +398,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
 
     const runtime: RuntimeConfig = {
       mode: "playback",
-      recorder: seedRecorder(fixtures),
+      recorder: await seedRecorder(fixtures),
       database: ":memory:"
     }
 
@@ -490,7 +490,7 @@ describe("workflow behavioral (execution and phase transitions)", () => {
       input: "build API",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onPhaseChanged: phaseChanges }

@@ -5,7 +5,8 @@ import * as path from "node:path"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { type EventId, Services, type SessionId } from "@open-scaffold/core"
+import type { EventId, SessionId } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { EventStoreLive, StateSnapshotStoreLive } from "../src/internal.js"
 
 const makeDb = () => {

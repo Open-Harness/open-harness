@@ -7,8 +7,7 @@
  * @module
  */
 
-import type { Effect, Stream } from "effect"
-import { Context } from "effect"
+import { Context, Effect, PubSub, Stream } from "effect"
 
 import type { SerializedEvent } from "../Domain/Events.js"
 import type { SessionId } from "../Domain/Ids.js"
@@ -38,3 +37,44 @@ export class EventBus extends Context.Tag("@open-scaffold/EventBus")<
   EventBus,
   EventBusService
 >() {}
+
+// ─────────────────────────────────────────────────────────────────
+// Live Implementation (PubSub-backed)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Live EventBus backed by an unbounded PubSub.
+ *
+ * Publishes all events into a single bus and filters by sessionId at
+ * subscription time to keep the EventBus interface simple.
+ *
+ * This is the only implementation - no mocks or stubs per CLAUDE.md.
+ *
+ * @example
+ * ```typescript
+ * const program = Effect.gen(function*() {
+ *   const bus = yield* EventBus
+ *   yield* bus.publish(sessionId, event)
+ * })
+ *
+ * Effect.runPromise(program.pipe(Effect.provide(Layer.effect(EventBus, EventBusLive))))
+ * ```
+ */
+export const EventBusLive = Effect.gen(function*() {
+  const bus = yield* PubSub.unbounded<{ sessionId: SessionId; event: SerializedEvent }>()
+
+  return EventBus.of({
+    publish: (sessionId, event) => PubSub.publish(bus, { sessionId, event }).pipe(Effect.asVoid),
+    subscribe: (sessionId) =>
+      Stream.unwrapScoped(
+        PubSub.subscribe(bus).pipe(
+          Effect.map((queue) =>
+            Stream.fromQueue(queue).pipe(
+              Stream.filter((item) => item.sessionId === sessionId),
+              Stream.map((item) => item.event)
+            )
+          )
+        )
+      )
+  })
+})

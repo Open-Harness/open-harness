@@ -1,5 +1,5 @@
-import type { AnyEvent, SessionId } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core"
+import type { SerializedEvent, SessionId } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { Effect, PubSub, Stream } from "effect"
 
 /**
@@ -9,7 +9,7 @@ import { Effect, PubSub, Stream } from "effect"
  * subscription time to keep the core EventBus interface unchanged.
  */
 export const EventBusLive = Effect.gen(function*() {
-  const bus = yield* PubSub.unbounded<{ sessionId: SessionId; event: AnyEvent }>()
+  const bus = yield* PubSub.unbounded<{ sessionId: SessionId; event: SerializedEvent }>()
 
   return Services.EventBus.of({
     publish: (sessionId, event) => PubSub.publish(bus, { sessionId, event }).pipe(Effect.asVoid),

@@ -339,7 +339,7 @@ describe("phase behavioral (next() routing)", () => {
       input: "go",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onPhaseChanged: phaseChanges }
@@ -403,7 +403,7 @@ describe("phase behavioral (next() routing)", () => {
       input: "evaluate",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -468,7 +468,7 @@ describe("phase behavioral (next() routing)", () => {
       input: "go",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onAgentStarted: agentStartedCalls }

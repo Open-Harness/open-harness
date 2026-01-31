@@ -5,7 +5,7 @@
  */
 
 import type { WorkflowDef } from "@open-scaffold/core"
-import { AnthropicProvider, OpenScaffold } from "@open-scaffold/server"
+import { OpenScaffold } from "@open-scaffold/server"
 import { resolve } from "path"
 
 import { loadWorkflow } from "../loader.js"
@@ -31,12 +31,7 @@ export async function runCommand(
     // Create scaffold instance
     const scaffold = OpenScaffold.create({
       database: `file:${resolve(options.database)}`,
-      mode: "live",
-      providers: {
-        "claude-sonnet-4-5": AnthropicProvider({ model: "claude-sonnet-4-5" }),
-        "claude-haiku-4-5": AnthropicProvider({ model: "claude-haiku-4-5" }),
-        "claude-opus-4-5": AnthropicProvider({ model: "claude-opus-4-5" }),
-      }
+      mode: "live"
     })
 
     // Create server for the workflow (loadWorkflow returns unknown; cast to WorkflowDef)

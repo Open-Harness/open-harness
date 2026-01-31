@@ -7,7 +7,7 @@
  * @module
  */
 
-import type { AnyEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
 
 import { useCreateSessionMutation, useSendInputMutation } from "../primitives/index.js"
 
@@ -24,9 +24,9 @@ export interface WorkflowActionsResult {
 
   /**
    * Send an input event to the current session.
-   * @param event - The event to send (typically an input:response)
+   * @param event - The event to send (typically an input:received)
    */
-  readonly send: (event: AnyEvent) => Promise<void>
+  readonly send: (event: SerializedEvent) => Promise<void>
 
   /** Whether a session is being created */
   readonly isCreating: boolean

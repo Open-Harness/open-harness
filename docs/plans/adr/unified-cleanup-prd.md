@@ -425,15 +425,31 @@ if (_tag === "InputRequested") {
 | 7.2 | DELETE `EventIdSchema`, `makeEventId`, `parseEventId` from `types.ts` |
 | 7.3 | Update all imports to use `Domain/Ids.ts` |
 
-### Phase 8: Remove Legacy Table Lookups (MEDIUM PRIORITY)
+### Phase 8: Consolidate ProviderRecorder to Single Table Structure (MEDIUM PRIORITY)
 
-**Goal:** Single table structure for ProviderRecorder.
+**Goal:** Single table structure for ProviderRecorder. All methods use `recording_sessions` + `recording_events` tables.
+
+**Background:** The original tasks (8.1-8.3) were incomplete. Simply removing the lookup without migrating `save()` would create a data loss bug - recordings saved via `save()` would never be loadable.
+
+The correct fix requires migrating ALL methods to the new table structure:
 
 | Task | Action |
 |------|--------|
-| 8.1 | Remove "First check legacy provider_recordings table" code from `ProviderRecorderLive.ts` |
-| 8.2 | Remove legacy store check from `Server.ts:88` |
-| 8.3 | Verify recordings still work |
+| 8.1 | Migrate `save()` in `LibSQL.ts` to use `recording_sessions` + `recording_events` |
+| 8.2 | Migrate `delete()` in `LibSQL.ts` to use `recording_sessions` + `recording_events` |
+| 8.3 | Migrate `list()` in `LibSQL.ts` to use `recording_sessions` |
+| 8.4 | Remove dual-lookup from `load()` in `LibSQL.ts` (only read new tables) |
+| 8.5 | Apply same migrations to `packages/server/src/store/ProviderRecorderLive.ts` |
+| 8.6 | Unify `packages/server/src/http/Server.ts` to single Map (remove dual store/incrementalRecordings) |
+| 8.7 | Delete `rowToRecordingEntry()` helper (no longer needed) |
+| 8.8 | Delete `RecordingRow` type (no longer needed) |
+| 8.9 | Optionally: Remove `provider_recordings` DDL from migrations |
+| 8.10 | Verify recordings still work (run tests) |
+
+**Why the original tasks were wrong:**
+- Task 8.1 said "remove lookup" but `save()` still wrote to `provider_recordings`
+- Result: data written via `save()` could never be loaded (silent data loss)
+- The fix requires migrating writes AND reads, not just reads
 
 ### Phase 9: Delete Dead Code (LOW PRIORITY)
 
@@ -451,8 +467,10 @@ if (_tag === "InputRequested") {
 | Task | Action |
 |------|--------|
 | 10.1 | Move `Services` and `Layers` exports to `/internal` |
-| 10.2 | Rename `Workflow*` errors per ADR-007 |
-| 10.3 | Remove legacy `WorkflowProvider` export from client |
+| 10.2 | Move schema decoders (`decodeAgentRunResult`, `decodeAgentStreamEvent`, `AgentRunResultSchema`, `AgentStreamEventSchema`) to `/internal` |
+| 10.3 | Move factory functions (`makeTextDelta`, `makeTextComplete`, `makeThinkingDelta`, `makeToolCall`, `makeToolResult`, `makeResult`, `makeSessionInit`, `makeStop`, `makeUsage`) to `/internal` |
+| 10.4 | Rename `Workflow*` errors per ADR-007 |
+| 10.5 | Remove legacy `WorkflowProvider` export from client |
 
 ### Phase 10.5: Delete Legacy React Surface (REQUIRED for “Zero Legacy”)
 
@@ -646,8 +664,14 @@ InMemory.ts                       → DELETE (entire file)
 Domain/index.ts                   → DELETE (orphaned)
 
 # Code Paths
-Legacy table lookup               → DELETE (ProviderRecorderLive.ts, Server.ts)
+Legacy table lookup               → MIGRATE all methods to new tables, then DELETE lookup (ProviderRecorderLive.ts, LibSQL.ts)
+Legacy store Map in Server.ts     → UNIFY to single Map (Server.ts:60-81)
 Legacy providers map              → DELETE (OpenScaffold.ts, Server.ts)
+
+# Dead Code After Migration
+rowToRecordingEntry()             → DELETE (LibSQL.ts, ProviderRecorderLive.ts - no longer needed)
+RecordingRow type                 → DELETE (LibSQL.ts, ProviderRecorderLive.ts - no longer needed)
+provider_recordings DDL           → DELETE (optional - table is unused after migration)
 WorkflowProvider export           → DELETE (client/react/index.ts)
 
 # Comments

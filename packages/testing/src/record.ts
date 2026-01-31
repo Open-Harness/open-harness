@@ -14,7 +14,7 @@ import { Effect, Stream } from "effect"
 import { z } from "zod"
 
 import type { AgentStreamEvent, ProviderRunOptions } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { AnthropicProvider, ProviderRecorderLive } from "@open-scaffold/server"
 
 import { recordingsDbUrl } from "./index.js"

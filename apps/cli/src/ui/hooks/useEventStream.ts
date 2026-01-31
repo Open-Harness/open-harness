@@ -53,9 +53,10 @@ export function useEventStream(
 
         setEvents((prev) => [...prev, event])
 
-        // Handle specific event types
+        // Handle specific event types (per ADR-008 canonical names)
         switch (event.name) {
-          case "state:updated":
+          case "state:intent":
+          case "state:checkpoint":
             setState((event.payload as { state: unknown }).state)
             break
 

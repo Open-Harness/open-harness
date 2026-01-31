@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { AnyEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
 import { useQuery } from "@tanstack/react-query"
 
 import type { SessionInfo, StateAtResult } from "../../Contract.js"
@@ -62,10 +62,10 @@ export const useSessionQuery = (sessionId: string | null) => {
  * @param sessionId - The session ID (used for query key and enable check)
  */
 export const useEventsQuery = (sessionId: string | null) => {
-  return useQuery<ReadonlyArray<AnyEvent>, Error>({
+  return useQuery<ReadonlyArray<SerializedEvent>, Error>({
     queryKey: workflowKeys.events(sessionId),
     // Initial data is empty - populated by SSE subscription
-    queryFn: () => Promise.resolve([] as ReadonlyArray<AnyEvent>),
+    queryFn: () => Promise.resolve([] as ReadonlyArray<SerializedEvent>),
     enabled: !!sessionId,
     staleTime: Infinity // SSE keeps it fresh
   })

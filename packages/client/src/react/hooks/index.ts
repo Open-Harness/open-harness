@@ -8,7 +8,7 @@
  */
 
 // Unified hook (Tier 2 - main public API)
-export type { UseWorkflowResult } from "./useWorkflow.js"
+export type { WorkflowResult } from "./useWorkflow.js"
 export { useWorkflow } from "./useWorkflow.js"
 
 // Data access (Tier 1)

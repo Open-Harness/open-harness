@@ -12,15 +12,14 @@ import { z } from "zod"
 
 import {
   agent,
-  type AnyEvent,
   EVENTS,
   type ProviderRunOptions,
-  Services,
+  type SerializedEvent,
   type SessionId,
   workflow
 } from "@open-scaffold/core"
-// executeWorkflow is internal API (ADR-001) - import from internal entrypoint
-import { executeWorkflow } from "@open-scaffold/core/internal"
+// executeWorkflow and Services are internal API (ADR-001) - import from internal entrypoint
+import { executeWorkflow, Services } from "@open-scaffold/core/internal"
 
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive } from "../src/internal.js"
@@ -145,12 +144,12 @@ describe("EventBus broadcast integration", () => {
     // Verify events were broadcast through the EventBus
     expect(broadcastedEvents.length).toBeGreaterThan(0)
 
-    const eventNames = broadcastedEvents.map((e: AnyEvent) => e.name)
+    const eventNames = broadcastedEvents.map((e: SerializedEvent) => e.name)
 
     // Key lifecycle events should have been broadcast
     expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
     expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
-    expect(eventNames).toContain(EVENTS.STATE_UPDATED)
+    expect(eventNames).toContain(EVENTS.STATE_INTENT)
 
     // Events should arrive in order
     const startedIdx = eventNames.indexOf(EVENTS.WORKFLOW_STARTED)

@@ -106,7 +106,7 @@ describe("EventStore persistence integration", () => {
     // Run workflow with file-backed database, using playback mode
     const runtime: RuntimeConfig = {
       mode: "playback",
-      recorder: seedRecorder(fixtures),
+      recorder: await seedRecorder(fixtures),
       database: url
     }
 
@@ -137,7 +137,7 @@ describe("EventStore persistence integration", () => {
     // Note: agent:started and agent:completed are emitted by runAgentDef and collected
     // in-memory, but only events emitted via the runtime's emitEvent are persisted to EventStore.
     const eventNames = (persistedEvents as Array<{ name: string }>).map((e) => e.name)
-    expect(eventNames).toContain(EVENTS.STATE_UPDATED)
+    expect(eventNames).toContain(EVENTS.STATE_INTENT)
     expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
     expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
 
@@ -162,7 +162,7 @@ describe("EventStore persistence integration", () => {
 
     const runtime: RuntimeConfig = {
       mode: "playback",
-      recorder: seedRecorder(fixtures),
+      recorder: await seedRecorder(fixtures),
       database: url
     }
 

@@ -58,10 +58,13 @@ describe("Observer type exports", () => {
 
   it("InputRequest type is importable", () => {
     // Per ADR-002: Only "approval" and "choice" types are valid
+    // Per ADR-008: id field is required for request-response correlation
     const request: InputRequest = {
+      id: "test-request-1",
       prompt: "What do you think?",
       type: "approval"
     }
+    expect(request.id).toBe("test-request-1")
     expect(request.prompt).toBe("What do you think?")
     expect(request.type).toBe("approval")
   })
@@ -107,7 +110,7 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
       input: "go",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -124,7 +127,7 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
       input: "go",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onEvent: eventSpy }
@@ -146,7 +149,7 @@ describe("RuntimeConfig behavioral (config affects runtime)", () => {
       input: "go",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: {

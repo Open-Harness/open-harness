@@ -40,7 +40,7 @@ function createMockedObserver(): WorkflowObserver<unknown> {
   return {
     onStarted: vi.fn(),
     onCompleted: vi.fn(),
-    onErrored: vi.fn(),
+    onError: vi.fn(),
     onStateChanged: vi.fn(),
     onPhaseChanged: vi.fn(),
     onAgentStarted: vi.fn(),
@@ -204,7 +204,7 @@ describe("dispatchToObserver (Match.exhaustive)", () => {
 
       dispatchToObserver(observer, event)
 
-      // StateIntent now triggers onStateChanged for backward compatibility
+      // StateIntent triggers onStateChanged with state and patches
       expect(observer.onStateChanged).toHaveBeenCalledWith(
         testState,
         [{ op: "replace", path: "/count", value: 5 }]

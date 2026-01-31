@@ -2,25 +2,23 @@
  * Test provider helper using ProviderRecorder playback.
  *
  * Replaces mock-provider.ts with real ProviderRecorder infrastructure.
- * Pre-seeds an in-memory recorder with fixture recordings, then uses
+ * Pre-seeds a LibSQL :memory: recorder with fixture recordings, then uses
  * playback mode so the runtime replays them deterministically.
  *
  * NO MOCKS. This uses the real ProviderRecorder service backed by
- * in-memory storage (makeInMemoryProviderRecorder).
+ * LibSQL :memory: (real SQLite with real migrations).
  */
 
-import { Effect, Layer } from "effect"
+import { Context, Effect, Layer, Scope } from "effect"
 import type { ZodType } from "zod"
 
+import type { StoreError } from "../../src/Domain/Errors.js"
 import { hashProviderRequest } from "../../src/Domain/Hash.js"
 import type { AgentProvider, AgentRunResult, AgentStreamEvent } from "../../src/Domain/Provider.js"
-import { InMemoryEventBus, InMemoryEventStore, makeInMemoryProviderRecorder } from "../../src/Layers/InMemory.js"
+import { EventStoreLive, ProviderRecorderLive } from "../../src/Layers/LibSQL.js"
+import { EventBus, EventBusLive } from "../../src/Services/EventBus.js"
 import { ProviderModeContext } from "../../src/Services/ProviderMode.js"
-import {
-  ProviderRecorder,
-  type ProviderRecorderService,
-  type RecordingEntry
-} from "../../src/Services/ProviderRecorder.js"
+import { ProviderRecorder, type RecordingEntry } from "../../src/Services/ProviderRecorder.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Fixture Recording Types
@@ -119,33 +117,131 @@ function computeFixtureHash(fixture: SimpleFixture): string {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Recorder Seeding
+// Recording Entry Builder
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Create and seed an in-memory ProviderRecorderService with fixture recordings.
+ * Build a RecordingEntry from a SimpleFixture.
+ */
+function buildRecordingEntry(fixture: SimpleFixture): Omit<RecordingEntry, "recordedAt"> {
+  return {
+    hash: computeFixtureHash(fixture),
+    prompt: fixture.prompt,
+    provider: "test-fixture",
+    streamData: buildStreamEvents(fixture),
+    result: buildResult(fixture)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Seeded Recorder Service (for direct RuntimeConfig injection)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Create a seeded ProviderRecorderService using real LibSQL :memory:.
+ *
+ * This is an Effect that builds the service and seeds fixtures.
+ * Use in test setup with Effect.runPromise or wrap in beforeAll.
  *
  * @param fixtures - Array of simple fixtures to pre-seed
- * @returns A ProviderRecorderService pre-populated with recordings
+ * @returns Effect that yields a seeded ProviderRecorderService
  */
-export function seedRecorder(fixtures: ReadonlyArray<SimpleFixture>): ProviderRecorderService {
-  const recorder = makeInMemoryProviderRecorder()
+export const makeSeededRecorder = (
+  fixtures: ReadonlyArray<SimpleFixture>
+): Effect.Effect<ProviderRecorder["Type"], StoreError, Scope.Scope> =>
+  Effect.gen(function*() {
+    // Build the real LibSQL layer (runs migrations)
+    const baseLayer = ProviderRecorderLive({ url: ":memory:" })
+    const context = yield* Layer.build(baseLayer)
+    const service = Context.get(context, ProviderRecorder)
 
-  // Pre-seed all fixtures synchronously via Effect.runSync
-  for (const fixture of fixtures) {
-    const hash = computeFixtureHash(fixture)
-    const entry: Omit<RecordingEntry, "recordedAt"> = {
-      hash,
-      prompt: fixture.prompt,
-      provider: "test-fixture",
-      streamData: buildStreamEvents(fixture),
-      result: buildResult(fixture)
+    // Seed all fixtures
+    for (const fixture of fixtures) {
+      const entry = buildRecordingEntry(fixture)
+      yield* service.save(entry)
     }
-    Effect.runSync(recorder.save(entry))
-  }
 
-  return recorder
+    return service
+  })
+
+/**
+ * Create a seeded ProviderRecorderService.
+ *
+ * Returns a Promise that resolves to the seeded service.
+ * Use in test setup with `beforeAll` or `beforeEach`.
+ *
+ * Note: The Scope is NOT finalized - the LibSQL client stays open for the
+ * process lifetime. For tests running in isolation this is acceptable since:
+ * 1. Each test file runs in its own isolate
+ * 2. LibSQL :memory: databases are ephemeral anyway
+ * 3. Process cleanup handles any resources when the test completes
+ *
+ * @example
+ * ```typescript
+ * let recorder: ProviderRecorderService
+ *
+ * beforeAll(async () => {
+ *   recorder = await seedRecorder(fixtures)
+ * })
+ *
+ * it("uses the recorder", async () => {
+ *   const result = await run(workflow, { runtime: { recorder } })
+ * })
+ * ```
+ *
+ * @param fixtures - Array of simple fixtures to pre-seed
+ * @returns Promise resolving to a ProviderRecorderService pre-populated with recordings
+ */
+export async function seedRecorder(fixtures: ReadonlyArray<SimpleFixture>): Promise<ProviderRecorder["Type"]> {
+  // Create a scope that won't be finalized until process exit.
+  // This keeps the LibSQL client open for the entire test duration.
+  // For test isolation this is fine - each test file runs separately.
+  const scope = Effect.runSync(Scope.make())
+
+  return Effect.runPromise(
+    makeSeededRecorder(fixtures).pipe(
+      Effect.provideService(Scope.Scope, scope)
+    )
+  )
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Layer-Based Test Recorder (Real LibSQL :memory:)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Create a ProviderRecorder layer with pre-seeded fixtures.
+ *
+ * Uses Layer.unwrapEffect to:
+ * 1. Build the real LibSQL layer (runs migrations)
+ * 2. Seed all fixtures into the database
+ * 3. Return a layer with the seeded service
+ *
+ * This ensures migrations run BEFORE fixtures are seeded.
+ *
+ * @param fixtures - Array of simple fixtures to pre-seed
+ * @returns A Layer providing ProviderRecorder with seeded fixtures
+ */
+export const makeTestRecorderLayer = (
+  fixtures: ReadonlyArray<SimpleFixture>
+): Layer.Layer<ProviderRecorder, StoreError, never> =>
+  Layer.unwrapScoped(
+    Effect.gen(function*() {
+      // Build the real LibSQL layer (runs migrations)
+      const baseLayer = ProviderRecorderLive({ url: ":memory:" })
+      const context = yield* Layer.build(baseLayer)
+      const service = Context.get(context, ProviderRecorder)
+
+      // Seed all fixtures
+      for (const fixture of fixtures) {
+        const entry = buildRecordingEntry(fixture)
+        yield* service.save(entry)
+      }
+
+      // Return layer with seeded service
+      return Layer.succeed(ProviderRecorder, service)
+    })
+  )
 
 // ─────────────────────────────────────────────────────────────────
 // Test Runtime Layer (Playback Mode)
@@ -198,29 +294,30 @@ export const testProvider = createTestProvider()
  *
  * This provides all the services needed to run workflows in tests:
  * - ProviderModeContext set to "playback"
- * - ProviderRecorder pre-seeded with fixtures
- * - EventStore (in-memory)
- * - EventBus (in-memory)
+ * - ProviderRecorder pre-seeded with fixtures (LibSQL :memory:)
+ * - EventStore (LibSQL :memory:)
+ * - EventBus (real PubSub)
  *
+ * Per CLAUDE.md: Uses real implementations with :memory: databases - no mocks.
  * Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly.
  */
 export const createTestRuntimeLayer = (options: TestRuntimeOptions) => {
   const { fixtures } = options
 
-  // Seed the recorder with fixtures
-  const recorder = seedRecorder(fixtures)
-
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, { mode: "playback" as const })
 
-  const ProviderRecorderLayer = Layer.succeed(ProviderRecorder, recorder)
+  // Real LibSQL :memory: with pre-seeded fixtures
+  const RecorderLayer = makeTestRecorderLayer(fixtures)
 
-  const EventStoreLayer = InMemoryEventStore
+  // Real LibSQL :memory: event store
+  const EventStoreLayer = EventStoreLive({ url: ":memory:" })
 
-  const EventBusLayer = InMemoryEventBus
+  // Real PubSub-backed event bus
+  const EventBusLayer = Layer.effect(EventBus, EventBusLive)
 
   return Layer.mergeAll(
     ProviderModeLayer,
-    ProviderRecorderLayer,
+    RecorderLayer,
     EventStoreLayer,
     EventBusLayer
   )

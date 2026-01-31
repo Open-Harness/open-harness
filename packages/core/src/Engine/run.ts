@@ -13,9 +13,8 @@ import { mkdirSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 
-import { InMemoryEventBus } from "../Layers/InMemory.js"
 import { EventStoreLive } from "../Layers/LibSQL.js"
-import { EventBus } from "../Services/EventBus.js"
+import { EventBus, EventBusLive } from "../Services/EventBus.js"
 import { EventStore } from "../Services/EventStore.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../Services/ProviderRecorder.js"
@@ -219,7 +218,6 @@ export function run<S, Input, Phases extends string = never>(
   let isAborted = false
 
   // Build service layers from runtime config
-  // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
   const { runtime } = options
 
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, {
@@ -243,7 +241,7 @@ export function run<S, Input, Phases extends string = never>(
 
   const EventBusLayer = runtime.eventBus
     ? Layer.succeed(EventBus, runtime.eventBus)
-    : InMemoryEventBus
+    : Layer.effect(EventBus, EventBusLive)
 
   const runtimeLayer = Layer.mergeAll(
     ProviderModeLayer,

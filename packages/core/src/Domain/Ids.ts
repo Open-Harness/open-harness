@@ -89,6 +89,12 @@ export const makeEventId = (): Effect.Effect<EventId, never, never> => Effect.sy
  */
 export const parseEventId = Schema.decodeUnknown(EventIdSchema)
 
+/**
+ * Generate a new EventId synchronously.
+ * Use this in plain functions. For Effect contexts, use makeEventId instead.
+ */
+export const generateEventId = (): EventId => crypto.randomUUID() as EventId
+
 // ─────────────────────────────────────────────────────────────────
 // WorkflowId - Simple branded string (not UUID)
 // ─────────────────────────────────────────────────────────────────

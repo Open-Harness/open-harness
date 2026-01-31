@@ -150,7 +150,7 @@ describe("executeWorkflow", () => {
       expect(result.state.tasks).toContain("Task completed")
     })
 
-    it("captures Immer patches in state:updated events", async () => {
+    it("captures Immer patches in state:intent events", async () => {
       const simpleWorkflow = workflow<TestState>({
         name: "patches-test",
         initialState: { goal: "", tasks: [], done: false },
@@ -166,11 +166,11 @@ describe("executeWorkflow", () => {
         { fixtures }
       )
 
-      // Find state:updated events
-      const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_UPDATED)
+      // Find state:intent events
+      const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_INTENT)
       expect(stateEvents.length).toBeGreaterThan(0)
 
-      // Verify patches are present in state:updated events
+      // Verify patches are present in state:intent events
       for (const event of stateEvents) {
         const payload = event.payload as { state: unknown; patches?: Array<unknown>; inversePatches?: Array<unknown> }
         expect(payload.patches).toBeDefined()
@@ -226,13 +226,14 @@ describe("EVENTS constant", () => {
     expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
     expect(EVENTS.AGENT_STARTED).toBe("agent:started")
     expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
-    expect(EVENTS.STATE_UPDATED).toBe("state:updated")
+    expect(EVENTS.STATE_INTENT).toBe("state:intent")
+    expect(EVENTS.STATE_CHECKPOINT).toBe("state:checkpoint")
     expect(EVENTS.TEXT_DELTA).toBe("text:delta")
     expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
     expect(EVENTS.TOOL_CALLED).toBe("tool:called")
     expect(EVENTS.TOOL_RESULT).toBe("tool:result")
     expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
-    expect(EVENTS.INPUT_RESPONSE).toBe("input:response")
+    expect(EVENTS.INPUT_RECEIVED).toBe("input:received")
   })
 })
 

@@ -8,35 +8,16 @@
  * @module
  */
 
-import type { AnyEvent, EventId } from "@open-scaffold/core"
+import { type SerializedEvent, SerializedEventSchema } from "@open-scaffold/core"
 import { useQueryClient } from "@tanstack/react-query"
+import { Option, Schema } from "effect"
 import { useEffect } from "react"
 
 import { useWorkflowClient } from "../WorkflowClientProvider.js"
 import { workflowKeys } from "./queries.js"
 
-/**
- * SSE event format (JSON with numeric timestamp).
- * This matches the SerializedEvent format from the server.
- */
-interface SSEEvent {
-  readonly id: string
-  readonly name: string
-  readonly payload: Record<string, unknown>
-  readonly timestamp: number
-  readonly causedBy?: string
-}
-
-/**
- * Convert SSE event (with numeric timestamp) to AnyEvent (with Date).
- */
-const parseSSEEvent = (sseEvent: SSEEvent): AnyEvent => ({
-  id: sseEvent.id as EventId,
-  name: sseEvent.name,
-  payload: sseEvent.payload,
-  timestamp: new Date(sseEvent.timestamp),
-  ...(sseEvent.causedBy !== undefined ? { causedBy: sseEvent.causedBy as EventId } : {})
-})
+// Schema decoder for SSE events - returns Option to gracefully skip malformed events
+const decodeSSEEvent = Schema.decodeUnknownOption(SerializedEventSchema)
 
 /**
  * @internal
@@ -71,11 +52,16 @@ export const useEventSubscription = (sessionId: string | null) => {
 
     eventSource.onmessage = (e) => {
       try {
-        const sseEvent = JSON.parse(e.data) as SSEEvent
-        const event = parseSSEEvent(sseEvent)
+        // Parse and validate SSE data with Effect Schema (ADR-004 wire format)
+        const parsed = decodeSSEEvent(JSON.parse(e.data))
+        if (Option.isNone(parsed)) {
+          console.warn("Received malformed SSE event, skipping")
+          return
+        }
+        const event = parsed.value
 
         // Append to events cache
-        queryClient.setQueryData<ReadonlyArray<AnyEvent>>(
+        queryClient.setQueryData<ReadonlyArray<SerializedEvent>>(
           workflowKeys.events(sessionId),
           (old = []) => [...old, event]
         )

@@ -13,16 +13,16 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 
 import type { ProviderMode } from "../Domain/Provider.js"
-import { InMemoryEventBus } from "../Layers/InMemory.js"
 import { EventStoreLive } from "../Layers/LibSQL.js"
-import { EventBus, type EventBusService } from "../Services/EventBus.js"
+import { EventBus, EventBusLive, type EventBusService } from "../Services/EventBus.js"
 import { EventStore, type EventStoreService } from "../Services/EventStore.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder, type ProviderRecorderService } from "../Services/ProviderRecorder.js"
 
+import type { SerializedEvent } from "../Domain/Events.js"
 import { type ExecuteOptions, executeWorkflow } from "./runtime.js"
 import { WorkflowAbortedError } from "./types.js"
-import type { AnyEvent, WorkflowError, WorkflowResult } from "./types.js"
+import type { WorkflowError, WorkflowResult } from "./types.js"
 import type { WorkflowDef } from "./workflow.js"
 
 // ─────────────────────────────────────────────────────────────────
@@ -36,8 +36,6 @@ import type { WorkflowDef } from "./workflow.js"
  * - mode: "live" for real API calls, "playback" for recordings
  * - recorder: Service for recording/replaying provider responses
  * - database: Storage URL for event persistence
- *
- * Per ADR-010: Agents own their providers directly, so no providers map is needed here.
  */
 export interface RuntimeConfig {
   /**
@@ -115,7 +113,7 @@ export interface WorkflowExecution<S> {
    * Async iterator for consuming events as they occur.
    * Events are yielded in real-time during workflow execution.
    */
-  [Symbol.asyncIterator](): AsyncIterator<AnyEvent, undefined>
+  [Symbol.asyncIterator](): AsyncIterator<SerializedEvent, undefined>
 
   /**
    * Promise that resolves when workflow completes.
@@ -234,9 +232,9 @@ export function execute<S, Input, Phases extends string = never>(
   const DONE: IteratorReturnResult<undefined> = { value: undefined, done: true }
 
   // Event queue for streaming - will be populated by the runtime
-  const eventBuffer: Array<AnyEvent> = []
+  const eventBuffer: Array<SerializedEvent> = []
   const eventWaiters: Array<{
-    resolve: (value: IteratorResult<AnyEvent, undefined>) => void
+    resolve: (value: IteratorResult<SerializedEvent, undefined>) => void
     reject: (error: unknown) => void
   }> = []
   let isComplete = false
@@ -258,7 +256,7 @@ export function execute<S, Input, Phases extends string = never>(
   })
 
   // Helper to emit an event to the stream
-  const emitEvent = (event: AnyEvent): void => {
+  const emitEvent = (event: SerializedEvent): void => {
     if (eventWaiters.length > 0) {
       const waiter = eventWaiters.shift()!
       waiter.resolve({ value: event, done: false })
@@ -294,8 +292,6 @@ export function execute<S, Input, Phases extends string = never>(
   const { runtime } = options
 
   // Build layers
-  // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
-
   const ProviderModeLayer = Layer.succeed(ProviderModeContext, {
     mode: runtime.mode ?? "live"
   })
@@ -317,7 +313,7 @@ export function execute<S, Input, Phases extends string = never>(
 
   const EventBusLayer = runtime.eventBus
     ? Layer.succeed(EventBus, runtime.eventBus)
-    : InMemoryEventBus
+    : Layer.effect(EventBus, EventBusLive)
 
   const runtimeLayer = Layer.mergeAll(
     ProviderModeLayer,
@@ -366,8 +362,8 @@ export function execute<S, Input, Phases extends string = never>(
   })
 
   // Create the async iterator
-  const asyncIterator = (): AsyncIterator<AnyEvent, undefined> => ({
-    next: (): Promise<IteratorResult<AnyEvent, undefined>> => {
+  const asyncIterator = (): AsyncIterator<SerializedEvent, undefined> => ({
+    next: (): Promise<IteratorResult<SerializedEvent, undefined>> => {
       // Check if aborted
       if (isAborted) {
         return Promise.resolve(DONE)
@@ -394,7 +390,7 @@ export function execute<S, Input, Phases extends string = never>(
     },
 
     // Handle early termination (break from for-await loop)
-    return: (): Promise<IteratorResult<AnyEvent, undefined>> => {
+    return: (): Promise<IteratorResult<SerializedEvent, undefined>> => {
       // Cancel provider HTTP request
       abortController.abort()
       // Interrupt the Effect fiber

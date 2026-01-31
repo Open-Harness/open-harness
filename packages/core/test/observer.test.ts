@@ -9,10 +9,11 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import type { SerializedEvent } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { phase } from "../src/Engine/phase.js"
 import { executeWorkflow } from "../src/Engine/runtime.js"
-import type { AnyEvent, WorkflowObserver } from "../src/Engine/types.js"
+import type { WorkflowObserver } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { runWithTestRuntime, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
@@ -134,13 +135,13 @@ function createRecordingObserver<S>(): { observer: WorkflowObserver<S>; log: Obs
     onAgentCompleted(info: { agent: string; output: unknown; durationMs: number }) {
       log.calls.push({ method: "onAgentCompleted", args: [info] })
     },
-    onCompleted(result: { state: S; events: ReadonlyArray<AnyEvent> }) {
+    onCompleted(result: { state: S; events: ReadonlyArray<SerializedEvent> }) {
       log.calls.push({ method: "onCompleted", args: [result] })
     },
-    onErrored(error: unknown) {
-      log.calls.push({ method: "onErrored", args: [error] })
+    onError(error: unknown) {
+      log.calls.push({ method: "onError", args: [error] })
     },
-    onEvent(evt: AnyEvent) {
+    onEvent(evt: SerializedEvent) {
       log.calls.push({ method: "onEvent", args: [evt] })
     },
     onTextDelta(info: { agent: string; delta: string }) {
@@ -234,7 +235,7 @@ describe("WorkflowObserver dispatch", () => {
       // onCompleted receives the final state and events
       const completedCall = log.calls.find((c) => c.method === "onCompleted")
       expect(completedCall).toBeDefined()
-      const completedResult = completedCall!.args[0] as { state: TestState; events: ReadonlyArray<AnyEvent> }
+      const completedResult = completedCall!.args[0] as { state: TestState; events: ReadonlyArray<SerializedEvent> }
       expect(completedResult.state.goal).toBe("Build an API")
       expect(completedResult.events.length).toBeGreaterThan(0)
     })

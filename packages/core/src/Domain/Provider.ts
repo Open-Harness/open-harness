@@ -7,6 +7,7 @@
  * @module
  */
 
+import { Schema } from "effect"
 import type { Stream } from "effect"
 import type { z } from "zod"
 
@@ -116,3 +117,138 @@ export type AgentStreamEvent =
     readonly usage?: { readonly inputTokens: number; readonly outputTokens: number }
     readonly sessionId?: string
   }
+
+// ─────────────────────────────────────────────────────────────────
+// Effect Schemas for Validation at System Boundaries
+// ─────────────────────────────────────────────────────────────────
+
+const StopReasonSchema = Schema.Literal("end_turn", "tool_use", "max_tokens")
+
+const UsageSchema = Schema.Struct({
+  inputTokens: Schema.Number,
+  outputTokens: Schema.Number
+})
+
+/**
+ * Schema for AgentRunResult - validates structure from JSON.parse.
+ */
+export const AgentRunResultSchema = Schema.Struct({
+  text: Schema.optionalWith(Schema.String, { exact: true }),
+  thinking: Schema.optionalWith(Schema.String, { exact: true }),
+  output: Schema.optionalWith(Schema.Unknown, { exact: true }),
+  sessionId: Schema.optionalWith(Schema.String, { exact: true }),
+  usage: Schema.optionalWith(UsageSchema, { exact: true }),
+  stopReason: StopReasonSchema
+})
+
+/**
+ * Schema for AgentStreamEvent union type.
+ * Each variant is validated by its _tag discriminator.
+ */
+export const AgentStreamEventSchema = Schema.Union(
+  Schema.Struct({ _tag: Schema.Literal("TextDelta"), delta: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("TextComplete"), text: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("ThinkingDelta"), delta: Schema.String }),
+  Schema.Struct({ _tag: Schema.Literal("ThinkingComplete"), thinking: Schema.String }),
+  Schema.Struct({
+    _tag: Schema.Literal("ToolCall"),
+    toolId: Schema.String,
+    toolName: Schema.String,
+    input: Schema.Unknown
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("ToolResult"),
+    toolId: Schema.String,
+    output: Schema.Unknown,
+    isError: Schema.Boolean
+  }),
+  Schema.Struct({ _tag: Schema.Literal("Stop"), reason: StopReasonSchema }),
+  Schema.Struct({ _tag: Schema.Literal("Usage"), inputTokens: Schema.Number, outputTokens: Schema.Number }),
+  Schema.Struct({ _tag: Schema.Literal("SessionInit"), sessionId: Schema.String }),
+  Schema.Struct({
+    _tag: Schema.Literal("Result"),
+    output: Schema.Unknown,
+    stopReason: StopReasonSchema,
+    text: Schema.optionalWith(Schema.String, { exact: true }),
+    thinking: Schema.optionalWith(Schema.String, { exact: true }),
+    usage: Schema.optionalWith(UsageSchema, { exact: true }),
+    sessionId: Schema.optionalWith(Schema.String, { exact: true })
+  })
+)
+
+/**
+ * Decode unknown value to AgentRunResult with validation.
+ * Returns Option - None if invalid, Some if valid.
+ */
+export const decodeAgentRunResult = Schema.decodeUnknownOption(AgentRunResultSchema)
+
+/**
+ * Decode unknown value to AgentStreamEvent with validation.
+ * Returns Option - None if invalid, Some if valid.
+ */
+export const decodeAgentStreamEvent = Schema.decodeUnknownOption(AgentStreamEventSchema)
+
+// ─────────────────────────────────────────────────────────────────
+// Factory Functions for Type-Safe Construction
+// ─────────────────────────────────────────────────────────────────
+
+/** Create a TextDelta event */
+export const makeTextDelta = (delta: string): AgentStreamEvent => ({ _tag: "TextDelta", delta })
+
+/** Create a TextComplete event */
+export const makeTextComplete = (text: string): AgentStreamEvent => ({ _tag: "TextComplete", text })
+
+/** Create a ThinkingDelta event */
+export const makeThinkingDelta = (delta: string): AgentStreamEvent => ({ _tag: "ThinkingDelta", delta })
+
+/** Create a ThinkingComplete event */
+export const makeThinkingComplete = (thinking: string): AgentStreamEvent => ({ _tag: "ThinkingComplete", thinking })
+
+/** Create a ToolCall event */
+export const makeToolCall = (toolId: string, toolName: string, input: unknown): AgentStreamEvent => ({
+  _tag: "ToolCall",
+  toolId,
+  toolName,
+  input
+})
+
+/** Create a ToolResult event */
+export const makeToolResult = (toolId: string, output: unknown, isError: boolean): AgentStreamEvent => ({
+  _tag: "ToolResult",
+  toolId,
+  output,
+  isError
+})
+
+/** Create a Stop event */
+export const makeStop = (reason: "end_turn" | "tool_use" | "max_tokens"): AgentStreamEvent => ({
+  _tag: "Stop",
+  reason
+})
+
+/** Create a Usage event */
+export const makeUsage = (inputTokens: number, outputTokens: number): AgentStreamEvent => ({
+  _tag: "Usage",
+  inputTokens,
+  outputTokens
+})
+
+/** Create a SessionInit event */
+export const makeSessionInit = (sessionId: string): AgentStreamEvent => ({ _tag: "SessionInit", sessionId })
+
+/** Create a Result event */
+export const makeResult = (
+  output: unknown,
+  stopReason: "end_turn" | "tool_use" | "max_tokens",
+  options?: {
+    text?: string
+    thinking?: string
+    usage?: { inputTokens: number; outputTokens: number }
+    sessionId?: string
+  }
+): AgentStreamEvent => ({
+  _tag: "Result",
+  output,
+  stopReason,
+  ...options
+})

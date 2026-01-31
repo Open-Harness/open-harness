@@ -11,7 +11,7 @@
 import { useMemo } from "react"
 
 import { EVENTS } from "@open-scaffold/core"
-import type { AnyEvent, EventId } from "@open-scaffold/core"
+import type { EventId, SerializedEvent } from "@open-scaffold/core"
 
 import type { ForkResult, PauseResult, ResumeResult } from "../../Contract.js"
 import { useWorkflowActions } from "./useWorkflowActions.js"
@@ -26,7 +26,7 @@ import { useWorkflowVCR } from "./useWorkflowVCR.js"
  *
  * @template S - The workflow state type
  */
-export interface UseWorkflowResult<S> {
+export interface WorkflowResult<S> {
   // ─────────────────────────────────────────────────────────────────
   // Connection
   // ─────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ export interface UseWorkflowResult<S> {
   // ─────────────────────────────────────────────────────────────────
 
   /** All events in the session */
-  readonly events: ReadonlyArray<AnyEvent>
+  readonly events: ReadonlyArray<SerializedEvent>
   /** Current state (derived at position) */
   readonly state: S | undefined
   /** Current event position (events.length) */
@@ -73,10 +73,10 @@ export interface UseWorkflowResult<S> {
    * Send a human input event.
    * Requires a connected session.
    *
-   * @param event - The event to send (typically an input:response)
+   * @param event - The event to send (typically an input:received)
    * @throws Error if no session is connected
    */
-  readonly send: (event: AnyEvent) => Promise<void>
+  readonly send: (event: SerializedEvent) => Promise<void>
 
   /**
    * Pause the current workflow session.
@@ -198,7 +198,7 @@ export interface UseWorkflowResult<S> {
  * }
  * ```
  */
-export const useWorkflow = <S>(sessionId: string | null): UseWorkflowResult<S> => {
+export const useWorkflow = <S>(sessionId: string | null): WorkflowResult<S> => {
   const data = useWorkflowData<S>(sessionId)
   const actions = useWorkflowActions()
   const vcr = useWorkflowVCR()

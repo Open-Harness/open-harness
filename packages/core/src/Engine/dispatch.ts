@@ -28,8 +28,9 @@ import type {
   WorkflowEvent,
   WorkflowStarted
 } from "../Domain/Events.js"
+import { toSerializedEvent } from "../Domain/Events.js"
 
-import type { AnyEvent, EventId, WorkflowObserver } from "./types.js"
+import type { WorkflowObserver } from "./types.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Type-Safe Event Handlers
@@ -111,13 +112,12 @@ const handleAgentCompleted = (
 
 /**
  * Handler for StateIntent events.
- * Calls onStateChanged with both state and patches for backward compatibility.
+ * Calls onStateChanged with state and patches.
  */
 const handleStateIntent = (
   observer: WorkflowObserver<unknown>,
   event: StateIntent
 ): void => {
-  // StateIntent now includes state for observer compatibility
   observer.onStateChanged?.(event.state, event.patches)
 }
 
@@ -251,61 +251,6 @@ const handleInputReceived = (
  * }))
  * ```
  */
-/**
- * Convert WorkflowEvent to legacy AnyEvent format for onEvent callback.
- * Maps new field names to legacy names for backward compatibility.
- */
-const toSerializedEvent = (event: WorkflowEvent): AnyEvent => {
-  const { _tag, timestamp, ...payload } = event
-  const nameMap: Record<WorkflowEvent["_tag"], string> = {
-    WorkflowStarted: "workflow:started",
-    WorkflowCompleted: "workflow:completed",
-    PhaseEntered: "phase:entered",
-    PhaseExited: "phase:exited",
-    AgentStarted: "agent:started",
-    AgentCompleted: "agent:completed",
-    StateIntent: "state:updated",
-    StateCheckpoint: "state:updated",
-    SessionForked: "workflow:started",
-    TextDelta: "text:delta",
-    ThinkingDelta: "thinking:delta",
-    ToolCalled: "tool:called",
-    ToolResult: "tool:result",
-    InputRequested: "input:requested",
-    InputReceived: "input:response"
-  }
-
-  // Format payload for backward compatibility
-  let finalPayload: unknown = payload
-  if (_tag === "StateIntent") {
-    const intentPayload = payload as { intentId: string; state: unknown; patches: unknown; inversePatches: unknown }
-    finalPayload = {
-      state: intentPayload.state,
-      patches: intentPayload.patches,
-      inversePatches: intentPayload.inversePatches
-    }
-  } else if (_tag === "InputRequested") {
-    const reqPayload = payload as { id: string; prompt: string; type: string; options?: unknown }
-    finalPayload = {
-      promptText: reqPayload.prompt,
-      inputType: reqPayload.type,
-      options: reqPayload.options
-    }
-  } else if (_tag === "InputReceived") {
-    const recPayload = payload as { id: string; value: string; approved?: boolean }
-    finalPayload = {
-      response: recPayload.value
-    }
-  }
-
-  return {
-    id: crypto.randomUUID() as EventId,
-    name: nameMap[_tag],
-    payload: finalPayload,
-    timestamp
-  }
-}
-
 export const dispatchToObserver = (
   observer: WorkflowObserver<unknown>,
   event: WorkflowEvent

@@ -7,9 +7,9 @@
 import { Effect, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
+import { type SerializedEvent } from "../src/Domain/Events.js"
 import { AgentIdSchema, makeSessionId, parseSessionId, SessionIdSchema, WorkflowIdSchema } from "../src/Domain/Ids.js"
 import {
-  type AnyEvent,
   type Draft,
   EventIdSchema,
   type EventName,
@@ -36,13 +36,14 @@ describe("EVENTS constant", () => {
     expect(EVENTS.PHASE_EXITED).toBe("phase:exited")
     expect(EVENTS.AGENT_STARTED).toBe("agent:started")
     expect(EVENTS.AGENT_COMPLETED).toBe("agent:completed")
-    expect(EVENTS.STATE_UPDATED).toBe("state:updated")
+    expect(EVENTS.STATE_INTENT).toBe("state:intent")
+    expect(EVENTS.STATE_CHECKPOINT).toBe("state:checkpoint")
     expect(EVENTS.TEXT_DELTA).toBe("text:delta")
     expect(EVENTS.THINKING_DELTA).toBe("thinking:delta")
     expect(EVENTS.TOOL_CALLED).toBe("tool:called")
     expect(EVENTS.TOOL_RESULT).toBe("tool:result")
     expect(EVENTS.INPUT_REQUESTED).toBe("input:requested")
-    expect(EVENTS.INPUT_RESPONSE).toBe("input:response")
+    expect(EVENTS.INPUT_RECEIVED).toBe("input:received")
   })
 
   it("event names are unique", () => {
@@ -157,15 +158,16 @@ describe("AgentId (Effect Schema branded type)", () => {
 })
 
 describe("makeEvent", () => {
-  it("creates event with generated ID", async () => {
+  it("creates SerializedEvent with generated ID and numeric timestamp", async () => {
     const event = await Effect.runPromise(
       makeEvent("test:event", { value: 42 })
-    ) as AnyEvent
+    )
 
     expect(event.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
     expect(event.name).toBe("test:event")
     expect(event.payload).toEqual({ value: 42 })
-    expect(event.timestamp).toBeInstanceOf(Date)
+    expect(typeof event.timestamp).toBe("number")
+    expect(event.timestamp).toBeGreaterThan(0)
     expect(event.causedBy).toBeUndefined()
   })
 
@@ -173,25 +175,26 @@ describe("makeEvent", () => {
     const causeId = await Effect.runPromise(makeEventId())
     const event = await Effect.runPromise(
       makeEvent("effect:event", {}, causeId)
-    ) as AnyEvent
+    )
 
     expect(event.causedBy).toBe(causeId)
   })
 })
 
-describe("Event type", () => {
-  it("AnyEvent accepts any event", async () => {
+describe("SerializedEvent type", () => {
+  it("SerializedEvent uses numeric timestamp", async () => {
     const id1 = await Effect.runPromise(makeEventId())
     const id2 = await Effect.runPromise(makeEventId())
     const id3 = await Effect.runPromise(makeEventId())
 
-    const events: Array<AnyEvent> = [
-      { id: id1, name: "a", payload: "string", timestamp: new Date() },
-      { id: id2, name: "b", payload: { complex: true }, timestamp: new Date() },
-      { id: id3, name: "c", payload: null, timestamp: new Date() }
+    const events: Array<SerializedEvent> = [
+      { id: id1, name: "a", payload: { value: "string" }, timestamp: Date.now() },
+      { id: id2, name: "b", payload: { complex: true }, timestamp: Date.now() },
+      { id: id3, name: "c", payload: {}, timestamp: Date.now() }
     ]
 
     expect(events).toHaveLength(3)
+    expect(typeof events[0].timestamp).toBe("number")
   })
 })
 
@@ -386,15 +389,17 @@ describe("EventName type (compile-time)", () => {
       "phase:exited",
       "agent:started",
       "agent:completed",
-      "state:updated",
+      "state:intent",
+      "state:checkpoint",
+      "session:forked",
       "text:delta",
       "thinking:delta",
       "tool:called",
       "tool:result",
       "input:requested",
-      "input:response"
+      "input:received"
     ]
 
-    expect(validNames).toHaveLength(13)
+    expect(validNames).toHaveLength(15)
   })
 })

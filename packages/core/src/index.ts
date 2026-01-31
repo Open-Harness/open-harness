@@ -52,17 +52,18 @@ export type {
   Event,
   EventId,
   EventName,
+  InputReceivedEvent,
+  InputReceivedPayload,
   InputRequest,
   InputRequestedEvent,
   InputRequestedPayload,
-  InputResponseEvent,
-  InputResponsePayload,
   PhaseEnteredEvent,
   PhaseEnteredPayload,
   PhaseExitedEvent,
   PhaseExitedPayload,
+  StateCheckpointEvent,
+  StateIntentEvent,
   StateSnapshot,
-  StateUpdatedEvent,
   StateUpdatedPayload,
   TextDeltaEvent,
   TextDeltaPayload,
@@ -96,6 +97,17 @@ export {
   WorkflowTimeoutError,
   WorkflowValidationError
 } from "./Engine/types.js"
+
+// Wire format deserialization (ADR-004)
+export { decodeSerializedEvent, generateEventId, type SerializedEvent, SerializedEventSchema } from "./Domain/Events.js"
+
+// HITL payload schemas (ADR-008: Type-safe event parsing)
+export {
+  decodeInputReceivedPayload,
+  decodeInputRequestedPayload,
+  InputReceivedPayloadSchema,
+  InputRequestedPayloadSchema
+} from "./Domain/Events.js"
 
 // Provider infrastructure
 export type { AgentExecutionContext, AgentExecutionResult } from "./Engine/provider.js"
@@ -137,22 +149,13 @@ export {
 } from "./Domain/Errors.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Internal (for library authors / advanced use)
+// Internal Utilities (advanced use - prefer "@open-scaffold/core/internal")
 // ─────────────────────────────────────────────────────────────────
-// NOTE: These exports are also available at "@open-scaffold/core/internal"
-// for explicit opt-in. The main index exports are kept for backward
-// compatibility during the migration period per ADR-003.
 
-// Services (Effect Context.Tag) - for building custom layers
-export * as Services from "./Services/index.js"
-
-// Utilities (pure functions)
+// computeStateAt is kept in main export since it's useful for state derivation
 export { computeStateAt } from "./Engine/utils.js"
 
-// Layers - runtime configurations (loggers, in-memory)
-export * as Layers from "./Layers/index.js"
-
-// Session Context (FiberRef for ambient context)
+// Session Context (FiberRef for ambient context) - kept for advanced workflow customization
 export type { SessionContext } from "./Domain/Context.js"
 export {
   getSessionContext,

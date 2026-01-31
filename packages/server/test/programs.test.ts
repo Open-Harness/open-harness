@@ -10,12 +10,14 @@
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { type AnyEvent, computeStateAt, EVENTS, makeEvent, Services, type SessionId } from "@open-scaffold/core"
+import { computeStateAt, EVENTS, makeEvent, type SerializedEvent, type SessionId } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { EventBusLive } from "../src/index.js"
 import { EventStoreLive, forkSession, loadSession, recordEvent } from "../src/internal.js"
 
 // Helper to create events synchronously
-const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))
+const mkEvent = (name: string, payload: Record<string, unknown>): SerializedEvent =>
+  Effect.runSync(makeEvent(name, payload))
 
 const makeTestLayer = (url = ":memory:") =>
   Layer.mergeAll(
@@ -56,13 +58,13 @@ describe("Programs (Effect)", () => {
     const state2 = { count: 2 }
     const state3 = { count: 3 }
 
-    const events: Array<AnyEvent> = [
+    const events: Array<SerializedEvent> = [
       mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId: "s1", workflowName: "test", input: "go" }),
-      mkEvent(EVENTS.STATE_UPDATED, { state: state1 }),
+      mkEvent(EVENTS.STATE_INTENT, { state: state1 }),
       mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }),
-      mkEvent(EVENTS.STATE_UPDATED, { state: state2 }),
+      mkEvent(EVENTS.STATE_INTENT, { state: state2 }),
       mkEvent(EVENTS.AGENT_COMPLETED, { agent: "a1", output: "done", durationMs: 50 }),
-      mkEvent(EVENTS.STATE_UPDATED, { state: state3 })
+      mkEvent(EVENTS.STATE_INTENT, { state: state3 })
     ]
 
     // Full replay returns last state
@@ -85,7 +87,7 @@ describe("Programs (Effect)", () => {
     const program = Effect.gen(function*() {
       const sessionId = crypto.randomUUID() as SessionId
       yield* recordEvent(sessionId, mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId, workflowName: "test", input: "go" }))
-      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { count: 1 } }))
+      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_INTENT, { state: { count: 1 } }))
 
       const result = yield* forkSession(sessionId)
 
@@ -113,7 +115,7 @@ describe("Programs (Effect)", () => {
     const program = Effect.gen(function*() {
       const sessionId = crypto.randomUUID() as SessionId
       yield* recordEvent(sessionId, mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId, workflowName: "test", input: "go" }))
-      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { count: 1 } }))
+      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_INTENT, { state: { count: 1 } }))
 
       const loaded = yield* loadSession(sessionId)
       return loaded

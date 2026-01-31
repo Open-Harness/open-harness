@@ -22,7 +22,7 @@ import type { Draft, Patch } from "immer"
 import { enablePatches, produceWithPatches } from "immer"
 
 import type { AgentError, ProviderError, RecordingNotFound, StoreError } from "../Domain/Errors.js"
-import type { WorkflowEvent } from "../Domain/Events.js"
+import type { SerializedEvent, WorkflowEvent } from "../Domain/Events.js"
 import * as Events from "../Domain/Events.js"
 import type { SessionId } from "../Domain/Ids.js"
 import { EventBus } from "../Services/EventBus.js"
@@ -36,10 +36,7 @@ import type { AgentDef } from "./agent.js"
 import { dispatchToObserver } from "./dispatch.js"
 import type { HumanConfig, PhaseDef } from "./phase.js"
 import { runAgentDef } from "./provider.js"
-// Note: subscribers.ts exports are not used here anymore (see comment in executeWorkflow)
-// import { makeBusSubscriber, makeObserverSubscriber, makeStoreSubscriber } from "./subscribers.js"
 import {
-  type AnyEvent,
   type EventId,
   EVENTS,
   type WorkflowError,
@@ -57,9 +54,6 @@ import {
 
 // Enable Immer patches plugin for incremental replay support
 enablePatches()
-
-// Note: dispatchToObserver has been moved to dispatch.ts per ADR-004.
-// Observer notifications now happen via the makeObserverSubscriber fiber.
 
 // ─────────────────────────────────────────────────────────────────
 // Runtime Context (internal state during execution)
@@ -92,11 +86,11 @@ interface RuntimeContext<S> {
   readonly pauseDeferred: Deferred.Deferred<void>
   /** Flag indicating if workflow is paused */
   readonly isPausedRef: Ref.Ref<boolean>
-  /** Last event ID for causality tracking (kept for legacy event format) */
+  /** Last event ID for causality tracking */
   readonly lastEventIdRef: Ref.Ref<EventId | undefined>
-  /** Optional real-time event callback for streaming (legacy, also handled by observer subscriber) */
-  readonly onEvent?: (event: AnyEvent) => void
-  /** Optional observer for structured lifecycle callbacks (handled by makeObserverSubscriber) */
+  /** Optional real-time event callback for streaming (wire format) */
+  readonly onEvent?: (event: SerializedEvent) => void
+  /** Optional observer for structured lifecycle callbacks */
   readonly observer?: WorkflowObserver<unknown>
   /** Optional human input handler for HITL (ADR-002) */
   readonly humanInput?: HumanInputHandler
@@ -134,8 +128,10 @@ const emitEvent = <S>(
     // Publish to EventHub - fiber subscribers can also process events
     yield* hub.publish(event)
 
+    // Serialize to canonical wire format (SerializedEvent from Domain/Events.ts)
+    const serializedEvent = Events.toSerializedEvent(event)
+
     // Synchronous persistence to EventStore (critical for replay/recovery)
-    const serializedEvent = workflowEventToLegacy(event)
     yield* store.append(ctx.sessionId as SessionId, serializedEvent)
 
     // Synchronous broadcast to EventBus (for SSE clients)
@@ -146,68 +142,13 @@ const emitEvent = <S>(
       yield* Effect.sync(() => dispatchToObserver(ctx.observer!, event))
     }
 
-    // Legacy onEvent callback (for execute.ts async iterator compatibility)
+    // onEvent callback (for execute.ts async iterator compatibility)
     if (ctx.onEvent) {
       ctx.onEvent(serializedEvent)
     }
   })
 
-/**
- * Convert a WorkflowEvent (Data.TaggedClass) to legacy AnyEvent format.
- * Used for backward compatibility with onEvent callback and WorkflowResult.events.
- */
-const workflowEventToLegacy = (event: WorkflowEvent): AnyEvent => {
-  const { _tag, timestamp, ...payload } = event
-  const nameMap: Record<WorkflowEvent["_tag"], string> = {
-    WorkflowStarted: EVENTS.WORKFLOW_STARTED,
-    WorkflowCompleted: EVENTS.WORKFLOW_COMPLETED,
-    PhaseEntered: EVENTS.PHASE_ENTERED,
-    PhaseExited: EVENTS.PHASE_EXITED,
-    AgentStarted: EVENTS.AGENT_STARTED,
-    AgentCompleted: EVENTS.AGENT_COMPLETED,
-    StateIntent: EVENTS.STATE_UPDATED,
-    StateCheckpoint: EVENTS.STATE_UPDATED,
-    SessionForked: EVENTS.WORKFLOW_STARTED, // Maps to workflow event
-    TextDelta: EVENTS.TEXT_DELTA,
-    ThinkingDelta: EVENTS.THINKING_DELTA,
-    ToolCalled: EVENTS.TOOL_CALLED,
-    ToolResult: EVENTS.TOOL_RESULT,
-    InputRequested: EVENTS.INPUT_REQUESTED,
-    InputReceived: EVENTS.INPUT_RESPONSE
-  }
-
-  // Format payload for backward compatibility with legacy field names
-  let finalPayload: unknown = payload
-  if (_tag === "StateIntent") {
-    const intentPayload = payload as { intentId: string; state: unknown; patches: unknown; inversePatches: unknown }
-    finalPayload = {
-      state: intentPayload.state,
-      patches: intentPayload.patches,
-      inversePatches: intentPayload.inversePatches
-    }
-  } else if (_tag === "InputRequested") {
-    // Map new field names to legacy names
-    const reqPayload = payload as { id: string; prompt: string; type: string; options?: unknown }
-    finalPayload = {
-      promptText: reqPayload.prompt,
-      inputType: reqPayload.type,
-      options: reqPayload.options
-    }
-  } else if (_tag === "InputReceived") {
-    // Map new field names to legacy names
-    const recPayload = payload as { id: string; value: string; approved?: boolean }
-    finalPayload = {
-      response: recPayload.value
-    }
-  }
-
-  return {
-    id: crypto.randomUUID() as EventId,
-    name: nameMap[_tag],
-    payload: finalPayload,
-    timestamp
-  }
-}
+// Note: workflowEventToLegacy removed - use Events.toSerializedEvent for canonical format
 
 // ─────────────────────────────────────────────────────────────────
 // Checkpoint Helpers (ADR-006)
@@ -270,9 +211,7 @@ interface StateUpdateResult<S> {
  * when it receives StateIntent events. This function does NOT directly mutate
  * the stateRef - state changes flow through events.
  *
- * For backward compatibility with tests and observer.onStateChanged:
- * - Observer dispatch calls onStateChanged via handleStateIntent
- * - Legacy serialization includes full state in payload
+ * Observer dispatch calls onStateChanged via handleStateIntent.
  *
  * Uses produceWithPatches to capture:
  * - patches: What changed (for incremental replay)
@@ -294,7 +233,6 @@ const updateState = <S>(
     const [newState, patches, inversePatches] = yield* Effect.sync(() => produceWithPatches(currentState, updater))
 
     // Per ADR-006: Emit StateIntent event. The event is the source of truth for state changes.
-    // State is included for backward compatibility with observer.onStateChanged.
     yield* emitEvent(
       ctx,
       new Events.StateIntent({
@@ -357,18 +295,18 @@ const executeAgent = <S, O, Ctx>(
     const causedBy = yield* Ref.get(runtimeCtx.lastEventIdRef)
 
     // Execute agent via provider infrastructure
-    // Note: runAgentDef returns legacy AnyEvent format, we convert and publish via EventHub
+    // Note: runAgentDef returns SerializedEvent format, we convert and publish via EventHub
     const result = yield* runAgentDef(agent, state, agentContext, {
       sessionId: runtimeCtx.sessionId,
       causedBy,
       phase
     })
 
-    // Convert legacy agent events to WorkflowEvent and publish via EventHub
+    // Convert agent events to WorkflowEvent and publish via EventHub
     // Per ADR-004: Subscribers handle persistence (EventStore), broadcast (EventBus),
     // and observer dispatch, so we don't need to do it here
-    for (const legacyEvent of result.events) {
-      const workflowEvent = legacyEventToWorkflowEvent(legacyEvent, agent.name)
+    for (const serializedEvent of result.events) {
+      const workflowEvent = serializedEventToWorkflowEvent(serializedEvent, agent.name)
       if (workflowEvent) {
         yield* emitEvent(runtimeCtx, workflowEvent)
       }
@@ -393,12 +331,12 @@ const executeAgent = <S, O, Ctx>(
   })
 
 /**
- * Convert a legacy AnyEvent to a WorkflowEvent (Data.TaggedClass).
+ * Convert a SerializedEvent to a WorkflowEvent (Data.TaggedClass).
  * Returns undefined for events that don't have a direct mapping.
  */
-const legacyEventToWorkflowEvent = (event: AnyEvent, agent: string): WorkflowEvent | undefined => {
-  const timestamp = event.timestamp
-  const p = event.payload as Record<string, unknown>
+const serializedEventToWorkflowEvent = (event: SerializedEvent, agent: string): WorkflowEvent | undefined => {
+  const timestamp = new Date(event.timestamp) // Convert Unix ms to Date
+  const p = event.payload
 
   switch (event.name) {
     case EVENTS.AGENT_STARTED: {
@@ -789,8 +727,9 @@ export interface ExecuteOptions<Input> {
    * Optional callback invoked synchronously for each event as it is emitted.
    * Used by execute() to stream events in real-time via the async iterator,
    * rather than buffering them until workflow completion.
+   * Events are in wire format (SerializedEvent).
    */
-  readonly onEvent?: (event: AnyEvent) => void
+  readonly onEvent?: (event: SerializedEvent) => void
   /**
    * Optional pre-existing state to resume from.
    * When provided, the runtime skips calling workflow.start(input)
@@ -871,20 +810,6 @@ export const executeWorkflow = <S, Input, Phases extends string = never>(
 
       // Create EventHub (scoped to this execution)
       const hub = yield* makeEventHub
-
-      // Note: Per ADR-004, we originally planned to use fiber-based subscribers.
-      // However, for synchronous reliability (ensuring events are persisted/dispatched
-      // before workflow returns), we now do synchronous dispatch in emitEvent().
-      //
-      // The fiber-based subscribers (makeStoreSubscriber, makeBusSubscriber,
-      // makeObserverSubscriber) are NOT used here because:
-      // 1. Scope closes before async fibers finish processing
-      // 2. Tests and users expect synchronous behavior
-      //
-      // The subscribers.ts module is kept for future use cases like:
-      // - SSE-only consumers that connect mid-workflow
-      // - Background analytics processing
-      // - Eventual consistency scenarios
 
       // Initialize runtime context
       // If resumeState is provided, use it directly instead of workflow.initialState
@@ -990,9 +915,8 @@ export const executeWorkflow = <S, Input, Phases extends string = never>(
       // Get all workflow events for the result
       const allWorkflowEvents = yield* Ref.get(ctx.eventsRef)
 
-      // Convert WorkflowEvents to legacy AnyEvent format for the result
-      // This maintains backward compatibility with existing code expecting AnyEvent[]
-      const allEvents = allWorkflowEvents.map(workflowEventToLegacy)
+      // Convert WorkflowEvents to canonical SerializedEvent format for the result
+      const allEvents = allWorkflowEvents.map((e) => Events.toSerializedEvent(e))
 
       // Build result with proper optional handling
       const result: WorkflowResult<S> = {
@@ -1005,10 +929,7 @@ export const executeWorkflow = <S, Input, Phases extends string = never>(
       // Only include exitPhase if defined (exactOptionalPropertyTypes)
       const finalResult = exitPhase !== undefined ? { ...result, exitPhase } : result
 
-      // Note: observer.onCompleted is now handled by makeObserverSubscriber
-      // when it receives WorkflowCompleted event. We keep this call for
-      // backward compatibility to ensure the full result (with state and events)
-      // is passed to onCompleted, not just the event payload.
+      // Notify observer of completion with full result (state + events)
       if (ctx.observer?.onCompleted) {
         ctx.observer.onCompleted({ state: finalResult.state, events: finalResult.events })
       }
@@ -1016,14 +937,14 @@ export const executeWorkflow = <S, Input, Phases extends string = never>(
       return finalResult
     })
   ).pipe(
-    // Dispatch observer.onErrored on failure
+    // Dispatch observer.onError on failure
     Effect.tapError((error) =>
       Effect.sync(() => {
-        options.observer?.onErrored?.(error)
+        options.observer?.onError?.(error)
       })
     ),
     Effect.withSpan("executeWorkflow", {
-      attributes: { workflowName: workflow.name }
+      attributes: { workflow: workflow.name }
     })
   )
 
@@ -1058,7 +979,7 @@ export const streamWorkflow = <S, Input, Phases extends string = never>(
   workflow: WorkflowDef<S, Input, Phases>,
   options: ExecuteOptions<Input>
 ): Stream.Stream<
-  AnyEvent,
+  SerializedEvent,
   WorkflowError | AgentError | ProviderError | StoreError | RecordingNotFound,
   ProviderRecorder | ProviderModeContext | EventStore | EventBus
 > =>
@@ -1095,8 +1016,8 @@ export interface WorkflowHandle<S> {
   readonly resume: () => Effect.Effect<void>
   /** Get current state */
   readonly getState: () => Effect.Effect<S>
-  /** Get all events so far */
-  readonly getEvents: () => Effect.Effect<ReadonlyArray<AnyEvent>>
+  /** Get all events so far (canonical wire format) */
+  readonly getEvents: () => Effect.Effect<ReadonlyArray<SerializedEvent>>
 }
 
 // Note: WorkflowHandle implementation would require maintaining

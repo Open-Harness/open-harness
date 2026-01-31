@@ -29,25 +29,14 @@ import { runAgentDef } from "../src/Engine/provider.js"
 import { WorkflowAbortedError } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
 import { execute } from "../src/internal.js"
-import { InMemoryEventBus, InMemoryEventStore } from "../src/Layers/InMemory.js"
+import { EventStoreLive, ProviderRecorderLive } from "../src/Layers/LibSQL.js"
+import { EventBus, EventBusLive } from "../src/Services/EventBus.js"
 import { ProviderModeContext } from "../src/Services/ProviderMode.js"
-import { ProviderRecorder, type ProviderRecorderService } from "../src/Services/ProviderRecorder.js"
 import { createTestRuntimeLayer, type SimpleFixture } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Shared helpers
 // ─────────────────────────────────────────────────────────────────
-
-/** Noop recorder that does nothing */
-const noopRecorder: ProviderRecorderService = {
-  load: () => Effect.succeed(null),
-  save: () => Effect.void,
-  delete: () => Effect.void,
-  list: () => Effect.succeed([]),
-  startRecording: () => Effect.succeed("noop"),
-  appendEvent: () => Effect.void,
-  finalizeRecording: () => Effect.void
-}
 
 /**
  * Create a test provider that streams events from an iterable.
@@ -73,14 +62,15 @@ const createFailingProvider = (modelName: string, error: ProviderError): AgentPr
 })
 
 /**
- * Build a layer for live mode (no ProviderRegistry needed per ADR-010).
+ * Build a layer for live mode using real implementations (per CLAUDE.md - no mocks).
+ * Uses LibSQL :memory: for ephemeral databases.
  */
 const buildLiveLayer = () =>
   Layer.mergeAll(
     Layer.succeed(ProviderModeContext, { mode: "live" as const }),
-    Layer.succeed(ProviderRecorder, noopRecorder),
-    InMemoryEventStore,
-    InMemoryEventBus
+    ProviderRecorderLive({ url: ":memory:" }),
+    EventStoreLive({ url: ":memory:" }),
+    Layer.effect(EventBus, EventBusLive)
   )
 
 // ─────────────────────────────────────────────────────────────────

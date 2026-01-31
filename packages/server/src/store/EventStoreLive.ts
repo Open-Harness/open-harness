@@ -6,7 +6,8 @@
 
 import { SqlClient } from "@effect/sql"
 import { LibsqlClient } from "@effect/sql-libsql"
-import { type AnyEvent, EventIdSchema, parseSessionId, Services, type SessionId, StoreError } from "@open-scaffold/core"
+import { EventIdSchema, parseSessionId, type SerializedEvent, type SessionId, StoreError } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { Effect, Layer, Redacted, Schema } from "effect"
 
 import type { LibSQLConfig } from "./Config.js"
@@ -31,24 +32,15 @@ interface EventRow {
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Schema for validating parsed event payload from database.
- *
- * This validates the JSON-parsed payload structure matches what we expect.
- * The database stores events with snake_case columns, but the parsed payload
- * should be a plain object. We validate that the row.id and row.caused_by
- * are valid EventIds, and that the payload parses as valid JSON.
- */
-const StoredEventPayloadSchema = Schema.Unknown
-
-/**
  * Schema for the fully parsed stored event.
  * Used to validate the combination of row fields after JSON.parse.
+ * Note: timestamp is stored as ISO string in DB, converted to Unix ms on read.
  */
 const StoredEventSchema = Schema.Struct({
   id: EventIdSchema,
   name: Schema.String,
-  payload: StoredEventPayloadSchema,
-  timestamp: Schema.DateFromString,
+  payload: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  timestamp: Schema.DateFromString, // Parsed as Date, then converted to number
   causedBy: Schema.optional(EventIdSchema)
 })
 
@@ -57,16 +49,16 @@ const StoredEventSchema = Schema.Struct({
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Decode a stored event row into an AnyEvent using Schema validation.
+ * Decode a stored event row into a SerializedEvent using Schema validation.
  * Maps decode errors to StoreError per ADR-005.
  */
 const decodeStoredEvent = Schema.decodeUnknown(StoredEventSchema)
 
 /**
- * Convert a database row to an Event object with Schema validation.
+ * Convert a database row to a SerializedEvent with Schema validation.
  * Returns an Effect that fails with StoreError if validation fails.
  */
-const rowToEvent = (row: EventRow): Effect.Effect<AnyEvent, StoreError> => {
+const rowToEvent = (row: EventRow): Effect.Effect<SerializedEvent, StoreError> => {
   // Parse the JSON payload first - this can throw
   const parsedPayload = Effect.try({
     try: () => JSON.parse(row.payload),
@@ -88,14 +80,14 @@ const rowToEvent = (row: EventRow): Effect.Effect<AnyEvent, StoreError> => {
         Effect.mapError((parseError) =>
           new StoreError({ operation: "read", cause: `Invalid stored event: ${parseError}` })
         ),
-        Effect.map((validated): AnyEvent => {
-          // Build AnyEvent, only including causedBy if present
+        Effect.map((validated): SerializedEvent => {
+          // Build SerializedEvent with numeric timestamp, only including causedBy if present
           // (for exactOptionalPropertyTypes compatibility)
-          const event: AnyEvent = {
+          const event: SerializedEvent = {
             id: validated.id,
             name: validated.name,
             payload: validated.payload,
-            timestamp: validated.timestamp
+            timestamp: validated.timestamp.getTime() // Convert Date to Unix ms
           }
           if (validated.causedBy !== undefined) {
             return { ...event, causedBy: validated.causedBy }
@@ -156,7 +148,8 @@ export const EventStoreLive = (config: LibSQLConfig): Layer.Layer<Services.Event
       append: (sessionId, event) =>
         Effect.gen(function*() {
           const position = yield* getNextPosition(sql, sessionId)
-          const timestamp = event.timestamp.toISOString()
+          // SerializedEvent.timestamp is Unix ms, convert to ISO string for storage
+          const timestamp = new Date(event.timestamp).toISOString()
           const payload = JSON.stringify(event.payload)
 
           // Ensure session row exists (created_at set on first event)

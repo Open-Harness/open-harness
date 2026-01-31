@@ -14,15 +14,15 @@ import { z } from "zod"
 
 import {
   agent,
-  type AnyEvent,
   EVENTS,
   makeEvent,
   phase,
-  Services,
+  type SerializedEvent,
   type SessionId,
   workflow,
   type WorkflowDef
 } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import {
   deleteSessionRoute,
   forkSessionRoute,
@@ -85,7 +85,8 @@ const testWorkflow = workflow<TestState, string, TestPhases>({
 // Test Layer
 // ─────────────────────────────────────────────────────────────────
 
-const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))
+const mkEvent = (name: string, payload: Record<string, unknown>): SerializedEvent =>
+  Effect.runSync(makeEvent(name, payload))
 
 const makeTestLayer = () => {
   // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
@@ -191,7 +192,7 @@ describe("VCR HTTP Routes", () => {
     const program = Effect.gen(function*() {
       const sessionId = crypto.randomUUID() as SessionId
       yield* recordEvent(sessionId, mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId, workflowName: "test", input: "go" }))
-      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { goal: "test", tasks: [], done: false } }))
+      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_INTENT, { state: { goal: "test", tasks: [], done: false } }))
 
       const ctx = makeCtx({ params: { id: sessionId } })
       return yield* forkSessionRoute(ctx)
@@ -260,7 +261,7 @@ describe("VCR HTTP Routes", () => {
       yield* recordEvent(sessionId, mkEvent(EVENTS.WORKFLOW_STARTED, { sessionId, workflowName: "test", input: "go" }))
       yield* recordEvent(
         sessionId,
-        mkEvent(EVENTS.STATE_UPDATED, { state: { goal: "test", tasks: ["a"], done: false } })
+        mkEvent(EVENTS.STATE_INTENT, { state: { goal: "test", tasks: ["a"], done: false } })
       )
 
       const ctx = makeCtx({ params: { id: sessionId } })
@@ -279,9 +280,9 @@ describe("VCR HTTP Routes", () => {
 
     const program = Effect.gen(function*() {
       const sessionId = crypto.randomUUID() as SessionId
-      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { goal: "v1", tasks: [], done: false } }))
+      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_INTENT, { state: { goal: "v1", tasks: [], done: false } }))
       yield* recordEvent(sessionId, mkEvent(EVENTS.AGENT_STARTED, { agent: "a1" }))
-      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_UPDATED, { state: { goal: "v2", tasks: ["a"], done: false } }))
+      yield* recordEvent(sessionId, mkEvent(EVENTS.STATE_INTENT, { state: { goal: "v2", tasks: ["a"], done: false } }))
 
       const ctx = makeCtx({ params: { id: sessionId }, query: { position: "1" } })
       return yield* getSessionStateRoute(ctx)
@@ -318,7 +319,7 @@ describe("VCR HTTP Routes", () => {
     expect((response.body as { ok: boolean }).ok).toBe(true)
     // Should have the original event + the input response event
     expect(events).toHaveLength(2)
-    expect(events[1].name).toBe(EVENTS.INPUT_RESPONSE)
+    expect(events[1].name).toBe(EVENTS.INPUT_RECEIVED)
   })
 
   it("deleteSessionRoute removes session data", async () => {

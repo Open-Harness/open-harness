@@ -9,7 +9,7 @@
 
 import { useMemo } from "react"
 
-import type { AnyEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
 
 import { useEventsQuery, useEventSubscription, useStateAtQuery } from "../primitives/index.js"
 
@@ -25,7 +25,7 @@ export type WorkflowDataStatus = "connecting" | "connected" | "disconnected" | "
  */
 export interface WorkflowDataResult<S> {
   /** All events in the session */
-  readonly events: ReadonlyArray<AnyEvent>
+  readonly events: ReadonlyArray<SerializedEvent>
   /** Current state (derived at position) */
   readonly state: S | undefined
   /** Current event position (events.length) */

@@ -19,8 +19,7 @@ export async function replayCommand(options: ReplayOptions): Promise<void> {
     // Create scaffold instance in playback mode
     const scaffold = OpenScaffold.create({
       database: `file:${resolve(options.database)}`,
-      mode: "playback",
-      providers: {}
+      mode: "playback"
     })
 
     // Get session info
@@ -31,7 +30,7 @@ export async function replayCommand(options: ReplayOptions): Promise<void> {
       console.error(`Session not found: ${options.session}`)
       console.error(`\nAvailable sessions:`)
       for (const s of sessions.slice(0, 5)) {
-        console.error(`  ${s.id} - ${s.workflowName} (${s.createdAt.toISOString()})`)
+        console.error(`  ${s.id} - ${s.workflow} (${s.createdAt.toISOString()})`)
       }
       process.exit(1)
     }
@@ -40,7 +39,7 @@ export async function replayCommand(options: ReplayOptions): Promise<void> {
     // In replay mode the workflow is never executed, so we provide
     // a stub PhaseWorkflowDef that satisfies the type constraint.
     const replayStub: WorkflowDef<unknown, string, string> = {
-      name: session.workflowName,
+      name: session.workflow,
       initialState: {},
       start: () => {},
       phases: {
@@ -62,7 +61,7 @@ export async function replayCommand(options: ReplayOptions): Promise<void> {
     } else {
       // TUI mode: dynamically import to avoid loading OpenTUI in headless mode
       const { runTui } = await import("./run-tui.js")
-      await runTui(addr.port, options.session, { name: session.workflowName }, { isReplay: true })
+      await runTui(addr.port, options.session, { name: session.workflow }, { isReplay: true })
     }
 
     await server.stop()

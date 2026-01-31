@@ -11,13 +11,13 @@
 import { Effect } from "effect"
 
 import {
-  type AnyEvent,
   computeStateAt,
-  type Services,
+  type SerializedEvent,
   type SessionId,
   type SessionNotFound,
   type StoreError
 } from "@open-scaffold/core"
+import type { Services } from "@open-scaffold/core/internal"
 
 import { loadSession } from "./loadSession.js"
 
@@ -31,13 +31,13 @@ import { loadSession } from "./loadSession.js"
  * For debugging, replay, and time-travel.
  *
  * `computeStateAt` is a pure function that scans for the last
- * `state:updated` event — no handlers parameter needed.
+ * state event (state:intent or state:checkpoint) — no handlers parameter needed.
  */
 export const loadWorkflowTape = <S>(
   sessionId: SessionId,
   initialState: S
 ): Effect.Effect<
-  { events: ReadonlyArray<AnyEvent>; state: S },
+  { events: ReadonlyArray<SerializedEvent>; state: S },
   StoreError | SessionNotFound,
   Services.EventStore
 > =>

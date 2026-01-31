@@ -230,7 +230,7 @@ describe("executeWorkflow with resume options", () => {
     expect(completedEvents.length).toBe(1)
   })
 
-  it("does not emit state:updated for start() when resuming", async () => {
+  it("does not emit state:intent for start() when resuming", async () => {
     const checkpointState: ResumeTestState = {
       goal: "Check events",
       planItems: ["already-planned"],
@@ -248,9 +248,9 @@ describe("executeWorkflow with resume options", () => {
       { fixtures }
     )
 
-    // The first state:updated event should NOT be from start()
+    // The first state:intent event should NOT be from start()
     // (there should be no goal-setting patch from start)
-    const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_UPDATED)
+    const stateEvents = result.events.filter((e) => e.name === EVENTS.STATE_INTENT)
     expect(stateEvents.length).toBeGreaterThan(0)
 
     // First state update should be from the worker agent, not from start()

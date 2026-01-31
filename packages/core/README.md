@@ -112,7 +112,7 @@ const ApprovalComplete = defineEvent<"approval:complete", { approved: boolean }>
 // Create an interaction
 const itemApproval = createInteraction<MyState>({
   name: "item-approval",
-  type: "approval",  // "approval" | "choice" | "freeform"
+  type: "approval",  // "approval" | "choice"
   prompt: (state) => `Approve ${state.items.length} items?`,
   metadata: (state) => ({ itemCount: state.items.length }),
   onResponse: (response, state, trigger) => {
@@ -148,15 +148,14 @@ const myWorkflow = workflow({
 | Type | Response | Use Case |
 |------|----------|----------|
 | `approval` | `boolean` | Yes/No decisions |
-| `choice` | `string` | Select from options |
-| `freeform` | `string` | Free text input |
+| `choice` | `string` | Select from options (use "Other..." option for freeform text) |
 
 ### HITL Events
 
 | Event | Direction | Purpose |
 |-------|-----------|---------|
-| `input:requested` | Agent → Human | Request input (contains prompt, type, options) |
-| `input:response` | Human → Agent | Provide response (contains value) |
+| `input:requested` | Agent → Human | Request input (contains id, prompt, type, options) |
+| `input:received` | Human → Agent | Provide response (contains id, value) |
 
 ### Helper Functions
 

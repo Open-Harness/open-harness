@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { AnyEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
 import { useMutation } from "@tanstack/react-query"
 
 import type { ForkResult, PauseResult, ResumeResult } from "../../Contract.js"
@@ -42,9 +42,9 @@ export const useCreateSessionMutation = () => {
  * await sendInput({
  *   event: {
  *     id: crypto.randomUUID(),
- *     name: "input:response",
- *     payload: { interactionId: "123", value: "approve", approved: true },
- *     timestamp: new Date()
+ *     name: "input:received",
+ *     payload: { id: "123", value: "approve", approved: true },
+ *     timestamp: Date.now()
  *   }
  * })
  * ```
@@ -53,7 +53,7 @@ export const useSendInputMutation = () => {
   const { client } = useWorkflowClient()
 
   return useMutation({
-    mutationFn: ({ event }: { event: AnyEvent }): Promise<void> => client.sendInput(event)
+    mutationFn: ({ event }: { event: SerializedEvent }): Promise<void> => client.sendInput(event)
   })
 }
 

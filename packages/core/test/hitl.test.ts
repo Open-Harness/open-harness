@@ -5,13 +5,10 @@
  * the runtime's Queue.take(ctx.inputQueue), unblocking HITL phases.
  * Uses ProviderRecorder playback with pre-seeded fixtures.
  *
- * NOTE: Event payloads use LEGACY wire format (promptText, inputType, response)
- * produced by workflowEventToLegacy() for backwards compatibility with storage
- * and SSE consumers. Internal events use new naming (prompt, type, value) per ADR-008.
- * See packages/core/src/Engine/runtime.ts:workflowEventToLegacy for the mapping.
+ * Event payloads use canonical ADR-008 format (id, prompt, type, value).
  */
 
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { agent } from "../src/Engine/agent.js"
@@ -73,18 +70,23 @@ const hitlFixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Per ADR-010: No providers map needed - agents own their providers directly
-const testRuntime: RuntimeConfig = {
-  mode: "playback",
-  recorder: seedRecorder(hitlFixtures),
-  database: ":memory:"
-}
-
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
 describe("HITL queue wiring", () => {
+  // Per ADR-010: No providers map needed - agents own their providers directly
+  // Created in beforeAll because seedRecorder is async (LibSQL :memory:)
+  let testRuntime: RuntimeConfig
+
+  beforeAll(async () => {
+    const recorder = await seedRecorder(hitlFixtures)
+    testRuntime = {
+      mode: "playback",
+      recorder,
+      database: ":memory:"
+    }
+  })
   it("respond() unblocks a human phase and workflow completes", async () => {
     // Workflow: review (human) -> finalize (agent) -> done (terminal)
     const hitlWorkflow = workflow<HitlState, string, HitlPhases>({
@@ -144,22 +146,22 @@ describe("HITL queue wiring", () => {
     const eventNames = events.map((e) => e.name)
     expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
     expect(eventNames).toContain(EVENTS.INPUT_REQUESTED)
-    expect(eventNames).toContain(EVENTS.INPUT_RESPONSE)
+    expect(eventNames).toContain(EVENTS.INPUT_RECEIVED)
     expect(eventNames).toContain(EVENTS.PHASE_ENTERED)
     expect(eventNames).toContain(EVENTS.AGENT_STARTED)
     expect(eventNames).toContain(EVENTS.AGENT_COMPLETED)
     expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
 
-    // Verify the input:requested payload (legacy wire format per workflowEventToLegacy)
+    // Verify the input:requested payload (canonical names per ADR-008)
     const inputRequestedEvent = events.find((e) => e.name === EVENTS.INPUT_REQUESTED)
-    const payload = inputRequestedEvent?.payload as { promptText: string; inputType: string }
-    expect(payload.promptText).toBe("Review proposal: Build a REST API")
-    expect(payload.inputType).toBe("approval")
+    const payload = inputRequestedEvent?.payload as { id: string; prompt: string; type: string }
+    expect(payload.prompt).toBe("Review proposal: Build a REST API")
+    expect(payload.type).toBe("approval")
 
-    // Verify the input:response payload (legacy wire format)
-    const inputResponseEvent = events.find((e) => e.name === EVENTS.INPUT_RESPONSE)
-    const responsePayload = inputResponseEvent?.payload as { response: string }
-    expect(responsePayload.response).toBe("approve")
+    // Verify the input:received payload (canonical names per ADR-008)
+    const inputReceivedEvent = events.find((e) => e.name === EVENTS.INPUT_RECEIVED)
+    const responsePayload = inputReceivedEvent?.payload as { id: string; value: string }
+    expect(responsePayload.value).toBe("approve")
   })
 
   it("respond() with rejection updates state accordingly", async () => {

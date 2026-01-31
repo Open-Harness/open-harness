@@ -5,7 +5,7 @@
  * Uses ProviderRecorder playback with pre-seeded fixtures.
  */
 
-import { describe, expect, it, vi } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import { agent } from "../src/Engine/agent.js"
@@ -92,17 +92,23 @@ const fixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Test runtime config using playback mode
-// Per ADR-010: No providers map needed - agents own their providers directly
-const testRuntime: RuntimeConfig = {
-  mode: "playback",
-  recorder: seedRecorder(fixtures),
-  database: ":memory:"
-}
-
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
+
+// Test runtime config using playback mode
+// Per ADR-010: No providers map needed - agents own their providers directly
+// Created in beforeAll because seedRecorder is async (LibSQL :memory:)
+let testRuntime: RuntimeConfig
+
+beforeAll(async () => {
+  const recorder = await seedRecorder(fixtures)
+  testRuntime = {
+    mode: "playback",
+    recorder,
+    database: ":memory:"
+  }
+})
 
 describe("run()", () => {
   describe("basic execution", () => {

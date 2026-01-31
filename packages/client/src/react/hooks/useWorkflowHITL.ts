@@ -10,26 +10,27 @@
 
 import { useCallback, useMemo } from "react"
 
-import { EVENTS, makeEventId } from "@open-scaffold/core"
-import type { AnyEvent, EventId } from "@open-scaffold/core"
-import { Effect } from "effect"
+import { decodeInputReceivedPayload, decodeInputRequestedPayload, EVENTS, makeEventId } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-scaffold/core"
+import { Effect, Option } from "effect"
 
 import { useEventsQuery, useSendInputMutation } from "../primitives/index.js"
 
 /**
  * A pending human input request.
+ * Per ADR-008: Uses payload.id as the correlation ID (not event.id).
  */
 export interface PendingInteraction {
-  /** Unique ID for this interaction (correlates request to response) */
-  readonly id: EventId
+  /** Correlation ID for matching request to response (payload.id per ADR-008) */
+  readonly id: string
   /** The prompt text shown to the user */
   readonly prompt: string
   /** Type of input requested */
   readonly type: "approval" | "choice"
   /** Available options for choice type */
   readonly options?: ReadonlyArray<string>
-  /** When the request was made */
-  readonly timestamp: Date
+  /** When the request was made (Unix ms) */
+  readonly timestamp: number
 }
 
 /**
@@ -41,10 +42,10 @@ export interface WorkflowHITLResult {
 
   /**
    * Respond to a pending interaction.
-   * @param interactionId - The ID of the interaction to respond to
+   * @param interactionId - The correlation ID from the request (payload.id per ADR-008)
    * @param response - The user's response text
    */
-  readonly respond: (interactionId: EventId, response: string) => Promise<void>
+  readonly respond: (interactionId: string, response: string) => Promise<void>
 
   /** Whether a response is being sent */
   readonly isResponding: boolean
@@ -90,31 +91,34 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
   const eventsQuery = useEventsQuery(sessionId)
   const sendMutation = useSendInputMutation()
 
-  // Derive pending interactions from events
+  // Derive pending interactions from events using ADR-008 canonical format
+  // Uses Effect Schema validation internally - silently skips malformed events
   const pending = useMemo((): ReadonlyArray<PendingInteraction> => {
     const events = eventsQuery.data ?? []
-    const requests = new Map<EventId, PendingInteraction>()
-    const responded = new Set<EventId>()
+    const requests = new Map<string, PendingInteraction>()
+    const responded = new Set<string>()
 
     for (const event of events) {
       if (event.name === EVENTS.INPUT_REQUESTED) {
-        const payload = event.payload as {
-          prompt: string
-          type: "approval" | "choice"
-          options?: ReadonlyArray<string>
+        // Type-safe parsing via Effect Schema (returns Option, not Effect)
+        const parsed = decodeInputRequestedPayload(event.payload)
+        if (Option.isSome(parsed)) {
+          const payload = parsed.value
+          requests.set(payload.id, {
+            id: payload.id,
+            prompt: payload.prompt,
+            type: payload.type,
+            // Only include options if defined (satisfies exactOptionalPropertyTypes)
+            ...(payload.options !== undefined && { options: payload.options }),
+            timestamp: event.timestamp
+          })
         }
-        requests.set(event.id, {
-          id: event.id,
-          prompt: payload.prompt,
-          type: payload.type,
-          // Only include options if defined (satisfies exactOptionalPropertyTypes)
-          ...(payload.options !== undefined && { options: payload.options }),
-          timestamp: event.timestamp
-        })
-      } else if (event.name === EVENTS.INPUT_RESPONSE) {
-        // The causedBy field links response to request
-        if (event.causedBy) {
-          responded.add(event.causedBy)
+        // Malformed events are silently skipped (Option.isNone case)
+      } else if (event.name === EVENTS.INPUT_RECEIVED) {
+        // Type-safe parsing - correlation via payload.id per ADR-008
+        const parsed = decodeInputReceivedPayload(event.payload)
+        if (Option.isSome(parsed)) {
+          responded.add(parsed.value.id)
         }
       }
     }
@@ -123,18 +127,22 @@ export const useWorkflowHITL = (sessionId: string | null): WorkflowHITLResult =>
     return Array.from(requests.values()).filter((r) => !responded.has(r.id))
   }, [eventsQuery.data])
 
-  // Respond to an interaction
+  // Respond to an interaction using ADR-008 canonical format
   const respond = useCallback(
-    async (interactionId: EventId, response: string): Promise<void> => {
+    async (interactionId: string, response: string): Promise<void> => {
       // Generate event ID synchronously (Effect.runSync is safe for pure UUID generation)
       const eventId = Effect.runSync(makeEventId())
 
-      const event: AnyEvent = {
+      // Build SerializedEvent with ADR-008 canonical payload format
+      // Correlation happens via payload.id, not causedBy
+      const event: SerializedEvent = {
         id: eventId,
-        name: EVENTS.INPUT_RESPONSE,
-        payload: { response },
-        timestamp: new Date(),
-        causedBy: interactionId
+        name: EVENTS.INPUT_RECEIVED,
+        payload: {
+          id: interactionId, // Correlation ID per ADR-008
+          value: response
+        },
+        timestamp: Date.now()
       }
 
       await sendMutation.mutateAsync({ event })

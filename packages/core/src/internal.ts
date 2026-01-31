@@ -18,19 +18,19 @@
 // Services (Effect Context.Tag) - for building custom layers
 // ─────────────────────────────────────────────────────────────────
 
-export * from "./Services/index.js"
+export * as Services from "./Services/index.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Layers - runtime configurations (loggers, in-memory, LibSQL)
 // ─────────────────────────────────────────────────────────────────
 
-export * from "./Layers/index.js"
+export * as Layers from "./Layers/index.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Internal utilities (pure functions for state derivation)
 // ─────────────────────────────────────────────────────────────────
 
-export { computeStateAt, deriveState, deriveStateOptimized } from "./Engine/utils.js"
+export { computeStateAt, deriveState } from "./Engine/utils.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Provider Infrastructure (for library authors)
@@ -38,6 +38,34 @@ export { computeStateAt, deriveState, deriveStateOptimized } from "./Engine/util
 
 export { mapStreamEventToInternal, runAgentDef } from "./Engine/provider.js"
 export type { AgentExecutionContext, AgentExecutionResult } from "./Engine/provider.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Schema Decoders (for boundary validation in server/test code)
+// ─────────────────────────────────────────────────────────────────
+
+export {
+  AgentRunResultSchema,
+  AgentStreamEventSchema,
+  decodeAgentRunResult,
+  decodeAgentStreamEvent
+} from "./Domain/Provider.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Factory Functions (for type-safe event construction in tests)
+// ─────────────────────────────────────────────────────────────────
+
+export {
+  makeResult,
+  makeSessionInit,
+  makeStop,
+  makeTextComplete,
+  makeTextDelta,
+  makeThinkingComplete,
+  makeThinkingDelta,
+  makeToolCall,
+  makeToolResult,
+  makeUsage
+} from "./Domain/Provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Session Context (FiberRef for ambient context)

@@ -19,7 +19,8 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { type AgentStreamEvent, type ProviderRunOptions, Services } from "@open-scaffold/core"
+import type { ProviderRunOptions } from "@open-scaffold/core"
+import { makeTextDelta, Services } from "@open-scaffold/core/internal"
 
 import { AnthropicProvider } from "../src/index.js"
 import { ProviderRecorderLive } from "../src/internal.js"
@@ -307,15 +308,8 @@ describe("ProviderRecorderLive (Incremental Recording)", () => {
       })
 
       // Append some events
-      yield* recorder.appendEvent(recordingId, {
-        _tag: "TextDelta",
-        text: "Hello"
-      } as AgentStreamEvent)
-
-      yield* recorder.appendEvent(recordingId, {
-        _tag: "TextDelta",
-        text: " World"
-      } as AgentStreamEvent)
+      yield* recorder.appendEvent(recordingId, makeTextDelta("Hello"))
+      yield* recorder.appendEvent(recordingId, makeTextDelta(" World"))
 
       // DO NOT finalize - this simulates a crash
 
@@ -346,20 +340,14 @@ describe("ProviderRecorderLive (Incremental Recording)", () => {
         prompt: "test prompt",
         provider: "test-provider"
       })
-      yield* recorder.appendEvent(firstRecordingId, {
-        _tag: "TextDelta",
-        text: "First attempt"
-      } as AgentStreamEvent)
+      yield* recorder.appendEvent(firstRecordingId, makeTextDelta("First attempt"))
 
       // Start second recording - should clean up the first one
       const secondRecordingId = yield* recorder.startRecording(hash, {
         prompt: "test prompt",
         provider: "test-provider"
       })
-      yield* recorder.appendEvent(secondRecordingId, {
-        _tag: "TextDelta",
-        text: "Second attempt"
-      } as AgentStreamEvent)
+      yield* recorder.appendEvent(secondRecordingId, makeTextDelta("Second attempt"))
 
       // Finalize the second one
       yield* recorder.finalizeRecording(secondRecordingId, {
@@ -376,7 +364,7 @@ describe("ProviderRecorderLive (Incremental Recording)", () => {
 
     expect(entry).not.toBeNull()
     expect(entry!.streamData.length).toBe(1) // Only the second recording's event
-    expect((entry!.streamData[0] as { text: string }).text).toBe("Second attempt")
+    expect((entry!.streamData[0] as { delta: string }).delta).toBe("Second attempt")
 
     console.log("First recording ID:", firstRecordingId)
     console.log("Second recording ID:", secondRecordingId)

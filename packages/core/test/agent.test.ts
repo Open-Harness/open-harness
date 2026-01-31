@@ -395,7 +395,7 @@ describe("agent behavioral (workflow execution)", () => {
       input: "build an API",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -425,7 +425,7 @@ describe("agent behavioral (workflow execution)", () => {
       input: "build an API",
       runtime: {
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })

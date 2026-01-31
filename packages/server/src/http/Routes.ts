@@ -10,16 +10,16 @@ import { Effect, Fiber, Schema } from "effect"
 
 import {
   computeStateAt,
+  decodeSerializedEvent,
   EVENTS,
   makeEvent,
-  Services,
   SessionIdSchema,
   SessionNotFound,
   ValidationError
 } from "@open-scaffold/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
-import type { AnyEvent, ProviderMode, SessionId, WorkflowDef } from "@open-scaffold/core"
-import { executeWorkflow } from "@open-scaffold/core/internal"
+import type { ProviderMode, SerializedEvent, SessionId, WorkflowDef } from "@open-scaffold/core"
+import { executeWorkflow, Services } from "@open-scaffold/core/internal"
 
 import { forkSession } from "../programs/forkSession.js"
 import { observeEvents, type ObserveEventsOptions } from "../programs/observeEvents.js"
@@ -144,7 +144,7 @@ export const listSessionsRoute = <S>(
         running: _ctx.sessions.has(sessionId),
         eventCount: events.length,
         lastEventAt: last
-          ? (last.timestamp instanceof Date ? last.timestamp.toISOString() : String(last.timestamp))
+          ? new Date(last.timestamp).toISOString()
           : null
       })
     }
@@ -226,7 +226,7 @@ export const getSessionEventsRoute = <S>(
  * GET /sessions/:id/state
  * Response: { state: S }
  *
- * Uses computeStateAt to scan state:updated events from the EventStore.
+ * Uses computeStateAt to scan state events from the EventStore.
  */
 export const getSessionStateRoute = <S>(
   _ctx: RouteContext<S>
@@ -271,7 +271,7 @@ export const getSessionStateRoute = <S>(
  * Body: { input: string }
  * Response: { ok: true }
  *
- * Uses makeEvent to create input:response events and
+ * Uses makeEvent to create input:received events and
  * appends directly to EventStore/EventBus.
  */
 export const postSessionInputRoute = <S>(
@@ -279,15 +279,17 @@ export const postSessionInputRoute = <S>(
 ): Effect.Effect<RouteResponse, ServerError, RouteEnvironment> => {
   return Effect.gen(function*() {
     const sessionId = yield* parseSessionIdOrFail(_ctx.params.id)
-    const body = _ctx.body as { event?: AnyEvent; input?: string } | null
+    const body = _ctx.body as { event?: unknown; input?: string } | null
     const input = body?.input
     const rawEvent = body?.event
 
-    // If a raw event was provided, normalize it; otherwise create an input:response event
-    const event: AnyEvent | null = rawEvent
-      ? normalizeEvent(rawEvent)
+    // If a raw event was provided, decode it with schema validation; otherwise create an input:received event
+    const event: SerializedEvent | null = rawEvent
+      ? yield* decodeSerializedEvent(rawEvent).pipe(
+        Effect.mapError(() => new ValidationError({ message: "invalid event format" }))
+      )
       : input
-      ? yield* makeEvent(EVENTS.INPUT_RESPONSE, { response: input })
+      ? yield* makeEvent(EVENTS.INPUT_RECEIVED, { response: input })
       : null
 
     if (!event) {
@@ -307,13 +309,6 @@ export const postSessionInputRoute = <S>(
   }).pipe(
     Effect.mapError((cause) => new ServerError({ operation: "request", cause }))
   )
-}
-
-const normalizeEvent = (event: AnyEvent): AnyEvent => {
-  if (typeof (event as { timestamp?: unknown }).timestamp === "string") {
-    return { ...event, timestamp: new Date(event.timestamp) }
-  }
-  return event
 }
 
 /**

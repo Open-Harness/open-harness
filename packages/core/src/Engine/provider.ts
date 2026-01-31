@@ -22,8 +22,9 @@ import type { AgentRunResult, AgentStreamEvent, ProviderRunOptions } from "../Do
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder } from "../Services/ProviderRecorder.js"
 
+import type { SerializedEvent } from "../Domain/Events.js"
 import type { AgentDef } from "./agent.js"
-import { type AnyEvent, type EventId, EVENTS, makeEvent } from "./types.js"
+import { type EventId, EVENTS, makeEvent } from "./types.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Agent Execution
@@ -50,7 +51,7 @@ export interface AgentExecutionResult<O> {
   /** The parsed output from the agent */
   readonly output: O
   /** Streaming events emitted during execution */
-  readonly events: ReadonlyArray<AnyEvent>
+  readonly events: ReadonlyArray<SerializedEvent>
   /** Duration in milliseconds */
   readonly durationMs: number
   /** Text output (if any) */
@@ -89,7 +90,7 @@ export const mapStreamEventToInternal = (
   agent: string,
   streamEvent: AgentStreamEvent,
   causedBy?: EventId
-): Effect.Effect<AnyEvent | null> => {
+): Effect.Effect<SerializedEvent | null> => {
   switch (streamEvent._tag) {
     case "TextDelta":
       return makeEvent(
@@ -163,11 +164,11 @@ export const runAgentDef = <S, O, Ctx>(
 > =>
   Effect.gen(function*() {
     const startTime = Date.now()
-    const events: Array<AnyEvent> = []
+    const events: Array<SerializedEvent> = []
     let lastEventId = executionContext.causedBy
 
     // Helper to emit and track events
-    const emitEvent = (name: string, payload: unknown): Effect.Effect<AnyEvent> =>
+    const emitEvent = (name: string, payload: Record<string, unknown>): Effect.Effect<SerializedEvent> =>
       Effect.gen(function*() {
         const event = yield* makeEvent(name, payload, lastEventId)
         events.push(event)
@@ -176,7 +177,6 @@ export const runAgentDef = <S, O, Ctx>(
       })
 
     // Get services
-    // Per ADR-010: No ProviderRegistry needed - agent.provider is used directly
     const recorder = yield* ProviderRecorder
     const { mode } = yield* ProviderModeContext
 
@@ -192,8 +192,7 @@ export const runAgentDef = <S, O, Ctx>(
       ? (agent.prompt as (s: S, ctx: Ctx) => string)(state, agentContext)
       : (agent.prompt as (s: S) => string)(state)
 
-    // Build provider options
-    // Per ADR-010: Use provider.model and provider.config, merge with agent.options
+    // Build provider options (provider.model + provider.config + agent.options)
     const providerOptions: ProviderRunOptions = {
       prompt,
       outputSchema: agent.output as ZodType<unknown>,
@@ -238,7 +237,6 @@ export const runAgentDef = <S, O, Ctx>(
       // ─────────────────────────────────────────────────────────────────
       // LIVE MODE: Call provider, record events incrementally
       // ─────────────────────────────────────────────────────────────────
-      // Per ADR-010: Use agent.provider directly instead of registry lookup
       const provider = agent.provider
 
       // Start incremental recording (crash-safe)

@@ -6,7 +6,7 @@
  *
  * The cache:
  * - Loads latest snapshot + subsequent events
- * - Derives state using deriveStateOptimized
+ * - Derives state using deriveState
  * - Saves periodic snapshots for fast replay
  * - Invalidates on StateIntent events via EventHub subscription
  *
@@ -126,7 +126,7 @@ export const makeStateCache = <S>(
         }
 
         // 3. Derive state using deriveState (ADR-006)
-        // This applies StateIntent, StateCheckpoint (new) or state:updated (old) events
+        // This applies state:intent and state:checkpoint events
         const baseState = (snapshot?.state as S | undefined) ?? initialState
         const state = deriveState(events, baseState)
 

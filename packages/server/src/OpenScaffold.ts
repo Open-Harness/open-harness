@@ -10,8 +10,8 @@
  * @module
  */
 
-import type { AgentProvider, WorkflowDef } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core"
+import type { WorkflowDef } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { Effect, Layer, ManagedRuntime } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "./constants.js"
@@ -40,16 +40,6 @@ export interface OpenScaffoldConfig {
   readonly database: string
   /** Provider mode: "live" or "playback" (REQUIRED - no default) */
   readonly mode: ProviderMode
-  /**
-   * Named providers map for workflow context.
-   * Keys are model strings (e.g., "claude-sonnet-4-20250514"),
-   * values are AgentProvider implementations.
-   *
-   * Note: Per ADR-010, agents now own their providers directly.
-   * This map is kept for backward compatibility but will be removed
-   * in Task 5.4.
-   */
-  readonly providers?: Record<string, AgentProvider>
 }
 
 /**
@@ -83,7 +73,8 @@ export interface OpenScaffoldServer {
  */
 export interface SessionInfo {
   id: string
-  workflowName: string
+  /** Short workflow name per ADR-008 */
+  workflow: string
   createdAt: Date
   eventCount: number
 }
@@ -228,8 +219,7 @@ export class OpenScaffold {
         name: "anthropic",
         mode,
         connected: mode === "live"
-      },
-      ...(this.config.providers ? { providers: this.config.providers } : {})
+      }
     })
 
     // Wrap Effect-returning methods with Promise-returning methods
@@ -275,21 +265,19 @@ export class OpenScaffold {
           const events = yield* eventStore.getEvents(id)
           const startEvent = events.find((e) => e.name === "workflow:started")
 
-          // Extract workflowName from workflow:started event
-          // - New runtime API: { workflowName, sessionId, input }
-          // - Old createSession: { goal } (no workflowName)
-          let workflowName = "unknown"
+          // Extract workflow name from workflow:started event (ADR-008: short name "workflow")
+          let workflow = "unknown"
           if (startEvent?.payload) {
-            const payload = startEvent.payload as { workflowName?: string }
-            if (payload.workflowName) {
-              workflowName = payload.workflowName
+            const payload = startEvent.payload as { workflow?: string }
+            if (payload.workflow) {
+              workflow = payload.workflow
             }
           }
 
           sessions.push({
             id,
-            workflowName,
-            createdAt: events[0]?.timestamp ?? new Date(),
+            workflow,
+            createdAt: new Date(events[0]?.timestamp ?? Date.now()),
             eventCount: events.length
           })
         }

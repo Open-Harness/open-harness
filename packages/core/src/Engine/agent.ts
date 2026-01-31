@@ -5,9 +5,7 @@
  * - Receive state (read-only)
  * - Generate structured output (via Zod schema)
  * - Update state via Immer-style draft mutations
- *
- * Per ADR-010: Agents own their provider directly instead of referencing
- * a model string. The provider instance includes name, model, config, and stream().
+ * - Own their provider directly (includes name, model, config, and stream())
  *
  * @module
  */
@@ -51,7 +49,7 @@ export interface AgentDef<S = unknown, O = unknown, Ctx = void> {
   /**
    * Provider instance for this agent.
    *
-   * Per ADR-010: Agents own their provider directly. The provider includes:
+   * The provider includes:
    * - name: Provider identifier (e.g., "anthropic", "codex")
    * - model: Model identifier (e.g., "claude-sonnet-4-5")
    * - config: Provider-specific configuration for recording hash

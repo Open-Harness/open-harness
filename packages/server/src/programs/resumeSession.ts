@@ -18,7 +18,6 @@ import {
   computeStateAt,
   type ProviderError,
   type RecordingNotFound,
-  type Services,
   type SessionId,
   type SessionNotFound,
   type StoreError,
@@ -26,8 +25,8 @@ import {
   type WorkflowError,
   type WorkflowResult
 } from "@open-scaffold/core"
-// executeWorkflow and ExecuteOptions are internal API (ADR-001) - import from internal entrypoint
-import { type ExecuteOptions, executeWorkflow } from "@open-scaffold/core/internal"
+// executeWorkflow, ExecuteOptions, and Services are internal API (ADR-001) - import from internal entrypoint
+import { type ExecuteOptions, executeWorkflow, type Services } from "@open-scaffold/core/internal"
 
 import { loadSession } from "./loadSession.js"
 
@@ -39,7 +38,7 @@ export interface ResumeConfig<S, Input = string, Phases extends string = never> 
   readonly sessionId: SessionId
   readonly workflow: WorkflowDef<S, Input, Phases>
   readonly input: Input
-  readonly initialState: S // Fallback if no state:updated events exist
+  readonly initialState: S // Fallback if no state events exist
   readonly resumePhase?: string // Phase to resume from (for phased workflows)
 }
 
@@ -72,7 +71,7 @@ export const resumeSession = <S, Input = string, Phases extends string = never>(
     // Load session events
     const { events } = yield* loadSession(sessionId)
 
-    // Compute current state by scanning for last state:updated event
+    // Compute current state by scanning for last state event
     const currentState = computeStateAt<S>(events, events.length) ?? initialState
 
     yield* Effect.log("Session resuming", {

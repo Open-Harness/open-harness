@@ -5,7 +5,7 @@
  * Uses ProviderRecorder playback with pre-seeded fixtures.
  */
 
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
 import { agent } from "../src/Engine/agent.js"
@@ -78,19 +78,24 @@ const simpleFixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-// Test runtime config using playback mode
-// Per ADR-010: No providers map needed - agents own their providers directly
-const testRuntime: RuntimeConfig = {
-  mode: "playback",
-  recorder: seedRecorder(simpleFixtures),
-  database: ":memory:"
-}
-
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
 describe("execute()", () => {
+  // Test runtime config using playback mode
+  // Per ADR-010: No providers map needed - agents own their providers directly
+  // Created in beforeAll because seedRecorder is async (LibSQL :memory:)
+  let testRuntime: RuntimeConfig
+
+  beforeAll(async () => {
+    const recorder = await seedRecorder(simpleFixtures)
+    testRuntime = {
+      mode: "playback",
+      recorder,
+      database: ":memory:"
+    }
+  })
   describe("WorkflowExecution interface", () => {
     it("returns a WorkflowExecution object with correct shape", () => {
       const execution = execute(testWorkflow, { input: "Build API", runtime: testRuntime })
@@ -272,7 +277,7 @@ describe("execute()", () => {
 
       const multiPhaseRuntime: RuntimeConfig = {
         mode: "playback",
-        recorder: seedRecorder(multiPhaseFixtures),
+        recorder: await seedRecorder(multiPhaseFixtures),
         database: ":memory:"
       }
 

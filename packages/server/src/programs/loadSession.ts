@@ -9,7 +9,8 @@
 
 import { Effect } from "effect"
 
-import { type AnyEvent, Services, type SessionId, SessionNotFound, type StoreError } from "@open-scaffold/core"
+import { type SerializedEvent, type SessionId, SessionNotFound, type StoreError } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 
 // ─────────────────────────────────────────────────────────────────
 // Types
@@ -17,7 +18,7 @@ import { type AnyEvent, Services, type SessionId, SessionNotFound, type StoreErr
 
 export interface LoadedSession {
   readonly sessionId: SessionId
-  readonly events: ReadonlyArray<AnyEvent>
+  readonly events: ReadonlyArray<SerializedEvent>
   readonly eventCount: number
 }
 

@@ -7,7 +7,12 @@
  * @module
  */
 
-import { Data } from "effect"
+import { Data, Schema } from "effect"
+
+import { type EventId, EventIdSchema, generateEventId } from "./Ids.js"
+
+export type { EventId } from "./Ids.js"
+export { generateEventId } from "./Ids.js"
 
 // ═══════════════════════════════════════════════════════════════
 // Workflow Lifecycle Events
@@ -90,12 +95,12 @@ export class AgentCompleted extends Data.TaggedClass("AgentCompleted")<{
  * Emitted when state changes via Immer patches.
  * This is the source of truth for state changes per ADR-006.
  *
- * Includes full state for backward compatibility with observer.onStateChanged.
- * Pure event sourcing systems can ignore the state and derive from patches.
+ * Includes full state for observer.onStateChanged callbacks.
+ * Pure event sourcing systems can derive state from patches instead.
  */
 export class StateIntent extends Data.TaggedClass("StateIntent")<{
   readonly intentId: string
-  /** The new state after applying patches (for observer compatibility) */
+  /** The new state after applying patches */
   readonly state: unknown
   readonly patches: ReadonlyArray<unknown>
   readonly inversePatches: ReadonlyArray<unknown>
@@ -205,6 +210,49 @@ export class InputReceived extends Data.TaggedClass("InputReceived")<{
 }> {}
 
 // ═══════════════════════════════════════════════════════════════
+// HITL Payload Schemas (ADR-008: Type-Safe Event Payloads)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Schema for input:requested event payload.
+ * Used for type-safe parsing at runtime without unsafe `as` casts.
+ */
+export const InputRequestedPayloadSchema = Schema.Struct({
+  id: Schema.String,
+  prompt: Schema.String,
+  type: Schema.Literal("approval", "choice"),
+  options: Schema.optional(Schema.Array(Schema.String))
+})
+
+/** Typed payload for input:requested events */
+export type InputRequestedPayload = Schema.Schema.Type<typeof InputRequestedPayloadSchema>
+
+/**
+ * Schema for input:received event payload.
+ * Used for type-safe parsing at runtime without unsafe `as` casts.
+ */
+export const InputReceivedPayloadSchema = Schema.Struct({
+  id: Schema.String,
+  value: Schema.String,
+  approved: Schema.optional(Schema.Boolean)
+})
+
+/** Typed payload for input:received events */
+export type InputReceivedPayload = Schema.Schema.Type<typeof InputReceivedPayloadSchema>
+
+/**
+ * Decode input:requested payload, returning Option (not Effect).
+ * Returns None if parsing fails - allows silent skip of malformed events.
+ */
+export const decodeInputRequestedPayload = Schema.decodeUnknownOption(InputRequestedPayloadSchema)
+
+/**
+ * Decode input:received payload, returning Option (not Effect).
+ * Returns None if parsing fails - allows silent skip of malformed events.
+ */
+export const decodeInputReceivedPayload = Schema.decodeUnknownOption(InputReceivedPayloadSchema)
+
+// ═══════════════════════════════════════════════════════════════
 // Union Type
 // ═══════════════════════════════════════════════════════════════
 
@@ -255,18 +303,6 @@ export type WorkflowEventTag = WorkflowEvent["_tag"]
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Branded EventId type for type safety.
- * Uses UUID v4 format at runtime.
- */
-export type EventId = string & { readonly _brand: "EventId" }
-
-/**
- * Generate a new EventId synchronously.
- * Uses crypto.randomUUID() which is available in Node.js 19+ and modern browsers.
- */
-export const generateEventId = (): EventId => crypto.randomUUID() as EventId
-
-/**
  * JSON-friendly event format for storage and SSE.
  *
  * Per ADR-004: This is the serialized format sent over the wire
@@ -285,6 +321,48 @@ export interface SerializedEvent {
   /** ID of the event that caused this one (for causality tracking) */
   readonly causedBy?: EventId
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Wire Format Schema (ADR-004: Type Safety at Boundaries)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Schema for deserializing SerializedEvent from wire format (HTTP/JSON).
+ *
+ * Handles timestamp as either:
+ * - number: Already normalized Unix ms (pass through)
+ * - string: ISO 8601 format (convert to Unix ms)
+ *
+ * This provides type-safe deserialization at API boundaries without
+ * double-casting through `unknown`.
+ */
+export const SerializedEventSchema = Schema.Struct({
+  id: EventIdSchema,
+  name: Schema.String,
+  payload: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  timestamp: Schema.Union(
+    Schema.Number,
+    Schema.transform(Schema.String, Schema.Number, {
+      decode: (s) => new Date(s).getTime(),
+      encode: (n) => new Date(n).toISOString()
+    })
+  ),
+  causedBy: Schema.optionalWith(EventIdSchema, { exact: true })
+})
+
+/**
+ * Decode an unknown value to SerializedEvent with proper type validation.
+ *
+ * Use at API boundaries (HTTP handlers) to safely deserialize incoming events.
+ *
+ * @example
+ * ```typescript
+ * const event = yield* decodeSerializedEvent(rawEvent).pipe(
+ *   Effect.mapError(() => new ValidationError({ message: "invalid event format" }))
+ * )
+ * ```
+ */
+export const decodeSerializedEvent = Schema.decodeUnknown(SerializedEventSchema)
 
 /**
  * Map from Data.TaggedClass _tag to colon-separated event name.

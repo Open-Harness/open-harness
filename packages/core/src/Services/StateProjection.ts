@@ -104,9 +104,7 @@ export const makeStateProjection = <S>(
       Stream.runForEach((event) =>
         Match.value(event).pipe(
           Match.tag("StateIntent", (e: StateIntent) =>
-            // Apply state from intent
-            // Note: StateIntent includes full state for observer compatibility
-            // per ADR-006 backward compatibility with observer.onStateChanged
+            // Apply state from intent (StateIntent includes full state per ADR-006)
             SubscriptionRef.set(stateRef, e.state as S)),
           Match.tag("StateCheckpoint", (e: StateCheckpoint) =>
             // Set state directly from checkpoint

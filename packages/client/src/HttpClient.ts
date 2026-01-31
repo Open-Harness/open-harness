@@ -7,7 +7,7 @@
  * @module
  */
 
-import { type AnyEvent, EventIdSchema } from "@open-scaffold/core"
+import { EventIdSchema, type SerializedEvent } from "@open-scaffold/core"
 import { Effect, Schema } from "effect"
 
 import { ClientError } from "./Contract.js"
@@ -28,17 +28,26 @@ import { createSSEStream } from "./SSE.js"
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * Schema for SSE event data (serialized AnyEvent).
+ * Schema for SSE event data (SerializedEvent).
  *
- * Validates the JSON-parsed event from SSE messages matches AnyEvent structure.
- * Per ADR-005: Replace `as AnyEvent` casts with schema validation.
+ * Validates the JSON-parsed event from SSE messages matches SerializedEvent structure.
+ * Per ADR-005: Replace `as SerializedEvent` casts with schema validation.
+ *
+ * Note: timestamp is numeric (Unix ms) in SerializedEvent, but may be
+ * ISO string from legacy sources. Schema accepts both formats.
  */
 const SSEEventSchema = Schema.Struct({
   id: EventIdSchema,
   name: Schema.String,
-  payload: Schema.Unknown,
-  timestamp: Schema.DateFromString,
-  causedBy: Schema.optional(EventIdSchema)
+  payload: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  timestamp: Schema.Union(
+    Schema.Number,
+    Schema.transform(Schema.String, Schema.Number, {
+      decode: (s) => new Date(s).getTime(),
+      encode: (n) => new Date(n).toISOString()
+    })
+  ),
+  causedBy: Schema.optionalWith(EventIdSchema, { exact: true })
 })
 
 /** Decoder for SSE events - validates and transforms SSE message data */
@@ -97,7 +106,7 @@ const ForkResultSchema = Schema.Struct({
 export const HttpClient = (config: ClientConfig): WorkflowClient => {
   let status: ConnectionStatus = "disconnected"
   let activeSessionId: string | null = config.sessionId ?? null
-  let stream: AsyncIterable<AnyEvent> | null = null
+  let stream: AsyncIterable<SerializedEvent> | null = null
   let abortController: AbortController | null = null
 
   const baseUrl = config.url.replace(/\/+$/, "")
@@ -192,7 +201,7 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
     const seen = new Set<string>()
     const signal = abortController.signal
 
-    const eventStream = async function*(): AsyncIterable<AnyEvent> {
+    const eventStream = async function*(): AsyncIterable<SerializedEvent> {
       let attempt = 0
       let delay = 100
 
@@ -221,7 +230,7 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
             try {
               // Parse JSON first
               const parsed: unknown = JSON.parse(message.data)
-              // Validate with Schema (ADR-005: no `as AnyEvent` cast)
+              // Validate with Schema (ADR-005: no `as SerializedEvent` cast)
               const validated = Effect.runSync(
                 decodeSSEEvent(parsed).pipe(
                   Effect.mapError((parseError) =>
@@ -232,8 +241,8 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
                   )
                 )
               )
-              // Build AnyEvent with proper structure
-              const event: AnyEvent = {
+              // Build SerializedEvent with proper structure (ADR-004 wire format)
+              const event: SerializedEvent = {
                 id: validated.id,
                 name: validated.name,
                 payload: validated.payload,
@@ -279,7 +288,7 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
     return response.sessionId
   }
 
-  const events = (): AsyncIterable<AnyEvent> => {
+  const events = (): AsyncIterable<SerializedEvent> => {
     if (!stream) {
       throw new ClientError({
         operation: "connect",
@@ -303,7 +312,7 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
     return response
   }
 
-  const sendInput = async (event: AnyEvent): Promise<void> => {
+  const sendInput = async (event: SerializedEvent): Promise<void> => {
     const sessionId = ensureSession()
     await requestJson(`/sessions/${sessionId}/input`, {
       method: "POST",

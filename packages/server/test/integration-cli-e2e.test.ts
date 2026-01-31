@@ -213,7 +213,7 @@ describe("CLI E2E integration", () => {
 
     expect(eventNames).toContain("workflow:started")
     expect(eventNames).toContain("workflow:completed")
-    expect(eventNames).toContain("state:updated")
+    expect(eventNames).toContain("state:intent")
 
     // Verify ordering
     const startedIdx = eventNames.indexOf("workflow:started")

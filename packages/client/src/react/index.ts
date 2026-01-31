@@ -15,18 +15,12 @@
 export type { WorkflowClientContextValue, WorkflowClientProviderProps } from "./WorkflowClientProvider.js"
 export { useWorkflowClient, WorkflowClientProvider } from "./WorkflowClientProvider.js"
 
-// Legacy Provider (for backwards compatibility)
-export type { WorkflowContextValue } from "./context.js"
-export { WorkflowContext } from "./context.js"
-export type { WorkflowProviderProps } from "./Provider.js"
-export { WorkflowProvider } from "./Provider.js"
-
 // ─────────────────────────────────────────────────────────────────
 // Grouped Hooks (ADR-013 - Public API)
 // ─────────────────────────────────────────────────────────────────
 
 // Unified hook (Tier 2 - recommended for most use cases)
-export type { UseWorkflowResult } from "./hooks/index.js"
+export type { WorkflowResult } from "./hooks/index.js"
 export { useWorkflow } from "./hooks/index.js"
 
 // Data access (Tier 1)

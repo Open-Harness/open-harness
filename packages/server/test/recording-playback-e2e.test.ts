@@ -15,7 +15,8 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import { type AgentStreamEvent, type ProviderRunOptions, Services } from "@open-scaffold/core"
+import type { AgentStreamEvent, ProviderRunOptions } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 
 import { AnthropicProvider } from "../src/provider/Provider.js"
 import { ProviderRecorderLive } from "../src/store/ProviderRecorderLive.js"

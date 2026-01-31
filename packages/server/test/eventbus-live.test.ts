@@ -10,11 +10,13 @@
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { type AnyEvent, EVENTS, makeEvent, Services, type SessionId } from "@open-scaffold/core"
+import { EVENTS, makeEvent, type SerializedEvent, type SessionId } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { EventBusLive } from "../src/services/EventBusLive.js"
 
 // Helper to create events synchronously
-const mkEvent = (name: string, payload: Record<string, unknown>): AnyEvent => Effect.runSync(makeEvent(name, payload))
+const mkEvent = (name: string, payload: Record<string, unknown>): SerializedEvent =>
+  Effect.runSync(makeEvent(name, payload))
 
 describe("EventBusLive", () => {
   it("publishes and filters by session", async () => {

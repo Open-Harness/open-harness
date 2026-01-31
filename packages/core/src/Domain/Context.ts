@@ -21,7 +21,8 @@ import type { SessionId } from "./Ids.js"
  */
 export interface SessionContext {
   readonly sessionId: SessionId
-  readonly workflowName: string
+  /** Short workflow name per ADR-008 */
+  readonly workflow: string
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ export const getSessionContextOptional: Effect.Effect<SessionContext | null, nev
  * @example
  * ```ts
  * const result = yield* withSessionContext(
- *   { sessionId, workflowName: "my-workflow" },
+ *   { sessionId, workflow: "my-workflow" },
  *   executeWorkflow(config)
  * )
  * ```
