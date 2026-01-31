@@ -1,11 +1,12 @@
 {
-  "name": "@open-scaffold/cli",
+  "name": "@open-harness/cli",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "Open Scaffold CLI - Run workflows from the terminal with a TUI",
+  "description": "Open Harness CLI - Run workflows from the terminal with a TUI",
   "bin": {
-    "scaffold": "./dist/index.mjs"
+    "harness": "./dist/index.mjs"
   },
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -19,8 +20,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/open-scaffold/open-scaffold",
-    "directory": "packages/cli"
+    "url": "https://github.com/Open-Harness/open-harness",
+    "directory": "apps/cli"
   },
   "publishConfig": {
     "access": "public"
