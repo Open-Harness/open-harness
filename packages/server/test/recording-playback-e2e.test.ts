@@ -60,7 +60,8 @@ const buildProviderOptions = (prompt: string): ProviderRunOptions => ({
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
-describe("Recording/Playback E2E", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("Recording/Playback E2E", () => {
   it("records in live mode and replays in playback mode with identical results", async () => {
     // Use :memory: for isolated ephemeral database - SHARED across the entire test
     const recorderLayer = ProviderRecorderLive({ url: ":memory:" })

@@ -43,7 +43,8 @@ const makeTestDb = () => {
   return { filePath, url: `file:${filePath}` }
 }
 
-describe("ProviderRecorderLive (Persistent Recording)", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("ProviderRecorderLive (Persistent Recording)", () => {
   it("records real SDK response to DB and replays it", async () => {
     const { filePath, url } = makeTestDb()
     const recorderLayer = ProviderRecorderLive({ url })
