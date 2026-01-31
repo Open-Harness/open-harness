@@ -5,6 +5,6 @@ export default defineConfig({
   ...shared,
   test: {
     ...shared.test,
-    projects: ["packages/*"]
+    projects: ["packages/*", "apps/cli"]
   }
 })

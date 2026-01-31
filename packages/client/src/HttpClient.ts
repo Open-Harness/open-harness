@@ -1,10 +1,14 @@
 /**
  * HTTP+SSE implementation of WorkflowClient.
  *
+ * Per ADR-005: API responses and SSE messages are validated using Effect Schema
+ * at the boundary to ensure runtime type safety.
+ *
  * @module
  */
 
-import type { AnyEvent } from "@open-scaffold/core"
+import { EventIdSchema, type SerializedEvent } from "@open-scaffold/core"
+import { Effect, Schema } from "effect"
 
 import { ClientError } from "./Contract.js"
 import type {
@@ -19,6 +23,76 @@ import type {
 } from "./Contract.js"
 import { createSSEStream } from "./SSE.js"
 
+// ─────────────────────────────────────────────────────────────────
+// API Response Schemas (ADR-005: Type Safety at API Boundaries)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Schema for SSE event data (SerializedEvent).
+ *
+ * Validates the JSON-parsed event from SSE messages matches SerializedEvent structure.
+ * Per ADR-005: Replace `as SerializedEvent` casts with schema validation.
+ *
+ * Note: timestamp is numeric (Unix ms) in SerializedEvent, but may be
+ * ISO string from legacy sources. Schema accepts both formats.
+ */
+const SSEEventSchema = Schema.Struct({
+  id: EventIdSchema,
+  name: Schema.String,
+  payload: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  timestamp: Schema.Union(
+    Schema.Number,
+    Schema.transform(Schema.String, Schema.Number, {
+      decode: (s) => new Date(s).getTime(),
+      encode: (n) => new Date(n).toISOString()
+    })
+  ),
+  causedBy: Schema.optionalWith(EventIdSchema, { exact: true })
+})
+
+/** Decoder for SSE events - validates and transforms SSE message data */
+const decodeSSEEvent = Schema.decodeUnknown(SSEEventSchema)
+
+/**
+ * Schema for createSession API response.
+ */
+const CreateSessionResponseSchema = Schema.Struct({
+  sessionId: Schema.String
+})
+
+/**
+ * Schema for getSession API response.
+ */
+const SessionInfoResponseSchema = Schema.Struct({
+  sessionId: Schema.String,
+  running: Schema.Boolean
+})
+
+/**
+ * Schema for pause API response.
+ */
+const PauseResultSchema = Schema.Struct({
+  ok: Schema.Boolean,
+  wasPaused: Schema.Boolean
+})
+
+/**
+ * Schema for resume API response.
+ */
+const ResumeResultSchema = Schema.Struct({
+  ok: Schema.Boolean,
+  wasResumed: Schema.Boolean
+})
+
+/**
+ * Schema for fork API response.
+ */
+const ForkResultSchema = Schema.Struct({
+  sessionId: Schema.String,
+  originalSessionId: Schema.String,
+  eventsCopied: Schema.Number
+})
+
 /**
  * Create an HTTP client for Open Scaffold workflows.
  *
@@ -32,13 +106,56 @@ import { createSSEStream } from "./SSE.js"
 export const HttpClient = (config: ClientConfig): WorkflowClient => {
   let status: ConnectionStatus = "disconnected"
   let activeSessionId: string | null = config.sessionId ?? null
-  let stream: AsyncIterable<AnyEvent> | null = null
+  let stream: AsyncIterable<SerializedEvent> | null = null
   let abortController: AbortController | null = null
 
   const baseUrl = config.url.replace(/\/+$/, "")
 
   const buildUrl = (path: string) => new URL(path, baseUrl).toString()
 
+  /**
+   * Fetch JSON and validate with Effect Schema.
+   * Per ADR-005: All API responses validated at boundary.
+   */
+  const requestWithSchema = async <A, I>(
+    schema: Schema.Schema<A, I>,
+    path: string,
+    options?: RequestInit
+  ): Promise<A> => {
+    const response = await fetch(buildUrl(path), {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(config.headers ?? {}),
+        ...(options?.headers ?? {})
+      }
+    })
+
+    if (!response.ok) {
+      throw new ClientError({
+        operation: "receive",
+        cause: new Error(`Request failed: ${response.status}`)
+      })
+    }
+
+    const json: unknown = await response.json()
+    const result = Effect.runSync(
+      Schema.decodeUnknown(schema)(json).pipe(
+        Effect.mapError((parseError) =>
+          new ClientError({
+            operation: "receive",
+            cause: new Error(`Invalid API response: ${parseError}`)
+          })
+        )
+      )
+    )
+    return result
+  }
+
+  /**
+   * Fetch JSON without schema validation (for endpoints with generic state).
+   * Used by getState/getStateAt where the state type is user-defined.
+   */
   const requestJson = async <T>(
     path: string,
     options?: RequestInit
@@ -84,7 +201,7 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
     const seen = new Set<string>()
     const signal = abortController.signal
 
-    const eventStream = async function*(): AsyncIterable<AnyEvent> {
+    const eventStream = async function*(): AsyncIterable<SerializedEvent> {
       let attempt = 0
       let delay = 100
 
@@ -111,8 +228,28 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
           for await (const message of createSSEStream(response)) {
             if (signal.aborted) return
             try {
-              const event = JSON.parse(message.data) as AnyEvent
-              if (event?.id && !seen.has(event.id)) {
+              // Parse JSON first
+              const parsed: unknown = JSON.parse(message.data)
+              // Validate with Schema (ADR-005: no `as SerializedEvent` cast)
+              const validated = Effect.runSync(
+                decodeSSEEvent(parsed).pipe(
+                  Effect.mapError((parseError) =>
+                    new ClientError({
+                      operation: "receive",
+                      cause: new Error(`Invalid SSE event: ${parseError}`)
+                    })
+                  )
+                )
+              )
+              // Build SerializedEvent with proper structure (ADR-004 wire format)
+              const event: SerializedEvent = {
+                id: validated.id,
+                name: validated.name,
+                payload: validated.payload,
+                timestamp: validated.timestamp,
+                ...(validated.causedBy !== undefined ? { causedBy: validated.causedBy } : {})
+              }
+              if (!seen.has(event.id)) {
                 seen.add(event.id)
                 yield event
               }
@@ -140,14 +277,18 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
   }
 
   const createSession = async (input: string): Promise<string> => {
-    const response = await requestJson<{ sessionId: string }>("/sessions", {
-      method: "POST",
-      body: JSON.stringify({ input })
-    })
+    const response = await requestWithSchema(
+      CreateSessionResponseSchema,
+      "/sessions",
+      {
+        method: "POST",
+        body: JSON.stringify({ input })
+      }
+    )
     return response.sessionId
   }
 
-  const events = (): AsyncIterable<AnyEvent> => {
+  const events = (): AsyncIterable<SerializedEvent> => {
     if (!stream) {
       throw new ClientError({
         operation: "connect",
@@ -171,7 +312,7 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
     return response
   }
 
-  const sendInput = async (event: AnyEvent): Promise<void> => {
+  const sendInput = async (event: SerializedEvent): Promise<void> => {
     const sessionId = ensureSession()
     await requestJson(`/sessions/${sessionId}/input`, {
       method: "POST",
@@ -190,26 +331,26 @@ export const HttpClient = (config: ClientConfig): WorkflowClient => {
 
   const getSession = async (): Promise<SessionInfo> => {
     const sessionId = ensureSession()
-    return requestJson<SessionInfo>(`/sessions/${sessionId}`)
+    return requestWithSchema(SessionInfoResponseSchema, `/sessions/${sessionId}`)
   }
 
   const pause = async (): Promise<PauseResult> => {
     const sessionId = ensureSession()
-    return requestJson<PauseResult>(`/sessions/${sessionId}/pause`, {
+    return requestWithSchema(PauseResultSchema, `/sessions/${sessionId}/pause`, {
       method: "POST"
     })
   }
 
   const resume = async (): Promise<ResumeResult> => {
     const sessionId = ensureSession()
-    return requestJson<ResumeResult>(`/sessions/${sessionId}/resume`, {
+    return requestWithSchema(ResumeResultSchema, `/sessions/${sessionId}/resume`, {
       method: "POST"
     })
   }
 
   const fork = async (): Promise<ForkResult> => {
     const sessionId = ensureSession()
-    return requestJson<ForkResult>(`/sessions/${sessionId}/fork`, {
+    return requestWithSchema(ForkResultSchema, `/sessions/${sessionId}/fork`, {
       method: "POST"
     })
   }

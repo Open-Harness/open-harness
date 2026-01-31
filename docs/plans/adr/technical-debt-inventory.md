@@ -2,15 +2,15 @@
 
 > **Living document** — Updated as issues are discovered and resolved.
 >
-> **Last updated:** 2026-01-29
+> **Last updated:** 2026-01-30
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
-| Total Issues | 96 |
-| Resolved (via ADR) | 57 |
-| Remaining | 39 |
+| Total Issues | 90 |
+| Resolved (via ADR) | 70 |
+| Remaining | 20 |
 | Bugs | 0 |
 | Smells | 0 |
 | Intentional | 0 |
@@ -20,15 +20,18 @@
 | ADR | Title | Status | Issues Resolved |
 |-----|-------|--------|-----------------|
 | [ADR-001](./001-execution-api.md) | Execution API Design | Accepted | API-001, API-003, API-004, API-005, API-011, ARCH-003, DEAD-001, DEAD-002 |
-| [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, ARCH-012, DEAD-009, DEAD-011 |
+| [ADR-002](./002-hitl-architecture.md) | HITL Architecture | Accepted | HITL-001, HITL-002, HITL-003, TYPE-014, ARCH-012, DEAD-009, DEAD-011 |
 | [ADR-003](./003-public-vs-internal-exports.md) | Public vs Internal Exports | Accepted | ARCH-004, ARCH-007, API-008, API-009, DEAD-003, DEAD-004, DEAD-005, DEAD-006 |
 | [ADR-004](./004-event-observer-pattern.md) | Event/Observer Pattern | Accepted | ARCH-001, ARCH-005, ARCH-020, NAME-005, NAME-007, TYPE-005 |
 | [ADR-005](./005-type-safety-strategy.md) | Type Safety Strategy | Accepted | TYPE-003, TYPE-004, TYPE-006, TYPE-009, TYPE-010, TYPE-011, TYPE-012, TYPE-013 |
-| [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
+| [ADR-006](./006-state-sourcing-model.md) | State Sourcing Model | Accepted | TYPE-015, ARCH-009, ARCH-010, ARCH-011, ARCH-018, ARCH-019, DOC-005 |
 | [ADR-007](./007-error-hierarchy.md) | Error Hierarchy | Accepted | ERR-001, ERR-002, NAME-006 |
-| [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008 |
-| [ADR-009](./009-config-consolidation.md) | Config Consolidation | Accepted | API-002, API-006, API-007 |
+| [ADR-008](./008-naming-conventions.md) | Naming Conventions | Accepted | NAME-001, NAME-002, NAME-003, NAME-004, NAME-008, TYPE-001 |
+| [ADR-009](./009-config-consolidation.md) | Config Consolidation | Accepted | API-002, API-006, API-007, ARCH-013 |
 | [ADR-010](./010-provider-ownership-model.md) | Provider Ownership Model | Accepted | ARCH-006, ARCH-021 |
+| [ADR-011](./011-service-instantiation-pattern.md) | Service Instantiation Pattern | Accepted | ARCH-002 |
+| [ADR-012](./012-phase-lifecycle-specification.md) | Phase Lifecycle Specification | Proposed | ARCH-017 |
+| [ADR-013](./013-react-hooks-architecture.md) | React Hooks Architecture | Accepted | ARCH-008, API-010, DEAD-010, TEST-012, TEST-013, DOC-003 |
 
 ## Decision Log
 
@@ -45,6 +48,7 @@
 | 2026-01-29 | 7 | **ADR-007**: Error hierarchy | Consolidate on a single canonical error hierarchy and structured API errors for better consumer DX. See [ADR-007](./007-error-hierarchy.md) |
 | 2026-01-29 | 7 | **ADR-008**: Naming conventions | Standardize payload field names and callback names for consistency across packages. See [ADR-008](./008-naming-conventions.md) |
 | 2026-01-29 | 7 | **ADR-009**: Config consolidation | Nested runtime/server config, single-workflow server model, and one public server creation path. See [ADR-009](./009-config-consolidation.md) |
+| 2026-01-29 | 7 | **ADR-013**: React Hooks Architecture | React Query + three-tier hooks (primitives, grouped, unified). Server-side state derivation per ADR-006. SSE updates React Query cache. See [ADR-013](./013-react-hooks-architecture.md) |
 
 ## Open Questions
 
@@ -100,7 +104,7 @@
 | API-007 | Two server creation paths without guidance | ✅ **Resolved** | ADR-009 | server/*.ts | One public server creation path |
 | API-008 | 10 route handlers exported individually | ✅ **Resolved** | ADR-003 | server/index.ts | Route handlers are internal-only |
 | API-009 | SSE utilities exported publicly | ✅ **Resolved** | ADR-003 | server/index.ts, client/index.ts | SSE utilities are internal-only |
-| API-010 | Redundant `react/index.ts` barrel in client | Needs Investigation | — | client/react/index.ts | Main index.ts already exports everything |
+| API-010 | Redundant `react/index.ts` barrel in client | ✅ **Resolved** | ADR-013 | client/react/index.ts | New three-tier hook architecture replaces all exports |
 | API-011 | `runSimple()` and `runWithText()` feel incomplete | ✅ **Resolved** | ADR-001 | Engine/run.ts | Remove - use `run()` with observer |
 | API-012 | ID schemas incomplete (only 2 of 4 exported) | Needs Investigation | — | Domain/Ids.ts | `SessionIdSchema`, `WorkflowIdSchema` but not `AgentIdSchema` |
 
@@ -114,8 +118,8 @@
 | TYPE-004 | ID brand casts without runtime validation | ✅ **Resolved** | ADR-005 | Domain/Ids.ts, Engine/types.ts | Schema validation with `Schema.brand` |
 | TYPE-005 | Event payload casts without validation | ✅ **Resolved** | ADR-004 | Engine/runtime.ts | `Data.TaggedClass` provides type-safe access |
 | TYPE-006 | JSON.parse without validation in LibSQL | ✅ **Resolved** | ADR-005 | Layers/LibSQL.ts:71 | Schema decode for deserialized rows |
-| TYPE-007 | StateSnapshot state cast on retrieval | Verify | ADR-006 | Services/StateCache.ts:112,121 | Verify with state-sourcing implementation |
-| TYPE-008 | Zod schema cast loses type info | Accept | ADR-010 | Engine/provider.ts:242 | Zod kept for agent output by design |
+| TYPE-007 | StateSnapshot state cast on retrieval | ✅ **Resolved** | ADR-006 | Services/StateCache.ts:112,121 | Verified — StateCache uses deriveState with schema validation |
+| TYPE-008 | Zod schema cast loses type info | ✅ **Accepted** | ADR-010 | Engine/provider.ts:242 | Zod kept for agent output by design — intentional tradeoff |
 | TYPE-009 | Array.from keys cast to SessionId | ✅ **Resolved** | ADR-005 | Layers/InMemory.ts:78 | ID validation with Schema |
 | TYPE-010 | JSON.parse in StateSnapshotStoreLive | ✅ **Resolved** | ADR-005 | server/store/StateSnapshotStoreLive.ts:36 | `StateCheckpoint` schema validation |
 | TYPE-011 | JSON.parse in EventStoreLive | ✅ **Resolved** | ADR-005 | server/store/EventStoreLive.ts:40 | `StoredEvent` schema validation |
@@ -135,9 +139,9 @@
 | DEAD-005 | `makeInMemoryProviderRegistry()` in public API | ✅ **Resolved** | ADR-003 | Engine/provider.ts | Internal/testing-only export |
 | DEAD-006 | `sseReconnectSchedule` in client exports | ✅ **Resolved** | ADR-003 | client/Reconnect.ts | Internal-only export |
 | DEAD-007 | 8 Logger layers never used | Needs Investigation | — | Layers/Logger.ts:20-85 | ProdLoggerLayer, TestLoggerLayer, etc. |
-| DEAD-008 | `loadWorkflowTape` never imported | Needs Investigation | — | server/programs/loadWorkflowTape.ts | Not re-exported from main index |
+| DEAD-008 | `loadWorkflowTape` never imported | ✅ **Resolved** | ADR-003 | server/programs/loadWorkflowTape.ts | Exported via `@open-scaffold/server/internal` |
 | DEAD-009 | Interaction utilities test-only | ✅ **Resolved** | ADR-002 | Domain/Interaction.ts | Delete — replaced by inline human on phase |
-| DEAD-010 | 7 React hooks missing from react/index.ts | Needs Investigation | — | client/react/index.ts | useFork, usePause, useResume, etc. not re-exported |
+| DEAD-010 | 7 React hooks missing from react/index.ts | ✅ **Resolved** | ADR-013 | client/react/index.ts | New grouped hooks replace individual hooks |
 | DEAD-011 | `usePendingInteraction(s)` completely untested | ✅ **Resolved** | ADR-002 | client/react/hooks.ts | Will be rewritten for new HITL payloads |
 | DEAD-012 | `InMemoryProviderRecorder` possibly redundant | Needs Investigation | — | core test helpers | Alternative to makeInMemoryProviderRecorder |
 
@@ -149,15 +153,15 @@
 | TEST-002 | **CRITICAL**: CLI has ZERO tests | Needs Investigation | — | apps/cli/src/**/* | 399 LoC, 15+ components, all untested |
 | TEST-003 | **HIGH**: hashProviderRequest untested | Needs Investigation | — | core/Domain/Hash.ts | Recording hash determinism critical but not tested |
 | TEST-004 | **HIGH**: OpenScaffold lifecycle untested | Needs Investigation | — | server/OpenScaffold.ts | initialize/dispose/resource cleanup not tested |
-| TEST-005 | **HIGH**: loadWorkflow() dynamic import untested | Needs Investigation | — | cli/loader.ts | Executes arbitrary code with no safety tests |
+| TEST-005 | **HIGH**: loadWorkflow() dynamic import untested | ✅ **Resolved** | — | cli/loader.ts | Covered by apps/cli/test/loader.test.ts (9 tests) |
 | TEST-006 | **HIGH**: LibSQL layer only integration-tested | Needs Investigation | — | core/Layers/LibSQL.ts | Query building, migrations, edge cases untested |
 | TEST-007 | HttpClient SSE integration uses mocked fetch | Needs Investigation | — | client/HttpClient.ts | Real streaming behavior not tested |
 | TEST-008 | EventBusLive concurrency untested | Needs Investigation | — | server/services/EventBusLive.ts | Multiple subscribers, race conditions |
 | TEST-009 | StateSnapshotStore corruption recovery untested | Needs Investigation | — | server/store/*.ts | No tests for corrupt state handling |
 | TEST-010 | Route error handling only happy paths | Needs Investigation | — | server/http/Routes.ts | Database/provider failures not tested |
 | TEST-011 | Provider recording error recovery untested | Needs Investigation | — | core/Engine/provider.ts | Only happy paths tested |
-| TEST-012 | React hooks only test initial state | Needs Investigation | — | client/react/hooks.ts | No mutation/state change tests |
-| TEST-013 | WorkflowProvider component untested | Needs Investigation | — | client/react/Provider.tsx | No component tests exist |
+| TEST-012 | React hooks only test initial state | ✅ **Resolved** | ADR-013 | client/react/hooks.ts | React Query provides testing utilities; new hooks need fresh tests |
+| TEST-013 | WorkflowProvider component untested | ✅ **Resolved** | ADR-013 | client/react/Provider.tsx | Replaced by WorkflowClientProvider; needs fresh tests |
 | TEST-014 | mapStreamEventToInternal untested | Needs Investigation | — | core/Engine/provider.ts:132 | Event type mappings not directly tested |
 | TEST-015 | No concurrent session tests anywhere | Needs Investigation | — | Multiple packages | Pause/resume/fork race conditions |
 | TEST-016 | No end-to-end recording/playback test | Needs Investigation | — | core/server | Live → record → playback cycle not verified |
@@ -167,15 +171,15 @@
 | ID | Issue | Status | Category | Files | Notes |
 |----|-------|--------|----------|-------|-------|
 | ARCH-001 | Three parallel observer patterns (fragmented) | ✅ **Resolved** | ADR-004 | WorkflowObserver, EventBus, EventStore | Single EventHub with PubSub, fiber subscribers |
-| ARCH-002 | Service instantiation patterns inconsistent | Needs Investigation | — | — | MAJOR: different service setup |
+| ARCH-002 | Service instantiation patterns inconsistent | ✅ **Resolved** | ADR-011 | Server.ts, Engine/runtime.ts | Standardized Layer factories with makeAppLayer |
 | ARCH-003 | Inconsistent naming for execution functions | ✅ **Resolved** | ADR-001 | — | Single `run()` API |
 | ARCH-004 | Too many internals exposed in core | ✅ **Resolved** | ADR-003 | core/index.ts | Move internals behind `/internal` entrypoint |
 | ARCH-005 | 26 event types exported individually | ✅ **Resolved** | ADR-004 | Engine/types.ts | Single WorkflowEvent union with Data.TaggedClass |
 | ARCH-006 | Provider infrastructure too public | ✅ **Resolved** | ADR-010 | Engine/provider.ts | ProviderRegistry deleted, runAgentDef internal |
 | ARCH-021 | Provider ownership model misaligned with eval design | ✅ **Resolved** | ADR-010 | Engine/agent.ts, Engine/provider.ts | Agent owns provider directly. See [ADR-010](./010-provider-ownership-model.md) |
-| ARCH-022 | `workflow.with()` not implemented | Needs Implementation | — | Engine/workflow.ts | Specified in eval-system-design.md. Required for variants. Depends on ADR-010. |
+
 | ARCH-007 | RouteContext/RouteResponse types exported | ✅ **Resolved** | ADR-003 | server/http/Routes.ts | Internal-only exports |
-| ARCH-008 | Convenience hooks vs context access redundancy | Needs Investigation | — | client/react/hooks.ts | Multiple ways to get same data |
+| ARCH-008 | Convenience hooks vs context access redundancy | ✅ **Resolved** | ADR-013 | client/react/hooks.ts | Three-tier hook architecture eliminates redundancy |
 | ARCH-009 | State exists in 4 places (divergence risk) | ✅ **Resolved** | ADR-006 | Multiple | Events are source of truth, state derived |
 | ARCH-010 | ProviderRecorder has two competing APIs | ✅ **Resolved** | ADR-006 | Services/ProviderRecorder.ts | Incremental API is canonical |
 | ARCH-011 | StateCache is orphaned (defined but never used) | ✅ **Resolved** | ADR-006 | Services/StateCache.ts | Wired to EventHub for reactive updates |
@@ -184,21 +188,10 @@
 | ARCH-014 | Three store implementations scattered | Needs Investigation | — | Core/Layers, Server/store | Confusing which is official |
 | ARCH-015 | Stream vs AsyncIterable (two async models) | Needs Investigation | — | core, client | Effect Stream + Web standard AsyncIterable |
 | ARCH-016 | ProviderModeContext is ambient (spooky action) | Needs Investigation | — | FiberRef | Global state via FiberRef |
-| ARCH-017 | Phase lifecycle under-specified | Needs Investigation | — | Engine/phase.ts | No guards, no recovery, no rollback |
+| ARCH-017 | Phase lifecycle under-specified | ✅ **Resolved** | ADR-012 | Engine/phase.ts | Guards + lifecycle hooks with retry/pause strategies |
 | ARCH-018 | Event → State order inverted (not true sourcing) | ✅ **Resolved** | ADR-006 | runtime.ts | Events first, state derived |
 | ARCH-019 | No event versioning strategy | ✅ **Resolved** | ADR-006 | — | Data.TaggedClass with _tag enables versioning |
 | ARCH-020 | dispatchToObserver has 10+ switch cases | ✅ **Resolved** | ADR-004 | runtime.ts | Match.exhaustive replaces switch |
-
-### Documentation
-
-| ID | Issue | Status | Category | Files | Notes |
-|----|-------|--------|----------|-------|-------|
-| DOC-001 | No execution API decision matrix in docs | Needs Investigation | — | — | Users don't know which to use |
-| DOC-002 | No internal vs public API documentation | Needs Investigation | — | — | Services/Layers need @internal markers |
-| DOC-003 | Hook grouping/hierarchy undocumented | Needs Investigation | — | client/react/*.ts | Actions vs State vs Predicates |
-| DOC-004 | HITL flow undocumented | Needs Investigation | — | — | No diagram showing pause/resume/input |
-| DOC-005 | State sourcing model undocumented | ✅ **Resolved** | ADR-006 | — | Fully documented in ADR-006 |
-| DOC-006 | Phase semantics undocumented | Needs Investigation | — | — | When snapshots created, lifecycle unclear |
 
 ---
 
@@ -284,8 +277,8 @@
 - **TEST-ONLY** (4): Interaction utilities (`createInteraction`, etc.)
 
 ### @open-scaffold/server
-- **DEAD** (1): `loadWorkflowTape` program never imported
 - **INTERNAL ONLY** (3): Pause/resume/fork routes (correctly not exported - healthy)
+- ~~**DEAD** (1): `loadWorkflowTape`~~ → Now exported via `@open-scaffold/server/internal`
 
 ### @open-scaffold/client
 - **INCOMPLETE** (1): `react/index.ts` missing 7 hooks + 1 type

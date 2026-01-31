@@ -14,12 +14,13 @@ import { Effect } from "effect"
 
 import {
   type EventId,
-  makeEventId,
-  Services,
+  generateEventId,
+  type SerializedEvent,
   type SessionId,
   type SessionNotFound,
   type StoreError
 } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 
 import { loadSession } from "./loadSession.js"
 
@@ -62,21 +63,21 @@ export const forkSession = (
 
     // Copy all events to new session
     for (const event of events) {
-      const newId = yield* makeEventId()
+      const newId = generateEventId()
       idMap.set(event.id, newId)
 
       const mappedCausedBy = event.causedBy
         ? idMap.get(event.causedBy) ?? event.causedBy
         : undefined
 
-      const baseEvent = {
+      const baseEvent: SerializedEvent = {
         id: newId,
         name: event.name,
         payload: event.payload,
         timestamp: event.timestamp
       }
 
-      const newEvent = mappedCausedBy ? { ...baseEvent, causedBy: mappedCausedBy } : baseEvent
+      const newEvent: SerializedEvent = mappedCausedBy ? { ...baseEvent, causedBy: mappedCausedBy } : baseEvent
 
       yield* store.append(newSessionId, newEvent)
     }

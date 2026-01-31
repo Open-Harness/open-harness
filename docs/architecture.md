@@ -99,13 +99,13 @@ packages/core/src/
 │   ├── runtime.ts    # Effect-based executeWorkflow, streamWorkflow
 │   ├── execute.ts    # Async iterator API
 │   ├── run.ts        # Simple Promise API
-│   ├── provider.ts   # ProviderRegistry, runAgentDef
+│   ├── provider.ts   # runAgentDef (agent execution with recording)
 │   ├── types.ts      # Events, payloads, WorkflowResult
 │   └── utils.ts      # computeStateAt (pure function)
 │
-└── Layers/           # Basic layer configurations
-    ├── Logger.ts
-    └── InMemory.ts
+└── Layers/           # Service implementations
+    ├── InMemory.ts   # InMemoryEventHub (PubSub-based, real implementation)
+    └── LibSQL.ts     # EventStoreLive, StateSnapshotStoreLive, ProviderRecorderLive
 ```
 
 ### Server Package Structure
@@ -469,31 +469,25 @@ const hashProviderRequest = (options: ProviderRunOptions): string => {
 
 This enables deterministic playback - same input produces same recorded output.
 
-### ProviderRegistry
+### Agent Provider Ownership (ADR-010)
 
-Models are resolved to providers via a registry:
-
-```typescript
-interface ProviderRegistryService {
-  readonly getProvider: (model: string) =>
-    Effect.Effect<AgentProvider, ProviderNotFoundError>
-  readonly registerProvider: (model: string, provider: AgentProvider) =>
-    Effect.Effect<void>
-}
-```
-
-Configuration in OpenScaffold:
+Per [ADR-010](./plans/adr/010-provider-ownership-model.md), agents own their providers directly:
 
 ```typescript
-const scaffold = OpenScaffold.create({
-  database: "./data/app.db",
-  mode: "live",
-  providers: {
-    "claude-haiku-4-5": AnthropicProvider({ model: "claude-haiku-4-5" }),
-    "claude-sonnet-4-5": AnthropicProvider({ model: "claude-sonnet-4-5" })
-  }
+// Agents embed their provider directly - no registry lookup
+const planner = agent({
+  name: "planner",
+  provider: AnthropicProvider({ model: "claude-sonnet-4-5" }),
+  output: planSchema,
+  prompt: (state) => `Create a plan for: ${state.task}`,
+  update: (output, draft) => { draft.plan = output.plan }
 })
 ```
+
+This enables:
+- **Type safety** - Provider output type flows to agent output type
+- **Simplified runtime** - No dependency on ProviderRegistry service
+- **Variant creation** - Easy to create evaluation variants with different models
 
 ---
 

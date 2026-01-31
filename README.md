@@ -74,7 +74,7 @@ Every action in a workflow is recorded as an immutable event. In `live` mode, AP
 ## Get Started
 
 ```bash
-pnpm add @open-scaffold/core
+bun add @open-scaffold/core
 ```
 
 See the [documentation](./docs/getting-started.md) for full guides.

@@ -10,8 +10,8 @@
  * @module
  */
 
-import type { AgentProvider, WorkflowDef } from "@open-scaffold/core"
-import { makeInMemoryProviderRegistry, ProviderRegistry, Services } from "@open-scaffold/core"
+import type { WorkflowDef } from "@open-scaffold/core"
+import { Services } from "@open-scaffold/core/internal"
 import { Effect, Layer, ManagedRuntime } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "./constants.js"
@@ -40,14 +40,6 @@ export interface OpenScaffoldConfig {
   readonly database: string
   /** Provider mode: "live" or "playback" (REQUIRED - no default) */
   readonly mode: ProviderMode
-  /**
-   * Named providers map for the ProviderRegistry.
-   * Keys are model strings (e.g., "claude-sonnet-4-20250514"),
-   * values are AgentProvider implementations.
-   *
-   * Optional - if not provided, no ProviderRegistry layer is added.
-   */
-  readonly providers?: Record<string, AgentProvider>
 }
 
 /**
@@ -81,7 +73,8 @@ export interface OpenScaffoldServer {
  */
 export interface SessionInfo {
   id: string
-  workflowName: string
+  /** Short workflow name per ADR-008 */
+  workflow: string
   createdAt: Date
   eventCount: number
 }
@@ -110,7 +103,6 @@ type AppServices =
   | Services.StateSnapshotStore
   | Services.EventBus
   | Services.ProviderRecorder
-  | ProviderRegistry
   | Services.ProviderModeContext
 
 // ─────────────────────────────────────────────────────────────────
@@ -165,35 +157,14 @@ export class OpenScaffold {
    * Create a new OpenScaffold instance.
    */
   static create(config: OpenScaffoldConfig): OpenScaffold {
-    // Validate providers: undefined means caller forgot, {} means explicit opt-out
-    if (config.providers === undefined) {
-      throw new Error(
-        "OpenScaffold created without providers. Any workflow with agent phases will fail. " +
-          "Pass providers to OpenScaffold.create() or set providers: {} to explicitly opt out."
-      )
-    }
-
     // Create individual layers - all use same database for unified storage
     const eventStoreLayer = EventStoreLive({ url: config.database })
     const snapshotStoreLayer = StateSnapshotStoreLive({ url: config.database })
     const providerRecorderLayer = ProviderRecorderLive({ url: config.database })
     const eventBusLayer = Layer.effect(Services.EventBus, EventBusLive)
 
-    // Build ProviderRegistry layer (empty if no providers configured)
-    const providerRegistryLayer = Layer.effect(
-      ProviderRegistry,
-      Effect.sync(() => {
-        const registry = makeInMemoryProviderRegistry()
-        if (config.providers) {
-          for (const [model, provider] of Object.entries(config.providers)) {
-            Effect.runSync(registry.registerProvider(model, provider))
-          }
-        }
-        return registry
-      })
-    )
-
     // ProviderModeContext layer
+    // Note: Per ADR-010, ProviderRegistry is no longer needed - agents own their providers directly
     const providerModeLayer = Layer.succeed(
       Services.ProviderModeContext,
       { mode: config.mode }
@@ -205,7 +176,6 @@ export class OpenScaffold {
       snapshotStoreLayer,
       providerRecorderLayer,
       eventBusLayer,
-      providerRegistryLayer,
       providerModeLayer
     )
 
@@ -249,8 +219,7 @@ export class OpenScaffold {
         name: "anthropic",
         mode,
         connected: mode === "live"
-      },
-      ...(this.config.providers ? { providers: this.config.providers } : {})
+      }
     })
 
     // Wrap Effect-returning methods with Promise-returning methods
@@ -296,21 +265,19 @@ export class OpenScaffold {
           const events = yield* eventStore.getEvents(id)
           const startEvent = events.find((e) => e.name === "workflow:started")
 
-          // Extract workflowName from workflow:started event
-          // - New runtime API: { workflowName, sessionId, input }
-          // - Old createSession: { goal } (no workflowName)
-          let workflowName = "unknown"
+          // Extract workflow name from workflow:started event (ADR-008: short name "workflow")
+          let workflow = "unknown"
           if (startEvent?.payload) {
-            const payload = startEvent.payload as { workflowName?: string }
-            if (payload.workflowName) {
-              workflowName = payload.workflowName
+            const payload = startEvent.payload as { workflow?: string }
+            if (payload.workflow) {
+              workflow = payload.workflow
             }
           }
 
           sessions.push({
             id,
-            workflowName,
-            createdAt: events[0]?.timestamp ?? new Date(),
+            workflow,
+            createdAt: new Date(events[0]?.timestamp ?? Date.now()),
             eventCount: events.length
           })
         }

@@ -55,14 +55,6 @@ export interface ProviderRecorderService {
   readonly load: (hash: string) => Effect.Effect<RecordingEntry | null, StoreError>
 
   /**
-   * Save a complete recording entry (hash, events, result).
-   * Used after streaming completes in live mode.
-   *
-   * @deprecated Use startRecording, appendEvent, finalizeRecording for crash-safe incremental recording.
-   */
-  readonly save: (entry: Omit<RecordingEntry, "recordedAt">) => Effect.Effect<void, StoreError>
-
-  /**
    * Delete a recorded entry by hash.
    */
   readonly delete: (hash: string) => Effect.Effect<void, StoreError>

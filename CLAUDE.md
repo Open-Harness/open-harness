@@ -1,6 +1,34 @@
 
 <!-- MANUAL ADDITIONS START -->
 
+## ⚠️ CRITICAL: VITEST ORPHANED PROCESSES - READ THIS FIRST ⚠️
+
+**NEVER run `vitest` without the `run` subcommand. Orphaned vitest processes will accumulate and crash the system.**
+
+Vitest defaults to **watch mode** when it detects a TTY. When an agent session ends or is interrupted, vitest keeps running in the background. Multiple agent runs = exponentially accumulating orphaned processes that consume all system resources.
+
+**Correct commands:**
+- `bun run test` → runs `vitest run` (single run, exits when done)
+- `bun run test:watch` → runs `vitest` in watch mode (interactive use only)
+
+**FORBIDDEN:**
+- NEVER run bare `vitest` without `run` subcommand
+- NEVER run `bun vitest` (use `bun run test` instead)
+
+**If you see orphaned vitest processes, kill them:**
+```bash
+pkill -f vitest
+```
+
+**Why this happens:**
+1. Agent runs `vitest` (not `vitest run`)
+2. Vitest detects TTY → starts in watch mode
+3. Agent finishes/interrupted → vitest keeps running
+4. Vitest spawns worker processes (`forks` pool) → those orphan too
+5. Multiple agent runs → system overload → computer shutdown
+
+---
+
 ## ⚠️ CRITICAL: TYPESCRIPT BUILD ARTIFACTS - READ THIS FIRST ⚠️
 
 **NEVER emit TypeScript build artifacts into source directories.**
@@ -15,10 +43,10 @@ The build system is:
 - If you see these files in `src/`, DELETE THEM IMMEDIATELY
 
 **Correct commands:**
-- `pnpm build` → runs `turbo run build` → tsdown to dist/
-- `pnpm typecheck` → runs `turbo run typecheck` → tsc -b to build/
-- `pnpm lint` → ESLint (no file emission)
-- `pnpm test` → Vitest (no file emission)
+- `bun run build` → runs `turbo run build` → tsdown to dist/
+- `bun run typecheck` → runs `turbo run typecheck` → tsc -b to build/
+- `bun run lint` → ESLint (no file emission)
+- `bun run test` → Vitest run mode (runs once and exits, no file emission)
 
 **The .gitignore blocks these patterns but files still pollute the working directory:**
 ```
@@ -116,6 +144,135 @@ Functions like `computeStateAt` that take arrays as input don't need services or
 - LibSQL `:memory:` is fast (no disk I/O) and exercises real SQL
 - ProviderRecorder already exists for deterministic replay of real API responses
 - If a test needs a mock, the architecture is wrong — fix the architecture
+
+---
+
+## ⚠️ CRITICAL: ZERO TECHNICAL DEBT - NO WORKAROUNDS, NO EXCEPTIONS ⚠️
+
+**NEVER introduce technical debt. NEVER create workarounds. Fix problems at the source. ALWAYS.**
+
+### The Absolute Rule
+
+When you encounter a problem - a type mismatch, a function returning the wrong thing, a legacy pattern - you have two choices:
+
+1. **Fix it properly** - Update the source, change all callers, do the full work
+2. **Work around it** - Add a conversion, a shim, a "temporary" hack
+
+**Option 2 is FORBIDDEN. There are no exceptions.**
+
+### What This Means In Practice
+
+- **Type mismatch?** Fix the type definition. Don't cast or convert at call sites.
+- **Function returns wrong format?** Fix the function. Don't wrap it.
+- **Legacy code in the way?** Delete it and update all callers. Don't deprecate.
+- **Need backwards compatibility?** NO. Break it. Fix all dependents.
+- **"Just for now" solution?** NO. There is no "for now." Do it right.
+- **Gradual migration?** NO. Migrate everything at once.
+- **Feature flag for old vs new?** NO. One path only.
+- **Conversion layer between old and new?** NO. One format only.
+
+### Why This Is Non-Negotiable
+
+**There is no such thing as a temporary workaround.** Every shortcut becomes permanent. Every compatibility shim becomes load-bearing. Every "we'll clean this up later" becomes "this is how it works now."
+
+The cost of doing it right is paid once. The cost of a workaround is paid forever.
+
+### Examples of FORBIDDEN Patterns
+
+```typescript
+// ❌ FORBIDDEN: Inline conversion instead of fixing the source
+const event: SerializedEvent = {
+  ...legacyEvent,
+  timestamp: legacyEvent.timestamp.getTime()  // NO! Fix the source!
+}
+
+// ❌ FORBIDDEN: Wrapper function instead of fixing the original
+const makeSerializedEvent = (e: LegacyEvent): SerializedEvent => ({ ... })
+
+// ❌ FORBIDDEN: Type assertion to paper over mismatch
+const event = makeEvent(...) as unknown as SerializedEvent
+
+// ❌ FORBIDDEN: Dual code paths
+if (useLegacyFormat) { ... } else { ... }
+
+// ❌ FORBIDDEN: Deprecation instead of deletion
+/** @deprecated Use newThing instead */
+export const oldThing = ...
+```
+
+### The Correct Response
+
+When you see a problem:
+
+1. Identify the SOURCE of the problem (the function, type, or module that's wrong)
+2. Fix the source directly
+3. Update ALL callers/dependents
+4. Delete the old code entirely
+5. Run tests, fix any failures
+
+**If this seems like "too much work" - do it anyway. The alternative is worse.**
+
+---
+
+## ⚠️ CRITICAL: NO TYPE CASTING FOR DATA CONSTRUCTION ⚠️
+
+**NEVER use `as SomeType` to construct data. This bypasses TypeScript's type checking.**
+
+### The Problem
+
+```typescript
+// ❌ FORBIDDEN: "Trust me bro" - TypeScript won't catch errors
+const event = { _tag: "TextDelta", text: "wrong field" } as AgentStreamEvent
+
+// The above compiles but is INVALID - schema expects `delta`, not `text`
+```
+
+### The Solution
+
+Use schema-validated factories or `satisfies`:
+
+```typescript
+// ✅ CORRECT: Schema.make() validates at construction
+import { makeTextDelta } from "@open-scaffold/core"
+const event = makeTextDelta("correct")
+
+// ✅ CORRECT: satisfies checks at compile time (no runtime cost)
+const event = { _tag: "TextDelta", delta: "correct" } satisfies AgentStreamEvent
+```
+
+### Exceptions
+
+- **Error narrowing in catch blocks is acceptable**: `catch (e) { const err = e as MyError }` - TypeScript types caught errors as `unknown`, narrowing is standard practice
+
+### Testing Validation Logic
+
+When testing that factory functions throw on invalid input, **use validation functions that accept `unknown`**, not type casts:
+
+```typescript
+// ❌ FORBIDDEN: Type casting to bypass TypeScript
+it("throws if provider is missing", () => {
+  expect(() => agent({
+    provider: undefined as unknown as AgentProvider,  // NO!
+    ...
+  })).toThrow()
+})
+
+// ✅ CORRECT: Use validation function that accepts unknown
+it("throws if provider is missing", () => {
+  expect(() => validateAgentDef({
+    provider: undefined,  // Clean - no casting needed
+    ...
+  })).toThrow("Agent \"test\" requires 'provider' field")
+})
+```
+
+**Available validation functions:**
+- `validateWorkflowDef(input: unknown)` - from `Engine/workflow.ts`
+- `validateAgentDef(input: unknown)` - from `Engine/agent.ts`
+
+### Why This Matters
+
+The schema validation we added at boundaries (Phase 6) will **silently drop** malformed data. Type casts hide bugs until runtime - or worse, until production.
 
 ---
 

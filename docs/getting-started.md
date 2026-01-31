@@ -6,15 +6,15 @@
 
 ## Prerequisites
 
-- Node.js 20+
-- pnpm (or npm/yarn)
+- Node.js 20+ or Bun 1.2+
+- bun (recommended) or npm/yarn
 
 ---
 
 ## Installation
 
 ```bash
-pnpm add @open-scaffold/core @open-scaffold/server @open-scaffold/client
+bun add @open-scaffold/core @open-scaffold/server @open-scaffold/client
 ```
 
 ---

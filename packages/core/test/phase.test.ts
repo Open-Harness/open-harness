@@ -12,7 +12,7 @@ import { agent } from "../src/Engine/agent.js"
 import { type HumanConfig, phase, type PhaseDef } from "../src/Engine/phase.js"
 import { run } from "../src/Engine/run.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Phases
@@ -30,19 +30,19 @@ interface TaskContext {
   task: { id: string; status: "pending" | "completed" }
 }
 
-// Test agent
+// Test agent (per ADR-010: agents own provider directly)
 const testAgent = agent<TestState, { done: boolean }>({
   name: "test-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ done: z.boolean() }),
   prompt: (state) => `Goal: ${state.goal}`,
   update: () => {}
 })
 
-// Test agent with context
+// Test agent with context (per ADR-010: agents own provider directly)
 const contextAgent = agent<TestState, { result: string }, TaskContext>({
   name: "context-agent",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: z.object({ result: z.string() }),
   prompt: (state, ctx) => `Task ${ctx.task.id}: ${state.goal}`,
   update: (output, draft, ctx) => {
@@ -173,8 +173,12 @@ describe("phase() factory", () => {
       })
 
       expect(p.human).toBeDefined()
-      expect(p.human!.type).toBe("approval")
-      expect(p.human!.prompt({ goal: "test", tasks: [], approved: false })).toBe("Review goal: test")
+      // Type narrow: we know human is a static config, not a function
+      const humanConfig = p.human as HumanConfig<TestState>
+      expect(humanConfig.type).toBe("approval")
+      expect((humanConfig.prompt as (state: TestState) => string)({ goal: "test", tasks: [], approved: false })).toBe(
+        "Review goal: test"
+      )
       expect(p.onResponse).toBeDefined()
     })
 
@@ -188,8 +192,10 @@ describe("phase() factory", () => {
         next: "done"
       })
 
-      expect(p.human!.type).toBe("choice")
-      expect(p.human!.options).toEqual(["Continue", "Revise", "Cancel"])
+      // Type narrow: we know human is a static config, not a function
+      const humanConfig = p.human as HumanConfig<TestState>
+      expect(humanConfig.type).toBe("choice")
+      expect(humanConfig.options).toEqual(["Continue", "Revise", "Cancel"])
     })
 
     it("allows human phase without next (if terminal)", () => {
@@ -246,12 +252,9 @@ describe("PhaseDef type (compile-time)", () => {
 })
 
 describe("HumanConfig type (compile-time)", () => {
-  it("HumanConfig can be created with all types", () => {
-    const freeform: HumanConfig<TestState> = {
-      prompt: () => "Enter text",
-      type: "freeform"
-    }
-
+  // Note: Per ADR-002, only "approval" and "choice" are valid types.
+  // For freeform text input, use "choice" with an "Other..." option.
+  it("HumanConfig can be created with valid types", () => {
     const approval: HumanConfig<TestState> = {
       prompt: () => "Approve?",
       type: "approval"
@@ -263,7 +266,6 @@ describe("HumanConfig type (compile-time)", () => {
       options: ["A", "B", "C"]
     }
 
-    expect(freeform.type).toBe("freeform")
     expect(approval.type).toBe("approval")
     expect(choice.type).toBe("choice")
   })
@@ -275,12 +277,6 @@ describe("HumanConfig type (compile-time)", () => {
 
 describe("phase behavioral (next() routing)", () => {
   const providerOptions = { model: "claude-sonnet-4-5" }
-  const playbackDummy = {
-    name: "playback-dummy",
-    stream: () => {
-      throw new Error("playbackDummyProvider called - recording not found")
-    }
-  }
 
   it("static next routes to the correct phase", async () => {
     type Phases = "step1" | "step2" | "done"
@@ -293,7 +289,7 @@ describe("phase behavioral (next() routing)", () => {
 
     const step1Agent = agent<StepState, { value: string }>({
       name: "step1-agent",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: outputSchema,
       prompt: () => "Step 1",
       update: (output, draft) => {
@@ -303,7 +299,7 @@ describe("phase behavioral (next() routing)", () => {
 
     const step2Agent = agent<StepState, { value: string }>({
       name: "step2-agent",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: outputSchema,
       prompt: (state) => `Step 2: ${state.value}`,
       update: (output, draft) => {
@@ -342,9 +338,8 @@ describe("phase behavioral (next() routing)", () => {
     const result = await run(w, {
       input: "go",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onPhaseChanged: phaseChanges }
@@ -373,7 +368,7 @@ describe("phase behavioral (next() routing)", () => {
 
     const checkAgent = agent<CheckState, { score: number }>({
       name: "checker",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: scoreSchema,
       prompt: () => "Check score",
       update: (output, draft) => {
@@ -407,9 +402,8 @@ describe("phase behavioral (next() routing)", () => {
     const result = await run(w, {
       input: "evaluate",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       }
     })
@@ -430,7 +424,7 @@ describe("phase behavioral (next() routing)", () => {
 
     const counterAgent = agent<CountState, { increment: number }>({
       name: "counter",
-      model: "claude-sonnet-4-5",
+      provider: testProvider,
       output: countSchema,
       prompt: (state) => `Count: ${state.count}`,
       update: (output, draft) => {
@@ -473,9 +467,8 @@ describe("phase behavioral (next() routing)", () => {
     const result = await run(w, {
       input: "go",
       runtime: {
-        providers: { "claude-sonnet-4-5": playbackDummy },
         mode: "playback",
-        recorder: seedRecorder(fixtures),
+        recorder: await seedRecorder(fixtures),
         database: ":memory:"
       },
       observer: { onAgentStarted: agentStartedCalls }

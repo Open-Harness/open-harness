@@ -15,8 +15,7 @@ export async function listCommand(options: ListOptions): Promise<void> {
   try {
     const scaffold = OpenScaffold.create({
       database: `file:${options.database}`,
-      mode: "playback",
-      providers: {}
+      mode: "playback"
     })
 
     const sessions: Array<SessionInfo> = await scaffold.listSessions()
@@ -35,7 +34,7 @@ export async function listCommand(options: ListOptions): Promise<void> {
 
     for (const session of sessions.slice(0, limit)) {
       const id = session.id.padEnd(36)
-      const name = session.workflowName.slice(0, 20).padEnd(20)
+      const name = session.workflow.slice(0, 20).padEnd(20)
       const events = String(session.eventCount).padStart(6)
       const created = session.createdAt.toISOString().slice(0, 19).replace("T", " ")
 

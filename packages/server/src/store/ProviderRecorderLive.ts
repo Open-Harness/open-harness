@@ -9,30 +9,20 @@
 
 import { SqlClient } from "@effect/sql"
 import { LibsqlClient } from "@effect/sql-libsql"
-import { type AgentRunResult, type AgentStreamEvent, Services, StoreError } from "@open-scaffold/core"
-import { Effect, Layer, Redacted, Ref } from "effect"
+import { type AgentStreamEvent, StoreError } from "@open-scaffold/core"
+import { decodeAgentRunResult, decodeAgentStreamEvent, Services } from "@open-scaffold/core/internal"
+import { Effect, Layer, Option, Redacted, Ref } from "effect"
 
 import type { LibSQLConfig } from "./Config.js"
 import { runMigrations } from "./Migrations.js"
 
 // Service types from Services namespace
 const { ProviderRecorder } = Services
-type RecordingEntry = Services.RecordingEntry
 type RecordingEntryMeta = Services.RecordingEntryMeta
 
 // ─────────────────────────────────────────────────────────────────
 // Internal Types
 // ─────────────────────────────────────────────────────────────────
-
-interface RecordingRow {
-  readonly id: string
-  readonly request_hash: string
-  readonly prompt: string
-  readonly provider: string
-  readonly response: string
-  readonly stream_transcript: string | null
-  readonly recorded_at: string
-}
 
 interface RecordingSessionRow {
   readonly recording_id: string
@@ -51,28 +41,6 @@ interface RecordingEventRow {
   readonly event_index: number
   readonly event_data: string
   readonly created_at: string
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Convert a database row to a RecordingEntry.
- */
-const rowToRecordingEntry = (row: RecordingRow): RecordingEntry => {
-  const result = JSON.parse(row.response) as AgentRunResult
-  const streamData = row.stream_transcript
-    ? (JSON.parse(row.stream_transcript) as ReadonlyArray<AgentStreamEvent>)
-    : []
-  return {
-    hash: row.request_hash,
-    prompt: row.prompt,
-    provider: row.provider,
-    result,
-    streamData,
-    recordedAt: new Date(row.recorded_at)
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -108,18 +76,7 @@ export const ProviderRecorderLive = (config: LibSQLConfig): Layer.Layer<Services
     return ProviderRecorder.of({
       load: (hash) =>
         Effect.gen(function*() {
-          // First check legacy provider_recordings table
-          const rows = yield* sql<RecordingRow>`
-            SELECT id, request_hash, prompt, provider, response, stream_transcript, recorded_at
-            FROM provider_recordings
-            WHERE request_hash = ${hash}
-            LIMIT 1
-          `
-          if (rows.length > 0) {
-            return rowToRecordingEntry(rows[0])
-          }
-
-          // Then check incremental recording_sessions (only completed)
+          // Load from recording_sessions (only completed)
           const sessions = yield* sql<RecordingSessionRow>`
             SELECT recording_id, request_hash, prompt, provider, status, response, created_at, completed_at
             FROM recording_sessions
@@ -141,10 +98,21 @@ export const ProviderRecorderLive = (config: LibSQLConfig): Layer.Layer<Services
             ORDER BY event_index ASC
           `
 
-          const streamData = eventRows.map((row) => JSON.parse(row.event_data) as AgentStreamEvent)
-          const result = session.response ? (JSON.parse(session.response) as AgentRunResult) : null
+          // Parse and validate events with Effect Schema (skip malformed)
+          const streamData: Array<AgentStreamEvent> = []
+          for (const row of eventRows) {
+            const parsed = decodeAgentStreamEvent(JSON.parse(row.event_data))
+            if (Option.isSome(parsed)) {
+              streamData.push(parsed.value)
+            }
+          }
 
-          if (!result) {
+          // Parse and validate result with Effect Schema
+          if (!session.response) {
+            return null
+          }
+          const parsedResult = decodeAgentRunResult(JSON.parse(session.response))
+          if (Option.isNone(parsedResult)) {
             return null
           }
 
@@ -153,7 +121,7 @@ export const ProviderRecorderLive = (config: LibSQLConfig): Layer.Layer<Services
             prompt: session.prompt,
             provider: session.provider,
             streamData,
-            result,
+            result: parsedResult.value,
             recordedAt: new Date(session.created_at)
           }
         }).pipe(
@@ -161,43 +129,18 @@ export const ProviderRecorderLive = (config: LibSQLConfig): Layer.Layer<Services
           Effect.withSpan("ProviderRecorder.load", { attributes: { hash } })
         ),
 
-      save: (entry) =>
-        Effect.gen(function*() {
-          const id = crypto.randomUUID()
-          const response = JSON.stringify(entry.result)
-          const streamTranscript = JSON.stringify(entry.streamData)
-          const recordedAt = new Date().toISOString()
-
-          yield* sql`
-            INSERT OR REPLACE INTO provider_recordings (
-              id,
-              request_hash,
-              prompt,
-              provider,
-              response,
-              stream_transcript,
-              recorded_at
-            )
-            VALUES (
-              ${id},
-              ${entry.hash},
-              ${entry.prompt},
-              ${entry.provider},
-              ${response},
-              ${streamTranscript},
-              ${recordedAt}
-            )
-          `
-        }).pipe(
-          Effect.mapError((cause) => new StoreError({ operation: "write", cause })),
-          Effect.withSpan("ProviderRecorder.save", { attributes: { hash: entry.hash } })
-        ),
-
       delete: (hash) =>
         Effect.gen(function*() {
+          // Delete events first (foreign key relationship)
           yield* sql`
-            DELETE FROM provider_recordings
-            WHERE request_hash = ${hash}
+            DELETE FROM recording_events
+            WHERE recording_id IN (
+              SELECT recording_id FROM recording_sessions WHERE request_hash = ${hash}
+            )
+          `
+          // Delete sessions
+          yield* sql`
+            DELETE FROM recording_sessions WHERE request_hash = ${hash}
           `
         }).pipe(
           Effect.mapError((cause) => new StoreError({ operation: "write", cause })),
@@ -210,17 +153,18 @@ export const ProviderRecorderLive = (config: LibSQLConfig): Layer.Layer<Services
             request_hash: string
             prompt: string
             provider: string
-            recorded_at: string
+            created_at: string
           }>`
-            SELECT request_hash, prompt, provider, recorded_at
-            FROM provider_recordings
-            ORDER BY recorded_at DESC
+            SELECT request_hash, prompt, provider, created_at
+            FROM recording_sessions
+            WHERE status = 'complete'
+            ORDER BY completed_at DESC
           `
           return rows.map((row): RecordingEntryMeta => ({
             hash: row.request_hash,
             prompt: row.prompt,
             provider: row.provider,
-            recordedAt: new Date(row.recorded_at)
+            recordedAt: new Date(row.created_at)
           }))
         }).pipe(
           Effect.mapError((cause) => new StoreError({ operation: "read", cause })),

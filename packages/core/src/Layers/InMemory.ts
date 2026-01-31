@@ -1,234 +1,83 @@
 /**
- * In-memory implementations of EventStore, EventBus, and ProviderRecorder.
+ * In-memory EventHub implementation using Effect PubSub.
  *
- * Real implementations using in-memory data structures.
- * Suitable for standalone/testing use without external dependencies.
+ * This is a REAL implementation - not a mock or stub.
+ * Uses Effect's PubSub for broadcasting events to multiple subscribers.
  *
- * - InMemoryEventStore: Uses a Map<string, AnyEvent[]> for storage
- * - InMemoryEventBus: Noop publish, empty subscribe (no subscribers in standalone mode)
- * - InMemoryProviderRecorder: Uses a Map for recording/playback storage
+ * Note: Map-based stubs (InMemoryEventStore, InMemoryEventBus, InMemoryProviderRecorder)
+ * have been removed per CLAUDE.md "NO MOCKS" policy. Use LibSQL :memory: implementations
+ * from LibSQL.ts instead:
+ * - EventStoreLive({ url: ":memory:" })
+ * - ProviderRecorderLive({ url: ":memory:" })
+ * - EventBusLive (from Services/EventBus.ts)
  *
  * @module
  */
 
-import { Effect, Layer, Ref, Stream } from "effect"
+import { Effect, Layer, PubSub, Stream } from "effect"
+import type { Scope } from "effect"
 
-import type { SessionId } from "../Domain/Ids.js"
-import type { AgentStreamEvent } from "../Domain/Provider.js"
-import type { AnyEvent } from "../Engine/types.js"
-import { EventBus } from "../Services/EventBus.js"
-import { EventStore } from "../Services/EventStore.js"
-import {
-  ProviderRecorder,
-  type ProviderRecorderService,
-  type RecordingEntry,
-  type RecordingEntryMeta
-} from "../Services/ProviderRecorder.js"
+import type { WorkflowEvent } from "../Domain/Events.js"
+import { EventHub } from "../Services/EventHub.js"
 
 // ─────────────────────────────────────────────────────────────────
-// InMemoryEventStore
+// InMemoryEventHub
 // ─────────────────────────────────────────────────────────────────
 
 /**
- * In-memory EventStore implementation.
+ * In-memory EventHub implementation backed by PubSub.
  *
- * Stores events in a `Map<string, AnyEvent[]>` managed by an Effect Ref.
- * All operations are real — append stores, getEvents retrieves, etc.
+ * Per ADR-004: Single emission point for all workflow events.
+ * Uses Effect's unbounded PubSub for broadcasting events to subscribers.
+ *
+ * This is the primary event distribution mechanism - all workflow events
+ * flow through EventHub and are broadcast to:
+ * - EventStore (persistence)
+ * - EventBus (SSE subscribers)
+ * - Observer callbacks
+ *
+ * The layer is scoped, meaning the PubSub is created fresh for each
+ * workflow execution and automatically cleaned up when the scope closes.
  *
  * @example
  * ```typescript
- * const program = Effect.gen(function* () {
- *   const store = yield* EventStore
- *   yield* store.append(sessionId, event)
- *   const events = yield* store.getEvents(sessionId)
- * })
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     const hub = yield* EventHub
  *
- * Effect.runPromise(program.pipe(Effect.provide(InMemoryEventStore)))
+ *     // Fork a subscriber
+ *     yield* Effect.forkScoped(
+ *       Effect.gen(function* () {
+ *         const stream = yield* hub.subscribe()
+ *         yield* stream.pipe(
+ *           Stream.runForEach((event) =>
+ *             Effect.log(`Event: ${event._tag}`)
+ *           )
+ *         )
+ *       })
+ *     )
+ *
+ *     // Publish event
+ *     yield* hub.publish(new WorkflowStarted({ ... }))
+ *   })
+ * )
+ *
+ * Effect.runPromise(program.pipe(Effect.provide(InMemoryEventHub)))
  * ```
  */
-export const InMemoryEventStore: Layer.Layer<EventStore> = Layer.effect(
-  EventStore,
+export const InMemoryEventHub: Layer.Layer<EventHub, never, Scope.Scope> = Layer.scoped(
+  EventHub,
   Effect.gen(function*() {
-    const ref = yield* Ref.make(new Map<string, Array<AnyEvent>>())
+    const pubsub = yield* PubSub.unbounded<WorkflowEvent>()
 
-    return EventStore.of({
-      append: (sessionId: SessionId, event: AnyEvent) =>
-        Ref.update(ref, (store) => {
-          const next = new Map(store)
-          const events = next.get(sessionId) ?? []
-          next.set(sessionId, [...events, event])
-          return next
-        }),
+    return EventHub.of({
+      publish: (event) => PubSub.publish(pubsub, event).pipe(Effect.asVoid),
 
-      getEvents: (sessionId: SessionId) =>
-        Ref.get(ref).pipe(
-          Effect.map((store) => store.get(sessionId) ?? [])
-        ),
-
-      getEventsFrom: (sessionId: SessionId, position: number) =>
-        Ref.get(ref).pipe(
-          Effect.map((store) => {
-            const events = store.get(sessionId) ?? []
-            return events.slice(position)
-          })
-        ),
-
-      listSessions: () =>
-        Ref.get(ref).pipe(
-          Effect.map((store) => Array.from(store.keys()) as Array<SessionId>)
-        ),
-
-      deleteSession: (sessionId: SessionId) =>
-        Ref.update(ref, (store) => {
-          const next = new Map(store)
-          next.delete(sessionId)
-          return next
+      subscribe: () =>
+        Effect.gen(function*() {
+          const subscription = yield* PubSub.subscribe(pubsub)
+          return Stream.fromQueue(subscription)
         })
     })
   })
-)
-
-// ─────────────────────────────────────────────────────────────────
-// InMemoryEventBus
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * In-memory EventBus implementation (standalone/noop mode).
- *
- * - publish: succeeds immediately (noop — no subscribers in standalone mode)
- * - subscribe: returns an empty stream (completes immediately)
- *
- * This satisfies the EventBus service contract for standalone execution
- * where no live subscribers (SSE clients) are expected.
- *
- * @example
- * ```typescript
- * const program = Effect.gen(function* () {
- *   const bus = yield* EventBus
- *   yield* bus.publish(sessionId, event) // succeeds, noop
- * })
- *
- * Effect.runPromise(program.pipe(Effect.provide(InMemoryEventBus)))
- * ```
- */
-export const InMemoryEventBus: Layer.Layer<EventBus> = Layer.succeed(
-  EventBus,
-  EventBus.of({
-    publish: () => Effect.void,
-    subscribe: () => Stream.empty
-  })
-)
-
-// ─────────────────────────────────────────────────────────────────
-// InMemoryProviderRecorder
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Internal state for an in-progress incremental recording.
- */
-interface InProgressRecording {
-  readonly hash: string
-  readonly prompt: string
-  readonly provider: string
-  readonly events: Array<AgentStreamEvent>
-}
-
-/**
- * Create an in-memory ProviderRecorderService instance.
- *
- * This is a real implementation that stores recordings in a Map.
- * Useful for testing with recorded fixtures without needing LibSQL.
- *
- * @returns A ProviderRecorderService backed by in-memory storage
- */
-export const makeInMemoryProviderRecorder = (): ProviderRecorderService => {
-  const recordings = new Map<string, RecordingEntry>()
-  const inProgress = new Map<string, InProgressRecording>()
-  let nextId = 0
-
-  return {
-    load: (hash: string) => Effect.succeed(recordings.get(hash) ?? null),
-
-    save: (entry) =>
-      Effect.sync(() => {
-        recordings.set(entry.hash, { ...entry, recordedAt: new Date() })
-      }),
-
-    delete: (hash: string) =>
-      Effect.sync(() => {
-        recordings.delete(hash)
-      }),
-
-    list: () =>
-      Effect.sync(() => {
-        const entries: Array<RecordingEntryMeta> = []
-        for (const entry of recordings.values()) {
-          entries.push({
-            hash: entry.hash,
-            prompt: entry.prompt,
-            provider: entry.provider,
-            recordedAt: entry.recordedAt
-          })
-        }
-        return entries
-      }),
-
-    startRecording: (hash, metadata) =>
-      Effect.sync(() => {
-        const id = `rec-${++nextId}`
-        inProgress.set(id, {
-          hash,
-          prompt: metadata.prompt,
-          provider: metadata.provider,
-          events: []
-        })
-        return id
-      }),
-
-    appendEvent: (recordingId, event) =>
-      Effect.sync(() => {
-        const recording = inProgress.get(recordingId)
-        if (recording) {
-          recording.events.push(event)
-        }
-      }),
-
-    finalizeRecording: (recordingId, result) =>
-      Effect.sync(() => {
-        const recording = inProgress.get(recordingId)
-        if (recording) {
-          recordings.set(recording.hash, {
-            hash: recording.hash,
-            prompt: recording.prompt,
-            provider: recording.provider,
-            streamData: recording.events,
-            result,
-            recordedAt: new Date()
-          })
-          inProgress.delete(recordingId)
-        }
-      })
-  }
-}
-
-/**
- * In-memory ProviderRecorder layer.
- *
- * Uses a Map for storage. Suitable for testing with pre-seeded recordings
- * or for recording during test execution.
- *
- * @example
- * ```typescript
- * const program = Effect.gen(function* () {
- *   const recorder = yield* ProviderRecorder
- *   yield* recorder.save({ hash: "abc", ... })
- *   const entry = yield* recorder.load("abc")
- * })
- *
- * Effect.runPromise(program.pipe(Effect.provide(InMemoryProviderRecorder)))
- * ```
- */
-export const InMemoryProviderRecorder: Layer.Layer<ProviderRecorder> = Layer.succeed(
-  ProviderRecorder,
-  makeInMemoryProviderRecorder()
 )

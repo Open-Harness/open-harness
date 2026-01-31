@@ -19,8 +19,6 @@ Service implementations. Stubs for validation, Live for production.
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
       AgentServiceStub  WorkflowRuntimeStub  AgentFixtureStoreStub
-              │
-              └──► Logger (Dev/Prod/Test)
 ```
 
 Note: StateCache is a factory function (not a Context.Tag service), so it has no stub.
@@ -39,7 +37,6 @@ Layers/
 │   ├── AgentFixtureStoreStub.ts
 │   ├── AppLayerStub.ts
 │   └── index.ts
-├── Logger.ts
 └── index.ts
 ```
 

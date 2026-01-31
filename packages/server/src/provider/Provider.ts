@@ -95,9 +95,15 @@ type SdkTools = Array<string> | { type: "preset"; preset: "claude_code" }
  */
 export const AnthropicProvider = (_config?: AnthropicProviderConfig): AgentProvider => {
   const config = _config ?? {}
+  const model = config.model ?? DEFAULT_MODEL
 
   return {
     name: "anthropic",
+    model,
+    config: {
+      extendedThinking: config.extendedThinking,
+      maxTokens: config.maxTokens
+    },
 
     stream: (options: ProviderRunOptions): Stream.Stream<AgentStreamEvent, ProviderError> =>
       // Stream.fromAsyncIterable wraps the async generator with typed error handling

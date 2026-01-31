@@ -12,64 +12,20 @@
  * @module
  */
 
-import { Context, Data, Effect, Stream } from "effect"
+import { Effect, Stream } from "effect"
 import type { ZodType } from "zod"
 
 import { AgentError, RecordingNotFound } from "../Domain/Errors.js"
 import type { ProviderError, StoreError } from "../Domain/Errors.js"
 import { hashProviderRequest } from "../Domain/Hash.js"
-import type { AgentProvider, AgentRunResult, AgentStreamEvent, ProviderRunOptions } from "../Domain/Provider.js"
+import type { AgentRunResult, AgentStreamEvent, ProviderRunOptions } from "../Domain/Provider.js"
 import { ProviderModeContext } from "../Services/ProviderMode.js"
 import { ProviderRecorder } from "../Services/ProviderRecorder.js"
 
+import type { SerializedEvent } from "../Domain/Events.js"
+import { tagToEventName } from "../Domain/Events.js"
 import type { AgentDef } from "./agent.js"
-import { type AnyEvent, type EventId, EVENTS, makeEvent } from "./types.js"
-
-// ─────────────────────────────────────────────────────────────────
-// Provider Registry Service
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Error when a provider cannot be found for a model.
- */
-export class ProviderNotFoundError extends Data.TaggedError("ProviderNotFoundError")<{
-  readonly model: string
-}> {
-  override get message() {
-    return `No provider registered for model: ${this.model}`
-  }
-}
-
-/**
- * Service for resolving model strings to AgentProvider instances.
- *
- * In production, this would be configured with actual providers.
- * For testing, it can be configured with mock providers.
- */
-export interface ProviderRegistryService {
-  /**
-   * Get a provider for the given model string.
-   */
-  readonly getProvider: (model: string) => Effect.Effect<AgentProvider, ProviderNotFoundError>
-
-  /**
-   * Register a provider for a model string.
-   */
-  readonly registerProvider: (model: string, provider: AgentProvider) => Effect.Effect<void>
-
-  /**
-   * List all registered model names.
-   */
-  readonly listModels: () => Effect.Effect<ReadonlyArray<string>>
-}
-
-/**
- * Context.Tag for ProviderRegistry dependency injection.
- */
-export class ProviderRegistry extends Context.Tag("@open-scaffold/core/ProviderRegistry")<
-  ProviderRegistry,
-  ProviderRegistryService
->() {}
+import { type EventId, makeEvent } from "./types.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Agent Execution
@@ -96,7 +52,7 @@ export interface AgentExecutionResult<O> {
   /** The parsed output from the agent */
   readonly output: O
   /** Streaming events emitted during execution */
-  readonly events: ReadonlyArray<AnyEvent>
+  readonly events: ReadonlyArray<SerializedEvent>
   /** Duration in milliseconds */
   readonly durationMs: number
   /** Text output (if any) */
@@ -128,32 +84,34 @@ const toRunResult = (
 
 /**
  * Map a stream event to an internal event.
+ *
+ * Exported for testing purposes via @open-scaffold/core/internal.
  */
-const mapStreamEventToInternal = (
-  agentName: string,
+export const mapStreamEventToInternal = (
+  agent: string,
   streamEvent: AgentStreamEvent,
   causedBy?: EventId
-): Effect.Effect<AnyEvent | null> => {
+): Effect.Effect<SerializedEvent | null> => {
   switch (streamEvent._tag) {
     case "TextDelta":
       return makeEvent(
-        EVENTS.TEXT_DELTA,
-        { agentName, delta: streamEvent.delta },
+        tagToEventName.TextDelta,
+        { agent, delta: streamEvent.delta },
         causedBy
       )
 
     case "ThinkingDelta":
       return makeEvent(
-        EVENTS.THINKING_DELTA,
-        { agentName, delta: streamEvent.delta },
+        tagToEventName.ThinkingDelta,
+        { agent, delta: streamEvent.delta },
         causedBy
       )
 
     case "ToolCall":
       return makeEvent(
-        EVENTS.TOOL_CALLED,
+        tagToEventName.ToolCalled,
         {
-          agentName,
+          agent,
           toolId: streamEvent.toolId,
           toolName: streamEvent.toolName,
           input: streamEvent.input
@@ -163,9 +121,9 @@ const mapStreamEventToInternal = (
 
     case "ToolResult":
       return makeEvent(
-        EVENTS.TOOL_RESULT,
+        tagToEventName.ToolResult,
         {
-          agentName,
+          agent,
           toolId: streamEvent.toolId,
           output: streamEvent.output,
           isError: streamEvent.isError
@@ -202,16 +160,16 @@ export const runAgentDef = <S, O, Ctx>(
   executionContext: AgentExecutionContext
 ): Effect.Effect<
   AgentExecutionResult<O>,
-  AgentError | ProviderError | StoreError | RecordingNotFound | ProviderNotFoundError,
-  ProviderRegistry | ProviderRecorder | ProviderModeContext
+  AgentError | ProviderError | StoreError | RecordingNotFound,
+  ProviderRecorder | ProviderModeContext
 > =>
   Effect.gen(function*() {
     const startTime = Date.now()
-    const events: Array<AnyEvent> = []
+    const events: Array<SerializedEvent> = []
     let lastEventId = executionContext.causedBy
 
     // Helper to emit and track events
-    const emitEvent = (name: string, payload: unknown): Effect.Effect<AnyEvent> =>
+    const emitEvent = (name: string, payload: Record<string, unknown>): Effect.Effect<SerializedEvent> =>
       Effect.gen(function*() {
         const event = yield* makeEvent(name, payload, lastEventId)
         events.push(event)
@@ -220,13 +178,12 @@ export const runAgentDef = <S, O, Ctx>(
       })
 
     // Get services
-    const registry = yield* ProviderRegistry
     const recorder = yield* ProviderRecorder
     const { mode } = yield* ProviderModeContext
 
     // Emit agent:started
-    yield* emitEvent(EVENTS.AGENT_STARTED, {
-      agentName: agent.name,
+    yield* emitEvent(tagToEventName.AgentStarted, {
+      agent: agent.name,
       phase: executionContext.phase,
       context: agentContext
     })
@@ -236,12 +193,13 @@ export const runAgentDef = <S, O, Ctx>(
       ? (agent.prompt as (s: S, ctx: Ctx) => string)(state, agentContext)
       : (agent.prompt as (s: S) => string)(state)
 
-    // Build provider options
+    // Build provider options (provider.model + provider.config + agent.options)
     const providerOptions: ProviderRunOptions = {
       prompt,
       outputSchema: agent.output as ZodType<unknown>,
       providerOptions: {
-        model: agent.model,
+        model: agent.provider.model,
+        ...agent.provider.config,
         ...agent.options
       },
       ...(executionContext.abortSignal ? { abortSignal: executionContext.abortSignal } : {})
@@ -280,7 +238,7 @@ export const runAgentDef = <S, O, Ctx>(
       // ─────────────────────────────────────────────────────────────────
       // LIVE MODE: Call provider, record events incrementally
       // ─────────────────────────────────────────────────────────────────
-      const provider = yield* registry.getProvider(agent.model)
+      const provider = agent.provider
 
       // Start incremental recording (crash-safe)
       const recordingId = yield* recorder.startRecording(hash, {
@@ -331,7 +289,7 @@ export const runAgentDef = <S, O, Ctx>(
           Effect.catchAll((saveError) =>
             Effect.logWarning("Failed to finalize recording", {
               hash,
-              agentName: agent.name,
+              agent: agent.name,
               error: String(saveError)
             })
           )
@@ -343,7 +301,7 @@ export const runAgentDef = <S, O, Ctx>(
     if (!streamResult) {
       return yield* Effect.fail(
         new AgentError({
-          agentName: agent.name,
+          agent: agent.name,
           phase: "execution",
           cause: "Provider stream ended without result"
         })
@@ -355,7 +313,7 @@ export const runAgentDef = <S, O, Ctx>(
     if (!parsed.success) {
       return yield* Effect.fail(
         new AgentError({
-          agentName: agent.name,
+          agent: agent.name,
           phase: "output",
           cause: parsed.error
         })
@@ -365,8 +323,8 @@ export const runAgentDef = <S, O, Ctx>(
     const durationMs = Date.now() - startTime
 
     // Emit agent:completed
-    yield* emitEvent(EVENTS.AGENT_COMPLETED, {
-      agentName: agent.name,
+    yield* emitEvent(tagToEventName.AgentCompleted, {
+      agent: agent.name,
       output: parsed.data,
       durationMs
     })
@@ -389,38 +347,9 @@ export const runAgentDef = <S, O, Ctx>(
     return result
   }).pipe(
     Effect.withSpan("runAgentDef", {
-      attributes: { agentName: agent.name, model: agent.model }
+      attributes: { agent: agent.name, model: agent.provider.model }
     })
   )
 
 // ─────────────────────────────────────────────────────────────────
 // In-Memory Provider Registry Implementation
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Create an in-memory ProviderRegistry.
- *
- * This is useful for testing or simple setups where providers
- * are registered at startup.
- */
-export const makeInMemoryProviderRegistry = (): ProviderRegistryService => {
-  const providers = new Map<string, AgentProvider>()
-
-  return {
-    getProvider: (model) =>
-      Effect.sync(() => providers.get(model)).pipe(
-        Effect.flatMap((provider) =>
-          provider
-            ? Effect.succeed(provider)
-            : Effect.fail(new ProviderNotFoundError({ model }))
-        )
-      ),
-
-    registerProvider: (model, provider) =>
-      Effect.sync(() => {
-        providers.set(model, provider)
-      }),
-
-    listModels: () => Effect.sync(() => Array.from(providers.keys()))
-  }
-}

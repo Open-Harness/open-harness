@@ -26,19 +26,20 @@ export type {
   AnyEvent,
   Event,
   EventId,
-  EventName,
   // Observer protocol
+  InputReceivedEvent,
+  InputReceivedPayload,
   InputRequest,
   InputRequestedEvent,
   InputRequestedPayload,
-  InputResponseEvent,
-  InputResponsePayload,
   PhaseEnteredEvent,
   PhaseEnteredPayload,
   PhaseExitedEvent,
   PhaseExitedPayload,
+  // Canonical state event names (ADR-008)
+  StateCheckpointEvent,
+  StateIntentEvent,
   StateSnapshot,
-  StateUpdatedEvent,
   StateUpdatedPayload,
   TextDeltaEvent,
   TextDeltaPayload,
@@ -60,7 +61,6 @@ export type {
 
 export {
   EventIdSchema,
-  EVENTS,
   makeEvent,
   makeEventId,
   parseEventId,
@@ -99,32 +99,27 @@ export { isPhaseWorkflow, isSimpleWorkflow, workflow } from "./workflow.js"
 // Provider Infrastructure
 // ─────────────────────────────────────────────────────────────────
 
-export type { AgentExecutionContext, AgentExecutionResult, ProviderRegistryService } from "./provider.js"
-export { makeInMemoryProviderRegistry, ProviderNotFoundError, ProviderRegistry, runAgentDef } from "./provider.js"
+export type { AgentExecutionContext, AgentExecutionResult } from "./provider.js"
+export { runAgentDef } from "./provider.js"
 
 // ─────────────────────────────────────────────────────────────────
-// Runtime (Effect-based)
+// Run (Simple Promise API) - PRIMARY PUBLIC API (ADR-001)
 // ─────────────────────────────────────────────────────────────────
 
-export type { ExecuteOptions, WorkflowHandle } from "./runtime.js"
-export { executeWorkflow, streamWorkflow } from "./runtime.js"
+export type { RunOptions, RunResult, WorkflowExecution } from "./run.js"
+export { run } from "./run.js"
 
-// ─────────────────────────────────────────────────────────────────
-// Execute (Async Iterator API)
-// ─────────────────────────────────────────────────────────────────
-
-export type { ExecuteWithRuntimeOptions, RuntimeConfig, WorkflowExecution } from "./execute.js"
-export { execute } from "./execute.js"
-
-// ─────────────────────────────────────────────────────────────────
-// Run (Simple Promise API)
-// ─────────────────────────────────────────────────────────────────
-
-export type { RunOptions, RunResult } from "./run.js"
-export { run, runSimple, runWithText } from "./run.js"
+// Re-export RuntimeConfig type from execute.ts (used by run.ts)
+export type { RuntimeConfig } from "./execute.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Utilities (pure functions)
 // ─────────────────────────────────────────────────────────────────
 
 export { computeStateAt } from "./utils.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Event Dispatch (ADR-004: Match.exhaustive)
+// ─────────────────────────────────────────────────────────────────
+
+export { dispatchToObserver } from "./dispatch.js"

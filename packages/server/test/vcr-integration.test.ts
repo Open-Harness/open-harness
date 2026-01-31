@@ -18,7 +18,7 @@ import {
   makeInMemoryRecorderLayer,
   type ServerService,
   StateSnapshotStoreLive
-} from "../src/index.js"
+} from "../src/internal.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test Workflow Definition
@@ -32,9 +32,18 @@ interface VcrTestState {
 
 type VcrPhases = "planning" | "done"
 
+// Per ADR-010: Agents own their provider directly
+const vcrTestProvider = {
+  name: "vcr-test-provider",
+  model: "test-model",
+  stream: () => {
+    throw new Error("Should not be called in playback mode")
+  }
+}
+
 const vcrAgent = agent<VcrTestState, { message: string }>({
   name: "vcr-agent",
-  model: "test-model",
+  provider: vcrTestProvider,
   output: z.object({ message: z.string() }),
   prompt: (state) => `Goal: ${state.goal}`,
   update: (output, draft) => {

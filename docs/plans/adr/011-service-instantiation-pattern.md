@@ -1,6 +1,6 @@
 # ADR-011: Service Instantiation Pattern
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-01-29
 **Decision Area:** Service Architecture
 **Related Issues:** ARCH-002
@@ -36,9 +36,45 @@ How do we standardize service instantiation across:
 
 ## Decision
 
-**TODO:** Decide on standardized pattern after discussion
+**Chosen Approach:** Option A — Standardized Layer Factories
 
-### Options to Consider
+We will use a centralized factory function `makeAppLayer` that takes a configuration object and returns the appropriate Layer composition. This provides a single source of truth for service wiring while remaining flexible across environments.
+
+### Rationale
+
+| Criterion | Option A | Option B | Option C | Option D |
+|-----------|----------|----------|----------|----------|
+| Testability | ✅ Easy config swap | ⚠️ Separate presets | ⚠️ Manual per-call | ❌ Runtime registry |
+| Explicitness | ✅ Config visible | ✅ Clear intent | ✅ At call site | ❌ Hidden in container |
+| Composability | ✅ Effect-native | ✅ Effect-native | ✅ Effect-native | ❌ Custom pattern |
+| DRY | ✅ Single factory | ❌ Duplication | ❌ Repetition everywhere | ⚠️ Registration boilerplate |
+| Type Safety | ✅ Full | ✅ Full | ✅ Full | ⚠️ Runtime errors possible |
+
+Option A best balances flexibility with consistency. It preserves Effect's Layer system, makes dependencies visible through the config object, and avoids the duplication of environment-specific presets.
+
+### Selected Pattern
+
+```typescript
+// packages/core/src/Layers/AppLayer.ts
+export interface AppLayerConfig {
+  database: string
+  mode: "live" | "playback"
+  enableRecorder?: boolean
+}
+
+export const makeAppLayer = (config: AppLayerConfig) =>
+  Layer.mergeAll(
+    EventStoreLive({ url: config.database }),
+    EventBusLive,
+    StateSnapshotStoreLive({ url: config.database }),
+    ProviderModeContextLive(config.mode),
+    config.enableRecorder 
+      ? ProviderRecorderLive({ url: config.database })
+      : Layer.empty
+  )
+```
+
+### Usage Patterns
 
 **Option A: Standardized Layer Factories**
 
@@ -116,13 +152,48 @@ container.register(EventBus, () => new EventBusLive())
 
 ## Consequences
 
-> **TODO:** Fill in after decision
+### Positive
+
+- **Single source of truth** for service composition — all environments use the same factory
+- **Explicit configuration** makes dependencies visible and required
+- **Easy testing** — swap to `:memory:` database and `playback` mode via config
+- **Type-safe** — invalid configurations caught at compile time
+- **Extensible** — adding new services only requires updating the factory
+
+### Negative
+
+- **Config object may grow** — as services are added, the config interface expands
+- **All services wired together** — even if a particular flow doesn't need all services
+- **Breaking change** for existing code using ad-hoc layer composition
+
+### Mitigations
+
+- Use `Layer.empty` for optional services instead of making everything required
+- Group related config into sub-objects (e.g., `database: { url, authToken }`)
+- Document that `makeAppLayer` is the blessed path — code review any inline `Layer.mergeAll`
 
 ---
 
 ## Implementation Notes
 
-> **TODO:** Fill in after decision
+### Implementation Strategy
+
+1. Create `AppLayer.ts` with `makeAppLayer` factory
+2. Create `TestLayer.ts` as thin wrapper around `makeAppLayer` with test defaults
+3. Refactor existing code to use factories (one package at a time)
+4. Add lint rule to discourage inline `Layer.mergeAll` outside layer files
+
+### Optional Services Pattern
+
+For services that aren't always needed (e.g., ProviderRecorder):
+
+```typescript
+config.enableRecorder 
+  ? ProviderRecorderLive({ url: config.database })
+  : Layer.empty
+```
+
+The Effect runtime will ignore `Layer.empty`, so the program only gets the services it needs.
 
 ### Files to Create
 

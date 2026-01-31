@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, URL */
 /**
  * Clean build artifacts from the monorepo.
  *
@@ -11,8 +12,8 @@
  * output instead of current source code.
  */
 
-import { existsSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs"
+import { join, relative } from "node:path"
 
 const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
@@ -89,14 +90,14 @@ for (const baseDir of [packagesDir, appsDir]) {
 }
 
 if (strayArtifacts.length > 0) {
-	console.log(`\nFound ${strayArtifacts.length} stray artifact(s):\n`);
-	for (const artifact of strayArtifacts) {
-		console.log(`  Removing ${relative(ROOT, artifact)}`);
-		unlinkSync(artifact);
-	}
-	console.log(
-		`\nRemoved ${strayArtifacts.length} stray artifacts from src/ directories.`,
-	);
+  console.log(`\nFound ${strayArtifacts.length} stray artifact(s):\n`)
+  for (const artifact of strayArtifacts) {
+    console.log(`  Removing ${relative(ROOT, artifact)}`)
+    unlinkSync(artifact)
+  }
+  console.log(
+    `\nRemoved ${strayArtifacts.length} stray artifacts from src/ directories.`
+  )
 } else {
 	console.log("\nNo stray artifacts found in src/ directories.");
 }

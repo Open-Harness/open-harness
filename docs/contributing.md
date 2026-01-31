@@ -328,11 +328,11 @@ const scaffold = OpenScaffold.create({
 ## Development Commands
 
 ```bash
-pnpm install          # Install dependencies
-pnpm build            # Build all packages (turbo + tsdown)
-pnpm typecheck        # Type check (turbo + tsc -b)
-pnpm test             # Run tests (vitest)
-pnpm lint             # Lint (eslint)
+bun install           # Install dependencies
+bun run build         # Build all packages (turbo + tsdown)
+bun run typecheck     # Type check (turbo + tsc -b)
+bun run test          # Run tests (vitest)
+bun run lint          # Lint (eslint)
 ```
 
 ## Server Defaults

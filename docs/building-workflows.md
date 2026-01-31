@@ -444,7 +444,7 @@ const result = await run(myWorkflow, {
     onThinkingDelta: ({ agent, delta }) => appendToThinking(delta),
 
     // Tools
-    onToolCall: ({ toolName, input }) => logToolCall(toolName, input),
+    onToolCalled: ({ toolName, input }) => logToolCall(toolName, input),
     onToolResult: ({ output, isError }) => logToolResult(output),
 
     // Human-in-the-loop (async - return the response)
@@ -476,7 +476,7 @@ All callbacks are optional. Implement only what you need:
 | `onAgentCompleted` | `({ agent, output, durationMs }) => void` | Agent finished |
 | `onTextDelta` | `({ agent, delta }) => void` | Text chunk streamed |
 | `onThinkingDelta` | `({ agent, delta }) => void` | Thinking chunk streamed |
-| `onToolCall` | `({ toolName, toolId, input }) => void` | Tool invoked |
+| `onToolCalled` | `({ toolName, toolId, input }) => void` | Tool invoked |
 | `onToolResult` | `({ toolId, output, isError }) => void` | Tool returned |
 | `onInputRequested` | `(request) => Promise<string>` | HITL - return response |
 | `onEvent` | `(event) => void` | Raw event catch-all |
@@ -537,13 +537,9 @@ Human phases pause the workflow and wait for input. Handle them via `onInputRequ
 
 ### Input Types
 
-```typescript
-// Freeform text input
-human: {
-  prompt: (state) => "Describe what you want:",
-  type: "freeform",
-}
+Per ADR-002, there are exactly two input types:
 
+```typescript
 // Binary approval
 human: {
   prompt: (state) => `Approve this plan?\n${state.plan}`,
@@ -558,6 +554,8 @@ human: {
 }
 ```
 
+For freeform text input, use `choice` with an "Other..." option that allows custom input.
+
 ### Handling in Observer
 
 ```typescript
@@ -567,7 +565,7 @@ const result = await run(myWorkflow, {
   observer: {
     onInputRequested: async (request) => {
       // request.prompt - the prompt text
-      // request.type - "freeform" | "approval" | "choice"
+      // request.type - "approval" | "choice"
       // request.options - for choice type
 
       if (request.type === "approval") {
@@ -579,7 +577,7 @@ const result = await run(myWorkflow, {
         return await showChoiceDialog(request.prompt, request.options)
       }
 
-      return await showInputDialog(request.prompt)
+      return "approve"  // Default fallback
     }
   }
 })
@@ -803,9 +801,9 @@ const result = await run(myWorkflow, {
   observer: {
     onErrored: (error) => {
       if (error instanceof WorkflowAgentError) {
-        console.error(`Agent ${error.agentName} failed:`, error.message)
+        console.error(`Agent ${error.agent} failed:`, error.message)
       } else if (error instanceof WorkflowValidationError) {
-        console.error(`Output validation failed for ${error.agentName}:`, error.message)
+        console.error(`Output validation failed for ${error.agent}:`, error.message)
       } else if (error instanceof WorkflowProviderError) {
         console.error(`Provider error (${error.code}):`, error.message)
         if (error.retryable) {

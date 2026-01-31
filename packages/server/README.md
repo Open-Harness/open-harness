@@ -91,7 +91,7 @@ Client                     Server                    Core
 ## Installation
 
 ```bash
-pnpm add @open-scaffold/server
+bun add @open-scaffold/server
 ```
 
 ## Configuration

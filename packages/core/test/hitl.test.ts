@@ -4,17 +4,19 @@
  * Validates that respond() on the WorkflowExecution handle feeds into
  * the runtime's Queue.take(ctx.inputQueue), unblocking HITL phases.
  * Uses ProviderRecorder playback with pre-seeded fixtures.
+ *
+ * Event payloads use canonical ADR-008 format (id, prompt, type, value).
  */
 
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 
+import { tagToEventName } from "../src/Domain/Events.js"
 import { agent } from "../src/Engine/agent.js"
 import { execute, type RuntimeConfig } from "../src/Engine/execute.js"
 import { phase } from "../src/Engine/phase.js"
-import { EVENTS } from "../src/Engine/types.js"
 import { workflow } from "../src/Engine/workflow.js"
-import { seedRecorder, type SimpleFixture } from "./helpers/test-provider.js"
+import { seedRecorder, type SimpleFixture, testProvider } from "./helpers/test-provider.js"
 
 // ─────────────────────────────────────────────────────────────────
 // Test State and Types
@@ -32,24 +34,16 @@ type HitlPhases = "review" | "finalize" | "done"
 const messageSchema = z.object({ message: z.string() })
 const providerOptions = { model: "claude-sonnet-4-5" }
 
-// Agent for the finalize phase
+// Agent for the finalize phase (per ADR-010: agents own provider directly)
 const finalizeAgent = agent<HitlState, { message: string }>({
   name: "finalizer",
-  model: "claude-sonnet-4-5",
+  provider: testProvider,
   output: messageSchema,
   prompt: (state) => `Finalize: ${state.proposal}, approved=${state.approved}`,
   update: (output, draft) => {
     draft.finalMessage = output.message
   }
 })
-
-// Dummy provider for playback mode
-const playbackDummy = {
-  name: "playback-dummy",
-  stream: () => {
-    throw new Error("playbackDummyProvider called - recording not found")
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────
 // Fixture definitions
@@ -76,18 +70,23 @@ const hitlFixtures: ReadonlyArray<SimpleFixture> = [
   }
 ]
 
-const testRuntime: RuntimeConfig = {
-  providers: { "claude-sonnet-4-5": playbackDummy },
-  mode: "playback",
-  recorder: seedRecorder(hitlFixtures),
-  database: ":memory:"
-}
-
 // ─────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
 describe("HITL queue wiring", () => {
+  // Per ADR-010: No providers map needed - agents own their providers directly
+  // Created in beforeAll because seedRecorder is async (LibSQL :memory:)
+  let testRuntime: RuntimeConfig
+
+  beforeAll(async () => {
+    const recorder = await seedRecorder(hitlFixtures)
+    testRuntime = {
+      mode: "playback",
+      recorder,
+      database: ":memory:"
+    }
+  })
   it("respond() unblocks a human phase and workflow completes", async () => {
     // Workflow: review (human) -> finalize (agent) -> done (terminal)
     const hitlWorkflow = workflow<HitlState, string, HitlPhases>({
@@ -128,7 +127,7 @@ describe("HITL queue wiring", () => {
       events.push({ name: event.name, payload: event.payload })
 
       // When we see input:requested, provide the human response
-      if (event.name === EVENTS.INPUT_REQUESTED && !respondedAlready) {
+      if (event.name === tagToEventName.InputRequested && !respondedAlready) {
         respondedAlready = true
         execution.respond("approve")
       }
@@ -145,24 +144,24 @@ describe("HITL queue wiring", () => {
 
     // Verify we saw all expected event types
     const eventNames = events.map((e) => e.name)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_STARTED)
-    expect(eventNames).toContain(EVENTS.INPUT_REQUESTED)
-    expect(eventNames).toContain(EVENTS.INPUT_RESPONSE)
-    expect(eventNames).toContain(EVENTS.PHASE_ENTERED)
-    expect(eventNames).toContain(EVENTS.AGENT_STARTED)
-    expect(eventNames).toContain(EVENTS.AGENT_COMPLETED)
-    expect(eventNames).toContain(EVENTS.WORKFLOW_COMPLETED)
+    expect(eventNames).toContain(tagToEventName.WorkflowStarted)
+    expect(eventNames).toContain(tagToEventName.InputRequested)
+    expect(eventNames).toContain(tagToEventName.InputReceived)
+    expect(eventNames).toContain(tagToEventName.PhaseEntered)
+    expect(eventNames).toContain(tagToEventName.AgentStarted)
+    expect(eventNames).toContain(tagToEventName.AgentCompleted)
+    expect(eventNames).toContain(tagToEventName.WorkflowCompleted)
 
-    // Verify the input:requested payload
-    const inputRequestedEvent = events.find((e) => e.name === EVENTS.INPUT_REQUESTED)
-    const payload = inputRequestedEvent?.payload as { promptText: string; inputType: string }
-    expect(payload.promptText).toBe("Review proposal: Build a REST API")
-    expect(payload.inputType).toBe("approval")
+    // Verify the input:requested payload (canonical names per ADR-008)
+    const inputRequestedEvent = events.find((e) => e.name === tagToEventName.InputRequested)
+    const payload = inputRequestedEvent?.payload as { id: string; prompt: string; type: string }
+    expect(payload.prompt).toBe("Review proposal: Build a REST API")
+    expect(payload.type).toBe("approval")
 
-    // Verify the input:response payload
-    const inputResponseEvent = events.find((e) => e.name === EVENTS.INPUT_RESPONSE)
-    const responsePayload = inputResponseEvent?.payload as { response: string }
-    expect(responsePayload.response).toBe("approve")
+    // Verify the input:received payload (canonical names per ADR-008)
+    const inputReceivedEvent = events.find((e) => e.name === tagToEventName.InputReceived)
+    const responsePayload = inputReceivedEvent?.payload as { id: string; value: string }
+    expect(responsePayload.value).toBe("approve")
   })
 
   it("respond() with rejection updates state accordingly", async () => {
@@ -197,7 +196,7 @@ describe("HITL queue wiring", () => {
     })
 
     for await (const event of execution) {
-      if (event.name === EVENTS.INPUT_REQUESTED) {
+      if (event.name === tagToEventName.InputRequested) {
         execution.respond("reject")
       }
     }

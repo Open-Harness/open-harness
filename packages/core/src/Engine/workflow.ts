@@ -10,9 +10,64 @@
  * @module
  */
 
+import { Schema } from "effect"
+
 import type { AgentDef } from "./agent.js"
 import type { PhaseDef } from "./phase.js"
 import type { Draft } from "./types.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Workflow Definition Schema (ADR-005: Runtime Validation)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Base fields shared by both SimpleWorkflow and PhaseWorkflow.
+ * Note: initialState uses Schema.UndefinedOr(Schema.Unknown) with filter
+ * to reject explicit `undefined` while accepting any other value.
+ */
+const WorkflowBaseSchema = Schema.Struct({
+  name: Schema.String.pipe(Schema.nonEmptyString()),
+  initialState: Schema.Unknown.pipe(
+    Schema.filter((v): v is unknown => v !== undefined, {
+      message: () => "initialState cannot be undefined"
+    })
+  ),
+  start: Schema.Unknown
+})
+
+/**
+ * Schema for SimpleWorkflow (has 'agent', no 'phases').
+ * Discriminated by the presence of the 'agent' field.
+ */
+const SimpleWorkflowSchema = Schema.Struct({
+  ...WorkflowBaseSchema.fields,
+  agent: Schema.Unknown,
+  until: Schema.optional(Schema.Unknown)
+})
+
+/**
+ * Schema for PhaseWorkflow (has 'phases', no 'agent').
+ * Discriminated by the presence of the 'phases' field.
+ */
+const PhaseWorkflowSchema = Schema.Struct({
+  ...WorkflowBaseSchema.fields,
+  phases: Schema.Record({ key: Schema.String, value: Schema.Unknown }),
+  startPhase: Schema.optional(Schema.String)
+})
+
+/**
+ * Discriminated union schema for WorkflowDef.
+ *
+ * Uses structural discrimination: SimpleWorkflow has 'agent',
+ * PhaseWorkflow has 'phases'. The schemas are mutually exclusive
+ * since a valid workflow has exactly one of these fields.
+ */
+export const WorkflowDefSchema = Schema.Union(SimpleWorkflowSchema, PhaseWorkflowSchema)
+
+/**
+ * Type derived from WorkflowDefSchema for validation result.
+ */
+type WorkflowDefInput = Schema.Schema.Type<typeof WorkflowDefSchema>
 
 // ─────────────────────────────────────────────────────────────────
 // Simple Workflow (Single Agent)
@@ -168,6 +223,39 @@ export function isPhaseWorkflow<S, Input, Phases extends string>(
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Validation Function (accepts unknown for testing)
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Validate a workflow definition from unknown input.
+ *
+ * Use this function when testing validation logic or when input
+ * comes from an untrusted source (e.g., JSON parsing, user input).
+ *
+ * @param input - Untyped input to validate
+ * @returns Validated workflow definition
+ * @throws Error with user-friendly message if validation fails
+ *
+ * @example Testing validation errors:
+ * ```typescript
+ * it("throws if initialState is undefined", () => {
+ *   expect(() => validateWorkflowDef({
+ *     name: "test",
+ *     initialState: undefined,
+ *     start: () => {},
+ *     agent: someAgent
+ *   })).toThrow("Workflow \"test\" requires 'initialState' field")
+ * })
+ * ```
+ */
+export function validateWorkflowDef(input: unknown): WorkflowDef<unknown, unknown, string> {
+  // Cast to SimpleWorkflowDef to match one overload - the implementation
+  // will validate and potentially throw if it's actually a PhaseWorkflowDef
+  // or has other issues. This is safe because we're testing validation.
+  return workflow(input as SimpleWorkflowDef<unknown, unknown>)
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Workflow Factory
 // ─────────────────────────────────────────────────────────────────
 
@@ -222,43 +310,72 @@ export function workflow<S, Input = string, Phases extends string = string>(
 export function workflow<S, Input = string, Phases extends string = string>(
   def: WorkflowDef<S, Input, Phases>
 ): WorkflowDef<S, Input, Phases> {
-  // Cast to unknown then to Record for validation logic
-  const d = def as unknown as Record<string, unknown>
-  const name = d.name as string
+  // Check for presence of discriminating fields on the input
+  // (before schema validation to provide better error messages)
+  const hasAgent = "agent" in def
+  const hasPhases = "phases" in def
 
-  // Validate required fields
-  if (!name) {
-    throw new Error("Workflow requires 'name' field")
-  }
-  if (d.initialState === undefined) {
-    throw new Error(`Workflow "${name}" requires 'initialState' field`)
-  }
-  if (!d.start) {
-    throw new Error(`Workflow "${name}" requires 'start' function`)
-  }
-
-  // Validate workflow type
-  const hasAgent = "agent" in d
-  const hasPhases = "phases" in d
-
+  // Mutual exclusivity check must happen first (before schema validation)
+  // because Schema.Union will fail on inputs with both fields
   if (hasAgent && hasPhases) {
+    // Need to extract name for error message
+    const name = (def as { name?: string }).name ?? "unknown"
     throw new Error(`Workflow "${name}" cannot have both 'agent' and 'phases'`)
   }
 
-  if (!hasAgent && !hasPhases) {
+  // Validate using WorkflowDefSchema (ADR-005: replaces double cast)
+  // Schema.decodeUnknownSync throws ParseError if validation fails
+  let validated: WorkflowDefInput
+  try {
+    validated = Schema.decodeUnknownSync(WorkflowDefSchema)(def)
+  } catch {
+    // Schema validation failed - provide user-friendly messages
+    // Extract name for contextual errors (may be empty/undefined)
+    const name = (def as { name?: string }).name
+
+    if (!name) {
+      throw new Error("Workflow requires 'name' field")
+    }
+    if ((def as { initialState?: unknown }).initialState === undefined) {
+      throw new Error(`Workflow "${name}" requires 'initialState' field`)
+    }
+    if ((def as { start?: unknown }).start === undefined) {
+      throw new Error(`Workflow "${name}" requires 'start' function`)
+    }
+    if (!hasAgent && !hasPhases) {
+      throw new Error(`Workflow "${name}" requires either 'agent' or 'phases'`)
+    }
+    // Generic fallback for other schema errors
+    throw new Error(`Workflow "${name}" validation failed`)
+  }
+
+  const { name } = validated
+
+  // Validate start is a function (Schema validates presence, not type)
+  if (typeof validated.start !== "function") {
+    throw new Error(`Workflow "${name}" requires 'start' function`)
+  }
+
+  // Discriminate workflow type using type guards
+  // Schema.Union validates the discriminated union; type guards narrow for further checks
+  const isSimple = isSimpleWorkflow(def)
+  const isPhased = isPhaseWorkflow(def)
+
+  // This should not happen after schema validation, but explicit check for clarity
+  if (!isSimple && !isPhased) {
     throw new Error(`Workflow "${name}" requires either 'agent' or 'phases'`)
   }
 
   // Validate simple workflow
-  if (hasAgent) {
-    if (!d.agent) {
+  if (isSimple) {
+    if (!def.agent) {
       throw new Error(`Workflow "${name}" has 'agent' but it's undefined`)
     }
   }
 
   // Validate phase workflow
-  if (hasPhases) {
-    const phases = d.phases as Record<string, { terminal?: boolean }>
+  if (isPhased) {
+    const phases = def.phases as Record<string, { terminal?: boolean }>
     const phaseNames = Object.keys(phases)
 
     if (phaseNames.length === 0) {
