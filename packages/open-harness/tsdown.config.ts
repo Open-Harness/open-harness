@@ -14,7 +14,7 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   outDir: "dist",
-  tsconfig: "tsconfig.src.json",
+  tsconfig: "tsconfig.build.json",
   // Bundle internal @open-scaffold/* packages into the output
   noExternal: [
     "@open-scaffold/core",
