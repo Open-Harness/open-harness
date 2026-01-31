@@ -1,6 +1,6 @@
 {
   "name": "open-harness",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "description": "Open Harness - Event-sourced AI agent workflow runtime with Effect-TS",
