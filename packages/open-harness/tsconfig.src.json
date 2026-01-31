@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "include": ["src"],
-  "exclude": ["src/record.ts"],
   "compilerOptions": {
     "types": ["node"],
     "outDir": "build/src",
@@ -10,6 +9,8 @@
   },
   "references": [
     { "path": "../core/tsconfig.src.json" },
-    { "path": "../server/tsconfig.src.json" }
+    { "path": "../server/tsconfig.src.json" },
+    { "path": "../client/tsconfig.src.json" },
+    { "path": "../testing/tsconfig.src.json" }
   ]
 }

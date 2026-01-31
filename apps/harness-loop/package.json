@@ -1,11 +1,23 @@
 {
-  "name": "@open-scaffold/harness-loop",
+  "name": "@open-harness/ralph",
   "version": "0.0.0",
   "type": "module",
   "license": "MIT",
-  "description": "Task executor for Claude Code task lists using Open Harness workflow engine",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
+  "description": "Ralph - Task executor CLI for Claude Code task lists",
+  "bin": {
+    "ralph": "./dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Open-Harness/open-harness",
+    "directory": "apps/harness-loop"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc -b tsconfig.json",
@@ -14,12 +26,19 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@open-scaffold/core": "*",
-    "@open-scaffold/server": "*",
-    "effect": "^3.16.4",
+    "@anthropic-ai/claude-agent-sdk": "latest",
+    "@effect/cli": "latest",
+    "@effect/platform": "latest",
+    "@effect/platform-node": "latest",
+    "@effect/sql": "latest",
+    "@effect/sql-libsql": "latest",
+    "effect": "latest",
+    "immer": "^10.1.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@open-scaffold/core": "*",
+    "@open-scaffold/server": "*",
     "tsx": "^4.19.0"
   }
 }

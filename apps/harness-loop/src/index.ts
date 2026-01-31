@@ -1,20 +1,14 @@
-#!/usr/bin/env bun
-
 /**
- * Harness Loop - Task Executor Script
+ * Ralph - Task Executor CLI
  *
  * Loads Claude Code task lists and executes them sequentially
  * using the Open Harness workflow engine.
  *
- * Usage:
- *   bun run src/index.ts <tasks-path> <plan-path> [--quiet|-q]
- *
- * Flags:
- *   --quiet, -q  Hide tool calls/results, show only spinner + task boxes
- *
  * @module
  */
 
+import { Args, Command, Options } from "@effect/cli"
+import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import { run } from "@open-scaffold/core"
 import { Effect, pipe } from "effect"
 import { readFileSync } from "node:fs"
@@ -24,6 +18,10 @@ import { type LoaderError, loadTasks } from "./loader.js"
 import { createObserver } from "./observer.js"
 import { renderError, renderExecutionOrder, renderOutro, renderTaskComplete, renderTaskHeader } from "./renderer.js"
 import { taskWorkflow } from "./workflow.js"
+
+// ─────────────────────────────────────────────────────────────────
+// Error Types
+// ─────────────────────────────────────────────────────────────────
 
 /**
  * Error reading the plan file.
@@ -37,13 +35,6 @@ class PlanReadError {
 }
 
 /**
- * Error when no arguments provided.
- */
-class MissingArgumentsError {
-  readonly _tag = "MissingArgumentsError"
-}
-
-/**
  * Error when a task fails execution.
  */
 class TaskFailedError {
@@ -54,15 +45,13 @@ class TaskFailedError {
 /**
  * Union of all main program errors.
  */
-type MainError = MissingArgumentsError | PlanReadError | LoaderError | CycleDetectedError | TaskFailedError
+type MainError = PlanReadError | LoaderError | CycleDetectedError | TaskFailedError
 
 /**
  * Convert error to user-friendly message.
  */
 const errorToMessage = (error: MainError): string => {
   switch (error._tag) {
-    case "MissingArgumentsError":
-      return "Missing required arguments"
     case "PlanReadError":
       return `Failed to read plan file: ${error.path}`
     case "TaskDirectoryError":
@@ -76,18 +65,27 @@ const errorToMessage = (error: MainError): string => {
   }
 }
 
-/**
- * Print usage information.
- */
-const printUsage = (): void => {
-  console.error("Usage: bun run src/index.ts <tasks-path> <plan-path> [--quiet|-q]")
-  console.error("")
-  console.error("  tasks-path  Directory containing task JSON files")
-  console.error("  plan-path   Path to plan markdown file")
-  console.error("")
-  console.error("Flags:")
-  console.error("  --quiet, -q  Hide tool calls/results, show only spinner + task boxes")
-}
+// ─────────────────────────────────────────────────────────────────
+// CLI Definition
+// ─────────────────────────────────────────────────────────────────
+
+const tasksPath = Args.path({ name: "tasks-path" }).pipe(
+  Args.withDescription("Directory containing task JSON files")
+)
+
+const planPath = Args.path({ name: "plan-path" }).pipe(
+  Args.withDescription("Path to plan markdown file")
+)
+
+const quiet = Options.boolean("quiet").pipe(
+  Options.withAlias("q"),
+  Options.withDescription("Hide tool calls/results, show only spinner + task boxes"),
+  Options.withDefault(false)
+)
+
+// ─────────────────────────────────────────────────────────────────
+// Main Program
+// ─────────────────────────────────────────────────────────────────
 
 /**
  * Read plan file.
@@ -99,102 +97,118 @@ const readPlan = (path: string) =>
   })
 
 /**
- * Main program - loads tasks, sorts them, and executes each in order.
+ * Execute all tasks in dependency order.
  */
-const main: Effect.Effect<void, MainError> = Effect.gen(function*() {
-  const args = process.argv.slice(2)
+const executeTasks = (
+  tasksPathValue: string,
+  planPathValue: string,
+  quietMode: boolean
+): Effect.Effect<void, MainError> =>
+  Effect.gen(function*() {
+    // Load plan and tasks in parallel
+    const [plan, tasks] = yield* Effect.all([
+      readPlan(planPathValue),
+      loadTasks(tasksPathValue)
+    ])
 
-  // Parse flags and positional arguments
-  const flags = args.filter((a) => a.startsWith("-"))
-  const positional = args.filter((a) => !a.startsWith("-"))
-  const quiet = flags.includes("--quiet") || flags.includes("-q")
+    // Filter to only pending tasks
+    const pendingTasks = tasks.filter((t) => t.status === "pending")
 
-  if (positional.length < 2) {
-    printUsage()
-    return yield* Effect.fail(new MissingArgumentsError())
-  }
+    if (pendingTasks.length === 0) {
+      console.log("No pending tasks to execute")
+      return
+    }
 
-  const [tasksPath, planPath] = positional
+    // Sort by dependencies
+    const sorted = yield* topologicalSort(pendingTasks)
 
-  // Load plan and tasks in parallel
-  const [plan, tasks] = yield* Effect.all([
-    readPlan(planPath),
-    loadTasks(tasksPath)
-  ])
+    // Show execution order
+    process.stdout.write(renderExecutionOrder(sorted.map((t) => t.id)))
 
-  // Filter to only pending tasks
-  const pendingTasks = tasks.filter((t) => t.status === "pending")
+    // Track total statistics across all tasks
+    let totalToolCalls = 0
+    let totalAgentRuns = 0
+    const startTime = Date.now()
 
-  if (pendingTasks.length === 0) {
-    console.log("No pending tasks to execute")
-    return
-  }
+    // Execute each task
+    for (const task of sorted) {
+      // Render task header
+      process.stdout.write(
+        renderTaskHeader(task.id, task.subject, task.description)
+      )
 
-  // Sort by dependencies
-  const sorted = yield* topologicalSort(pendingTasks)
+      // Create observer with quiet mode setting
+      const { observer, stats } = createObserver({ quiet: quietMode })
 
-  // Show execution order
-  process.stdout.write(renderExecutionOrder(sorted.map((t) => t.id)))
+      const result = yield* Effect.promise(() =>
+        run(taskWorkflow, {
+          input: { plan, task },
+          runtime: { mode: "live" },
+          observer
+        })
+      )
 
-  // Track total statistics across all tasks
-  let totalToolCalls = 0
-  let totalAgentRuns = 0
-  const startTime = Date.now()
+      // Accumulate statistics
+      totalToolCalls += stats.toolCalls
+      totalAgentRuns += stats.agentRuns
 
-  // Execute each task
-  for (const task of sorted) {
-    // Render task header
+      const success = result.state.result?.success ?? false
+      const summary = result.state.result?.summary ?? "No summary provided"
+
+      // Render task completion
+      process.stdout.write(renderTaskComplete(task.id, success, summary))
+
+      if (!success) {
+        return yield* Effect.fail(new TaskFailedError(task.id))
+      }
+    }
+
+    // Final outro with statistics
+    const duration = Date.now() - startTime
     process.stdout.write(
-      renderTaskHeader(task.id, task.subject, task.description)
-    )
-
-    // Create observer with quiet mode setting
-    const { observer, stats } = createObserver({ quiet })
-
-    const result = yield* Effect.promise(() =>
-      run(taskWorkflow, {
-        input: { plan, task },
-        runtime: { mode: "live" },
-        observer
+      renderOutro({
+        tasks: sorted.length,
+        duration,
+        toolCalls: totalToolCalls,
+        agentRuns: totalAgentRuns
       })
     )
+  })
 
-    // Accumulate statistics
-    totalToolCalls += stats.toolCalls
-    totalAgentRuns += stats.agentRuns
+// ─────────────────────────────────────────────────────────────────
+// Command Definition
+// ─────────────────────────────────────────────────────────────────
 
-    const success = result.state.result?.success ?? false
-    const summary = result.state.result?.summary ?? "No summary provided"
-
-    // Render task completion
-    process.stdout.write(renderTaskComplete(task.id, success, summary))
-
-    if (!success) {
-      return yield* Effect.fail(new TaskFailedError(task.id))
-    }
-  }
-
-  // Final outro with statistics
-  const duration = Date.now() - startTime
-  process.stdout.write(
-    renderOutro({
-      tasks: sorted.length,
-      duration,
-      toolCalls: totalToolCalls,
-      agentRuns: totalAgentRuns
-    })
-  )
-})
-
-// Run the program with proper Effect error handling
-const program = pipe(
-  main,
-  Effect.catchAll((error) =>
-    Effect.sync(() => {
-      process.stdout.write(renderError(new Error(errorToMessage(error))))
-      process.exit(1)
-    })
+const command = Command.make(
+  "ralph",
+  { tasksPath, planPath, quiet },
+  ({ tasksPath: tasksPathValue, planPath: planPathValue, quiet: quietMode }) =>
+    pipe(
+      executeTasks(tasksPathValue, planPathValue, quietMode),
+      Effect.catchAll((error) =>
+        Effect.sync(() => {
+          process.stdout.write(renderError(new Error(errorToMessage(error))))
+          process.exit(1)
+        })
+      )
+    )
+).pipe(
+  Command.withDescription(
+    "Execute Claude Code task lists using the Open Harness workflow engine"
   )
 )
 
-Effect.runPromise(program)
+// ─────────────────────────────────────────────────────────────────
+// CLI Entry Point
+// ─────────────────────────────────────────────────────────────────
+
+const cli = Command.run(command, {
+  name: "ralph",
+  version: "0.0.0"
+})
+
+pipe(
+  cli(process.argv),
+  Effect.provide(NodeContext.layer),
+  NodeRuntime.runMain
+)
