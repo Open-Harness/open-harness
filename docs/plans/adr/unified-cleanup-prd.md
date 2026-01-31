@@ -315,20 +315,18 @@ if (_tag === "InputRequested") {
 
 ## 3. Remediation Plan
 
-### Phase 0: Critical Decisions (BEFORE STARTING)
+### Phase 0: Critical Decisions (BEFORE STARTING) ✅ DECIDED
 
-Before any code changes, decide:
-
-| Decision | Options | Recommendation |
-|----------|---------|----------------|
-| **D1:** StateIntent `state` field | Keep (convenience) vs Remove (pure event sourcing) | **Remove** - derive from patches |
-| **D2:** WorkflowResult.events type | `AnyEvent[]` vs `SerializedEvent[]` vs `WorkflowEvent[]` | **`SerializedEvent[]`** - wire format |
-| **D3:** Keep EVENTS constant? | Delete vs Update values | **Delete** - use `tagToEventName` |
-| **D4:** Provider bridge approach | Fix `runAgentDef` to emit canonical events vs Keep conversion | **Fix `runAgentDef`** - zero legacy means no bridge |
-| **D5:** Timestamp encoding on the wire | `number` (ms) vs ISO string | **`number` (ms)** (matches `Domain/Events.ts` SerializedEvent) |
-| **D6:** SSE client transport | `EventSource` vs fetch+parser | **One approach only** (pick and delete the other) |
-| **D7:** Event persistence contract | Store `SerializedEvent` vs store `WorkflowEvent` vs keep `AnyEvent` | **Store `SerializedEvent`** (stable JSON boundary) |
-| **D8:** Subscriber model (ADR-004) | Fiber subscribers vs synchronous dispatch | **Decide and make code match** (no dead modules) |
+| Decision | Options | **FINAL DECISION** | Rationale |
+|----------|---------|-------------------|-----------|
+| **D1:** StateIntent `state` field | Keep vs Remove | **REMOVE** | Pure event sourcing - derive from patches |
+| **D2:** WorkflowResult.events type | AnyEvent vs SerializedEvent vs WorkflowEvent | **SerializedEvent[]** | Stable wire/JSON boundary |
+| **D3:** Keep EVENTS constant? | Delete vs Update | **DELETE** | Use `tagToEventName` from Domain/Events.ts |
+| **D4:** Provider bridge approach | Fix runAgentDef vs Keep conversion | **FIX runAgentDef** | Zero legacy means no bridge code |
+| **D5:** Timestamp encoding | number (ms) vs ISO string | **number (ms)** | Matches SerializedEvent in Domain/Events.ts |
+| **D6:** SSE client transport | EventSource vs fetch+createSSEStream | **EventSource** | ADR-013 hooks use EventSource; delete HttpClient SSE |
+| **D7:** Event persistence contract | SerializedEvent vs WorkflowEvent vs AnyEvent | **SerializedEvent** | Store the wire format |
+| **D8:** Subscriber model | Fiber subscribers vs synchronous dispatch | **Synchronous dispatch** | Fibers are dead code; formalize current behavior |
 
 ### Phase 1: Consolidate Serialization (HIGH PRIORITY)
 
