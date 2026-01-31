@@ -1,94 +1,104 @@
 /**
- * Logging observer for workflow execution.
+ * Workflow observer with rich terminal rendering.
  *
- * Implements WorkflowObserver to log all events to console.
+ * Uses renderer.ts for beautiful, readable output.
  *
  * @module
  */
 
-import type { SerializedEvent, WorkflowObserver } from "@open-scaffold/core"
+import type { WorkflowObserver } from "@open-scaffold/core"
 
+import {
+  renderAgentCompleted,
+  renderAgentStarted,
+  renderError,
+  renderStateChanged,
+  renderTextDelta,
+  renderThinkingDelta,
+  renderThinkingEnd,
+  renderThinkingStart,
+  renderToolCall,
+  renderToolResult,
+  renderWorkflowStarted
+} from "./renderer.js"
 import type { TaskExecutionState } from "./workflow.js"
 
 /**
- * Create a logging observer that writes all workflow events to console.
+ * Create an observer with rich terminal output.
  *
- * @returns WorkflowObserver that logs events
+ * @returns WorkflowObserver that renders events beautifully
  */
-export const createObserver = (): WorkflowObserver<TaskExecutionState> => ({
-  onStarted: (sessionId) => {
-    console.log(`\n[Workflow] Started: ${sessionId}`)
-  },
+export const createObserver = (): WorkflowObserver<TaskExecutionState> => {
+  // Track thinking state for start/end delimiters
+  let isInThinking = false
 
-  onCompleted: (result) => {
-    console.log("\n[Workflow] Completed")
-    if (result.state.result) {
-      console.log(`  Success: ${result.state.result.success}`)
-      console.log(`  Summary: ${result.state.result.summary}`)
-    }
-  },
+  return {
+    onStarted: (sessionId) => {
+      process.stdout.write(renderWorkflowStarted(sessionId))
+    },
 
-  onError: (error) => {
-    console.error("\n[Workflow] Error:", error)
-  },
+    onCompleted: () => {
+      // Task completion is handled in index.ts
+    },
 
-  onStateChanged: (state, patches) => {
-    if (patches && patches.length > 0) {
-      console.log("\n[State] Changed")
-      for (const patch of patches) {
-        console.log(`  Patch: ${JSON.stringify(patch)}`)
+    onError: (error) => {
+      process.stdout.write(renderError(error))
+    },
+
+    onStateChanged: (_state, patches) => {
+      // Extract what changed from patches
+      if (patches && patches.length > 0) {
+        const firstPatch = patches[0] as { path?: Array<string> }
+        const changedKey = firstPatch.path?.[0]
+        // Only show state changes for result, not for initial setup
+        if (changedKey === "result") {
+          process.stdout.write(renderStateChanged(changedKey))
+        }
       }
+    },
+
+    onAgentStarted: (info) => {
+      process.stdout.write(renderAgentStarted(info.agent))
+    },
+
+    onAgentCompleted: (info) => {
+      // End thinking block if we were in one
+      if (isInThinking) {
+        process.stdout.write(renderThinkingEnd())
+        isInThinking = false
+      }
+      process.stdout.write(renderAgentCompleted(info.agent, info.durationMs))
+    },
+
+    onTextDelta: (info) => {
+      // End thinking block if we were in one
+      if (isInThinking) {
+        process.stdout.write(renderThinkingEnd())
+        isInThinking = false
+      }
+      process.stdout.write(renderTextDelta(info.delta))
+    },
+
+    onThinkingDelta: (info) => {
+      // Start thinking block if not already in one
+      if (!isInThinking) {
+        process.stdout.write(renderThinkingStart())
+        isInThinking = true
+      }
+      process.stdout.write(renderThinkingDelta(info.delta))
+    },
+
+    onToolCalled: (info) => {
+      // End thinking block if we were in one
+      if (isInThinking) {
+        process.stdout.write(renderThinkingEnd())
+        isInThinking = false
+      }
+      process.stdout.write(renderToolCall(info.toolName, info.input))
+    },
+
+    onToolResult: (info) => {
+      process.stdout.write(renderToolResult(info.output, info.isError))
     }
-  },
-
-  onAgentStarted: (info) => {
-    console.log(`\n[Agent] Started: ${info.agent}`)
-    if (info.phase) {
-      console.log(`  Phase: ${info.phase}`)
-    }
-  },
-
-  onAgentCompleted: (info) => {
-    console.log(`\n[Agent] Completed: ${info.agent} (${info.durationMs}ms)`)
-    console.log(`  Output: ${JSON.stringify(info.output)}`)
-  },
-
-  onTextDelta: (info) => {
-    // Stream text directly to stdout (no newline)
-    process.stdout.write(info.delta)
-  },
-
-  onThinkingDelta: (info) => {
-    // Show thinking in a distinct style
-    process.stdout.write(`\x1b[90m${info.delta}\x1b[0m`)
-  },
-
-  onToolCalled: (info) => {
-    console.log(`\n[Tool] ${info.toolName}`)
-    const inputStr = JSON.stringify(info.input, null, 2)
-    // Truncate long inputs
-    if (inputStr.length > 500) {
-      console.log(`  Input: ${inputStr.substring(0, 500)}...`)
-    } else {
-      console.log(`  Input: ${inputStr}`)
-    }
-  },
-
-  onToolResult: (info) => {
-    const outputStr = JSON.stringify(info.output)
-    // Truncate long outputs
-    if (outputStr.length > 500) {
-      console.log(`  Result: ${outputStr.substring(0, 500)}...`)
-    } else {
-      console.log(`  Result: ${outputStr}`)
-    }
-    if (info.isError) {
-      console.log("  [ERROR]")
-    }
-  },
-
-  onEvent: (_event: SerializedEvent) => {
-    // Optional: log raw events for debugging
-    // console.log(`[Event] ${event.name}`)
   }
-})
+}
