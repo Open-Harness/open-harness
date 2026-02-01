@@ -15,6 +15,14 @@
       "dependsOn": ["build"],
       "outputs": ["coverage/**"],
       "cache": true
+    },
+    "docs#build": {
+      "outputs": ["site/**"],
+      "cache": true
+    },
+    "docs#dev": {
+      "cache": false,
+      "persistent": true
     }
   }
 }
