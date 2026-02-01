@@ -1,0 +1,8 @@
+# Build output
+site/
+
+# Python virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
