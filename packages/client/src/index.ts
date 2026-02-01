@@ -1,5 +1,5 @@
 /**
- * @open-scaffold/client - Abstract client contract and HTTP implementation.
+ * @open-harness/client - Abstract client contract and HTTP implementation.
  *
  * @module
  */

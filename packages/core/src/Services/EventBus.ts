@@ -33,7 +33,7 @@ export interface EventBusService {
 // Service Tag
 // ─────────────────────────────────────────────────────────────────
 
-export class EventBus extends Context.Tag("@open-scaffold/EventBus")<
+export class EventBus extends Context.Tag("@open-harness/EventBus")<
   EventBus,
   EventBusService
 >() {}

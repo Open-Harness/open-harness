@@ -1,6 +1,6 @@
 {
   "name": "@open-harness/ralph",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "description": "Ralph - Task executor CLI for Claude Code task lists",
@@ -32,13 +32,15 @@
     "@effect/platform-node": "latest",
     "@effect/sql": "latest",
     "@effect/sql-libsql": "latest",
+    "colorette": "^2.0.20",
     "effect": "latest",
     "immer": "^10.1.1",
-    "zod": "^3.24.2"
+    "log-update": "^7.0.2",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@open-scaffold/core": "*",
-    "@open-scaffold/server": "*",
+    "@open-harness/core": "*",
+    "@open-harness/server": "*",
     "tsx": "^4.19.0"
   }
 }

@@ -8,6 +8,6 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   outDir: "dist",
-  external: ["@open-scaffold/core", "react", "react-dom"],
+  external: ["@open-harness/core", "react", "react-dom"],
   tsconfig: "tsconfig.src.json"
 })

@@ -15,8 +15,8 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import type { AgentStreamEvent, ProviderRunOptions } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import type { AgentStreamEvent, ProviderRunOptions } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 
 import { AnthropicProvider } from "../src/provider/Provider.js"
 import { ProviderRecorderLive } from "../src/store/ProviderRecorderLive.js"
@@ -60,7 +60,8 @@ const buildProviderOptions = (prompt: string): ProviderRunOptions => ({
 // Tests
 // ─────────────────────────────────────────────────────────────────
 
-describe("Recording/Playback E2E", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("Recording/Playback E2E", () => {
   it("records in live mode and replays in playback mode with identical results", async () => {
     // Use :memory: for isolated ephemeral database - SHARED across the entire test
     const recorderLayer = ProviderRecorderLive({ url: ":memory:" })

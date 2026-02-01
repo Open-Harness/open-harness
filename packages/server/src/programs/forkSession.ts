@@ -19,8 +19,8 @@ import {
   type SessionId,
   type SessionNotFound,
   type StoreError
-} from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+} from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 
 import { loadSession } from "./loadSession.js"
 

@@ -1,5 +1,5 @@
 /**
- * @open-scaffold/client - React bindings for workflows.
+ * @open-harness/client - React bindings for workflows.
  *
  * Per ADR-013: Exports grouped hooks as the public API.
  * Primitive hooks are internal and NOT exported from this file.

@@ -7,9 +7,9 @@
 import * as http from "node:http"
 import { URL } from "node:url"
 
-import type { AgentRunResult, AgentStreamEvent, ProviderMode, SessionId, WorkflowDef } from "@open-scaffold/core"
-import { SessionNotFound, ValidationError } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import type { AgentRunResult, AgentStreamEvent, ProviderMode, SessionId, WorkflowDef } from "@open-harness/core"
+import { SessionNotFound, ValidationError } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 import { Cause, Context, Data, Effect, Exit, Fiber, Layer, ManagedRuntime, Option, Stream } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "../constants.js"
@@ -176,7 +176,7 @@ export interface ServerService {
 /**
  * Context.Tag for ServerService.
  */
-export class Server extends Context.Tag("@open-scaffold/Server")<
+export class Server extends Context.Tag("@open-harness/Server")<
   Server,
   ServerService
 >() {}
@@ -197,7 +197,7 @@ export interface CreateServerOptions<S> extends ServerConfig {
    *
    * @example
    * ```typescript
-   * import { ProviderRecorderLive } from "@open-scaffold/server"
+   * import { ProviderRecorderLive } from "@open-harness/server"
    *
    * // Persistent recording (recommended for CI)
    * createServer({
@@ -205,7 +205,7 @@ export interface CreateServerOptions<S> extends ServerConfig {
    * })
    *
    * // In-memory recording (for quick local dev only)
-   * import { makeInMemoryRecorderLayer } from "@open-scaffold/server"
+   * import { makeInMemoryRecorderLayer } from "@open-harness/server"
    * createServer({
    *   providerRecorder: makeInMemoryRecorderLayer()
    * })

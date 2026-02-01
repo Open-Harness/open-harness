@@ -49,7 +49,7 @@ export interface EventStoreService {
 // Service Tag
 // ─────────────────────────────────────────────────────────────────
 
-export class EventStore extends Context.Tag("@open-scaffold/EventStore")<
+export class EventStore extends Context.Tag("@open-harness/EventStore")<
   EventStore,
   EventStoreService
 >() {}

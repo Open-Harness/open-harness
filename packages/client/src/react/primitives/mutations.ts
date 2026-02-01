@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { SerializedEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-harness/core"
 import { useMutation } from "@tanstack/react-query"
 
 import type { ForkResult, PauseResult, ResumeResult } from "../../Contract.js"

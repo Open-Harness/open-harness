@@ -1,5 +1,5 @@
-import type { SerializedEvent, SessionId } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import type { SerializedEvent, SessionId } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 import { Effect, PubSub, Stream } from "effect"
 
 /**

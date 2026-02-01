@@ -1,7 +1,7 @@
 /**
  * open-harness/core - Full core API re-export.
  *
- * This provides access to all exports from @open-scaffold/core,
+ * This provides access to all exports from @open-harness/core,
  * including advanced APIs for library authors.
  *
  * @example
@@ -12,4 +12,4 @@
  * @module
  */
 
-export * from "@open-scaffold/core"
+export * from "@open-harness/core"

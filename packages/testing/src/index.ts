@@ -1,5 +1,5 @@
 /**
- * @open-scaffold/testing
+ * @open-harness/testing
  *
  * Shared testing utilities and recordings for Open Scaffold packages.
  *
@@ -28,8 +28,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
  *
  * @example
  * ```typescript
- * import { recordingsDbPath } from "@open-scaffold/testing"
- * import { ProviderRecorderLive } from "@open-scaffold/server"
+ * import { recordingsDbPath } from "@open-harness/testing"
+ * import { ProviderRecorderLive } from "@open-harness/server"
  *
  * const recorder = ProviderRecorderLive({ url: `file:${recordingsDbPath}` })
  * ```
@@ -41,7 +41,7 @@ export const recordingsDbPath = path.resolve(__dirname, "../recordings/test.db")
  *
  * @example
  * ```typescript
- * import { recordingsDbUrl } from "@open-scaffold/testing"
+ * import { recordingsDbUrl } from "@open-harness/testing"
  *
  * const scaffold = OpenScaffold.create({
  *   database: recordingsDbUrl,

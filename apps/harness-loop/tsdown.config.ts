@@ -11,9 +11,11 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node"
   },
-  // Bundle internal @open-scaffold/* packages into the output
+  // Bundle internal @open-harness/* packages into the output
   noExternal: [
-    "@open-scaffold/core",
-    "@open-scaffold/server"
-  ]
+    "@open-harness/core",
+    "@open-harness/server"
+  ],
+  // Acknowledge we intentionally bundle transitive dependencies
+  inlineOnly: false
 })

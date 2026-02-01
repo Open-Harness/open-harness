@@ -14,12 +14,14 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   outDir: "dist",
-  tsconfig: "tsconfig.src.json",
-  // Bundle internal @open-scaffold/* packages into the output
+  tsconfig: "tsconfig.build.json",
+  // Bundle internal @open-harness/* packages into the output
   noExternal: [
-    "@open-scaffold/core",
-    "@open-scaffold/server",
-    "@open-scaffold/client",
-    "@open-scaffold/testing"
-  ]
+    "@open-harness/core",
+    "@open-harness/server",
+    "@open-harness/client",
+    "@open-harness/testing"
+  ],
+  // Acknowledge we intentionally bundle transitive dependencies
+  inlineOnly: false
 })

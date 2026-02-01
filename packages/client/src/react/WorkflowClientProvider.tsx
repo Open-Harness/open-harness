@@ -42,7 +42,7 @@ export interface WorkflowClientProviderProps {
  * @example
  * ```tsx
  * import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
- * import { WorkflowClientProvider, HttpClient } from '@open-scaffold/client'
+ * import { WorkflowClientProvider, HttpClient } from '@open-harness/client'
  *
  * const queryClient = new QueryClient()
  * const client = HttpClient({ url: 'http://localhost:3000' })

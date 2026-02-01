@@ -24,9 +24,9 @@ import {
   type WorkflowDef,
   type WorkflowError,
   type WorkflowResult
-} from "@open-scaffold/core"
+} from "@open-harness/core"
 // executeWorkflow, ExecuteOptions, and Services are internal API (ADR-001) - import from internal entrypoint
-import { type ExecuteOptions, executeWorkflow, type Services } from "@open-scaffold/core/internal"
+import { type ExecuteOptions, executeWorkflow, type Services } from "@open-harness/core/internal"
 
 import { loadSession } from "./loadSession.js"
 

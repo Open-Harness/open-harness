@@ -2,7 +2,7 @@
 /**
  * Record test sessions to the shared recordings database.
  *
- * Run with: pnpm --filter @open-scaffold/testing record
+ * Run with: pnpm --filter @open-harness/testing record
  *
  * This script records real API responses that can be replayed
  * deterministically in tests across all packages.
@@ -13,9 +13,9 @@
 import { Effect, Stream } from "effect"
 import { z } from "zod"
 
-import type { AgentStreamEvent, ProviderRunOptions } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
-import { AnthropicProvider, ProviderRecorderLive } from "@open-scaffold/server"
+import type { AgentStreamEvent, ProviderRunOptions } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
+import { AnthropicProvider, ProviderRecorderLive } from "@open-harness/server"
 
 import { recordingsDbUrl } from "./index.js"
 

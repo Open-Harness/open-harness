@@ -4,7 +4,7 @@
  * @module
  */
 
-import { OpenScaffold, type SessionInfo } from "@open-scaffold/server"
+import { OpenScaffold, type SessionInfo } from "@open-harness/server"
 
 export interface ListOptions {
   database: string

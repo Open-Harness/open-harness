@@ -7,7 +7,7 @@
  * @module
  */
 
-import type { SerializedEvent } from "@open-scaffold/core"
+import type { SerializedEvent } from "@open-harness/core"
 
 import { useCreateSessionMutation, useSendInputMutation } from "../primitives/index.js"
 

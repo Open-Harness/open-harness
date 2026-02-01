@@ -9,7 +9,7 @@
 
 import { Args, Command, Options } from "@effect/cli"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
-import { run } from "@open-scaffold/core"
+import { run } from "@open-harness/core"
 import { Effect, pipe } from "effect"
 import { readFileSync } from "node:fs"
 

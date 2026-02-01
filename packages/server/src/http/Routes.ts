@@ -1,7 +1,7 @@
 /**
  * Route handlers for Open Scaffold HTTP API.
  *
- * Uses the executeWorkflow runtime from @open-scaffold/core Engine API.
+ * Uses the executeWorkflow runtime from @open-harness/core Engine API.
  *
  * @module
  */
@@ -16,10 +16,10 @@ import {
   SessionNotFound,
   tagToEventName,
   ValidationError
-} from "@open-scaffold/core"
+} from "@open-harness/core"
 // executeWorkflow is internal API (ADR-001) - import from internal entrypoint
-import type { ProviderMode, SerializedEvent, SessionId, WorkflowDef } from "@open-scaffold/core"
-import { executeWorkflow, Services } from "@open-scaffold/core/internal"
+import type { ProviderMode, SerializedEvent, SessionId, WorkflowDef } from "@open-harness/core"
+import { executeWorkflow, Services } from "@open-harness/core/internal"
 
 import { forkSession } from "../programs/forkSession.js"
 import { observeEvents, type ObserveEventsOptions } from "../programs/observeEvents.js"

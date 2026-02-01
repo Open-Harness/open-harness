@@ -1,6 +1,6 @@
 /**
  * @internal
- * Advanced/internal exports for @open-scaffold/core
+ * Advanced/internal exports for @open-harness/core
  *
  * These are implementation details and may change without notice.
  * Use for:
@@ -9,7 +9,7 @@
  * - Library authoring
  * - Testing infrastructure
  *
- * For most use cases, prefer the public API from "@open-scaffold/core".
+ * For most use cases, prefer the public API from "@open-harness/core".
  *
  * @module
  */

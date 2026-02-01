@@ -1,6 +1,6 @@
 {
-  "name": "open-harness",
-  "version": "0.0.0",
+  "name": "@open-harness/sdk",
+  "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "description": "Open Harness - Event-sourced AI agent workflow runtime with Effect-TS",
@@ -86,10 +86,10 @@
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
-    "@open-scaffold/core": "*",
-    "@open-scaffold/server": "*",
-    "@open-scaffold/client": "*",
-    "@open-scaffold/testing": "*"
+    "@open-harness/core": "*",
+    "@open-harness/server": "*",
+    "@open-harness/client": "*",
+    "@open-harness/testing": "*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"

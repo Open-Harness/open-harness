@@ -153,7 +153,7 @@ export interface AgentProviderService {
 // Service Tag
 // ─────────────────────────────────────────────────────────────────
 
-export class AgentProvider extends Context.Tag("@open-scaffold/AgentProvider")<
+export class AgentProvider extends Context.Tag("@open-harness/AgentProvider")<
   AgentProvider,
   AgentProviderService
 >() {}

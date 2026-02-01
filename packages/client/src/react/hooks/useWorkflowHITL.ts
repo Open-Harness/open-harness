@@ -15,8 +15,8 @@ import {
   decodeInputRequestedPayload,
   makeEventId,
   tagToEventName
-} from "@open-scaffold/core"
-import type { SerializedEvent } from "@open-scaffold/core"
+} from "@open-harness/core"
+import type { SerializedEvent } from "@open-harness/core"
 import { Effect, Option } from "effect"
 
 import { useEventsQuery, useSendInputMutation } from "../primitives/index.js"

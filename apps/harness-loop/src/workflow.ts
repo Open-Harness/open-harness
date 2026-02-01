@@ -6,8 +6,8 @@
  * @module
  */
 
-import { agent, workflow } from "@open-scaffold/core"
-import { AnthropicProvider } from "@open-scaffold/server"
+import { agent, workflow } from "@open-harness/core"
+import { AnthropicProvider } from "@open-harness/server"
 import { z } from "zod"
 
 import type { Task } from "./schema.js"

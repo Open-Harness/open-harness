@@ -19,8 +19,8 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import type { ProviderRunOptions } from "@open-scaffold/core"
-import { makeTextDelta, Services } from "@open-scaffold/core/internal"
+import type { ProviderRunOptions } from "@open-harness/core"
+import { makeTextDelta, Services } from "@open-harness/core/internal"
 
 import { AnthropicProvider } from "../src/index.js"
 import { ProviderRecorderLive } from "../src/internal.js"
@@ -43,7 +43,8 @@ const makeTestDb = () => {
   return { filePath, url: `file:${filePath}` }
 }
 
-describe("ProviderRecorderLive (Persistent Recording)", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("ProviderRecorderLive (Persistent Recording)", () => {
   it("records real SDK response to DB and replays it", async () => {
     const { filePath, url } = makeTestDb()
     const recorderLayer = ProviderRecorderLive({ url })
@@ -194,7 +195,8 @@ describe("ProviderRecorderLive (Persistent Recording)", () => {
   })
 })
 
-describe("ProviderRecorderLive (Incremental Recording)", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("ProviderRecorderLive (Incremental Recording)", () => {
   it("records events incrementally and can replay them", async () => {
     const { filePath, url } = makeTestDb()
     const recorderLayer = ProviderRecorderLive({ url })

@@ -9,8 +9,8 @@
 
 import { SqlClient } from "@effect/sql"
 import { LibsqlClient } from "@effect/sql-libsql"
-import { type AgentStreamEvent, StoreError } from "@open-scaffold/core"
-import { decodeAgentRunResult, decodeAgentStreamEvent, Services } from "@open-scaffold/core/internal"
+import { type AgentStreamEvent, StoreError } from "@open-harness/core"
+import { decodeAgentRunResult, decodeAgentStreamEvent, Services } from "@open-harness/core/internal"
 import { Effect, Layer, Option, Redacted, Ref } from "effect"
 
 import type { LibSQLConfig } from "./Config.js"

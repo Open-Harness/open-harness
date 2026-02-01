@@ -7,7 +7,7 @@
  * @module
  */
 
-import type { WorkflowObserver } from "@open-scaffold/core"
+import type { WorkflowObserver } from "@open-harness/core"
 
 import {
   hasToolRenderer,
@@ -119,9 +119,8 @@ export const createObserver = (options: ObserverOptions = {}): ObserverResult =>
       stats.agentRuns++
       process.stdout.write(renderAgentStarted(info.agent))
 
-      if (quiet) {
-        spinner.start("Running...")
-      }
+      // Always start spinner - shows progress in both modes
+      spinner.start("Running...")
     },
 
     onAgentCompleted: (info) => {
@@ -136,7 +135,13 @@ export const createObserver = (options: ObserverOptions = {}): ObserverResult =>
     },
 
     onTextDelta: (info) => {
+      // Update spinner with context (always visible)
+      spinner.update("Generating text...")
+
       if (quiet) return
+
+      // Stop spinner before writing verbose output
+      spinner.stop()
 
       // End thinking block if we were in one
       if (isInThinking) {
@@ -154,7 +159,13 @@ export const createObserver = (options: ObserverOptions = {}): ObserverResult =>
     },
 
     onThinkingDelta: (info) => {
+      // Update spinner with context (always visible)
+      spinner.update("Thinking...")
+
       if (quiet) return
+
+      // Stop spinner before writing verbose output
+      spinner.stop()
 
       // Start thinking block if not already in one
       if (!isInThinking) {
@@ -167,22 +178,22 @@ export const createObserver = (options: ObserverOptions = {}): ObserverResult =>
     onToolCalled: (info) => {
       stats.toolCalls++
 
-      if (quiet) {
-        // Update spinner with tool name
-        spinner.update(`Running ${info.toolName}...`)
-        // Store pending call for when we get the result
-        pendingToolCall = { name: info.toolName, input: info.input }
-        return
-      }
+      // Update spinner with tool name (always visible)
+      spinner.update(`Running ${info.toolName}...`)
+
+      // Store pending call for when we get the result
+      pendingToolCall = { name: info.toolName, input: info.input }
+
+      if (quiet) return
+
+      // Stop spinner before writing verbose output
+      spinner.stop()
 
       // End thinking block if we were in one
       if (isInThinking) {
         process.stdout.write(renderThinkingEnd())
         isInThinking = false
       }
-
-      // Store pending call for combined rendering
-      pendingToolCall = { name: info.toolName, input: info.input }
 
       // For tools without specific renderers, show call immediately
       if (!hasToolRenderer(info.toolName)) {
@@ -192,12 +203,18 @@ export const createObserver = (options: ObserverOptions = {}): ObserverResult =>
     },
 
     onToolResult: (info) => {
+      // Update spinner (always visible)
+      spinner.update("Processing result...")
+
       if (quiet) {
         // Reset spinner to generic message
         spinner.update("Running...")
         pendingToolCall = null
         return
       }
+
+      // Stop spinner before writing verbose output
+      spinner.stop()
 
       justFinishedTool = true
 

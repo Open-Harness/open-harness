@@ -8,7 +8,7 @@
 
 import { z } from "zod"
 
-import { agent, phase, workflow } from "@open-scaffold/core"
+import { agent, phase, workflow } from "@open-harness/core"
 
 // ─────────────────────────────────────────────────────────────────
 // State

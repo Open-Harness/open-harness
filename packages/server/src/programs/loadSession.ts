@@ -9,8 +9,8 @@
 
 import { Effect } from "effect"
 
-import { type SerializedEvent, type SessionId, SessionNotFound, type StoreError } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import { type SerializedEvent, type SessionId, SessionNotFound, type StoreError } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 
 // ─────────────────────────────────────────────────────────────────
 // Types

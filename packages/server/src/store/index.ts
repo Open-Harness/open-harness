@@ -1,5 +1,5 @@
 /**
- * @open-scaffold/server - LibSQL/Turso storage layers.
+ * @open-harness/server - LibSQL/Turso storage layers.
  *
  * @module
  */

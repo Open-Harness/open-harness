@@ -1,5 +1,5 @@
 /**
- * @open-scaffold/server - Anthropic AgentProvider with recording support.
+ * @open-harness/server - Anthropic AgentProvider with recording support.
  *
  * @module
  */

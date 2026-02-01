@@ -16,7 +16,7 @@ import { Effect, Stream } from "effect"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 
-import type { AgentStreamEvent } from "@open-scaffold/core"
+import type { AgentStreamEvent } from "@open-harness/core"
 
 import { AnthropicProvider } from "../src/provider/Provider.js"
 
@@ -28,7 +28,8 @@ const TestOutputSchema = z.object({
   confidence: z.number().min(0).max(1)
 })
 
-describe("AnthropicProvider (Real SDK)", () => {
+// Skip in CI - requires live Anthropic API access
+describe.skipIf(process.env.CI)("AnthropicProvider (Real SDK)", () => {
   it("streams events from real Anthropic API", async () => {
     const provider = AnthropicProvider({
       model: "claude-haiku-4-5"

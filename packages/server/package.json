@@ -1,5 +1,5 @@
 {
-  "name": "@open-scaffold/server",
+  "name": "@open-harness/server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -46,7 +46,7 @@
     "@effect/platform": "latest",
     "@effect/sql": "latest",
     "@effect/sql-libsql": "latest",
-    "@open-scaffold/core": "*",
+    "@open-harness/core": "*",
     "effect": "latest",
     "zod-to-json-schema": "^3.24.6"
   }

@@ -28,7 +28,7 @@ export interface ProviderModeContextValue {
  * @example
  * ```typescript
  * import { Effect, Layer } from "effect"
- * import { ProviderModeContext } from "@open-scaffold/core"
+ * import { ProviderModeContext } from "@open-harness/core"
  *
  * // Server sets the mode
  * const modeLayer = Layer.succeed(
@@ -43,7 +43,7 @@ export interface ProviderModeContextValue {
  * })
  * ```
  */
-export class ProviderModeContext extends Context.Tag("@open-scaffold/ProviderModeContext")<
+export class ProviderModeContext extends Context.Tag("@open-harness/ProviderModeContext")<
   ProviderModeContext,
   ProviderModeContextValue
 >() {}

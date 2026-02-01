@@ -46,7 +46,7 @@ export interface EventHubService {
 // Service Tag
 // ─────────────────────────────────────────────────────────────────
 
-export class EventHub extends Context.Tag("@open-scaffold/EventHub")<
+export class EventHub extends Context.Tag("@open-harness/EventHub")<
   EventHub,
   EventHubService
 >() {}

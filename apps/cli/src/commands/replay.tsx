@@ -4,8 +4,8 @@
  * @module
  */
 
-import type { WorkflowDef } from "@open-scaffold/core"
-import { OpenScaffold, type SessionInfo } from "@open-scaffold/server"
+import type { WorkflowDef } from "@open-harness/core"
+import { OpenScaffold, type SessionInfo } from "@open-harness/server"
 import { resolve } from "path"
 
 export interface ReplayOptions {

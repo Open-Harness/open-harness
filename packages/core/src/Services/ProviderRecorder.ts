@@ -108,7 +108,7 @@ export interface ProviderRecorderService {
  * @example
  * ```typescript
  * import { Effect } from "effect"
- * import { ProviderRecorder } from "@open-scaffold/core"
+ * import { ProviderRecorder } from "@open-harness/core"
  *
  * const replayRecording = Effect.gen(function*() {
  *   const recorder = yield* ProviderRecorder
@@ -122,7 +122,7 @@ export interface ProviderRecorderService {
  * })
  * ```
  */
-export class ProviderRecorder extends Context.Tag("@open-scaffold/ProviderRecorder")<
+export class ProviderRecorder extends Context.Tag("@open-harness/ProviderRecorder")<
   ProviderRecorder,
   ProviderRecorderService
 >() {}

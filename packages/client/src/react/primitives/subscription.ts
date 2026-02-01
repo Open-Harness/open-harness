@@ -8,7 +8,7 @@
  * @module
  */
 
-import { type SerializedEvent, SerializedEventSchema } from "@open-scaffold/core"
+import { type SerializedEvent, SerializedEventSchema } from "@open-harness/core"
 import { useQueryClient } from "@tanstack/react-query"
 import { Option, Schema } from "effect"
 import { useEffect } from "react"

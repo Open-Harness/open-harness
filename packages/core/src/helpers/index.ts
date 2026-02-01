@@ -1,5 +1,5 @@
 /**
- * Helper utilities for @open-scaffold/core.
+ * Helper utilities for @open-harness/core.
  *
  * Contains built-in implementations for common use cases.
  *

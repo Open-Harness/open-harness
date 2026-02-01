@@ -1,6 +1,6 @@
 /**
  * @internal
- * Advanced/internal exports for @open-scaffold/server
+ * Advanced/internal exports for @open-harness/server
  * These are implementation details and may change without notice.
  *
  * @module

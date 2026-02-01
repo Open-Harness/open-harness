@@ -10,8 +10,8 @@
  * @module
  */
 
-import type { WorkflowDef } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import type { WorkflowDef } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 import { Effect, Layer, ManagedRuntime } from "effect"
 
 import { DEFAULT_HOST, DEFAULT_PORT } from "./constants.js"
@@ -114,7 +114,7 @@ type AppServices =
  *
  * @example
  * ```typescript
- * import { OpenScaffold } from "@open-scaffold/server"
+ * import { OpenScaffold } from "@open-harness/server"
  *
  * // Create instance with explicit config (mode is REQUIRED)
  * const scaffold = OpenScaffold.create({

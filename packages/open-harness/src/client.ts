@@ -17,4 +17,4 @@
  * @module
  */
 
-export * from "@open-scaffold/client"
+export * from "@open-harness/client"

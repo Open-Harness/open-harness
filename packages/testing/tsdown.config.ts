@@ -9,5 +9,5 @@ export default defineConfig({
   treeshake: true,
   outDir: "dist",
   tsconfig: "tsconfig.src.json",
-  external: ["@open-scaffold/core", "@open-scaffold/server"]
+  external: ["@open-harness/core", "@open-harness/server"]
 })

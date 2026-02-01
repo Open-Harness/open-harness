@@ -6,8 +6,8 @@
 
 import { SqlClient } from "@effect/sql"
 import { LibsqlClient } from "@effect/sql-libsql"
-import { EventIdSchema, parseSessionId, type SerializedEvent, type SessionId, StoreError } from "@open-scaffold/core"
-import { Services } from "@open-scaffold/core/internal"
+import { EventIdSchema, parseSessionId, type SerializedEvent, type SessionId, StoreError } from "@open-harness/core"
+import { Services } from "@open-harness/core/internal"
 import { Effect, Layer, Redacted, Schema } from "effect"
 
 import type { LibSQLConfig } from "./Config.js"

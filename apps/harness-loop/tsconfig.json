@@ -19,10 +19,10 @@
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
     "paths": {
-      "@open-scaffold/core": ["../../packages/core/src/index.ts"],
-      "@open-scaffold/core/*": ["../../packages/core/src/*.ts"],
-      "@open-scaffold/server": ["../../packages/server/src/index.ts"],
-      "@open-scaffold/server/*": ["../../packages/server/src/*.ts"]
+      "@open-harness/core": ["../../packages/core/src/index.ts"],
+      "@open-harness/core/*": ["../../packages/core/src/*.ts"],
+      "@open-harness/server": ["../../packages/server/src/index.ts"],
+      "@open-harness/server/*": ["../../packages/server/src/*.ts"]
     }
   }
 }
