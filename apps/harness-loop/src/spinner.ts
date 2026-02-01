@@ -1,53 +1,54 @@
 /**
- * Terminal spinner utility for showing progress during operations.
+ * Terminal spinner using log-update for reliable in-place rendering.
  *
- * Uses ANSI escape sequences to update in place and hide/show cursor.
+ * Provides a clean spinner that works reliably in terminal environments.
  *
  * @module
  */
 
-const HIDE_CURSOR = "\x1b[?25l"
-const SHOW_CURSOR = "\x1b[?25h"
-const CLEAR_LINE = "\r\x1b[K"
+import logUpdate from "log-update"
+import * as colors from "colorette"
 
-const DIM = "\x1b[2m"
-const RESET = "\x1b[0m"
+// Spinner frames
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+const SPINNER_INTERVAL = 80
 
 /**
- * Animated terminal spinner that updates in place.
+ * Terminal spinner that updates in place using log-update.
+ *
+ * Uses the same rendering approach as listr2 for reliable terminal output.
  */
 export class Spinner {
-  private frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
   private interval: ReturnType<typeof setInterval> | null = null
   private frameIndex = 0
-  private message: string = ""
+  private message = ""
   private isRunning = false
 
   /**
    * Start the spinner with a message.
    */
   start(message: string): void {
-    if (this.isRunning) return
+    if (this.isRunning) {
+      this.update(message)
+      return
+    }
 
     this.message = message
     this.frameIndex = 0
     this.isRunning = true
 
-    // Hide cursor
-    process.stdout.write(HIDE_CURSOR)
-
-    // Render initial frame
+    // Initial render
     this.render()
 
     // Start animation
     this.interval = setInterval(() => {
-      this.frameIndex = (this.frameIndex + 1) % this.frames.length
+      this.frameIndex = (this.frameIndex + 1) % SPINNER_FRAMES.length
       this.render()
-    }, 80)
+    }, SPINNER_INTERVAL)
   }
 
   /**
-   * Update the spinner message without stopping.
+   * Update the spinner message.
    */
   update(message: string): void {
     this.message = message
@@ -67,8 +68,41 @@ export class Spinner {
       this.interval = null
     }
 
-    // Clear line and show cursor
-    process.stdout.write(CLEAR_LINE + SHOW_CURSOR)
+    // Clear the spinner line
+    logUpdate.clear()
+    this.isRunning = false
+  }
+
+  /**
+   * Stop with a success message.
+   */
+  succeed(message?: string): void {
+    this.stopWithSymbol("✓", message ?? this.message, "green")
+  }
+
+  /**
+   * Stop with a failure message.
+   */
+  fail(message?: string): void {
+    this.stopWithSymbol("✗", message ?? this.message, "red")
+  }
+
+  /**
+   * Stop with a custom symbol and color.
+   */
+  private stopWithSymbol(
+    symbol: string,
+    message: string,
+    color: "green" | "red" | "yellow" | "blue"
+  ): void {
+    if (this.interval) {
+      clearInterval(this.interval)
+      this.interval = null
+    }
+
+    const colorFn = colors[color] ?? ((s: string) => s)
+    logUpdate(`${colorFn(symbol)} ${message}`)
+    logUpdate.done()
     this.isRunning = false
   }
 
@@ -76,7 +110,13 @@ export class Spinner {
    * Render the current frame.
    */
   private render(): void {
-    const frame = this.frames[this.frameIndex]
-    process.stdout.write(`${CLEAR_LINE}${DIM}${frame} ${this.message}${RESET}`)
+    const frame = SPINNER_FRAMES[this.frameIndex]
+    const output = `${colors.cyan(frame)} ${colors.dim(this.message)}`
+    logUpdate(output)
   }
 }
+
+/**
+ * Create a new spinner instance.
+ */
+export const createSpinner = (): Spinner => new Spinner()
